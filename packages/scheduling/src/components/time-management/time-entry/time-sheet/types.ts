@@ -1,5 +1,10 @@
-import { ITimeEntry, ITimePeriodView } from '@alga-psa/types';
-import { TaxRegion } from '@alga-psa/types';
+import {
+  IExtendedWorkItem,
+  ITimeEntry,
+  ITimeEntryWithWorkItemString,
+  ITimePeriodView,
+  TaxRegion,
+} from '@alga-psa/types';
 
 export interface Service {
   id: string;
@@ -68,3 +73,32 @@ export interface TimeSheetDateNavigatorState {
   goToPreviousPage: () => void;
   goToNextPage: () => void;
 }
+
+export interface TimeEntrySelectionRequest {
+  workItem: IExtendedWorkItem;
+  date: string;
+  entries: ITimeEntryWithWorkItemString[];
+  defaultStartTime?: string;
+  defaultEndTime?: string;
+}
+
+export interface TimeSheetListFocusFilter {
+  workItemId: string;
+  workItemLabel: string;
+  date: string;
+  dateLabel: string;
+  entryIds: string[];
+  entryCount: number;
+}
+
+export interface TimeSheetQuickAddState {
+  workItem: IExtendedWorkItem;
+  date: string;
+  value: string;
+}
+
+export type TimeSheetInteractionState =
+  | { type: 'idle' }
+  | { type: 'quick-add'; quickAdd: TimeSheetQuickAddState }
+  | { type: 'dialog'; selection: TimeEntrySelectionRequest }
+  | { type: 'list-focus'; filter: TimeSheetListFocusFilter };

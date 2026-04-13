@@ -202,6 +202,7 @@
       "billable": "Billable",
       "nonBillable": "Non-Billable",
       "workItem": "Work Item",
+      "service": "Service",
       "duration": "Duration",
       "notes": "Notes",
       "entryChangeSuggestion": "Entry Change Suggestion",

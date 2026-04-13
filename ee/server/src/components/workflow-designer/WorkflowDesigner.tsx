@@ -47,6 +47,10 @@ import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/WorkflowList';
 import EventsCatalogV2 from '@alga-psa/workflows/components/automation-hub/EventsCatalogV2';
+import type { WorkflowPickerActions } from '@alga-psa/workflows/components/automation-hub/WorkflowActionInputFixedPicker';
+import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
+import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrations/actions';
+import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions';
 import WorkflowSchedules from './WorkflowSchedules';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
@@ -275,6 +279,27 @@ type PipeSegment = {
 type PipeLocation = {
   pipePath: string;
   label: string;
+};
+
+const workflowPickerActions: WorkflowPickerActions = {
+  getAllContacts,
+  getContactsByClient,
+  getAvailableStatuses,
+  getTicketFieldOptions,
+  getTicketById,
+  getTicketsForList: async ({ boardFilterState, searchQuery }) => {
+    const result = await getTicketsForList({ boardFilterState, searchQuery });
+    return {
+      tickets: (result?.tickets ?? [])
+        .filter((ticket): ticket is typeof ticket & { ticket_id: string } => Boolean(ticket.ticket_id))
+        .map((ticket) => ({
+          ticket_id: ticket.ticket_id,
+          ticket_number: ticket.ticket_number,
+          title: ticket.title,
+          status_name: ticket.status_name,
+        })),
+    };
+  },
 };
 
 const CONTROL_BLOCKS: Array<{ id: Step['type']; label: string; category: string; description: string }> = [
@@ -4640,7 +4665,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   const eventCatalogContent = (
     <div className="h-full min-h-0 overflow-y-auto px-6 py-4">
-      <EventsCatalogV2 />
+      <EventsCatalogV2 pickerActions={workflowPickerActions} />
     </div>
   );
   const schedulesContent = (

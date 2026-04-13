@@ -91,8 +91,8 @@ export const updateNumberSettings = withAuth(async (
       }
 
       if ('prefix' in updates) {
-        if (!finalSettings.prefix || typeof finalSettings.prefix !== 'string') {
-          return { success: false, error: 'Prefix is required' };
+        if (typeof finalSettings.prefix !== 'string') {
+          return { success: false, error: 'Prefix must be a string' };
         }
       }
 

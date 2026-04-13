@@ -3,7 +3,15 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { ITimeEntry, ITimeSheetView, IUser, IUserWithRoles } from '@alga-psa/types';
+import type {
+  IExtendedWorkItem,
+  ITimeEntry,
+  ITimeEntryWithWorkItem,
+  ITimeSheetComment,
+  ITimeSheetView,
+  IUser,
+  IUserWithRoles,
+} from '@alga-psa/types';
 import { saveTimeEntry, fetchOrCreateTimeSheet } from '@alga-psa/scheduling/actions/timeEntryActions';
 import { fetchEligibleTimeEntrySubjects } from '@alga-psa/scheduling/actions/timeEntryDelegationActions';
 import { fetchTimeSheet, reverseTimeSheetApproval } from '@alga-psa/scheduling/actions/timeSheetActions';
@@ -18,9 +26,20 @@ interface TimeSheetClientProps {
   currentUser: IUserWithRoles;
   isManager: boolean;
   canReopenForEdits: boolean;
+  initialEntries: ITimeEntryWithWorkItem[];
+  initialWorkItems: IExtendedWorkItem[];
+  initialComments: ITimeSheetComment[];
 }
 
-export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUser, isManager, canReopenForEdits }: TimeSheetClientProps) {
+export default function TimeSheetClient({
+  timeSheet: initialTimeSheet,
+  currentUser,
+  isManager,
+  canReopenForEdits,
+  initialEntries,
+  initialWorkItems,
+  initialComments,
+}: TimeSheetClientProps) {
   const { t } = useTranslation('msp/time-entry');
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -38,6 +57,10 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
     { defaultValue: false }
   );
   const allowDelegatedEditing = delegatedTimeEntryEnabled && !delegatedTimeEntryLoading;
+
+  useEffect(() => {
+    setTimeSheet(initialTimeSheet);
+  }, [initialTimeSheet]);
 
   useEffect(() => {
     const loadSubjectUser = async () => {
@@ -117,6 +140,9 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
     <>
       <TimeSheet
         timeSheet={timeSheet}
+        initialEntries={initialEntries}
+        initialWorkItems={initialWorkItems}
+        initialComments={initialComments}
         onSaveTimeEntry={handleSaveTimeEntry}
         isManager={isManager}
         subjectName={allowDelegatedEditing && subjectUser ? formatUserName(subjectUser) : undefined}
@@ -129,18 +155,21 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
         onBack={handleBack}
       />
 
-      <ConfirmationDialog
-        isOpen={isReopenDialogOpen}
-        onClose={() => setIsReopenDialogOpen(false)}
-        onConfirm={confirmReopenForEdits}
-        title={t('timeSheetClient.reopen.title', { defaultValue: 'Reopen for edits?' })}
-        message={t('timeSheetClient.reopen.message', {
-          defaultValue: 'This will move the time sheet back to Changes Requested so time entries can be edited.'
-        })}
-        confirmLabel={t('common.actions.reopen', { defaultValue: 'Reopen' })}
-        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
-        isConfirming={isReopening}
-      />
+      {isReopenDialogOpen && (
+        <ConfirmationDialog
+          id="timesheet-client-reopen-confirmation"
+          isOpen={true}
+          onClose={() => setIsReopenDialogOpen(false)}
+          onConfirm={confirmReopenForEdits}
+          title={t('timeSheetClient.reopen.title', { defaultValue: 'Reopen for edits?' })}
+          message={t('timeSheetClient.reopen.message', {
+            defaultValue: 'This will move the time sheet back to Changes Requested so time entries can be edited.'
+          })}
+          confirmLabel={t('common.actions.reopen', { defaultValue: 'Reopen' })}
+          cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+          isConfirming={isReopening}
+        />
+      )}
     </>
   );
 }

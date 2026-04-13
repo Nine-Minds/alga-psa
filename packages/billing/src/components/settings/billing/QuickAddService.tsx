@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog'
 import { Button } from '@alga-psa/ui/components/Button'
 import { Input } from '@alga-psa/ui/components/Input'
@@ -18,6 +18,7 @@ import { getServiceCategories } from '@alga-psa/billing/actions'
 import { IService, IServiceCategory, IServiceType } from '@alga-psa/types' // Added IServiceType
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider'
 import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling'
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client'
 
 interface QuickAddServiceProps {
   onServiceAdded: () => void;
@@ -53,20 +54,11 @@ interface ServiceFormData {
 
 // Removed hardcoded SERVICE_CATEGORY_OPTIONS - will use fetched categories instead
 
-const LICENSE_TERM_OPTIONS = [
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'annual', label: 'Annual' },
-  { value: 'perpetual', label: 'Perpetual' }
-];
-
-const BILLING_METHOD_OPTIONS = [
-  { value: 'fixed', label: 'Fixed Fee' },
-  { value: 'hourly', label: 'Hourly' },
-  { value: 'usage', label: 'Usage' },
-  { value: 'usage', label: 'Usage Based' }
-];
+const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
+const BILLING_METHOD_OPTION_VALUES = ['fixed', 'hourly', 'usage'] as const;
 
 export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceTypesChange, isOpen, onClose, triggerId = 'add-service' }: QuickAddServiceProps) {
+  const { t } = useTranslation('msp/billing-settings');
   // Support both controlled (isOpen/onClose) and uncontrolled (internal state) modes
   const isControlled = isOpen !== undefined;
   const [internalOpen, setInternalOpen] = useState(false)
@@ -81,7 +73,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
         setServiceData((prev) => ({ ...prev, currency_code: currency }));
       })
       .catch(() => {});
-  }, []);
+  }, [t]);
 
   // In controlled mode, use external state; in uncontrolled mode, use internal state
   const dialogOpen = isControlled ? isOpen : internalOpen;
@@ -115,6 +107,29 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
   ])
   // State for price input display values (allows temporary invalid states during editing)
   const [priceInputs, setPriceInputs] = useState<string[]>([''])
+  const billingMethodOptions = useMemo(
+    () =>
+      BILLING_METHOD_OPTION_VALUES.map((value) => ({
+        value,
+        label:
+          value === 'fixed'
+            ? t('common.billingMethod.fixedFee', { defaultValue: 'Fixed Fee' })
+            : value === 'hourly'
+              ? t('common.billingMethod.hourly', { defaultValue: 'Hourly' })
+              : t('common.billingMethod.usage', { defaultValue: 'Usage' }),
+      })),
+    [t]
+  )
+  const licenseTermOptions = useMemo(
+    () =>
+      LICENSE_TERM_OPTION_VALUES.map((value) => ({
+        value,
+        label: t(`common.licenseTerm.${value}`, {
+          defaultValue: value.charAt(0).toUpperCase() + value.slice(1),
+        }),
+      })),
+    [t]
+  )
 
   // Initialize service state
   const [serviceData, setServiceData] = useState<ServiceFormData>({
@@ -133,6 +148,10 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
     seat_limit: 0,
     license_term: 'monthly'
   })
+  const selectedServiceTypeName = useMemo(
+    () => allServiceTypes.find((type) => type.id === serviceData.custom_service_type_id)?.name,
+    [allServiceTypes, serviceData.custom_service_type_id]
+  )
 
   // This useEffect might be removable if categories are fully replaced by service types
   useEffect(() => {
@@ -142,7 +161,9 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
         setCategories(fetchedCategories)
       } catch (error) {
         console.error('Error fetching categories:', error)
-        setError('Failed to fetch categories')
+        setError(t('quickAddService.errors.fetchCategories', {
+          defaultValue: 'Failed to fetch categories'
+        }))
       }
     }
 
@@ -158,7 +179,11 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
            setTaxRates(rates);
        } catch (error) {
            console.error('Error loading tax rates:', error);
-           const errorMessage = error instanceof Error ? error.message : 'Failed to load tax rates.';
+           const errorMessage = error instanceof Error
+             ? error.message
+             : t('quickAddService.errors.fetchTaxRates', {
+                 defaultValue: 'Failed to load tax rates.'
+               });
            setErrorTaxRates(errorMessage);
            setTaxRates([]); // Clear rates on error
        } finally {
@@ -168,7 +193,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
 
     fetchCategories(); // Keep fetching categories for now
     fetchTaxRates(); // Call fetchTaxRates
-  }, []);
+  }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -192,17 +217,25 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
 
       // Validate required fields
       if (!serviceData.service_name.trim()) {
-        errors.push('Service name is required')
+        errors.push(t('quickAddService.validation.serviceNameRequired', {
+          defaultValue: 'Service name is required'
+        }))
       }
       if (!serviceData.custom_service_type_id || serviceData.custom_service_type_id.trim() === '') { // Check ID is not empty
-        errors.push('Service type is required') // Updated label
+        errors.push(t('quickAddService.validation.serviceTypeRequired', {
+          defaultValue: 'Service type is required'
+        })) // Updated label
       }
       // Allow $0.00 services, but require the user to enter a price (including "0").
       if ((priceInputs[0] ?? '').trim() === '') {
-        errors.push('At least one price is required')
+        errors.push(t('quickAddService.validation.priceRequired', {
+          defaultValue: 'At least one price is required'
+        }))
       }
       if (!serviceData.billing_method) {
-        errors.push('Billing method is required')
+        errors.push(t('quickAddService.validation.billingMethodRequired', {
+          defaultValue: 'Billing method is required'
+        }))
       }
       
       if (errors.length > 0) {
@@ -214,12 +247,12 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
       // Removed category_id validation
 
       // Find the selected service type name for conditional checks
-      const selectedServiceTypeName = allServiceTypes.find(t => t.id === serviceData.custom_service_type_id)?.name;
-
       // Validate product-specific fields
       if (selectedServiceTypeName === 'Hardware') { // Check name
         if (!serviceData.sku) {
-          setError('SKU is required for Hardware')
+          setError(t('quickAddService.validation.skuRequiredForHardware', {
+            defaultValue: 'SKU is required for Hardware'
+          }))
           return
         }
       }
@@ -227,7 +260,9 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
       // Validate license-specific fields
       if (selectedServiceTypeName === 'Software License') { // Check name
         if (!serviceData.license_term) {
-          setError('License term is required for Software Licenses')
+          setError(t('quickAddService.validation.licenseTermRequired', {
+            defaultValue: 'License term is required for Software Licenses'
+          }))
           return
         }
       }
@@ -235,7 +270,9 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
 const selectedServiceType = allServiceTypes.find(t => t.id === serviceData.custom_service_type_id);
 
 if (!selectedServiceType) {
-  setError('Selected service type not found');
+  setError(t('quickAddService.validation.selectedTypeNotFound', {
+    defaultValue: 'Selected service type not found'
+  }));
   return;
 }
 
@@ -312,7 +349,7 @@ if (createdService?.service_id) {
       setValidationErrors([])
     } catch (error) {
       console.error('[QuickAddService] Error creating service:', error)
-      setError('Failed to create service')
+      setError(t('quickAddService.errors.create', { defaultValue: 'Failed to create service' }))
     }
   }
 
@@ -329,13 +366,13 @@ if (createdService?.service_id) {
           id={triggerId}
           onClick={() => setInternalOpen(true)}
         >
-          Add Service
+          {t('quickAddService.actions.trigger', { defaultValue: 'Add Service' })}
         </Button>
       )}
       <Dialog
         isOpen={dialogOpen}
         onClose={handleDialogClose}
-        title="Add New Service"
+        title={t('quickAddService.dialog.title', { defaultValue: 'Add New Service' })}
         className="max-w-[550px]"
       >
         <DialogContent>
@@ -344,7 +381,9 @@ if (createdService?.service_id) {
           {hasAttemptedSubmit && validationErrors.length > 0 && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
-                Please fix the following errors:
+                {t('quickAddService.validation.summary', {
+                  defaultValue: 'Please fix the following errors:'
+                })}
                 <ul className="list-disc pl-5 mt-1 text-sm">
                   {validationErrors.map((err, index) => (
                     <li key={index}>{err}</li>
@@ -355,12 +394,16 @@ if (createdService?.service_id) {
           )}
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div>
-              <Label htmlFor="serviceName" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Service Name *</Label>
+              <Label htmlFor="serviceName" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                {t('quickAddService.fields.serviceName.label', { defaultValue: 'Service Name *' })}
+              </Label>
               <Input
                 id="serviceName"
                 value={serviceData.service_name}
                 onChange={(e) => setServiceData({ ...serviceData, service_name: e.target.value })}
-                placeholder="Service Name"
+                placeholder={t('quickAddService.fields.serviceName.placeholder', {
+                  defaultValue: 'Service Name'
+                })}
                 required
                 className={hasAttemptedSubmit && !serviceData.service_name.trim() ? 'border-red-500' : ''}
               />
@@ -369,7 +412,9 @@ if (createdService?.service_id) {
             {/* Updated to Service Type dropdown using EditableServiceTypeSelect */}
             <div>
               <EditableServiceTypeSelect
-                label="Service Type *"
+                label={t('quickAddService.fields.serviceType.label', {
+                  defaultValue: 'Service Type *'
+                })}
                 value={serviceData.custom_service_type_id}
                 onChange={(value) => {
                   // Keep service-type taxonomy and billing-mode selection independent.
@@ -394,29 +439,39 @@ if (createdService?.service_id) {
                   await deleteServiceTypeInline(id);
                   onServiceTypesChange(); // Refresh the service types list
                 }}
-                placeholder="Select service type..."
+                placeholder={t('quickAddService.fields.serviceType.placeholder', {
+                  defaultValue: 'Select service type...'
+                })}
                 className={`w-full ${hasAttemptedSubmit && !serviceData.custom_service_type_id ? 'ring-1 ring-red-500' : ''}`}
               />
             </div>
 
             <div>
-              <Label htmlFor="billingMethod" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Billing Method *</Label>
+              <Label htmlFor="billingMethod" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                {t('quickAddService.fields.billingMethod.label', { defaultValue: 'Billing Method *' })}
+              </Label>
               <CustomSelect
-                options={BILLING_METHOD_OPTIONS}
+                options={billingMethodOptions}
                 value={serviceData.billing_method}
                 onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'hourly' | 'usage' | '' })}
-                placeholder="Select billing method..."
+                placeholder={t('quickAddService.fields.billingMethod.placeholder', {
+                  defaultValue: 'Select billing method...'
+                })}
                 className={`w-full ${hasAttemptedSubmit && !serviceData.billing_method ? 'ring-1 ring-red-500' : ''}`}
               />
             </div>
 
             <div>
-              <Label htmlFor="description" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Description</Label>
+              <Label htmlFor="description" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                {t('quickAddService.fields.description.label', { defaultValue: 'Description' })}
+              </Label>
               <Input
                 id="description"
                 value={serviceData.description || ''}
                 onChange={(e) => setServiceData({ ...serviceData, description: e.target.value })}
-                placeholder="Service Description"
+                placeholder={t('quickAddService.fields.description.placeholder', {
+                  defaultValue: 'Service Description'
+                })}
               />
             </div>
 
@@ -424,9 +479,17 @@ if (createdService?.service_id) {
             <div className="border rounded-lg p-4 bg-muted">
               <div className="flex justify-between items-center mb-3">
                 <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                  Pricing *
+                  {t('quickAddService.fields.pricing.label', { defaultValue: 'Pricing *' })}
                   <span className="text-xs font-normal text-muted-foreground ml-2">
-                    ({serviceData.billing_method === 'fixed' ? 'Monthly' : serviceData.billing_method === 'hourly' ? 'Per Hour' : serviceData.billing_method === 'usage' ? 'Usage' : 'Rate'})
+                    (
+                    {serviceData.billing_method === 'fixed'
+                      ? t('quickAddService.fields.pricing.rateType.monthly', { defaultValue: 'Monthly' })
+                      : serviceData.billing_method === 'hourly'
+                        ? t('quickAddService.fields.pricing.rateType.perHour', { defaultValue: 'Per Hour' })
+                        : serviceData.billing_method === 'usage'
+                          ? t('quickAddService.fields.pricing.rateType.usage', { defaultValue: 'Usage' })
+                          : t('quickAddService.fields.pricing.rateType.rate', { defaultValue: 'Rate' })}
+                    )
                   </span>
                 </label>
                 <Button
@@ -445,7 +508,7 @@ if (createdService?.service_id) {
                   }}
                   disabled={prices.length >= CURRENCY_OPTIONS.length}
                 >
-                  + Add Currency
+                  {t('quickAddService.actions.addCurrency', { defaultValue: '+ Add Currency' })}
                 </Button>
               </div>
 
@@ -465,7 +528,9 @@ if (createdService?.service_id) {
                           newPrices[index] = { ...newPrices[index], currency_code: value };
                           setPrices(newPrices);
                         }}
-                        placeholder="Currency"
+                        placeholder={t('quickAddService.fields.pricing.placeholders.currency', {
+                          defaultValue: 'Currency'
+                        })}
                       />
                     </div>
                     <div className="relative flex-1">
@@ -500,7 +565,9 @@ if (createdService?.service_id) {
                           newInputs[index] = inputValue.trim() !== '' ? (cents / 100).toFixed(2) : '';
                           setPriceInputs(newInputs);
                         }}
-                        placeholder="0.00"
+                        placeholder={t('quickAddService.fields.pricing.placeholders.rate', {
+                          defaultValue: '0.00'
+                        })}
                         className={`pl-10 ${hasAttemptedSubmit && index === 0 && (priceInputs[0] ?? '').trim() === '' ? 'border-red-500' : ''}`}
                       />
                     </div>
@@ -518,21 +585,27 @@ if (createdService?.service_id) {
                           setPriceInputs(newInputs);
                         }}
                       >
-                        Remove
+                        {t('quickAddService.actions.remove', { defaultValue: 'Remove' })}
                       </Button>
                     )}
                   </div>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Add prices in multiple currencies. The first currency is the primary rate.
+                {t('quickAddService.fields.pricing.help', {
+                  defaultValue: 'Add prices in multiple currencies. The first currency is the primary rate.'
+                })}
               </p>
             </div>
 
             {/* Unit of Measure for usage-based services */}
             {serviceData.billing_method === 'usage' && (
               <div>
-                <Label htmlFor="unitOfMeasure" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Unit of Measure *</Label>
+                <Label htmlFor="unitOfMeasure" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                  {t('quickAddService.fields.unitOfMeasure.label', {
+                    defaultValue: 'Unit of Measure *'
+                  })}
+                </Label>
                 <Input
                   id="unitOfMeasure"
                   type="text"
@@ -541,11 +614,17 @@ if (createdService?.service_id) {
                     console.log('[QuickAddService] Unit of Measure onChange called with:', e.target.value);
                     setServiceData({ ...serviceData, unit_of_measure: e.target.value });
                   }}
-                  placeholder="e.g., GB, API call, user"
+                  placeholder={t('quickAddService.fields.unitOfMeasure.placeholder', {
+                    defaultValue: 'e.g., GB, API call, user'
+                  })}
                   required
                   className={`${hasAttemptedSubmit && !serviceData.unit_of_measure ? 'border-red-500' : ''}`}
                 />
-                <p className="text-xs text-muted-foreground mt-1">The measurable unit for billing (e.g., GB, API call, user)</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('quickAddService.fields.unitOfMeasure.help', {
+                    defaultValue: 'The measurable unit for billing (e.g., GB, API call, user)'
+                  })}
+                </p>
               </div>
             )}
 
@@ -554,17 +633,28 @@ if (createdService?.service_id) {
 
             {/* Replaced Is Taxable Switch and Tax Region Select with Tax Rate Select */}
             <div>
-              <Label htmlFor="taxRate" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Tax Rate (Optional)</Label>
+              <Label htmlFor="taxRate" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                {t('quickAddService.fields.taxRate.label', { defaultValue: 'Tax Rate (Optional)' })}
+              </Label>
               <CustomSelect
                   id="quick-add-service-tax-rate-select"
                   value={serviceData.tax_rate_id || ''} // Bind to tax_rate_id
-                  placeholder={isLoadingTaxRates ? "Loading tax rates..." : "Select Tax Rate (optional)"}
+                  placeholder={
+                    isLoadingTaxRates
+                      ? t('quickAddService.fields.taxRate.loading', {
+                          defaultValue: 'Loading tax rates...'
+                        })
+                      : t('quickAddService.fields.taxRate.placeholder', {
+                          defaultValue: 'Select Tax Rate (optional)'
+                        })
+                  }
                   onValueChange={(value) => setServiceData({ ...serviceData, tax_rate_id: value || null })} // Set null if cleared
                   // Populate with fetched tax rates, construct label using regionMap
                   // Use description or region_code directly from the rate object
                   options={taxRates.map(r => { // r is now correctly typed as ITaxRate
                     // Construct label using fields directly from ITaxRate
-                    const descriptionPart = r.description || r.region_code || 'N/A'; // Use description or region_code
+                    const descriptionPart =
+                      r.description || r.region_code || t('common.notAvailable', { defaultValue: 'N/A' }); // Use description or region_code
 
                     // Ensure tax_percentage is treated as a number before calling toFixed
                     const percentageValue = typeof r.tax_percentage === 'string'
@@ -584,50 +674,68 @@ if (createdService?.service_id) {
 
             {/* Product-specific fields */}
             {/* Conditional fields based on Service Type Name */}
-            {allServiceTypes.find(t => t.id === serviceData.custom_service_type_id)?.name === 'Hardware' && (
+            {selectedServiceTypeName === 'Hardware' && (
               <>
                 <div>
-                  <Label htmlFor="sku" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">SKU</Label>
+                  <Label htmlFor="sku" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('quickAddService.fields.sku.label', { defaultValue: 'SKU' })}
+                  </Label>
                   <Input
                     id="sku"
                     value={serviceData.sku || ''}
                     onChange={(e) => setServiceData({ ...serviceData, sku: e.target.value })}
-                    placeholder="SKU"
+                    placeholder={t('quickAddService.fields.sku.placeholder', { defaultValue: 'SKU' })}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="inventoryCount" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Inventory Count</Label>
+                  <Label htmlFor="inventoryCount" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('quickAddService.fields.inventoryCount.label', {
+                      defaultValue: 'Inventory Count'
+                    })}
+                  </Label>
                   <Input
                     id="inventoryCount"
                     type="number"
                     value={serviceData.inventory_count || 0}
                     onChange={(e) => setServiceData({ ...serviceData, inventory_count: parseInt(e.target.value) })}
-                    placeholder="Inventory Count"
+                    placeholder={t('quickAddService.fields.inventoryCount.placeholder', {
+                      defaultValue: 'Inventory Count'
+                    })}
                   />
                 </div>
               </>
             )}
 
             {/* License-specific fields */}
-            {allServiceTypes.find(t => t.id === serviceData.custom_service_type_id)?.name === 'Software License' && (
+            {selectedServiceTypeName === 'Software License' && (
               <>
                 <div>
-                  <Label htmlFor="seatLimit" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Seat Limit</Label>
+                  <Label htmlFor="seatLimit" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('quickAddService.fields.seatLimit.label', { defaultValue: 'Seat Limit' })}
+                  </Label>
                   <Input
                     id="seatLimit"
                     type="number"
                     value={serviceData.seat_limit || 0}
                     onChange={(e) => setServiceData({ ...serviceData, seat_limit: parseInt(e.target.value) })}
-                    placeholder="Seat Limit"
+                    placeholder={t('quickAddService.fields.seatLimit.placeholder', {
+                      defaultValue: 'Seat Limit'
+                    })}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="licenseTerm" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">License Term</Label>
+                  <Label htmlFor="licenseTerm" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('quickAddService.fields.licenseTerm.label', {
+                      defaultValue: 'License Term'
+                    })}
+                  </Label>
                   <CustomSelect
-                    options={LICENSE_TERM_OPTIONS}
+                    options={licenseTermOptions}
                     value={serviceData.license_term || 'monthly'}
                     onValueChange={(value) => setServiceData({ ...serviceData, license_term: value })} // Corrected prop name
-                    placeholder="Select license term..."
+                    placeholder={t('quickAddService.fields.licenseTerm.placeholder', {
+                      defaultValue: 'Select license term...'
+                    })}
                     className="w-full"
                   />
                 </div>
@@ -636,7 +744,7 @@ if (createdService?.service_id) {
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button id='cancel-button' type="button" variant="outline" onClick={handleDialogClose}>
-                Cancel
+                {t('quickAddService.actions.cancel', { defaultValue: 'Cancel' })}
               </Button>
               <Button
                 id='save-button'
@@ -650,7 +758,7 @@ if (createdService?.service_id) {
                     : ''
                 }
               >
-                Save Service
+                {t('quickAddService.actions.save', { defaultValue: 'Save Service' })}
               </Button>
             </div>
           </form>

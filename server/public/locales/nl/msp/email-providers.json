@@ -130,8 +130,8 @@
     },
     "actions": {
       "cancel": "Annuleren",
-      "back": "Rug",
-      "close": "Dichtbij"
+      "back": "Terug",
+      "close": "Sluiten"
     }
   },
   "providerCard": {
@@ -207,7 +207,7 @@
     "common": {
       "actions": {
         "cancel": "Annuleren",
-        "saving": "Besparing...",
+        "saving": "Opslaan...",
         "updateProvider": "Aanbieder bijwerken",
         "addProvider": "Aanbieder toevoegen",
         "createProvider": "Aanbieder maken",
@@ -453,7 +453,7 @@
     "actions": {
       "cancel": "Annuleren",
       "updating": "Updaten...",
-      "creating": "Creëren...",
+      "creating": "Aanmaken...",
       "update": "Standaardwaarden bijwerken",
       "create": "Standaardwaarden maken"
     }

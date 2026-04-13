@@ -121,7 +121,7 @@
     "clientRequired": "Klant is vereist",
     "projectStatusRequired": "Projectstatus is vereist",
     "taskStatusRequired": "Er moet ten minste één taakstatus worden geselecteerd",
-    "creating": "Creëren...",
+    "creating": "Aanmaken...",
     "create": "Project maken",
     "createdSuccess": "Project succesvol aangemaakt",
     "tagCreatePartialError": "{{count}} tag(s) konden niet worden gemaakt",
@@ -151,7 +151,7 @@
     "continueEditing": "Ga door met bewerken",
     "discardChanges": "Wijzigingen negeren",
     "saveAndClose": "Opslaan en sluiten",
-    "saving": "Besparing..."
+    "saving": "Opslaan..."
   },
   "projectDetail": {
     "allAgents": "Alle agenten",
@@ -314,7 +314,7 @@
     "deleteTicketsLabel": "Delete tickets",
     "keepTicketsLabel": "Keep tickets",
     "deleting": "Deleting...",
-    "save": "Redden",
+    "save": "Opslaan",
     "update": "Update",
     "adding": "Toevoegen...",
     "updating": "Updaten...",
@@ -380,8 +380,8 @@
     "editDocumentTitle": "Document bewerken",
     "viewDocumentTitle": "Document bekijken",
     "pdfLabel": "PDF",
-    "save": "Redden",
-    "saving": "Besparing...",
+    "save": "Opslaan",
+    "saving": "Opslaan...",
     "downloadFile": "Bestand downloaden",
     "selectFolderTitle": "Select Folder for New Document",
     "selectFolderDescription": "Choose where to save this new document"
@@ -829,7 +829,7 @@
         "actions": "Acties"
       },
       "neverUsed": "Nooit",
-      "edit": "Bewerking",
+      "edit": "Bewerken",
       "applyTemplate": "Sjabloon toepassen",
       "addTemplate": "Sjabloon toevoegen",
       "createFromProject": "Van project maken",
@@ -852,7 +852,7 @@
       "copyChecklists": "Kopieer taakchecklists",
       "copyServices": "Taakservices kopiëren",
       "copyAssignments": "Taaktoewijzingen kopiëren",
-      "creating": "Creëren...",
+      "creating": "Aanmaken...",
       "create": "Sjabloon maken",
       "createdSuccess": "Sjabloon is succesvol aangemaakt",
       "createFailed": "Failed to create template",
@@ -1029,7 +1029,7 @@
     },
     "wizard": {
       "next": "Volgende",
-      "back": "Rug",
+      "back": "Terug",
       "create": "Sjabloon maken",
       "title": "Create New Project Template",
       "basics": {

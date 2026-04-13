@@ -1,0 +1,429 @@
+[
+  {
+    "id": "T001",
+    "description": "Lang-pack validation: `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs` passes for all 9 locales after namespace creation (covers key parity, missing/extra keys, interpolation variables, pseudo-locale patterns, Italian accents)",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F030",
+      "F031",
+      "F032",
+      "F033",
+      "F034",
+      "F035",
+      "F036",
+      "F037"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Namespace file exists: server/public/locales/en/msp/invoicing.json is valid JSON and contains top-level groups matching PRD namespace structure",
+    "implemented": false,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: AutomaticInvoices uses t() for ready-to-invoice heading, column headers (Group, Service Period, Invoice Window, Included), and filter placeholder -- no hardcoded English in table chrome",
+    "implemented": false,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: AutomaticInvoices parent group combinability badges render translated (Can combine into 1 invoice, Must invoice separately, Not ready to invoice, Contains blocked items) and incompatibility reasons render translated",
+    "implemented": false,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: AutomaticInvoices child execution row labels (cadence, billing timing, assignment context strings) render via t(); Pending amount and attribution metadata warning are translated",
+    "implemented": false,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: AutomaticInvoices reverse dialog renders translated warning text, bullet list items, and confirm/cancel buttons",
+    "implemented": false,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: AutomaticInvoices preview dialog renders translated title, description, invoice count summary with interpolation, table headers (Description, Quantity, Rate, Amount), footer labels (Subtotal, Tax, Total), and action buttons",
+    "implemented": false,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: AutomaticInvoices PO overage dialogs render translated title, description with currency interpolation, option labels (Allow overages, Skip invoices), and confirm/cancel buttons",
+    "implemented": false,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: AutomaticInvoices recurring history section renders translated column headers (Client, Assignment Scope, Cadence Source, Service Period, Invoice Window, Invoice, Actions) and cadence badges",
+    "implemented": false,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: AutomaticInvoices materialization gap panel renders translated heading, description, field labels (Service period, Invoice window, Schedule key), and Review Service Periods link text",
+    "implemented": false,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: ManualInvoices form renders translated headings (Invoice Details / Generate Manual Invoice), field labels (Client, Invoice Number), and descriptions via t()",
+    "implemented": false,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: ManualInvoices renders translated button states (Add Charge, Add Discount, Save Changes, Generate Invoice, Processing...), validation errors, and prepayment checkbox label",
+    "implemented": false,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Unit: ManualInvoices ErrorFallback renders translated heading (Something went wrong) and Try again button text",
+    "implemented": false,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Unit: DraftsTab renders translated column headers (Invoice Number, Client, Amount, Invoice Date, Due Date, Status, Actions), Draft badge, and search placeholder via t()",
+    "implemented": false,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Unit: DraftsTab empty state renders translated heading (No Draft Invoices), description, and Generate Invoices button; reverse confirmation dialog renders translated title, message (with count interpolation for single/plural), and confirm/cancel labels",
+    "implemented": false,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Unit: FinalizedTab renders translated column headers (Invoice Number, Client, Amount, Finalized Date, Status, Actions), Finalized badge, and search placeholder via t()",
+    "implemented": false,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Unit: FinalizedTab empty state renders translated heading (No Finalized Invoices), description, and View Drafts button; bulk actions (Download PDFs, Send Emails, Unfinalize Selected) are translated",
+    "implemented": false,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Unit: RecurringServicePeriodsTab renders translated page title (Recurring Service Periods), description, form labels (Choose a Schedule, Schedule Key), and Open Schedule button via t()",
+    "implemented": false,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Unit: RecurringServicePeriodsTab table headers (State, Service Period, Invoice Window, Revision, Reason, Allowed Actions) and summary stat labels (Generated, Edited, Billed, Exceptions) are translated",
+    "implemented": false,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Unit: RecurringServicePeriodsTab repair panel renders translated heading, description, and repair button; regeneration preview section renders translated heading, description, and button text",
+    "implemented": false,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Unit: BillingCycles renders translated heading (Billing Cycles), tooltip text, column headers (Client, Contract, Current Billing Cycle, Anchor, Actions), and View Client Billing link text via t()",
+    "implemented": false,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Unit: BillingCycles month names, anchor format labels (Weekday, Rolling, Starts, Day), and descriptive text are translated; No active assignments and Not set fallbacks are translated",
+    "implemented": false,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Unit: InvoicePreviewPanel renders translated heading (Invoice Preview), action buttons (Finalize Invoice, Download PDF, Reverse Draft, Send Email, Unfinalize, Edit Items), and template selector placeholder via t()",
+    "implemented": false,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Unit: InvoicePreviewPanel empty state (Select an invoice to preview), loading text (Loading Preview...), and error fallback (Could not display preview) are translated",
+    "implemented": false,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Unit: InvoiceTemplateEditor renders translated back nav text, heading variants, Template Name label, tab labels (Visual, Code), code readonly alert, and Save Template/Saving/Cancel buttons via t()",
+    "implemented": false,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Unit: InvoiceTemplateEditor validation error (Template name is required) and timestamp labels (Created, Last Updated) are translated",
+    "implemented": false,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Unit: InvoiceTemplates renders translated section heading (Invoice Layouts), column headers (Template Name, Type, Default, Actions), type labels (Standard, Custom), and Create New Layout button via t()",
+    "implemented": false,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Unit: InvoiceTemplates action menu items (Edit, Edit as Copy, Clone, Set as Default, Delete) are translated; error messages for clone/set-default/fetch failures are translated",
+    "implemented": false,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Unit: ExternalTaxBatchImportDashboard renders translated card title (External Tax Import), description, column headers (Invoice, Client, Amount, System, Created, Actions), and Import button text via t()",
+    "implemented": false,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Unit: ExternalTaxBatchImportDashboard progress labels, results summary (N successful, N failed), empty state (All invoices are up to date), and help text are translated",
+    "implemented": false,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Unit: ExternalTaxImportPanel renders translated panel title, pending/imported alerts, import button text (with adapter name interpolation), and reconciliation labels (Internal, External, Difference) via t()",
+    "implemented": false,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Unit: ExternalTaxImportPanel history heading, loading/empty history text, significant difference warning, and help text are translated",
+    "implemented": false,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Unit: SendInvoiceEmailDialog renders translated dialog title, summary labels with count interpolation (N Invoice(s), N ready to send, N missing email), Recipients heading, and send/cancel buttons via t()",
+    "implemented": false,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Unit: SendInvoiceEmailDialog recipient source labels (Billing Contact, Billing Email, Client Email, No Email Found) and email preview text are translated",
+    "implemented": false,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Unit: TaxReconciliationView renders translated card title (Tax Reconciliation), comparison labels, table headers, and Total label via t()",
+    "implemented": false,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Unit: TaxReconciliationView significant difference alert, loading/no-data states, and help text are translated",
+    "implemented": false,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Unit: GenerateTab renders translated Invoice Type label, all type option labels (Automatic Invoices, Manual Invoice, Prepayment), and type descriptions via t()",
+    "implemented": false,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Unit: PrepaymentInvoices renders translated heading, field labels (Type, Client, Amount, Description), type options (Prepayment Invoice, Credit Memo), placeholders, and submit button states via t()",
+    "implemented": false,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Unit: ContractInvoiceItems renders translated table headers (Description, Quantity, Rate, Amount), subtotal labels (Contract Subtotal, Other Items Subtotal), Other Items heading, and Product badge via t()",
+    "implemented": false,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Unit: InvoicingHub renders translated section heading (Invoicing) and tab labels (Generate, Drafts, Finalized) via t()",
+    "implemented": false,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Unit: InvoiceTemplateManager renders translated headings (Invoice Template Manager, Sample Invoices, Template Preview) via t()",
+    "implemented": false,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Unit: InvoiceTaxSourceBadge renders translated badge labels (Tax: Internal, Tax: External, Tax: Pending) and tooltip strings via t(); adapter names are translated",
+    "implemented": false,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Unit: InvoiceAnnotations renders translated heading (Invoice Annotations), Internal/External labels, placeholder, and Add Annotation button via t()",
+    "implemented": false,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Unit: PurchaseOrderSummaryBanner renders translated field labels (PO Number, PO Authorized, PO Consumed (Finalized), PO Remaining) via t()",
+    "implemented": false,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Italian accent preservation: it/msp/invoicing.json contains proper accented characters (e.g., a-grave, e-grave, e-acute, u-grave) and not ASCII-degraded equivalents; validate-translations.cjs Italian accent check passes",
+    "implemented": false,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Interpolation variable preservation: all 9 locale files preserve {{variable}} placeholders identically to the English source (validate-translations.cjs covers this)",
+    "implemented": false,
+    "featureIds": [
+      "F030",
+      "F031",
+      "F032",
+      "F033",
+      "F034",
+      "F035",
+      "F036"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Regression: existing billing test suites pass after i18n wiring (no broken imports, no missing providers)",
+    "implemented": false,
+    "featureIds": [
+      "F003",
+      "F008",
+      "F010",
+      "F011",
+      "F012",
+      "F014",
+      "F015",
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Visual: /msp/billing?tab=invoicing renders all 3 sub-tabs (Generate, Drafts, Finalized) in xx pseudo-locale with no bare English leakage in the UI chrome",
+    "implemented": false,
+    "featureIds": [
+      "F003",
+      "F010",
+      "F011",
+      "F022",
+      "F025"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "Visual: /msp/billing?tab=templates renders template list and editor in xx pseudo-locale with no bare English leakage",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Visual: /msp/billing?tab=billing-cycles renders billing cycles table in de with translated column headers, anchor labels, and month names",
+    "implemented": false,
+    "featureIds": [
+      "F014"
+    ]
+  }
+]

@@ -34,15 +34,8 @@ import { getContractLineById } from '@alga-psa/billing/actions/contractLineActio
 import { getContractById } from '@alga-psa/billing/actions/contractActions';
 import { getCurrencySymbol } from '@alga-psa/core';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 // Removed ContractLineServiceForm import as 'Configure' is removed
-
-// Define billing method options
-const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [
-  { value: 'fixed', label: 'Fixed Price' },
-  { value: 'hourly', label: 'Hourly' },
-  { value: 'usage', label: 'Usage Based' },
-  { value: 'usage', label: 'Usage' }
-];
 
 interface FixedPlanServicesListProps {
   planId: string; // Changed from plan object to just planId
@@ -68,6 +61,7 @@ type PlanServiceWithConfig = {
   typeConfig?: any;
 };
 const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, onServiceAdded }) => {
+  const { t } = useTranslation('msp/billing');
   const [planServices, setPlanServices] = useState<SimplePlanService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [serviceCategories, setServiceCategories] = useState<IServiceCategory[]>([]); // Added state for categories
@@ -115,8 +109,8 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
           tenant: configInfo.configuration.tenant,
           created_at: configInfo.configuration.created_at,
           updated_at: configInfo.configuration.updated_at,
-          service_name: configInfo.service.service_name || 'Unknown Service',
-          service_category: configInfo.service.service_type_name || 'N/A', // Now using service_type_name from IService
+          service_name: configInfo.service.service_name || t('contractLineServices.unknownService', { defaultValue: 'Unknown Service' }),
+          service_category: configInfo.service.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' }), // Now using service_type_name from IService
           billing_method: configInfo.service.billing_method,
           default_rate: configInfo.service.default_rate,
           quantity: configInfo.configuration.quantity, // Added quantity from configuration
@@ -131,11 +125,11 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
       setSelectedServicesToAdd([]);
     } catch (error) {
       console.error('Error fetching data:', error);
-      setError('Failed to load services data');
+      setError(t('contractLineServices.errors.loadData', { defaultValue: 'Failed to load services data' }));
     } finally {
       setIsLoading(false);
     }
-  }, [planId]);
+  }, [planId, t]);
 
   useEffect(() => {
     fetchData();
@@ -156,7 +150,11 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
               const parsed = override != null ? parseFloat(override) : NaN;
               if (!override || !Number.isFinite(parsed)) {
                 throw new Error(
-                  `Product "${serviceToAdd.service_name}" has no ${contractCurrency} price. Enter a custom rate before adding.`
+                  t('contractLineServices.addSection.productMissingPrice', {
+                    defaultValue: 'Product "{{name}}" has no {{currency}} price. Enter a custom rate before adding.',
+                    name: serviceToAdd.service_name ?? '',
+                    currency: contractCurrency,
+                  })
                 );
               }
               const cents = Math.round(parsed * 100);
@@ -181,7 +179,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
       }
     } catch (error) {
       console.error('Error adding services:', error);
-      setError('Failed to add services');
+      setError(t('contractLineServices.errors.addServices', { defaultValue: 'Failed to add services' }));
     }
   };
 
@@ -198,7 +196,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
       }
     } catch (error) {
       console.error('Error removing service:', error);
-      setError('Failed to remove service');
+      setError(t('contractLineServices.errors.removeService', { defaultValue: 'Failed to remove service' }));
     }
   };
 
@@ -227,6 +225,18 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
   };
 
   const currencySymbol = getCurrencySymbol(contractCurrency);
+  const getBillingMethodLabel = (value?: 'fixed' | 'hourly' | 'usage' | null) => {
+    if (value === 'fixed') {
+      return t('contractLineServices.billingMethods.fixed', { defaultValue: 'Fixed Price' });
+    }
+    if (value === 'hourly') {
+      return t('contractLineServices.billingMethods.hourly', { defaultValue: 'Hourly' });
+    }
+    if (value === 'usage') {
+      return t('contractLineServices.billingMethods.usageBased', { defaultValue: 'Usage Based' });
+    }
+    return t('common.notAvailable', { defaultValue: 'N/A' });
+  };
 
   const getCatalogUnitPriceCents = (serviceId: string): number | null => {
     const service = availableServices.find((s) => s.service_id === serviceId);
@@ -237,15 +247,19 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
 
 const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
     {
-      title: 'Service Name',
+      title: t('contractLineServices.table.serviceName', { defaultValue: 'Service Name' }),
       dataIndex: 'service_name',
       render: (_value, record) => (
         <div className="flex items-center gap-2">
           <span>{record.service_name}</span>
           {record.item_kind === 'product' ? (
-            <Badge variant="secondary">Product</Badge>
+            <Badge variant="secondary">
+              {t('contractLineServices.badges.product', { defaultValue: 'Product' })}
+            </Badge>
           ) : (
-            <Badge variant="secondary">Service</Badge>
+            <Badge variant="secondary">
+              {t('contractLineServices.badges.service', { defaultValue: 'Service' })}
+            </Badge>
           )}
           {record.item_kind === 'product' && record.sku ? (
             <span className="text-xs text-muted-foreground">{record.sku}</span>
@@ -254,16 +268,16 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
       ),
     },
     {
-      title: 'Category',
+      title: t('contractLineServices.table.category', { defaultValue: 'Category' }),
       dataIndex: 'service_category', // Now displays the name
     },
     {
-      title: 'Billing Method',
+      title: t('contractLineServices.table.billingMethod', { defaultValue: 'Billing Method' }),
       dataIndex: 'billing_method',
-      render: (value) => BILLING_METHOD_OPTIONS.find(opt => opt.value === value)?.label || value || 'N/A',
+      render: (value) => getBillingMethodLabel(value),
     },
     {
-      title: 'Quantity',
+      title: t('contractLineServices.table.quantity', { defaultValue: 'Quantity' }),
       dataIndex: 'quantity',
       render: (value) => value ?? 1, // Display quantity, default to 1 if null/undefined
     },
@@ -271,11 +285,15 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
     {
       title: ( // Use title prop for the header content
         <Tooltip content={ // Pass tooltip content to the 'content' prop
-          <p>Service's standard rate, used for internal value allocation and reporting within the fixed plan total. Not directly editable here.</p>
+          <p>
+            {t('contractLineServices.tooltip.defaultRate', {
+              defaultValue: "Service's standard rate, used for internal value allocation and reporting within the fixed plan total. Not directly editable here.",
+            })}
+          </p>
         }>
           {/* Children are the trigger */}
           <span className="flex items-center cursor-help">
-            Default Rate
+            {t('contractLineServices.table.defaultRate', { defaultValue: 'Default Rate' })}
             <HelpCircle className="h-4 w-4 ml-1 text-muted-foreground" />
           </span>
         </Tooltip>
@@ -290,18 +308,25 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
           const catalogCents = getCatalogUnitPriceCents(record.service_id);
           const unitCents = overrideCents ?? catalogCents;
           if (unitCents === null) {
-            return <span className="text-amber-700">Missing {contractCurrency} price</span>;
+            return (
+              <span className="text-amber-700">
+                {t('contractLineServices.states.missingPrice', {
+                  defaultValue: 'Missing {{currency}} price',
+                  currency: contractCurrency,
+                })}
+              </span>
+            );
           }
           return `${currencySymbol}${(unitCents / 100).toFixed(2)}`;
         }
 
         return record.default_rate !== undefined
           ? `$${Number(record.default_rate).toFixed(2)}`
-          : 'N/A';
+          : t('common.notAvailable', { defaultValue: 'N/A' });
       },
     },
     {
-      title: 'Actions',
+      title: t('contractLineServices.table.actions', { defaultValue: 'Actions' }),
       dataIndex: 'service_id',
       render: (value, record) => (
         <DropdownMenu>
@@ -312,7 +337,7 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('common.openMenu', { defaultValue: 'Open menu' })}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -326,7 +351,7 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
                 setQuantityDialogOpen(true);
               }}
             >
-              Edit Quantity
+              {t('contractLineServices.actions.editQuantity', { defaultValue: 'Edit Quantity' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`remove-fixed-plan-service-${value}`}
@@ -336,7 +361,7 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
                 handleRemoveService(value);
               }}
             >
-              Remove
+              {t('contractLineServices.actions.remove', { defaultValue: 'Remove' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -366,7 +391,9 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
       )}
 
       {isLoading ? (
-        <div className="text-center py-4">Loading services...</div>
+        <div className="text-center py-4">
+          {t('contractLineServices.states.loading', { defaultValue: 'Loading services...' })}
+        </div>
       ) : (
         <>
           <div className="mb-4">
@@ -377,20 +404,32 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
               pagination={false} // Assuming pagination isn't needed for typical plan service lists
               onRowClick={handleRowClick} // Add row click handler
             />
-             {planServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this contract line.</p>}
+             {planServices.length === 0 && (
+               <p className="text-sm text-muted-foreground mt-2">
+                 {t('contractLineServices.states.emptyAssociated', {
+                   defaultValue: 'No services currently associated with this contract line.',
+                 })}
+               </p>
+             )}
           </div>
 
           <div className="mt-6 border-t pt-4">
-            <h4 className="text-md font-medium mb-2">Add Services to Contract Line</h4>
+            <h4 className="text-md font-medium mb-2">
+              {t('contractLineServices.addSection.title', { defaultValue: 'Add Services to Contract Line' })}
+            </h4>
              {servicesAvailableToAdd.length === 0 ? (
-                 <p className="text-sm text-muted-foreground">All available services are already associated with this contract line.</p>
+                 <p className="text-sm text-muted-foreground">
+                   {t('contractLineServices.states.emptyAvailable', {
+                     defaultValue: 'All available services are already associated with this contract line.',
+                   })}
+                 </p>
              ) : (
                  <>
                     <div className="mb-3">
                         <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto border rounded p-2">
                         {servicesAvailableToAdd.map(service => {
                             // Use service_type_name directly from the service object
-                            const serviceTypeName = service.service_type_name || 'N/A';
+                            const serviceTypeName = service.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' });
                             const isProduct = service.item_kind === 'product';
                             const catalogRateCents =
                               isProduct
@@ -418,20 +457,53 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
                                 <div className="flex-grow flex flex-col text-sm">
                                     <span className="flex items-center gap-2">
                                       {service.service_name}
-                                      {isProduct ? <Badge variant="secondary">Product</Badge> : null}
+                                      {isProduct ? (
+                                        <Badge variant="secondary">
+                                          {t('contractLineServices.badges.product', { defaultValue: 'Product' })}
+                                        </Badge>
+                                      ) : null}
                                     </span>
                                     <span className="text-xs text-muted-foreground">
-                                    Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method}
+                                    {t('contractLineServices.addSection.serviceType', {
+                                      defaultValue: 'Service Type: {{value}}',
+                                      value: serviceTypeName,
+                                    })}
+                                    {' | '}
+                                    {t('contractLineServices.addSection.method', {
+                                      defaultValue: 'Method: {{value}}',
+                                      value: getBillingMethodLabel(service.billing_method),
+                                    })}
                                     {isProduct ? (
-                                      <> | {contractCurrency} price: {catalogRateCents == null ? 'missing' : `${currencySymbol}${(Number(catalogRateCents) / 100).toFixed(2)}`}</>
+                                      <>
+                                        {' | '}
+                                        {catalogRateCents == null
+                                          ? t('contractLineServices.addSection.catalogPriceMissing', {
+                                              defaultValue: '{{currency}} price: missing',
+                                              currency: contractCurrency,
+                                            })
+                                          : t('contractLineServices.addSection.catalogPrice', {
+                                              defaultValue: '{{currency}} price: {{value}}',
+                                              currency: contractCurrency,
+                                              value: `${currencySymbol}${(Number(catalogRateCents) / 100).toFixed(2)}`,
+                                            })}
+                                      </>
                                     ) : (
-                                      <> | Rate: ${ Number(service.default_rate).toFixed(2)}</>
+                                      <>
+                                        {' | '}
+                                        {t('contractLineServices.addSection.rate', {
+                                          defaultValue: 'Rate: {{value}}',
+                                          value: `$${Number(service.default_rate).toFixed(2)}`,
+                                        })}
+                                      </>
                                     )}
                                     </span>
                                     {isProduct && catalogRateCents == null && selectedServicesToAdd.includes(service.service_id!) && (
                                       <div className="mt-2 flex items-center gap-2">
                                         <span className="text-xs text-muted-foreground">
-                                          Override ({contractCurrency}):
+                                          {t('contractLineServices.addSection.customRate', {
+                                            defaultValue: 'Custom {{currency}} rate',
+                                            currency: contractCurrency,
+                                          })}
                                         </span>
                                         <div className="relative w-28">
                                           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">
@@ -467,7 +539,14 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
                         className="w-full sm:w-auto" // Adjust width
                     >
                         <Plus className="h-4 w-4 mr-2" />
-                        Add Selected {selectedServicesToAdd.length > 0 ? `(${selectedServicesToAdd.length})` : ''} Services
+                        {selectedServicesToAdd.length > 0
+                          ? t('contractLineServices.actions.addSelectedServicesWithCount', {
+                              defaultValue: 'Add Selected Services ({{count}})',
+                              count: selectedServicesToAdd.length,
+                            })
+                          : t('contractLineServices.actions.addSelectedServices', {
+                              defaultValue: 'Add Selected Services',
+                            })}
                     </Button>
                  </>
              )}
@@ -483,7 +562,7 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
           onOpenChange={setQuantityDialogOpen}
           planId={planId}
           serviceId={selectedService.service_id}
-          serviceName={selectedService.service_name || 'Unknown Service'}
+          serviceName={selectedService.service_name || t('contractLineServices.unknownService', { defaultValue: 'Unknown Service' })}
           currentQuantity={selectedService.quantity || 1}
           currencySymbol={selectedService.item_kind === 'product' ? currencySymbol : undefined}
           currentUnitRateCents={

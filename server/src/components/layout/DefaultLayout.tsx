@@ -484,37 +484,40 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
             ) : null}
           </div>
         </div>
-        <ConfirmationDialog
-          isOpen={pendingInterruptKind !== null}
-          onClose={closeInterruptDialog}
-          onConfirm={confirmInterruptAction}
-          title={
-            pendingInterruptKind === 'navigate'
-              ? t('dialogs.aiInterrupt.navigate.title', { defaultValue: 'Leave page and cancel AI response?' })
-              : t('dialogs.aiInterrupt.closeChat.title', { defaultValue: 'Close chat and cancel AI response?' })
-          }
-          message={
-            pendingInterruptKind === 'navigate'
-              ? t('dialogs.aiInterrupt.navigate.message', {
-                  defaultValue:
-                    'An AI response or tool action is still in progress. Leaving this page now will cancel it.',
-                })
-              : t('dialogs.aiInterrupt.closeChat.message', {
-                  defaultValue:
-                    'An AI response or tool action is still in progress. Closing the chat now will cancel it.',
-                })
-          }
-          confirmLabel={
-            pendingInterruptKind === 'navigate'
-              ? t('dialogs.aiInterrupt.navigate.confirm', { defaultValue: 'Leave page' })
-              : t('dialogs.aiInterrupt.closeChat.confirm', { defaultValue: 'Close chat' })
-          }
-          cancelLabel={
-            pendingInterruptKind === 'navigate'
-              ? t('dialogs.aiInterrupt.navigate.cancel', { defaultValue: 'Stay on page' })
-              : t('dialogs.aiInterrupt.closeChat.cancel', { defaultValue: 'Keep chat open' })
-          }
-        />
+        {pendingInterruptKind !== null && (
+          <ConfirmationDialog
+            id="default-layout-ai-interrupt-confirmation"
+            isOpen={true}
+            onClose={closeInterruptDialog}
+            onConfirm={confirmInterruptAction}
+            title={
+              pendingInterruptKind === 'navigate'
+                ? t('dialogs.aiInterrupt.navigate.title', { defaultValue: 'Leave page and cancel AI response?' })
+                : t('dialogs.aiInterrupt.closeChat.title', { defaultValue: 'Close chat and cancel AI response?' })
+            }
+            message={
+              pendingInterruptKind === 'navigate'
+                ? t('dialogs.aiInterrupt.navigate.message', {
+                    defaultValue:
+                      'An AI response or tool action is still in progress. Leaving this page now will cancel it.',
+                  })
+                : t('dialogs.aiInterrupt.closeChat.message', {
+                    defaultValue:
+                      'An AI response or tool action is still in progress. Closing the chat now will cancel it.',
+                  })
+            }
+            confirmLabel={
+              pendingInterruptKind === 'navigate'
+                ? t('dialogs.aiInterrupt.navigate.confirm', { defaultValue: 'Leave page' })
+                : t('dialogs.aiInterrupt.closeChat.confirm', { defaultValue: 'Close chat' })
+            }
+            cancelLabel={
+              pendingInterruptKind === 'navigate'
+                ? t('dialogs.aiInterrupt.navigate.cancel', { defaultValue: 'Stay on page' })
+                : t('dialogs.aiInterrupt.closeChat.cancel', { defaultValue: 'Keep chat open' })
+            }
+          />
+        )}
         <DrawerOutlet />
       </QuickAddClientProviderWithCallbacks>
       </MspActivityCrossFeatureProvider>

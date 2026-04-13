@@ -202,6 +202,7 @@
       "billable": "Fatturabile",
       "nonBillable": "Non fatturabile",
       "workItem": "Elemento di lavoro",
+      "service": "Servizio",
       "duration": "Durata",
       "notes": "Note",
       "entryChangeSuggestion": "Suggerimento per la modifica della voce",

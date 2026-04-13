@@ -22,12 +22,14 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ShieldOff, ShieldCheck, Info } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TaxSettingsFormProps {
   clientId: string;
 }
 
 const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
+  const { t } = useTranslation('msp/billing-settings');
   const [taxSettings, setTaxSettings] = useState<Omit<IClientTaxSettings, 'tenant'> | null>(null);
   const [originalSettings, setOriginalSettings] = useState<Omit<IClientTaxSettings, 'tenant'> | null>(null);
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
@@ -64,9 +66,13 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
             const defaultSettings = await createDefaultTaxSettings(clientId);
             setTaxSettings(defaultSettings);
             setOriginalSettings(JSON.parse(JSON.stringify(defaultSettings)));
-            setSuccessMessage('Default tax settings created successfully');
+            setSuccessMessage(t('clientTaxSettings.messages.defaultCreated', {
+              defaultValue: 'Default tax settings created successfully'
+            }));
           } catch (createErr) {
-            setError('Error creating default tax settings');
+            setError(t('clientTaxSettings.messages.createDefaultError', {
+              defaultValue: 'Error creating default tax settings'
+            }));
             setLoading(false);
             return;
           }
@@ -92,13 +98,15 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
 
         setLoading(false);
       } catch (err) {
-        setError('Error fetching tax settings');
+        setError(t('clientTaxSettings.messages.fetchError', {
+          defaultValue: 'Error fetching tax settings'
+        }));
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [clientId]);
+  }, [clientId, t]);
 
   // Handle creation of default tax settings when none exist
   const handleCreateDefaultSettings = async () => {
@@ -107,10 +115,14 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
       const defaultSettings = await createDefaultTaxSettings(clientId);
       setTaxSettings(defaultSettings);
       setError(null);
-      setSuccessMessage('Default tax settings created successfully');
+      setSuccessMessage(t('clientTaxSettings.messages.defaultCreated', {
+        defaultValue: 'Default tax settings created successfully'
+      }));
       setLoading(false);
     } catch (err) {
-      setError('Error creating default tax settings');
+      setError(t('clientTaxSettings.messages.createDefaultError', {
+        defaultValue: 'Error creating default tax settings'
+      }));
       setLoading(false);
     }
   };
@@ -129,13 +141,22 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
       for (let i = 0; i < settings.tax_rate_thresholds.length; i++) {
         const threshold = settings.tax_rate_thresholds[i];
         if (threshold.min_amount < 0) {
-          return `Threshold ${i + 1} has a negative minimum amount`;
+          return t('clientTaxSettings.validation.thresholdNegativeMin', {
+            index: i + 1,
+            defaultValue: 'Threshold {{index}} has a negative minimum amount'
+          });
         }
         if (threshold.max_amount !== undefined && threshold.max_amount < threshold.min_amount) {
-          return `Threshold ${i + 1} has a maximum amount less than its minimum amount`;
+          return t('clientTaxSettings.validation.thresholdMaxLessThanMin', {
+            index: i + 1,
+            defaultValue: 'Threshold {{index}} has a maximum amount less than its minimum amount'
+          });
         }
         if (threshold.rate < 0) {
-          return `Threshold ${i + 1} has a negative rate`;
+          return t('clientTaxSettings.validation.thresholdNegativeRate', {
+            index: i + 1,
+            defaultValue: 'Threshold {{index}} has a negative rate'
+          });
         }
       }
     }
@@ -145,10 +166,16 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
       for (let i = 0; i < settings.tax_holidays.length; i++) {
         const holiday = settings.tax_holidays[i];
         if (!holiday.start_date || !holiday.end_date) {
-          return `Holiday ${i + 1} is missing start or end date`;
+          return t('clientTaxSettings.validation.holidayMissingDates', {
+            index: i + 1,
+            defaultValue: 'Holiday {{index}} is missing start or end date'
+          });
         }
         if (new Date(holiday.start_date) > new Date(holiday.end_date)) {
-          return `Holiday ${i + 1} has an end date before its start date`;
+          return t('clientTaxSettings.validation.holidayEndBeforeStart', {
+            index: i + 1,
+            defaultValue: 'Holiday {{index}} has an end date before its start date'
+          });
         }
       }
     }
@@ -177,13 +204,21 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
       setOriginalTaxExempt(isTaxExempt);
       setOriginalCertificate(taxExemptionCertificate);
       setSuccessMessage(isTaxExempt
-        ? 'Client marked as tax exempt.'
-        : 'Tax exempt status removed from client.');
+        ? t('clientTaxSettings.messages.taxExemptEnabled', {
+            defaultValue: 'Client marked as tax exempt.'
+          })
+        : t('clientTaxSettings.messages.taxExemptDisabled', {
+            defaultValue: 'Tax exempt status removed from client.'
+          }));
     } catch (err) {
       // Revert on error
       setIsTaxExempt(originalTaxExempt);
       setTaxExemptionCertificate(originalCertificate);
-      setError(err instanceof Error ? err.message : 'Failed to update tax exempt status');
+      setError(err instanceof Error
+        ? err.message
+        : t('clientTaxSettings.messages.taxExemptUpdateError', {
+            defaultValue: 'Failed to update tax exempt status'
+          }));
     } finally {
       setIsUpdatingExemptStatus(false);
     }
@@ -211,13 +246,19 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
       // Update original settings after successful update
       setOriginalSettings(JSON.parse(JSON.stringify(updatedSettings)));
       setError(null);
-      setSuccessMessage('Tax settings updated successfully');
+      setSuccessMessage(t('clientTaxSettings.messages.updated', {
+        defaultValue: 'Tax settings updated successfully'
+      }));
     } catch (err) {
       // Revert to original settings on error
       if (originalSettings) {
         setTaxSettings(JSON.parse(JSON.stringify(originalSettings)));
       }
-      setError(err instanceof Error ? err.message : 'Error updating tax settings');
+      setError(err instanceof Error
+        ? err.message
+        : t('clientTaxSettings.messages.updateError', {
+            defaultValue: 'Error updating tax settings'
+          }));
     } finally {
       setIsSubmitting(false);
     }
@@ -232,7 +273,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator 
           layout="stacked" 
-          text="Loading tax settings..."
+          text={t('clientTaxSettings.loading', { defaultValue: 'Loading tax settings...' })}
           spinnerProps={{ size: 'md' }}
         />
       </div>
@@ -249,7 +290,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
           <button
             onClick={dismissError}
             className="ml-4 opacity-70 hover:opacity-100"
-            aria-label="Dismiss error"
+            aria-label={t('clientTaxSettings.alerts.dismissError', { defaultValue: 'Dismiss error' })}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -270,7 +311,9 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
           <button
             onClick={dismissSuccess}
             className="ml-4 opacity-70 hover:opacity-100"
-            aria-label="Dismiss success message"
+            aria-label={t('clientTaxSettings.alerts.dismissSuccess', {
+              defaultValue: 'Dismiss success message'
+            })}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -284,13 +327,19 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
     return (
       <div className="text-center">
         <ErrorMessage />
-        <p className="mb-4">No tax settings found for this client.</p>
+        <p className="mb-4">
+          {t('clientTaxSettings.noSettingsFound', {
+            defaultValue: 'No tax settings found for this client.'
+          })}
+        </p>
         <Button
           id="create-default-tax-settings-button"
           onClick={handleCreateDefaultSettings}
           variant="default"
         >
-          Create Default Tax Settings
+          {t('clientTaxSettings.createDefaultButton', {
+            defaultValue: 'Create Default Tax Settings'
+          })}
         </Button>
       </div>
     );
@@ -300,7 +349,9 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Client Tax Settings</h2>
+      <h2 className="text-2xl font-bold">
+        {t('clientTaxSettings.title', { defaultValue: 'Client Tax Settings' })}
+      </h2>
       <ErrorMessage />
       <SuccessMessage />
 
@@ -313,23 +364,31 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
             ) : (
               <ShieldCheck className="h-5 w-5 text-green-500" />
             )}
-            Tax Exempt Status
+            {t('clientTaxSettings.taxExempt.title', { defaultValue: 'Tax Exempt Status' })}
           </CardTitle>
           <CardDescription>
-            Tax exempt clients will not have taxes applied to their invoices.
+            {t('clientTaxSettings.taxExempt.description', {
+              defaultValue: 'Tax exempt clients will not have taxes applied to their invoices.'
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Tax Exempt</span>
-              <Tooltip content="When enabled, no taxes will be calculated for this client's invoices. Changes are logged for audit purposes.">
+              <span className="text-sm font-medium">
+                {t('clientTaxSettings.taxExempt.label', { defaultValue: 'Tax Exempt' })}
+              </span>
+              <Tooltip content={t('clientTaxSettings.taxExempt.tooltip', {
+                defaultValue: 'When enabled, no taxes will be calculated for this client\'s invoices. Changes are logged for audit purposes.'
+              })}>
                 <Info className="h-4 w-4 text-muted-foreground cursor-help" />
               </Tooltip>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                {isTaxExempt ? 'Exempt' : 'Not Exempt'}
+                {isTaxExempt
+                  ? t('clientTaxSettings.taxExempt.status.exempt', { defaultValue: 'Exempt' })
+                  : t('clientTaxSettings.taxExempt.status.notExempt', { defaultValue: 'Not Exempt' })}
               </span>
               <Switch
                 checked={isTaxExempt}
@@ -342,18 +401,24 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
           {isTaxExempt && (
             <div className="space-y-2">
               <label htmlFor="tax-exemption-certificate" className="text-sm font-medium">
-                Tax Exemption Certificate Number
+                {t('clientTaxSettings.taxExempt.certificate.label', {
+                  defaultValue: 'Tax Exemption Certificate Number'
+                })}
               </label>
               <Input
                 id="tax-exemption-certificate"
                 type="text"
-                placeholder="Enter certificate number (optional)"
+                placeholder={t('clientTaxSettings.taxExempt.certificate.placeholder', {
+                  defaultValue: 'Enter certificate number (optional)'
+                })}
                 value={taxExemptionCertificate}
                 onChange={(e) => setTaxExemptionCertificate(e.target.value)}
                 disabled={isUpdatingExemptStatus}
               />
               <p className="text-xs text-muted-foreground">
-                Optional: Store the client's tax exemption certificate number for reference.
+                {t('clientTaxSettings.taxExempt.certificate.help', {
+                  defaultValue: 'Optional: Store the client\'s tax exemption certificate number for reference.'
+                })}
               </p>
             </div>
           )}
@@ -361,9 +426,13 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
           {isTaxExempt && (
             <Alert variant="info" showIcon>
               <AlertDescription>
-                <p className="font-medium">Tax Exempt Client</p>
+                <p className="font-medium">
+                  {t('clientTaxSettings.taxExempt.alert.title', { defaultValue: 'Tax Exempt Client' })}
+                </p>
                 <p className="text-sm mt-1">
-                  This client will not be charged any taxes on invoices. Make sure to keep their exemption certificate on file.
+                  {t('clientTaxSettings.taxExempt.alert.description', {
+                    defaultValue: 'This client will not be charged any taxes on invoices. Make sure to keep their exemption certificate on file.'
+                  })}
                 </p>
               </AlertDescription>
             </Alert>
@@ -382,7 +451,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
                 }}
                 disabled={isUpdatingExemptStatus}
               >
-                Cancel
+                {t('clientTaxSettings.taxExempt.actions.cancel', { defaultValue: 'Cancel' })}
               </Button>
               <Button
                 id="save-tax-exempt-status-button"
@@ -391,7 +460,9 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
                 onClick={handleTaxExemptUpdate}
                 disabled={isUpdatingExemptStatus}
               >
-                {isUpdatingExemptStatus ? 'Saving...' : 'Save Tax Exempt Status'}
+                {isUpdatingExemptStatus
+                  ? t('clientTaxSettings.taxExempt.actions.saving', { defaultValue: 'Saving...' })
+                  : t('clientTaxSettings.taxExempt.actions.save', { defaultValue: 'Save Tax Exempt Status' })}
               </Button>
             </div>
           )}
@@ -402,23 +473,35 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card id="reverse-charge-card">
           <CardHeader>
-            <CardTitle>Advanced Tax Options</CardTitle>
+            <CardTitle>
+              {t('clientTaxSettings.advanced.title', { defaultValue: 'Advanced Tax Options' })}
+            </CardTitle>
             <CardDescription>
-              Configure special tax handling for this client.
+              {t('clientTaxSettings.advanced.description', {
+                defaultValue: 'Configure special tax handling for this client.'
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Apply Reverse Charge</span>
-                  <Tooltip content="Reverse charge shifts the tax liability from the seller to the buyer. Common in B2B transactions across borders.">
+                  <span className="text-sm font-medium">
+                    {t('clientTaxSettings.advanced.reverseCharge.label', {
+                      defaultValue: 'Apply Reverse Charge'
+                    })}
+                  </span>
+                  <Tooltip content={t('clientTaxSettings.advanced.reverseCharge.tooltip', {
+                    defaultValue: 'Reverse charge shifts the tax liability from the seller to the buyer. Common in B2B transactions across borders.'
+                  })}>
                     <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                   </Tooltip>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
-                    {taxSettings.is_reverse_charge_applicable ? 'Enabled' : 'Disabled'}
+                    {taxSettings.is_reverse_charge_applicable
+                      ? t('common.statuses.enabled', { defaultValue: 'Enabled' })
+                      : t('common.statuses.disabled', { defaultValue: 'Disabled' })}
                   </span>
                   <Switch
                     id="reverseCharge"
@@ -436,9 +519,13 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <label htmlFor="tax-source-override" className="text-sm font-medium">
-                    Tax Source Override
+                    {t('clientTaxSettings.advanced.taxSourceOverride.label', {
+                      defaultValue: 'Tax Source Override'
+                    })}
                   </label>
-                  <Tooltip content="Override the tenant default tax source for this client. 'Internal' uses Alga's tax calculation. 'External' delegates tax calculation to the accounting system when invoices are exported.">
+                  <Tooltip content={t('clientTaxSettings.advanced.taxSourceOverride.tooltip', {
+                    defaultValue: 'Override the tenant default tax source for this client. \'Internal\' uses Alga\'s tax calculation. \'External\' delegates tax calculation to the accounting system when invoices are exported.'
+                  })}>
                     <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                   </Tooltip>
                 </div>
@@ -453,33 +540,74 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
                     setTaxSettings({ ...taxSettings, tax_source_override: newValue });
                   }}
                   options={[
-                    { value: '', label: 'Use Tenant Default' },
-                    { value: 'internal', label: 'Alga PSA Calculates Tax' },
-                    { value: 'external', label: 'Accounting Package Calculates Tax' },
+                    {
+                      value: '',
+                      label: t('clientTaxSettings.advanced.taxSourceOverride.options.default', {
+                        defaultValue: 'Use Tenant Default'
+                      })
+                    },
+                    {
+                      value: 'internal',
+                      label: t('clientTaxSettings.advanced.taxSourceOverride.options.internal', {
+                        defaultValue: 'Alga PSA Calculates Tax'
+                      })
+                    },
+                    {
+                      value: 'external',
+                      label: t('clientTaxSettings.advanced.taxSourceOverride.options.external', {
+                        defaultValue: 'Accounting Package Calculates Tax'
+                      })
+                    },
                   ]}
-                  placeholder="Select tax source..."
+                  placeholder={t('clientTaxSettings.advanced.taxSourceOverride.placeholder', {
+                    defaultValue: 'Select tax source...'
+                  })}
                   disabled={isSubmitting || !canOverrideTaxSource}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Current effective tax source: <span className="font-medium">
-                    {effectiveTaxSource === 'internal' ? 'Alga PSA Calculates Tax' : effectiveTaxSource === 'external' ? 'Accounting Package Calculates Tax' : 'Pending External'}
+                  {t('clientTaxSettings.advanced.taxSourceOverride.effective.label', {
+                    defaultValue: 'Current effective tax source:'
+                  })}{' '}
+                  <span className="font-medium">
+                    {effectiveTaxSource === 'internal'
+                      ? t('clientTaxSettings.advanced.taxSourceOverride.options.internal', {
+                          defaultValue: 'Alga PSA Calculates Tax'
+                        })
+                      : effectiveTaxSource === 'external'
+                        ? t('clientTaxSettings.advanced.taxSourceOverride.options.external', {
+                            defaultValue: 'Accounting Package Calculates Tax'
+                          })
+                        : t('clientTaxSettings.advanced.taxSourceOverride.effective.pendingExternal', {
+                            defaultValue: 'Pending External'
+                          })}
                   </span>
                   {taxSettings.tax_source_override && (
-                    <span className="ml-1">(overridden)</span>
+                    <span className="ml-1">
+                      {t('clientTaxSettings.advanced.taxSourceOverride.effective.overridden', {
+                        defaultValue: '(overridden)'
+                      })}
+                    </span>
                   )}
                 </p>
                 {!canOverrideTaxSource && (
                   <Alert variant="info" showIcon>
                     <AlertDescription>
                       <p className="text-sm">
-                        Tax source override is not available. This feature must be enabled in the{' '}
+                        {t('clientTaxSettings.advanced.taxSourceOverride.notAvailable.messageStart', {
+                          defaultValue: 'Tax source override is not available. This feature must be enabled in the'
+                        })}{' '}
                         <Link 
                           href="/msp/settings?tab=billing" 
                           className="text-primary-600 hover:text-primary-700 underline font-medium"
                         >
-                          billing settings
+                          {t('clientTaxSettings.advanced.taxSourceOverride.notAvailable.link', {
+                            defaultValue: 'billing settings'
+                          })}
                         </Link>
-                        {' '}to allow per-client tax source overrides.
+                        {' '}
+                        {t('clientTaxSettings.advanced.taxSourceOverride.notAvailable.messageEnd', {
+                          defaultValue: 'to allow per-client tax source overrides.'
+                        })}
                       </p>
                     </AlertDescription>
                   </Alert>
@@ -502,7 +630,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
             variant="outline"
             disabled={isSubmitting}
           >
-            Reset Changes
+            {t('clientTaxSettings.advanced.actions.reset', { defaultValue: 'Reset Changes' })}
           </Button>
           <Button
             id="update-tax-settings-button"
@@ -510,7 +638,9 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
             variant="default"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Updating...' : 'Update Tax Settings'}
+            {isSubmitting
+              ? t('clientTaxSettings.advanced.actions.updating', { defaultValue: 'Updating...' })
+              : t('clientTaxSettings.advanced.actions.update', { defaultValue: 'Update Tax Settings' })}
           </Button>
         </div>
       </form>

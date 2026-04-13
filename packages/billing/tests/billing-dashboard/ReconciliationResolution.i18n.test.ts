@@ -1,0 +1,101 @@
+// @vitest-environment node
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+function read(relativePath: string): string {
+  return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
+}
+
+function readJson<T>(relativePath: string): T {
+  return JSON.parse(read(relativePath)) as T;
+}
+
+function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
+  return dottedPath.split('.').reduce<unknown>((value, key) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return undefined;
+    }
+    return (value as Record<string, unknown>)[key];
+  }, record);
+}
+
+describe('ReconciliationResolution i18n wiring contract', () => {
+  it('T002: wires the stepper labels through msp/billing translations', () => {
+    const source = read('../../src/components/billing-dashboard/ReconciliationResolution.tsx');
+    const pseudo = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/xx/msp/billing.json'
+    );
+
+    expect(source).toContain("const { t } = useTranslation('msp/billing');");
+    expect(source).toContain("t('reconciliation.steps.review', { defaultValue: 'Review Discrepancy' })");
+    expect(source).toContain("t('reconciliation.steps.approval', { defaultValue: 'Approval' })");
+    expect(source).toContain("t('reconciliation.steps.confirmation', { defaultValue: 'Confirmation' })");
+
+    expect(getLeaf(pseudo, 'reconciliation.steps.review')).toBe('11111');
+    expect(getLeaf(pseudo, 'reconciliation.steps.approval')).toBe('11111');
+    expect(getLeaf(pseudo, 'reconciliation.steps.confirmation')).toBe('11111');
+  });
+
+  it('T003: wires the resolution options through msp/billing translations', () => {
+    const source = read('../../src/components/billing-dashboard/ReconciliationResolution.tsx');
+    const pseudo = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/xx/msp/billing.json'
+    );
+
+    expect(source).toContain("t('reconciliation.resolutionTypes.recommended', { defaultValue: 'Recommended Fix' })");
+    expect(source).toContain("t('reconciliation.resolutionTypes.custom', { defaultValue: 'Custom Correction' })");
+    expect(source).toContain("t('reconciliation.resolutionTypes.noAction', { defaultValue: 'No Action Required' })");
+
+    expect(getLeaf(pseudo, 'reconciliation.resolutionTypes.recommended')).toBe('11111');
+    expect(getLeaf(pseudo, 'reconciliation.resolutionTypes.custom')).toBe('11111');
+    expect(getLeaf(pseudo, 'reconciliation.resolutionTypes.noAction')).toBe('11111');
+  });
+
+  it('T004: wires balance-comparison and four-eyes approval copy through msp/billing translations', () => {
+    const source = read('../../src/components/billing-dashboard/ReconciliationResolution.tsx');
+
+    expect(source).toContain("t('reconciliation.fields.expectedBalance', { defaultValue: 'Expected Balance' })");
+    expect(source).toContain("t('reconciliation.fields.actualBalance', { defaultValue: 'Actual Balance' })");
+    expect(source).toContain("t('reconciliation.fields.difference', { defaultValue: 'Difference' })");
+    expect(source).toContain("t('reconciliation.fourEyes.requiredTitle', { defaultValue: 'Four-Eyes Approval Required' })");
+    expect(source).toContain("t('reconciliation.fourEyes.requiredDescription', {");
+    expect(source).toContain("t('reconciliation.fourEyes.approverName', { defaultValue: 'Secondary Approver Name' })");
+    expect(source).toContain("t('reconciliation.fourEyes.approverEmail', { defaultValue: 'Secondary Approver Email' })");
+    expect(source).toContain("t('reconciliation.fourEyes.verificationCode', { defaultValue: 'Verification Code' })");
+    expect(source).toContain("t('reconciliation.fourEyes.verifiedTitle', { defaultValue: 'Secondary Approval Verified' })");
+  });
+
+  it('T005: wires confirmation-dialog copy and error messages through msp/billing translations', () => {
+    const source = read('../../src/components/billing-dashboard/ReconciliationResolution.tsx');
+
+    expect(source).toContain("t('reconciliation.confirmation.importantTitle', { defaultValue: 'Important' })");
+    expect(source).toContain("t('reconciliation.confirmation.importantDescription', {");
+    expect(source).toContain("t('reconciliation.confirmation.confirmButton', { defaultValue: 'Confirm Resolution' })");
+    expect(source).toContain("t('reconciliation.confirmation.thankYouTitle', { defaultValue: 'Thank you!' })");
+    expect(source).toContain("t('reconciliation.confirmation.closeButton', { defaultValue: 'Close' })");
+    expect(source).toContain("t('reconciliation.errors.loadData', { defaultValue: 'Failed to load reconciliation report data' })");
+    expect(source).toContain("t('reconciliation.errors.unknown', { defaultValue: 'An unknown error occurred' })");
+    expect(source).toContain("t('reconciliation.errors.reportNotFound', { defaultValue: 'Reconciliation report not found. The report may have been deleted or you may not have permission to view it.' })");
+  });
+
+  it('T006: keeps the reconciliation shell backed by xx pseudo-locale keys instead of raw English', () => {
+    const pseudo = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/xx/msp/billing.json'
+    );
+
+    const pseudoKeys = [
+      'reconciliation.steps.review',
+      'reconciliation.resolutionTypes.recommended',
+      'reconciliation.fields.expectedBalance',
+      'reconciliation.fourEyes.requiredTitle',
+      'reconciliation.confirmation.confirmButton',
+      'reconciliation.confirmation.closeButton',
+    ];
+
+    for (const key of pseudoKeys) {
+      expect(getLeaf(pseudo, key)).toBe('11111');
+    }
+  });
+});

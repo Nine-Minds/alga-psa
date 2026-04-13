@@ -12,6 +12,7 @@ import { getRegistry } from '../chat/registry/apiRegistry.indexer';
 import {
   ChatApiRegistryEntry,
 } from '../chat/registry/apiRegistry.schema';
+import { searchRegistryEntries, type RegistrySearchResult } from '../chat/registry/search';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';
 import { reprovisionExtension } from '../lib/actions/extensionDomainActions';
@@ -35,6 +36,7 @@ const RATE_LIMIT_MAX_DELAY_MS = 5000;
 const MIN_RATE_LIMIT_DELAY_MS = 100;
 const SEARCH_TOOL_NAME = 'search_api_registry';
 const EXECUTE_TOOL_NAME = 'call_api_endpoint';
+const FINISH_TOOL_NAME = 'finish_response';
 const MAX_TOOL_ITERATIONS = 6;
 const MAX_TOOL_RESULT_CHARS = 12000;
 const TOOL_RESULT_PREVIEW_ITEMS = 3;
@@ -178,6 +180,19 @@ type ParsedToolArgumentsResult =
       message: string;
     };
 
+type FinishResponsePayload =
+  | {
+      ok: true;
+      value: {
+        message: string;
+        reasoning?: string;
+      };
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
 type ToolArgumentParseContext = {
   source: 'stream' | 'non_stream';
   functionName?: string;
@@ -191,6 +206,58 @@ type StreamedToolCallState = {
 };
 
 export class ChatCompletionsService {
+  private static isDebugLoggingEnabled(): boolean {
+    const value = (process.env.CHAT_AGENT_DEBUG ?? '').trim().toLowerCase();
+    return value === '1' || value === 'true' || value === 'yes' || value === 'on';
+  }
+
+  private static previewText(value: string | null | undefined, maxLength = 240): string | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+
+    return trimmed.length <= maxLength ? trimmed : `${trimmed.slice(0, maxLength)}…`;
+  }
+
+  private static summarizeConversation(messages: ChatCompletionMessage[]) {
+    const lastUserMessage = [...messages]
+      .reverse()
+      .find((message) => message.role === 'user' && typeof message.content === 'string');
+
+    return {
+      messageCount: messages.length,
+      lastUserMessage: this.previewText(lastUserMessage?.content),
+    };
+  }
+
+  private static summarizeRegistryResults(results: RegistrySearchResult[]) {
+    return results.slice(0, 5).map(({ entry, score, matchedFields }) => ({
+      id: entry.id,
+      displayName: entry.displayName,
+      method: entry.method.toUpperCase(),
+      path: entry.path,
+      score: Number(score.toFixed(2)),
+      matchedFields,
+    }));
+  }
+
+  private static logDebug(event: string, payload?: Record<string, unknown>) {
+    if (!this.isDebugLoggingEnabled()) {
+      return;
+    }
+
+    console.info(`[ChatCompletionsService] ${event}`, payload ?? {});
+  }
+
+  private static logWarn(event: string, payload?: Record<string, unknown>) {
+    console.warn(`[ChatCompletionsService] ${event}`, payload ?? {});
+  }
+
   static async createRawCompletionStream(
     conversation: ChatCompletionMessage[],
   ): Promise<AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>> {
@@ -245,10 +312,6 @@ export class ChatCompletionsService {
         const contentDelta = this.readContentDelta(delta);
         if (contentDelta) {
           streamedContent += contentDelta;
-          yield {
-            type: 'content_delta',
-            delta: contentDelta,
-          };
         }
 
         this.mergeStreamedToolCalls(streamedToolCalls, delta.tool_calls);
@@ -257,12 +320,30 @@ export class ChatCompletionsService {
       const parsedContent = parseAssistantContent(streamedContent, streamedReasoning);
       const toolCalls = this.materializeStreamedToolCalls(streamedToolCalls);
 
+      if (toolCalls.length > 1) {
+        this.logWarn('stream_retry_multiple_tool_calls', {
+          iteration,
+          toolNames: toolCalls.map((toolCall) => toolCall.function?.name ?? 'unknown'),
+          ...this.summarizeConversation(conversation),
+        });
+        conversation = this.appendToolContractRetryMessage(
+          conversation,
+          parsedContent,
+          'The previous response called multiple functions. Retry with exactly one function call.',
+        );
+        continue;
+      }
+
       if (toolCalls.length > 0) {
         const toolCall = toolCalls[0];
         const functionName = toolCall.function?.name;
         const toolCallId = toolCall.id ?? uuid();
 
         if (!functionName) {
+          this.logWarn('stream_missing_tool_name', {
+            iteration,
+            ...this.summarizeConversation(conversation),
+          });
           yield { type: 'done' };
           return;
         }
@@ -273,24 +354,24 @@ export class ChatCompletionsService {
           toolCallId,
         });
         const parsedArgs = parsedArgsResult.ok ? parsedArgsResult.value : {};
-
-        const assistantMessage: ChatCompletionMessage = {
-          role: 'assistant',
-          content: parsedContent.raw || undefined,
-          reasoning: parsedContent.reasoning,
-          reasoning_content: parsedContent.reasoning,
-          function_call: {
-            name: functionName,
-            arguments: parsedArgs,
-          },
-          tool_call_id: toolCallId,
-        };
-        conversation = [...conversation, assistantMessage];
+        const assistantMessage = this.buildAssistantToolCallMessage(
+          functionName,
+          parsedContent,
+          parsedArgs,
+          toolCallId,
+        );
 
         if (parsedArgsResult.ok === false) {
           const parseErrorMessage = parsedArgsResult.message;
+          this.logWarn('stream_retry_invalid_tool_arguments', {
+            iteration,
+            functionName,
+            toolCallId,
+            error: parseErrorMessage,
+          });
           conversation = [
             ...conversation,
+            assistantMessage,
             {
               role: 'function',
               name: functionName,
@@ -302,9 +383,16 @@ export class ChatCompletionsService {
         }
 
         if (functionName === SEARCH_TOOL_NAME) {
+          this.logDebug('stream_tool_search_registry', {
+            iteration,
+            functionName,
+            query: typeof parsedArgs.query === 'string' ? parsedArgs.query : undefined,
+            limit: parsedArgs.limit,
+          });
           const results = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
           conversation = [
             ...conversation,
+            assistantMessage,
             {
               role: 'function',
               name: SEARCH_TOOL_NAME,
@@ -316,11 +404,28 @@ export class ChatCompletionsService {
         }
 
         if (functionName === EXECUTE_TOOL_NAME) {
+          conversation = [...conversation, assistantMessage];
+          this.logDebug('stream_tool_execute_requested', {
+            iteration,
+            requestedEntryId:
+              typeof (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name) === 'string'
+                ? (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name)
+                : undefined,
+            method: typeof parsedArgs.method === 'string' ? parsedArgs.method : undefined,
+            path: typeof parsedArgs.path === 'string' ? parsedArgs.path : undefined,
+          });
           const entry = this.resolveRegistryEntry(
             parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name,
             parsedArgs,
           );
           if (!entry) {
+            this.logWarn('stream_tool_execute_entry_unavailable', {
+              iteration,
+              requestedEntryId:
+                typeof (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name) === 'string'
+                  ? (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name)
+                  : undefined,
+            });
             yield {
               type: 'content_delta',
               delta: this.buildUnavailableFunctionMessage(
@@ -335,6 +440,12 @@ export class ChatCompletionsService {
           const preparedArgs = { ...parsedArgs };
           this.populatePathParameters(entry, preparedArgs);
           assistantMessage.function_call!.arguments = preparedArgs;
+          this.logDebug('stream_tool_execute_resolved', {
+            iteration,
+            entryId: entry.id,
+            method: entry.method.toUpperCase(),
+            path: entry.path,
+          });
           const metadata = this.buildFunctionMetadata(entry, preparedArgs);
           const assistantPreview = this.buildFunctionPreview(parsedContent, entry);
           yield {
@@ -355,6 +466,47 @@ export class ChatCompletionsService {
           return;
         }
 
+        if (functionName === FINISH_TOOL_NAME) {
+          const finishPayload = this.parseFinishResponsePayload(parsedArgs);
+          if (finishPayload.ok === false) {
+            this.logWarn('stream_retry_invalid_finish_response', {
+              iteration,
+              toolCallId,
+              error: finishPayload.error,
+            });
+            conversation = [
+              ...conversation,
+              assistantMessage,
+              {
+                role: 'function',
+                name: FINISH_TOOL_NAME,
+                content: JSON.stringify({ error: finishPayload.error }),
+                tool_call_id: toolCallId,
+              },
+            ];
+            continue;
+          }
+
+          const finalAssistantMessage = this.buildFinalAssistantMessage(
+            finishPayload.value.message,
+            finishPayload.value.reasoning ?? parsedContent.reasoning,
+          );
+          conversation = [...conversation, finalAssistantMessage];
+
+          if (finalAssistantMessage.content) {
+            yield {
+              type: 'content_delta',
+              delta: finalAssistantMessage.content,
+            };
+          }
+          yield { type: 'done' };
+          return;
+        }
+
+        this.logWarn('stream_unknown_tool_name', {
+          iteration,
+          functionName,
+        });
         yield {
           type: 'content_delta',
           delta: this.buildUnavailableFunctionMessage(functionName),
@@ -364,13 +516,27 @@ export class ChatCompletionsService {
       }
 
       if (!this.hasMeaningfulContent(parsedContent)) {
+        this.logWarn('stream_retry_no_meaningful_content', {
+          iteration,
+          contentPreview: this.previewText(parsedContent.raw),
+          reasoningPreview: this.previewText(parsedContent.reasoning),
+          ...this.summarizeConversation(conversation),
+        });
         continue;
       }
 
-      yield { type: 'done' };
-      return;
+      this.logWarn('stream_retry_plain_text_instead_of_tool', {
+        iteration,
+        contentPreview: this.previewText(parsedContent.raw),
+        reasoningPreview: this.previewText(parsedContent.reasoning),
+      });
+      conversation = this.appendToolContractRetryMessage(conversation, parsedContent);
     }
 
+    this.logWarn('stream_gave_up_after_max_iterations', {
+      maxIterations: MAX_TOOL_ITERATIONS,
+      ...this.summarizeConversation(conversation),
+    });
     yield { type: 'done' };
   }
 
@@ -715,6 +881,30 @@ export class ChatCompletionsService {
           },
         },
       },
+      {
+        type: 'function' as const,
+        function: {
+          name: FINISH_TOOL_NAME,
+          description:
+            'Finish the current turn and provide the final user-visible response. Use this only when you are ready to answer the user without any further tool calls.',
+          parameters: {
+            type: 'object',
+            properties: {
+              message: {
+                type: 'string',
+                description: 'Final user-visible response for this turn.',
+              },
+              reasoning: {
+                type: 'string',
+                description:
+                  'Optional concise reasoning summary to persist with the assistant response.',
+              },
+            },
+            required: ['message'],
+            ...(isVertex ? {} : { additionalProperties: false }),
+          },
+        },
+      },
     ];
   }
 
@@ -731,7 +921,7 @@ export class ChatCompletionsService {
     const method = typeof args?.method === 'string' ? args.method.toLowerCase() : undefined;
     const path = typeof args?.path === 'string' ? args.path : undefined;
 
-    return (
+    const resolved = (
       registry.find((item) => item.id === identifier) ??
       registry.find((item) => this.toToolName(item.id) === identifier) ??
       registry.find((item) => item.id === normalizedId) ??
@@ -743,60 +933,140 @@ export class ChatCompletionsService {
         : null) ??
       null
     );
+
+    if (!resolved) {
+      this.logWarn('registry_entry_not_found', {
+        requestedEntryId: identifier || undefined,
+        normalizedId: normalizedId || undefined,
+        method,
+        path,
+      });
+      return null;
+    }
+
+    this.logDebug('registry_entry_resolved', {
+      requestedEntryId: identifier || undefined,
+      resolvedEntryId: resolved.id,
+      method: resolved.method.toUpperCase(),
+      path: resolved.path,
+    });
+
+    return resolved;
   }
 
   private static searchRegistry(query: unknown, limitValue: unknown) {
     const text = typeof query === 'string' ? query.trim() : '';
     if (!text) {
+      this.logWarn('registry_search_empty_query', {
+        rawQueryType: typeof query,
+      });
       return [];
     }
 
     const limit = Math.max(1, Math.min(typeof limitValue === 'number' ? limitValue : parseInt(String(limitValue ?? ''), 10) || 5, 25));
-    const terms = text.toLowerCase().split(/\s+/).filter(Boolean);
     const registry = getRegistry();
-    const mentionsIdLookup = /\b(by id|id|details?|detail|single)\b/.test(text);
-    const mentionsList = /\b(list|search|find|all|recent|latest)\b/.test(text);
-
-    const scored = registry
-      .map((entry, index) => {
-        const haystack = [
-          entry.displayName,
-          entry.summary,
-          entry.description,
-          entry.path,
-          entry.tags?.join(' '),
-          entry.id,
-          entry.parameters?.map((param) => `${param.name} ${param.in}`).join(' '),
-        ]
-          .join(' ')
-          .toLowerCase();
-        const hasPathId = entry.parameters?.some((param) => param.in === 'path' && param.name === 'id') ?? false;
-        const isGetById = entry.method === 'get' && /\{id\}/.test(entry.path);
-        const isListEndpoint = entry.method === 'get' && !/\{[^}]+\}/.test(entry.path);
-        const score =
-          terms.reduce((acc, term) => (haystack.includes(term) ? acc + 2 : acc), 0) +
-          (mentionsIdLookup && hasPathId ? 8 : 0) +
-          (mentionsIdLookup && isGetById ? 6 : 0) +
-          (mentionsList && isListEndpoint ? 4 : 0) +
-          (entry.playbooks?.length ?? 0) +
-          Math.max(0, 3 - index * 0.1);
-        return { entry, score };
-      })
-      .sort((a, b) => b.score - a.score);
-
-      const top = scored.slice(0, limit).map(({ entry }) => ({
-        id: entry.id,
-        displayName: entry.displayName,
-        description: entry.description,
-        method: entry.method.toUpperCase(),
-        path: entry.path,
-        approvalRequired: entry.approvalRequired,
-        tags: entry.tags ?? [],
-        parameters: entry.parameters ?? [],
-        examples: entry.examples?.slice(0, 1) ?? [],
-      }));
+    const ranked = searchRegistryEntries(registry, text, limit);
+    this.logDebug('registry_search', {
+      query: text,
+      limit,
+      topResults: this.summarizeRegistryResults(ranked),
+    });
+    const top = ranked.map(({ entry }) => ({
+      id: entry.id,
+      displayName: entry.displayName,
+      description: entry.description,
+      method: entry.method.toUpperCase(),
+      path: entry.path,
+      approvalRequired: entry.approvalRequired,
+      tags: entry.tags ?? [],
+      parameters: entry.parameters ?? [],
+      examples: entry.examples?.slice(0, 1) ?? [],
+    }));
 
     return top;
+  }
+
+  private static buildAssistantToolCallMessage(
+    functionName: string,
+    parsedContent: ParsedAssistantContent,
+    parsedArgs: Record<string, unknown>,
+    toolCallId: string,
+  ): ChatCompletionMessage {
+    return {
+      role: 'assistant',
+      content: parsedContent.raw || undefined,
+      reasoning: parsedContent.reasoning,
+      reasoning_content: parsedContent.reasoning,
+      function_call: {
+        name: functionName,
+        arguments: parsedArgs,
+      },
+      tool_call_id: toolCallId,
+    };
+  }
+
+  private static buildFinalAssistantMessage(
+    message: string,
+    reasoning?: string,
+  ): ChatCompletionMessage {
+    const trimmedMessage = message.trim();
+    const trimmedReasoning = reasoning?.trim();
+    return {
+      role: 'assistant',
+      content: trimmedMessage,
+      reasoning: trimmedReasoning || undefined,
+      reasoning_content: trimmedReasoning || undefined,
+    };
+  }
+
+  private static appendToolContractRetryMessage(
+    conversation: ChatCompletionMessage[],
+    parsedContent: ParsedAssistantContent,
+    reason = 'The previous response was invalid because every assistant turn must be exactly one function call.',
+  ): ChatCompletionMessage[] {
+    const nextConversation = [...conversation];
+    if (this.hasMeaningfulContent(parsedContent)) {
+      nextConversation.push({
+        role: 'assistant',
+        content: parsedContent.raw || undefined,
+        reasoning: parsedContent.reasoning,
+        reasoning_content: parsedContent.reasoning,
+      });
+    }
+    nextConversation.push({
+      role: 'user',
+      content:
+        `${reason} Retry now with exactly one function call. ` +
+        `Use ${SEARCH_TOOL_NAME} to look up registry entries, ${EXECUTE_TOOL_NAME} to propose an API call, or ${FINISH_TOOL_NAME} when you are ready to respond to the user. ` +
+        `Do not send plain assistant text outside ${FINISH_TOOL_NAME}. Put the final user-visible reply in ${FINISH_TOOL_NAME}.message.`,
+    });
+    return nextConversation;
+  }
+
+  private static parseFinishResponsePayload(
+    args: Record<string, unknown>,
+  ): FinishResponsePayload {
+    const message = typeof args.message === 'string' ? args.message.trim() : '';
+    if (!message) {
+      return {
+        ok: false,
+        error:
+          'finish_response requires a non-empty "message" string. Retry the same function call with that property set.',
+      };
+    }
+
+    const reasoning =
+      typeof args.reasoning === 'string' && args.reasoning.trim().length > 0
+        ? args.reasoning.trim()
+        : undefined;
+
+    return {
+      ok: true,
+      value: {
+        message,
+        reasoning,
+      },
+    };
   }
 
   private static async processModelInteraction(params: {
@@ -839,12 +1109,30 @@ export class ChatCompletionsService {
         throw error;
       }
 
+      if (toolCalls.length > 1) {
+        this.logWarn('retry_multiple_tool_calls', {
+          iteration,
+          toolNames: toolCalls.map((toolCall) => toolCall.function?.name ?? 'unknown'),
+          ...this.summarizeConversation(conversation),
+        });
+        conversation = this.appendToolContractRetryMessage(
+          conversation,
+          parsedContent,
+          'The previous response called multiple functions. Retry with exactly one function call.',
+        );
+        continue;
+      }
+
       if (toolCalls.length > 0) {
         const toolCall = toolCalls[0];
         const functionName = toolCall.function?.name;
         const toolCallId = toolCall.id ?? uuid();
 
         if (!functionName) {
+          this.logWarn('missing_tool_name', {
+            iteration,
+            ...this.summarizeConversation(conversation),
+          });
           return {
             type: 'error',
             error: 'The assistant attempted to call an unknown function.',
@@ -857,34 +1145,38 @@ export class ChatCompletionsService {
           toolCallId,
         });
         const parsedArgs = parsedArgsResult.ok ? parsedArgsResult.value : {};
-
-        const assistantMessage: ChatCompletionMessage = {
-          role: 'assistant',
-          content: parsedContent.raw || undefined,
-          reasoning: parsedContent.reasoning,
-          reasoning_content: parsedContent.reasoning,
-          function_call: {
-            name: functionName,
-            arguments: parsedArgs,
-          },
-          tool_call_id: toolCallId,
-        };
-
-        conversation = [...conversation, assistantMessage];
+        const assistantMessage = this.buildAssistantToolCallMessage(
+          functionName,
+          parsedContent,
+          parsedArgs,
+          toolCallId,
+        );
 
         if (parsedArgsResult.ok === false) {
           const parseErrorMessage = parsedArgsResult.message;
+          this.logWarn('retry_invalid_tool_arguments', {
+            iteration,
+            functionName,
+            toolCallId,
+            error: parseErrorMessage,
+          });
           const functionMessage: ChatCompletionMessage = {
             role: 'function',
             name: functionName,
             content: JSON.stringify({ error: parseErrorMessage }),
             tool_call_id: toolCallId,
           };
-          conversation = [...conversation, functionMessage];
+          conversation = [...conversation, assistantMessage, functionMessage];
           continue;
         }
 
         if (functionName === SEARCH_TOOL_NAME) {
+          this.logDebug('tool_search_registry', {
+            iteration,
+            functionName,
+            query: typeof parsedArgs.query === 'string' ? parsedArgs.query : undefined,
+            limit: parsedArgs.limit,
+          });
           const results = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
           const functionMessage: ChatCompletionMessage = {
             role: 'function',
@@ -892,16 +1184,33 @@ export class ChatCompletionsService {
             content: JSON.stringify({ results }),
             tool_call_id: toolCallId,
           };
-          conversation = [...conversation, functionMessage];
+          conversation = [...conversation, assistantMessage, functionMessage];
           continue;
         }
 
         if (functionName === EXECUTE_TOOL_NAME) {
+          conversation = [...conversation, assistantMessage];
+          this.logDebug('tool_execute_requested', {
+            iteration,
+            requestedEntryId:
+              typeof (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name) === 'string'
+                ? (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name)
+                : undefined,
+            method: typeof parsedArgs.method === 'string' ? parsedArgs.method : undefined,
+            path: typeof parsedArgs.path === 'string' ? parsedArgs.path : undefined,
+          });
           const entry = this.resolveRegistryEntry(
             parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name,
             parsedArgs,
           );
           if (!entry) {
+            this.logWarn('tool_execute_entry_unavailable', {
+              iteration,
+              requestedEntryId:
+                typeof (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name) === 'string'
+                  ? (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name)
+                  : undefined,
+            });
             return {
               type: 'error',
               error: `Function ${parsedArgs.entryId ?? functionName} is not available.`,
@@ -911,6 +1220,12 @@ export class ChatCompletionsService {
           const preparedArgs = { ...parsedArgs };
           this.populatePathParameters(entry, preparedArgs);
           assistantMessage.function_call!.arguments = preparedArgs;
+          this.logDebug('tool_execute_resolved', {
+            iteration,
+            entryId: entry.id,
+            method: entry.method.toUpperCase(),
+            path: entry.path,
+          });
           const metadata = this.buildFunctionMetadata(entry, preparedArgs);
           const assistantPreview = this.buildFunctionPreview(parsedContent, entry);
           return {
@@ -929,37 +1244,81 @@ export class ChatCompletionsService {
           };
         }
 
+        if (functionName === FINISH_TOOL_NAME) {
+          const finishPayload = this.parseFinishResponsePayload(parsedArgs);
+          if (finishPayload.ok === false) {
+            this.logWarn('retry_invalid_finish_response', {
+              iteration,
+              toolCallId,
+              error: finishPayload.error,
+            });
+            conversation = [
+              ...conversation,
+              assistantMessage,
+              {
+                role: 'function',
+                name: FINISH_TOOL_NAME,
+                content: JSON.stringify({ error: finishPayload.error }),
+                tool_call_id: toolCallId,
+              },
+            ];
+            continue;
+          }
+
+          const finalAssistantMessage = this.buildFinalAssistantMessage(
+            finishPayload.value.message,
+            finishPayload.value.reasoning ?? parsedContent.reasoning,
+          );
+          const nextMessages = [...conversation, finalAssistantMessage];
+
+          return {
+            type: 'assistant_message',
+            message: {
+              role: 'assistant',
+              content: finalAssistantMessage.content ?? '',
+              reasoning: finalAssistantMessage.reasoning,
+              reasoning_content: finalAssistantMessage.reasoning_content,
+            },
+            nextMessages: this.sanitizeMessagesForClient(nextMessages),
+            modelMessages: nextMessages,
+          };
+        }
+
+        this.logWarn('unknown_tool_name', {
+          iteration,
+          functionName,
+        });
         return {
           type: 'error',
           error: `Function ${functionName} is not available.`,
         };
       }
 
-      const assistantMessage: ChatCompletionMessage = {
-        role: 'assistant',
-        content: parsedContent.raw || undefined,
-        reasoning: parsedContent.reasoning,
-        reasoning_content: parsedContent.reasoning,
-      };
+      if (!this.hasMeaningfulContent(parsedContent)) {
+        this.logWarn('retry_no_meaningful_content', {
+          iteration,
+          contentPreview: this.previewText(parsedContent.raw),
+          reasoningPreview: this.previewText(parsedContent.reasoning),
+          ...this.summarizeConversation(conversation),
+        });
+        continue;
+      }
 
-      const nextMessages = [...conversation, assistantMessage];
-
-      return {
-        type: 'assistant_message',
-        message: {
-          role: 'assistant',
-          content: this.buildUserFacingContent(parsedContent),
-          reasoning: parsedContent.reasoning,
-          reasoning_content: parsedContent.reasoning,
-        },
-        nextMessages: this.sanitizeMessagesForClient(nextMessages),
-        modelMessages: nextMessages,
-      };
+      this.logWarn('retry_plain_text_instead_of_tool', {
+        iteration,
+        contentPreview: this.previewText(parsedContent.raw),
+        reasoningPreview: this.previewText(parsedContent.reasoning),
+      });
+      conversation = this.appendToolContractRetryMessage(conversation, parsedContent);
     }
 
+    this.logWarn('gave_up_after_max_iterations', {
+      maxIterations: MAX_TOOL_ITERATIONS,
+      ...this.summarizeConversation(conversation),
+    });
     return {
       type: 'error',
-      error: 'The assistant produced too many tool invocations without completing the task.',
+      error: 'The assistant produced too many invalid or incomplete tool turns without completing the task.',
     };
   }
 
@@ -1177,11 +1536,17 @@ export class ChatCompletionsService {
           error instanceof Error ? error.message : String(error),
           error,
         );
+        const likelyTruncated =
+          context.source === 'stream' && this.isLikelyTruncatedJsonObjectString(args);
         return {
           ok: false,
-          message: `Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only. Raw arguments preview: ${JSON.stringify(
-            args.slice(0, INVALID_TOOL_ARGUMENTS_PREVIEW_CHARS),
-          )}`,
+          message: likelyTruncated
+            ? `Tool arguments appeared truncated during streaming and were not a complete JSON object. Retry the same function call with the full JSON object only. Raw arguments preview: ${JSON.stringify(
+                args.slice(0, INVALID_TOOL_ARGUMENTS_PREVIEW_CHARS),
+              )}`
+            : `Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only. Raw arguments preview: ${JSON.stringify(
+                args.slice(0, INVALID_TOOL_ARGUMENTS_PREVIEW_CHARS),
+              )}`,
         };
       }
     }
@@ -1191,6 +1556,58 @@ export class ChatCompletionsService {
       message:
         'Tool arguments must be a valid JSON object. Retry the same function call with a JSON object only.',
     };
+  }
+
+  private static isLikelyTruncatedJsonObjectString(args: string): boolean {
+    const trimmed = args.trim();
+    if (!trimmed.startsWith('{')) {
+      return false;
+    }
+
+    let inString = false;
+    let escaped = false;
+    const stack: string[] = [];
+
+    for (const char of trimmed) {
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (char === '\\') {
+          escaped = true;
+          continue;
+        }
+        if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (char === '{' || char === '[') {
+        stack.push(char);
+        continue;
+      }
+
+      if (char === '}' || char === ']') {
+        const expected = char === '}' ? '{' : '[';
+        const open = stack.pop();
+        if (open !== expected) {
+          return false;
+        }
+      }
+    }
+
+    if (inString || escaped || stack.length > 0) {
+      return true;
+    }
+
+    return trimmed.endsWith(':') || trimmed.endsWith(',');
   }
 
   private static logToolArgumentParseFailure(
@@ -1661,6 +2078,8 @@ export class ChatCompletionsService {
       role: 'system' as const,
       content:
         'You are Alga, an assistant that helps users manage PSA workflows. ' +
+        `Every assistant turn must contain exactly one function call: ${SEARCH_TOOL_NAME}, ${EXECUTE_TOOL_NAME}, or ${FINISH_TOOL_NAME}. ` +
+        `Do not return plain assistant text without a function call. When you are ready to answer the user, call ${FINISH_TOOL_NAME} and put the final user-visible reply in ${FINISH_TOOL_NAME}.message. ` +
         'Always consult the enterprise API registry before executing actions so you understand every required parameter. ' +
         'When the registry or endpoint descriptions mention prerequisite data (such as IDs for boards, clients, categories, priorities, or other related resources): for write operations (create, update, delete), proactively call the appropriate lookup endpoints to gather that information instead of asking the user; for read operations (list, get), call the endpoint directly and only look up prerequisite data if the user explicitly asks to filter by it. ' +
         'For ticket-creation calls, first use search_api_registry to locate the list endpoints you need, gather current data (e.g. call GET /api/v1/tickets to sample board_id/status_id/priority_id combinations and GET /api/v1/clients to confirm client_id), and do not proceed until you have concrete UUIDs for board_id, client_id, status_id, and priority_id collected from prior API responses. When sampling GET /api/v1/tickets, pick the first record with non-null board_id, status_id, and priority_id and reuse those UUIDs unless the user specifies different values. ' +
@@ -2185,28 +2604,28 @@ export class ChatCompletionsService {
       const requestStarted = Date.now();
       const requestHeadersForLog = this.sanitizeHeadersForLogging(init.headers);
       const requestMethodForLog = init.method ?? entry.method.toUpperCase();
-      // console.info('[ChatCompletionsService] API request', {
-      //   entryId: entry.id,
-      //   method: requestMethodForLog,
-      //   url,
-      //   hasBody: init.body !== undefined && init.body !== null,
-      //   headers: requestHeadersForLog,
-      //   args,
-      // });
+      this.logDebug('api_tool_request', {
+        entryId: entry.id,
+        method: requestMethodForLog,
+        url,
+        hasBody: init.body !== undefined && init.body !== null,
+        headers: requestHeadersForLog,
+        args,
+      });
       const response = await this.fetchWithProtocolFallback(url, init, baseUrl);
       const durationMs = Date.now() - requestStarted;
 
       const text = await response.text();
-      // console.info('[ChatCompletionsService] API response', {
-      //   entryId: entry.id,
-      //   method: requestMethodForLog,
-      //   url,
-      //   status: response.status,
-      //   ok: response.ok,
-      //   durationMs,
-      //   contentType: response.headers.get('content-type') ?? undefined,
-      //   text
-      // });      
+      this.logDebug('api_tool_response', {
+        entryId: entry.id,
+        method: requestMethodForLog,
+        url,
+        status: response.status,
+        ok: response.ok,
+        durationMs,
+        contentType: response.headers.get('content-type') ?? undefined,
+        bodyPreview: this.previewText(text, 1000),
+      });
       let data: unknown = null;
       try {
         data = text ? JSON.parse(text) : null;

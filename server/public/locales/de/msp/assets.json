@@ -3,9 +3,9 @@
     "actions": {
       "add": "Hinzufügen",
       "back": "Zurück",
-      "cancel": "Stornieren",
+      "cancel": "Abbrechen",
       "close": "Schließen",
-      "copy": "Kopie",
+      "copy": "Kopieren",
       "create": "Erstellen",
       "delete": "Löschen",
       "download": "Herunterladen",
@@ -14,20 +14,20 @@
       "remove": "Entfernen",
       "retry": "Wiederholen",
       "save": "Speichern",
-      "saving": "Sparen...",
+      "saving": "Speichern...",
       "search": "Suchen",
-      "select": "Wählen",
+      "select": "Auswählen",
       "update": "Aktualisieren",
-      "view": "Sicht"
+      "view": "Anzeigen"
     },
     "states": {
       "active": "Aktiv",
       "inactive": "Inaktiv",
       "loading": "Laden...",
       "na": "N/A",
-      "none": "Keiner"
+      "none": "Keine"
     },
-    "no": "NEIN",
+    "no": "Nein",
     "yes": "Ja"
   },
   "assetAlertsSection": {
@@ -64,7 +64,7 @@
     },
     "hint": {
       "body": "Geben Sie weiter ein, um die gesamte Asset-Liste zu durchsuchen. Tickets und Kundensuche werden zu einem späteren Zeitpunkt verfügbar sein.",
-      "badge": "Kommt bald"
+      "badge": "Bald verfügbar"
     },
     "values": {
       "unassigned": "Nicht zugewiesen"
@@ -94,11 +94,11 @@
       "selectAllVisibleAssets": "Wählen Sie alle sichtbaren Assets aus",
       "selectAsset": "Asset {{name}} auswählen",
       "selectedAssets": "{{count}} Asset{{suffix}} ausgewählt",
-      "clearSelection": "Klare Auswahl",
+      "clearSelection": "Auswahl aufheben",
       "bulkActionsComingSoon": "Massenaktionen folgen bald"
     },
     "actions": {
-      "openActionsForAsset": "Offene Aktionen für Asset {{name}}",
+      "openActionsForAsset": "Aktionen für Asset {{name}} öffnen",
       "viewDetails": "Details anzeigen",
       "editAsset": "Asset bearbeiten",
       "createTicket": "Ticket erstellen",
@@ -106,9 +106,9 @@
     },
     "table": {
       "name": "Name",
-      "tag": "Etikett",
+      "tag": "Tag",
       "type": "Typ",
-      "details": "Einzelheiten",
+      "details": "Details",
       "status": "Status",
       "agent": "Agent",
       "client": "Kunde",
@@ -214,7 +214,7 @@
       "maintenance": "Wartung",
       "tickets": "Tickets",
       "configuration": "Konfiguration",
-      "documents": "Unterlagen"
+      "documents": "Dokumente"
     },
     "helper": {
       "awaitingSelection": "Warten auf Asset-Auswahl",
@@ -242,7 +242,7 @@
       "completedMaintenance": "Wartung abgeschlossen",
       "compliance": "Compliance {{percent}}%",
       "lastMaintenance": "Letzte Wartung",
-      "noHistory": "Keine Geschichte",
+      "noHistory": "Keine Historie",
       "maintenanceDataPending": "Wartungsdaten werden angezeigt, sobald die Zeitpläne konfiguriert sind.",
       "assetSummary": "Zusammenfassung der Vermögenswerte",
       "recentLifecycleEvents": "Aktuelle Lebenszyklusereignisse"
@@ -261,7 +261,7 @@
       "empty": "Mit diesem Asset sind noch keine Tickets verknüpft. Verwenden Sie die Schnellaktion, um eine zu erstellen.",
       "linked": "Verlinkt {{date}}",
       "client": "Kunde: {{name}}",
-      "assignee": "Bevollmächtigter: {{name}}",
+      "assignee": "Zuständig: {{name}}",
       "openTicket": "Ticket öffnen"
     },
     "configuration": {
@@ -279,7 +279,7 @@
       "status": "Status",
       "created": "Erstellt",
       "updated": "Aktualisiert",
-      "tenant": "Mieter"
+      "tenant": "Mandant"
     },
     "typeDetails": {
       "workstation": "Details zur Workstation",
@@ -290,10 +290,10 @@
       "operatingSystem": "Betriebssystem",
       "cpu": "CPU",
       "ram": "RAM",
-      "storage": "Lagerung",
+      "storage": "Speicher",
       "gpu": "GPU",
       "notProvided": "Nicht bereitgestellt",
-      "never": "Niemals",
+      "never": "Nie",
       "deviceType": "Gerätetyp",
       "managementIp": "Management-IP",
       "portCount": "Anzahl der Ports",
@@ -307,7 +307,7 @@
       "model": "Modell",
       "imei": "IMEI",
       "phoneNumber": "Telefonnummer",
-      "carrier": "Träger",
+      "carrier": "Mobilfunkanbieter",
       "lastLogin": "Letzter Login",
       "lastCheckIn": "Letzter Check-in",
       "notReported": "Nicht gemeldet",
@@ -333,7 +333,7 @@
     "actions": {
       "createTicket": "Ticket erstellen",
       "menu": "Aktionen",
-      "refreshing": "Erfrischend...",
+      "refreshing": "Wird aktualisiert...",
       "refreshData": "Daten aktualisieren",
       "rebootDevice": "Gerät neu starten",
       "editAsset": "Asset bearbeiten",
@@ -380,7 +380,7 @@
       "warrantyEnd": "Garantieende",
       "cpu": "CPU",
       "ram": "RAM",
-      "storage": "Lagerung",
+      "storage": "Speicher",
       "gpu": "GPU",
       "lastLogin": "Letzte Anmeldung",
       "managementIp": "Management-IP",
@@ -394,7 +394,7 @@
       "operatingSystem": "Betriebssystem",
       "imei": "IMEI",
       "phoneNumber": "Telefonnummer",
-      "carrier": "Träger",
+      "carrier": "Mobilfunkanbieter",
       "supervisionStatus": "Überwachungsstatus",
       "ipAddress": "IP-Adresse",
       "networkPrinter": "Netzwerkdrucker",
@@ -417,9 +417,9 @@
       "upcoming": "Demnächst"
     },
     "tabs": {
-      "details": "Einzelheiten",
-      "relatedAssets": "Zugehörige Vermögenswerte",
-      "documents": "Unterlagen"
+      "details": "Details",
+      "relatedAssets": "Zugehörige Assets",
+      "documents": "Dokumente"
     },
     "relationships": {
       "parentOf": "Elternteil von",
@@ -428,13 +428,13 @@
     "empty": {
       "notSpecified": "Nicht angegeben",
       "unassigned": "Nicht zugewiesen",
-      "never": "Niemals",
+      "never": "Nie",
       "noAdditionalDetails": "Keine weiteren Details verfügbar",
       "noRelatedAssets": "Keine zugehörigen Vermögenswerte gefunden"
     },
     "values": {
       "virtual": "Virtuell",
-      "physical": "Körperlich",
+      "physical": "Physisch",
       "supervised": "Beaufsichtigt",
       "unsupervised": "Unbeaufsichtigt",
       "pagesUnit": "Seiten"
@@ -445,7 +445,7 @@
       "maintenance": "Wartung"
     },
     "deviceTypes": {
-      "switch": "Schalten",
+      "switch": "Switch",
       "router": "Router",
       "firewall": "Firewall",
       "access_point": "Zugangspunkt",
@@ -510,7 +510,7 @@
       "model": "Modell",
       "imei": "IMEI",
       "phoneNumber": "Telefonnummer",
-      "carrier": "Träger",
+      "carrier": "Mobilfunkanbieter",
       "supervisedDevice": "Überwachtes Gerät",
       "ipAddress": "IP-Adresse",
       "monthlyDutyCycle": "Monatlicher Arbeitszyklus",
@@ -542,7 +542,7 @@
       "maintenance": "Wartung"
     },
     "networkDeviceTypes": {
-      "switch": "Schalten",
+      "switch": "Switch",
       "router": "Router",
       "firewall": "Firewall",
       "access_point": "Zugangspunkt",
@@ -695,22 +695,22 @@
     "actions": {
       "open": "Ticket erstellen",
       "create": "Ticket erstellen",
-      "creating": "Erstellen..."
+      "creating": "Wird erstellt..."
     },
     "fields": {
       "title": "Titel",
       "description": "Beschreibung",
-      "board": "Planke",
+      "board": "Board",
       "status": "Status",
       "priority": "Priorität"
     },
     "placeholders": {
       "title": "Geben Sie den Tickettitel ein",
       "description": "Beschreiben Sie das Problem...",
-      "loadingBoards": "Lade Boards...",
+      "loadingBoards": "Boards werden geladen...",
       "selectBoard": "Board auswählen...",
       "selectBoardFirst": "Zuerst Board auswählen...",
-      "loadingStatuses": "Ladestatus...",
+      "loadingStatuses": "Status wird geladen...",
       "selectStatus": "Status auswählen...",
       "loadingPriorities": "Prioritäten werden geladen...",
       "selectPriority": "Priorität auswählen..."
@@ -743,7 +743,7 @@
     "description": "Erstellen Sie schnell einen Asset-Flow mit wichtigen Feldern zum Hinzufügen eines neuen Asset-Datensatzes",
     "actions": {
       "addAsset": "Asset hinzufügen",
-      "creating": "Erstellen...",
+      "creating": "Wird erstellt...",
       "createAsset": "Asset erstellen"
     },
     "errors": {
@@ -777,7 +777,7 @@
       "managementIp": "z. B. 192.168.1.1",
       "serverOsType": "z. B. Windows Server, Ubuntu Server",
       "serverOsVersion": "z. B. 2022, 22.04 LTS",
-      "selectOsType": "Wählen Sie den Typ OS",
+      "selectOsType": "OS-Typ auswählen",
       "mobileModel": "z. B. iPhone 14 Pro, Galaxy S23",
       "printerModel": "z. B. HP LaserJet Pro M404n",
       "assetName": "Geben Sie den Asset-Namen ein",
@@ -802,7 +802,7 @@
       "printer": "Drucker"
     },
     "networkDeviceTypes": {
-      "switch": "Schalten",
+      "switch": "Switch",
       "router": "Router",
       "firewall": "Firewall",
       "accessPoint": "Zugangspunkt",
@@ -842,7 +842,7 @@
     "title": "Asset-Informationen und Lebenszyklus",
     "description": "Allgemeines Asset-Informationsfeld für Identifikations-, Eigentümer- und Lebenszyklusdetails",
     "actions": {
-      "copy": "Kopie",
+      "copy": "Kopieren",
       "copied": "Kopiert"
     },
     "fields": {
@@ -874,7 +874,7 @@
     "fields": {
       "cpu": "CPU",
       "ram": "RAM",
-      "storage": "Lagerung",
+      "storage": "Speicher",
       "utilization": "Verwendung"
     },
     "values": {
@@ -882,7 +882,7 @@
       "unknown": "Unbekannt",
       "unifiedMemory": "{{size}}GB Einheitlicher Speicher",
       "memoryUsed": "({{size}}GB verwendet)",
-      "freeStorage": "{{size}} GB kostenlos"
+      "freeStorage": "{{size}} GB frei"
     },
     "empty": "Keine Hardwaredaten verfügbar",
     "emptyStorage": "Keine Speicherlaufwerke erkannt"
@@ -903,7 +903,7 @@
       "networkValue": "LAN IP: {{lan}} | WAN IP: {{wan}}"
     },
     "values": {
-      "never": "Niemals"
+      "never": "Nie"
     },
     "empty": {
       "title": "RMM Vitalwerte",
@@ -942,7 +942,7 @@
     "title": "Kopierbares Feld",
     "description": "Gemeinsames Feld zum Kopieren in die Zwischenablage, das in allen Asset-Formularen und Detailbereichen verwendet wird",
     "actions": {
-      "copy": "Kopie",
+      "copy": "Kopieren",
       "copied": "Kopiert"
     }
   },
@@ -980,17 +980,17 @@
     }
   },
   "createMaintenanceScheduleDialog": {
-    "title": "Erstellen Sie einen Wartungsplan",
+    "title": "Wartungsplan erstellen",
     "description": "Dialog zum Definieren von Wartungsplänen und Wiederholungsregeln für eine Anlage",
     "titles": {
-      "create": "Planen Sie die Wartung",
+      "create": "Wartung planen",
       "edit": "Wartungsplan bearbeiten"
     },
     "actions": {
       "create": "Zeitplan erstellen",
-      "creating": "Erstellen...",
+      "creating": "Wird erstellt...",
       "update": "Zeitplan aktualisieren",
-      "updating": "Aktualisierung..."
+      "updating": "Wird aktualisiert..."
     },
     "fields": {
       "scheduleName": "Zeitplanname *",
@@ -1042,7 +1042,7 @@
       "noneScheduled": "Keine geplant"
     },
     "actions": {
-      "scheduleMaintenance": "Planen Sie die Wartung"
+      "scheduleMaintenance": "Wartung planen"
     },
     "errors": {
       "deleteFailed": "Der Wartungsplan konnte nicht gelöscht werden"
@@ -1074,15 +1074,15 @@
       "preventive": "Vorbeugend",
       "inspection": "Inspektion",
       "calibration": "Kalibrierung",
-      "replacement": "Ersatz"
+      "replacement": "Austausch"
     },
     "empty": {
       "schedules": "Keine Wartungspläne gefunden. Klicken Sie auf „Wartung planen“, um eine zu erstellen."
     },
     "history": {
       "title": "Wartungsverlauf",
-      "performedAt": "Aufgeführt am",
-      "performedBy": "Aufgeführt von",
+      "performedAt": "Durchgeführt am",
+      "performedBy": "Durchgeführt von",
       "notes": "Notizen",
       "empty": "Keine Wartungshistorie aufgezeichnet."
     },
@@ -1138,7 +1138,7 @@
       },
       "actions": {
         "selected": "Ausgewählt",
-        "linking": "Verlinkung...",
+        "linking": "Wird verknüpft...",
         "confirm": "Asset verknüpfen"
       }
     },
