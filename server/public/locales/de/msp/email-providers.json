@@ -5,7 +5,7 @@
       "testingConnection": "Verbindung testen für {{providerName}}...",
       "connectionSuccess": "Verbunden mit {{providerName}}.",
       "connectionError": "Verbindungstest fehlgeschlagen",
-      "refreshWatchError": "Das Uhrenabonnement konnte nicht aktualisiert werden",
+      "refreshWatchError": "Das Watch-Abonnement konnte nicht aktualisiert werden",
       "renewalError": "Die Verlängerung ist fehlgeschlagen",
       "initiateOauthError": "IMAP-OAuth konnte nicht gestartet werden",
       "resyncing": "{{providerName}} wird erneut synchronisiert...",
@@ -101,7 +101,7 @@
           "processing": "✓ E-Mail-Verarbeitung in Echtzeit",
           "authentication": "✓ Azure AD OAuth-Integration"
         },
-        "action": "Richten Sie Microsoft 365 ein"
+        "action": "Microsoft 365 einrichten"
       },
       "imap": {
         "title": "IMAP",
@@ -116,7 +116,7 @@
       }
     },
     "actions": {
-      "cancel": "Stornieren"
+      "cancel": "Abbrechen"
     },
     "help": {
       "enterprise": "Wählen Sie den Anbieter, den Ihre Organisation bereits nutzt. Wenn Sie Google Workspace verwenden, wählen Sie Gmail; Wenn Sie Microsoft 365 verwenden, wählen Sie Microsoft 365. Sie können dies später ändern, indem Sie Ihren E-Mail-Anbieter entfernen und neu konfigurieren.",
@@ -129,7 +129,7 @@
       "setup": "{{provider}}-Konfiguration"
     },
     "actions": {
-      "cancel": "Stornieren",
+      "cancel": "Abbrechen",
       "back": "Zurück",
       "close": "Schließen"
     }
@@ -149,7 +149,7 @@
       "unknown": "Unbekannt"
     },
     "lastSync": {
-      "never": "Niemals",
+      "never": "Nie",
       "justNow": "Soeben",
       "minutesAgo": "Vor {{count}}m",
       "hoursAgo": "Vor {{count}}h",
@@ -159,9 +159,9 @@
       "edit": "Konfiguration bearbeiten",
       "testing": "Testen…",
       "testConnection": "Testverbindung",
-      "refreshWatch": "Pub/Sub aktualisieren und ansehen",
-      "retryRenewal": "Versuchen Sie es erneut",
-      "runDiagnostics": "Führen Sie die Microsoft 365-Diagnose aus",
+      "refreshWatch": "Pub/Sub-Watch aktualisieren",
+      "retryRenewal": "Erneut versuchen",
+      "runDiagnostics": "Microsoft 365-Diagnose ausführen",
       "reconnectOauth": "OAuth erneut verbinden",
       "resyncing": "Neusynchronisierung…",
       "resyncMailbox": "Postfach neu synchronisieren",
@@ -206,14 +206,14 @@
   "forms": {
     "common": {
       "actions": {
-        "cancel": "Stornieren",
-        "saving": "Sparen...",
-        "updateProvider": "Update-Anbieter",
+        "cancel": "Abbrechen",
+        "saving": "Speichern...",
+        "updateProvider": "Anbieter aktualisieren",
         "addProvider": "Anbieter hinzufügen",
         "createProvider": "Anbieter erstellen",
         "manageDefaults": "Standardeinstellungen verwalten",
         "refreshList": "Liste aktualisieren",
-        "openProvidersSettings": "Öffnen Sie die Anbietereinstellungen"
+        "openProvidersSettings": "Anbietereinstellungen öffnen"
       },
       "validation": {
         "requiredFieldsTitle": "Bitte füllen Sie die erforderlichen Felder aus:",
@@ -227,9 +227,9 @@
         "empty": "Keine Standardeinstellungen verfügbar"
       },
       "oauth": {
-        "authorizing": "Autorisierung...",
+        "authorizing": "Wird autorisiert...",
         "authorized": "Autorisiert",
-        "authorizeAccess": "Autorisieren Sie den Zugriff"
+        "authorizeAccess": "Zugriff autorisieren"
       }
     },
     "microsoft": {
@@ -255,7 +255,7 @@
         "providerNamePlaceholder": "z. B. Support-E-Mail",
         "emailLabel": "E-Mail-Adresse *",
         "emailPlaceholder": "support@client.com",
-        "enableProvider": "Aktivieren Sie diesen Anbieter"
+        "enableProvider": "Diesen Anbieter aktivieren"
       },
       "oauth": {
         "sectionTitle": "Microsoft OAuth-Konfiguration",
@@ -302,10 +302,10 @@
         "title": "Grundkonfiguration",
         "description": "Grundeinstellungen für Ihren Gmail-E-Mail-Anbieter",
         "providerNameLabel": "Anbietername *",
-        "providerNamePlaceholder": "z. B. Gmail unterstützen",
+        "providerNamePlaceholder": "z. B. Support Gmail",
         "mailboxLabel": "Gmail-Adresse *",
         "mailboxPlaceholder": "support@client.com",
-        "enableProvider": "Aktivieren Sie diesen Anbieter"
+        "enableProvider": "Diesen Anbieter aktivieren"
       },
       "oauth": {
         "sectionTitle": "Google OAuth",
@@ -313,7 +313,7 @@
         "setupLabel": "Google Cloud Console",
         "notConfigured": "Die Google-Integration ist für diesen Mandanten nicht konfiguriert.",
         "setupHelp": "Konfigurieren Sie zunächst mandanteneigenes Google OAuth + Pub/Sub: Einstellungen → Integrationen → Anbieter.",
-        "openSettings": "Öffnen Sie die Google-Einstellungen",
+        "openSettings": "Google-Einstellungen öffnen",
         "requiredTitle": "OAuth-Autorisierung erforderlich",
         "stepTitle": "Schritt 1: OAuth-Autorisierung",
         "stepDescription": "Schließen Sie den OAuth-Ablauf ab, um Zugriff auf Gmail zu gewähren",
@@ -328,7 +328,7 @@
       },
       "processing": {
         "labelFiltersLabel": "Zu überwachende Gmail-Labels",
-        "labelFiltersPlaceholder": "Posteingang, Support, benutzerdefiniertes Etikett",
+        "labelFiltersPlaceholder": "Posteingang, Support, benutzerdefiniertes Label",
         "labelFiltersHelp": "Durch Kommas getrennte Liste der zu überwachenden Gmail-Labels (Standard: INBOX)"
       }
     },
@@ -347,8 +347,8 @@
         "providerName": "Anbietername",
         "mailboxAddress": "Postfachadresse",
         "host": "IMAP-Host",
-        "port": "Hafen",
-        "useTls": "Verwenden Sie TLS/SSL",
+        "port": "Port",
+        "useTls": "TLS/SSL verwenden",
         "allowStarttls": "STARTTLS-Upgrade zulassen"
       },
       "auth": {
@@ -387,7 +387,7 @@
     },
     "validation": {
       "nameRequired": "Kurzname und Anzeigename sind erforderlich",
-      "boardRequired": "Vorstand ist erforderlich",
+      "boardRequired": "Board ist erforderlich",
       "statusRequired": "Status ist erforderlich",
       "priorityRequired": "Priorität ist erforderlich",
       "clientRequired": "Firma ist erforderlich"
@@ -410,8 +410,8 @@
         "label": "Aktiv"
       },
       "board": {
-        "label": "Planke *",
-        "placeholder": "Wählen Sie „Board“."
+        "label": "Board *",
+        "placeholder": "Board auswählen"
       },
       "status": {
         "label": "Status *",
@@ -424,7 +424,7 @@
       "client": {
         "label": "Kunde *",
         "placeholder": "Wählen Sie Kunde aus",
-        "help": "Erforderlich: Wird als Sammelbegriff verwendet, wenn in der E-Mail kein Kunde gefunden werden kann."
+        "help": "Erforderlich: Wird als Auffangkunde verwendet, wenn in der E-Mail kein Kunde zugeordnet werden kann."
       },
       "category": {
         "label": "Kategorie",
@@ -436,7 +436,7 @@
         "label": "Standort",
         "placeholder": "Standort auswählen",
         "placeholderNoClient": "Wählen Sie zuerst den Kunden aus (optional)",
-        "help": "Wird nur angewendet, wenn der Catch-All-Client verwendet wird (keine Übereinstimmung zwischen Groß- und Kleinschreibung)."
+        "help": "Wird nur angewendet, wenn der Auffangkunde verwendet wird (kein Treffer gefunden)."
       },
       "enteredBy": {
         "label": "Eingetragen von",
@@ -451,11 +451,11 @@
       "default": "(Standard)"
     },
     "actions": {
-      "cancel": "Stornieren",
-      "updating": "Aktualisierung...",
-      "creating": "Erstellen...",
+      "cancel": "Abbrechen",
+      "updating": "Wird aktualisiert...",
+      "creating": "Wird erstellt...",
       "update": "Standardeinstellungen aktualisieren",
-      "create": "Erstellen Sie Standards"
+      "create": "Standardeinstellungen erstellen"
     }
   }
 }

@@ -1,24 +1,24 @@
 {
   "common": {
     "actions": {
-      "add": "Aggiungere",
+      "add": "Aggiungi",
       "back": "Indietro",
-      "cancel": "Cancellare",
-      "close": "Vicino",
+      "cancel": "Annulla",
+      "close": "Chiudi",
       "copy": "Copia",
-      "create": "Creare",
-      "delete": "Eliminare",
-      "download": "Scaricamento",
-      "edit": "Modificare",
+      "create": "Crea",
+      "delete": "Elimina",
+      "download": "Scarica",
+      "edit": "Modifica",
       "refresh": "Aggiorna",
-      "remove": "Rimuovere",
+      "remove": "Rimuovi",
       "retry": "Riprova",
       "save": "Salva",
-      "saving": "Risparmio...",
-      "search": "Ricerca",
-      "select": "Selezionare",
-      "update": "Aggiornamento",
-      "view": "Visualizzazione"
+      "saving": "Salvataggio...",
+      "search": "Cerca",
+      "select": "Seleziona",
+      "update": "Aggiorna",
+      "view": "Visualizza"
     },
     "states": {
       "active": "Attivo",
@@ -51,7 +51,7 @@
         "description": "Recupera le risorse dal server"
       },
       "reset": {
-        "label": "Reset",
+        "label": "Reimposta",
         "description": "Rimuovi tutti i filtri attivi e i termini di ricerca"
       }
     },
@@ -59,7 +59,7 @@
     "empty": "Nessuna corrispondenza ancora. Prova una parola chiave diversa.",
     "groups": {
       "quickActions": "Azioni rapide",
-      "assets": "Attività",
+      "assets": "Risorse",
       "hints": "Suggerimenti"
     },
     "hint": {
@@ -117,7 +117,7 @@
     },
     "metrics": {
       "totalAssets": {
-        "title": "Patrimonio totale",
+        "title": "Risorse totali",
         "helper": "Su tutti i clienti"
       },
       "filteredView": {
@@ -145,7 +145,7 @@
     },
     "filters": {
       "searchPlaceholder": "Cerca per nome, tag o numero di serie",
-      "reset": "Reset",
+      "reset": "Reimposta",
       "status": "Stato",
       "type": "Tipo",
       "agent": "Agente",
@@ -231,7 +231,7 @@
     },
     "actions": {
       "openAssetRecord": "Apri il record delle risorse",
-      "delete": "Eliminare"
+      "delete": "Elimina"
     },
     "overview": {
       "assetTag": "Etichetta risorsa {{tag}} • {{type}}",
@@ -290,7 +290,7 @@
       "operatingSystem": "Sistema operativo",
       "cpu": "CPU",
       "ram": "RAM",
-      "storage": "Magazzinaggio",
+      "storage": "Archiviazione",
       "gpu": "GPU",
       "notProvided": "Non fornito",
       "never": "Mai",
@@ -333,7 +333,7 @@
     "actions": {
       "createTicket": "Crea biglietto",
       "menu": "Azioni",
-      "refreshing": "Rinfrescante...",
+      "refreshing": "Aggiornamento in corso...",
       "refreshData": "Aggiorna dati",
       "rebootDevice": "Riavvia il dispositivo",
       "editAsset": "Modifica risorsa",
@@ -380,7 +380,7 @@
       "warrantyEnd": "Fine della garanzia",
       "cpu": "CPU",
       "ram": "RAM",
-      "storage": "Magazzinaggio",
+      "storage": "Archiviazione",
       "gpu": "GPU",
       "lastLogin": "Ultimo accesso",
       "managementIp": "IP di gestione",
@@ -452,7 +452,7 @@
       "load_balancer": "Bilanciatore del carico"
     },
     "relationshipTypes": {
-      "affected": "Ricercato",
+      "affected": "Interessato",
       "related": "Imparentato"
     }
   },
@@ -680,7 +680,7 @@
       "printer": "Stampante"
     },
     "relationshipTypes": {
-      "affected": "Ricercato",
+      "affected": "Interessato",
       "related": "Imparentato"
     }
   },
@@ -874,7 +874,7 @@
     "fields": {
       "cpu": "CPU",
       "ram": "RAM",
-      "storage": "Magazzinaggio",
+      "storage": "Archiviazione",
       "utilization": "Utilizzo"
     },
     "values": {
@@ -980,17 +980,17 @@
     }
   },
   "createMaintenanceScheduleDialog": {
-    "title": "Creare un programma di manutenzione",
+    "title": "Crea programma di manutenzione",
     "description": "Finestra di dialogo per definire i programmi di manutenzione e le regole di ricorrenza per un asset",
     "titles": {
-      "create": "Pianificare la manutenzione",
+      "create": "Pianifica manutenzione",
       "edit": "Modifica programma di manutenzione"
     },
     "actions": {
       "create": "Crea pianificazione",
       "creating": "Creazione...",
-      "update": "Programma di aggiornamento",
-      "updating": "Aggiornamento..."
+      "update": "Aggiorna programma",
+      "updating": "Aggiornamento in corso..."
     },
     "fields": {
       "scheduleName": "Nome del programma *",
@@ -1042,7 +1042,7 @@
       "noneScheduled": "Nessuno pianificato"
     },
     "actions": {
-      "scheduleMaintenance": "Pianificare la manutenzione"
+      "scheduleMaintenance": "Pianifica manutenzione"
     },
     "errors": {
       "deleteFailed": "Impossibile eliminare il programma di manutenzione"
@@ -1144,7 +1144,7 @@
     },
     "relationshipTypes": {
       "related": "Imparentato",
-      "affected": "Ricercato"
+      "affected": "Interessato"
     }
   },
   "serviceHistoryTab": {

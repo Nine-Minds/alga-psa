@@ -26,13 +26,7 @@ import { AlertCircle } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-
-// Define billing method options
-const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [
-  { value: 'fixed', label: 'Fixed Price' },
-  { value: 'hourly', label: 'Hourly' },
-  { value: 'usage', label: 'Usage Based' }
-];
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface FixedContractLinePresetServicesListProps {
   planId: string; // This is actually the presetId
@@ -51,6 +45,7 @@ interface SimplePresetService {
 }
 
 const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServicesListProps> = ({ planId, onServiceAdded }) => {
+  const { t } = useTranslation('msp/billing');
   const [presetServices, setPresetServices] = useState<SimplePresetService[]>([]);
   const [originalServices, setOriginalServices] = useState<SimplePresetService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
@@ -60,6 +55,18 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
   const [error, setError] = useState<string | null>(null);
   const [showNavigateAwayConfirm, setShowNavigateAwayConfirm] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const getBillingMethodLabel = (value?: 'fixed' | 'hourly' | 'usage' | null) => {
+    if (value === 'fixed') {
+      return t('contractLineServices.billingMethods.fixed', { defaultValue: 'Fixed Price' });
+    }
+    if (value === 'hourly') {
+      return t('contractLineServices.billingMethods.hourly', { defaultValue: 'Hourly' });
+    }
+    if (value === 'usage') {
+      return t('contractLineServices.billingMethods.usageBased', { defaultValue: 'Usage Based' });
+    }
+    return t('common.notAvailable', { defaultValue: 'N/A' });
+  };
 
   const fetchData = useCallback(async () => {
     if (!planId) return;
@@ -83,8 +90,8 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
         return {
           preset_id: presetService.preset_id,
           service_id: presetService.service_id,
-          service_name: serviceDetails?.service_name || 'Unknown Service',
-          service_type_name: serviceDetails?.service_type_name || 'N/A',
+          service_name: serviceDetails?.service_name || t('presetServices.unknownService', { defaultValue: 'Unknown Service' }),
+          service_type_name: serviceDetails?.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' }),
           billing_method: serviceDetails?.billing_method,
           default_rate: serviceDetails?.default_rate,
           quantity: presetService.quantity || 1
@@ -97,11 +104,11 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
       setSelectedServicesToAdd([]);
     } catch (error) {
       console.error('Error fetching preset services data:', error);
-      setError('Failed to load services data');
+      setError(t('contractLineServices.errors.loadData', { defaultValue: 'Failed to load services data' }));
     } finally {
       setIsLoading(false);
     }
-  }, [planId]);
+  }, [planId, t]);
 
   useEffect(() => {
     fetchData();
@@ -173,13 +180,13 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
   const handleAddServices = () => {
     if (selectedServicesToAdd.length === 0) return;
 
-    const newServices: SimplePresetService[] = selectedServicesToAdd.map(serviceId => {
+      const newServices: SimplePresetService[] = selectedServicesToAdd.map(serviceId => {
       const service = availableServices.find(s => s.service_id === serviceId);
       return {
         preset_id: planId,
         service_id: serviceId,
-        service_name: service?.service_name || 'Unknown Service',
-        service_type_name: service?.service_type_name || 'N/A',
+        service_name: service?.service_name || t('presetServices.unknownService', { defaultValue: 'Unknown Service' }),
+        service_type_name: service?.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' }),
         billing_method: service?.billing_method,
         default_rate: service?.default_rate,
         quantity: 1
@@ -217,15 +224,19 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
       await updateContractLinePresetServices(planId, servicesToSave);
       await fetchData();
 
-      toast.success('Contract line preset services saved successfully');
+      toast.success(t('presetServices.toast.saveSuccess', {
+        defaultValue: 'Contract line preset services saved successfully',
+      }));
 
       if (onServiceAdded) {
         onServiceAdded();
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save services';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('presetServices.toast.saveError', { defaultValue: 'Failed to save services' });
       setError(errorMessage);
-      handleError(error, 'Failed to save services');
+      handleError(error, t('presetServices.toast.saveError', { defaultValue: 'Failed to save services' }));
     } finally {
       setIsSaving(false);
     }
@@ -239,20 +250,20 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
 
   const presetServiceColumns: ColumnDefinition<SimplePresetService>[] = [
     {
-      title: 'Service Name',
+      title: t('presetServices.table.serviceName', { defaultValue: 'Service Name' }),
       dataIndex: 'service_name',
     },
     {
-      title: 'Category',
+      title: t('presetServices.table.category', { defaultValue: 'Category' }),
       dataIndex: 'service_type_name',
     },
     {
-      title: 'Billing Method',
+      title: t('presetServices.table.billingMethod', { defaultValue: 'Billing Method' }),
       dataIndex: 'billing_method',
-      render: (value) => BILLING_METHOD_OPTIONS.find(opt => opt.value === value)?.label || value || 'N/A',
+      render: (value) => getBillingMethodLabel(value),
     },
     {
-      title: 'Quantity',
+      title: t('presetServices.table.quantity', { defaultValue: 'Quantity' }),
       dataIndex: 'quantity',
       render: (value, record) => (
         <Input
@@ -271,21 +282,25 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
     {
       title: (
         <Tooltip content={
-          <p>Service's standard rate, used for internal value allocation and reporting within the fixed plan total.</p>
+          <p>
+            {t('presetServices.tooltip.defaultRate', {
+              defaultValue: "Service's standard rate, used for internal value allocation and reporting within the fixed plan total.",
+            })}
+          </p>
         }>
           <span className="flex items-center cursor-help">
-            Default Rate
+            {t('presetServices.table.defaultRate', { defaultValue: 'Default Rate' })}
             <HelpCircle className="h-4 w-4 ml-1 text-muted-foreground" />
           </span>
         </Tooltip>
       ),
       dataIndex: 'default_rate',
-      render: (value) => value !== undefined ? `$${(Number(value) / 100).toFixed(2)}` : 'N/A',
+      render: (value) => value !== undefined ? `$${(Number(value) / 100).toFixed(2)}` : t('common.notAvailable', { defaultValue: 'N/A' }),
     },
     {
-      title: 'Actions',
+      title: t('presetServices.table.actions', { defaultValue: 'Actions' }),
       dataIndex: 'service_id',
-      render: (value, record) => (
+      render: (value) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -294,7 +309,7 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('common.openMenu', { defaultValue: 'Open menu' })}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -307,7 +322,7 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
                 handleRemoveService(value);
               }}
             >
-              Remove
+              {t('presetServices.actions.remove', { defaultValue: 'Remove' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -327,7 +342,9 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
       {hasUnsavedChanges && (
         <Alert variant="warning" className="mb-4">
           <AlertDescription>
-            You have unsaved changes. Click "Save Changes" to apply them.
+            {t('presetServices.warnings.unsavedChanges', {
+              defaultValue: 'You have unsaved changes. Click "Save Changes" to apply them.',
+            })}
           </AlertDescription>
         </Alert>
       )}
@@ -340,7 +357,9 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
       )}
 
       {isLoading ? (
-        <div className="text-center py-4">Loading services...</div>
+        <div className="text-center py-4">
+          {t('presetServices.states.loading', { defaultValue: 'Loading services...' })}
+        </div>
       ) : (
         <>
           <div className="mb-4">
@@ -349,13 +368,25 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
               columns={presetServiceColumns}
               pagination={false}
             />
-            {presetServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this contract line.</p>}
+            {presetServices.length === 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                {t('presetServices.states.emptyAssociated', {
+                  defaultValue: 'No services currently associated with this contract line.',
+                })}
+              </p>
+            )}
           </div>
 
           <div className="mt-6 border-t pt-4">
-            <h4 className="text-md font-medium mb-2">Add Services to Contract Line</h4>
+            <h4 className="text-md font-medium mb-2">
+              {t('presetServices.addSection.title', { defaultValue: 'Add Services to Contract Line' })}
+            </h4>
             {servicesAvailableToAdd.length === 0 ? (
-              <p className="text-sm text-muted-foreground">All available services are already associated with this contract line.</p>
+              <p className="text-sm text-muted-foreground">
+                {t('presetServices.states.emptyAvailable', {
+                  defaultValue: 'All available services are already associated with this contract line.',
+                })}
+              </p>
             ) : (
               <>
                 <div className="mb-3">
@@ -384,7 +415,20 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
                           <div className="flex-grow flex flex-col text-sm">
                             <span>{service.service_name}</span>
                             <span className="text-xs text-muted-foreground">
-                              Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Rate: ${(Number(service.default_rate) / 100).toFixed(2)}
+                              {t('presetServices.addSection.serviceType', {
+                                defaultValue: 'Service Type: {{value}}',
+                                value: serviceTypeName,
+                              })}
+                              {' | '}
+                              {t('presetServices.addSection.method', {
+                                defaultValue: 'Method: {{value}}',
+                                value: getBillingMethodLabel(service.billing_method),
+                              })}
+                              {' | '}
+                              {t('presetServices.addSection.rate', {
+                                defaultValue: 'Rate: ${{value}}',
+                                value: (Number(service.default_rate) / 100).toFixed(2),
+                              })}
                             </span>
                           </div>
                         </div>
@@ -399,7 +443,14 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
                   className="w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Selected Services {selectedServicesToAdd.length > 0 ? `(${selectedServicesToAdd.length})` : ''}
+                  {selectedServicesToAdd.length > 0
+                    ? t('presetServices.actions.addSelectedServicesWithCount', {
+                        defaultValue: 'Add Selected Services ({{count}})',
+                        count: selectedServicesToAdd.length,
+                      })
+                    : t('presetServices.actions.addSelectedServices', {
+                        defaultValue: 'Add Selected Services',
+                      })}
                 </Button>
               </>
             )}
@@ -413,7 +464,7 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
               onClick={handleReset}
               disabled={isSaving || !hasUnsavedChanges}
             >
-              Reset
+              {t('presetServices.actions.reset', { defaultValue: 'Reset' })}
             </Button>
             <Button
               id="save-preset-services"
@@ -421,7 +472,11 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
               disabled={isSaving || !hasUnsavedChanges}
             >
               <span className={hasUnsavedChanges ? 'font-bold' : ''}>
-                {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
+                {isSaving
+                  ? t('presetServices.actions.saving', { defaultValue: 'Saving...' })
+                  : hasUnsavedChanges
+                    ? t('presetServices.actions.saveChangesDirty', { defaultValue: 'Save Changes *' })
+                    : t('presetServices.actions.saveChanges', { defaultValue: 'Save Changes' })}
               </span>
               {!isSaving && <Save className="ml-2 h-4 w-4" />}
             </Button>
@@ -434,10 +489,12 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
         isOpen={showNavigateAwayConfirm}
         onClose={handleNavigateAwayDismiss}
         onConfirm={handleNavigateAwayConfirm}
-        title="Unsaved Changes"
-        message="You have unsaved changes. Are you sure you want to leave this page? All changes will be lost."
-        confirmLabel="Leave Page"
-        cancelLabel="Stay on Page"
+        title={t('presetServices.navigationDialog.title', { defaultValue: 'Unsaved Changes' })}
+        message={t('presetServices.navigationDialog.message', {
+          defaultValue: 'You have unsaved changes. Are you sure you want to leave this page? All changes will be lost.',
+        })}
+        confirmLabel={t('presetServices.navigationDialog.confirmLabel', { defaultValue: 'Leave Page' })}
+        cancelLabel={t('presetServices.navigationDialog.cancelLabel', { defaultValue: 'Stay on Page' })}
       />
     </div>
   );

@@ -2,19 +2,19 @@
   "common": {
     "actions": {
       "add": "Toevoegen",
-      "back": "Rug",
+      "back": "Terug",
       "cancel": "Annuleren",
-      "close": "Dichtbij",
+      "close": "Sluiten",
       "copy": "Kopiëren",
-      "create": "Creëren",
+      "create": "Aanmaken",
       "delete": "Verwijderen",
       "download": "Downloaden",
-      "edit": "Bewerking",
+      "edit": "Bewerken",
       "refresh": "Vernieuwen",
       "remove": "Verwijderen",
       "retry": "Opnieuw proberen",
-      "save": "Redden",
-      "saving": "Besparing...",
+      "save": "Opslaan",
+      "saving": "Opslaan...",
       "search": "Zoekopdracht",
       "select": "Selecteer",
       "update": "Update",
@@ -695,7 +695,7 @@
     "actions": {
       "open": "Ticket aanmaken",
       "create": "Ticket aanmaken",
-      "creating": "Creëren..."
+      "creating": "Aanmaken..."
     },
     "fields": {
       "title": "Titel",
@@ -743,7 +743,7 @@
     "description": "Creëer snel een activastroom met essentiële velden voor het toevoegen van een nieuw activarecord",
     "actions": {
       "addAsset": "Voeg item toe",
-      "creating": "Creëren...",
+      "creating": "Aanmaken...",
       "createAsset": "Activa maken"
     },
     "errors": {
@@ -988,7 +988,7 @@
     },
     "actions": {
       "create": "Schema maken",
-      "creating": "Creëren...",
+      "creating": "Aanmaken...",
       "update": "Schema bijwerken",
       "updating": "Updaten..."
     },

@@ -61,7 +61,7 @@
       "tags": "Etiquetas",
       "stats": "Estadísticas",
       "updated": "Actualizado",
-      "actions": "Comportamiento"
+      "actions": "Acciones"
     },
     "stats": {
       "views": "Vistas",
@@ -72,7 +72,7 @@
       "edit": "Editar",
       "submitForReview": "Enviar para revisión",
       "publish": "Publicar",
-      "archive": "Archivo"
+      "archive": "Archivar"
     },
     "pagination": {
       "itemsPerPage": {
@@ -103,9 +103,9 @@
     "actions": {
       "submitForReview": "Enviar para revisión",
       "publish": "Publicar",
-      "archive": "Archivo",
+      "archive": "Archivar",
       "saveMetadata": "Guardar metadatos",
-      "saving": "Ahorro..."
+      "saving": "Guardando..."
     },
     "feedback": {
       "permissionDenied": "Permiso denegado",
@@ -194,7 +194,7 @@
       "submitForReview": "Enviar para revisión",
       "publish": "Publicar",
       "approveAndPublish": "Aprobar y publicar",
-      "archive": "Archivo",
+      "archive": "Archivar",
       "republish": "Republicar"
     },
     "flow": {
@@ -240,7 +240,7 @@
       "never": "Nunca"
     },
     "actions": {
-      "view": "Vista",
+      "view": "Ver",
       "review": "Revisar",
       "reviewNow": "Revisar ahora"
     },

@@ -1,0 +1,748 @@
+{
+  "common": {
+    "back": "Atrás",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "create": "Crear",
+    "delete": "Borrar",
+    "edit": "Editar",
+    "error": "Error",
+    "loading": "Cargando...",
+    "new": "Nuevo",
+    "next": "Próximo",
+    "notAvailable": "N/A",
+    "openMenu": "Abrir menú",
+    "processing": "Tratamiento...",
+    "refresh": "Refrescar",
+    "remove": "Eliminar",
+    "reset": "Reiniciar",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "success": "Éxito",
+    "update": "Actualizar",
+    "yes": "Sí",
+    "no": "No"
+  },
+  "dashboard": {
+    "title": "Facturación",
+    "beta": {
+      "title": "Lanzamiento beta",
+      "description": "Nuestro sistema de facturación renovado se encuentra actualmente en versión beta. Es posible que encuentre problemas o funciones incompletas. Agradecemos su paciencia mientras continuamos mejorando la experiencia."
+    },
+    "errorPrefix": "Error:",
+    "backToPresets": "Volver a la lista de ajustes preestablecidos de líneas de contrato",
+    "quoteTemplatesHeading": "Plantillas de cotización",
+    "tabs": {
+      "quotes": "Cotizaciones",
+      "quoteLayouts": "Diseños de cotización",
+      "quoteTemplates": "Plantillas de cotización",
+      "clientContracts": "Contratos de clientes",
+      "accountingExports": "Exportaciones Contables",
+      "contractTemplates": "Plantillas de contrato",
+      "invoicing": "Facturación",
+      "invoiceLayouts": "Diseños de factura",
+      "taxRates": "Tasas de impuestos",
+      "contractLinePresets": "Preajustes de línea de contrato",
+      "billingCycles": "Ciclos de facturación",
+      "servicePeriods": "Períodos de servicio",
+      "usageTracking": "Seguimiento de uso",
+      "reports": "Informes",
+      "serviceCatalog": "Catálogo de servicios",
+      "products": "Productos"
+    }
+  },
+  "overview": {
+    "errors": {
+      "loadTitle": "No se pueden cargar los datos de facturación",
+      "loadData": "No se pudieron cargar los datos de facturación"
+    },
+    "metrics": {
+      "activeContractLines": {
+        "title": "Líneas de contrato activas",
+        "subtitle": "Líneas de contrato activas"
+      },
+      "billingClients": {
+        "title": "Clientes facturados",
+        "subtitle": "Clientes totales"
+      },
+      "monthlyRevenue": {
+        "title": "Ingresos mensuales",
+        "subtitle": "Mes actual"
+      },
+      "activeServices": {
+        "title": "Servicios activos",
+        "subtitle": "En catálogo"
+      },
+      "outstandingAmount": {
+        "title": "Monto pendiente",
+        "subtitle": "Facturas impagas"
+      },
+      "creditBalance": {
+        "title": "Saldo de crédito",
+        "subtitle": "Créditos totales"
+      },
+      "pendingApprovals": {
+        "title": "Aprobaciones pendientes",
+        "subtitle": "Entradas de tiempo"
+      }
+    },
+    "states": {
+      "ellipsis": "...",
+      "error": "Error",
+      "zero": "0",
+      "zeroHours": "0 horas"
+    },
+    "sections": {
+      "monthlyActivity": {
+        "title": "Actividad Mensual",
+        "subtitle": "Horas facturables este mes"
+      },
+      "serviceCatalog": {
+        "title": "Gestión del catálogo de servicios",
+        "description": "Administre sus ofertas de servicios, precios y configuraciones de facturación.",
+        "activeServicesLabel": "Servicios activos",
+        "button": "Administrar catálogo de servicios"
+      }
+    },
+    "features": {
+      "paymentProcessing": {
+        "title": "Procesamiento de pagos",
+        "description": "Realice un seguimiento y administre los pagos de los clientes, procese reembolsos y maneje disputas de pagos"
+      },
+      "billingCycles": {
+        "title": "Ciclos de facturación",
+        "description": "Administre los cronogramas de facturación de los clientes, los valores predeterminados de cadencia y la configuración de frecuencia de facturación."
+      },
+      "servicePeriods": {
+        "title": "Períodos de servicio",
+        "description": "Revise los períodos de servicio recurrentes y comprenda cómo los agrupan las ventanas de facturación"
+      },
+      "invoiceManagement": {
+        "title": "Gestión de facturas",
+        "description": "Genere ventanas de facturación para períodos de servicio recurrentes y cree documentos manuales o de pago anticipado cuando el manejo financiero difiera de la cobertura recurrente"
+      },
+      "overduePayments": {
+        "title": "Pagos vencidos",
+        "description": "Monitorear y dar seguimiento a pagos vencidos y recordatorios de pago."
+      },
+      "serviceCatalog": {
+        "title": "Catálogo de servicios",
+        "description": "Administre sus ofertas de servicios, precios y contratos."
+      }
+    },
+    "debug": {
+      "reportExecuted": "Informe ejecutado:",
+      "executionTime": "Tiempo de ejecución:",
+      "reportVersion": "Versión del informe:"
+    }
+  },
+  "reconciliation": {
+    "title": "Resolver discrepancia de crédito",
+    "steps": {
+      "review": "Revisar la discrepancia",
+      "approval": "Aprobación",
+      "confirmation": "Confirmación"
+    },
+    "sections": {
+      "discrepancyDetails": "Detalles de discrepancia",
+      "balanceComparison": "Comparación de saldos",
+      "issueDetails": "Detalles del problema",
+      "resolutionOptions": "Opciones de resolución",
+      "approvalDetails": "Detalles de aprobación",
+      "correctionSummary": "Resumen de corrección",
+      "confirmResolution": "Confirmar resolución",
+      "resolutionDetails": "Detalles de resolución",
+      "impactSummary": "Resumen de impacto",
+      "resolutionComplete": "Resolución completa",
+      "resolutionSummary": "Resumen de resolución"
+    },
+    "fields": {
+      "client": "Cliente",
+      "status": "Estado",
+      "detected": "Detectado",
+      "issueType": "Tipo de problema",
+      "expectedBalance": "Saldo esperado",
+      "actualBalance": "Saldo real",
+      "difference": "Diferencia",
+      "transactionId": "ID de transacción",
+      "transactionType": "Tipo de transacción",
+      "transactionAmount": "Monto de la transacción",
+      "transactionDate": "Fecha de transacción",
+      "creditId": "ID de crédito",
+      "originalAmount": "Monto original",
+      "expectedRemaining": "Restante esperado",
+      "actualRemaining": "Restante real",
+      "reportId": "ID de informe",
+      "resolutionType": "Tipo de resolución",
+      "correctionAmount": "Cantidad de corrección",
+      "currentBalance": "Saldo actual",
+      "newBalance": "Nuevo saldo",
+      "resolutionNotes": "Notas de resolución",
+      "previousBalance": "Saldo anterior"
+    },
+    "issueTypes": {
+      "missingCreditTrackingEntry": "Entrada de seguimiento de crédito faltante",
+      "inconsistentCreditRemainingAmount": "Monto restante del crédito inconsistente"
+    },
+    "transactionHistory": {
+      "title": "Solicitudes de crédito",
+      "columns": {
+        "transactionId": "ID de transacción",
+        "date": "Fecha",
+        "amount": "Monto"
+      }
+    },
+    "recommendedFix": {
+      "title": "Solución recomendada",
+      "missingTrackingDescription": "Cree una entrada de seguimiento de crédito basada en los detalles de la transacción original y establezca el monto restante para que coincida con el monto de la transacción original.",
+      "missingTrackingRemainingAmount": "Cantidad restante: calcular en función de cualquier solicitud",
+      "inconsistentRemainingDescription": "Actualice el monto restante de la entrada de seguimiento de crédito para que coincida con el saldo esperado calculado según las aplicaciones."
+    },
+    "resolutionTypes": {
+      "recommended": "Solución recomendada",
+      "custom": "Corrección personalizada",
+      "noAction": "No se requiere acción"
+    },
+    "customCorrection": {
+      "label": "Cantidad de corrección",
+      "hint": "Ingrese un monto positivo para aumentar el saldo o un monto negativo para disminuirlo."
+    },
+    "notes": {
+      "label": "Notas de resolución",
+      "placeholder": "Explique el motivo de esta corrección...",
+      "hint": "Estas notas se registrarán en la pista de auditoría para esta discrepancia."
+    },
+    "fourEyes": {
+      "requiredTitle": "Se requiere aprobación de los cuatro ojos",
+      "requiredDescription": "Esta corrección excede el umbral de aprobación y requiere que un aprobador secundario revise y verifique el cambio antes de poder enviarlo.",
+      "approverName": "Nombre del aprobador secundario",
+      "approverEmail": "Correo electrónico del aprobador secundario",
+      "sendRequest": "Enviar solicitud de aprobación",
+      "requestSentTitle": "Solicitud de aprobación enviada",
+      "requestSentDescription": "Pídale al aprobador secundario el código de verificación que recibió y luego ingréselo a continuación para continuar.",
+      "verificationCode": "Código de verificación",
+      "verifyCode": "Verificar código",
+      "verificationHint": "Ingrese el código de verificación proporcionado por el aprobador secundario.",
+      "verifiedTitle": "Aprobación secundaria verificada",
+      "verifiedDescription": "Se ha verificado la aprobación secundaria y ahora se puede enviar esta corrección."
+    },
+    "confirmation": {
+      "importantTitle": "Importante",
+      "importantDescription": "Revise atentamente los detalles a continuación. Esta acción actualizará los registros de conciliación y no se puede deshacer fácilmente.",
+      "verifiedTitle": "Aprobación secundaria verificada",
+      "verifiedDescription": "Un aprobador secundario verificó esta corrección y se cumplió el requisito de aprobación.",
+      "thankYouTitle": "¡Gracias!",
+      "thankYouDescription": "Se resolvió la discrepancia y se actualizaron los registros de facturación.",
+      "confirmButton": "Confirmar resolución",
+      "closeButton": "Cerrar"
+    },
+    "status": {
+      "open": "Abierto"
+    },
+    "buttons": {
+      "cancel": "Cancelar",
+      "back": "Atrás",
+      "next": "Siguiente",
+      "confirm": "Confirmar resolución"
+    },
+    "errors": {
+      "loadData": "No se pudieron cargar los datos del informe de conciliación",
+      "secondaryApprovalRequired": "Se requiere aprobación secundaria para esta corrección.",
+      "secondaryApproverRequired": "Introduzca el nombre y el correo electrónico del aprobador secundario.",
+      "invalidVerificationCode": "Código de verificación no válido",
+      "unknown": "Se produjo un error desconocido",
+      "reportNotFound": "No se encontró el informe de conciliación. Es posible que el informe se haya eliminado o que no tenga permiso para verlo."
+    }
+  },
+  "discrepancy": {
+    "backToReconciliation": "Volver a la reconciliación",
+    "title": "Resolver discrepancia de crédito",
+    "tabs": {
+      "transactionHistory": "Historial de transacciones",
+      "creditTrackingEntries": "Entradas de seguimiento de crédito",
+      "issueDetails": "Detalles del problema"
+    },
+    "cards": {
+      "relatedTransactions": "Transacciones relacionadas",
+      "creditTrackingEntries": "Entradas de seguimiento de crédito",
+      "issueDetails": "Detalles del problema",
+      "discrepancyDetails": "Detalles de discrepancia",
+      "balanceComparison": "Comparación de saldos"
+    },
+    "status": {
+      "open": "Abierto",
+      "inReview": "En revisión",
+      "resolved": "Resuelto",
+      "expired": "Venció",
+      "active": "Activo"
+    },
+    "fields": {
+      "client": "Cliente",
+      "status": "Estado",
+      "detected": "Detectado",
+      "resolved": "Resuelto",
+      "resolutionNotes": "Notas de resolución",
+      "issueType": "Tipo de problema",
+      "expectedBalance": "Saldo esperado",
+      "actualBalance": "Saldo real",
+      "difference": "Diferencia",
+      "transactionId": "ID de transacción",
+      "createdAt": "Creado en",
+      "clientId": "ID de cliente",
+      "userId": "ID de usuario",
+      "invoiceId": "ID de factura",
+      "metadata": "Metadatos",
+      "creditId": "ID de crédito",
+      "created": "Creado",
+      "amount": "Monto",
+      "remaining": "Restante",
+      "expiration": "Vencimiento",
+      "originalAmount": "Monto original",
+      "remainingAmount": "Cantidad restante",
+      "expirationDate": "Fecha de expiración",
+      "description": "Descripción",
+      "type": "Tipo",
+      "balanceAfter": "Saldo después"
+    },
+    "empty": {
+      "transactions": "No se encontraron transacciones relacionadas.",
+      "creditTrackingEntries": "No se encontraron entradas de seguimiento de crédito.",
+      "issueDetails": "No hay detalles del problema disponibles.",
+      "batchNotFound": "Lote no encontrado.",
+      "noNotesProvided": "No se proporcionaron notas",
+      "noExpiration": "Sin vencimiento"
+    },
+    "issueTypes": {
+      "missingCreditTrackingEntry": "Entrada de seguimiento de crédito faltante",
+      "inconsistentCreditRemainingAmount": "Monto restante del crédito inconsistente"
+    },
+    "recommendedFix": {
+      "title": "Solución recomendada",
+      "missingTrackingDescription": "Cree una entrada de seguimiento de crédito basada en los detalles de la transacción original y establezca el monto restante para que coincida con el monto de la transacción original.",
+      "missingTrackingRemainingAmount": "Cantidad restante: calcular en función de cualquier solicitud",
+      "inconsistentRemainingDescription": "Actualice el monto restante de la entrada de seguimiento de crédito para que coincida con el saldo esperado calculado según las aplicaciones."
+    },
+    "resolutionDialog": {
+      "title": "Resolver discrepancia de crédito",
+      "notesPlaceholder": "Explique el motivo de esta corrección...",
+      "confirmButton": "Confirmar resolución"
+    },
+    "actions": {
+      "applyFix": "Aplicar corrección",
+      "resolveReport": "Resolver informe"
+    },
+    "errors": {
+      "unknown": "Se produjo un error desconocido"
+    }
+  },
+  "recommendedFix": {
+    "title": "Correcciones recomendadas",
+    "panels": {
+      "recommendedFix": "Solución recomendada",
+      "alternativeFix": "Solución alternativa",
+      "noActionRequired": "No se requiere acción",
+      "customAdjustment": "Ajuste personalizado"
+    },
+    "buttons": {
+      "createTrackingEntry": "Crear entrada de seguimiento de crédito",
+      "updateRemainingAmount": "Actualizar cantidad restante",
+      "applyAdjustment": "Aplicar ajuste de crédito",
+      "applyCustomAdjustment": "Aplicar ajuste personalizado",
+      "markResolvedNoAction": "Marcar como resuelto (sin acción)",
+      "cancel": "Cancelar",
+      "confirm": "Aplicar corrección"
+    },
+    "descriptions": {
+      "createTrackingEntry": "Esto creará una nueva entrada de seguimiento de crédito para la transacción.",
+      "updateRemainingAmount": "Esto actualizará el monto restante en la entrada de seguimiento de crédito.",
+      "applyAdjustment": "Esto creará una transacción de ajuste de crédito para corregir el saldo.",
+      "customAdjustment": "Esto creará una transacción de ajuste de crédito personalizada.",
+      "noAction": "Esto marcará la discrepancia como resuelta sin realizar ningún cambio.",
+      "missingTrackingRecommended": "Cree la entrada de seguimiento de crédito que falta para que la transacción se refleje en el libro mayor de seguimiento.",
+      "missingTrackingAlternative": "En su lugar, cree un ajuste manual si la transacción original no debe generar una entrada de seguimiento.",
+      "missingTrackingNoAction": "Deje la discrepancia sin resolver solo si la transacción fue excluida intencionalmente del seguimiento crediticio.",
+      "inconsistentRemainingRecommended": "Actualice el monto restante registrado para que coincida con el saldo esperado después de las solicitudes.",
+      "inconsistentRemainingAlternative": "Cree un ajuste de equilibrio en lugar de editar la entrada de seguimiento existente.",
+      "inconsistentRemainingNoAction": "Deje la discrepancia sin resolver sólo si la entrada de seguimiento se compensa intencionalmente en otro lugar.",
+      "genericRecommended": "Aplique la corrección recomendada para realinear los saldos.",
+      "genericCustom": "Ingrese un ajuste personalizado si se requiere una corrección manual."
+    },
+    "dialog": {
+      "adjustmentAmount": "Monto del ajuste",
+      "adjustmentHint": "Ingrese un monto positivo para aumentar el saldo o un monto negativo para disminuirlo.",
+      "notes": "Notas",
+      "notesPlaceholder": "Explique el motivo de esta corrección..."
+    },
+    "impactSummary": {
+      "title": "Resumen de impacto",
+      "currentBalance": "Saldo actual",
+      "newBalance": "Nuevo saldo"
+    },
+    "resolved": {
+      "title": "Esta discrepancia ha sido resuelta",
+      "description": "No es necesario realizar ninguna otra acción a menos que necesite revisar el historial de conciliación."
+    },
+    "errors": {
+      "notesRequired": "Proporcione notas que expliquen el motivo de esta corrección.",
+      "invalidAmount": "Por favor ingresa una cantidad válida",
+      "unknown": "Se produjo un error desconocido"
+    }
+  },
+  "usage": {
+    "bucketHoursOverview": "Resumen de horas de bucket",
+    "usageRecords": "Registros de uso",
+    "actions": {
+      "addUsage": "Agregar uso",
+      "updateUsage": "Actualizar uso",
+      "edit": "Editar",
+      "delete": "Borrar",
+      "resetFilters": "Reiniciar"
+    },
+    "filters": {
+      "client": "Cliente",
+      "service": "Servicio",
+      "clientPlaceholder": "Filtrar por cliente",
+      "servicePlaceholder": "Filtrar por servicio",
+      "allClients": "Todos los clientes",
+      "allServices": "Todos los servicios"
+    },
+    "table": {
+      "client": "Cliente",
+      "service": "Servicio",
+      "quantity": "Cantidad",
+      "usageDate": "Fecha de uso",
+      "contractLine": "Línea de contrato",
+      "actions": "Acciones",
+      "defaultContractLine": "Línea de contrato predeterminada",
+      "contractLineLabel": "Línea de contrato: {{id}}..."
+    },
+    "states": {
+      "loadingRecords": "Cargando registros de uso",
+      "noActiveBucketPlans": "No se encontraron planes de depósito activos."
+    },
+    "dialog": {
+      "addTitle": "Agregar registro de uso",
+      "editTitle": "Editar registro de uso",
+      "fields": {
+        "client": "Cliente",
+        "service": "Servicio",
+        "quantity": "Cantidad",
+        "usageDate": "Fecha de uso",
+        "comments": "Comentarios (opcional)",
+        "contractLine": "Línea de contrato"
+      },
+      "servicePlaceholder": "Seleccionar servicio"
+    },
+    "contractLineGuidance": {
+      "multipleLines": "Este servicio aparece en múltiples líneas de contrato. Seleccione contra qué línea de contrato facturar.",
+      "tooltipNoClient": "Información del cliente no disponible. El uso se dirigirá al contrato predeterminado administrado por el sistema.",
+      "tooltipMultiple": "Este servicio aparece en múltiples líneas de contrato. Seleccione qué línea de contrato utilizar. Las líneas de contrato de depósito generalmente se usan primero hasta que se agotan.",
+      "tooltipSingle": "Este uso se facturará bajo la línea de contrato \"{{name}}\".",
+      "tooltipNone": "No se encontraron líneas de contrato elegibles para este servicio.",
+      "placeholderNoClient": "Uso del contrato predeterminado administrado por el sistema",
+      "placeholderNone": "No hay líneas de contrato elegibles",
+      "placeholderSingle": "Usando {{name}}",
+      "placeholderSelect": "Seleccione una línea de contrato",
+      "wrongContractLineWarning": "Seleccionar la línea de contrato incorrecta puede resultar en una facturación incorrecta",
+      "noClientNotice": "Información del cliente no disponible. El uso se dirigirá al contrato predeterminado administrado por el sistema.",
+      "noEligibleNotice": "No se encontraron líneas de contrato elegibles para este servicio."
+    },
+    "deleteDialog": {
+      "title": "Eliminar registro de uso",
+      "message": "¿Está seguro de que desea eliminar este registro de uso? Esta acción no se puede deshacer."
+    },
+    "toast": {
+      "loadClientsError": "No se pudieron cargar los clientes",
+      "loadUsageError": "No se pudieron cargar los registros de uso",
+      "createSuccess": "Registro de uso creado correctamente",
+      "createError": "No se pudo crear el registro de uso",
+      "updateSuccess": "Registro de uso actualizado correctamente",
+      "updateError": "No se pudo actualizar el registro de uso",
+      "deleteSuccess": "Registro de uso eliminado correctamente",
+      "deleteError": "No se pudo eliminar el registro de uso"
+    }
+  },
+  "lineItem": {
+    "collapsed": {
+      "itemDiscount": "Descuento del artículo",
+      "invoiceDiscount": "Descuento en factura",
+      "appliedTo": "Aplicado a: {{description}}",
+      "selectService": "Seleccionar Servicio",
+      "taxable": "(Imponible)",
+      "nonTaxable": "(No imponible)",
+      "calculatedOnSave": "(calculado al guardar)"
+    },
+    "expanded": {
+      "discount": "Descuento",
+      "item": "Artículo {{number}}",
+      "markedForRemoval": "Marcado para su eliminación"
+    },
+    "fields": {
+      "service": "Servicio",
+      "quantity": "Cantidad",
+      "discountType": "Tipo de descuento",
+      "percentage": "Porcentaje",
+      "amount": "Cantidad ({{currencySymbol}})",
+      "discountDescription": "Descripción del descuento",
+      "applyDiscountTo": "Aplicar descuento a",
+      "entireInvoice": "Factura completa",
+      "rate": "Tarifa ({{currencySymbol}})",
+      "description": "Descripción"
+    },
+    "placeholders": {
+      "discountDescription": "por ejemplo, descuento por pago anticipado"
+    },
+    "actions": {
+      "add": "Agregar",
+      "remove": "Eliminar",
+      "restore": "Restaurar"
+    },
+    "hints": {
+      "removed": "Este elemento se eliminará cuando guardes los cambios."
+    },
+    "summary": {
+      "percentageDiscount": "Descuento porcentual",
+      "fixedDiscount": "Descuento fijo",
+      "itemTotal": "{{percentage}}% del total del artículo",
+      "invoiceTotal": "{{percentage}}% del total de la factura",
+      "amount": "Cantidad: -{{currencySymbol}}{{amount}}",
+      "appliedTo": "Aplicado a: {{description}}",
+      "subtotal": "Subtotal: {{currencySymbol}}{{amount}}"
+    },
+    "options": {
+      "percentage": "Porcentaje",
+      "fixedAmount": "Monto Fijo"
+    }
+  },
+  "contractLineServices": {
+    "table": {
+      "serviceName": "Nombre del servicio",
+      "category": "Categoría",
+      "billingMethod": "Método de facturación",
+      "quantity": "Cantidad",
+      "defaultRate": "Tasa predeterminada",
+      "actions": "Acciones"
+    },
+    "billingMethods": {
+      "fixed": "Precio fijo",
+      "hourly": "Cada hora",
+      "usageBased": "Basado en el uso",
+      "usage": "Uso"
+    },
+    "badges": {
+      "product": "Producto",
+      "service": "Servicio"
+    },
+    "actions": {
+      "editQuantity": "Editar cantidad",
+      "remove": "Eliminar",
+      "addSelectedServices": "Agregar servicios seleccionados",
+      "addSelectedServicesWithCount": "Agregar servicios seleccionados ({{count}})"
+    },
+    "tooltip": {
+      "defaultRate": "Tarifa estándar del servicio, utilizada para la asignación de valor interno y la generación de informes dentro del total del plan fijo. No se puede editar directamente aquí."
+    },
+    "states": {
+      "loading": "Cargando servicios...",
+      "emptyAssociated": "Actualmente no hay servicios asociados con esta línea de contrato.",
+      "emptyAvailable": "Todos los servicios disponibles ya están asociados con esta línea de contrato.",
+      "missingPrice": "Falta el precio {{currency}}"
+    },
+    "addSection": {
+      "title": "Agregar servicios a la línea de contrato",
+      "serviceType": "Tipo de servicio: {{value}}",
+      "method": "Método: {{value}}",
+      "rate": "Tarifa: {{value}}",
+      "catalogPrice": "Precio {{currency}}: {{value}}",
+      "catalogPriceMissing": "Precio {{currency}}: falta",
+      "customRate": "Tarifa {{currency}} personalizada",
+      "productMissingPrice": "El producto \"{{name}}\" no tiene precio {{currency}}. Ingrese una tarifa personalizada antes de agregarla."
+    },
+    "errors": {
+      "loadData": "No se pudieron cargar los datos de los servicios",
+      "addServices": "No se pudieron agregar servicios",
+      "removeService": "No se pudo eliminar el servicio"
+    },
+    "unknownService": "Servicio desconocido"
+  },
+  "presetServices": {
+    "warnings": {
+      "unsavedChanges": "Tienes cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos."
+    },
+    "table": {
+      "serviceName": "Nombre del servicio",
+      "category": "Categoría",
+      "billingMethod": "Método de facturación",
+      "quantity": "Cantidad",
+      "defaultRate": "Tasa predeterminada",
+      "actions": "Acciones"
+    },
+    "tooltip": {
+      "defaultRate": "Tarifa estándar del servicio, utilizada para la asignación de valor interno y la generación de informes dentro del total del plan fijo."
+    },
+    "states": {
+      "loading": "Cargando servicios...",
+      "emptyAssociated": "Actualmente no hay servicios asociados con esta línea de contrato.",
+      "emptyAvailable": "Todos los servicios disponibles ya están asociados con esta línea de contrato."
+    },
+    "addSection": {
+      "title": "Agregar servicios a la línea de contrato",
+      "serviceType": "Tipo de servicio: {{value}}",
+      "method": "Método: {{value}}",
+      "rate": "Tarifa: ${{value}}"
+    },
+    "actions": {
+      "remove": "Eliminar",
+      "addSelectedServices": "Agregar servicios seleccionados",
+      "addSelectedServicesWithCount": "Agregar servicios seleccionados ({{count}})",
+      "saveChanges": "Guardar cambios",
+      "saveChangesDirty": "Guardar cambios *",
+      "saving": "Guardando...",
+      "reset": "Reiniciar"
+    },
+    "navigationDialog": {
+      "title": "Cambios no guardados",
+      "message": "Tienes cambios sin guardar. ¿Estás seguro de que quieres abandonar esta página? Todos los cambios se perderán.",
+      "confirmLabel": "Salir de la página",
+      "cancelLabel": "Permanecer en la página"
+    },
+    "toast": {
+      "saveSuccess": "Servicios preestablecidos de línea de contrato guardados correctamente",
+      "saveError": "No se pudieron guardar los servicios"
+    },
+    "unknownService": "Servicio desconocido"
+  },
+  "accountingExports": {
+    "title": "Exportaciones Contables",
+    "description": "Cree lotes de exportación, valide asignaciones y entregue archivos para importarlos manualmente a su sistema de contabilidad.",
+    "table": {
+      "batch": "Lote",
+      "adapter": "Adaptador",
+      "status": "Estado",
+      "created": "Creado",
+      "updated": "Actualizado",
+      "actions": "Acciones"
+    },
+    "actions": {
+      "refresh": "Refrescar",
+      "newExport": "Nueva exportación",
+      "open": "Abrir",
+      "execute": "Ejecutar",
+      "createBatch": "Crear lote",
+      "creating": "Creando..."
+    },
+    "states": {
+      "loadingBatches": "Cargando lotes...",
+      "empty": "Aún no hay lotes de exportación.",
+      "loadingDetails": "Cargando detalles del lote...",
+      "batchNotFound": "Lote no encontrado."
+    },
+    "createDialog": {
+      "title": "Nueva exportación contable",
+      "fields": {
+        "adapter": "Adaptador",
+        "startDate": "Fecha de inicio",
+        "endDate": "Fecha de finalización",
+        "clientSearch": "Búsqueda de clientes",
+        "invoiceStatuses": "Estados de factura",
+        "notes": "Notas"
+      },
+      "placeholders": {
+        "clientSearch": "Filtro de nombre de cliente opcional",
+        "invoiceStatuses": "Separados por comas (opcional), p.e. finalizado, publicado",
+        "notes": "Notas opcionales"
+      }
+    },
+    "detailDialog": {
+      "title": "Lote de exportación contable",
+      "subtitle": "Detalles del lote",
+      "fields": {
+        "batchId": "ID de lote",
+        "adapter": "Adaptador",
+        "status": "Estado",
+        "created": "Creado",
+        "lines": "Líneas",
+        "errors": "Errores",
+        "delivered": "Entregado"
+      }
+    },
+    "toast": {
+      "created": "Lote de exportación contable creado",
+      "executing": "Se inició la ejecución por lotes",
+      "loadBatchesError": "No se pudieron cargar los lotes de exportación contable",
+      "loadDetailError": "No se pudieron cargar los detalles del lote",
+      "createError": "No se pudo crear el lote de exportación",
+      "executeError": "No se pudo ejecutar el lote"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "validating": "Validando",
+      "ready": "Listo",
+      "delivered": "Entregado",
+      "posted": "Publicado",
+      "failed": "Fallido",
+      "cancelled": "Cancelado",
+      "needsAttention": "Requiere atencion"
+    }
+  },
+  "templateRenderer": {
+    "loading": "Cargando vista previa de la plantilla...",
+    "errorPrefix": "Error:",
+    "empty": "Seleccione una factura y una plantilla para obtener una vista previa."
+  },
+  "templateDesigner": {
+    "propertyEditor": {
+      "selectField": "Seleccione un campo",
+      "content": "Contenido",
+      "dataField": "Campo de datos",
+      "width": "Ancho",
+      "height": "Altura",
+      "fontSize": "Tamaño de fuente",
+      "color": "Color",
+      "columns": "{{count}} columna(s)",
+      "rows": "{{count}} fila(s)"
+    },
+    "conditionalRules": {
+      "title": "Reglas de visualización condicional",
+      "selectAction": "Seleccionar acción",
+      "show": "Mostrar",
+      "hide": "Ocultar",
+      "format": "Formato",
+      "conditionPlaceholder": "Condición",
+      "targetPlaceholder": "Objetivo",
+      "addRule": "Agregar regla"
+    }
+  },
+  "contractsHub": {
+    "title": "Contratos",
+    "tabs": {
+      "templates": "Plantillas",
+      "clientContracts": "Contratos de clientes"
+    }
+  },
+  "editQuantityDialog": {
+    "title": "Editar cantidad para {{serviceName}}",
+    "fields": {
+      "quantity": "Cantidad"
+    },
+    "validation": {
+      "empty": "La cantidad no puede estar vacía.",
+      "positiveWholeNumber": "La cantidad debe ser un número entero positivo."
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "saveQuantity": "Guardar cantidad",
+      "saving": "Guardando..."
+    },
+    "errors": {
+      "saveFailed": "No se pudo actualizar la cantidad. Por favor inténtalo de nuevo."
+    }
+  },
+  "templateRendererCore": {
+    "notAvailable": "N/A",
+    "unknownValue": "Valor desconocido",
+    "noDataForList": "No hay datos para la lista: {{name}}",
+    "uncategorized": "Sin categoría"
+  }
+}

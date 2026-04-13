@@ -219,7 +219,7 @@
         "action": "Actie"
       },
       "actions": {
-        "edit": "Bewerking"
+        "edit": "Bewerken"
       },
       "defaultApprover": {
         "placeholder": "Selecteer een goedkeurder"
@@ -443,8 +443,8 @@
     },
     "actions": {
       "cancel": "Annuleren",
-      "close": "Dichtbij",
-      "save": "Redden",
+      "close": "Sluiten",
+      "save": "Opslaan",
       "delete": "Invoer verwijderen"
     },
     "workItem": {

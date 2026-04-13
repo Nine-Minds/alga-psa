@@ -1,0 +1,1100 @@
+{
+  "tabs": {
+    "general": "55555",
+    "quoting": "55555",
+    "tax": "55555",
+    "payments": "55555"
+  },
+  "general": {
+    "currency": {
+      "title": "55555",
+      "description": "55555",
+      "fields": {
+        "currency": {
+          "label": "55555",
+          "placeholder": "55555"
+        }
+      },
+      "toast": {
+        "updated": "55555"
+      },
+      "errors": {
+        "load": "55555",
+        "save": "55555"
+      }
+    },
+    "invoiceNumbering": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "zeroDollar": {
+      "title": "55555",
+      "description": "55555",
+      "fields": {
+        "handling": {
+          "label": "55555",
+          "placeholder": "55555",
+          "help": "55555"
+        },
+        "suppress": {
+          "label": "55555",
+          "help": "55555"
+        }
+      },
+      "options": {
+        "draft": "55555",
+        "finalized": "55555"
+      },
+      "toast": {
+        "updated": "55555"
+      },
+      "errors": {
+        "load": "55555",
+        "save": "55555"
+      }
+    },
+    "creditExpiration": {
+      "title": "55555",
+      "description": "55555",
+      "fields": {
+        "enabled": {
+          "label": "55555",
+          "help": "55555"
+        },
+        "expirationDays": {
+          "label": "55555",
+          "help": "55555"
+        },
+        "notificationDays": {
+          "label": "55555",
+          "placeholder": "55555",
+          "help": "55555"
+        }
+      },
+      "actions": {
+        "save": "55555"
+      },
+      "toast": {
+        "updated": "55555"
+      },
+      "errors": {
+        "load": "55555",
+        "save": "55555"
+      }
+    },
+    "renewal": {
+      "title": "55555",
+      "description": "55555",
+      "fields": {
+        "dueDateAction": {
+          "label": "55555",
+          "help": "55555"
+        },
+        "ticketBoard": {
+          "label": "55555",
+          "placeholderLoading": "55555",
+          "placeholderSelect": "55555"
+        },
+        "ticketStatus": {
+          "label": "55555",
+          "placeholderLoading": "55555",
+          "placeholderSelect": "55555",
+          "placeholderSelectBoardFirst": "55555",
+          "help": "55555"
+        }
+      },
+      "options": {
+        "createTicket": "55555",
+        "queueOnly": "55555"
+      },
+      "states": {
+        "unnamedBoard": "55555"
+      },
+      "actions": {
+        "save": "55555",
+        "saving": "55555"
+      },
+      "toast": {
+        "updated": "55555"
+      },
+      "errors": {
+        "load": "55555",
+        "loadStatuses": "55555",
+        "save": "55555"
+      }
+    }
+  },
+  "quoting": {
+    "quoteNumbering": {
+      "title": "55555",
+      "description": "55555"
+    }
+  },
+  "tax": {
+    "taxRegions": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "source": {
+      "title": "55555",
+      "tooltip": "55555",
+      "description": "55555",
+      "fields": {
+        "defaultMethod": {
+          "label": "55555"
+        }
+      },
+      "options": {
+        "internal": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "external": {
+          "label": "55555",
+          "description": "55555"
+        }
+      },
+      "workflow": {
+        "title": "55555",
+        "step1": "55555",
+        "step2": "55555",
+        "step3": "55555",
+        "step4": "55555",
+        "step5": "55555",
+        "note": "55555"
+      },
+      "loading": "55555",
+      "actions": {
+        "cancel": "55555",
+        "save": "55555",
+        "saving": "55555"
+      },
+      "toast": {
+        "saved": "55555"
+      },
+      "errors": {
+        "load": "55555",
+        "save": "55555"
+      }
+    },
+    "regions": {
+      "title": "55555",
+      "loading": "55555",
+      "fields": {
+        "code": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "name": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "active": {
+          "label": "55555"
+        }
+      },
+      "dialog": {
+        "addTitle": "55555",
+        "editTitle": "55555"
+      },
+      "actions": {
+        "add": "55555",
+        "edit": "55555",
+        "activate": "55555",
+        "deactivate": "55555",
+        "cancel": "55555",
+        "save": "55555",
+        "saving": "55555"
+      },
+      "toast": {
+        "created": "55555",
+        "updated": "55555",
+        "activatePending": "55555 {{name}} 55555",
+        "deactivatePending": "55555 {{name}} 55555",
+        "activated": "55555 {{name}} 55555",
+        "deactivated": "55555 {{name}} 55555"
+      },
+      "errors": {
+        "load": "55555",
+        "create": "55555",
+        "update": "55555",
+        "activate": "55555",
+        "deactivate": "55555"
+      }
+    },
+    "thresholds": {
+      "title": "55555",
+      "tooltip": "55555",
+      "loading": "55555",
+      "empty": "55555",
+      "noLimit": "55555",
+      "above": "55555",
+      "table": {
+        "minAmount": "55555",
+        "maxAmount": "55555"
+      },
+      "issuesTitle": "55555",
+      "issueNoMax": "55555 {{from}} 55555",
+      "issueGap": "55555 {{from}} 55555 {{to}} 55555",
+      "issueOverlap": "55555 {{at}} 55555",
+      "preview": {
+        "title": "55555",
+        "amount": "55555",
+        "taxable": "55555 {{amount}} 55555 {{tax}} 55555",
+        "totalTax": "55555",
+        "effective": "55555 {{rate}} 55555"
+      },
+      "dialog": {
+        "addTitle": "55555",
+        "editTitle": "55555",
+        "deleteTitle": "55555"
+      },
+      "fields": {
+        "minAmount": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "maxAmount": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "rate": {
+          "label": "55555",
+          "placeholder": "55555"
+        }
+      },
+      "actions": {
+        "add": "55555",
+        "edit": "55555",
+        "delete": "55555",
+        "cancel": "55555",
+        "save": "55555",
+        "saving": "55555",
+        "deleting": "55555"
+      },
+      "delete": {
+        "message": "55555 {{range}} 55555",
+        "lastWarning": "55555"
+      },
+      "toast": {
+        "created": "55555",
+        "updated": "55555",
+        "deleted": "55555"
+      },
+      "errors": {
+        "load": "55555",
+        "create": "55555",
+        "update": "55555",
+        "delete": "55555"
+      }
+    },
+    "components": {
+      "title": "55555",
+      "tooltip": "55555",
+      "loading": "55555",
+      "empty": "55555",
+      "preview": {
+        "title": "55555 {{amount}} 55555",
+        "compoundSuffix": "55555",
+        "totalTax": "55555",
+        "effective": "55555 {{rate}} 55555"
+      },
+      "dialog": {
+        "addTitle": "55555",
+        "editTitle": "55555",
+        "deleteTitle": "55555"
+      },
+      "fields": {
+        "name": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "rate": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "sequence": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "compound": {
+          "label": "55555",
+          "help": "55555"
+        },
+        "startDate": {
+          "label": "55555"
+        },
+        "endDate": {
+          "label": "55555"
+        }
+      },
+      "dateRange": {
+        "always": "55555",
+        "any": "55555",
+        "ongoing": "55555"
+      },
+      "actions": {
+        "add": "55555",
+        "edit": "55555",
+        "delete": "55555",
+        "cancel": "55555",
+        "save": "55555",
+        "saving": "55555",
+        "deleting": "55555"
+      },
+      "delete": {
+        "message": "55555 {{name}} 55555"
+      },
+      "toast": {
+        "created": "55555",
+        "updated": "55555",
+        "deleted": "55555"
+      },
+      "errors": {
+        "load": "55555",
+        "create": "55555",
+        "update": "55555",
+        "delete": "55555"
+      }
+    },
+    "holidays": {
+      "title": "55555",
+      "titleWithName": "55555 {{name}} 55555",
+      "tooltip": "55555",
+      "loading": "55555",
+      "empty": "55555",
+      "summary": {
+        "active": "55555 {{count}} 55555",
+        "upcoming": "55555 {{count}} 55555",
+        "expired": "55555 {{count}} 55555"
+      },
+      "dialog": {
+        "addTitle": "55555",
+        "editTitle": "55555",
+        "deleteTitle": "55555"
+      },
+      "fields": {
+        "startDate": {
+          "label": "55555"
+        },
+        "endDate": {
+          "label": "55555"
+        },
+        "description": {
+          "label": "55555",
+          "placeholder": "55555"
+        }
+      },
+      "actions": {
+        "add": "55555",
+        "edit": "55555",
+        "delete": "55555",
+        "cancel": "55555",
+        "save": "55555",
+        "saving": "55555",
+        "deleting": "55555"
+      },
+      "delete": {
+        "message": "55555 {{description}} 55555 {{dateRange}} 55555",
+        "untitled": "55555"
+      },
+      "toast": {
+        "created": "55555",
+        "updated": "55555",
+        "deleted": "55555"
+      },
+      "errors": {
+        "load": "55555",
+        "create": "55555",
+        "update": "55555",
+        "delete": "55555"
+      }
+    }
+  },
+  "payments": {
+    "title": "55555",
+    "description": "55555",
+    "loading": "55555"
+  },
+  "serviceCategories": {
+    "title": "55555",
+    "dialog": {
+      "addTitle": "55555",
+      "editTitle": "55555",
+      "deleteTitle": "55555"
+    },
+    "fields": {
+      "categoryName": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "description": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "displayOrder": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555"
+      }
+    },
+    "actions": {
+      "add": "55555",
+      "importFromStandard": "55555",
+      "create": "55555",
+      "update": "55555"
+    },
+    "delete": {
+      "message": "55555 {{name}} 55555"
+    },
+    "import": {
+      "title": "55555",
+      "empty": "55555",
+      "description": "55555",
+      "fetchError": "55555"
+    },
+    "conflicts": {
+      "description": "55555",
+      "nameExists": "55555",
+      "rename": "55555",
+      "orderInUse": "55555 {{displayOrder}} 55555",
+      "reorder": "55555 {{order}} 55555"
+    },
+    "toast": {
+      "created": "55555",
+      "updated": "55555",
+      "deleted": "55555",
+      "imported": "55555"
+    },
+    "errors": {
+      "fetch": "55555",
+      "missingId": "55555",
+      "nameRequired": "55555",
+      "save": "55555",
+      "delete": "55555",
+      "import": "55555"
+    }
+  },
+  "serviceTypes": {
+    "title": "55555",
+    "description": "55555",
+    "loading": "55555",
+    "dialog": {
+      "addTitle": "55555",
+      "editTitle": "55555",
+      "deleteTitle": "55555"
+    },
+    "fields": {
+      "name": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "description": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "billingMethod": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "displayOrder": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555",
+        "usedOrders": "55555 {{orders}} 55555"
+      }
+    },
+    "actions": {
+      "add": "55555",
+      "importFromStandard": "55555",
+      "save": "55555",
+      "close": "55555"
+    },
+    "validation": {
+      "summary": "55555",
+      "name": "55555",
+      "billingMethod": "55555",
+      "displayOrder": "55555",
+      "orderInUse": "55555 {{order}} 55555 {{name}} 55555"
+    },
+    "delete": {
+      "message": "55555 {{name}} 55555",
+      "errorPrefix": "55555 {{error}} 55555"
+    },
+    "import": {
+      "title": "55555",
+      "empty": "55555",
+      "description": "55555"
+    },
+    "conflicts": {
+      "description": "55555",
+      "nameExists": "55555",
+      "orderInUse": "55555 {{order}} 55555",
+      "rename": "55555",
+      "reorder": "55555"
+    },
+    "toast": {
+      "importedCount": "55555 {{count}} 55555",
+      "importedCount_other": "55555 {{count}} 55555",
+      "skippedItem": "55555 {{name}} 55555 {{reason}} 55555"
+    },
+    "errors": {
+      "fetch": "55555",
+      "save": "55555",
+      "delete": "55555",
+      "checkConflicts": "55555",
+      "import": "55555"
+    }
+  },
+  "serviceCatalog": {
+    "title": "55555",
+    "loading": "55555",
+    "dialog": {
+      "editTitle": "55555"
+    },
+    "filters": {
+      "allServiceTypes": "55555",
+      "serviceTypePlaceholder": "55555",
+      "allBillingMethods": "55555",
+      "billingMethodPlaceholder": "55555"
+    },
+    "fields": {
+      "serviceName": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "serviceType": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "billingMethod": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "description": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "pricing": {
+        "label": "55555",
+        "primaryRateHelp": "55555",
+        "multiCurrencyHelp": "55555",
+        "placeholders": {
+          "currency": "55555",
+          "rate": "55555"
+        },
+        "rateType": {
+          "monthly": "55555",
+          "perHour": "55555",
+          "usage": "55555",
+          "rate": "55555"
+        }
+      },
+      "unitOfMeasure": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555"
+      },
+      "taxRate": {
+        "label": "55555",
+        "placeholder": "55555",
+        "loading": "55555"
+      },
+      "sku": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "inventoryCount": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "seatLimit": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "licenseTerm": {
+        "label": "55555",
+        "placeholder": "55555"
+      }
+    },
+    "actions": {
+      "edit": "55555",
+      "delete": "55555",
+      "addCurrency": "55555",
+      "remove": "55555",
+      "cancel": "55555",
+      "saveChanges": "55555"
+    },
+    "table": {
+      "serviceName": "55555",
+      "serviceType": "55555",
+      "billingMethod": "55555",
+      "pricing": "55555",
+      "unit": "55555",
+      "taxRate": "55555",
+      "nonTaxable": "55555",
+      "thisService": "55555"
+    },
+    "errors": {
+      "fetchServices": "55555",
+      "fetchCategories": "55555",
+      "fetchServiceTypesUnknown": "55555",
+      "fetchTaxRates": "55555",
+      "serviceTypeRequired": "55555",
+      "priceRequired": "55555",
+      "missingId": "55555",
+      "update": "55555",
+      "validateDelete": "55555",
+      "delete": "55555",
+      "deactivate": "55555"
+    }
+  },
+  "products": {
+    "title": "55555",
+    "loading": "55555",
+    "thisProduct": "55555",
+    "actions": {
+      "add": "55555",
+      "search": "55555",
+      "edit": "55555",
+      "restore": "55555",
+      "archive": "55555",
+      "delete": "55555"
+    },
+    "filters": {
+      "searchPlaceholder": "55555",
+      "allStatuses": "55555",
+      "active": "55555",
+      "inactive": "55555",
+      "allCategories": "55555",
+      "allTypes": "55555",
+      "loading": "55555"
+    },
+    "table": {
+      "product": "55555",
+      "sku": "55555",
+      "type": "55555",
+      "category": "55555",
+      "label": "55555",
+      "pricing": "55555",
+      "taxRate": "55555",
+      "active": "55555",
+      "nonTaxable": "55555"
+    },
+    "archive": {
+      "title": "55555",
+      "message": "55555 {{name}} 55555"
+    },
+    "permanentDelete": {
+      "title": "55555",
+      "checking": "55555",
+      "confirm": "55555 {{name}} 55555",
+      "blocked": "55555 {{name}} 55555",
+      "archiveInstead": "55555"
+    },
+    "errors": {
+      "fetch": "55555",
+      "restore": "55555",
+      "archive": "55555",
+      "checkAssociations": "55555",
+      "delete": "55555"
+    }
+  },
+  "quickAddService": {
+    "dialog": {
+      "title": "55555"
+    },
+    "actions": {
+      "trigger": "55555",
+      "addCurrency": "55555",
+      "remove": "55555",
+      "cancel": "55555",
+      "save": "55555"
+    },
+    "fields": {
+      "serviceName": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "serviceType": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "billingMethod": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "description": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "pricing": {
+        "label": "55555",
+        "help": "55555",
+        "placeholders": {
+          "currency": "55555",
+          "rate": "55555"
+        },
+        "rateType": {
+          "monthly": "55555",
+          "perHour": "55555",
+          "usage": "55555",
+          "rate": "55555"
+        }
+      },
+      "unitOfMeasure": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555"
+      },
+      "taxRate": {
+        "label": "55555",
+        "placeholder": "55555",
+        "loading": "55555"
+      },
+      "sku": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "inventoryCount": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "seatLimit": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "licenseTerm": {
+        "label": "55555",
+        "placeholder": "55555"
+      }
+    },
+    "validation": {
+      "summary": "55555",
+      "serviceNameRequired": "55555",
+      "serviceTypeRequired": "55555",
+      "priceRequired": "55555",
+      "billingMethodRequired": "55555",
+      "skuRequiredForHardware": "55555",
+      "licenseTermRequired": "55555",
+      "selectedTypeNotFound": "55555"
+    },
+    "errors": {
+      "fetchCategories": "55555",
+      "fetchTaxRates": "55555",
+      "create": "55555"
+    }
+  },
+  "quickAddProduct": {
+    "dialog": {
+      "addTitle": "55555",
+      "editTitle": "55555"
+    },
+    "actions": {
+      "addCurrency": "55555",
+      "remove": "55555",
+      "cancel": "55555",
+      "create": "55555",
+      "save": "55555"
+    },
+    "fields": {
+      "productName": {
+        "label": "55555"
+      },
+      "type": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "sku": {
+        "label": "55555"
+      },
+      "category": {
+        "label": "55555",
+        "placeholder": "55555",
+        "loading": "55555"
+      },
+      "label": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "vendor": {
+        "label": "55555"
+      },
+      "manufacturer": {
+        "label": "55555"
+      },
+      "cost": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "billingMethod": {
+        "label": "55555"
+      },
+      "pricing": {
+        "label": "55555",
+        "help": "55555",
+        "rateType": {
+          "rate": "55555"
+        },
+        "placeholders": {
+          "currency": "55555",
+          "rate": "55555"
+        }
+      },
+      "taxRate": {
+        "label": "55555",
+        "placeholder": "55555",
+        "loading": "55555"
+      },
+      "active": {
+        "label": "55555"
+      },
+      "unitOfMeasure": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "license": {
+        "label": "55555"
+      },
+      "licenseTerm": {
+        "label": "55555"
+      },
+      "description": {
+        "label": "55555"
+      }
+    },
+    "options": {
+      "active": "55555",
+      "inactive": "55555",
+      "yes": "55555",
+      "no": "55555"
+    },
+    "validation": {
+      "productNameRequired": "55555",
+      "serviceTypeRequired": "55555",
+      "unitOfMeasureRequired": "55555",
+      "priceRequired": "55555",
+      "currencyRequired": "55555",
+      "currencyUnique": "55555",
+      "pricesNonNegative": "55555",
+      "nonZeroPriceRequired": "55555"
+    },
+    "errors": {
+      "create": "55555",
+      "update": "55555"
+    }
+  },
+  "clientTaxSettings": {
+    "title": "55555",
+    "loading": "55555",
+    "noSettingsFound": "55555",
+    "createDefaultButton": "55555",
+    "alerts": {
+      "dismissError": "55555",
+      "dismissSuccess": "55555"
+    },
+    "messages": {
+      "defaultCreated": "55555",
+      "createDefaultError": "55555",
+      "fetchError": "55555",
+      "updated": "55555",
+      "updateError": "55555",
+      "taxExemptEnabled": "55555",
+      "taxExemptDisabled": "55555",
+      "taxExemptUpdateError": "55555"
+    },
+    "validation": {
+      "thresholdNegativeMin": "55555 {{index}} 55555",
+      "thresholdMaxLessThanMin": "55555 {{index}} 55555",
+      "thresholdNegativeRate": "55555 {{index}} 55555",
+      "holidayMissingDates": "55555 {{index}} 55555",
+      "holidayEndBeforeStart": "55555 {{index}} 55555"
+    },
+    "taxExempt": {
+      "title": "55555",
+      "description": "55555",
+      "label": "55555",
+      "tooltip": "55555",
+      "status": {
+        "exempt": "55555",
+        "notExempt": "55555"
+      },
+      "certificate": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555"
+      },
+      "alert": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "actions": {
+        "cancel": "55555",
+        "save": "55555",
+        "saving": "55555"
+      }
+    },
+    "advanced": {
+      "title": "55555",
+      "description": "55555",
+      "reverseCharge": {
+        "label": "55555",
+        "tooltip": "55555",
+        "status": {
+          "enabled": "55555",
+          "disabled": "55555"
+        }
+      },
+      "taxSourceOverride": {
+        "label": "55555",
+        "tooltip": "55555",
+        "placeholder": "55555",
+        "options": {
+          "default": "55555",
+          "internal": "55555",
+          "external": "55555"
+        },
+        "effective": {
+          "label": "55555",
+          "pendingExternal": "55555",
+          "overridden": "55555"
+        },
+        "notAvailable": {
+          "messageStart": "55555",
+          "link": "55555",
+          "messageEnd": "55555"
+        }
+      },
+      "actions": {
+        "reset": "55555",
+        "update": "55555",
+        "updating": "55555"
+      }
+    }
+  },
+  "common": {
+    "actions": {
+      "add": "55555",
+      "cancel": "55555",
+      "close": "55555",
+      "create": "55555",
+      "delete": "55555",
+      "edit": "55555",
+      "importSelected": "55555",
+      "importWithResolutions": "55555",
+      "remove": "55555",
+      "reset": "55555",
+      "save": "55555",
+      "update": "55555"
+    },
+    "columns": {
+      "actions": "55555",
+      "name": "55555",
+      "description": "55555",
+      "order": "55555",
+      "code": "55555",
+      "status": "55555",
+      "billingMethod": "55555",
+      "rate": "55555",
+      "dateRange": "55555",
+      "startDate": "55555",
+      "endDate": "55555",
+      "sequence": "55555"
+    },
+    "billingMethod": {
+      "fixed": "55555",
+      "fixedFee": "55555",
+      "hourly": "55555",
+      "usage": "55555",
+      "usageBased": "55555"
+    },
+    "licenseTerm": {
+      "monthly": "55555",
+      "annual": "55555",
+      "perpetual": "55555"
+    },
+    "statuses": {
+      "active": "55555",
+      "inactive": "55555",
+      "upcoming": "55555",
+      "expired": "55555",
+      "enabled": "55555",
+      "disabled": "55555",
+      "yes": "55555",
+      "no": "55555",
+      "nonTaxable": "55555"
+    },
+    "emptyValue": "55555",
+    "notAvailable": "55555",
+    "loading": "55555",
+    "a11y": {
+      "openMenu": "55555"
+    }
+  },
+  "import": {
+    "title": "55555",
+    "selectAll": "55555",
+    "skipItem": "55555",
+    "headers": {
+      "name": "55555",
+      "description": "55555",
+      "order": "55555",
+      "billingMethod": "55555"
+    }
+  },
+  "validation": {
+    "requiredFields": "55555"
+  },
+  "errors": {
+    "failedToLoadSettings": "55555",
+    "failedToSaveSettings": "55555"
+  },
+  "toast": {
+    "saved": "55555"
+  },
+  "numbering": {
+    "section": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "fields": {
+      "prefix": {
+        "label": "55555",
+        "help": "55555"
+      },
+      "minimumDigits": {
+        "label": "55555",
+        "help": "55555"
+      },
+      "initialValue": {
+        "label": "55555",
+        "help": "55555",
+        "placeholder": "55555"
+      },
+      "lastUsedNumber": {
+        "label": "55555",
+        "help": "55555"
+      },
+      "nextPreview": {
+        "label": "55555",
+        "help": "55555"
+      }
+    },
+    "actions": {
+      "save": "55555",
+      "cancel": "55555"
+    },
+    "dialog": {
+      "title": "55555",
+      "message": "55555",
+      "confirm": "55555"
+    },
+    "toast": {
+      "updated": "55555"
+    },
+    "errors": {
+      "load": "55555",
+      "save": "55555"
+    }
+  }
+}
