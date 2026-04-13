@@ -109,6 +109,8 @@ export interface ProjectTaskActivity extends ActivityBase {
   projectName?: string;
   phaseId: string;
   phaseName?: string;
+  /** The project_status_mappings.project_status_mapping_id the task is currently in */
+  statusMappingId?: string;
   estimatedHours?: number;
   actualHours?: number;
   wbsCode?: string;
@@ -120,6 +122,10 @@ export interface ProjectTaskActivity extends ActivityBase {
 export interface TicketActivity extends ActivityBase {
   sourceType: ActivityType.TICKET;
   ticketNumber: string;
+  /** Board scoping statuses for this ticket */
+  boardId?: string;
+  /** Current status_id on the ticket (for the inline status picker) */
+  statusId?: string;
   clientId?: string;
   clientName?: string;
   contactId?: string;
@@ -205,12 +211,33 @@ export interface ActivityFilters {
   contactId?: string;
   ticketNumber?: string;
   projectId?: string;
+  projectIds?: string[];
   phaseId?: string;
+  phaseIds?: string[];
   isRecurring?: boolean;
   workItemType?: string;
   executionId?: string;
   includeHidden?: boolean;
+  /** Ticket-specific: filter by board_id(s) */
+  ticketBoardIds?: string[];
+  /** Ticket-specific: filter by status_id from the statuses table */
+  ticketStatusIds?: string[];
+  /** Project task-specific: filter by project_status_mapping_id */
+  projectStatusMappingIds?: string[];
+  /** Ticket-specific: filter by tag definition IDs */
+  ticketTagIds?: string[];
+  /** Project task-specific: filter by tag definition IDs */
+  projectTaskTagIds?: string[];
+  /** Server-side sort column key. When omitted, default sort (priority desc, due date asc) is applied. */
+  sortBy?: ActivitySortBy;
+  /** Sort direction for the sortBy column. Defaults to 'asc'. */
+  sortDirection?: 'asc' | 'desc';
 }
+
+/**
+ * Sortable columns for server-side sorting in the activities list view.
+ */
+export type ActivitySortBy = 'type' | 'title' | 'status' | 'priority' | 'dueDate';
 
 /**
  * Response format for activity queries

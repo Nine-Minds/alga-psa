@@ -22,7 +22,7 @@ import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
 // Project imports
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
 import { getTaskWithDetails } from '@alga-psa/projects/actions/projectTaskActions';
-import { getProjects } from '@alga-psa/projects/actions/projectActions';
+import { getProjects, getProjectsWithPhases } from '@alga-psa/projects/actions/projectActions';
 
 // Scheduling imports
 import { getScheduleEntries } from '@alga-psa/scheduling/actions';
@@ -141,6 +141,7 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
       getBlockContent,
       updateBlockContent,
       getProjects,
+      getProjectsWithPhases,
       getAllClients,
       getAllContacts,
     }),

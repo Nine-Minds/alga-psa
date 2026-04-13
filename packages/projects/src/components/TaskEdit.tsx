@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -39,6 +39,24 @@ export default function TaskEdit({
   onCommentCountChange
 }: TaskEditProps): React.JSX.Element {
   const [selectedPhaseStatuses, setSelectedPhaseStatuses] = useState<ProjectStatus[]>(initialStatuses || []);
+
+  // If caller didn't provide statuses (e.g., opened from user activities drawer),
+  // load them from the task's phase/project so the status dropdown is populated.
+  useEffect(() => {
+    if (initialStatuses && initialStatuses.length > 0) return;
+    if (!phase?.project_id) return;
+    let cancelled = false;
+    getProjectTaskStatuses(phase.project_id, phase.phase_id)
+      .then((statuses) => {
+        if (!cancelled) setSelectedPhaseStatuses(statuses);
+      })
+      .catch((error) => {
+        console.error('Error loading project task statuses:', error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialStatuses, phase?.project_id, phase?.phase_id]);
 
   const handlePhaseChange = async (newPhaseId: string) => {
     if (!phases) return;

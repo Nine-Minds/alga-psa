@@ -330,6 +330,7 @@ def "main cleanup" [
         "email_reply_tokens" "email_sending_logs" "email_rate_limits"
 
         # User related details
+        "user_activity_group_items" "user_activity_groups"
         "user_notification_preferences" "user_internal_notification_preferences" "user_preferences"
         "role_permissions" "user_roles" "user_auth_accounts"
 

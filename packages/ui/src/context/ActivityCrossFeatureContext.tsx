@@ -61,6 +61,7 @@ export interface ActivityCrossFeatureCallbacks {
   getBlockContent: (documentId: string) => Promise<any>;
   updateBlockContent: (documentId: string, data: any) => Promise<any>;
   getProjects: () => Promise<any>;
+  getProjectsWithPhases: () => Promise<any>;
   getAllClients: (includeInactive?: boolean) => Promise<any>;
   getAllContacts: (status?: 'active' | 'inactive' | 'all', sortBy?: string, sortDirection?: 'asc' | 'desc') => Promise<any>;
 }
