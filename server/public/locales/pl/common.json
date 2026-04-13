@@ -367,7 +367,9 @@
       "namePlaceholder": "Wprowadź nazwę folderu",
       "loading": "Ładowanie folderów...",
       "rootOption": "Katalog główny (bez folderu)",
-      "empty": "Brak dostępnych folderów. Dokumenty zostaną zapisane w katalogu głównym."
+      "empty": "Brak dostępnych folderów. Dokumenty zostaną zapisane w katalogu głównym.",
+      "showAllFolders": "Pokaż wszystkie foldery",
+      "showEntityFolders": "Pokaż foldery jednostki"
     },
     "filters": {
       "searchLabel": "Szukaj dokumentów",

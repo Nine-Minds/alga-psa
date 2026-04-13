@@ -438,7 +438,7 @@
       "checkingMasters": "55555",
       "existingMasterSuffix": "55555",
       "existingMasterLocked": "55555",
-      "multipleExistingMasters": "55555"
+      "multipleExistingMasters": "55555 {{count}} 55555"
     },
     "auth": {
       "moveRequired": "55555",

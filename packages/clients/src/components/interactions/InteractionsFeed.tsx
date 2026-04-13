@@ -296,10 +296,30 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
         </CardContent>
       </Card>
 
-      <Dialog 
-        isOpen={isFilterDialogOpen} 
-        onClose={() => setIsFilterDialogOpen(false)} 
+      <Dialog
+        isOpen={isFilterDialogOpen}
+        onClose={() => setIsFilterDialogOpen(false)}
         title="Filter Interactions"
+        footer={
+          <div className="flex justify-between w-full">
+            <Button
+              {...resetButtonProps}
+              onClick={resetFilters}
+              variant="ghost"
+              size="sm"
+              className="text-gray-500 hover:text-gray-700 flex items-center gap-1"
+            >
+              <XCircle className="h-4 w-4" />
+              Reset
+            </Button>
+            <Button
+              {...applyButtonProps}
+              onClick={handleApplyFilters}
+            >
+              Apply Filters
+            </Button>
+          </div>
+        }
       >
         <DialogContent>
           <div className="space-y-4">
@@ -324,24 +344,6 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               onChange={(e) => setEndDate(e.target.value)}
               placeholder="End Date"
             />
-            <div className="flex justify-between">
-              <Button
-                {...resetButtonProps}
-                onClick={resetFilters}
-                variant="ghost"
-                size="sm"
-                className="text-gray-500 hover:text-gray-700 flex items-center gap-1"
-              >
-                <XCircle className="h-4 w-4" />
-                Reset
-              </Button>
-              <Button 
-                {...applyButtonProps}
-                onClick={handleApplyFilters}
-              >
-                Apply Filters
-              </Button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { EmailProviderSelector } from './EmailProviderSelector';
 import {
@@ -58,6 +58,25 @@ export function ProviderSetupWizardDialog({ isOpen, onClose, onComplete, tenant 
     reset();
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      {step === 'select' ? (
+        <Button id="provider-wizard-cancel" variant="outline" onClick={handleClose}>
+          {t('wizard.actions.cancel', { defaultValue: 'Cancel' })}
+        </Button>
+      ) : (
+        <>
+          <Button id="provider-wizard-back" variant="outline" onClick={handleSetupCancel}>
+            {t('wizard.actions.back', { defaultValue: 'Back' })}
+          </Button>
+          <Button id="provider-wizard-close" variant="ghost" onClick={handleClose}>
+            {t('wizard.actions.close', { defaultValue: 'Close' })}
+          </Button>
+        </>
+      )}
+    </div>
+  );
+
   return (
     <Dialog
       isOpen={isOpen}
@@ -65,6 +84,7 @@ export function ProviderSetupWizardDialog({ isOpen, onClose, onComplete, tenant 
       title={step === 'select'
         ? t('wizard.title.select', { defaultValue: 'Choose Email Provider' })
         : t('wizard.title.setup', { defaultValue: '{{provider}} Configuration', provider: providerTitle })}
+      footer={footer}
     >
       <DialogContent>
         {step === 'select' && (
@@ -83,22 +103,6 @@ export function ProviderSetupWizardDialog({ isOpen, onClose, onComplete, tenant 
           <ImapProviderForm tenant={tenant} onSuccess={handleSetupSuccess} onCancel={handleSetupCancel} />
         )}
       </DialogContent>
-      <DialogFooter>
-        {step === 'select' ? (
-          <Button id="provider-wizard-cancel" variant="outline" onClick={handleClose}>
-            {t('wizard.actions.cancel', { defaultValue: 'Cancel' })}
-          </Button>
-        ) : (
-          <>
-            <Button id="provider-wizard-back" variant="outline" onClick={handleSetupCancel}>
-              {t('wizard.actions.back', { defaultValue: 'Back' })}
-            </Button>
-            <Button id="provider-wizard-close" variant="ghost" onClick={handleClose}>
-              {t('wizard.actions.close', { defaultValue: 'Close' })}
-            </Button>
-          </>
-        )}
-      </DialogFooter>
     </Dialog>
   );
 }

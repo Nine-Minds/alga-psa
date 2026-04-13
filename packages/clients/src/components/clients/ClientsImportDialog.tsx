@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -366,13 +366,59 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
     }
   }, [isProcessing, onClose]);
 
+  const footer = (
+    <>
+      {step === 'mapping' && previewData && (
+        <div className="flex justify-end space-x-2">
+          <Button id="mapping-back-btn" variant="outline" onClick={() => setStep('upload')} disabled={isProcessing}>
+            {t('common.actions.back', { defaultValue: 'Back' })}
+          </Button>
+          <Button id="mapping-preview-btn" onClick={handlePreview} disabled={isProcessing}>
+            {isProcessing
+              ? t('clientsImportDialog.processing', { defaultValue: 'Processing...' })
+              : t('clientsImportDialog.previewTitle', { defaultValue: 'Preview Import' })}
+          </Button>
+        </div>
+      )}
+      {step === 'preview' && validationResults.length > 0 && (
+        <div className="flex justify-end space-x-2">
+          <Button
+            id="preview-back-btn"
+            variant="outline"
+            onClick={() => setStep('mapping')}
+            disabled={isProcessing}
+          >
+            {t('common.actions.back', { defaultValue: 'Back' })}
+          </Button>
+          <Button
+            id="preview-import-btn"
+            onClick={handleImport}
+            disabled={validationResults.every(result => !result.isValid) || isProcessing}
+          >
+            {isProcessing
+              ? t('clientsImportDialog.importing', { defaultValue: 'Importing...' })
+              : t('common.actions.import', { defaultValue: 'Import' })}
+          </Button>
+        </div>
+      )}
+      {step === 'complete' && (
+        <div className="flex justify-end space-x-2">
+          <Button id="complete-close-btn" onClick={handleClose}>
+            {t('common.actions.close', { defaultValue: 'Close' })}
+          </Button>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <>
       <Dialog
-        isOpen={isOpen} 
-        onClose={handleClose} 
+        isOpen={isOpen}
+        onClose={handleClose}
         title={t('clientsImportDialog.title', { defaultValue: 'Import Clients' })}
         className="max-w-5xl"
+        footer={step !== 'upload' ? footer : undefined}
       >
         <DialogContent>
           {errors.length > 0 && (
@@ -509,18 +555,6 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
                   </AlertDescription>
                 </Alert>
               )}
-              <div className="mt-4">
-                <DialogFooter>
-                  <Button id="mapping-back-btn" variant="outline" onClick={() => setStep('upload')} disabled={isProcessing}>
-                    {t('common.actions.back', { defaultValue: 'Back' })}
-                  </Button>
-                  <Button id="mapping-preview-btn" onClick={handlePreview} disabled={isProcessing}>
-                    {isProcessing
-                      ? t('clientsImportDialog.processing', { defaultValue: 'Processing...' })
-                      : t('clientsImportDialog.previewTitle', { defaultValue: 'Preview Import' })}
-                  </Button>
-                </DialogFooter>
-              </div>
             </div>
           )}
 
@@ -671,27 +705,6 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
                   ] as ColumnDefinition<any>[]}
                 />
               </div>
-              <div className="mt-4">
-                <DialogFooter>
-                  <Button 
-                    id="preview-back-btn"
-                    variant="outline" 
-                    onClick={() => setStep('mapping')}
-                    disabled={isProcessing}
-                  >
-                    {t('common.actions.back', { defaultValue: 'Back' })}
-                  </Button>
-                  <Button
-                    id="preview-import-btn"
-                    onClick={handleImport}
-                    disabled={validationResults.every(result => !result.isValid) || isProcessing}
-                  >
-                    {isProcessing
-                      ? t('clientsImportDialog.importing', { defaultValue: 'Importing...' })
-                      : t('common.actions.import', { defaultValue: 'Import' })}
-                  </Button>
-                </DialogFooter>
-              </div>
             </div>
           )}
 
@@ -707,11 +720,6 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
                   count: validationResults.filter(r => r.isValid).length,
                 })}
               </p>
-              <DialogFooter>
-                <Button id="complete-close-btn" onClick={handleClose}>
-                  {t('common.actions.close', { defaultValue: 'Close' })}
-                </Button>
-              </DialogFooter>
             </div>
           )}
         </DialogContent>

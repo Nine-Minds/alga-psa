@@ -21,7 +21,7 @@ import { TagFilter } from '@alga-psa/ui/components';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { IBoard, IClient, IUser, ITeam } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -1885,11 +1885,38 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         confirmLabel={t('bulk.bundle.proceed', 'Proceed')}
         cancelLabel={t('actions.cancel', 'Cancel')}
       />
+      {(() => {
+        const bulkMoveFooter = (
+          <div className="flex justify-end space-x-2">
+            <Button
+              id={`${id}-bulk-move-cancel`}
+              variant="outline"
+              onClick={handleBulkMoveClose}
+              disabled={isBulkMoving}
+            >
+              {t('actions.cancel', 'Cancel')}
+            </Button>
+            <Button
+              id={`${id}-bulk-move-confirm`}
+              onClick={handleConfirmBulkMove}
+              disabled={isBulkMoving || isLoadingDestinationStatuses || !selectedDestinationBoardId || !selectedDestinationStatusId || destinationBoardStatuses.length === 0 || destinationStatusError.length > 0}
+            >
+              {isBulkMoving
+                ? t('bulk.move.submitting', 'Moving...')
+                : t('bulk.move.confirm', {
+                  count: selectedTicketIdsArray.length,
+                  defaultValue: selectedTicketIdsArray.length === 1 ? 'Move {{count}} Ticket' : 'Move {{count}} Tickets',
+                })}
+            </Button>
+          </div>
+        );
+        return (
       <Dialog
         isOpen={isBulkMoveDialogOpen && hasSelection}
         onClose={handleBulkMoveClose}
         id={`${id}-bulk-move-dialog`}
         title={t('bulk.move.dialogTitle', 'Move Selected Tickets')}
+        footer={bulkMoveFooter}
       >
         <DialogContent>
           {bulkMoveErrors.length > 0 && (
@@ -1974,35 +2001,43 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             )}
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id={`${id}-bulk-move-cancel`}
-            variant="outline"
-            onClick={handleBulkMoveClose}
-            disabled={isBulkMoving}
-          >
-            {t('actions.cancel', 'Cancel')}
-          </Button>
-          <Button
-            id={`${id}-bulk-move-confirm`}
-            onClick={handleConfirmBulkMove}
-            disabled={isBulkMoving || isLoadingDestinationStatuses || !selectedDestinationBoardId || !selectedDestinationStatusId || destinationBoardStatuses.length === 0 || destinationStatusError.length > 0}
-          >
-            {isBulkMoving
-              ? t('bulk.move.submitting', 'Moving...')
-              : t('bulk.move.confirm', {
-                count: selectedTicketIdsArray.length,
-                defaultValue: selectedTicketIdsArray.length === 1 ? 'Move {{count}} Ticket' : 'Move {{count}} Tickets',
-              })}
-          </Button>
-        </DialogFooter>
       </Dialog>
+        );
+      })()}
 
+      {(() => {
+        const bulkDeleteFooter = (
+          <div className="flex justify-end space-x-2">
+            <Button
+              id={`${id}-bulk-delete-cancel`}
+              variant="outline"
+              onClick={handleBulkDeleteClose}
+              disabled={isBulkDeleting}
+            >
+              {t('actions.cancel', 'Cancel')}
+            </Button>
+            <Button
+              id={`${id}-bulk-delete-confirm`}
+              variant="destructive"
+              onClick={handleConfirmBulkDelete}
+              disabled={isBulkDeleting || selectedTicketIdsArray.length === 0}
+            >
+              {isBulkDeleting
+                ? t('bulk.delete.submitting', 'Deleting...')
+                : t('bulk.delete.button', {
+                  count: selectedTicketIdsArray.length,
+                  defaultValue: selectedTicketIdsArray.length === 1 ? 'Delete {{count}} Ticket' : 'Delete {{count}} Tickets',
+                })}
+            </Button>
+          </div>
+        );
+        return (
       <Dialog
         isOpen={isBulkDeleteDialogOpen && hasSelection}
         onClose={handleBulkDeleteClose}
         id={`${id}-bulk-delete-dialog`}
         title={t('bulk.delete.dialogTitle', 'Delete Selected Tickets')}
+        footer={bulkDeleteFooter}
       >
         <DialogContent>
           {bulkDeleteErrors.length > 0 && (
@@ -2055,31 +2090,39 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             )}
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id={`${id}-bulk-delete-cancel`}
-            variant="outline"
-            onClick={handleBulkDeleteClose}
-            disabled={isBulkDeleting}
-          >
-            {t('actions.cancel', 'Cancel')}
-          </Button>
-          <Button
-            id={`${id}-bulk-delete-confirm`}
-            variant="destructive"
-            onClick={handleConfirmBulkDelete}
-            disabled={isBulkDeleting || selectedTicketIdsArray.length === 0}
-          >
-            {isBulkDeleting
-              ? t('bulk.delete.submitting', 'Deleting...')
-              : t('bulk.delete.button', {
-                count: selectedTicketIdsArray.length,
-                defaultValue: selectedTicketIdsArray.length === 1 ? 'Delete {{count}} Ticket' : 'Delete {{count}} Tickets',
-              })}
-          </Button>
-        </DialogFooter>
       </Dialog>
+        );
+      })()}
 
+      {(() => {
+        const bundleFooter = (
+          <div className="flex justify-end space-x-2">
+            <Button
+              id={`${id}-bundle-cancel`}
+              variant="outline"
+              onClick={() => {
+                setIsBundleDialogOpen(false);
+                setBundleError(null);
+                setBundleExistingMasterIds(new Set());
+              }}
+            >
+              {t('actions.cancel', 'Cancel')}
+            </Button>
+            <Button
+              id={`${id}-bundle-confirm`}
+              onClick={handleConfirmBundleTickets}
+              disabled={
+                selectedTicketIdsArray.length < 2 ||
+                !bundleMasterTicketId ||
+                isLoadingBundleMasterStatus ||
+                hasMultipleExistingMasters
+              }
+            >
+              {t('bulk.bundleTickets', 'Bundle Tickets')}
+            </Button>
+          </div>
+        );
+        return (
       <Dialog
         isOpen={isBundleDialogOpen && selectedTicketIds.size >= 2}
         onClose={() => {
@@ -2089,6 +2132,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         }}
         id={`${id}-bundle-dialog`}
         title={t('bulk.bundle.dialogTitle', 'Bundle Tickets')}
+        footer={bundleFooter}
       >
         <DialogContent>
           {bundleError && (
@@ -2162,32 +2206,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id={`${id}-bundle-cancel`}
-            variant="outline"
-            onClick={() => {
-              setIsBundleDialogOpen(false);
-              setBundleError(null);
-              setBundleExistingMasterIds(new Set());
-            }}
-          >
-            {t('actions.cancel', 'Cancel')}
-          </Button>
-          <Button
-            id={`${id}-bundle-confirm`}
-            onClick={handleConfirmBundleTickets}
-            disabled={
-              selectedTicketIdsArray.length < 2 ||
-              !bundleMasterTicketId ||
-              isLoadingBundleMasterStatus ||
-              hasMultipleExistingMasters
-            }
-          >
-            {t('bulk.bundleTickets', 'Bundle Tickets')}
-          </Button>
-        </DialogFooter>
       </Dialog>
+        );
+      })()}
       <TicketExportDialog
         isOpen={isExportDialogOpen}
         onClose={() => setIsExportDialogOpen(false)}

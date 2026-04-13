@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -536,11 +536,45 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
           },
         ] as ColumnDefinition<ImportContactResult>[]}
       />
-      <DialogFooter>
-        <Button id='close-import-dialog' onClick={onClose}>{t('common.actions.close', { defaultValue: 'Close' })}</Button>
-      </DialogFooter>
     </div>
   );
+
+  const footer = (
+    <>
+      {step === 'mapping' && previewData && (
+        <div className="flex justify-end space-x-2">
+          <Button id='back-to-upload' variant="outline" onClick={() => setStep('upload')} disabled={isProcessing}>{t('common.actions.back', { defaultValue: 'Back' })}</Button>
+          <Button id='preview-import' onClick={handlePreview} disabled={isProcessing}>
+            {isProcessing ? t('contactsImportDialog.mapping.processing', { defaultValue: 'Processing...' }) : t('contactsImportDialog.mapping.preview', { defaultValue: 'Preview' })}
+          </Button>
+        </div>
+      )}
+      {step === 'preview' && validationResults.length > 0 && (
+        <div className="flex justify-end space-x-2">
+          <Button id='back-to-mapping' variant="outline" onClick={() => setStep('mapping')}>{t('common.actions.back', { defaultValue: 'Back' })}</Button>
+          <Button
+            id='import-contacts'
+            onClick={handleImport}
+            disabled={validationResults.every(result => !result.isValid)}
+          >
+            {t('common.actions.import', { defaultValue: 'Import' })}
+          </Button>
+        </div>
+      )}
+      {step === 'results' && (
+        <div className="flex justify-end space-x-2">
+          <Button id='close-import-dialog' onClick={onClose}>{t('common.actions.close', { defaultValue: 'Close' })}</Button>
+        </div>
+      )}
+      {step === 'complete' && (
+        <div className="flex justify-end space-x-2">
+          <Button id='close-import-complete' onClick={onClose}>{t('common.actions.close', { defaultValue: 'Close' })}</Button>
+        </div>
+      )}
+    </>
+  );
+
+  const hasFooter = step === 'mapping' || step === 'preview' || step === 'results' || step === 'complete';
 
   return (
     <>
@@ -549,6 +583,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         onClose={onClose}
         title={t('contactsImportDialog.title', { defaultValue: 'Import Contacts' })}
         className="max-w-5xl"
+        footer={hasFooter ? footer : undefined}
       >
         <DialogContent>
           {errors.length > 0 && (
@@ -692,14 +727,6 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                   </AlertDescription>
                 </Alert>
               )}
-              <div className="mt-4">
-                <DialogFooter>
-                  <Button id='back-to-upload' variant="outline" onClick={() => setStep('upload')} disabled={isProcessing}>{t('common.actions.back', { defaultValue: 'Back' })}</Button>
-                  <Button id='preview-import' onClick={handlePreview} disabled={isProcessing}>
-                    {isProcessing ? t('contactsImportDialog.mapping.processing', { defaultValue: 'Processing...' }) : t('contactsImportDialog.mapping.preview', { defaultValue: 'Preview' })}
-                  </Button>
-                </DialogFooter>
-              </div>
             </div>
           )}
 
@@ -813,16 +840,6 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                   ] as ColumnDefinition<any>[]}
                 />
               </div>
-              <DialogFooter>
-                <Button id='back-to-mapping' variant="outline" onClick={() => setStep('mapping')}>{t('common.actions.back', { defaultValue: 'Back' })}</Button>
-                <Button
-                  id='import-contacts'
-                  onClick={handleImport}
-                  disabled={validationResults.every(result => !result.isValid)}
-                >
-                  {t('common.actions.import', { defaultValue: 'Import' })}
-                </Button>
-              </DialogFooter>
             </div>
           )}
 
@@ -861,9 +878,6 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                   count: importResults.filter((r: ImportContactResult): boolean => r.success).length
                 })}
               </p>
-              <DialogFooter>
-                <Button id='close-import-complete' onClick={onClose}>{t('common.actions.close', { defaultValue: 'Close' })}</Button>
-              </DialogFooter>
             </div>
           )}
         </DialogContent>

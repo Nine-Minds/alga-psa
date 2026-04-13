@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getEligibleContractLinesForUI } from '@alga-psa/billing/lib/contractLineDisambiguation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -525,6 +525,27 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
           ? t('usage.dialog.editTitle', { defaultValue: 'Edit Usage Record' })
           : t('usage.dialog.addTitle', { defaultValue: 'Add Usage Record' })}
         disableFocusTrap
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-usage-button"
+              variant="outline"
+              onClick={() => setIsAddModalOpen(false)}
+              disabled={isSaving}
+            >
+              {t('common.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="submit-usage-button"
+              onClick={editingUsage ? handleEditUsage : handleAddUsage}
+              disabled={isSaving}
+            >
+              {editingUsage
+                ? t('usage.actions.updateUsage', { defaultValue: 'Update Usage' })
+                : t('usage.actions.addUsage', { defaultValue: 'Add Usage' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -654,25 +675,6 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 ) : <></>}
               </div>
             )}
-            <DialogFooter>
-              <Button
-                id="cancel-usage-button"
-                variant="outline"
-                onClick={() => setIsAddModalOpen(false)}
-                disabled={isSaving}
-              >
-                {t('common.cancel', { defaultValue: 'Cancel' })}
-              </Button>
-              <Button
-                id="submit-usage-button"
-                onClick={editingUsage ? handleEditUsage : handleAddUsage}
-                disabled={isSaving}
-              >
-                {editingUsage
-                  ? t('usage.actions.updateUsage', { defaultValue: 'Update Usage' })
-                  : t('usage.actions.addUsage', { defaultValue: 'Add Usage' })}
-              </Button>
-            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>

@@ -101,6 +101,33 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
     }
   };
 
+  const footer = (
+    <div className="flex justify-between">
+      <Button
+        id="cancel-button"
+        variant="ghost"
+        onClick={() => {
+          setHasAttemptedSubmit(false);
+          onClose();
+        }}
+        disabled={isSubmitting}
+      >
+        {t('common:actions.cancel', 'Cancel')}
+      </Button>
+      <Button
+        id="create-button"
+        type="button"
+        disabled={isSubmitting}
+        className={!formData.project_id || !formData.template_name.trim() ? 'opacity-50' : ''}
+        onClick={() => (document.getElementById('create-template-dialog-form') as HTMLFormElement | null)?.requestSubmit()}
+      >
+        {isSubmitting
+          ? t('templates.create.creating', 'Creating...')
+          : t('templates.create.create', 'Create Template')}
+      </Button>
+    </div>
+  );
+
   return (
     <Dialog
       isOpen={true}
@@ -110,9 +137,10 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
       }}
       title={t('templates.create.title', 'Create Template from Project')}
       className="max-w-[600px]"
+      footer={footer}
     >
       <DialogContent>
-        <form onSubmit={handleSubmit} className="flex flex-col">
+        <form id="create-template-dialog-form" onSubmit={handleSubmit} className="flex flex-col">
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -238,29 +266,6 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
               </div>
             </div>
 
-            <div className="flex justify-between mt-6">
-              <Button
-                id="cancel-button"
-                variant="ghost"
-                onClick={() => {
-                  setHasAttemptedSubmit(false);
-                  onClose();
-                }}
-                disabled={isSubmitting}
-              >
-                {t('common:actions.cancel', 'Cancel')}
-              </Button>
-              <Button
-                id="create-button"
-                type="submit"
-                disabled={isSubmitting}
-                className={!formData.project_id || !formData.template_name.trim() ? 'opacity-50' : ''}
-              >
-                {isSubmitting
-                  ? t('templates.create.creating', 'Creating...')
-                  : t('templates.create.create', 'Create Template')}
-              </Button>
-            </div>
           </div>
         </form>
       </DialogContent>

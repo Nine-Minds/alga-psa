@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -338,6 +338,23 @@ export default function AccountingExportsTab(): React.JSX.Element {
         }}
         title={t('accountingExports.createDialog.title', { defaultValue: 'New Accounting Export' })}
         id="accounting-exports-create"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="accounting-export-create-cancel"
+              variant="outline"
+              onClick={() => setCreateOpen(false)}
+              disabled={creating}
+            >
+              {t('common.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button onClick={() => void onCreate()} disabled={creating} id="accounting-export-create-submit">
+              {creating
+                ? t('accountingExports.actions.creating', { defaultValue: 'Creating...' })
+                : t('accountingExports.actions.createBatch', { defaultValue: 'Create Batch' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <DialogHeader>
@@ -428,21 +445,6 @@ export default function AccountingExportsTab(): React.JSX.Element {
             </div>
           </div>
 
-          <DialogFooter className="mt-6">
-            <Button
-              id="accounting-export-create-cancel"
-              variant="outline"
-              onClick={() => setCreateOpen(false)}
-              disabled={creating}
-            >
-              {t('common.cancel', { defaultValue: 'Cancel' })}
-            </Button>
-            <Button onClick={() => void onCreate()} disabled={creating} id="accounting-export-create-submit">
-              {creating
-                ? t('accountingExports.actions.creating', { defaultValue: 'Creating...' })
-                : t('accountingExports.actions.createBatch', { defaultValue: 'Create Batch' })}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

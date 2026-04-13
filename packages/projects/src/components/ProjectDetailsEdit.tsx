@@ -475,28 +475,30 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             id="cancel-confirm-dialog"
             className="max-w-md"
             draggable={false}
+            footer={
+              <div className="flex justify-end space-x-3">
+                <Button
+                  id="cancel-button"
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCancelConfirm(false)}
+                >
+                  {t('projectEdit.continueEditing', 'Continue Editing')}
+                </Button>
+                <Button
+                  id="discard-button"
+                  type="button"
+                  onClick={() => {
+                    setShowCancelConfirm(false);
+                    onCancel();
+                  }}
+                >
+                  {t('projectEdit.discardChanges', 'Discard Changes')}
+                </Button>
+              </div>
+            }
           >
             <p className="mb-4">{t('projectEdit.unsavedMessage', 'You have unsaved changes. Are you sure you want to cancel?')}</p>
-            <div className="flex justify-end space-x-3">
-              <Button
-                id="cancel-button"
-                type="button"
-                variant="outline"
-                onClick={() => setShowCancelConfirm(false)}
-              >
-                {t('projectEdit.continueEditing', 'Continue Editing')}
-              </Button>
-              <Button
-                id="discard-button"
-                type="button"
-                onClick={() => {
-                  setShowCancelConfirm(false);
-                  onCancel();
-                }}
-              >
-                {t('projectEdit.discardChanges', 'Discard Changes')}
-              </Button>
-            </div>
           </Dialog>
 
           <Dialog
@@ -506,28 +508,30 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             id="save-confirm-dialog"
             className="max-w-md"
             draggable={false}
+            footer={
+              <div className="flex justify-end space-x-3">
+                <Button
+                  id="continue-button"
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowSaveConfirm(false)}
+                >
+                  {t('projectEdit.continueEditing', 'Continue Editing')}
+                </Button>
+                <Button
+                  id="save-and-close-button"
+                  type="button"
+                  onClick={(e) => {
+                    setShowSaveConfirm(false);
+                    handleSubmit(e);
+                  }}
+                >
+                  {t('projectEdit.saveAndClose', 'Save and Close')}
+                </Button>
+              </div>
+            }
           >
             <p className="mb-4">{t('projectEdit.saveMessage', 'Are you sure you want to save your changes and close the drawer?')}</p>
-            <div className="flex justify-end space-x-3">
-              <Button
-                id="continue-button"
-                type="button"
-                variant="outline"
-                onClick={() => setShowSaveConfirm(false)}
-              >
-                {t('projectEdit.continueEditing', 'Continue Editing')}
-              </Button>
-              <Button
-                id="save-and-close-button"
-                type="button"
-                onClick={(e) => {
-                  setShowSaveConfirm(false);
-                  handleSubmit(e);
-                }}
-              >
-                {t('projectEdit.saveAndClose', 'Save and Close')}
-              </Button>
-            </div>
           </Dialog>
 
           <Button

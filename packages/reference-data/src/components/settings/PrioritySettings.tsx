@@ -18,7 +18,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DeleteEntityDialog } from '@alga-psa/ui';
@@ -354,9 +354,33 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
         title={editingPriority ? 'Edit Priority' : 'Add New Priority'}
         className="max-w-lg max-w-[90vw]"
         id="priority-dialog"
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-priority-dialog"
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowPriorityDialog(false);
+                setEditingPriority(null);
+                setPriorityColor('#6B7280');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="submit-priority-dialog"
+              type="button"
+              variant="default"
+              onClick={() => (document.getElementById('priority-dialog-form') as HTMLFormElement | null)?.requestSubmit()}
+            >
+              {editingPriority ? 'Update' : 'Add'} Priority
+            </Button>
+          </div>
+        }
       >
         <DialogContent>
-          <form onSubmit={async (e) => {
+          <form id="priority-dialog-form" onSubmit={async (e) => {
             e.preventDefault();
             const formData = new FormData(e.currentTarget);
             const name = formData.get('name') as string;
@@ -496,28 +520,6 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                 </div>
               </div>
             </div>
-            
-            <DialogFooter>
-              <Button
-                id="cancel-priority-dialog"
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setShowPriorityDialog(false);
-                  setEditingPriority(null);
-                  setPriorityColor('#6B7280');
-                }}
-              >
-                Cancel
-              </Button>
-              <Button 
-                id="submit-priority-dialog"
-                type="submit" 
-                variant="default"
-              >
-                {editingPriority ? 'Update' : 'Add'} Priority
-              </Button>
-            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
@@ -529,6 +531,28 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
         title="Import Standard Priorities"
         className="max-w-lg"
         id="import-priorities-dialog"
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-import-dialog"
+              variant="outline"
+              onClick={() => {
+                setShowImportDialog(false);
+                setSelectedImportPriorities([]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="import-selected-priorities"
+              variant="default"
+              disabled={selectedImportPriorities.length === 0}
+              onClick={handleImportSelected}
+            >
+              Import ({selectedImportPriorities.length})
+            </Button>
+          </div>
+        }
       >
         <DialogContent>
           {availableReferencePriorities.length === 0 ? (
@@ -598,27 +622,6 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
               
             </div>
           )}
-          
-          <DialogFooter>
-            <Button
-              id="cancel-import-dialog"
-              variant="outline"
-              onClick={() => {
-                setShowImportDialog(false);
-                setSelectedImportPriorities([]);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              id="import-selected-priorities"
-              variant="default"
-              disabled={selectedImportPriorities.length === 0}
-              onClick={handleImportSelected}
-            >
-              Import ({selectedImportPriorities.length})
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

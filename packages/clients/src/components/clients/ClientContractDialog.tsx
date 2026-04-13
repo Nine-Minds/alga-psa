@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -195,6 +195,26 @@ export function ClientContractDialog({
     }
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="cancel-contract-assignment-btn"
+        type="button"
+        variant="secondary"
+        onClick={handleClose}
+      >
+        {t('clientContractDialog.cancel', { defaultValue: 'Cancel' })}
+      </Button>
+      <Button
+        id="save-contract-assignment-btn"
+        type="button"
+        onClick={() => (document.getElementById('client-contract-dialog-form') as HTMLFormElement | null)?.requestSubmit()}
+      >
+        {initialStartDate ? t('clientContractDialog.updateAssignment', { defaultValue: 'Update Assignment' }) : t('clientContractDialog.assignContract', { defaultValue: 'Assign Contract' })}
+      </Button>
+    </div>
+  );
+
   return (
     <>
       {triggerButton && (
@@ -207,9 +227,10 @@ export function ClientContractDialog({
         onClose={handleClose}
         title={initialStartDate ? t('clientContractDialog.editTitle', { defaultValue: 'Edit Contract Assignment' }) : t('clientContractDialog.assignTitle', { defaultValue: 'Assign Contract to Client' })}
         className="max-w-md"
+        footer={footer}
       >
         <DialogContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form id="client-contract-dialog-form" onSubmit={handleSubmit} className="space-y-4">
             {/* Display Contract Line Names if provided (likely in edit mode) */}
             {contractLineNames && contractLineNames.length > 0 && (
               <div className="mb-4 border-b pb-4">
@@ -340,23 +361,6 @@ export function ClientContractDialog({
                 {t('clientContractDialog.renewalSettingsSubtext', { defaultValue: 'Renewal settings appear for fixed-term assignments with an end date.' })}
               </p>
             )}
-            
-            <DialogFooter>
-              <Button
-                id="cancel-contract-assignment-btn"
-                type="button"
-                variant="secondary"
-                onClick={handleClose}
-              >
-                {t('clientContractDialog.cancel', { defaultValue: 'Cancel' })}
-              </Button>
-              <Button
-                id="save-contract-assignment-btn"
-                type="submit"
-              >
-                {initialStartDate ? t('clientContractDialog.updateAssignment', { defaultValue: 'Update Assignment' }) : t('clientContractDialog.assignContract', { defaultValue: 'Assign Contract' })}
-              </Button>
-            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

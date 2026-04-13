@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -55,8 +55,35 @@ export function EntraCippConnectDialog({
         }
     };
 
+    const footer = (
+        <div className="flex justify-end space-x-2">
+            <Button
+                id="entra-cipp-cancel"
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
+            >
+                Cancel
+            </Button>
+            <Button
+                id="entra-cipp-submit"
+                type="button"
+                onClick={() => (document.getElementById('entra-cipp-form') as HTMLFormElement | null)?.requestSubmit()}
+                disabled={isSubmitting}
+            >
+                {isSubmitting ? 'Connecting...' : 'Connect'}
+            </Button>
+        </div>
+    );
+
     return (
-        <Dialog isOpen={open} onClose={() => onOpenChange(false)} id="entra-cipp-connect-dialog">
+        <Dialog
+            isOpen={open}
+            onClose={() => onOpenChange(false)}
+            id="entra-cipp-connect-dialog"
+            footer={footer}
+        >
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Connect CIPP</DialogTitle>
@@ -65,7 +92,7 @@ export function EntraCippConnectDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form id="entra-cipp-form" onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="entra-cipp-baseurl">CIPP Base URL</Label>
                         <Input
@@ -90,21 +117,6 @@ export function EntraCippConnectDialog({
                     </div>
 
                     {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
-                    <DialogFooter>
-                        <Button
-                            id="entra-cipp-cancel"
-                            type="button"
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                            disabled={isSubmitting}
-                        >
-                            Cancel
-                        </Button>
-                        <Button id="entra-cipp-submit" type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? 'Connecting...' : 'Connect'}
-                        </Button>
-                    </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>

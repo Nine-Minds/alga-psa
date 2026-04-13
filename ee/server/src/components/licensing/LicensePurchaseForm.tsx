@@ -368,11 +368,39 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
 
     console.log('[renderConfirmationModal] Rendering Dialog component');
 
+    const footer = (
+      <div className="flex justify-end space-x-2">
+        <Button
+          id="cancel-confirmation-button"
+          variant="outline"
+          onClick={() => {
+            setShowConfirmModal(false);
+            setLoading(false);
+          }}
+          disabled={confirmLoading}
+        >
+          {t('subscriptionForm.confirmation.cancel', { defaultValue: 'Cancel' })}
+        </Button>
+        <Button
+          id="confirm-license-update-button"
+          onClick={processLicenseUpdate}
+          disabled={confirmLoading}
+        >
+          {confirmLoading
+            ? tCommon('status.processing', { defaultValue: 'Processing...' })
+            : isIncrease
+              ? t('subscriptionForm.confirmation.confirmPayNow', { defaultValue: 'Confirm & Pay Now' })
+              : t('subscriptionForm.confirmation.confirmSchedule', { defaultValue: 'Confirm Schedule' })}
+        </Button>
+      </div>
+    );
+
     return (
       <Dialog
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
         title={t('subscriptionForm.confirmation.title', { defaultValue: 'Confirm License Update' })}
+        footer={footer}
       >
           <p className="text-sm text-gray-600 mb-4">
             {isIncrease
@@ -520,30 +548,6 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
             </div>
           </div>
 
-          <div className="mt-6 flex gap-2 justify-end">
-            <Button
-              id="cancel-confirmation-button"
-              variant="outline"
-              onClick={() => {
-                setShowConfirmModal(false);
-                setLoading(false);
-              }}
-              disabled={confirmLoading}
-            >
-              {t('subscriptionForm.confirmation.cancel', { defaultValue: 'Cancel' })}
-            </Button>
-            <Button
-              id="confirm-license-update-button"
-              onClick={processLicenseUpdate}
-              disabled={confirmLoading}
-            >
-              {confirmLoading
-                ? tCommon('status.processing', { defaultValue: 'Processing...' })
-                : isIncrease
-                  ? t('subscriptionForm.confirmation.confirmPayNow', { defaultValue: 'Confirm & Pay Now' })
-                  : t('subscriptionForm.confirmation.confirmSchedule', { defaultValue: 'Confirm Schedule' })}
-            </Button>
-          </div>
       </Dialog>
     );
   };

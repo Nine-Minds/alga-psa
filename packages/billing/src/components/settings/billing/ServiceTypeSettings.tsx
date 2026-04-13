@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -430,15 +430,30 @@ const ServiceTypeSettings: React.FC = () => {
       </Card>
 
       {/* Add/Edit Dialog */}
-      <Dialog 
-        isOpen={isEditDialogOpen} 
-        onClose={handleCloseEditDialog} 
+      <Dialog
+        isOpen={isEditDialogOpen}
+        onClose={handleCloseEditDialog}
         title={editingType?.id
           ? t('serviceTypes.dialog.editTitle', { defaultValue: 'Edit Custom Service Type' })
           : t('serviceTypes.dialog.addTitle', { defaultValue: 'Add Custom Service Type' })}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="cancel-edit-type-button" variant="outline" onClick={handleCloseEditDialog}>
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="save-type-button"
+              type="button"
+              onClick={() => (document.getElementById('service-type-edit-form') as HTMLFormElement | null)?.requestSubmit()}
+              className={!editingType?.name?.trim() || !editingType?.billing_method || (!editingType?.order_number && editingType?.order_number !== 0) ? 'opacity-50' : ''}
+            >
+              {t('serviceTypes.actions.save', { defaultValue: 'Save' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
-          <form onSubmit={(e) => { e.preventDefault(); handleSaveType(); }} noValidate>
+          <form id="service-type-edit-form" onSubmit={(e) => { e.preventDefault(); handleSaveType(); }} noValidate>
           <div className="space-y-4 py-4">
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive">
@@ -548,18 +563,6 @@ const ServiceTypeSettings: React.FC = () => {
               </p>
             </div>
           </div>
-          <DialogFooter>
-            <Button id="cancel-edit-type-button" variant="outline" onClick={handleCloseEditDialog}>
-              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-            </Button>
-            <Button
-              id="save-type-button"
-              type="submit"
-              className={!editingType?.name?.trim() || !editingType?.billing_method || (!editingType?.order_number && editingType?.order_number !== 0) ? 'opacity-50' : ''}
-            >
-              {t('serviceTypes.actions.save', { defaultValue: 'Save' })}
-            </Button>
-          </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
@@ -588,13 +591,34 @@ const ServiceTypeSettings: React.FC = () => {
       />
 
       {/* Import Dialog */}
-      <Dialog 
-        isOpen={showImportDialog && importConflicts.length === 0} 
+      <Dialog
+        isOpen={showImportDialog && importConflicts.length === 0}
         onClose={() => {
           setShowImportDialog(false);
           setSelectedImportTypes([]);
-        }} 
+        }}
         title={t('serviceTypes.import.title', { defaultValue: 'Import Standard Service Types' })}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-import-service-types"
+              variant="outline"
+              onClick={() => {
+                setShowImportDialog(false);
+                setSelectedImportTypes([]);
+              }}
+            >
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="confirm-import-service-types"
+              onClick={handleCheckConflicts}
+              disabled={selectedImportTypes.length === 0}
+            >
+              {t('common.actions.importSelected', { defaultValue: 'Import Selected' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -659,35 +683,36 @@ const ServiceTypeSettings: React.FC = () => {
             )}
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button 
-            id="cancel-import-service-types"
-            variant="outline" 
-            onClick={() => {
-              setShowImportDialog(false);
-              setSelectedImportTypes([]);
-            }}
-          >
-            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-          </Button>
-          <Button 
-            id="confirm-import-service-types"
-            onClick={handleCheckConflicts}
-            disabled={selectedImportTypes.length === 0}
-          >
-            {t('common.actions.importSelected', { defaultValue: 'Import Selected' })}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       {/* Conflict Resolution Dialog */}
-      <Dialog 
-        isOpen={importConflicts.length > 0} 
+      <Dialog
+        isOpen={importConflicts.length > 0}
         onClose={() => {
           setImportConflicts([]);
           setConflictResolutions({});
-        }} 
+        }}
         title={t('import.title', { defaultValue: 'Resolve Import Conflicts' })}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-resolve-conflicts"
+              variant="outline"
+              onClick={() => {
+                setImportConflicts([]);
+                setConflictResolutions({});
+              }}
+            >
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="confirm-import-with-resolutions"
+              onClick={handleImport}
+            >
+              {t('common.actions.importWithResolutions', { defaultValue: 'Import with Resolutions' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -790,24 +815,6 @@ const ServiceTypeSettings: React.FC = () => {
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button 
-            id="cancel-resolve-conflicts"
-            variant="outline" 
-            onClick={() => {
-              setImportConflicts([]);
-              setConflictResolutions({});
-            }}
-          >
-            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-          </Button>
-          <Button 
-            id="confirm-import-with-resolutions"
-            onClick={handleImport}
-          >
-            {t('common.actions.importWithResolutions', { defaultValue: 'Import with Resolutions' })}
-          </Button>
-        </DialogFooter>
       </Dialog>
     </div>
   );

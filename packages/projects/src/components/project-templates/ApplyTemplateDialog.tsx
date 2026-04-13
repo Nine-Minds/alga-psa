@@ -183,6 +183,29 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
     }
   }
 
+  const footer = (
+    <div className="flex gap-4 justify-end">
+      <Button
+        id="apply-template-cancel"
+        type="button"
+        variant="outline"
+        onClick={onClose}
+      >
+        {t('common:actions.cancel', 'Cancel')}
+      </Button>
+      <Button
+        id="apply-template-submit"
+        type="button"
+        disabled={loading}
+        onClick={() => (document.getElementById('apply-template-dialog-form') as HTMLFormElement | null)?.requestSubmit()}
+      >
+        {loading
+          ? t('templates.apply.creating', 'Creating...')
+          : t('templates.apply.create', 'Create Project')}
+      </Button>
+    </div>
+  );
+
   return (
     <>
     <Dialog
@@ -191,8 +214,9 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
       title={t('templates.apply.title', 'Create Project from Template')}
       className="max-w-3xl"
       disableFocusTrap
+      footer={footer}
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form id="apply-template-dialog-form" onSubmit={handleSubmit} className="space-y-6">
           {hasAttemptedSubmit && validationErrors.length > 0 && (
             <Alert variant="destructive">
               <AlertDescription>
@@ -366,25 +390,6 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
             </div>
           </div>
 
-          <div className="flex gap-4 justify-end pt-4 border-t">
-            <Button
-              id="apply-template-cancel"
-              type="button"
-              variant="outline"
-              onClick={onClose}
-            >
-              {t('common:actions.cancel', 'Cancel')}
-            </Button>
-            <Button
-              id="apply-template-submit"
-              type="submit"
-              disabled={loading}
-            >
-              {loading
-                ? t('templates.apply.creating', 'Creating...')
-                : t('templates.apply.create', 'Create Project')}
-            </Button>
-          </div>
         </form>
     </Dialog>
     <QuickAddStatus

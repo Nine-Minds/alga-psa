@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -110,9 +110,17 @@ export function Microsoft365DiagnosticsDialog({
 
   const overallStatusKey = `microsoft365.statuses.${report?.summary.overallStatus ?? 'skip'}`;
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button id="m365-diag-close" variant="outline" onClick={onClose}>
+        {t('common.actions.close', { defaultValue: 'Close' })}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title={title} id="microsoft-365-diagnostics">
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+    <Dialog isOpen={isOpen} onClose={onClose} title={title} id="microsoft-365-diagnostics" footer={footer}>
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -244,11 +252,6 @@ export function Microsoft365DiagnosticsDialog({
           </div>
         )}
 
-        <DialogFooter>
-          <Button id="m365-diag-close" variant="outline" onClick={onClose}>
-            {t('common.actions.close', { defaultValue: 'Close' })}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

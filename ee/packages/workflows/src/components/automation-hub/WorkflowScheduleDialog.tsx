@@ -11,7 +11,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle
 } from '@alga-psa/ui/components/Dialog';
@@ -893,12 +892,28 @@ export default function WorkflowScheduleDialog({
 
   const dialogBusy = isLoadingWorkflows || isLoadingSchedule;
 
+  const footer = (
+    <div className="flex justify-end gap-2">
+      <Button id="schedule-dialog-cancel" variant="outline" onClick={onClose} disabled={isSaving}>
+        Cancel
+      </Button>
+      <Button
+        id="schedule-dialog-save"
+        onClick={() => void handleSave()}
+        disabled={!canSave || isSaving || dialogBusy}
+      >
+        {isSaving ? 'Saving…' : mode === 'edit' ? 'Save Changes' : 'Create Schedule'}
+      </Button>
+    </div>
+  );
+
   return (
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
       title={mode === 'edit' ? 'Edit Schedule' : 'Create Schedule'}
       className="max-w-5xl"
+      footer={footer}
     >
       <DialogContent>
         <DialogHeader>
@@ -1330,20 +1345,6 @@ export default function WorkflowScheduleDialog({
           </div>
         )}
 
-        <DialogFooter>
-          <div className="mt-6 flex justify-end gap-2">
-            <Button id="schedule-dialog-cancel" variant="outline" onClick={onClose} disabled={isSaving}>
-              Cancel
-            </Button>
-            <Button
-              id="schedule-dialog-save"
-              onClick={() => void handleSave()}
-              disabled={!canSave || isSaving || dialogBusy}
-            >
-              {isSaving ? 'Saving…' : mode === 'edit' ? 'Save Changes' : 'Create Schedule'}
-            </Button>
-          </div>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

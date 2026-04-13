@@ -367,7 +367,9 @@
       "namePlaceholder": "Inserisci il nome della cartella",
       "loading": "Caricamento cartelle...",
       "rootOption": "Radice (nessuna cartella)",
-      "empty": "Nessuna cartella disponibile. I documenti verranno salvati nella radice."
+      "empty": "Nessuna cartella disponibile. I documenti verranno salvati nella radice.",
+      "showAllFolders": "Mostra tutte le cartelle",
+      "showEntityFolders": "Mostra cartelle dell'entità"
     },
     "filters": {
       "searchLabel": "Cerca documenti",

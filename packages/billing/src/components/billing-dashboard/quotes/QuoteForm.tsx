@@ -15,7 +15,7 @@ import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import type { IClient, IContact, IQuote, IQuoteDocumentTemplate, IQuoteListItem, QuoteConversionPreview, QuoteStatus } from '@alga-psa/types';
 import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
 import { addQuoteItem, approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
@@ -918,7 +918,20 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       </Box>
 
       {/* Send dialog */}
-      <Dialog id="quote-form-send-dialog" isOpen={isSendDialogOpen} onClose={() => setIsSendDialogOpen(false)} title="Send Quote to Client">
+      <Dialog
+        id="quote-form-send-dialog"
+        isOpen={isSendDialogOpen}
+        onClose={() => setIsSendDialogOpen(false)}
+        title="Send Quote to Client"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="quote-form-send-cancel" variant="outline" onClick={() => setIsSendDialogOpen(false)} disabled={isWorking}>Cancel</Button>
+            <Button id="quote-form-send-confirm" onClick={() => void handleSendQuote()} disabled={isWorking}>
+              {isWorking ? 'Sending...' : 'Send Quote'}
+            </Button>
+          </div>
+        )}
+      >
         <DialogContent>
           <DialogDescription>
             This will email the quote to the client&apos;s billing contacts and change its status to &ldquo;Sent&rdquo;.
@@ -953,12 +966,6 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
               />
             </label>
           </div>
-          <DialogFooter>
-            <Button id="quote-form-send-cancel" variant="outline" onClick={() => setIsSendDialogOpen(false)} disabled={isWorking}>Cancel</Button>
-            <Button id="quote-form-send-confirm" onClick={() => void handleSendQuote()} disabled={isWorking}>
-              {isWorking ? 'Sending...' : 'Send Quote'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -968,6 +975,18 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         isOpen={approvalDialogMode !== null}
         onClose={() => { setApprovalDialogMode(null); setApprovalComment(''); }}
         title={approvalDialogMode === 'approve' ? 'Approve Quote' : 'Request Changes'}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="quote-form-approval-cancel" variant="outline" onClick={() => { setApprovalDialogMode(null); setApprovalComment(''); }} disabled={isWorking}>Cancel</Button>
+            <Button
+              id="quote-form-approval-confirm"
+              onClick={() => void (approvalDialogMode === 'approve' ? handleApproveQuote() : handleRequestChanges())}
+              disabled={isWorking || (approvalDialogMode === 'changes' && !approvalComment.trim())}
+            >
+              {isWorking ? 'Processing...' : approvalDialogMode === 'approve' ? 'Approve' : 'Request Changes'}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <DialogDescription>
@@ -987,22 +1006,28 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
               />
             </label>
           </div>
-          <DialogFooter>
-            <Button id="quote-form-approval-cancel" variant="outline" onClick={() => { setApprovalDialogMode(null); setApprovalComment(''); }} disabled={isWorking}>Cancel</Button>
-            <Button
-              id="quote-form-approval-confirm"
-              onClick={() => void (approvalDialogMode === 'approve' ? handleApproveQuote() : handleRequestChanges())}
-              disabled={isWorking || (approvalDialogMode === 'changes' && !approvalComment.trim())}
-            >
-              {isWorking ? 'Processing...' : approvalDialogMode === 'approve' ? 'Approve' : 'Request Changes'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Conversion dialog */}
-      <Dialog id="quote-form-conversion-dialog" isOpen={isConversionDialogOpen} onClose={() => setIsConversionDialogOpen(false)}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-3xl">
+      <Dialog
+        id="quote-form-conversion-dialog"
+        isOpen={isConversionDialogOpen}
+        onClose={() => setIsConversionDialogOpen(false)}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="quote-form-conversion-cancel" variant="outline" onClick={() => setIsConversionDialogOpen(false)} disabled={isWorking}>Cancel</Button>
+            <Button
+              id="quote-form-conversion-confirm"
+              onClick={() => void handleConfirmConversion()}
+              disabled={isWorking || !conversionPreview}
+            >
+              {conversionMode === 'contract' ? 'Create Draft Contract' : conversionMode === 'invoice' ? 'Create Draft Invoice' : 'Create Both Records'}
+            </Button>
+          </div>
+        )}
+      >
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Conversion Preview</DialogTitle>
             <DialogDescription>Review what this quote conversion will create before confirming.</DialogDescription>
@@ -1076,16 +1101,6 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
               <LoadingIndicator text="Loading conversion preview..." spinnerProps={{ size: 'sm' }} />
             </div>
           )}
-          <DialogFooter>
-            <Button id="quote-form-conversion-cancel" variant="outline" onClick={() => setIsConversionDialogOpen(false)} disabled={isWorking}>Cancel</Button>
-            <Button
-              id="quote-form-conversion-confirm"
-              onClick={() => void handleConfirmConversion()}
-              disabled={isWorking || !conversionPreview}
-            >
-              {conversionMode === 'contract' ? 'Create Draft Contract' : conversionMode === 'invoice' ? 'Create Draft Invoice' : 'Create Both Records'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Card>

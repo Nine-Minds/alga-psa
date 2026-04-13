@@ -569,10 +569,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                     isOpen={!!errorMessage}
                     onClose={() => setErrorMessage(null)}
                     draggable={false}
-                >
-                    <div className="space-y-4">
-                        <p className="text-sm text-red-600">{errorMessage}</p>
-                        <div className="flex justify-end">
+                    footer={
+                        <div className="flex justify-end space-x-2">
                             <Button
                                 id="close-error-dialog-btn"
                                 onClick={() => setErrorMessage(null)}
@@ -581,6 +579,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                                 {t('common.actions.close', { defaultValue: 'Close' })}
                             </Button>
                         </div>
+                    }
+                >
+                    <div className="space-y-4">
+                        <p className="text-sm text-red-600">{errorMessage}</p>
                     </div>
                 </Dialog>
             )}

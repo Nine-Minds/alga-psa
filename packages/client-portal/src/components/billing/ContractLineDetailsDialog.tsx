@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import type { IClientContractLine } from '@alga-psa/types';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -142,18 +142,20 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
       onClose={onClose}
       title={t('contractLine.detailsTitle')}
       data-automation-id="contract-line-details-dialog"
+      footer={
+        <div className="flex justify-end space-x-2">
+          <Button id="close-contract-line-dialog-button" variant="outline" onClick={onClose}>
+            <X className="mr-2 h-4 w-4" />
+            {tCommon('common.close')}
+          </Button>
+        </div>
+      }
     >
       <DialogContent>
         <div data-automation-id="contract-line-details-content">
           {isLoading ? loadingSkeleton : contractLineContent}
         </div>
       </DialogContent>
-      <DialogFooter>
-        <Button id="close-contract-line-dialog-button" variant="outline" onClick={onClose}>
-          <X className="mr-2 h-4 w-4" />
-          {tCommon('common.close')}
-        </Button>
-      </DialogFooter>
     </Dialog>
   );
 });

@@ -207,6 +207,29 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
     }
   };
 
+  const footer = (
+    <div className="flex justify-between">
+      <Button id='cancel-button' variant="ghost" onClick={() => {
+        setHasAttemptedSubmit(false);
+        setValidationErrors([]);
+        onClose();
+      }} disabled={isSubmitting}>
+        {t('common:actions.cancel', 'Cancel')}
+      </Button>
+      <Button
+        id='create-button'
+        type="button"
+        disabled={isSubmitting}
+        className={!projectName.trim() || !selectedClientId || !selectedStatusId ? 'opacity-50' : ''}
+        onClick={() => (document.getElementById('project-quick-add-form') as HTMLFormElement | null)?.requestSubmit()}
+      >
+        {isSubmitting
+          ? t('quickAdd.creating', 'Creating...')
+          : t('quickAdd.create', 'Create Project')}
+      </Button>
+    </div>
+  );
+
   return (
     <>
     <Dialog
@@ -219,6 +242,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       title={t('quickAdd.title', 'Add New Project')}
       className="max-w-[600px]"
       disableFocusTrap
+      footer={footer}
     >
       <DialogContent>
           {hasAttemptedSubmit && validationErrors.length > 0 && (
@@ -233,7 +257,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
               </AlertDescription>
             </Alert>
           )}
-          <form onSubmit={handleSubmit} className="flex flex-col">
+          <form id="project-quick-add-form" onSubmit={handleSubmit} className="flex flex-col">
             <div className="space-y-4">
               <TextArea
                 value={projectName}
@@ -394,20 +418,6 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                     />
                   </div>
                 )}
-              </div>
-              <div className="flex justify-between mt-6">
-                <Button id='cancel-button' variant="ghost" onClick={() => {
-                  setHasAttemptedSubmit(false);
-                  setValidationErrors([]);
-                  onClose();
-                }} disabled={isSubmitting}>
-                  {t('common:actions.cancel', 'Cancel')}
-                </Button>
-                <Button id='create-button' type="submit" disabled={isSubmitting} className={!projectName.trim() || !selectedClientId || !selectedStatusId ? 'opacity-50' : ''}>
-                  {isSubmitting
-                    ? t('quickAdd.creating', 'Creating...')
-                    : t('quickAdd.create', 'Create Project')}
-                </Button>
               </div>
             </div>
           </form>

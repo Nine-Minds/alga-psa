@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -168,10 +168,28 @@ export function AccountingMappingDialog({
     return null;
   };
 
+  const formId = `${dialogId}-form`;
+
+  const footer = (
+    <div className="flex items-center justify-end gap-3">
+      <Button id={cancelButtonId} type="button" variant="outline" onClick={onClose}>
+        {module.labels.deleteConfirmation.cancelLabel ?? 'Cancel'}
+      </Button>
+      <Button
+        id={saveButtonId}
+        type="button"
+        disabled={isSaving}
+        onClick={() => (document.getElementById(formId) as HTMLFormElement | null)?.requestSubmit()}
+      >
+        {isSaving ? 'Saving…' : 'Save Mapping'}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog id={dialogId} isOpen={isOpen} onClose={onClose} title={dialogTitle}>
+    <Dialog id={dialogId} isOpen={isOpen} onClose={onClose} title={dialogTitle} footer={footer}>
       <DialogContent className="sm:max-w-[520px]">
-        <form onSubmit={handleSubmit} className="space-y-6 py-4">
+        <form id={formId} onSubmit={handleSubmit} className="space-y-6 py-4">
           <div className="space-y-2">
             <Label htmlFor={`${module.id}-alga-select`} className="text-sm font-medium text-foreground">
               {module.labels.dialog.algaField}
@@ -245,15 +263,6 @@ export function AccountingMappingDialog({
           ) : null}
 
           {error ? <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p> : null}
-
-          <DialogFooter className="flex items-center justify-end gap-3">
-            <Button id={cancelButtonId} type="button" variant="outline" onClick={onClose}>
-              {module.labels.deleteConfirmation.cancelLabel ?? 'Cancel'}
-            </Button>
-            <Button id={saveButtonId} type="submit" disabled={isSaving}>
-              {isSaving ? 'Saving…' : 'Save Mapping'}
-            </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

@@ -14,7 +14,7 @@ import { getAvailableReferenceData, importReferenceData, checkImportConflicts, I
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -307,17 +307,38 @@ const ServiceCategoriesSettings: React.FC = () => {
       />
 
       {/* Add/Edit Dialog */}
-      <Dialog 
-        isOpen={showAddEditDialog} 
+      <Dialog
+        isOpen={showAddEditDialog}
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingCategory(null);
           setFormData({ category_name: '', description: '', display_order: 0 });
           setError(null);
-        }} 
+        }}
         title={editingCategory
           ? t('serviceCategories.dialog.editTitle', { defaultValue: 'Edit Service Category' })
           : t('serviceCategories.dialog.addTitle', { defaultValue: 'Add Service Category' })}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-service-category"
+              variant="outline"
+              onClick={() => {
+                setShowAddEditDialog(false);
+                setEditingCategory(null);
+                setFormData({ category_name: '', description: '', display_order: 0 });
+                setError(null);
+              }}
+            >
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button id="save-service-category" onClick={handleSaveCategory}>
+              {editingCategory
+                ? t('serviceCategories.actions.update', { defaultValue: 'Update' })
+                : t('serviceCategories.actions.create', { defaultValue: 'Create' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -373,35 +394,37 @@ const ServiceCategoriesSettings: React.FC = () => {
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button 
-            id="cancel-service-category"
-            variant="outline" 
-            onClick={() => {
-              setShowAddEditDialog(false);
-              setEditingCategory(null);
-              setFormData({ category_name: '', description: '', display_order: 0 });
-              setError(null);
-            }}
-          >
-            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-          </Button>
-          <Button id="save-service-category" onClick={handleSaveCategory}>
-            {editingCategory
-              ? t('serviceCategories.actions.update', { defaultValue: 'Update' })
-              : t('serviceCategories.actions.create', { defaultValue: 'Create' })}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       {/* Import Dialog */}
-      <Dialog 
-        isOpen={showImportDialog && importConflicts.length === 0} 
+      <Dialog
+        isOpen={showImportDialog && importConflicts.length === 0}
         onClose={() => {
           setShowImportDialog(false);
           setSelectedImportCategories([]);
-        }} 
+        }}
         title={t('serviceCategories.import.title', { defaultValue: 'Import Standard Service Categories' })}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-import"
+              variant="outline"
+              onClick={() => {
+                setShowImportDialog(false);
+                setSelectedImportCategories([]);
+              }}
+            >
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="import-selected"
+              onClick={handleImport}
+              disabled={selectedImportCategories.length === 0}
+            >
+              {t('common.actions.importSelected', { defaultValue: 'Import Selected' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -471,35 +494,33 @@ const ServiceCategoriesSettings: React.FC = () => {
             )}
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button 
-            id="cancel-import"
-            variant="outline" 
-            onClick={() => {
-              setShowImportDialog(false);
-              setSelectedImportCategories([]);
-            }}
-          >
-            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-          </Button>
-          <Button 
-            id="import-selected"
-            onClick={handleImport} 
-            disabled={selectedImportCategories.length === 0}
-          >
-            {t('common.actions.importSelected', { defaultValue: 'Import Selected' })}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       {/* Conflict Resolution Dialog */}
-      <Dialog 
-        isOpen={importConflicts.length > 0} 
+      <Dialog
+        isOpen={importConflicts.length > 0}
         onClose={() => {
           setImportConflicts([]);
           setConflictResolutions({});
-        }} 
+        }}
         title={t('import.title', { defaultValue: 'Resolve Import Conflicts' })}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-conflicts"
+              variant="outline"
+              onClick={() => {
+                setImportConflicts([]);
+                setConflictResolutions({});
+              }}
+            >
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button id="import-with-resolutions" onClick={handleImport}>
+              {t('common.actions.importWithResolutions', { defaultValue: 'Import with Resolutions' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -597,21 +618,6 @@ const ServiceCategoriesSettings: React.FC = () => {
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button 
-            id="cancel-conflicts"
-            variant="outline" 
-            onClick={() => {
-              setImportConflicts([]);
-              setConflictResolutions({});
-            }}
-          >
-            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-          </Button>
-          <Button id="import-with-resolutions" onClick={handleImport}>
-            {t('common.actions.importWithResolutions', { defaultValue: 'Import with Resolutions' })}
-          </Button>
-        </DialogFooter>
       </Dialog>
     </div>
   );

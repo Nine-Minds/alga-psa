@@ -7,7 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { Dialog, DialogContent, DialogDescription, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ArrowLeft, Download } from 'lucide-react';
 import type { IQuote, IQuoteItem, QuoteStatus } from '@alga-psa/types';
@@ -482,16 +482,8 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
         isOpen={confirmAction !== null}
         onClose={() => setConfirmAction(null)}
         title={confirmAction === 'accept' ? 'Accept Quote' : 'Reject Quote'}
-      >
-        <DialogContent>
-          <DialogDescription>
-            {confirmAction === 'accept'
-              ? hasOptionalItems
-                ? 'Accept this quote with your current optional item selections? Your choices will be sent to the MSP for review.'
-                : 'Accept this quote? The MSP will be notified.'
-              : 'Reject this quote and send your comment to the MSP? They may revise and resend the quote.'}
-          </DialogDescription>
-          <DialogFooter>
+        footer={
+          <div className="flex justify-end space-x-2">
             <Button
               id="quote-confirm-cancel"
               variant="outline"
@@ -507,7 +499,17 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
             >
               {isSubmittingDecision ? 'Submitting...' : confirmAction === 'accept' ? 'Accept' : 'Reject'}
             </Button>
-          </DialogFooter>
+          </div>
+        }
+      >
+        <DialogContent>
+          <DialogDescription>
+            {confirmAction === 'accept'
+              ? hasOptionalItems
+                ? 'Accept this quote with your current optional item selections? Your choices will be sent to the MSP for review.'
+                : 'Accept this quote? The MSP will be notified.'
+              : 'Reject this quote and send your comment to the MSP? They may revise and resend the quote.'}
+          </DialogDescription>
         </DialogContent>
       </Dialog>
     </div>

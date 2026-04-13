@@ -471,17 +471,49 @@ export function OnboardingWizard({
     }
   };
 
-  const wizardContent = (
+  const wizardNavigation = (
+    <WizardNavigation
+      currentStep={currentStep}
+      totalSteps={STEPS.length}
+      onBack={handleBack}
+      onNext={handleNext}
+      onSkip={handleSkip}
+      onFinish={handleFinish}
+      isNextDisabled={!isStepValid() || isLoading}
+      isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
+      isLoading={isLoading}
+      backLabel={t('common.actions.back', {
+        defaultValue: 'Back'
+      })}
+      skipLabel={t('common.actions.skip', {
+        defaultValue: 'Skip'
+      })}
+      nextLabel={t('common.actions.next', {
+        defaultValue: 'Next'
+      })}
+      finishLabel={t('onboardingWizard.actions.finish', {
+        defaultValue: 'Finish Setup'
+      })}
+      savingLabel={t('onboardingWizard.actions.saving', {
+        defaultValue: 'Saving...'
+      })}
+      completingLabel={t('onboardingWizard.actions.completing', {
+        defaultValue: 'Completing...'
+      })}
+    />
+  );
+
+  const wizardBody = (
     <>
       <WizardProgress
         steps={translatedSteps}
         currentStep={currentStep}
         completedSteps={completedSteps}
         onStepClick={handleStepClick}
-        canNavigateToStep={(stepIndex) => 
-          stepIndex === 0 || 
+        canNavigateToStep={(stepIndex) =>
+          stepIndex === 0 ||
           stepIndex === currentStep ||  // Current step is always navigable
-          completedSteps.has(stepIndex) || 
+          completedSteps.has(stepIndex) ||
           (stepIndex > 0 && completedSteps.has(stepIndex - 1))
         }
       />
@@ -538,36 +570,6 @@ export function OnboardingWizard({
           <AlertDescription>{errors[currentStep]}</AlertDescription>
         </Alert>
       )}
-
-      <WizardNavigation
-        currentStep={currentStep}
-        totalSteps={STEPS.length}
-        onBack={handleBack}
-        onNext={handleNext}
-        onSkip={handleSkip}
-        onFinish={handleFinish}
-        isNextDisabled={!isStepValid() || isLoading}
-        isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
-        isLoading={isLoading}
-        backLabel={t('common.actions.back', {
-          defaultValue: 'Back'
-        })}
-        skipLabel={t('common.actions.skip', {
-          defaultValue: 'Skip'
-        })}
-        nextLabel={t('common.actions.next', {
-          defaultValue: 'Next'
-        })}
-        finishLabel={t('onboardingWizard.actions.finish', {
-          defaultValue: 'Finish Setup'
-        })}
-        savingLabel={t('onboardingWizard.actions.saving', {
-          defaultValue: 'Saving...'
-        })}
-        completingLabel={t('onboardingWizard.actions.completing', {
-          defaultValue: 'Completing...'
-        })}
-      />
     </>
   );
 
@@ -588,7 +590,8 @@ export function OnboardingWizard({
             </p>
           </div>
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            {wizardContent}
+            {wizardBody}
+            {wizardNavigation}
           </div>
         </div>
       </div>
@@ -603,9 +606,10 @@ export function OnboardingWizard({
         defaultValue: 'Setup Your System'
       })}
       className="max-w-4xl"
+      footer={wizardNavigation}
     >
-      <div className="max-h-[90vh] overflow-y-auto">
-        {wizardContent}
+      <div>
+        {wizardBody}
       </div>
     </Dialog>
   );

@@ -71,17 +71,37 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
     onClose();
   };
 
+  const footer = (
+    <div className="flex justify-between">
+      <Button id="cancel-phase-button" variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
+        {t('common:actions.cancel', 'Cancel')}
+      </Button>
+      <Button
+        id="save-phase-button"
+        type="button"
+        disabled={isSubmitting}
+        className={!phaseName.trim() ? 'opacity-50' : ''}
+        onClick={() => (document.getElementById('phase-quick-add-form') as HTMLFormElement | null)?.requestSubmit()}
+      >
+        {isSubmitting
+          ? t('projectPhases.adding', 'Adding...')
+          : t('common:actions.save', 'Save')}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog 
-      isOpen={true} 
+    <Dialog
+      isOpen={true}
       onClose={() => {
         setHasAttemptedSubmit(false);
         onClose();
       }}
       title={t('projectPhases.addPhase', 'Add Phase')}
       className="max-w-2xl"
+      footer={footer}
     >
-      <DialogContent className="max-h-[80vh] overflow-y-auto">
+      <DialogContent>
           {hasAttemptedSubmit && !phaseName.trim() && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
@@ -89,7 +109,7 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
               </AlertDescription>
             </Alert>
           )}
-          <form onSubmit={handleSubmit} className="flex flex-col">
+          <form id="phase-quick-add-form" onSubmit={handleSubmit} className="flex flex-col">
             <div className="space-y-4 mb-2 mt-2">
               <TextArea
                 value={phaseName}
@@ -124,16 +144,6 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
                     clearable={true}
                   />
                 </div>
-              </div>
-              <div className="flex justify-between mt-6">
-                <Button id="cancel-phase-button" variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
-                  {t('common:actions.cancel', 'Cancel')}
-                </Button>
-                <Button id="save-phase-button" type="submit" disabled={isSubmitting} className={!phaseName.trim() ? 'opacity-50' : ''}>
-                  {isSubmitting
-                    ? t('projectPhases.adding', 'Adding...')
-                    : t('common:actions.save', 'Save')}
-                </Button>
               </div>
             </div>
           </form>
