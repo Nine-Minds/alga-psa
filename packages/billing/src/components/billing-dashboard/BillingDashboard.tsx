@@ -5,7 +5,7 @@ import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { IClient, IService } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
-import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 // Import all the components
@@ -121,16 +121,6 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
       <h1 className="text-3xl font-bold mb-6">
         {t('dashboard.title', { defaultValue: 'Billing' })}
       </h1>
-
-      {/* Beta Warning Banner */}
-      <Alert variant="info" className="mb-4">
-        <AlertTitle>{t('dashboard.beta.title', { defaultValue: 'Beta Release' })}</AlertTitle>
-        <AlertDescription>
-          {t('dashboard.beta.description', {
-            defaultValue: 'Our revamped billing system is currently in beta. You may encounter issues or incomplete features. We appreciate your patience as we continue to improve the experience.',
-          })}
-        </AlertDescription>
-      </Alert>
 
       {error && (
         <Alert variant="destructive" className="mb-4">
