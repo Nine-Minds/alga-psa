@@ -434,7 +434,11 @@
       "selectMasterTicket": "Sélectionnez le ticket principal...",
       "syncUpdates": "Synchroniser les mises à jour du maître vers les enfants (réponses publiques + modifications du workflow)",
       "syncUpdatesHelp": "Les tickets enfants conservent leur statut actuel lorsqu’ils sont regroupés. Les champs de workflow sont verrouillés sur les enfants par défaut. Les notes internes restent sur le maître.",
-      "childrenDescription": "Les enfants conservent leur statut actuel ; les champs de workflow sont verrouillés sur les enfants. Les réponses entrantes des enfants sont affichées ci-dessous en lecture seule."
+      "childrenDescription": "Les enfants conservent leur statut actuel ; les champs de workflow sont verrouillés sur les enfants. Les réponses entrantes des enfants sont affichées ci-dessous en lecture seule.",
+      "checkingMasters": "Vérification des regroupements existants...",
+      "existingMasterSuffix": "(maître existant)",
+      "existingMasterLocked": "Un ticket sélectionné est déjà un ticket principal. Il sera utilisé comme maître ; les autres seront ajoutés comme enfants.",
+      "multipleExistingMasters": "Plusieurs tickets sélectionnés sont déjà des tickets principaux ({{count}}). Dégroupez tous sauf un avant de regrouper."
     },
     "auth": {
       "moveRequired": "Vous devez être connecté pour déplacer des tickets",

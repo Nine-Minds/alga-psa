@@ -434,7 +434,11 @@
       "selectMasterTicket": "Seleziona ticket master...",
       "syncUpdates": "Sincronizza gli aggiornamenti dal master ai figli (risposte pubbliche + modifiche al flusso di lavoro)",
       "syncUpdatesHelp": "I ticket figli mantengono il loro stato attuale quando vengono raggruppati. I campi del flusso di lavoro sono bloccati sui figli per impostazione predefinita. Le note interne restano sul master.",
-      "childrenDescription": "I secondari mantengono il loro stato attuale; i campi del workflow sono bloccati sui secondari. Le risposte in entrata dei secondari sono mostrate sotto in sola lettura."
+      "childrenDescription": "I secondari mantengono il loro stato attuale; i campi del workflow sono bloccati sui secondari. Le risposte in entrata dei secondari sono mostrate sotto in sola lettura.",
+      "checkingMasters": "Verifica dei raggruppamenti esistenti...",
+      "existingMasterSuffix": "(master esistente)",
+      "existingMasterLocked": "Un ticket selezionato è già un master di raggruppamento. Verrà usato come master; gli altri saranno aggiunti come figli.",
+      "multipleExistingMasters": "Più ticket selezionati sono già master di raggruppamento ({{count}}). Annulla il raggruppamento di tutti tranne uno prima di raggruppare."
     },
     "auth": {
       "moveRequired": "Devi aver effettuato l'accesso per spostare i ticket",

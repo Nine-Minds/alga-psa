@@ -434,7 +434,11 @@
       "selectMasterTicket": "Hauptticket auswählen...",
       "syncUpdates": "Synchronisiere Aktualisierungen vom Hauptticket zu den Untertickets (öffentliche Antworten + Workflow-Änderungen)",
       "syncUpdatesHelp": "Untertickets behalten beim Bündeln ihren aktuellen Status. Workflow-Felder sind bei Untertickets standardmäßig gesperrt. Interne Notizen bleiben auf dem Hauptticket.",
-      "childrenDescription": "Untergeordnete behalten ihren aktuellen Status; Workflow-Felder sind bei untergeordneten Tickets gesperrt. Eingehende Antworten auf untergeordnete Tickets werden unten als schreibgeschützt angezeigt."
+      "childrenDescription": "Untergeordnete behalten ihren aktuellen Status; Workflow-Felder sind bei untergeordneten Tickets gesperrt. Eingehende Antworten auf untergeordnete Tickets werden unten als schreibgeschützt angezeigt.",
+      "checkingMasters": "Vorhandene Bündel werden geprüft...",
+      "existingMasterSuffix": "(vorhandenes Hauptticket)",
+      "existingMasterLocked": "Ein ausgewähltes Ticket ist bereits ein Hauptticket. Es wird als Hauptticket verwendet; die anderen werden als Untertickets hinzugefügt.",
+      "multipleExistingMasters": "Mehrere ausgewählte Tickets sind bereits Haupttickets ({{count}}). Hebe die Bündelung aller bis auf eines auf, bevor du bündelst."
     },
     "auth": {
       "moveRequired": "Du musst angemeldet sein, um Tickets zu verschieben",
