@@ -17,6 +17,7 @@ export interface SelectOption {
   dropdownHint?: string | React.JSX.Element;
   className?: string;
   is_inactive?: boolean;
+  disabled?: boolean;
 }
 
 export interface StyleProps {
@@ -346,11 +347,14 @@ const CustomSelect = ({
                   key={option.radixValue}
                   value={option.radixValue}
                   textValue={option.textValue ?? (typeof option.label === 'string' ? option.label : undefined)}
+                  disabled={Boolean(option.disabled)}
                   className={`
                     relative flex px-3 py-2 text-sm rounded text-foreground
                     cursor-pointer hover:bg-muted focus:bg-muted
                     focus:outline-none select-none
                     data-[highlighted]:bg-muted
+                    data-[disabled]:pointer-events-none data-[disabled]:cursor-not-allowed
+                    data-[disabled]:opacity-50 data-[disabled]:hover:bg-transparent data-[disabled]:focus:bg-transparent
                     ${option.dropdownHint ? 'flex-col items-start' : 'items-center whitespace-nowrap'}
                     ${option.className || 'bg-background'}
                     ${customStyles?.item || ''}

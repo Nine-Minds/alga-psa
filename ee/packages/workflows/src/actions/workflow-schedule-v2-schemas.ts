@@ -18,6 +18,15 @@ const scheduleName = z.preprocess(
 );
 
 const triggerType = z.enum(['schedule', 'recurring']);
+const dayTypeFilter = z.enum(['any', 'business', 'non_business']);
+const optionalUuid = z.preprocess(
+  (value) => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  },
+  z.string().uuid()
+).optional();
 
 const jsonObjectPayload = z.record(z.any()).default({});
 
@@ -25,6 +34,8 @@ const baseScheduleInput = z.object({
   workflowId,
   name: scheduleName,
   triggerType,
+  dayTypeFilter: dayTypeFilter.default('any'),
+  businessHoursScheduleId: optionalUuid.nullish(),
   payload: jsonObjectPayload,
   enabled: z.boolean().default(true)
 });

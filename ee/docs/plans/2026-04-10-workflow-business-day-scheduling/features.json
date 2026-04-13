@@ -1,0 +1,225 @@
+[
+  {
+    "id": "F001",
+    "description": "Add `day_type_filter` to workflow schedule persistence with allowed values `any`, `business`, and `non_business`, defaulting legacy schedules to `any`.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-001",
+      "FR-002",
+      "FR-019"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add nullable `business_hours_schedule_id` to workflow schedule persistence so a schedule can override the tenant default business-hours schedule.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-003"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Extend `WorkflowScheduleStateRecord` and persistence helpers to read and write the new day-filter and business-hours override fields.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-002",
+      "FR-003",
+      "NFR-002"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Extend workflow schedule create/update/list/get schemas and response shapes to accept and return day-filter and business-hours override fields.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-015",
+      "FR-020"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Reject non-`any` day filters for one-time workflow schedules during action validation.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-004"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Validate that recurring schedules using `business` or `non_business` filtering resolve to an effective business-hours schedule via explicit override or tenant default at save time.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-005",
+      "NFR-003"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Validate that any selected `business_hours_schedule_id` belongs to the current tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-006"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Implement a shared workflow-side helper that resolves the effective business-hours schedule, including tenant default fallback semantics for filtered recurring schedules.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-005",
+      "FR-007",
+      "NFR-001",
+      "NFR-005"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Load both global holidays and schedule-specific holidays for the selected business-hours schedule when evaluating workflow day filtering.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-007",
+      "NFR-001"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Classify holidays as non-business days for workflow scheduling even when the selected business-hours schedule is marked 24x7.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-008"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Classify non-holiday dates as business days only when the selected business-hours schedule has an enabled entry for the scheduled local weekday; otherwise classify them as non-business days.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-009",
+      "FR-010",
+      "NFR-005"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Evaluate business/non-business-day eligibility using the scheduled occurrence date in the schedule timezone rather than the worker's actual execution timestamp.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-010",
+      "NFR-005"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Keep pg-boss recurring registration and lifecycle behavior unchanged for recurrence generation, layering day-filter eligibility checks on top of existing cron ticks.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-011",
+      "NFR-002"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Skip filtered recurring cron occurrences that land on disallowed days without launching workflow runs or creating deferred/catch-up executions.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-012"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Record skipped filtered occurrences distinctly from workflow execution failures in workflow schedule state/bookkeeping.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-013"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Fail fast at runtime when a filtered recurring schedule can no longer resolve its selected/default business-hours schedule, and store an actionable error state without launching the workflow.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-014",
+      "NFR-003"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Add a recurring-only `Run on` control to the workflow schedule dialog with `Any day`, `Business days only`, and `Non-business days only` options.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-016",
+      "FR-017"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Show calendar-source controls for filtered recurring schedules, including tenant default and specific business-hours schedule options.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-016",
+      "FR-017"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Populate the specific-schedule override selector in the workflow schedule dialog from tenant business-hours schedules.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-016"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Surface inline UI validation errors when a filtered recurring schedule has no effective business-hours schedule or an invalid override selection.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-018"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Preserve legacy schedule create/edit/list flows for schedules using the default `any` day filter with no behavior change.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-019",
+      "NFR-002"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Expose the configured day filter and effective calendar selection in schedule list/detail responses so the UI can render and edit them accurately.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-020"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Implement bounded search for the next eligible filtered recurring occurrence for list/detail preview purposes.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-021",
+      "FR-022",
+      "NFR-004",
+      "NFR-005"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Expose an effective next eligible run in schedule list/detail responses for filtered recurring schedules when a bounded search finds one.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-021",
+      "FR-022"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Return no effective next eligible run when no eligible occurrence exists within the bounded search window, without breaking list/detail APIs.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-022",
+      "NFR-004"
+    ]
+  }
+]
