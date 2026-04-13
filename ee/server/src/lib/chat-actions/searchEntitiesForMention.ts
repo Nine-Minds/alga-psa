@@ -1,5 +1,6 @@
 'use server';
 
+import type { Knex } from 'knex';
 import { createTenantKnex } from '@/lib/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 
@@ -15,6 +16,13 @@ export type MentionableEntity = {
   type: MentionableEntityType;
   id: string;
   displayName: string;
+  /**
+   * Core name used for auto-select equality / prefix checks. Defaults to
+   * displayName if omitted. For entities whose displayName is decorated
+   * (e.g., "#TIC001 - title", "Name (tag)"), this should be the bare name
+   * the user is most likely to type verbatim.
+   */
+  matchName?: string;
   secondaryText?: string;
 };
 
@@ -31,80 +39,110 @@ export async function searchEntitiesForMention(
   }
 
   const { knex } = await createTenantKnex();
-  const searchPattern = `%${query.toLowerCase()}%`;
   const limit = 5;
+
+  // Split the query into words so that "Acme Corp" still matches rows named
+  // "Acme" plus additional words — each word becomes a separate substring
+  // condition, all ANDed together. Empty queries (user just typed "@") fall
+  // back to a single "%"-only pattern that matches anything.
+  const words = query
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length > 0)
+    .slice(0, 10);
+  const patterns = words.length > 0 ? words.map((w) => `%${w}%`) : ['%'];
+
+  // Applies `fields LIKE pattern` for every word (ANDed) against the OR of
+  // all provided raw field expressions (each containing a `?` placeholder).
+  const applyWordFilters = (
+    qb: Knex.QueryBuilder,
+    fieldExpressions: string[],
+  ) => {
+    for (const pattern of patterns) {
+      qb.andWhere(function () {
+        for (let i = 0; i < fieldExpressions.length; i += 1) {
+          if (i === 0) {
+            this.whereRaw(fieldExpressions[i], [pattern]);
+          } else {
+            this.orWhereRaw(fieldExpressions[i], [pattern]);
+          }
+        }
+      });
+    }
+  };
 
   const [tickets, clients, contacts, projects, assets, users] = await Promise.all([
     // Tickets: search by ticket_number and title
-    knex('tickets')
-      .select('ticket_id', 'ticket_number', 'title', 'status_id')
-      .where('tenant', user.tenant)
-      .andWhere(function () {
-        this.whereRaw('LOWER(title) LIKE ?', [searchPattern])
-          .orWhereRaw('CAST(ticket_number AS TEXT) LIKE ?', [searchPattern]);
-      })
-      .orderBy('ticket_number', 'desc')
-      .limit(limit)
-      .catch(() => []),
+    (() => {
+      const qb = knex('tickets')
+        .select('ticket_id', 'ticket_number', 'title', 'status_id')
+        .where('tenant', user.tenant);
+      applyWordFilters(qb, [
+        'LOWER(title) LIKE ?',
+        'CAST(ticket_number AS TEXT) LIKE ?',
+      ]);
+      return qb.orderBy('ticket_number', 'desc').limit(limit).catch(() => []);
+    })(),
 
     // Clients: search by client_name
-    knex('clients')
-      .select('client_id', 'client_name')
-      .where('tenant', user.tenant)
-      .andWhere('is_inactive', false)
-      .andWhereRaw('LOWER(client_name) LIKE ?', [searchPattern])
-      .orderBy('client_name')
-      .limit(limit)
-      .catch(() => []),
+    (() => {
+      const qb = knex('clients')
+        .select('client_id', 'client_name')
+        .where('tenant', user.tenant)
+        .andWhere('is_inactive', false);
+      applyWordFilters(qb, ['LOWER(client_name) LIKE ?']);
+      return qb.orderBy('client_name').limit(limit).catch(() => []);
+    })(),
 
     // Contacts: search by full_name and email
-    knex('contacts')
-      .select('contact_name_id', 'full_name', 'email')
-      .where('tenant', user.tenant)
-      .andWhere(function () {
-        this.whereRaw('LOWER(full_name) LIKE ?', [searchPattern])
-          .orWhereRaw('LOWER(email) LIKE ?', [searchPattern]);
-      })
-      .orderBy('full_name')
-      .limit(limit)
-      .catch(() => []),
+    (() => {
+      const qb = knex('contacts')
+        .select('contact_name_id', 'full_name', 'email')
+        .where('tenant', user.tenant);
+      applyWordFilters(qb, [
+        'LOWER(full_name) LIKE ?',
+        'LOWER(email) LIKE ?',
+      ]);
+      return qb.orderBy('full_name').limit(limit).catch(() => []);
+    })(),
 
     // Projects: search by project_name
-    knex('projects')
-      .select('project_id', 'project_name', 'status')
-      .where('tenant', user.tenant)
-      .andWhereRaw('LOWER(project_name) LIKE ?', [searchPattern])
-      .orderBy('project_name')
-      .limit(limit)
-      .catch(() => []),
+    (() => {
+      const qb = knex('projects')
+        .select('project_id', 'project_name', 'status')
+        .where('tenant', user.tenant);
+      applyWordFilters(qb, ['LOWER(project_name) LIKE ?']);
+      return qb.orderBy('project_name').limit(limit).catch(() => []);
+    })(),
 
     // Assets: search by name and asset_tag
-    knex('assets')
-      .select('asset_id', 'name', 'asset_tag', 'asset_type')
-      .where('tenant', user.tenant)
-      .andWhere(function () {
-        this.whereRaw('LOWER(name) LIKE ?', [searchPattern])
-          .orWhereRaw('LOWER(asset_tag) LIKE ?', [searchPattern]);
-      })
-      .orderBy('name')
-      .limit(limit)
-      .catch(() => []),
+    (() => {
+      const qb = knex('assets')
+        .select('asset_id', 'name', 'asset_tag', 'asset_type')
+        .where('tenant', user.tenant);
+      applyWordFilters(qb, [
+        'LOWER(name) LIKE ?',
+        'LOWER(asset_tag) LIKE ?',
+      ]);
+      return qb.orderBy('name').limit(limit).catch(() => []);
+    })(),
 
     // Users: search by name, username, email
-    knex('users')
-      .select('user_id', 'username', 'first_name', 'last_name', 'email')
-      .where('tenant', user.tenant)
-      .andWhere('user_type', 'internal')
-      .andWhere('is_inactive', false)
-      .andWhere(function () {
-        this.whereRaw('LOWER(username) LIKE ?', [searchPattern])
-          .orWhereRaw('LOWER(first_name) LIKE ?', [searchPattern])
-          .orWhereRaw('LOWER(last_name) LIKE ?', [searchPattern])
-          .orWhereRaw("LOWER(CONCAT(first_name, ' ', last_name)) LIKE ?", [searchPattern]);
-      })
-      .orderBy('first_name')
-      .limit(limit)
-      .catch(() => []),
+    (() => {
+      const qb = knex('users')
+        .select('user_id', 'username', 'first_name', 'last_name', 'email')
+        .where('tenant', user.tenant)
+        .andWhere('user_type', 'internal')
+        .andWhere('is_inactive', false);
+      applyWordFilters(qb, [
+        'LOWER(username) LIKE ?',
+        'LOWER(first_name) LIKE ?',
+        'LOWER(last_name) LIKE ?',
+        "LOWER(CONCAT(first_name, ' ', last_name)) LIKE ?",
+      ]);
+      return qb.orderBy('first_name').limit(limit).catch(() => []);
+    })(),
   ]);
 
   const results: MentionSearchResults = {};
@@ -114,6 +152,7 @@ export async function searchEntitiesForMention(
       type: 'ticket' as const,
       id: t.ticket_id,
       displayName: `#${t.ticket_number} - ${t.title}`,
+      matchName: t.title,
     }));
   }
 
@@ -148,6 +187,7 @@ export async function searchEntitiesForMention(
       type: 'asset' as const,
       id: a.asset_id,
       displayName: a.asset_tag ? `${a.name} (${a.asset_tag})` : a.name,
+      matchName: a.name,
       secondaryText: a.asset_type || undefined,
     }));
   }

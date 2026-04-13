@@ -98,6 +98,12 @@
   gap: 0.4rem;
 }
 
+.chat-input-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
 .chat-input {
   width: 100%;
   min-height: 3.25rem;
@@ -482,7 +488,11 @@
 /* ---------- Mention popup ---------- */
 
 .chat-mention-popup {
-  z-index: 50;
+  position: absolute;
+  left: 0;
+  width: 100%;
+  max-width: 400px;
+  z-index: 10;
   max-height: 320px;
   overflow-y: auto;
   background: rgb(var(--color-card));
@@ -490,6 +500,14 @@
   border-radius: 0.5rem;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   padding: 0.25rem 0;
+}
+
+.chat-mention-popup--above {
+  bottom: calc(100% + 4px);
+}
+
+.chat-mention-popup--below {
+  top: calc(100% + 4px);
 }
 
 .chat-mention-popup__loading,
