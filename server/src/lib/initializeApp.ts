@@ -1,6 +1,5 @@
 import { isEnterprise } from './features';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
-import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
 import { logger, registerFeatureFlagChecker } from '@alga-psa/core';
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
@@ -217,6 +216,7 @@ export async function initializeApp() {
 
     // Initialize scheduled jobs
     try {
+      const { initializeScheduledJobs } = await import('./jobs/initializeScheduledJobs');
       await initializeScheduledJobs();
       logger.info('Scheduled jobs initialized');
     } catch (error) {
