@@ -1051,5 +1051,50 @@
   },
   "toast": {
     "saved": "Saved successfully"
+  },
+  "numbering": {
+    "section": {
+      "title": "Number Format",
+      "description": "Define the prefix, digit padding, and current sequence."
+    },
+    "fields": {
+      "prefix": {
+        "label": "Number Prefix",
+        "help": "Optional prefix for the number sequence. Leave empty for no prefix or enter a custom prefix."
+      },
+      "minimumDigits": {
+        "label": "Minimum Digits",
+        "help": "Minimum number of digits for the sequential number. For example, 6 makes '1' become '000001'."
+      },
+      "initialValue": {
+        "label": "Initial Value",
+        "help": "Set the starting number for the sequence. This can only be set once.",
+        "placeholder": "Enter value"
+      },
+      "lastUsedNumber": {
+        "label": "Last Used Number",
+        "help": "The last number that was assigned. The next number will be one higher than this value."
+      },
+      "nextPreview": {
+        "label": "Next Number Preview",
+        "help": "This is the number that will be assigned to the next record."
+      }
+    },
+    "actions": {
+      "save": "Save Changes",
+      "cancel": "Cancel"
+    },
+    "dialog": {
+      "title": "Update Numbering Settings",
+      "message": "Changing these settings will affect how new numbers are generated. This change will not affect existing records. Are you sure you want to proceed?",
+      "confirm": "Update Settings"
+    },
+    "toast": {
+      "updated": "Settings updated successfully."
+    },
+    "errors": {
+      "load": "Failed to load numbering settings.",
+      "save": "Failed to update settings."
+    }
   }
 }

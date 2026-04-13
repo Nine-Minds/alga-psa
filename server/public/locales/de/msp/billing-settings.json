@@ -187,7 +187,7 @@
         },
         "name": {
           "label": "Regionsname",
-          "placeholder": "z. B. Kalifornien, New York, Vereinigtes Königreich Mehrwertsteuer"
+          "placeholder": "z. B. Kalifornien, New York, UK-Mehrwertsteuer"
         },
         "active": {
           "label": "Aktiv"
@@ -1051,5 +1051,50 @@
   },
   "toast": {
     "saved": "Erfolgreich gespeichert"
+  },
+  "numbering": {
+    "section": {
+      "title": "Nummernformat",
+      "description": "Legen Sie das Präfix, die Ziffernauffüllung und die aktuelle Sequenz fest."
+    },
+    "fields": {
+      "prefix": {
+        "label": "Nummernpräfix",
+        "help": "Optionales Präfix für die Nummernsequenz. Leer lassen für kein Präfix oder ein eigenes Präfix eingeben."
+      },
+      "minimumDigits": {
+        "label": "Mindestanzahl Ziffern",
+        "help": "Mindestanzahl der Ziffern für die laufende Nummer. Bei 6 wird z. B. aus '1' die Zahl '000001'."
+      },
+      "initialValue": {
+        "label": "Startwert",
+        "help": "Legen Sie die Anfangsnummer der Sequenz fest. Dies kann nur einmal festgelegt werden.",
+        "placeholder": "Wert eingeben"
+      },
+      "lastUsedNumber": {
+        "label": "Zuletzt verwendete Nummer",
+        "help": "Die letzte zugewiesene Nummer. Die nächste Nummer ist um eins höher als dieser Wert."
+      },
+      "nextPreview": {
+        "label": "Vorschau der nächsten Nummer",
+        "help": "Dies ist die Nummer, die dem nächsten Datensatz zugewiesen wird."
+      }
+    },
+    "actions": {
+      "save": "Änderungen speichern",
+      "cancel": "Abbrechen"
+    },
+    "dialog": {
+      "title": "Nummerierungseinstellungen aktualisieren",
+      "message": "Durch das Ändern dieser Einstellungen wird beeinflusst, wie neue Nummern erzeugt werden. Bestehende Datensätze sind davon nicht betroffen. Möchten Sie wirklich fortfahren?",
+      "confirm": "Einstellungen aktualisieren"
+    },
+    "toast": {
+      "updated": "Einstellungen erfolgreich aktualisiert."
+    },
+    "errors": {
+      "load": "Fehler beim Laden der Nummerierungseinstellungen.",
+      "save": "Fehler beim Aktualisieren der Einstellungen."
+    }
   }
 }

@@ -63,7 +63,7 @@
         "subtitle": "Líneas de contrato activas"
       },
       "billingClients": {
-        "title": "Clientes de facturación",
+        "title": "Clientes facturados",
         "subtitle": "Clientes totales"
       },
       "monthlyRevenue": {
@@ -138,7 +138,7 @@
     }
   },
   "reconciliation": {
-    "title": "Resolver discrepancia crediticia",
+    "title": "Resolver discrepancia de crédito",
     "steps": {
       "review": "Revisar la discrepancia",
       "approval": "Aprobación",
@@ -190,7 +190,7 @@
       "columns": {
         "transactionId": "ID de transacción",
         "date": "Fecha",
-        "amount": "Cantidad"
+        "amount": "Monto"
       }
     },
     "recommendedFix": {
@@ -243,7 +243,7 @@
     "buttons": {
       "cancel": "Cancelar",
       "back": "Atrás",
-      "next": "Próximo",
+      "next": "Siguiente",
       "confirm": "Confirmar resolución"
     },
     "errors": {
@@ -257,7 +257,7 @@
   },
   "discrepancy": {
     "backToReconciliation": "Volver a la reconciliación",
-    "title": "Resolver discrepancia crediticia",
+    "title": "Resolver discrepancia de crédito",
     "tabs": {
       "transactionHistory": "Historial de transacciones",
       "creditTrackingEntries": "Entradas de seguimiento de crédito",
@@ -295,7 +295,7 @@
       "metadata": "Metadatos",
       "creditId": "ID de crédito",
       "created": "Creado",
-      "amount": "Cantidad",
+      "amount": "Monto",
       "remaining": "Restante",
       "expiration": "Vencimiento",
       "originalAmount": "Monto original",
@@ -324,7 +324,7 @@
       "inconsistentRemainingDescription": "Actualice el monto restante de la entrada de seguimiento de crédito para que coincida con el saldo esperado calculado según las aplicaciones."
     },
     "resolutionDialog": {
-      "title": "Resolver discrepancia crediticia",
+      "title": "Resolver discrepancia de crédito",
       "notesPlaceholder": "Explique el motivo de esta corrección...",
       "confirmButton": "Confirmar resolución"
     },
@@ -365,7 +365,7 @@
       "inconsistentRemainingRecommended": "Actualice el monto restante registrado para que coincida con el saldo esperado después de las solicitudes.",
       "inconsistentRemainingAlternative": "Cree un ajuste de equilibrio en lugar de editar la entrada de seguimiento existente.",
       "inconsistentRemainingNoAction": "Deje la discrepancia sin resolver sólo si la entrada de seguimiento se compensa intencionalmente en otro lugar.",
-      "genericRecommended": "Aplique la corrección recomendada para volver a alinear los equilibrios.",
+      "genericRecommended": "Aplique la corrección recomendada para realinear los saldos.",
       "genericCustom": "Ingrese un ajuste personalizado si se requiere una corrección manual."
     },
     "dialog": {

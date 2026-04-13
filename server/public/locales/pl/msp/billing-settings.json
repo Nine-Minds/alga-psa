@@ -1051,5 +1051,50 @@
   },
   "toast": {
     "saved": "Zapisano pomyślnie"
+  },
+  "numbering": {
+    "section": {
+      "title": "Format numeru",
+      "description": "Zdefiniuj prefiks, uzupełnienie cyframi oraz bieżącą sekwencję."
+    },
+    "fields": {
+      "prefix": {
+        "label": "Prefiks numeru",
+        "help": "Opcjonalny prefiks dla sekwencji numerów. Pozostaw puste, aby nie używać prefiksu, lub wprowadź własny prefiks."
+      },
+      "minimumDigits": {
+        "label": "Minimalna liczba cyfr",
+        "help": "Minimalna liczba cyfr dla numeru sekwencyjnego. Na przykład 6 zamieni '1' na '000001'."
+      },
+      "initialValue": {
+        "label": "Wartość początkowa",
+        "help": "Ustaw numer początkowy sekwencji. Można to ustawić tylko raz.",
+        "placeholder": "Wprowadź wartość"
+      },
+      "lastUsedNumber": {
+        "label": "Ostatnio użyty numer",
+        "help": "Ostatnio przypisany numer. Następny numer będzie o jeden wyższy od tej wartości."
+      },
+      "nextPreview": {
+        "label": "Podgląd następnego numeru",
+        "help": "To jest numer, który zostanie przypisany następnemu rekordowi."
+      }
+    },
+    "actions": {
+      "save": "Zapisz zmiany",
+      "cancel": "Anuluj"
+    },
+    "dialog": {
+      "title": "Zaktualizuj ustawienia numeracji",
+      "message": "Zmiana tych ustawień wpłynie na sposób generowania nowych numerów. Ta zmiana nie wpłynie na istniejące rekordy. Czy na pewno chcesz kontynuować?",
+      "confirm": "Zaktualizuj ustawienia"
+    },
+    "toast": {
+      "updated": "Ustawienia zostały pomyślnie zaktualizowane."
+    },
+    "errors": {
+      "load": "Nie udało się załadować ustawień numeracji.",
+      "save": "Nie udało się zaktualizować ustawień."
+    }
   }
 }

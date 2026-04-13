@@ -1051,5 +1051,50 @@
   },
   "toast": {
     "saved": "Succesvol opgeslagen"
+  },
+  "numbering": {
+    "section": {
+      "title": "Nummerformaat",
+      "description": "Stel het voorvoegsel, de cijferopvulling en de huidige reeks in."
+    },
+    "fields": {
+      "prefix": {
+        "label": "Nummervoorvoegsel",
+        "help": "Optioneel voorvoegsel voor de nummerreeks. Laat leeg voor geen voorvoegsel of voer een aangepast voorvoegsel in."
+      },
+      "minimumDigits": {
+        "label": "Minimaal aantal cijfers",
+        "help": "Minimaal aantal cijfers voor het volgnummer. Bijvoorbeeld 6 maakt van '1' '000001'."
+      },
+      "initialValue": {
+        "label": "Beginwaarde",
+        "help": "Stel het beginnummer van de reeks in. Dit kan slechts één keer worden ingesteld.",
+        "placeholder": "Waarde invoeren"
+      },
+      "lastUsedNumber": {
+        "label": "Laatst gebruikte nummer",
+        "help": "Het laatst toegewezen nummer. Het volgende nummer is één hoger dan deze waarde."
+      },
+      "nextPreview": {
+        "label": "Voorbeeld van volgend nummer",
+        "help": "Dit is het nummer dat aan het volgende record wordt toegewezen."
+      }
+    },
+    "actions": {
+      "save": "Wijzigingen opslaan",
+      "cancel": "Annuleren"
+    },
+    "dialog": {
+      "title": "Nummeringsinstellingen bijwerken",
+      "message": "Het wijzigen van deze instellingen beïnvloedt hoe nieuwe nummers worden gegenereerd. Deze wijziging heeft geen invloed op bestaande records. Weet u zeker dat u wilt doorgaan?",
+      "confirm": "Instellingen bijwerken"
+    },
+    "toast": {
+      "updated": "Instellingen succesvol bijgewerkt."
+    },
+    "errors": {
+      "load": "Kan nummeringsinstellingen niet laden.",
+      "save": "Kan instellingen niet bijwerken."
+    }
   }
 }

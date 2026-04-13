@@ -63,7 +63,7 @@
         "subtitle": "Linee contrattuali attive"
       },
       "billingClients": {
-        "title": "Clienti di fatturazione",
+        "title": "Clienti fatturati",
         "subtitle": "Clienti totali"
       },
       "monthlyRevenue": {
@@ -138,7 +138,7 @@
     }
   },
   "reconciliation": {
-    "title": "Risolvere la discrepanza del credito",
+    "title": "Risolvi la discrepanza del credito",
     "steps": {
       "review": "Rivedi discrepanza",
       "approval": "Approvazione",
@@ -190,7 +190,7 @@
       "columns": {
         "transactionId": "ID della transazione",
         "date": "Data",
-        "amount": "Quantità"
+        "amount": "Importo"
       }
     },
     "recommendedFix": {
@@ -257,7 +257,7 @@
   },
   "discrepancy": {
     "backToReconciliation": "Torna alla riconciliazione",
-    "title": "Risolvere la discrepanza del credito",
+    "title": "Risolvi la discrepanza del credito",
     "tabs": {
       "transactionHistory": "Cronologia delle transazioni",
       "creditTrackingEntries": "Voci di monitoraggio del credito",
@@ -295,7 +295,7 @@
       "metadata": "Metadati",
       "creditId": "ID di credito",
       "created": "Creato",
-      "amount": "Quantità",
+      "amount": "Importo",
       "remaining": "Rimanente",
       "expiration": "Scadenza",
       "originalAmount": "Importo originale",
@@ -324,7 +324,7 @@
       "inconsistentRemainingDescription": "Aggiorna l'importo rimanente della voce di tracciamento del credito in modo che corrisponda al saldo previsto calcolato in base alle richieste."
     },
     "resolutionDialog": {
-      "title": "Risolvere la discrepanza del credito",
+      "title": "Risolvi la discrepanza del credito",
       "notesPlaceholder": "Spiega il motivo di questa correzione...",
       "confirmButton": "Conferma risoluzione"
     },

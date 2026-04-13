@@ -80,7 +80,7 @@
       },
       "creditBalance": {
         "title": "Guthaben",
-        "subtitle": "Gesamt-Credits"
+        "subtitle": "Gesamtguthaben"
       },
       "pendingApprovals": {
         "title": "Ausstehende Genehmigungen",
@@ -138,7 +138,7 @@
     }
   },
   "reconciliation": {
-    "title": "Beheben Sie Kreditdiskrepanzen",
+    "title": "Guthabendiskrepanz beheben",
     "steps": {
       "review": "Diskrepanz überprüfen",
       "approval": "Genehmigung",
@@ -146,7 +146,7 @@
     },
     "sections": {
       "discrepancyDetails": "Diskrepanzdetails",
-      "balanceComparison": "Bilanzvergleich",
+      "balanceComparison": "Saldenvergleich",
       "issueDetails": "Problemdetails",
       "resolutionOptions": "Auflösungsoptionen",
       "approvalDetails": "Genehmigungsdetails",
@@ -169,7 +169,7 @@
       "transactionType": "Transaktionstyp",
       "transactionAmount": "Transaktionsbetrag",
       "transactionDate": "Transaktionsdatum",
-      "creditId": "Kredit-ID",
+      "creditId": "Guthaben-ID",
       "originalAmount": "Ursprünglicher Betrag",
       "expectedRemaining": "Voraussichtlich verbleibend",
       "actualRemaining": "Tatsächlicher Restbetrag",
@@ -182,22 +182,22 @@
       "previousBalance": "Vorheriger Kontostand"
     },
     "issueTypes": {
-      "missingCreditTrackingEntry": "Fehlender Kreditverfolgungseintrag",
-      "inconsistentCreditRemainingAmount": "Inkonsistenter Restkreditbetrag"
+      "missingCreditTrackingEntry": "Fehlender Guthabenverfolgungseintrag",
+      "inconsistentCreditRemainingAmount": "Inkonsistenter verbleibender Guthabenbetrag"
     },
     "transactionHistory": {
-      "title": "Kreditanträge",
+      "title": "Guthabenverwendungen",
       "columns": {
         "transactionId": "Transaktions-ID",
         "date": "Datum",
-        "amount": "Menge"
+        "amount": "Betrag"
       }
     },
     "recommendedFix": {
       "title": "Empfohlener Fix",
-      "missingTrackingDescription": "Erstellen Sie einen Bonitätsverfolgungseintrag basierend auf den ursprünglichen Transaktionsdetails und stellen Sie den verbleibenden Betrag so ein, dass er mit dem ursprünglichen Transaktionsbetrag übereinstimmt.",
+      "missingTrackingDescription": "Erstellen Sie einen Guthabenverfolgungseintrag basierend auf den ursprünglichen Transaktionsdetails und stellen Sie den verbleibenden Betrag so ein, dass er mit dem ursprünglichen Transaktionsbetrag übereinstimmt.",
       "missingTrackingRemainingAmount": "Verbleibender Betrag: Berechnen Sie ihn auf Grundlage etwaiger Anträge",
-      "inconsistentRemainingDescription": "Aktualisieren Sie den Restbetrag des Kreditverfolgungseintrags, damit er mit dem berechneten erwarteten Saldo auf Grundlage der Anträge übereinstimmt."
+      "inconsistentRemainingDescription": "Aktualisieren Sie den Restbetrag des Guthabenverfolgungseintrags, damit er mit dem berechneten erwarteten Saldo auf Grundlage der Anträge übereinstimmt."
     },
     "resolutionTypes": {
       "recommended": "Empfohlener Fix",
@@ -257,22 +257,22 @@
   },
   "discrepancy": {
     "backToReconciliation": "Zurück zum Abgleich",
-    "title": "Beheben Sie Kreditdiskrepanzen",
+    "title": "Guthabendiskrepanz beheben",
     "tabs": {
       "transactionHistory": "Transaktionsverlauf",
-      "creditTrackingEntries": "Einträge zur Kreditverfolgung",
+      "creditTrackingEntries": "Einträge zur Guthabenverfolgung",
       "issueDetails": "Problemdetails"
     },
     "cards": {
       "relatedTransactions": "Verwandte Transaktionen",
-      "creditTrackingEntries": "Einträge zur Kreditverfolgung",
+      "creditTrackingEntries": "Einträge zur Guthabenverfolgung",
       "issueDetails": "Problemdetails",
       "discrepancyDetails": "Diskrepanzdetails",
-      "balanceComparison": "Bilanzvergleich"
+      "balanceComparison": "Saldenvergleich"
     },
     "status": {
       "open": "Offen",
-      "inReview": "Im Rückblick",
+      "inReview": "In Prüfung",
       "resolved": "Gelöst",
       "expired": "Abgelaufen",
       "active": "Aktiv"
@@ -293,9 +293,9 @@
       "userId": "Benutzer-ID",
       "invoiceId": "Rechnungs-ID",
       "metadata": "Metadaten",
-      "creditId": "Kredit-ID",
+      "creditId": "Guthaben-ID",
       "created": "Erstellt",
-      "amount": "Menge",
+      "amount": "Betrag",
       "remaining": "Übrig",
       "expiration": "Ablauf",
       "originalAmount": "Ursprünglicher Betrag",
@@ -307,24 +307,24 @@
     },
     "empty": {
       "transactions": "Keine zugehörigen Transaktionen gefunden.",
-      "creditTrackingEntries": "Es wurden keine Credit-Tracking-Einträge gefunden.",
+      "creditTrackingEntries": "Es wurden keine Guthabenverfolgungseinträge gefunden.",
       "issueDetails": "Keine Problemdetails verfügbar.",
       "batchNotFound": "Charge nicht gefunden.",
       "noNotesProvided": "Keine Notizen vorhanden",
       "noExpiration": "Kein Ablauf"
     },
     "issueTypes": {
-      "missingCreditTrackingEntry": "Fehlender Kreditverfolgungseintrag",
-      "inconsistentCreditRemainingAmount": "Inkonsistenter Restkreditbetrag"
+      "missingCreditTrackingEntry": "Fehlender Guthabenverfolgungseintrag",
+      "inconsistentCreditRemainingAmount": "Inkonsistenter verbleibender Guthabenbetrag"
     },
     "recommendedFix": {
       "title": "Empfohlener Fix",
-      "missingTrackingDescription": "Erstellen Sie einen Bonitätsverfolgungseintrag basierend auf den ursprünglichen Transaktionsdetails und stellen Sie den verbleibenden Betrag so ein, dass er mit dem ursprünglichen Transaktionsbetrag übereinstimmt.",
+      "missingTrackingDescription": "Erstellen Sie einen Guthabenverfolgungseintrag basierend auf den ursprünglichen Transaktionsdetails und stellen Sie den verbleibenden Betrag so ein, dass er mit dem ursprünglichen Transaktionsbetrag übereinstimmt.",
       "missingTrackingRemainingAmount": "Verbleibender Betrag: Berechnen Sie ihn auf Grundlage etwaiger Anträge",
-      "inconsistentRemainingDescription": "Aktualisieren Sie den Restbetrag des Kreditverfolgungseintrags, damit er mit dem berechneten erwarteten Saldo auf Grundlage der Anträge übereinstimmt."
+      "inconsistentRemainingDescription": "Aktualisieren Sie den Restbetrag des Guthabenverfolgungseintrags, damit er mit dem berechneten erwarteten Saldo auf Grundlage der Anträge übereinstimmt."
     },
     "resolutionDialog": {
-      "title": "Beheben Sie Kreditdiskrepanzen",
+      "title": "Guthabendiskrepanz beheben",
       "notesPlaceholder": "Erklären Sie den Grund für diese Korrektur...",
       "confirmButton": "Bestätigen Sie die Lösung"
     },
@@ -345,27 +345,27 @@
       "customAdjustment": "Benutzerdefinierte Anpassung"
     },
     "buttons": {
-      "createTrackingEntry": "Erstellen Sie einen Kreditverfolgungseintrag",
+      "createTrackingEntry": "Erstellen Sie einen Guthabenverfolgungseintrag",
       "updateRemainingAmount": "Verbleibenden Betrag aktualisieren",
-      "applyAdjustment": "Nehmen Sie eine Kreditanpassung vor",
+      "applyAdjustment": "Nehmen Sie eine Guthabenanpassung vor",
       "applyCustomAdjustment": "Benutzerdefinierte Anpassung anwenden",
       "markResolvedNoAction": "Als gelöst markieren (keine Aktion)",
       "cancel": "Abbrechen",
       "confirm": "Fix anwenden"
     },
     "descriptions": {
-      "createTrackingEntry": "Dadurch wird ein neuer Kreditverfolgungseintrag für die Transaktion erstellt.",
-      "updateRemainingAmount": "Dadurch wird der verbleibende Betrag im Kreditverfolgungseintrag aktualisiert.",
-      "applyAdjustment": "Dadurch wird eine Kreditkorrekturtransaktion erstellt, um den Saldo zu korrigieren.",
-      "customAdjustment": "Dadurch wird eine benutzerdefinierte Kreditanpassungstransaktion erstellt.",
+      "createTrackingEntry": "Dadurch wird ein neuer Guthabenverfolgungseintrag für die Transaktion erstellt.",
+      "updateRemainingAmount": "Dadurch wird der verbleibende Betrag im Guthabenverfolgungseintrag aktualisiert.",
+      "applyAdjustment": "Dadurch wird eine Guthabenkorrekturtransaktion erstellt, um den Saldo zu korrigieren.",
+      "customAdjustment": "Dadurch wird eine benutzerdefinierte Guthabenanpassungstransaktion erstellt.",
       "noAction": "Dadurch wird die Diskrepanz als behoben markiert, ohne dass Änderungen vorgenommen werden.",
-      "missingTrackingRecommended": "Erstellen Sie den fehlenden Kreditverfolgungseintrag, damit die Transaktion im Verfolgungsbuch angezeigt wird.",
+      "missingTrackingRecommended": "Erstellen Sie den fehlenden Guthabenverfolgungseintrag, damit die Transaktion im Verfolgungsbuch angezeigt wird.",
       "missingTrackingAlternative": "Erstellen Sie stattdessen eine manuelle Anpassung, wenn die ursprüngliche Transaktion keinen Tracking-Eintrag erzeugen soll.",
-      "missingTrackingNoAction": "Lassen Sie die Diskrepanz nur dann ungelöst, wenn die Transaktion absichtlich von der Bonitätsverfolgung ausgeschlossen wurde.",
+      "missingTrackingNoAction": "Lassen Sie die Diskrepanz nur dann ungelöst, wenn die Transaktion absichtlich von der Guthabenverfolgung ausgeschlossen wurde.",
       "inconsistentRemainingRecommended": "Aktualisieren Sie den erfassten Restbetrag, damit er mit dem erwarteten Saldo nach den Anträgen übereinstimmt.",
       "inconsistentRemainingAlternative": "Erstellen Sie eine Ausgleichsanpassung, anstatt den vorhandenen Tracking-Eintrag zu bearbeiten.",
       "inconsistentRemainingNoAction": "Lassen Sie die Diskrepanz nur dann ungelöst, wenn der Tracking-Eintrag absichtlich an anderer Stelle versetzt wird.",
-      "genericRecommended": "Wenden Sie die empfohlene Korrektur an, um die Waagen wieder auszurichten.",
+      "genericRecommended": "Wenden Sie die empfohlene Korrektur an, um die Salden wieder ins Gleichgewicht zu bringen.",
       "genericCustom": "Geben Sie eine benutzerdefinierte Anpassung ein, wenn eine manuelle Korrektur erforderlich ist."
     },
     "dialog": {

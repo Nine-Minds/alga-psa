@@ -187,7 +187,7 @@
         },
         "name": {
           "label": "Nom de la région",
-          "placeholder": "Par exemple, TVA en Californie, à New York et au Royaume-Uni"
+          "placeholder": "par ex. Californie, New York, TVA Royaume-Uni"
         },
         "active": {
           "label": "Actif"
@@ -1051,5 +1051,50 @@
   },
   "toast": {
     "saved": "Enregistré avec succès"
+  },
+  "numbering": {
+    "section": {
+      "title": "Format du numéro",
+      "description": "Définissez le préfixe, le remplissage des chiffres et la séquence actuelle."
+    },
+    "fields": {
+      "prefix": {
+        "label": "Préfixe du numéro",
+        "help": "Préfixe facultatif pour la séquence de numéros. Laissez vide pour ne pas utiliser de préfixe ou saisissez un préfixe personnalisé."
+      },
+      "minimumDigits": {
+        "label": "Nombre minimum de chiffres",
+        "help": "Nombre minimum de chiffres pour le numéro séquentiel. Par exemple, 6 transforme « 1 » en « 000001 »."
+      },
+      "initialValue": {
+        "label": "Valeur initiale",
+        "help": "Définissez le numéro de départ de la séquence. Cette valeur ne peut être définie qu'une seule fois.",
+        "placeholder": "Saisir une valeur"
+      },
+      "lastUsedNumber": {
+        "label": "Dernier numéro utilisé",
+        "help": "Le dernier numéro attribué. Le prochain numéro sera supérieur d'une unité à cette valeur."
+      },
+      "nextPreview": {
+        "label": "Aperçu du prochain numéro",
+        "help": "Il s'agit du numéro qui sera attribué au prochain enregistrement."
+      }
+    },
+    "actions": {
+      "save": "Enregistrer les modifications",
+      "cancel": "Annuler"
+    },
+    "dialog": {
+      "title": "Mettre à jour les paramètres de numérotation",
+      "message": "La modification de ces paramètres affectera la façon dont les nouveaux numéros sont générés. Ce changement n'affectera pas les enregistrements existants. Voulez-vous vraiment continuer ?",
+      "confirm": "Mettre à jour les paramètres"
+    },
+    "toast": {
+      "updated": "Paramètres mis à jour avec succès."
+    },
+    "errors": {
+      "load": "Échec du chargement des paramètres de numérotation.",
+      "save": "Échec de la mise à jour des paramètres."
+    }
   }
 }

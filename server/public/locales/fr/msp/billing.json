@@ -42,7 +42,7 @@
       "contractTemplates": "Modèles de contrat",
       "invoicing": "Facturation",
       "invoiceLayouts": "Présentations de facture",
-      "taxRates": "Taux d'imposition",
+      "taxRates": "Taux de taxe",
       "contractLinePresets": "Préréglages de ligne de contrat",
       "billingCycles": "Cycles de facturation",
       "servicePeriods": "Périodes de service",
@@ -63,7 +63,7 @@
         "subtitle": "Lignes de contrat actives"
       },
       "billingClients": {
-        "title": "Facturation des clients",
+        "title": "Clients facturés",
         "subtitle": "Nombre total de clients"
       },
       "monthlyRevenue": {
@@ -365,7 +365,7 @@
       "inconsistentRemainingRecommended": "Mettez à jour le montant restant suivi afin qu'il corresponde au solde attendu après les applications.",
       "inconsistentRemainingAlternative": "Créez un ajustement d'équilibrage au lieu de modifier l'écriture de suivi existante.",
       "inconsistentRemainingNoAction": "Ne laissez l’écart non résolu que si l’entrée de suivi est intentionnellement compensée ailleurs.",
-      "genericRecommended": "Appliquez la correction recommandée pour remettre les balances dans l’alignement.",
+      "genericRecommended": "Appliquez la correction recommandée pour réaligner les soldes.",
       "genericCustom": "Entrez un ajustement personnalisé si une correction manuelle est requise."
     },
     "dialog": {

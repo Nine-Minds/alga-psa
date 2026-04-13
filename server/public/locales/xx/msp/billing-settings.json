@@ -1051,5 +1051,50 @@
   },
   "toast": {
     "saved": "11111"
+  },
+  "numbering": {
+    "section": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "fields": {
+      "prefix": {
+        "label": "11111",
+        "help": "11111"
+      },
+      "minimumDigits": {
+        "label": "11111",
+        "help": "11111"
+      },
+      "initialValue": {
+        "label": "11111",
+        "help": "11111",
+        "placeholder": "11111"
+      },
+      "lastUsedNumber": {
+        "label": "11111",
+        "help": "11111"
+      },
+      "nextPreview": {
+        "label": "11111",
+        "help": "11111"
+      }
+    },
+    "actions": {
+      "save": "11111",
+      "cancel": "11111"
+    },
+    "dialog": {
+      "title": "11111",
+      "message": "11111",
+      "confirm": "11111"
+    },
+    "toast": {
+      "updated": "11111"
+    },
+    "errors": {
+      "load": "11111",
+      "save": "11111"
+    }
   }
 }

@@ -1051,5 +1051,50 @@
   },
   "toast": {
     "saved": "Guardado exitosamente"
+  },
+  "numbering": {
+    "section": {
+      "title": "Formato de número",
+      "description": "Defina el prefijo, el relleno de dígitos y la secuencia actual."
+    },
+    "fields": {
+      "prefix": {
+        "label": "Prefijo del número",
+        "help": "Prefijo opcional para la secuencia de números. Déjelo vacío para no usar prefijo o ingrese un prefijo personalizado."
+      },
+      "minimumDigits": {
+        "label": "Dígitos mínimos",
+        "help": "Número mínimo de dígitos del número secuencial. Por ejemplo, 6 convierte '1' en '000001'."
+      },
+      "initialValue": {
+        "label": "Valor inicial",
+        "help": "Establezca el número inicial de la secuencia. Esto solo se puede configurar una vez.",
+        "placeholder": "Ingresar valor"
+      },
+      "lastUsedNumber": {
+        "label": "Último número usado",
+        "help": "El último número asignado. El siguiente número será una unidad mayor que este valor."
+      },
+      "nextPreview": {
+        "label": "Vista previa del próximo número",
+        "help": "Este es el número que se asignará al próximo registro."
+      }
+    },
+    "actions": {
+      "save": "Guardar cambios",
+      "cancel": "Cancelar"
+    },
+    "dialog": {
+      "title": "Actualizar configuración de numeración",
+      "message": "Cambiar estos ajustes afectará la forma en que se generan los nuevos números. Este cambio no afectará a los registros existentes. ¿Está seguro de continuar?",
+      "confirm": "Actualizar configuración"
+    },
+    "toast": {
+      "updated": "Configuración actualizada correctamente."
+    },
+    "errors": {
+      "load": "No se pudo cargar la configuración de numeración.",
+      "save": "No se pudo actualizar la configuración."
+    }
   }
 }
