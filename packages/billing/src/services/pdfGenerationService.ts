@@ -420,6 +420,11 @@ export class PDFGenerationService {
         }
       }
 
+      const escapedTitle = (document.document_name || 'Document')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
       return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -430,6 +435,7 @@ export class PDFGenerationService {
       body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; margin: 0; padding: 5mm; }
       pre { white-space: pre-wrap; word-wrap: break-word; }
       h1, h2, h3, h4, h5, h6 { margin-top: 1em; margin-bottom: 0.5em; }
+      .document-title { margin-top: 0; padding-bottom: 0.4em; border-bottom: 1px solid #e2e8f0; font-size: 1.8em; }
       p { margin-top: 0; margin-bottom: 1em; }
       table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
       th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -443,6 +449,7 @@ export class PDFGenerationService {
     </style>
   </head>
   <body>
+    <h1 class="document-title">${escapedTitle}</h1>
     ${htmlContent}
   </body>
 </html>`;

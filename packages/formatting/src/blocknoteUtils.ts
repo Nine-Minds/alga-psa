@@ -957,6 +957,225 @@ export function convertProseMirrorToHTML(doc: unknown): string {
   return renderPMNode(pmDoc);
 }
 
+// ── ProseMirror JSON → Markdown conversion ─────────────────────────
+
+function renderPMMarksMarkdown(text: string, marks: PMNode['marks']): string {
+  if (!text) return text;
+  if (!marks || marks.length === 0) return text;
+
+  // CommonMark forbids leading/trailing whitespace inside emphasis delimiters
+  // (e.g. `*foo *` won't render). Peel whitespace off and restore it outside.
+  const leadingMatch = text.match(/^\s+/);
+  const trailingMatch = text.match(/\s+$/);
+  const leading = leadingMatch ? leadingMatch[0] : '';
+  const trailing = trailingMatch ? trailingMatch[0] : '';
+  let core = text.slice(leading.length, text.length - trailing.length);
+
+  if (core.length === 0) return text;
+
+  for (const mark of marks) {
+    switch (mark.type) {
+      case 'bold':
+        core = `**${core}**`;
+        break;
+      case 'italic':
+        core = `*${core}*`;
+        break;
+      case 'underline':
+        core = `<u>${core}</u>`;
+        break;
+      case 'strike':
+        core = `~~${core}~~`;
+        break;
+      case 'code':
+        core = `\`${core}\``;
+        break;
+      case 'link': {
+        const href = String(mark.attrs?.href ?? '');
+        core = `[${core}](${href})`;
+        break;
+      }
+    }
+  }
+  return `${leading}${core}${trailing}`;
+}
+
+function renderPMInlineMarkdown(nodes: PMNode[] | undefined): string {
+  if (!nodes || nodes.length === 0) return '';
+
+  return nodes.map(node => {
+    if (node.type === 'text' && node.text != null) {
+      return renderPMMarksMarkdown(node.text, node.marks);
+    }
+    if (node.type === 'hard_break' || node.type === 'hardBreak') {
+      return '  \n';
+    }
+    if (node.type === 'mention') {
+      const { username, displayName } = (node.attrs ?? {}) as {
+        username?: string; displayName?: string;
+      };
+      return username ? `@${username}` : `@${displayName || 'Unknown'}`;
+    }
+    if (node.content) return renderPMInlineMarkdown(node.content);
+    return '';
+  }).join('');
+}
+
+function renderPMNodeMarkdown(node: PMNode, listContext?: { ordered: boolean; index: number }): string {
+  switch (node.type) {
+    case 'doc':
+      return (node.content ?? [])
+        .map(child => renderPMNodeMarkdown(child))
+        .join('\n\n');
+
+    case 'paragraph': {
+      const inner = renderPMInlineMarkdown(node.content);
+      return inner;
+    }
+
+    case 'heading': {
+      const level = Math.min(Math.max(Number(node.attrs?.level) || 1, 1), 6);
+      const inner = renderPMInlineMarkdown(node.content);
+      return `${'#'.repeat(level)} ${inner}`;
+    }
+
+    case 'bullet_list':
+    case 'bulletList': {
+      return (node.content ?? [])
+        .map(item => renderPMNodeMarkdown(item, { ordered: false, index: 0 }))
+        .join('\n');
+    }
+
+    case 'ordered_list':
+    case 'orderedList': {
+      const start = Number(node.attrs?.order ?? node.attrs?.start ?? 1);
+      return (node.content ?? [])
+        .map((item, i) => renderPMNodeMarkdown(item, { ordered: true, index: start + i }))
+        .join('\n');
+    }
+
+    case 'list_item':
+    case 'listItem': {
+      const marker = listContext?.ordered ? `${listContext.index}.` : '-';
+      const childBlocks = (node.content ?? []).map(child => renderPMNodeMarkdown(child));
+      const first = (childBlocks[0] ?? '').trim();
+      const rest = childBlocks.slice(1)
+        .map(block => block.split('\n').map(l => (l ? `  ${l}` : l)).join('\n'))
+        .join('\n');
+      return rest ? `${marker} ${first}\n${rest}` : `${marker} ${first}`;
+    }
+
+    case 'task_list':
+    case 'taskList': {
+      return (node.content ?? [])
+        .map(item => renderPMNodeMarkdown(item))
+        .join('\n');
+    }
+
+    case 'task_item':
+    case 'taskItem': {
+      const checked = Boolean(node.attrs?.checked);
+      const inner = (node.content ?? []).map(child => renderPMNodeMarkdown(child)).join('\n').trim();
+      return `- [${checked ? 'x' : ' '}] ${inner}`;
+    }
+
+    case 'blockquote': {
+      const inner = (node.content ?? []).map(child => renderPMNodeMarkdown(child)).join('\n\n');
+      return inner.split('\n').map(line => `> ${line}`).join('\n');
+    }
+
+    case 'code_block':
+    case 'codeBlock': {
+      const lang = node.attrs?.language ? String(node.attrs.language) : '';
+      const code = (node.content ?? []).map(n => n.text ?? '').join('');
+      return `\`\`\`${lang}\n${code}\n\`\`\``;
+    }
+
+    case 'horizontal_rule':
+    case 'horizontalRule':
+      return '---';
+
+    case 'hard_break':
+    case 'hardBreak':
+      return '  \n';
+
+    case 'image': {
+      const src = String(node.attrs?.src ?? '');
+      const alt = String(node.attrs?.alt ?? '');
+      return src ? `![${alt}](${src})` : '';
+    }
+
+    case 'text':
+      return renderPMMarksMarkdown(node.text ?? '', node.marks);
+
+    case 'mention': {
+      const { username, displayName } = (node.attrs ?? {}) as {
+        username?: string; displayName?: string;
+      };
+      return username ? `@${username}` : `@${displayName || 'Unknown'}`;
+    }
+
+    default: {
+      if (node.content) return (node.content).map(child => renderPMNodeMarkdown(child)).join('\n');
+      if (node.text != null) return node.text;
+      return '';
+    }
+  }
+}
+
+/**
+ * Converts ProseMirror JSON ({type: 'doc', content: [...]}) to a Markdown string.
+ * Handles paragraphs, headings, lists, code blocks, blockquotes, marks
+ * (bold, italic, underline, strike, code, link), mention nodes, and emoji.
+ */
+export function convertProseMirrorToMarkdown(doc: unknown): string {
+  if (!doc) return '';
+
+  let parsed: unknown = doc;
+  if (typeof doc === 'string') {
+    try {
+      parsed = JSON.parse(doc);
+    } catch {
+      return typeof doc === 'string' ? doc : '';
+    }
+  }
+
+  if (typeof parsed !== 'object' || parsed === null) return '';
+
+  const pmDoc = parsed as PMNode;
+  if (pmDoc.type !== 'doc') return '';
+
+  return renderPMNodeMarkdown(pmDoc);
+}
+
+/**
+ * Auto-detects whether block_data is BlockNote or ProseMirror format
+ * and converts it to Markdown using the appropriate converter.
+ */
+export function convertBlockContentToMarkdown(blockData: unknown): string {
+  if (!blockData) return '';
+
+  let parsed: unknown = blockData;
+  if (typeof blockData === 'string') {
+    try {
+      parsed = JSON.parse(blockData);
+    } catch {
+      return convertBlockNoteToMarkdown(blockData);
+    }
+  }
+
+  // ProseMirror format: {type: 'doc', content: [...]}
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    const maybeDoc = parsed as { type?: string };
+    if (maybeDoc.type === 'doc') {
+      return convertProseMirrorToMarkdown(parsed);
+    }
+  }
+
+  // BlockNote format: [{type: '...', props: {...}, content: [...]}]
+  return convertBlockNoteToMarkdown(blockData);
+}
+
 /**
  * Auto-detects whether block_data is BlockNote or ProseMirror format
  * and converts it to HTML using the appropriate converter.
