@@ -733,18 +733,21 @@ function DocumentStorageCardComponent({
                     )}
                 </div>
 
-                {!hideActions && (
+                {!hideActions && (() => {
+                    const isTextDocument = document.type_name === 'text/plain' ||
+                                           document.type_name === 'text/markdown' ||
+                                           (!document.type_name && !document.file_id);
+                    const isPdfTarget = isTextDocument;
+
+                    return (
                     <div className="mt-4 pt-3 flex flex-row flex-wrap gap-1 justify-end border-t border-[rgb(var(--color-border-100))]">
-                        <Tooltip content={t('documents.download', 'Download')}>
+                        <Tooltip content={isPdfTarget ? t('documents.downloadAsPdf', 'Download as PDF') : t('documents.download', 'Download')}>
                             <Button
                                 id={`download-document-${document.document_id}-button`}
                                 variant="ghost"
                                 size="sm"
                                 onClick={async (e) => {
                                     e.stopPropagation();
-                                    const isPdfTarget = document.type_name === 'text/plain' ||
-                                                        document.type_name === 'text/markdown' ||
-                                                        (!document.type_name && !document.file_id);
 
                                     let downloadUrl = '#';
                                     if (isPdfTarget) {
@@ -770,6 +773,30 @@ function DocumentStorageCardComponent({
                                 <Download className="w-4 h-4" />
                             </Button>
                         </Tooltip>
+                        {isTextDocument && (
+                            <Tooltip content={t('documents.downloadAsMarkdown', 'Download as Markdown')}>
+                                <Button
+                                    id={`download-document-${document.document_id}-markdown-button`}
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (!document.document_id) return;
+                                        const downloadUrl = `/api/documents/download/${document.document_id}?format=markdown`;
+                                        const filename = `${document.document_name || 'document'}.md`;
+                                        try {
+                                            await downloadDocument(downloadUrl, filename, true);
+                                        } catch (error) {
+                                            console.error('Markdown download failed:', error);
+                                        }
+                                    }}
+                                    disabled={isDeleteProcessing}
+                                    className="text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] p-1.5"
+                                >
+                                    <FileText className="w-4 h-4" />
+                                </Button>
+                            </Tooltip>
+                        )}
                         {onShare && (
                             <Tooltip content={t('documents.share', 'Share')}>
                                 <Button
@@ -839,7 +866,8 @@ function DocumentStorageCardComponent({
                             </Tooltip>
                         )}
                     </div>
-                )}
+                    );
+                })()}
             </div>
         </ReflectionContainer>
         <DeleteEntityDialog

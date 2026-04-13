@@ -434,7 +434,11 @@
       "selectMasterTicket": "Select master ticket...",
       "syncUpdates": "Sync updates from master to children (public replies + workflow changes)",
       "syncUpdatesHelp": "Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.",
-      "childrenDescription": "Children keep their current status; workflow fields are locked on children. Inbound child replies are surfaced below as view-only."
+      "childrenDescription": "Children keep their current status; workflow fields are locked on children. Inbound child replies are surfaced below as view-only.",
+      "checkingMasters": "Checking existing bundles...",
+      "existingMasterSuffix": "(existing master)",
+      "existingMasterLocked": "One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.",
+      "multipleExistingMasters": "Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling."
     },
     "auth": {
       "moveRequired": "You must be logged in to move tickets",

@@ -1089,6 +1089,56 @@ const generateSaveAsName = (actionId: string): string => {
   return camelCase + 'Result';
 };
 
+const cloneWorkflowStepValue = <T,>(value: T): T => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value);
+  }
+
+  return JSON.parse(JSON.stringify(value)) as T;
+};
+
+const duplicateWorkflowStepWithNewIds = (step: Step): Step => {
+  const clonedStep = cloneWorkflowStepValue(step);
+
+  if (clonedStep.type === 'control.if') {
+    const ifStep = clonedStep as IfBlock;
+    return {
+      ...ifStep,
+      id: uuidv4(),
+      then: ifStep.then.map(duplicateWorkflowStepWithNewIds),
+      else: ifStep.else ? ifStep.else.map(duplicateWorkflowStepWithNewIds) : ifStep.else
+    } satisfies IfBlock;
+  }
+
+  if (clonedStep.type === 'control.tryCatch') {
+    const tryCatchStep = clonedStep as TryCatchBlock;
+    return {
+      ...tryCatchStep,
+      id: uuidv4(),
+      try: tryCatchStep.try.map(duplicateWorkflowStepWithNewIds),
+      catch: tryCatchStep.catch.map(duplicateWorkflowStepWithNewIds)
+    } satisfies TryCatchBlock;
+  }
+
+  if (clonedStep.type === 'control.forEach') {
+    const forEachStep = clonedStep as ForEachBlock;
+    return {
+      ...forEachStep,
+      id: uuidv4(),
+      body: forEachStep.body.map(duplicateWorkflowStepWithNewIds)
+    } satisfies ForEachBlock;
+  }
+
+  return {
+    ...clonedStep,
+    id: uuidv4()
+  } as Step;
+};
+
 const createStepFromPalette = (
   type: Step['type'],
   nodeRegistry: Record<string, NodeRegistryItem>
@@ -2759,6 +2809,46 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     if (selectedStepId === stepId) {
       setSelectedStepId(null);
     }
+  };
+
+  const handleDuplicateStep = (stepId: string) => {
+    if (!activeDefinition) return;
+
+    const stepPathMap = buildStepPathMap(activeDefinition.steps as Step[]);
+    const stepPath = stepPathMap[stepId];
+    if (!stepPath) {
+      throw new Error(`Cannot duplicate step ${stepId}: step path was not found`);
+    }
+
+    const stepPathMatch = stepPath.match(/^(.*)\.steps\[(\d+)\]$/);
+    if (!stepPathMatch) {
+      throw new Error(`Cannot duplicate step ${stepId}: step path "${stepPath}" is invalid`);
+    }
+
+    const [, pipePath, stepIndexRaw] = stepPathMatch;
+    const stepIndex = Number(stepIndexRaw);
+    const segments = parsePipePath(pipePath);
+    const pipeSteps = getStepsAtPath(activeDefinition.steps as Step[], segments);
+    const sourceStep = pipeSteps[stepIndex];
+
+    if (!sourceStep) {
+      throw new Error(`Cannot duplicate step ${stepId}: source step was not found in pipe "${pipePath}"`);
+    }
+
+    const duplicatedStep = duplicateWorkflowStepWithNewIds(sourceStep);
+    const nextSteps = [
+      ...pipeSteps.slice(0, stepIndex + 1),
+      duplicatedStep,
+      ...pipeSteps.slice(stepIndex + 1)
+    ];
+
+    setActiveDefinition({
+      ...activeDefinition,
+      steps: updateStepsAtPath(activeDefinition.steps as Step[], segments, nextSteps)
+    });
+    setSelectedPipePath(pipePath);
+    setSelectedStepId(duplicatedStep.id);
+    setPendingInsertPosition(null);
   };
 
   const handleStepUpdate = (stepId: string, updater: (step: Step) => Step) => {
@@ -4590,6 +4680,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       selectedStepId={selectedStepId}
                       onSelectStep={setSelectedStepId}
                       onDeleteStep={handleDeleteStep}
+                      onDuplicateStep={handleDuplicateStep}
                       onSelectPipe={handlePipeSelect}
                       onPipeHover={handlePipeHover}
                       onInsertStep={(index) => handleInsertStep('root', index)}
@@ -4882,6 +4973,7 @@ const Pipe: React.FC<{
   selectedStepId: string | null;
   onSelectStep: (id: string) => void;
   onDeleteStep: (id: string) => void;
+  onDuplicateStep: (id: string) => void;
   onSelectPipe: (pipePath: string) => void;
   onPipeHover: (pipePath: string) => void;
   onInsertStep?: (index: number) => void;
@@ -4898,6 +4990,7 @@ const Pipe: React.FC<{
   selectedStepId,
   onSelectStep,
   onDeleteStep,
+  onDuplicateStep,
   onSelectPipe,
   onPipeHover,
   onInsertStep,
@@ -4966,6 +5059,7 @@ const Pipe: React.FC<{
                       selectedStepId={selectedStepId}
                       onSelectStep={onSelectStep}
                       onDeleteStep={onDeleteStep}
+                      onDuplicateStep={onDuplicateStep}
                       onSelectPipe={onSelectPipe}
                       onPipeHover={onPipeHover}
                       onInsertStep={onInsertStep}
@@ -5020,6 +5114,7 @@ const StepCard: React.FC<{
   selectedStepId: string | null;
   onSelectStep: (id: string) => void;
   onDeleteStep: (id: string) => void;
+  onDuplicateStep: (id: string) => void;
   onSelectPipe: (pipePath: string) => void;
   onPipeHover: (pipePath: string) => void;
   onInsertStep?: (index: number) => void;
@@ -5038,6 +5133,7 @@ const StepCard: React.FC<{
   selectedStepId,
   onSelectStep,
   onDeleteStep,
+  onDuplicateStep,
   onSelectPipe,
   onPipeHover,
   onInsertStep,
@@ -5131,6 +5227,18 @@ const StepCard: React.FC<{
                 <GripVertical className="h-4 w-4" />
               </div>
               <Button
+                id={`workflow-step-duplicate-${step.id}`}
+                variant="ghost"
+                size="sm"
+                onClick={() => onDuplicateStep(step.id)}
+                className="text-gray-400 hover:text-primary-600 p-1 h-auto"
+                data-testid={`step-duplicate-${step.id}`}
+                title="Duplicate step"
+                aria-label={`Duplicate ${label} step`}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
                 id={`workflow-step-delete-${step.id}`}
                 variant="ghost"
                 size="sm"
@@ -5160,6 +5268,7 @@ const StepCard: React.FC<{
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
+                onDuplicateStep={onDuplicateStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(thenPath, index) : undefined}
@@ -5178,6 +5287,7 @@ const StepCard: React.FC<{
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
+                onDuplicateStep={onDuplicateStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(elsePath, index) : undefined}
@@ -5206,6 +5316,7 @@ const StepCard: React.FC<{
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
+                onDuplicateStep={onDuplicateStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(tryPath, index) : undefined}
@@ -5224,6 +5335,7 @@ const StepCard: React.FC<{
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
+                onDuplicateStep={onDuplicateStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(catchPath, index) : undefined}
@@ -5252,6 +5364,7 @@ const StepCard: React.FC<{
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
+                onDuplicateStep={onDuplicateStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(bodyPath, index) : undefined}

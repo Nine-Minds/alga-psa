@@ -1,0 +1,117 @@
+/* Print styles for the User Activities page — the "marching orders" view.
+ * Strips interactive chrome, renders each activity as a checklist row with
+ * an empty checkbox square, and keeps group headings for context.
+ *
+ * Activated by toggling .ua-print-mode on <html> (or a parent) just before
+ * window.print(), and removed afterwards.
+ */
+
+@media print {
+  html.ua-print-mode,
+  html.ua-print-mode body {
+    background: #fff !important;
+  }
+
+  /* Hide everything by default in print mode */
+  html.ua-print-mode body * {
+    visibility: hidden;
+  }
+
+  /* Re-show the print root and its contents */
+  html.ua-print-mode .ua-print-root,
+  html.ua-print-mode .ua-print-root * {
+    visibility: visible;
+  }
+
+  /* Position the print root at the top of the page */
+  html.ua-print-mode .ua-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 16pt;
+    color: #000;
+    background: #fff;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 11pt;
+    line-height: 1.4;
+  }
+
+  /* Things to hide even within the print root */
+  html.ua-print-mode .ua-print-hide {
+    display: none !important;
+  }
+
+  /* Things that are only visible when printing */
+  html.ua-print-mode .ua-print-only {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  /* Print header (date + page title) */
+  html.ua-print-mode .ua-print-header {
+    font-size: 14pt;
+    font-weight: 700;
+    border-bottom: 1pt solid #000;
+    padding-bottom: 6pt;
+    margin-bottom: 12pt;
+  }
+
+  html.ua-print-mode .ua-print-header-date {
+    font-size: 10pt;
+    font-weight: 400;
+    color: #444;
+    margin-left: 12pt;
+  }
+
+  /* Group name heading */
+  html.ua-print-mode .ua-print-group-name {
+    font-size: 12pt;
+    font-weight: 700;
+    margin-top: 12pt;
+    margin-bottom: 4pt;
+    page-break-after: avoid;
+  }
+
+  /* Activity row */
+  html.ua-print-mode .ua-print-row {
+    display: flex !important;
+    align-items: flex-start;
+    gap: 6pt;
+    padding: 3pt 0;
+    page-break-inside: avoid;
+  }
+
+  /* Activity type icon (SVG from lucide-react) */
+  html.ua-print-mode .ua-print-type-icon {
+    flex-shrink: 0;
+    width: 11pt;
+    height: 11pt;
+    color: #444;
+    margin-top: 2pt;
+  }
+
+  /* Activity text columns */
+  html.ua-print-mode .ua-print-title {
+    flex: 1;
+    font-weight: 500;
+  }
+
+  html.ua-print-mode .ua-print-meta {
+    flex-shrink: 0;
+    font-size: 9pt;
+    color: #444;
+    margin-left: 12pt;
+  }
+
+  /* Groups should not split across pages where possible */
+  html.ua-print-mode .ua-print-group {
+    page-break-inside: avoid;
+  }
+}
+
+/* Hide print-only elements when NOT printing */
+.ua-print-only,
+.ua-print-header {
+  display: none;
+}

@@ -379,16 +379,18 @@ describe('StripeService tier pricing', () => {
     expect(quantity).toBe(1);
   });
 
-  it('keeps base plus per-user checkout line items for Pro pricing', async () => {
+  it('keeps base plus per-user checkout line items for Pro pricing (minus the included seat)', async () => {
     const service = createService({ 'tenant-pro': 'pro' });
 
+    // Pro includes 1 user in the platform fee, so asking for 4 total seats
+    // should bill the per-user line item for 3.
     await service.createLicenseCheckoutSession('tenant-pro', 4, 'month');
 
     expect(service.stripe.checkout.sessions.create).toHaveBeenCalledWith(
       expect.objectContaining({
         line_items: [
           { price: 'price_pro_base', quantity: 1 },
-          { price: 'price_pro_user', quantity: 4 },
+          { price: 'price_pro_user', quantity: 3 },
         ],
       }),
     );
@@ -497,13 +499,18 @@ describe('StripeService tier pricing', () => {
     const result = await service.upgradeTier('tenant-solo', 'pro', 'month');
 
     expect(result).toEqual({ success: true });
+    // The single Solo user is fully covered by the Pro platform fee
+    // (Pro includes 1 user), so the per-user line is added at quantity 0
+    // and the customer is billed only the Pro base fee. We still include
+    // the per-user item so `stripe_subscription_item_id` points at a real
+    // per-user line for future seat increases.
     expect(service.stripe.subscriptions.update).toHaveBeenCalledWith(
       'sub_ext_1',
       expect.objectContaining({
         items: [
           { id: 'si_solo_flat', deleted: true },
           { price: 'price_pro_base', quantity: 1 },
-          { price: 'price_pro_user', quantity: 1 },
+          { price: 'price_pro_user', quantity: 0 },
         ],
       }),
     );
@@ -684,9 +691,12 @@ describe('StripeService tier pricing', () => {
       }),
     );
 
+    // `stripe_subscriptions.quantity` now stores the user-facing total so it
+    // matches `tenants.licensed_user_count`. Solo always clamps to 1 regardless
+    // of what the raw Stripe item quantity says.
     expect(subscriptionUpdates[0]?.values).toEqual(
       expect.objectContaining({
-        quantity: 4,
+        quantity: 1,
       }),
     );
     expect(tenantUpdates[0]?.values).toEqual(
@@ -694,6 +704,156 @@ describe('StripeService tier pricing', () => {
         licensed_user_count: 1,
         plan: 'solo',
       }),
+    );
+  });
+
+  it('resolves the user-facing total for a Pro multi-item subscription.updated webhook', async () => {
+    const service = createService({});
+    const subscriptionUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
+    const tenantUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
+    service.stripe.prices = {
+      retrieve: vi.fn().mockResolvedValue({
+        id: 'price_pro_user',
+        product: { name: 'alga-psa-pro' },
+      }),
+    };
+
+    await service.handleSubscriptionUpdated(
+      {
+        data: {
+          object: {
+            id: 'sub_pro_update',
+            status: 'active',
+            metadata: {},
+            current_period_start: Math.floor(new Date('2026-03-26T00:00:00.000Z').getTime() / 1000),
+            current_period_end: Math.floor(new Date('2026-04-26T00:00:00.000Z').getTime() / 1000),
+            cancel_at: null,
+            canceled_at: null,
+            items: {
+              data: [
+                {
+                  id: 'si_pro_base',
+                  quantity: 1,
+                  price: {
+                    id: 'price_pro_base',
+                    recurring: { interval: 'month' },
+                  },
+                },
+                {
+                  id: 'si_pro_user',
+                  quantity: 5,
+                  price: {
+                    id: 'price_pro_user',
+                    recurring: { interval: 'month' },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+      'tenant-pro',
+      createSubscriptionWebhookKnex({
+        existingSubscription: {
+          tenant: 'tenant-pro',
+          stripe_subscription_external_id: 'sub_pro_update',
+          quantity: 5,
+          metadata: {},
+        },
+        subscriptionUpdates,
+        tenantUpdates,
+      }),
+    );
+
+    // Per-user line item carries 5, but the user-facing total is 6 (Pro
+    // platform fee covers 1 seat).
+    expect(subscriptionUpdates[0]?.values).toEqual(
+      expect.objectContaining({ quantity: 6 }),
+    );
+    expect(tenantUpdates[0]?.values).toEqual(
+      expect.objectContaining({
+        licensed_user_count: 6,
+        plan: 'pro',
+      }),
+    );
+  });
+
+  it('subtracts the included seat when increasing a Pro multi-item subscription', async () => {
+    const service = createService({});
+    const subscriptionUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
+    const tenantUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
+
+    const knex = ((table: string) => {
+      if (table === 'tenants') {
+        return {
+          where: (criteria: Record<string, any>) => ({
+            select: (_field: string) => ({
+              first: async () => ({ plan: 'pro' }),
+            }),
+            update: async (values: Record<string, any>) => {
+              tenantUpdates.push({ criteria, values });
+              return 1;
+            },
+          }),
+        };
+      }
+
+      if (table === 'stripe_subscriptions') {
+        return {
+          where: (criteria: Record<string, any>) => ({
+            first: async () => ({
+              tenant: 'tenant-pro',
+              stripe_subscription_id: 'sub_db_pro',
+              stripe_subscription_external_id: 'sub_ext_pro',
+              stripe_subscription_item_id: 'si_pro_user',
+              stripe_customer_id: 'cust_db_pro',
+              stripe_price_id: 'price_record_pro_user',
+              status: 'active',
+              quantity: 5,
+              stripe_base_item_id: 'si_pro_base',
+              stripe_base_price_id: 'price_record_pro_base',
+              billing_interval: 'month',
+              metadata: {},
+              current_period_end: new Date('2026-04-26T00:00:00.000Z'),
+            }),
+            update: async (values: Record<string, any>) => {
+              subscriptionUpdates.push({ criteria, values });
+              return 1;
+            },
+          }),
+        };
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    }) as any;
+    knex.fn = { now: () => new Date('2026-03-26T00:00:00.000Z') };
+
+    getConnectionMock.mockResolvedValue(knex);
+    service.getOrImportCustomer = vi.fn().mockResolvedValue({
+      stripe_customer_id: 'cust_db_pro',
+      stripe_customer_external_id: 'cus_ext_pro',
+    });
+    service.initPromise = Promise.resolve();
+    service.stripe.subscriptions = {
+      update: vi.fn().mockResolvedValue({ id: 'sub_ext_pro' }),
+    };
+
+    // User increases from 5 total to 7 total seats on a multi-item Pro sub.
+    await service.updateOrCreateLicenseSubscription('tenant-pro', 7);
+
+    // The per-user line item receives 6 (= 7 total − 1 included), not 7.
+    expect(service.stripe.subscriptions.update).toHaveBeenCalledWith(
+      'sub_ext_pro',
+      expect.objectContaining({
+        items: [{ id: 'si_pro_user', quantity: 6 }],
+      }),
+    );
+    // Local DB writes preserve the user-facing total.
+    expect(subscriptionUpdates[0]?.values).toEqual(
+      expect.objectContaining({ quantity: 7 }),
+    );
+    expect(tenantUpdates[0]?.values).toEqual(
+      expect.objectContaining({ licensed_user_count: 7 }),
     );
   });
 

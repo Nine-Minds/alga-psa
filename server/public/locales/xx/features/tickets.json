@@ -434,7 +434,11 @@
       "selectMasterTicket": "11111",
       "syncUpdates": "11111",
       "syncUpdatesHelp": "11111",
-      "childrenDescription": "11111"
+      "childrenDescription": "11111",
+      "checkingMasters": "11111",
+      "existingMasterSuffix": "11111",
+      "existingMasterLocked": "11111",
+      "multipleExistingMasters": "11111"
     },
     "auth": {
       "moveRequired": "11111",

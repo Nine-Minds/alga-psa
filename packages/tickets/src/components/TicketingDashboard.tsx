@@ -27,7 +27,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ColumnDefinition } from '@alga-psa/types';
 import { deleteTicket, deleteTickets, moveTicketsToBoard } from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
-import { bundleTicketsAction } from '../actions/ticketBundleActions';
+import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
 import { fetchBundleChildrenForMaster, getAllMatchingTicketIds } from '../actions/optimizedTicketActions';
 import TicketExportDialog from './TicketExportDialog';
 import TicketImportDialog from './TicketImportDialog';
@@ -39,7 +39,7 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { useIntervalTracking } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
 
@@ -181,6 +181,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [bundleMasterTicketId, setBundleMasterTicketId] = useState<string | null>(null);
   const [bundleSyncUpdates, setBundleSyncUpdates] = useState(true);
   const [bundleError, setBundleError] = useState<string | null>(null);
+  const [bundleExistingMasterIds, setBundleExistingMasterIds] = useState<Set<string>>(new Set());
+  const [isLoadingBundleMasterStatus, setIsLoadingBundleMasterStatus] = useState(false);
   const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -1190,6 +1192,54 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   }, [selectedTicketIdsArray, clearSelection, currentUser, t]);
 
+  // When the bundle dialog opens, check which of the selected tickets are already
+  // bundle masters of other bundles. Masters can't be added as children, so we must
+  // either force them to BE the master or block the operation entirely.
+  useEffect(() => {
+    if (!isBundleDialogOpen || selectedTicketIdsArray.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingBundleMasterStatus(true);
+    (async () => {
+      try {
+        const { masterTicketIds } = await getBundleMasterStatusAction({ ticketIds: selectedTicketIdsArray });
+        if (cancelled) return;
+        const masterSet = new Set(masterTicketIds);
+        setBundleExistingMasterIds(masterSet);
+        if (masterSet.size === 1) {
+          // Exactly one of the selected tickets is already a master; force it to be THE master.
+          const [onlyMaster] = Array.from(masterSet);
+          setBundleMasterTicketId(onlyMaster);
+        } else if (masterSet.size > 1) {
+          // Can't bundle: multiple existing masters can't be merged without unbundling first.
+          setBundleError(
+            t(
+              'bulk.bundle.multipleExistingMasters',
+              'Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling.',
+              { count: masterSet.size }
+            )
+          );
+          setBundleMasterTicketId(null);
+        } else {
+          setBundleError(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to load bundle master status', error);
+          setBundleExistingMasterIds(new Set());
+        }
+      } finally {
+        if (!cancelled) setIsLoadingBundleMasterStatus(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isBundleDialogOpen, selectedTicketIdsArray, t]);
+
+  const hasMultipleExistingMasters = bundleExistingMasterIds.size > 1;
+
   const performBundleTickets = useCallback(async () => {
     if (selectedTicketIdsArray.length < 2) {
       setBundleError(t('bulk.bundle.selectAtLeastTwo', 'Select at least two tickets to bundle.'));
@@ -1199,14 +1249,24 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       setBundleError(t('bulk.bundle.selectMaster', 'Select a master ticket.'));
       return;
     }
+    if (hasMultipleExistingMasters) {
+      return;
+    }
 
     setBundleError(null);
     try {
-      await bundleTicketsAction({
+      const result = await bundleTicketsAction({
         masterTicketId: bundleMasterTicketId,
         childTicketIds: selectedTicketIdsArray.filter((id) => id !== bundleMasterTicketId),
         mode: bundleSyncUpdates ? 'sync_updates' : 'link_only',
       });
+
+      if (isActionMessageError(result)) {
+        const message = getErrorMessage(result);
+        setBundleError(message);
+        toast.error(message);
+        return;
+      }
 
       toast.success(t('bulk.bundle.success', 'Tickets bundled'));
       setIsBundleDialogOpen(false);
@@ -1215,8 +1275,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       // Re-fetch with current filters after bundling
       onFilterChange({});
     } catch (error) {
-      setBundleError(error instanceof Error ? error.message : t('bulk.bundle.failure', 'Failed to bundle tickets'));
-      handleError(error, t('bulk.bundle.failure', 'Failed to bundle tickets'));
+      const message = getErrorMessage(error);
+      setBundleError(message);
+      handleError(error);
     }
   }, [
     selectedTicketIdsArray,
@@ -1225,6 +1286,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     currentUser,
     clearSelection,
     onFilterChange,
+    hasMultipleExistingMasters,
     t,
   ]);
 
@@ -2041,6 +2103,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               onClick={() => {
                 setIsBundleDialogOpen(false);
                 setBundleError(null);
+                setBundleExistingMasterIds(new Set());
               }}
             >
               {t('actions.cancel', 'Cancel')}
@@ -2048,7 +2111,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             <Button
               id={`${id}-bundle-confirm`}
               onClick={handleConfirmBundleTickets}
-              disabled={selectedTicketIdsArray.length < 2 || !bundleMasterTicketId}
+              disabled={
+                selectedTicketIdsArray.length < 2 ||
+                !bundleMasterTicketId ||
+                isLoadingBundleMasterStatus ||
+                hasMultipleExistingMasters
+              }
             >
               {t('bulk.bundleTickets', 'Bundle Tickets')}
             </Button>
@@ -2060,6 +2128,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         onClose={() => {
           setIsBundleDialogOpen(false);
           setBundleError(null);
+          setBundleExistingMasterIds(new Set());
         }}
         id={`${id}-bundle-dialog`}
         title={t('bulk.bundle.dialogTitle', 'Bundle Tickets')}
@@ -2069,6 +2138,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           {bundleError && (
             <Alert variant="destructive" className="mb-3">
               <AlertDescription>{bundleError}</AlertDescription>
+            </Alert>
+          )}
+          {bundleExistingMasterIds.size === 1 && !bundleError && (
+            <Alert variant="warning" className="mb-3">
+              <AlertDescription>
+                {t(
+                  'bulk.bundle.existingMasterLocked',
+                  'One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.'
+                )}
+              </AlertDescription>
             </Alert>
           )}
           {(() => {
@@ -2085,12 +2164,27 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               <CustomSelect
                 id={`${id}-bundle-master-select`}
                 value={bundleMasterTicketId || ''}
-                options={selectedTicketDetails.map(detail => ({
-                  value: detail.ticket_id,
-                  label: detail.ticket_number || detail.title || detail.ticket_id
-                }))}
+                options={selectedTicketDetails.map(detail => {
+                  const baseLabel = detail.ticket_number || detail.title || detail.ticket_id;
+                  const isExistingMaster = bundleExistingMasterIds.has(detail.ticket_id);
+                  return {
+                    value: detail.ticket_id,
+                    label: isExistingMaster
+                      ? `${baseLabel} ${t('bulk.bundle.existingMasterSuffix', '(existing master)')}`
+                      : baseLabel,
+                  };
+                })}
                 onValueChange={(value) => setBundleMasterTicketId(value)}
-                placeholder={t('bulk.bundle.selectMasterTicket', 'Select master ticket...')}
+                placeholder={
+                  isLoadingBundleMasterStatus
+                    ? t('bulk.bundle.checkingMasters', 'Checking existing bundles...')
+                    : t('bulk.bundle.selectMasterTicket', 'Select master ticket...')
+                }
+                disabled={
+                  isLoadingBundleMasterStatus ||
+                  hasMultipleExistingMasters ||
+                  bundleExistingMasterIds.size === 1
+                }
               />
             </div>
 

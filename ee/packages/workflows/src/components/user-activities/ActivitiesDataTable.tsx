@@ -5,18 +5,18 @@ import React, { useState, useMemo, useCallback } from 'react';
 import {
   Activity,
   ActivityType,
-  ActivityPriority,
   ScheduleActivity,
   NotificationActivity
 } from '@alga-psa/types';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
-import { Badge } from '@alga-psa/ui/components/Badge';
 import { formatDistanceToNow } from 'date-fns';
 import { ActivityActionMenu } from './ActivityActionMenu';
+import { InlinePriorityPicker } from './InlinePriorityPicker';
+import { InlineStatusPicker } from './InlineStatusPicker';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { AlertTriangle, Calendar, Briefcase, TicketIcon, Clock, ListChecks, Repeat, Bell } from 'lucide-react';
+import { Calendar, Layers, MessageSquare, Clock, ListChecks, Repeat, Bell } from 'lucide-react';
 
 interface ActivitiesDataTableProps {
   activities: Activity[];
@@ -28,6 +28,9 @@ interface ActivitiesDataTableProps {
   totalItems?: number;
   onPageChange?: (page: number) => void;
   onItemsPerPageChange?: (pageSize: number) => void;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+  onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
 }
 
 // Format date to a readable format
@@ -51,11 +54,11 @@ const getRelativeTime = (dateString?: string) => {
 const getActivityTypeIcon = (type: ActivityType) => {
   switch (type) {
     case ActivityType.SCHEDULE:
-      return <Calendar className="h-4 w-4 text-primary-500" />;
+      return <Calendar className="h-4 w-4 text-success" />;
     case ActivityType.PROJECT_TASK:
-      return <Briefcase className="h-4 w-4 text-success" />;
+      return <Layers className="h-4 w-4" style={{ color: 'rgb(var(--color-secondary-500))' }} />;
     case ActivityType.TICKET:
-      return <TicketIcon className="h-4 w-4 text-purple-500" />;
+      return <MessageSquare className="h-4 w-4 text-primary-500" />;
     case ActivityType.TIME_ENTRY:
       return <Clock className="h-4 w-4 text-orange-500" />;
     case ActivityType.WORKFLOW_TASK:
@@ -109,7 +112,10 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
   pageSize = 10,
   totalItems,
   onPageChange,
-  onItemsPerPageChange
+  onItemsPerPageChange,
+  sortBy,
+  sortDirection,
+  onSortChange
 }: ActivitiesDataTableProps) {
   const { openActivityDrawer } = useActivityDrawer();
 
@@ -141,9 +147,6 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
           {record.type === ActivityType.NOTIFICATION && !(record as NotificationActivity).isRead && (
             <div className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" title="Unread" />
           )}
-          {record.priority === ActivityPriority.HIGH && (
-            <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0 ml-1" />
-          )}
         </div>
       ),
     },
@@ -151,15 +154,28 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
       title: 'Status',
       dataIndex: 'status',
       width: '15%',
-      render: (value) => (
-        <Badge variant="default">{value}</Badge>
+      render: (_value, record) => (
+        <InlineStatusPicker
+          activity={record}
+          onStatusChange={onActionComplete}
+        />
       ),
     },
     {
       title: 'Priority',
       dataIndex: 'priority',
-      width: '10%',
+      width: '12%',
       render: (value, record) => {
+        // Inline priority picker for tickets and project tasks
+        if (record.type === ActivityType.TICKET || record.type === ActivityType.PROJECT_TASK) {
+          return (
+            <InlinePriorityPicker
+              activity={record}
+              onPriorityChange={onActionComplete}
+            />
+          );
+        }
+        // Read-only display for other types
         if (!record.priorityColor) {
           return <span className="text-muted-foreground">—</span>;
         }
@@ -192,6 +208,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
       title: 'Actions',
       dataIndex: 'actions',
       width: '5%',
+      sortable: false,
       render: (_, record) => (
         <ActivityActionMenu
           activity={record}
@@ -221,6 +238,10 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
       pageSize={pageSize}
       totalItems={totalItems}
       onItemsPerPageChange={onItemsPerPageChange}
+      manualSorting
+      sortBy={sortBy}
+      sortDirection={sortDirection}
+      onSortChange={onSortChange}
     />
   ), [
     activities,
@@ -230,7 +251,10 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
     onPageChange,
     pageSize,
     totalItems,
-    onItemsPerPageChange
+    onItemsPerPageChange,
+    sortBy,
+    sortDirection,
+    onSortChange
   ]);
   
   return MemoizedDataTable;
@@ -256,7 +280,16 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
   if (prevProps.isLoading !== nextProps.isLoading) {
     return false; // Re-render if loading state changed
   }
-  
+
+  // Check if sort props changed
+  if (
+    prevProps.sortBy !== nextProps.sortBy ||
+    prevProps.sortDirection !== nextProps.sortDirection
+  ) {
+    return false;
+  }
+
+
   // For activities, we need a deeper comparison
   // This is a simplified approach - for large datasets, consider using a more efficient comparison
   const prevIds = prevProps.activities.map(a => a.id).join(',');
