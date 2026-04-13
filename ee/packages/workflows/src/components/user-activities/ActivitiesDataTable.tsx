@@ -5,7 +5,6 @@ import React, { useState, useMemo, useCallback } from 'react';
 import {
   Activity,
   ActivityType,
-  ActivityPriority,
   ScheduleActivity,
   NotificationActivity
 } from '@alga-psa/types';
@@ -17,7 +16,7 @@ import { ActivityActionMenu } from './ActivityActionMenu';
 import { InlinePriorityPicker } from './InlinePriorityPicker';
 import { InlineStatusPicker } from './InlineStatusPicker';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { AlertTriangle, Calendar, Briefcase, TicketIcon, Clock, ListChecks, Repeat, Bell } from 'lucide-react';
+import { Calendar, Layers, MessageSquare, Clock, ListChecks, Repeat, Bell } from 'lucide-react';
 
 interface ActivitiesDataTableProps {
   activities: Activity[];
@@ -55,11 +54,11 @@ const getRelativeTime = (dateString?: string) => {
 const getActivityTypeIcon = (type: ActivityType) => {
   switch (type) {
     case ActivityType.SCHEDULE:
-      return <Calendar className="h-4 w-4 text-primary-500" />;
+      return <Calendar className="h-4 w-4 text-success" />;
     case ActivityType.PROJECT_TASK:
-      return <Briefcase className="h-4 w-4 text-success" />;
+      return <Layers className="h-4 w-4" style={{ color: 'rgb(var(--color-secondary-500))' }} />;
     case ActivityType.TICKET:
-      return <TicketIcon className="h-4 w-4 text-purple-500" />;
+      return <MessageSquare className="h-4 w-4 text-primary-500" />;
     case ActivityType.TIME_ENTRY:
       return <Clock className="h-4 w-4 text-orange-500" />;
     case ActivityType.WORKFLOW_TASK:
@@ -147,9 +146,6 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
           )}
           {record.type === ActivityType.NOTIFICATION && !(record as NotificationActivity).isRead && (
             <div className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" title="Unread" />
-          )}
-          {record.priority === ActivityPriority.HIGH && (
-            <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0 ml-1" />
           )}
         </div>
       ),

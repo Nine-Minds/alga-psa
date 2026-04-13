@@ -5,31 +5,24 @@ import React, { useState, useCallback, useMemo } from 'react';
 import {
   ActivityFilters as ActivityFiltersType,
   ActivityType,
-  IPriority
+  IPriority,
+  IStatus,
+  ITag
 } from "@alga-psa/types";
+import type { ProjectWithPhases } from '@alga-psa/projects/actions/projectActions';
 
-export interface ProjectWithPhases {
-  project_id: string;
-  project_name: string;
-  is_inactive: boolean;
-  phases: Array<{ phase_id: string; phase_name: string; wbs_code: string }>;
-}
-
-type ProjectNodeType = 'project' | 'phase';
 import { Button } from "@alga-psa/ui/components/Button";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import TreeSelect, { TreeSelectOption } from "@alga-psa/ui/components/TreeSelect";
+import { TagFilter } from "@alga-psa/ui/components";
 import { RotateCcw } from 'lucide-react';
 import { DEFAULT_TABLE_TYPES } from '../constants';
 
-// Activity types that support priority filtering via the priorities table
 const PRIORITY_FILTERABLE_TYPES = new Set([ActivityType.TICKET, ActivityType.PROJECT_TASK]);
 
-// Time entries and notifications are intentionally excluded from the list view —
-// they create noise and aren't meaningful "tasks to do today".
 const ACTIVITY_TYPE_OPTIONS = [
   { value: ActivityType.SCHEDULE, label: 'Schedule' },
   { value: ActivityType.PROJECT_TASK, label: 'Project Tasks' },
@@ -37,156 +30,392 @@ const ACTIVITY_TYPE_OPTIONS = [
   { value: ActivityType.WORKFLOW_TASK, label: 'Workflow Tasks' },
 ];
 
+type ProjectNodeType = 'project' | 'phase' | 'status';
+
 interface ActivitiesTableFiltersProps {
   filters: ActivityFiltersType;
   onChange: (filters: ActivityFiltersType) => void;
   priorities?: IPriority[];
   projects?: ProjectWithPhases[];
+  boards?: Array<{ board_id?: string; board_name?: string }>;
+  ticketStatuses?: IStatus[];
+  ticketTags?: ITag[];
+  projectTaskTags?: ITag[];
+}
+
+// Deduplicate statuses by name, optionally scoped to a board
+function buildUniqueStatusOptions(
+  statuses: IStatus[],
+  boardId?: string
+): Array<{ value: string; label: string }> {
+  const seen = new Map<string, string>(); // name → first status_id
+  for (const s of statuses) {
+    if (boardId && s.board_id !== boardId) continue;
+    if (!seen.has(s.name)) {
+      seen.set(s.name, s.status_id);
+    }
+  }
+  return Array.from(seen.entries()).map(([name, id]) => ({
+    value: id,
+    label: name,
+  }));
+}
+
+// Collect all status_ids that share a name (for cross-board filtering)
+function getStatusIdsByName(statuses: IStatus[], statusId: string): string[] {
+  const target = statuses.find((s) => s.status_id === statusId);
+  if (!target) return [statusId];
+  return statuses
+    .filter((s) => s.name === target.name)
+    .map((s) => s.status_id);
 }
 
 export function ActivitiesTableFilters({
   filters,
   onChange,
   priorities = [],
-  projects = []
+  projects = [],
+  boards = [],
+  ticketStatuses = [],
+  ticketTags = [],
+  projectTaskTags = [],
 }: ActivitiesTableFiltersProps) {
-  const [selectedPriorityId, setSelectedPriorityId] = useState<string>(filters.priorityIds?.[0] || 'all');
+  const [selectedPriorityId, setSelectedPriorityId] = useState<string>(
+    filters.priorityIds?.[0] || 'all'
+  );
 
-  // Determine if priority filter should be enabled based on selected types
-  const isPriorityFilterAvailable = filters.types?.length === 1
-    && PRIORITY_FILTERABLE_TYPES.has(filters.types[0]);
+  const selectedTypes = filters.types || [];
+  const hasTickets = selectedTypes.includes(ActivityType.TICKET);
+  const hasProjectTasks = selectedTypes.includes(ActivityType.PROJECT_TASK);
+
+  const isPriorityFilterAvailable =
+    selectedTypes.length === 1 && PRIORITY_FILTERABLE_TYPES.has(selectedTypes[0]);
+
+  // -------- Handlers -------------------------------------------------------
 
   const handleReset = useCallback(() => {
     setSelectedPriorityId('all');
     onChange({
       types: DEFAULT_TABLE_TYPES,
-      status: [],
-      assignedTo: [],
       isClosed: false,
-      projectIds: undefined,
-      phaseIds: undefined,
     });
   }, [onChange]);
 
-  // Toggle a value in an array filter and apply immediately
-  const toggleType = useCallback((typeValue: ActivityType) => {
-    const currentTypes = filters.types || [];
-    const newTypes = currentTypes.includes(typeValue)
-      ? currentTypes.filter(t => t !== typeValue)
-      : [...currentTypes, typeValue];
+  const toggleType = useCallback(
+    (typeValue: ActivityType) => {
+      const currentTypes = filters.types || [];
+      const newTypes = currentTypes.includes(typeValue)
+        ? currentTypes.filter((t) => t !== typeValue)
+        : [...currentTypes, typeValue];
 
-    // Clear priority selection if the result is no longer a single prioritized type
-    const stillFilterable = newTypes.length === 1 && PRIORITY_FILTERABLE_TYPES.has(newTypes[0]);
-    const updatedFilters: ActivityFiltersType = { ...filters, types: newTypes };
-    if (!stillFilterable) {
-      setSelectedPriorityId('all');
-      delete updatedFilters.priorityIds;
-    }
-    onChange(updatedFilters);
-  }, [filters, onChange]);
+      const next: ActivityFiltersType = { ...filters, types: newTypes };
 
-  const handlePriorityChange = useCallback((value: string) => {
-    setSelectedPriorityId(value);
-    const updatedFilters: ActivityFiltersType = {
-      ...filters,
-      priorityIds: value && value !== 'all' ? [value] : undefined,
-    };
-    if (!updatedFilters.priorityIds) delete updatedFilters.priorityIds;
-    delete updatedFilters.priority;
-    onChange(updatedFilters);
-  }, [filters, onChange]);
-
-  const handleDateRangeChange = useCallback((range: { from: string; to: string }) => {
-    const startDate = range.from ? new Date(range.from) : undefined;
-    const endDate = range.to ? new Date(range.to) : undefined;
-    const effectiveStartDate = !startDate && endDate ? new Date() : startDate;
-
-    if (effectiveStartDate) effectiveStartDate.setHours(0, 0, 0, 0);
-    if (endDate) endDate.setHours(23, 59, 59, 999);
-
-    onChange({
-      ...filters,
-      dueDateStart: effectiveStartDate ? effectiveStartDate.toISOString() as any : undefined,
-      dueDateEnd: endDate ? endDate.toISOString() as any : undefined,
-    });
-  }, [filters, onChange]);
-
-  const handleProjectTreeToggle = useCallback((value: string, type: ProjectNodeType) => {
-    if (!value) {
-      // Reset clicked — clear both projects and phases
-      const next: ActivityFiltersType = { ...filters };
-      delete next.projectIds;
-      delete next.phaseIds;
-      onChange(next);
-      return;
-    }
-
-    if (type === 'project') {
-      const current = filters.projectIds || [];
-      const isSelected = current.includes(value);
-      const updated = isSelected
-        ? current.filter(id => id !== value)
-        : [...current, value];
-      const next: ActivityFiltersType = { ...filters };
-      if (updated.length > 0) {
-        next.projectIds = updated;
-      } else {
+      if (!newTypes.includes(ActivityType.TICKET)) {
+        delete next.ticketBoardIds;
+        delete next.ticketStatusIds;
+        delete next.ticketTagIds;
+      }
+      if (!newTypes.includes(ActivityType.PROJECT_TASK)) {
         delete next.projectIds;
-      }
-      onChange(next);
-      return;
-    }
-
-    if (type === 'phase') {
-      const current = filters.phaseIds || [];
-      const isSelected = current.includes(value);
-      const updated = isSelected
-        ? current.filter(id => id !== value)
-        : [...current, value];
-      const next: ActivityFiltersType = { ...filters };
-      if (updated.length > 0) {
-        next.phaseIds = updated;
-      } else {
         delete next.phaseIds;
+        delete next.projectStatusMappingIds;
+        delete next.projectTaskTagIds;
       }
-      onChange(next);
-    }
-  }, [filters, onChange]);
 
-  // Build project/phase tree options with selected state
+      const stillFilterable =
+        newTypes.length === 1 && PRIORITY_FILTERABLE_TYPES.has(newTypes[0]);
+      if (!stillFilterable) {
+        setSelectedPriorityId('all');
+        delete next.priorityIds;
+      }
+
+      onChange(next);
+    },
+    [filters, onChange]
+  );
+
+  const handlePriorityChange = useCallback(
+    (value: string) => {
+      setSelectedPriorityId(value);
+      const next: ActivityFiltersType = {
+        ...filters,
+        priorityIds: value && value !== 'all' ? [value] : undefined,
+      };
+      if (!next.priorityIds) delete next.priorityIds;
+      delete next.priority;
+      onChange(next);
+    },
+    [filters, onChange]
+  );
+
+  const handleDateRangeChange = useCallback(
+    (range: { from: string; to: string }) => {
+      const startDate = range.from ? new Date(range.from) : undefined;
+      const endDate = range.to ? new Date(range.to) : undefined;
+      const effectiveStartDate = !startDate && endDate ? new Date() : startDate;
+      if (effectiveStartDate) effectiveStartDate.setHours(0, 0, 0, 0);
+      if (endDate) endDate.setHours(23, 59, 59, 999);
+      onChange({
+        ...filters,
+        dueDateStart: effectiveStartDate
+          ? (effectiveStartDate.toISOString() as any)
+          : undefined,
+        dueDateEnd: endDate ? (endDate.toISOString() as any) : undefined,
+      });
+    },
+    [filters, onChange]
+  );
+
+  const handleClosedToggle = useCallback(
+    (e: boolean | React.ChangeEvent<HTMLInputElement>) => {
+      const isChecked =
+        typeof e === 'boolean' ? e : (e.target as HTMLInputElement).checked;
+      onChange({ ...filters, isClosed: isChecked });
+    },
+    [filters, onChange]
+  );
+
+  // -------- Ticket board (multi-select) ------------------------------------
+
+  const boardTreeOptions = useMemo((): TreeSelectOption<'board'>[] => {
+    const selectedIds = new Set(filters.ticketBoardIds || []);
+    return boards
+      .filter((b) => b.board_id && b.board_name)
+      .map((b) => ({
+        value: b.board_id!,
+        label: b.board_name!,
+        type: 'board' as const,
+        selected: selectedIds.has(b.board_id!),
+      }));
+  }, [boards, filters.ticketBoardIds]);
+
+  const handleBoardToggle = useCallback(
+    (value: string, _type: string) => {
+      if (!value) {
+        const next = { ...filters };
+        delete next.ticketBoardIds;
+        delete next.ticketStatusIds;
+        onChange(next);
+        return;
+      }
+      const current = filters.ticketBoardIds || [];
+      const updated = current.includes(value)
+        ? current.filter((id) => id !== value)
+        : [...current, value];
+      onChange({
+        ...filters,
+        ticketBoardIds: updated.length > 0 ? updated : undefined,
+      });
+    },
+    [filters, onChange]
+  );
+
+  // -------- Ticket status (multi-select, scoped to selected boards) --------
+
+  const ticketStatusTreeOptions = useMemo((): TreeSelectOption<'ticketStatus'>[] => {
+    const selectedIds = new Set(filters.ticketStatusIds || []);
+    const selectedBoardIds = filters.ticketBoardIds;
+    const opts = buildUniqueStatusOptions(
+      ticketStatuses,
+      // If exactly one board selected, scope statuses to it
+      selectedBoardIds?.length === 1 ? selectedBoardIds[0] : undefined
+    );
+    return opts.map((o) => ({
+      value: o.value,
+      label: o.label,
+      type: 'ticketStatus' as const,
+      selected: selectedIds.has(o.value),
+    }));
+  }, [ticketStatuses, filters.ticketStatusIds, filters.ticketBoardIds]);
+
+  const handleTicketStatusToggle = useCallback(
+    (value: string, _type: string) => {
+      if (!value) {
+        const next = { ...filters };
+        delete next.ticketStatusIds;
+        onChange(next);
+        return;
+      }
+      const current = filters.ticketStatusIds || [];
+      const isSelected = current.includes(value);
+      // When filtering across boards, include all status_ids that share the name
+      const idsForThisName = (filters.ticketBoardIds && filters.ticketBoardIds.length === 1)
+        ? [value]
+        : getStatusIdsByName(ticketStatuses, value);
+
+      let updated: string[];
+      if (isSelected) {
+        // Remove all IDs for this status name
+        const removeSet = new Set(idsForThisName);
+        updated = current.filter((id) => !removeSet.has(id));
+      } else {
+        // Add all IDs for this status name
+        updated = [...new Set([...current, ...idsForThisName])];
+      }
+      onChange({
+        ...filters,
+        ticketStatusIds: updated.length > 0 ? updated : undefined,
+      });
+    },
+    [filters, onChange, ticketStatuses]
+  );
+
+  // -------- Ticket tags (TagFilter) ----------------------------------------
+
+  // Deduplicate tags by tag_text for the filter
+  const uniqueTicketTags = useMemo(() => {
+    const seen = new Set<string>();
+    return ticketTags.filter((t) => {
+      if (seen.has(t.tag_text)) return false;
+      seen.add(t.tag_text);
+      return true;
+    });
+  }, [ticketTags]);
+
+  const handleTicketTagToggle = useCallback(
+    (tagText: string) => {
+      const tag = uniqueTicketTags.find((t) => t.tag_text === tagText);
+      if (!tag) return;
+      const current = filters.ticketTagIds || [];
+      const isSelected = current.includes(tag.tag_id);
+      const updated = isSelected
+        ? current.filter((id) => id !== tag.tag_id)
+        : [...current, tag.tag_id];
+      onChange({
+        ...filters,
+        ticketTagIds: updated.length > 0 ? updated : undefined,
+      });
+    },
+    [filters, onChange, uniqueTicketTags]
+  );
+
+  // Map tag_ids back to tag_texts for the TagFilter component
+  const selectedTicketTagTexts = useMemo(() => {
+    if (!filters.ticketTagIds) return [];
+    const idSet = new Set(filters.ticketTagIds);
+    return uniqueTicketTags
+      .filter((t) => idSet.has(t.tag_id))
+      .map((t) => t.tag_text);
+  }, [filters.ticketTagIds, uniqueTicketTags]);
+
+  // -------- Project / Phase / Status tree ----------------------------------
+
+  const handleProjectTreeToggle = useCallback(
+    (value: string, type: ProjectNodeType) => {
+      if (!value) {
+        const next = { ...filters };
+        delete next.projectIds;
+        delete next.phaseIds;
+        delete next.projectStatusMappingIds;
+        onChange(next);
+        return;
+      }
+
+      if (type === 'project') {
+        const current = filters.projectIds || [];
+        const updated = current.includes(value)
+          ? current.filter((id) => id !== value)
+          : [...current, value];
+        onChange({
+          ...filters,
+          projectIds: updated.length > 0 ? updated : undefined,
+        });
+      } else if (type === 'phase') {
+        const current = filters.phaseIds || [];
+        const updated = current.includes(value)
+          ? current.filter((id) => id !== value)
+          : [...current, value];
+        onChange({
+          ...filters,
+          phaseIds: updated.length > 0 ? updated : undefined,
+        });
+      } else if (type === 'status') {
+        const current = filters.projectStatusMappingIds || [];
+        const updated = current.includes(value)
+          ? current.filter((id) => id !== value)
+          : [...current, value];
+        onChange({
+          ...filters,
+          projectStatusMappingIds: updated.length > 0 ? updated : undefined,
+        });
+      }
+    },
+    [filters, onChange]
+  );
+
   const projectTreeOptions = useMemo((): TreeSelectOption<ProjectNodeType>[] => {
     const selectedProjectIds = new Set(filters.projectIds || []);
     const selectedPhaseIds = new Set(filters.phaseIds || []);
-    return projects.map(p => ({
+    const selectedMappingIds = new Set(filters.projectStatusMappingIds || []);
+    return projects.filter((p) => !p.is_inactive).map((p) => ({
       value: p.project_id,
       label: p.project_name,
       type: 'project' as const,
       selected: selectedProjectIds.has(p.project_id),
-      children: p.phases.map(phase => ({
+      children: p.phases.map((phase) => ({
         value: phase.phase_id,
         label: phase.phase_name,
         type: 'phase' as const,
         selected: selectedPhaseIds.has(phase.phase_id),
+        children: (phase.statuses || []).map((st) => ({
+          value: st.mapping_id,
+          label: st.name + (st.is_closed ? ' (closed)' : ''),
+          type: 'status' as const,
+          selected: selectedMappingIds.has(st.mapping_id),
+        })),
       })),
     }));
-  }, [projects, filters.projectIds, filters.phaseIds]);
+  }, [projects, filters.projectIds, filters.phaseIds, filters.projectStatusMappingIds]);
 
-  const handleClosedToggle = useCallback((e: boolean | React.ChangeEvent<HTMLInputElement>) => {
-    const isChecked = typeof e === 'boolean' ? e : (e.target as HTMLInputElement).checked;
-    onChange({ ...filters, isClosed: isChecked });
-  }, [filters, onChange]);
+  // -------- Project task tags (TagFilter) -----------------------------------
+
+  const uniqueProjectTaskTags = useMemo(() => {
+    const seen = new Set<string>();
+    return projectTaskTags.filter((t) => {
+      if (seen.has(t.tag_text)) return false;
+      seen.add(t.tag_text);
+      return true;
+    });
+  }, [projectTaskTags]);
+
+  const handleProjectTaskTagToggle = useCallback(
+    (tagText: string) => {
+      const tag = uniqueProjectTaskTags.find((t) => t.tag_text === tagText);
+      if (!tag) return;
+      const current = filters.projectTaskTagIds || [];
+      const isSelected = current.includes(tag.tag_id);
+      const updated = isSelected
+        ? current.filter((id) => id !== tag.tag_id)
+        : [...current, tag.tag_id];
+      onChange({
+        ...filters,
+        projectTaskTagIds: updated.length > 0 ? updated : undefined,
+      });
+    },
+    [filters, onChange, uniqueProjectTaskTags]
+  );
+
+  const selectedProjectTaskTagTexts = useMemo(() => {
+    if (!filters.projectTaskTagIds) return [];
+    const idSet = new Set(filters.projectTaskTagIds);
+    return uniqueProjectTaskTags
+      .filter((t) => idSet.has(t.tag_id))
+      .map((t) => t.tag_text);
+  }, [filters.projectTaskTagIds, uniqueProjectTaskTags]);
+
+  // -------- Render ---------------------------------------------------------
 
   return (
-    <div className="border-b border-border pb-4 mb-4">
+    <div className="border-b border-border pb-4 mb-4 space-y-3">
       {/* Row 1: Activity types */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <Label className="text-sm font-semibold whitespace-nowrap">Types:</Label>
-        {ACTIVITY_TYPE_OPTIONS.map(option => (
+        {ACTIVITY_TYPE_OPTIONS.map((option) => (
           <Checkbox
             key={option.value}
             id={`activity-type-${option.value}`}
             label={option.label}
-            checked={(filters.types || []).includes(option.value)}
+            checked={selectedTypes.includes(option.value)}
             onChange={() => toggleType(option.value)}
             containerClassName="mb-0"
             size="sm"
@@ -194,19 +423,100 @@ export function ActivitiesTableFilters({
         ))}
       </div>
 
-      {/* Row 2: Priority, Date Range, Show Closed, Reset */}
+      {/* Ticket-specific filters */}
+      {hasTickets && (
+        <div className="flex flex-wrap items-end gap-x-3 gap-y-2 pl-4 border-l-2 border-primary-300">
+          <Label className="text-xs font-semibold text-primary-600 self-center whitespace-nowrap">
+            Tickets:
+          </Label>
+
+          {boardTreeOptions.length > 0 && (
+            <div className="min-w-[150px] max-w-[240px]">
+              <TreeSelect<'board'>
+                options={boardTreeOptions}
+                value=""
+                onValueChange={handleBoardToggle}
+                placeholder="All Boards"
+                multiSelect
+                showReset
+                allowEmpty
+              />
+            </div>
+          )}
+
+          {ticketStatusTreeOptions.length > 0 && (
+            <div className="min-w-[150px] max-w-[240px]">
+              <TreeSelect<'ticketStatus'>
+                options={ticketStatusTreeOptions}
+                value=""
+                onValueChange={handleTicketStatusToggle}
+                placeholder="All Statuses"
+                multiSelect
+                showReset
+                allowEmpty
+              />
+            </div>
+          )}
+
+          {uniqueTicketTags.length > 0 && (
+            <TagFilter
+              tags={uniqueTicketTags}
+              selectedTags={selectedTicketTagTexts}
+              onToggleTag={handleTicketTagToggle}
+              onClearTags={() => onChange({ ...filters, ticketTagIds: undefined })}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Project task-specific filters */}
+      {hasProjectTasks && (
+        <div className="flex flex-wrap items-end gap-x-3 gap-y-2 pl-4 border-l-2" style={{ borderColor: 'rgb(var(--color-secondary-500))' }}>
+          <Label className="text-xs font-semibold self-center whitespace-nowrap" style={{ color: 'rgb(var(--color-secondary-500))' }}>
+            Tasks:
+          </Label>
+
+          {projects.length > 0 && (
+            <div className="min-w-[220px] max-w-[320px]">
+              <TreeSelect<ProjectNodeType>
+                options={projectTreeOptions}
+                value=""
+                onValueChange={handleProjectTreeToggle}
+                placeholder="All Projects"
+                multiSelect
+                showReset
+                allowEmpty
+              />
+            </div>
+          )}
+
+          {uniqueProjectTaskTags.length > 0 && (
+            <TagFilter
+              tags={uniqueProjectTaskTags}
+              selectedTags={selectedProjectTaskTagTexts}
+              onToggleTag={handleProjectTaskTagToggle}
+              onClearTags={() =>
+                onChange({ ...filters, projectTaskTagIds: undefined })
+              }
+            />
+          )}
+        </div>
+      )}
+
+      {/* Shared filters row */}
       <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-        {/* Priority filter */}
         {isPriorityFilterAvailable && priorities.length > 0 && (
           <div className="min-w-[180px]">
-            <Label htmlFor="priority-select" className="text-sm font-semibold mb-1 block">Priority</Label>
+            <Label htmlFor="priority-select" className="text-sm font-semibold mb-1 block">
+              Priority
+            </Label>
             <CustomSelect
               id="priority-select"
               value={selectedPriorityId}
               onValueChange={handlePriorityChange}
               options={[
                 { value: 'all', label: 'All Priorities' },
-                ...priorities.map(p => ({
+                ...priorities.map((p) => ({
                   value: p.priority_id,
                   label: (
                     <span className="flex items-center gap-2">
@@ -218,7 +528,7 @@ export function ActivitiesTableFilters({
                     </span>
                   ),
                   textValue: p.priority_name,
-                }))
+                })),
               ]}
               placeholder="Select Priority..."
               size="sm"
@@ -226,36 +536,22 @@ export function ActivitiesTableFilters({
           </div>
         )}
 
-        {/* Project + phase filter */}
-        {projects.length > 0 && (
-          <div className="min-w-[220px] max-w-[320px]">
-            <Label className="text-sm font-semibold mb-1 block">Projects / Phases</Label>
-            <TreeSelect<ProjectNodeType>
-              options={projectTreeOptions}
-              value=""
-              onValueChange={handleProjectTreeToggle}
-              placeholder="All Projects"
-              multiSelect
-              showReset
-              allowEmpty
-            />
-          </div>
-        )}
-
-        {/* Date range filter */}
         <div className="min-w-[240px]">
           <Label className="text-sm font-semibold mb-1 block">Due Date</Label>
           <StringDateRangePicker
             id="activities-due-date-range"
             value={{
-              from: filters.dueDateStart ? new Date(filters.dueDateStart).toISOString().split('T')[0] : '',
-              to: filters.dueDateEnd ? new Date(filters.dueDateEnd).toISOString().split('T')[0] : ''
+              from: filters.dueDateStart
+                ? new Date(filters.dueDateStart).toISOString().split('T')[0]
+                : '',
+              to: filters.dueDateEnd
+                ? new Date(filters.dueDateEnd).toISOString().split('T')[0]
+                : '',
             }}
             onChange={handleDateRangeChange}
           />
         </div>
 
-        {/* Show closed */}
         <div className="flex items-center pb-0.5">
           <Checkbox
             id="show-closed"
@@ -267,7 +563,6 @@ export function ActivitiesTableFilters({
           />
         </div>
 
-        {/* Reset button */}
         <div className="flex items-center pb-0.5 ml-auto">
           <Button
             id="reset-filters-button"

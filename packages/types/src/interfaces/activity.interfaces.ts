@@ -218,6 +218,16 @@ export interface ActivityFilters {
   workItemType?: string;
   executionId?: string;
   includeHidden?: boolean;
+  /** Ticket-specific: filter by board_id(s) */
+  ticketBoardIds?: string[];
+  /** Ticket-specific: filter by status_id from the statuses table */
+  ticketStatusIds?: string[];
+  /** Project task-specific: filter by project_status_mapping_id */
+  projectStatusMappingIds?: string[];
+  /** Ticket-specific: filter by tag definition IDs */
+  ticketTagIds?: string[];
+  /** Project task-specific: filter by tag definition IDs */
+  projectTaskTagIds?: string[];
   /** Server-side sort column key. When omitted, default sort (priority desc, due date asc) is applied. */
   sortBy?: ActivitySortBy;
   /** Sort direction for the sortBy column. Defaults to 'asc'. */

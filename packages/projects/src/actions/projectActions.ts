@@ -138,6 +138,12 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
  * Used by filter pickers that need to display projects + phases as a tree,
  * but don't need the full project details (statuses, users, etc.)
  */
+export interface ProjectPhaseStatus {
+  mapping_id: string;
+  name: string;
+  is_closed: boolean;
+}
+
 export interface ProjectWithPhases {
   project_id: string;
   project_name: string;
@@ -146,6 +152,7 @@ export interface ProjectWithPhases {
     phase_id: string;
     phase_name: string;
     wbs_code: string;
+    statuses: ProjectPhaseStatus[];
   }>;
 }
 
@@ -160,8 +167,7 @@ export const getProjectsWithPhases = withAuth(async (
     if (denied) return denied;
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Fetch all projects and phases in two queries, assemble in JS
-      const [projects, phases] = await Promise.all([
+      const [projects, phases, statusMappings] = await Promise.all([
         trx('projects')
           .where({ tenant })
           .select('project_id', 'project_name', 'is_inactive')
@@ -170,15 +176,54 @@ export const getProjectsWithPhases = withAuth(async (
           .where({ tenant })
           .select('phase_id', 'project_id', 'phase_name', 'wbs_code')
           .orderBy('wbs_code'),
+        // Fetch all project status mappings with resolved names
+        trx('project_status_mappings as psm')
+          .leftJoin('statuses as s', function () {
+            this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
+          })
+          .leftJoin('standard_statuses as ss', function () {
+            this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+          })
+          .where('psm.tenant', tenant)
+          .select(
+            'psm.project_status_mapping_id as mapping_id',
+            'psm.project_id',
+            'psm.phase_id',
+            trx.raw("COALESCE(psm.custom_name, s.name, ss.name) as name"),
+            trx.raw("COALESCE(s.is_closed, ss.is_closed, false) as is_closed"),
+            'psm.display_order'
+          )
+          .orderBy('psm.display_order'),
       ]);
 
-      const phasesByProject = new Map<string, ProjectWithPhases['phases']>();
+      // Group phases by project
+      const phasesByProject = new Map<string, Array<{
+        phase_id: string;
+        phase_name: string;
+        wbs_code: string;
+        statuses: ProjectPhaseStatus[];
+      }>>();
+
+      // Group status mappings: key = "project_id:phase_id" (phase_id may be null for defaults)
+      const statusesByScope = new Map<string, ProjectPhaseStatus[]>();
+      for (const m of statusMappings) {
+        const key = `${m.project_id}:${m.phase_id || '__default__'}`;
+        const list = statusesByScope.get(key) || [];
+        list.push({ mapping_id: m.mapping_id, name: m.name, is_closed: !!m.is_closed });
+        statusesByScope.set(key, list);
+      }
+
       for (const phase of phases) {
         const list = phasesByProject.get(phase.project_id) || [];
+        // Phase-specific statuses, falling back to project defaults
+        const phaseStatuses = statusesByScope.get(`${phase.project_id}:${phase.phase_id}`)
+          || statusesByScope.get(`${phase.project_id}:__default__`)
+          || [];
         list.push({
           phase_id: phase.phase_id,
           phase_name: phase.phase_name,
           wbs_code: phase.wbs_code,
+          statuses: phaseStatuses,
         });
         phasesByProject.set(phase.project_id, list);
       }

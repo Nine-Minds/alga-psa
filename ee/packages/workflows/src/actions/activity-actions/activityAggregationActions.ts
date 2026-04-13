@@ -397,9 +397,26 @@ export async function fetchProjectActivities(
           queryBuilder.where("project_tasks.phase_id", filters.phaseId);
         }
         
+        // Project task-specific status filter by mapping ID
+        if (filters.projectStatusMappingIds && filters.projectStatusMappingIds.length > 0) {
+          queryBuilder.whereIn("project_tasks.project_status_mapping_id", filters.projectStatusMappingIds);
+        }
+
         // Apply priority filter by priority IDs if provided
         if (filters.priorityIds && filters.priorityIds.length > 0) {
           queryBuilder.whereIn("project_tasks.priority_id", filters.priorityIds);
+        }
+
+        // Tag filter: task must have at least one of the requested tags
+        if (filters.projectTaskTagIds && filters.projectTaskTagIds.length > 0) {
+          queryBuilder.whereExists(function() {
+            this.select(db.raw(1))
+              .from("tag_mappings")
+              .whereRaw("tag_mappings.tagged_id = project_tasks.task_id::text")
+              .andWhere("tag_mappings.tenant", tenant)
+              .andWhere("tag_mappings.tagged_type", "project_task")
+              .whereIn("tag_mappings.tag_id", filters.projectTaskTagIds!);
+          });
         }
 
         // Apply search filter if provided
@@ -550,6 +567,16 @@ export async function fetchTicketActivities(
           queryBuilder.whereIn("tickets.status_id", filters.status);
         }
 
+        // Ticket-specific board filter
+        if (filters.ticketBoardIds && filters.ticketBoardIds.length > 0) {
+          queryBuilder.whereIn("tickets.board_id", filters.ticketBoardIds);
+        }
+
+        // Ticket-specific status filter by status_id
+        if (filters.ticketStatusIds && filters.ticketStatusIds.length > 0) {
+          queryBuilder.whereIn("tickets.status_id", filters.ticketStatusIds);
+        }
+
         // Apply priority filter by priority IDs if provided
         if (filters.priorityIds && filters.priorityIds.length > 0) {
           queryBuilder.whereIn("tickets.priority_id", filters.priorityIds);
@@ -582,8 +609,19 @@ export async function fetchTicketActivities(
 
         // Ticket number filter
         if (filters.ticketNumber) {
-          // Using ilike for case-insensitive partial match. Use '=' for exact match.
           queryBuilder.where("tickets.ticket_number", 'ilike', `%${filters.ticketNumber}%`);
+        }
+
+        // Tag filter: ticket must have at least one of the requested tags
+        if (filters.ticketTagIds && filters.ticketTagIds.length > 0) {
+          queryBuilder.whereExists(function() {
+            this.select(db.raw(1))
+              .from("tag_mappings")
+              .whereRaw("tag_mappings.tagged_id = tickets.ticket_id::text")
+              .andWhere("tag_mappings.tenant", tenant)
+              .andWhere("tag_mappings.tagged_type", "ticket")
+              .whereIn("tag_mappings.tag_id", filters.ticketTagIds!);
+          });
         }
 
         // Text search filter
@@ -592,9 +630,6 @@ export async function fetchTicketActivities(
           queryBuilder.where(function() {
             this.where("tickets.title", 'ilike', searchTerm)
               .orWhere("tickets.ticket_number", 'ilike', searchTerm);
-            // Add other fields to search if needed (e.g., client name, contact name)
-            // .orWhere("clients.client_name", 'ilike', searchTerm)
-            // .orWhere("contacts.full_name", 'ilike', searchTerm);
           });
         }
       });

@@ -1,5 +1,6 @@
 export * from './activityServerActions';
 export * from './activityStatusActions';
+export * from './activityGroupActions';
 export {
   fetchWorkflowTask,
   fetchTaskFormSchema,
