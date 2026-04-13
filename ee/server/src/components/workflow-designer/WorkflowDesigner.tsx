@@ -287,7 +287,19 @@ const workflowPickerActions: WorkflowPickerActions = {
   getAvailableStatuses,
   getTicketFieldOptions,
   getTicketById,
-  getTicketsForList,
+  getTicketsForList: async ({ boardFilterState, searchQuery }) => {
+    const result = await getTicketsForList({ boardFilterState, searchQuery });
+    return {
+      tickets: (result?.tickets ?? [])
+        .filter((ticket): ticket is typeof ticket & { ticket_id: string } => Boolean(ticket.ticket_id))
+        .map((ticket) => ({
+          ticket_id: ticket.ticket_id,
+          ticket_number: ticket.ticket_number,
+          title: ticket.title,
+          status_name: ticket.status_name,
+        })),
+    };
+  },
 };
 
 const CONTROL_BLOCKS: Array<{ id: Step['type']; label: string; category: string; description: string }> = [
