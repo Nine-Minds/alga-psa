@@ -97,7 +97,7 @@
   {
     "id": "F020",
     "description": "Wire useTranslation('msp/contracts') in ContractTemplateDetail.tsx -- translate contract lines section (columns, actions, empty state, inline editing fields), service configuration details, and confirmation dialogs",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F021",

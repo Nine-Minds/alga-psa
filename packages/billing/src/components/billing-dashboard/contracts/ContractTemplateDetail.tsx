@@ -1121,7 +1121,7 @@ const ContractTemplateDetail: React.FC = () => {
           <div className="flex items-center gap-2">
             <Layers3 className="h-4 w-4 text-blue-600" />
             <Heading as="h3" size="5" className="text-[rgb(var(--color-text-900))]">
-              Template Composition
+              {t('templateDetail.composition.title', { defaultValue: 'Template Composition' })}
             </Heading>
           </div>
           <Button
@@ -1132,7 +1132,9 @@ const ContractTemplateDetail: React.FC = () => {
             className="h-8 px-2 text-xs gap-1.5"
           >
             <Layers3 className="h-3.5 w-3.5" />
-            {showServicesEditor ? 'Close Manager' : 'Manage Services'}
+            {showServicesEditor
+              ? t('templateDetail.composition.closeManager', { defaultValue: 'Close Manager' })
+              : t('templateDetail.composition.manageServices', { defaultValue: 'Manage Services' })}
           </Button>
         </div>
         <div
@@ -1153,12 +1155,26 @@ const ContractTemplateDetail: React.FC = () => {
                 <Card key={type}>
                   <CardHeader>
                     <CardTitle className="text-sm font-semibold">
-                      {type === 'Fixed' ? 'Fixed Fee Bundles' : type === 'Hourly' ? 'Hourly Plans' : 'Usage-Based Plans'}
+                      {type === 'Fixed'
+                        ? t('templateDetail.composition.fixedFeeBundles', { defaultValue: 'Fixed Fee Bundles' })
+                        : type === 'Hourly'
+                          ? t('templateDetail.composition.hourlyPlans', { defaultValue: 'Hourly Plans' })
+                          : t('templateDetail.composition.usageBasedPlans', { defaultValue: 'Usage-Based Plans' })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      No {type === 'Fixed' ? 'fixed fee' : type === 'Hourly' ? 'hourly' : 'usage-based'} contract lines configured yet.
+                      {type === 'Fixed'
+                        ? t('templateDetail.composition.noFixedFeeLines', {
+                          defaultValue: 'No fixed fee contract lines configured yet.',
+                        })
+                        : type === 'Hourly'
+                          ? t('templateDetail.composition.noHourlyLines', {
+                            defaultValue: 'No hourly contract lines configured yet.',
+                          })
+                          : t('templateDetail.composition.noUsageLines', {
+                            defaultValue: 'No usage-based contract lines configured yet.',
+                          })}
                     </p>
                   </CardContent>
                 </Card>
@@ -1169,7 +1185,13 @@ const ContractTemplateDetail: React.FC = () => {
               <Card key={type}>
                 <CardHeader>
                   <CardTitle className="text-sm font-semibold">
-                    {type === 'Fixed' ? 'Fixed Fee Bundles' : type === 'Hourly' ? 'Hourly Plans' : type === 'Usage' ? 'Usage-Based Plans' : 'Additional Plans'}
+                    {type === 'Fixed'
+                      ? t('templateDetail.composition.fixedFeeBundles', { defaultValue: 'Fixed Fee Bundles' })
+                      : type === 'Hourly'
+                        ? t('templateDetail.composition.hourlyPlans', { defaultValue: 'Hourly Plans' })
+                        : type === 'Usage'
+                          ? t('templateDetail.composition.usageBasedPlans', { defaultValue: 'Usage-Based Plans' })
+                          : t('templateDetail.composition.additionalPlans', { defaultValue: 'Additional Plans' })}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1183,12 +1205,24 @@ const ContractTemplateDetail: React.FC = () => {
                           </p>
                         </div>
                         <Badge variant="outline" className="text-xs">
-                          {line.services.length} service{line.services.length === 1 ? '' : 's'}
+                          {line.services.length === 1
+                            ? t('templateDetail.composition.serviceCountSingle', {
+                              count: line.services.length,
+                              defaultValue: '{{count}} service',
+                            })
+                            : t('templateDetail.composition.serviceCountPlural', {
+                              count: line.services.length,
+                              defaultValue: '{{count}} services',
+                            })}
                         </Badge>
                       </div>
                       <div className="mt-3 space-y-2">
                         {line.services.length === 0 ? (
-                          <p className="text-sm text-muted-foreground italic">No services assigned to this contract line.</p>
+                          <p className="text-sm text-muted-foreground italic">
+                            {t('templateDetail.composition.noServicesAssigned', {
+                              defaultValue: 'No services assigned to this contract line.',
+                            })}
+                          </p>
                         ) : (
                           line.services.map((service) => (
                             <div
@@ -1198,26 +1232,58 @@ const ContractTemplateDetail: React.FC = () => {
                               <div>
                                 <p className="font-medium text-[rgb(var(--color-text-900))]">{service.service_name}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  {service.billing_method ? humanize(service.billing_method) : 'Service'} • {service.configuration.configuration_type}
+                                  {service.billing_method
+                                    ? humanize(service.billing_method)
+                                    : t('templateDetail.composition.serviceFallback', { defaultValue: 'Service' })}
+                                  {' • '}
+                                  {service.configuration.configuration_type}
                                 </p>
                               </div>
                               <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                                 {service.quantity != null && (
-                                  <span>Quantity: <span className="font-medium">{service.quantity}</span></span>
+                                  <span>
+                                    {t('templateDetail.composition.quantityLabel', { defaultValue: 'Quantity:' })}{' '}
+                                    <span className="font-medium">{service.quantity}</span>
+                                  </span>
                                 )}
                                 {service.unit_of_measure && (
-                                  <span>Unit: <span className="font-medium">{service.unit_of_measure}</span></span>
+                                  <span>
+                                    {t('templateDetail.composition.unitLabel', { defaultValue: 'Unit:' })}{' '}
+                                    <span className="font-medium">{service.unit_of_measure}</span>
+                                  </span>
                                 )}
                                 {service.minimum_billable_time != null && (
-                                  <span>Minimum Time: <span className="font-medium">{service.minimum_billable_time} min</span></span>
+                                  <span>
+                                    {t('templateDetail.composition.minimumTimeLabel', {
+                                      defaultValue: 'Minimum Time:',
+                                    })}{' '}
+                                    <span className="font-medium">
+                                      {t('templateDetail.composition.minutesValue', {
+                                        count: service.minimum_billable_time,
+                                        defaultValue: '{{count}} min',
+                                      })}
+                                    </span>
+                                  </span>
                                 )}
                                 {service.round_up_to_nearest != null && (
-                                  <span>Round Up: <span className="font-medium">{service.round_up_to_nearest} min</span></span>
+                                  <span>
+                                    {t('templateDetail.composition.roundUpLabel', { defaultValue: 'Round Up:' })}{' '}
+                                    <span className="font-medium">
+                                      {t('templateDetail.composition.minutesValue', {
+                                        count: service.round_up_to_nearest,
+                                        defaultValue: '{{count}} min',
+                                      })}
+                                    </span>
+                                  </span>
                                 )}
                                 {service.bucket_overlay && (
                                   <span className="flex items-center gap-1">
                                     <Package className="h-3 w-3 text-purple-500" />
-                                    Bucket: {service.bucket_overlay.total_minutes ?? 0} min • Overage ${service.bucket_overlay.overage_rate ?? 0}
+                                    {t('templateDetail.composition.bucketSummary', {
+                                      defaultValue: 'Bucket: {{minutes}} min • Overage ${{overage}}',
+                                      minutes: service.bucket_overlay.total_minutes ?? 0,
+                                      overage: service.bucket_overlay.overage_rate ?? 0,
+                                    })}
                                   </span>
                                 )}
                               </div>
@@ -1250,11 +1316,12 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
   contractLines,
   onServicesChanged,
 }) => {
+  const { t } = useTranslation('msp/contracts');
   const [editingLine, setEditingLine] = useState<TemplateContractLine | null>(null);
 
   const formatCurrency = (minorUnits?: number | null) => {
     if (minorUnits === null || minorUnits === undefined) {
-      return 'Not set';
+      return t('templateDetail.composition.notSet', { defaultValue: 'Not set' });
     }
     return formatCurrencyFromMinorUnits(
       Math.round(Number(minorUnits)),
@@ -1282,13 +1349,17 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
     <Card className="mt-4">
       <CardHeader>
         <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))]">
-          Manage Template Services
+          {t('templateDetail.composition.manageTemplateServices', {
+            defaultValue: 'Manage Template Services',
+          })}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {contractLines.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Add contract lines to this template before managing services.
+            {t('templateDetail.composition.addContractLinesBeforeManaging', {
+              defaultValue: 'Add contract lines to this template before managing services.',
+            })}
           </p>
         ) : (
           contractLines.map((line) => (
@@ -1302,10 +1373,19 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline" className="text-xs">
-                    {line.services.length} service{line.services.length === 1 ? '' : 's'}
+                    {line.services.length === 1
+                      ? t('templateDetail.composition.serviceCountSingle', {
+                        count: line.services.length,
+                        defaultValue: '{{count}} service',
+                      })
+                      : t('templateDetail.composition.serviceCountPlural', {
+                        count: line.services.length,
+                        defaultValue: '{{count}} services',
+                      })}
                   </Badge>
                   <Badge variant="secondary" className="text-xs">
-                    Fixed Fee Rate: {formatCurrency(line.rate)}
+                    {t('templateDetail.composition.fixedFeeRate', { defaultValue: 'Fixed Fee Rate:' })}{' '}
+                    {formatCurrency(line.rate)}
                   </Badge>
                   {line.contract_line_type === 'Fixed' && (
                     <Button
@@ -1315,7 +1395,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
                       className="text-xs"
                       onClick={() => setEditingLine(line)}
                     >
-                      Edit Rate
+                      {t('templateDetail.composition.editRate', { defaultValue: 'Edit Rate' })}
                     </Button>
                   )}
                 </div>
