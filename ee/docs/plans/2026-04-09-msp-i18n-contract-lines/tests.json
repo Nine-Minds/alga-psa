@@ -10,7 +10,7 @@
   {
     "id": "T002",
     "description": "ContractLineDialog.tsx: preset basics labels (name, frequency, billing timing) render translated text with required markers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ]
