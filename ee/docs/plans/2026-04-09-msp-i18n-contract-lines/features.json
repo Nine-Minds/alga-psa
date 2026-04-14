@@ -147,7 +147,7 @@
   {
     "id": "F030",
     "description": "ServiceUsageConfigForm.tsx: Wire useTranslation and translate form labels ('Default Rate per Unit', 'Unit of Measure', 'Minimum Usage'), tooltip content strings (rate explanation, unit explanation, minimum billable explanation), required field indicator text, tiered pricing switch label ('Enable Tiered Pricing for {serviceName}'), and placeholder text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F031",
