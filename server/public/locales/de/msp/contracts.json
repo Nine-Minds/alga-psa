@@ -1,0 +1,201 @@
+{
+  "common": {
+    "actions": {
+      "back": "Zurück",
+      "cancel": "Stornieren",
+      "close": "Schließen",
+      "create": "Erstellen",
+      "delete": "Löschen",
+      "discard": "Verwerfen",
+      "edit": "Bearbeiten",
+      "refresh": "Aktualisieren",
+      "remove": "Entfernen",
+      "retry": "Wiederholen",
+      "save": "Speichern",
+      "saveChanges": "Änderungen speichern",
+      "saveChangesDirty": "Änderungen speichern *",
+      "saving": "Sparen...",
+      "view": "Sicht"
+    },
+    "alerts": {
+      "saveSuccess": "Änderungen erfolgreich gespeichert.",
+      "systemManagedDefault": "Hierbei handelt es sich um einen vom System verwalteten Standardvertrag."
+    },
+    "empty": {
+      "none": "Keiner",
+      "notAvailable": "N / A",
+      "notSpecified": "Nicht angegeben",
+      "ongoing": "Laufend"
+    },
+    "errors": {
+      "failedToLoad": "Daten konnten nicht geladen werden.",
+      "failedToSave": "Änderungen konnten nicht gespeichert werden.",
+      "validationPrefix": "Bitte korrigieren Sie Folgendes:"
+    },
+    "labels": {
+      "created": "Erstellt",
+      "currency": "Währung",
+      "description": "Beschreibung",
+      "lastUpdated": "Zuletzt aktualisiert",
+      "name": "Name",
+      "status": "Status"
+    },
+    "tabs": {
+      "clientContracts": "Kundenverträge",
+      "drafts": "Entwürfe",
+      "templates": "Vorlagen"
+    }
+  },
+  "status": {
+    "active": "Aktiv",
+    "draft": "Entwurf",
+    "expired": "Abgelaufen",
+    "terminated": "Beendet"
+  },
+  "renewal": {
+    "labels": {
+      "decisionDue": "Entscheidung fällig",
+      "mode": "Erneuerungsmodus",
+      "noticeDays": "Kündigungsfrist",
+      "source": "Erneuerungsquelle",
+      "termMonths": "Verlängerungszeitraum"
+    },
+    "modes": {
+      "auto": "Automatische Verlängerung",
+      "manual": "Manuelle Erneuerung",
+      "none": "Nicht erneuerbar"
+    },
+    "source": {
+      "contract": "Vertrag",
+      "tenantDefault": "Zahlungsverzug des Mieters"
+    }
+  },
+  "billing": {
+    "cadenceOwner": {
+      "client": "Kundenplan",
+      "contract": "Vertragsjubiläum"
+    },
+    "frequency": {
+      "annually": "Jährlich",
+      "biweekly": "Zweiwöchentlich",
+      "monthly": "Monatlich",
+      "quarterly": "Vierteljährlich",
+      "weekly": "Wöchentlich"
+    },
+    "labels": {
+      "billingFrequency": "Abrechnungshäufigkeit",
+      "timing": "Abrechnungszeitpunkt"
+    },
+    "timing": {
+      "advance": "Im voraus",
+      "arrears": "Im Rückstand"
+    }
+  },
+  "po": {
+    "labels": {
+      "amount": "Bestellbetrag",
+      "number": "Bestellnummer",
+      "required": "Bestellung erforderlich"
+    }
+  },
+  "contractDetail": {
+    "cards": {
+      "assignment": "Kundenauftrag",
+      "clientOwnership": "Kundeneigentum",
+      "contractDetails": "Vertragsdetails",
+      "header": "Vertragskopf",
+      "quickActions": "Schnelle Aktionen",
+      "renewalHandling": "Umgang mit Erneuerungen"
+    },
+    "dialogs": {
+      "delete": {
+        "confirm": "Vertrag löschen",
+        "description": "Sind Sie sicher, dass Sie diesen Vertrag löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "title": "Vertrag löschen"
+      },
+      "discard": {
+        "confirm": "Änderungen verwerfen",
+        "description": "Ihre nicht gespeicherten Änderungen verwerfen?",
+        "title": "Änderungen verwerfen"
+      },
+      "leave": {
+        "confirm": "Seite verlassen",
+        "description": "Sie haben nicht gespeicherte Änderungen. Diese Seite verlassen, ohne zu speichern?",
+        "title": "Nicht gespeicherte Änderungen"
+      }
+    },
+    "invoices": {
+      "columns": {
+        "amount": "Menge",
+        "createdAt": "Erstellt",
+        "dueDate": "Fälligkeitsdatum",
+        "invoiceNumber": "Rechnung #",
+        "status": "Status"
+      },
+      "empty": "Für diesen Vertrag wurden keine Rechnungen gefunden.",
+      "loading": "Rechnungen werden geladen...",
+      "title": "Vertragsrechnungen"
+    },
+    "labels": {
+      "client": "Kunde",
+      "contractName": "Vertragsname",
+      "description": "Beschreibung",
+      "noClientAssigned": "Kein Kunde zugewiesen",
+      "noDescription": "Keine Beschreibung",
+      "systemManagedDefault": "Vom System verwalteter Standard",
+      "useTenantDefaults": "Mandantenstandards verwenden"
+    },
+    "quickActions": {
+      "deleteContract": "Vertrag löschen",
+      "manageContractLines": "Vertragszeilen verwalten",
+      "managePricingSchedules": "Preispläne verwalten",
+      "viewDocuments": "Dokumente anzeigen",
+      "viewInvoices": "Rechnungen anzeigen"
+    },
+    "tabs": {
+      "documents": "Unterlagen",
+      "invoices": "Rechnungen",
+      "lines": "Vertragslinien",
+      "overview": "Überblick",
+      "pricing": "Preispläne"
+    },
+    "validation": {
+      "billingFrequencyRequired": "Die Häufigkeit der Abrechnung ist erforderlich.",
+      "contractNameRequired": "Vertragsname ist erforderlich."
+    }
+  },
+  "contractHeader": {},
+  "contractOverview": {},
+  "contractDialog": {},
+  "contractForm": {},
+  "contractLines": {},
+  "contractLineEdit": {},
+  "contractLineRate": {},
+  "addLines": {},
+  "createCustomLine": {},
+  "pricingSchedules": {},
+  "contractsList": {},
+  "clientContracts": {},
+  "templatesTab": {},
+  "detailSwitcher": {},
+  "templateDetail": {},
+  "quickStart": {},
+  "servicePicker": {},
+  "bucketOverlay": {},
+  "frequencyOverride": {},
+  "wizard": {},
+  "wizardBasics": {},
+  "wizardFixed": {},
+  "wizardProducts": {},
+  "wizardHourly": {},
+  "wizardUsage": {},
+  "wizardReview": {},
+  "templateWizard": {},
+  "templateBasics": {},
+  "templateFixed": {},
+  "templateProducts": {},
+  "templateHourly": {},
+  "templateUsage": {},
+  "templateReview": {},
+  "templatePreview": {}
+}

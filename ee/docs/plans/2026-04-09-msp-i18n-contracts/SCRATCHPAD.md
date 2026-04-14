@@ -60,3 +60,6 @@ A mechanical wiring pass: 37 unwired contract components (+ 1 pure-constants fil
 - **(2026-04-14)** Verification: `jq empty server/public/locales/fr/msp/contracts.json`.
 - **(2026-04-14)** `F003` completed: generated [`server/public/locales/es/msp/contracts.json`](../../../../server/public/locales/es/msp/contracts.json) from English source with placeholder-safe machine translation.
 - **(2026-04-14)** Verification: `jq empty server/public/locales/es/msp/contracts.json`.
+- **(2026-04-14)** `F004` completed: generated [`server/public/locales/de/msp/contracts.json`](../../../../server/public/locales/de/msp/contracts.json) from English source with placeholder-safe machine translation.
+- **(2026-04-14)** Verification: `jq empty server/public/locales/de/msp/contracts.json`.
+MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/plans/2026-04-09-msp-i18n-contracts/SCRATCHPAD.md server/public/locales/de/msp/contracts.json && git commit -m "feat(F004): add german contracts locale namespace"
