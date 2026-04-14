@@ -82,7 +82,7 @@
   {
     "id": "T011",
     "description": "HourlyContractLineConfiguration.tsx: after-hours section renders translated switch label, tooltip content, and multiplier label with helper text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
