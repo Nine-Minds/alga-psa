@@ -57,7 +57,7 @@
   {
     "id": "F012",
     "description": "UsageContractLinePresetServicesList.tsx: Wire useTranslation and translate table column headers (Service Name, Service Type, Billing Method, Rate, Unit, Actions), action menu items (Edit Rate, Remove, Configure bucket), empty state messages, and 'Add Services' section heading",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F013",
