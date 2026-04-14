@@ -226,7 +226,7 @@
   {
     "id": "T029",
     "description": "FixedContractLineConfiguration.tsx: contract line basics section renders translated heading, description, and all form labels including cadence owner options",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
