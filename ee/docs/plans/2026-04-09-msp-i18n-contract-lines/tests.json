@@ -386,7 +386,7 @@
   {
     "id": "T049",
     "description": "All 7 production language files (fr, es, de, nl, it, pl) exist for msp/contract-lines and contain translations for every key in the English file",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]
