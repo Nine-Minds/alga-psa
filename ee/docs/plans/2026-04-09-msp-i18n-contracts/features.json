@@ -27,7 +27,7 @@
   {
     "id": "F006",
     "description": "Generate it/msp/contracts.json translations for all keys (with Italian accent audit)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F007",
