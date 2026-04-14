@@ -39,7 +39,6 @@ interface TeamsAppManifest {
   manifestVersion: string;
   version: string;
   id: string;
-  packageName: string;
   developer: {
     name: string;
     websiteUrl: string;
@@ -87,7 +86,7 @@ interface TeamsAppManifest {
       type: 'query' | 'action';
       title: string;
       description: string;
-      contexts: string[];
+      context: string[];
       parameters?: Array<{
         name: string;
         title: string;
@@ -182,7 +181,6 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
     manifestVersion: TEAMS_MANIFEST_VERSION,
     version: TEAMS_PACKAGE_VERSION,
     id: profile.client_id,
-    packageName: `com.algapsa.teams.${tenant}`,
     developer: {
       name: 'Alga PSA',
       websiteUrl: baseUrl,
@@ -194,8 +192,7 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
       full: 'Alga PSA for Microsoft Teams',
     },
     description: {
-      short:
-        'Manage PSA work from the Teams personal tab, bot, message extension, and personal notifications.',
+      short: 'Manage PSA tickets, time, notes, and approvals from Microsoft Teams.',
       full:
         'Alga PSA for Microsoft Teams gives MSP technicians a personal tab, personal-scope bot, message extension, and activity feed notifications backed by the tenant-selected Microsoft profile.',
     },
@@ -240,7 +237,7 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
             type: 'query',
             title: 'Search tickets',
             description: 'Find tickets and work items from Alga PSA',
-            contexts: ['compose', 'commandBox'],
+            context: ['compose', 'commandBox'],
             parameters: [
               {
                 name: 'query',
