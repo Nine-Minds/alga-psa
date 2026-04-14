@@ -72,7 +72,7 @@
   {
     "id": "F015",
     "description": "HourlyContractLinePresetServicesList.tsx: Translate service addition UI, bucket overlay switch labels, save/discard buttons, unsaved changes confirmation dialog, toast messages, and error alerts",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F016",
