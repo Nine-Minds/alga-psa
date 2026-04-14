@@ -182,7 +182,7 @@
   {
     "id": "F037",
     "description": "Generate translations for all 7 production languages (fr, es, de, nl, it, pl) for the msp/contract-lines namespace",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F038",

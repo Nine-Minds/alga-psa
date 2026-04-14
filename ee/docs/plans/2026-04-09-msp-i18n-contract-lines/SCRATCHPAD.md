@@ -131,3 +131,12 @@
 - (2026-04-13) **F036 verification runbook**:
   - Extraction/build script (AST-based, local one-off) to assemble key/default pairs from 21 contract-line components.
   - Coverage check script confirmed `missing 0` for static/dynamic key references against `en/msp/contract-lines.json`.
+- (2026-04-13) **F037 complete**: generated production locale files for `msp/contract-lines`:
+  - `server/public/locales/fr/msp/contract-lines.json`
+  - `server/public/locales/es/msp/contract-lines.json`
+  - `server/public/locales/de/msp/contract-lines.json`
+  - `server/public/locales/nl/msp/contract-lines.json`
+  - `server/public/locales/it/msp/contract-lines.json`
+  - `server/public/locales/pl/msp/contract-lines.json`
+- (2026-04-13) **F037 runbook**: used a local Node script to translate from `en/msp/contract-lines.json` via Google Translate endpoint with placeholder protection for `{{...}}` interpolation tokens and JSON structure preservation.
+- (2026-04-13) **F037 verification**: key/shape/interpolation parity check against English returned, per locale, `missing: 0`, `extra: 0`, `phMismatch: 0`, `keys: 509`.

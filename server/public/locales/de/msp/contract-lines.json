@@ -1,0 +1,803 @@
+{
+  "common": {
+    "actions": {
+      "add": "Hinzufügen",
+      "cancel": "Stornieren",
+      "configure": "Konfigurieren",
+      "delete": "Löschen",
+      "edit": "Bearbeiten",
+      "openMenu": "Menü öffnen",
+      "remove": "Entfernen",
+      "reset": "Zurücksetzen",
+      "save": "Speichern",
+      "saveChanges": "Änderungen speichern",
+      "saveChangesDirty": "Änderungen speichern *",
+      "saving": "Sparen..."
+    },
+    "errors": {
+      "errorWithMessage": "Fehler: {{message}}"
+    },
+    "labels": {
+      "no": "NEIN",
+      "yes": "Ja"
+    },
+    "moneyPlaceholder": "0,00",
+    "notAvailable": "N / A",
+    "tryAgain": "Bitte versuchen Sie es erneut.",
+    "validation": {
+      "prefix": "Bitte korrigieren Sie Folgendes:"
+    }
+  },
+  "configuration": {
+    "fixed": {
+      "basics": {
+        "billingFrequencyLabel": "Abrechnungshäufigkeit *",
+        "billingFrequencyPlaceholder": "Wählen Sie die Abrechnungshäufigkeit aus",
+        "billingTiming": {
+          "options": {
+            "advance": "Vorauszahlung – Rechnung zu Beginn der Periode",
+            "arrears": "Zahlungsrückstände – Rechnung nach Ablauf der Frist"
+          }
+        },
+        "billingTimingHelp": "Bei der Vorausabrechnung wird die kommende Periode zu Beginn jedes Zyklus in Rechnung gestellt.",
+        "billingTimingLabel": "Abrechnungszeitpunkt *",
+        "billingTimingPlaceholder": "Wählen Sie den Abrechnungszeitpunkt aus",
+        "cadenceOwner": {
+          "description": "Wählen Sie aus, welcher Zeitplan die Servicezeiträume dieser wiederkehrenden Linie definiert.",
+          "label": "Cadence-Besitzer",
+          "options": {
+            "client": {
+              "description": "Verwenden Sie den Abrechnungskalender des Kunden, damit diese wiederkehrende Zeile mit dem normalen Rechnungsrhythmus des Kunden übereinstimmt.",
+              "label": "Rechnung gemäß Kundenabrechnungsplan"
+            },
+            "contract": {
+              "description": "Verwenden Sie die eigenen Jubiläumsdaten dieser Vertragszeile. Der Vertragsrhythmus unterstützt derzeit die monatliche, vierteljährliche, halbjährliche und jährliche wiederkehrende Abrechnung.",
+              "label": "Rechnung zum Vertragsjubiläum"
+            }
+          }
+        },
+        "description": "Benennen Sie die Vertragsposition und wählen Sie aus, wie sie standardmäßig abgerechnet werden soll.",
+        "heading": "Grundlagen der Vertragslinie",
+        "nameLabel": "Name der Vertragszeile *",
+        "namePlaceholder": "z.B. Verwalteter Support – Gold"
+      },
+      "cardTitle": "Vertragszeile bearbeiten: {{name}} (behoben)",
+      "errors": {
+        "contractLineNotFoundOrInvalidType": "Vertragszeile nicht gefunden oder ungültiger Typ.",
+        "failedToLoadContractLineConfiguration": "Die Konfiguration der Vertragszeile konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "failedToSaveContractLine": "Vertragszeile konnte nicht gespeichert werden",
+        "invalidContractLineTypeOrNotFound": "Ungültiger Vertragszeilentyp oder Vertragszeile nicht gefunden."
+      },
+      "services": {
+        "associatedCardTitle": "Zugehörige Dienste"
+      },
+      "settings": {
+        "adjustForPartialPeriodsHelp": "Aktivieren Sie diese Option, wenn die wiederkehrende Gebühr auf den abgedeckten Teil eines Servicezeitraums skaliert werden soll, wenn der Vertrag innerhalb dieses Zeitraums beginnt oder endet.",
+        "adjustForPartialPeriodsLabel": "Passen Sie Teilperioden an",
+        "baseRateHelp": "Die gesamte wiederkehrende Gebühr für alle Festnetzdienste zusammen",
+        "baseRateLabel": "Wiederkehrender Basispreis *",
+        "billingCycleAlignment": {
+          "options": {
+            "end": "Ende des Abrechnungszeitraums",
+            "prorated": "Proportionale Abdeckung",
+            "start": "Beginn des Abrechnungszeitraums"
+          }
+        },
+        "billingCycleAlignmentLabel": "Ausrichtung des Abrechnungszeitraums",
+        "billingCycleAlignmentPlaceholder": "Ausrichtung auswählen",
+        "description": "Definieren Sie den wiederkehrenden Basistarif und legen Sie fest, ob bei Teilzeitversicherungen die Gebühr angepasst werden soll. Servicezuweisungen können angepasst werden, sobald die Leitung aktiv ist.",
+        "heading": "Feste Gebühreneinstellungen"
+      },
+      "validation": {
+        "baseRateRequiredForFixedLines": "Für Festnetzanschlüsse ist ein Basistarif erforderlich",
+        "billingFrequency": "Abrechnungshäufigkeit",
+        "contractLineName": "Name der Vertragszeile",
+        "contractLineType": "Vertragszeilentyp"
+      }
+    },
+    "hourly": {
+      "actions": {
+        "saveConfiguration": "Konfiguration speichern"
+      },
+      "basics": {
+        "billingFrequencyLabel": "Abrechnungshäufigkeit *",
+        "billingFrequencyPlaceholder": "Wählen Sie die Abrechnungshäufigkeit aus",
+        "cardTitle": "Vertragszeile bearbeiten: {{name}} (stündlich)",
+        "description": "Benennen Sie die Vertragsposition und wählen Sie aus, wie sie standardmäßig abgerechnet werden soll.",
+        "heading": "Grundlagen der Vertragslinie",
+        "nameLabel": "Name der Vertragszeile *",
+        "namePlaceholder": "z.B. Zeit- und Materialunterstützung",
+        "validation": {
+          "billingFrequency": "Abrechnungshäufigkeit",
+          "contractLineName": "Name der Vertragszeile"
+        }
+      },
+      "errors": {
+        "cannotSaveValidationErrors": "Speichern nicht möglich, es liegen vertragszeilenweite Validierungsfehler vor.",
+        "contractLineNotFoundOrInvalidType": "Vertragszeile nicht gefunden oder ungültiger Typ.",
+        "failedToLoadPlanConfiguration": "Die Plankonfiguration konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "failedToSaveContractLine": "Vertragszeile konnte nicht gespeichert werden",
+        "failedToSavePlanWideConfiguration": "Planweite Konfiguration konnte nicht gespeichert werden: {{message}}",
+        "failedToSaveServiceConfiguration": "Dienstkonfiguration konnte nicht gespeichert werden: {{message}}",
+        "invalidPlanTypeOrNotFound": "Ungültiger Plantyp oder Plan nicht gefunden."
+      },
+      "planWideSettings": {
+        "afterHours": {
+          "enableLabel": "Aktivieren Sie den Tarifmultiplikator außerhalb der Geschäftszeiten",
+          "multiplierHelp": "Multiplikator für außerhalb der Geschäftszeiten (z. B. 1,5x).",
+          "multiplierLabel": "Nachbörslicher Multiplikator",
+          "multiplierPlaceholder": "1.5",
+          "tooltip": "Wenden Sie einen Multiplikator auf den Standardstundensatz für Arbeiten an, die außerhalb der definierten Geschäftszeiten ausgeführt werden (erfordert die Konfiguration „Geschäftszeiten“)."
+        },
+        "overtime": {
+          "enableLabel": "Überstundensätze aktivieren",
+          "rateHelp": "Rate, die nach dem Schwellenwert angewendet wird.",
+          "rateLabel": "Überstundensatz ($/Std.)",
+          "thresholdHelp": "Stunden bevor OT gilt.",
+          "thresholdLabel": "Überstundenschwelle (Stunden/Zeitraum)",
+          "thresholdPlaceholder": "40",
+          "tooltip": "Wenden Sie einen anderen Satz an, wenn die Gesamtzahl der im Abrechnungszeitraum der Vertragszeile geleisteten Arbeitsstunden einen bestimmten Schwellenwert überschreitet."
+        },
+        "trigger": "Stundeneinstellungen für Vertragspositionen (Überstunden, außerhalb der Geschäftszeiten)"
+      },
+      "services": {
+        "cardTitle": "Servicepreise und -einstellungen",
+        "emptyState": "Mit dieser Vertragszeile sind derzeit keine Services verknüpft.",
+        "fallbackServiceName": "Dienst-ID: {{id}}",
+        "manageCardTitle": "Vertragszeilendienste verwalten",
+        "nonHourlyServiceMessage": "Dieser Dienst (Abrechnungsmethode: {{method}}) kann in diesem Plan nicht mit bestimmten Stundensätzen konfiguriert werden."
+      },
+      "validation": {
+        "afterHoursMultiplierMinOne": "Der Multiplikator außerhalb der Geschäftszeiten muss mindestens 1 betragen",
+        "overtimeRateNonNegative": "Der Überstundensatz darf nicht negativ sein",
+        "overtimeThresholdNonNegative": "Der Überstundenschwellenwert darf nicht negativ sein"
+      }
+    },
+    "usage": {
+      "actions": {
+        "saveAllConfigurations": "Alle Konfigurationen speichern"
+      },
+      "basics": {
+        "billingFrequencyLabel": "Abrechnungshäufigkeit *",
+        "billingFrequencyPlaceholder": "Wählen Sie die Abrechnungshäufigkeit aus",
+        "cardTitle": "Vertragszeile bearbeiten: {{name}} (Nutzung)",
+        "description": "Benennen Sie die Vertragsposition und wählen Sie aus, wie sie standardmäßig abgerechnet werden soll.",
+        "heading": "Grundlagen der Vertragslinie",
+        "nameLabel": "Name der Vertragszeile *",
+        "namePlaceholder": "z.B. Nutzungsbasierte Dienste",
+        "validation": {
+          "billingFrequency": "Abrechnungshäufigkeit",
+          "contractLineName": "Name der Vertragszeile"
+        }
+      },
+      "errors": {
+        "failedToLoadPlanServicesOrConfigurations": "Plandienste oder -konfigurationen konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "failedToSaveContractLine": "Vertragszeile konnte nicht gespeichert werden",
+        "failedToSaveOneOrMoreServiceConfigurations": "Eine oder mehrere Dienstkonfigurationen konnten nicht gespeichert werden. Bitte überprüfen Sie die Details und versuchen Sie es erneut.",
+        "invalidPlanTypeOrNotFound": "Ungültiger Plantyp oder Plan nicht gefunden.",
+        "noChangesDetected": "Es wurden keine Änderungen zum Speichern gefunden.",
+        "validationErrorDetails": "Validierungsfehler: {{details}}",
+        "validationErrorsInModifiedServices": "Speichern nicht möglich, in den geänderten Diensten liegen Validierungsfehler vor."
+      },
+      "services": {
+        "emptyStateWithHelper": "Mit dieser Vertragszeile sind derzeit keine Services verknüpft. Fügen Sie unten Dienste hinzu, um deren Preise zu konfigurieren.",
+        "fallbackServiceName": "Dienst-ID: {{id}}",
+        "loadingConfiguration": "Konfiguration wird geladen...",
+        "manageCardTitle": "Vertragszeilendienste verwalten",
+        "pricingCardTitle": "Servicepreise",
+        "summary": {
+          "defaultUnit": "Einheit",
+          "loading": "Laden...",
+          "notSet": "Nicht festgelegt",
+          "ratePerUnit": "{{rate}} / {{unit}}",
+          "tieredPricing": "Staffelpreise ({{count}}-Stufen)"
+        }
+      },
+      "validation": {
+        "baseRateNonNegative": "Der Basiszinssatz darf nicht negativ sein.",
+        "baseRateRequiredWhenTieredOff": "Der Basispreis ist erforderlich, wenn die gestaffelte Preisgestaltung deaktiviert ist.",
+        "firstTierStartsAtZero": "Die erste Stufe muss bei 0 beginnen.",
+        "minimumUsageNonNegative": "Die Mindestnutzung darf nicht negativ sein.",
+        "onlyLastTierUnlimited": "Nur die letzte Stufe kann eine unbegrenzte Obergrenze haben.",
+        "tierGap": "Lücke zwischen Tier {{tier1}} und Tier {{tier2}} erkannt.",
+        "tierOverlap": "Stufe {{tier1}} überschneidet sich mit Stufe {{tier2}}.",
+        "tierRatesNonNegative": "Die Staffelsätze dürfen nicht negativ sein.",
+        "tiersRequiredWhenTieredOn": "Wenn die gestaffelte Preisgestaltung aktiviert ist, ist mindestens eine Stufe erforderlich.",
+        "tierUpperBound": "Tier {{tier}}: Obergrenze muss >= Untergrenze sein.",
+        "unitOfMeasureRequired": "Maßeinheit ist erforderlich."
+      }
+    }
+  },
+  "dialog": {
+    "actions": {
+      "cancel": "Stornieren",
+      "createPreset": "Erstellen Sie eine Vertragszeilenvorgabe",
+      "saving": "Sparen...",
+      "updatePreset": "Vertragszeilenvorgabe aktualisieren"
+    },
+    "basics": {
+      "billingFrequencyLabel": "Abrechnungshäufigkeit *",
+      "billingFrequencyPlaceholder": "Wählen Sie die Abrechnungshäufigkeit aus",
+      "billingTiming": {
+        "options": {
+          "advance": "Vorauszahlung – Rechnung zu Beginn der Periode",
+          "arrears": "Zahlungsrückstände – Rechnung nach Ablauf der Frist"
+        }
+      },
+      "billingTimingLabel": "Abrechnungszeitpunkt *",
+      "billingTimingPlaceholder": "Wählen Sie den Abrechnungszeitpunkt aus",
+      "description": "Erstellen Sie eine wiederverwendbare Vorlage, die schnell zu Verträgen oder Vertragsvorlagen hinzugefügt werden kann. Definieren Sie das Abrechnungsmodell, die Dienste und die Standardtarife, die bei Verwendung dieser Voreinstellung kopiert werden.",
+      "heading": "Grundlagen der Voreinstellung von Vertragszeilen",
+      "nameLabel": "Voreingestellter Name der Vertragszeile *",
+      "namePlaceholder": "z.B. Verwalteter Support – Gold"
+    },
+    "billingModel": {
+      "cards": {
+        "fixed": {
+          "description": "Berechnen Sie für jeden Abrechnungszeitraum einen Pauschalbetrag.",
+          "title": "Feste Gebühr"
+        },
+        "hourly": {
+          "description": "Abrechnung basierend auf genehmigten Zeiteinträgen und stündlichen Überlagerungen.",
+          "title": "Stündlich"
+        },
+        "usage": {
+          "description": "Rechnung für verbrauchte Einheiten wie Geräte oder Lizenzen.",
+          "title": "Nutzungsbasiert"
+        }
+      },
+      "description": "Wählen Sie das Abrechnungsverhalten aus, das zu diesem Angebot passt. Dienste und Overlays können angehängt werden, sobald die Leitung vorhanden ist.",
+      "heading": "Wählen Sie ein Abrechnungsmodell *",
+      "timingHelp": {
+        "fixed": "Bei der Vorausrechnung wird die kommende Periode zu Beginn des Zyklus in Rechnung gestellt.",
+        "nonFixed": "Stunden- und nutzungsbasierte Linien rechnen immer im Nachhinein ab."
+      }
+    },
+    "common": {
+      "moneyPlaceholder": "0,00",
+      "quantity": "Menge"
+    },
+    "errors": {
+      "saveFailed": "Die Voreinstellung für die Vertragszeile konnte nicht gespeichert werden"
+    },
+    "fixed": {
+      "addItem": "Artikel hinzufügen",
+      "adjustForPartialPeriodsHelp": "Wenn diese Option aktiviert ist, skaliert die wiederkehrende Gebühr auf den abgedeckten Teil eines Servicezeitraums, wenn der Vertrag innerhalb dieses Zeitraums beginnt oder endet.",
+      "adjustForPartialPeriodsLabel": "Passen Sie Teilperioden an",
+      "alertBody": "Der Basiszinssatz der Vertragsposition ist der in Rechnung gestellte Betrag. Sie können hier auch Produkte anhängen; Produktmengen werden als Einheiten abgerechnet, während Servicemengen mit fester Gebühr nur für die Steuerzuordnung verwendet werden.",
+      "alertTitle": "Festpreisdienste:",
+      "baseRateHelp": "Empfohlene wiederkehrende Gebühr für alle Festnetzdienste. Kann beim Hinzufügen dieser Voreinstellung zu einem Vertrag überschrieben werden.",
+      "baseRateLabel": "Wiederkehrender Basispreis (optional)",
+      "description": "Richten Sie Dienste ein, die unabhängig von der Nutzung zu einem festen, wiederkehrenden Tarif abgerechnet werden.",
+      "emptyState": "Es wurden noch keine festen Gebührenpositionen hinzugefügt. Klicken Sie oben auf „Artikel hinzufügen“, um zu beginnen.",
+      "heading": "Festpreisdienste",
+      "itemLabel": "Artikel {{index}}",
+      "selectItemPlaceholder": "Wählen Sie einen Artikel aus",
+      "servicesAndProducts": "Dienstleistungen und Produkte"
+    },
+    "hourly": {
+      "addHourlyService": "Fügen Sie stündlichen Service hinzu",
+      "alertBody": "Diese Dienste werden auf der Grundlage der tatsächlich erfassten Zeit abgerechnet. Jeder Zeiteintrag wird mit dem Stundensatz multipliziert, um den Rechnungsbetrag zu berechnen.",
+      "alertTitle": "Was sind Stundendienste?",
+      "description": "Konfigurieren Sie Dienste, die basierend auf der erfassten Zeit abgerechnet werden. Perfekt für T&M-Arbeiten (Zeit und Material).",
+      "emptyState": "Es wurden noch keine stündlichen Dienste hinzugefügt. Klicken Sie oben auf „Stündlichen Service hinzufügen“, um zu beginnen.",
+      "enterHourlyRate": "Geben Sie den Stundensatz ein",
+      "heading": "Stündliche Dienste",
+      "hourlyRateLabel": "Stundensatz",
+      "hourlyRateSummary": "{{rate}}/Stunde",
+      "minimumBillableTimeHelp": "z. B. 15 Minuten – jeder Zeitaufwand, der darunter liegt, wird aufgerundet",
+      "minimumBillableTimeLabel": "Mindestabrechenbare Zeit (Minuten)",
+      "minutesPlaceholder": "15",
+      "recommendBucketLabel": "Empfehlen Sie einen Eimer voller Stunden",
+      "roundUpToNearestHelp": "z. B. 15 Minuten – Zeiteinträge werden auf das nächste Intervall aufgerundet",
+      "roundUpToNearestLabel": "Auf den nächsten Wert aufrunden (Minuten)",
+      "selectServicePlaceholder": "Wählen Sie einen Dienst aus",
+      "serviceLabel": "Dienst {{index}}",
+      "servicesHeading": "Stündliche Dienste"
+    },
+    "title": {
+      "add": "Vertragszeilenvorgabe hinzufügen",
+      "edit": "Vertragszeilenvorgabe bearbeiten"
+    },
+    "usage": {
+      "addUsageService": "Nutzungsbasierten Dienst hinzufügen",
+      "alertBody": "Die Abrechnung dieser Dienste erfolgt auf Basis des tatsächlichen Verbrauchs bzw. der Nutzungsmetriken. Jede verbrauchte Einheit wird mit dem Einheitspreis multipliziert, um den Rechnungsbetrag zu berechnen.",
+      "alertTitle": "Was sind nutzungsbasierte Dienste?",
+      "defaultUnit": "Einheit",
+      "defaultUnits": "Einheiten",
+      "description": "Konfigurieren Sie Dienste, die nutzungs- oder verbrauchsabhängig abgerechnet werden.",
+      "emptyState": "Es wurden noch keine nutzungsbasierten Dienste hinzugefügt. Klicken Sie oben auf „Nutzungsbasierten Dienst hinzufügen“, um zu beginnen.",
+      "enterUnitRate": "Geben Sie den Einheitspreis ein",
+      "heading": "Nutzungsbasierte Dienste",
+      "ratePerUnitLabel": "Preis pro Einheit",
+      "rateSummary": "{{rate}}/{{unit}}",
+      "recommendBucketLabel": "Empfehlen Sie einen Eimer Verzehr",
+      "searchServicesPlaceholder": "Suchdienste...",
+      "serviceLabel": "Dienst {{index}}",
+      "servicesHeading": "Nutzungsbasierte Dienste",
+      "unitOfMeasureHelp": "z. B. GB, API-Aufruf, Transaktion",
+      "unitOfMeasureLabel": "Maßeinheit",
+      "unitOfMeasurePlaceholder": "z. B. GB, API-Aufruf, Benutzer"
+    },
+    "validation": {
+      "billingFrequencyRequired": "Die Häufigkeit der Abrechnung ist erforderlich",
+      "contractLineTypeRequired": "Vertragszeilentyp ist erforderlich",
+      "fixedServiceRequired": "Es ist mindestens eine feste Dienstleistung oder ein festes Produkt erforderlich",
+      "hourlyRateRequired": "Service {{index}}: Stundensatz ist erforderlich",
+      "hourlyServiceRequired": "Es ist mindestens ein stündlicher Service erforderlich",
+      "nameRequired": "Der voreingestellte Name der Vertragszeile ist erforderlich",
+      "prefix": "Bitte korrigieren Sie Folgendes:",
+      "serviceSelectRequired": "Dienst {{index}}: Bitte wählen Sie einen Dienst aus",
+      "unitOfMeasureRequired": "Service {{index}}: Maßeinheit ist erforderlich",
+      "unitRateRequired": "Service {{index}}: Einheitspreis ist erforderlich",
+      "usageServiceRequired": "Es ist mindestens ein nutzungsbasierter Dienst erforderlich"
+    }
+  },
+  "forms": {
+    "bucketConfig": {
+      "labels": {
+        "allowRollover": "Ermöglichen Sie den Rollover von ungenutztem {{units}}",
+        "overageRatePerUnit": "Überschreitungsrate pro {{unit}}",
+        "totalInBucket": "Insgesamt {{units}} im Bucket"
+      },
+      "placeholders": {
+        "overageRate": "Geben Sie den Überschreitungssatz ein",
+        "totalHours": "Geben Sie die Gesamtstundenzahl ein"
+      },
+      "tooltips": {
+        "allowRollover": "Wenn diese Option aktiviert ist, können ungenutzte {{units}} aus einer Periode in der nächsten verwendet werden.",
+        "overageRatePerUnit": "Der Satz wird für jeden {{unit}} berechnet, der über den enthaltenen Betrag hinaus verwendet wird. (z. B. $)",
+        "totalInBucket": "Die Gesamtzahl der in diesem Bucket enthaltenen {{units}} pro Abrechnungszeitraum."
+      },
+      "units": {
+        "defaultPlural": "Einheiten",
+        "defaultSingular": "Einheit"
+      }
+    },
+    "editQuantity": {
+      "dialogTitle": "Servicemenge bearbeiten",
+      "errors": {
+        "quantityGreaterThanZero": "Die Menge muss größer als Null sein",
+        "updateFailed": "Menge konnte nicht aktualisiert werden"
+      },
+      "heading": "Menge anpassen",
+      "helperText": "Lassen Sie das Feld leer, um den Produktkatalogpreis für die Währung dieses Vertrags zu verwenden.",
+      "labels": {
+        "quantity": "Menge",
+        "unitPriceOverrideOptional": "Stückpreisüberschreibung (optional)"
+      }
+    },
+    "hourlyConfig": {
+      "labels": {
+        "hourlyRate": "Stundensatz ($)",
+        "minimumBillableTime": "Mindestabrechenbare Zeit (Minuten)",
+        "roundUpToNearest": "Auf den nächsten Wert aufrunden (Minuten)"
+      },
+      "placeholders": {
+        "minutes": "z.B. 15"
+      },
+      "tooltips": {
+        "hourlyRate": "Der Standardtarif pro Stunde für diesen Service.",
+        "minimumBillableTime": "Die Mindestdauer (in Minuten), die für jeden Zeiteintrag in Rechnung gestellt wird, unabhängig von der tatsächlichen Dauer.",
+        "roundUpToNearest": "Zeiteinträge werden auf das nächste angegebene Minutenintervall (z. B. 15 Minuten) aufgerundet. Legen Sie den Wert 1 oder 0 fest, um die Rundung zu deaktivieren."
+      },
+      "userTypeRates": {
+        "addNewRateLabel": "Neuen Tarif hinzufügen",
+        "heading": "Benutzertypspezifische Tarife",
+        "options": {
+          "administrator": "Administrator",
+          "consultant": "Berater",
+          "engineer": "Ingenieur",
+          "projectManager": "Projektmanager",
+          "technician": "Techniker"
+        },
+        "perHourSuffix": "/Std",
+        "rateSrLabel": "Preis ($/Std.)",
+        "selectTypePlaceholder": "Typ auswählen",
+        "tooltip": "Definieren Sie unterschiedliche Stundensätze für bestimmte Benutzertypen, die an diesem Dienst arbeiten. Diese setzen den Standardstundensatz des Dienstes außer Kraft.",
+        "userTypeSrLabel": "Benutzertyp",
+        "validation": {
+          "duplicateType": "Für diesen Benutzertyp gibt es bereits einen bestimmten Tarif.",
+          "selectTypeAndRate": "Bitte wählen Sie einen Benutzertyp aus und geben Sie einen gültigen, nicht negativen Preis ein."
+        }
+      }
+    },
+    "serviceForm": {
+      "errors": {
+        "failedToLoadServiceConfiguration": "Die Dienstkonfiguration konnte nicht geladen werden",
+        "failedToUpdateService": "Der Dienst konnte nicht aktualisiert werden",
+        "missingPlanOrServiceInformation": "Fehlende Plan- oder Serviceinformationen"
+      },
+      "loading": "Dienstkonfiguration wird geladen...",
+      "title": "Bearbeiten Sie die Dienstkonfiguration"
+    },
+    "tierEditor": {
+      "actions": {
+        "addTier": "Stufe hinzufügen"
+      },
+      "aria": {
+        "fromAmount": "Tier {{tier}} Ab Betrag",
+        "rate": "Tarif der Stufe {{tier}}",
+        "removeTier": "Entfernen Sie die Stufe {{tier}}",
+        "toAmount": "Tier {{tier}} zum Betrag"
+      },
+      "cardTitle": "Preisstufen",
+      "columns": {
+        "from": "Von ({{unit}})",
+        "ratePerUnit": "Preis pro {{unit}}",
+        "to": "An ({{unit}})"
+      },
+      "emptyState": "Keine Ebenen definiert. Klicken Sie auf „Stufe hinzufügen“.",
+      "helperText": "Definieren Sie Nutzungsbereiche und die entsprechenden Tarife. Lassen Sie „Bis“ leer, damit die letzte Stufe eine unbegrenzte Nutzung darstellt. Die erste Ebene muss bei 0 beginnen. Ebenen müssen zusammenhängend sein.",
+      "units": {
+        "defaultPlural": "Einheiten",
+        "defaultSingular": "Einheit"
+      },
+      "unlimitedPlaceholder": "Unbegrenzt"
+    },
+    "usageConfig": {
+      "labels": {
+        "defaultRatePerUnit": "Standardpreis pro Einheit",
+        "enableTieredPricing": "Aktivieren Sie die gestaffelte Preisgestaltung für {{serviceName}}",
+        "minimumUsage": "Mindestverbrauch",
+        "unitOfMeasure": "Maßeinheit"
+      },
+      "placeholders": {
+        "minimumUsage": "0",
+        "selectUnit": "Einheit auswählen"
+      },
+      "requiredFieldHint": "Zeigt ein erforderliches Feld an.",
+      "tooltips": {
+        "defaultRatePerUnit": "Preis pro Einheit (wird verwendet, wenn die gestaffelte Preisgestaltung deaktiviert ist).",
+        "minimumUsage": "Mindestens abrechnungsfähige Einheiten pro Zeitraum.",
+        "unitOfMeasure": "z. B. GB, Benutzer, Gerät."
+      }
+    }
+  },
+  "list": {
+    "actions": {
+      "addContractLine": "Vertragszeile hinzufügen"
+    },
+    "columns": {
+      "actions": "Aktionen",
+      "billingFrequency": "Abrechnungshäufigkeit",
+      "contractLineName": "Name der Vertragszeile",
+      "contractLineType": "Vertragszeilentyp",
+      "isCustom": "Ist benutzerdefiniert"
+    },
+    "deleteDialog": {
+      "defaultEntityName": "dieser Vertragszeile"
+    },
+    "errors": {
+      "failedToAddContractLineService": "Der Vertragszeilendienst konnte nicht hinzugefügt werden",
+      "failedToDeleteContractLine": "Vertragszeile konnte nicht gelöscht werden",
+      "failedToFetchContractLines": "Vertragszeilen konnten nicht abgerufen werden",
+      "failedToFetchContractLineServices": "Vertragszeilendienste konnten nicht abgerufen werden",
+      "failedToRemoveContractLineService": "Der Vertragszeilendienst konnte nicht entfernt werden",
+      "failedToUpdateContractLineService": "Der Vertragszeilendienst konnte nicht aktualisiert werden",
+      "failedToValidateDeletion": "Der Löschvorgang konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
+      "unknownErrorFetchingServiceTypes": "Beim Abrufen der Diensttypen ist ein unbekannter Fehler aufgetreten"
+    },
+    "heading": "Vertragslinien",
+    "planServices": {
+      "actions": {
+        "addService": "Dienst hinzufügen"
+      },
+      "columns": {
+        "actions": "Aktionen",
+        "customRate": "Benutzerdefinierter Preis",
+        "quantity": "Menge",
+        "serviceName": "Dienstname",
+        "unitOfMeasure": "Maßeinheit"
+      },
+      "emptyStateSelectContractLine": "Wählen Sie eine Vertragsposition aus, um deren Dienste zu verwalten",
+      "heading": "Planen Sie Dienstleistungen",
+      "selectServicePlaceholder": "Dienst auswählen...",
+      "servicesFor": "Dienste für {{name}}"
+    },
+    "toast": {
+      "contractLineDeletedSuccessfully": "Vertragszeile erfolgreich gelöscht"
+    }
+  },
+  "overview": {
+    "actions": {
+      "addContractLinePreset": "Vertragszeilenvorgabe hinzufügen"
+    },
+    "columns": {
+      "actions": "Aktionen",
+      "billingFrequency": "Abrechnungshäufigkeit",
+      "contractLineName": "Name der Vertragszeile",
+      "contractLineType": "Vertragszeilentyp"
+    },
+    "errors": {
+      "failedToFetchContractLinePresets": "Die Voreinstellungen für Vertragspositionen konnten nicht abgerufen werden",
+      "unexpectedDeleteError": "Beim Löschen der Vertragszeilenvoreinstellung ist ein unerwarteter Fehler aufgetreten."
+    },
+    "filters": {
+      "searchPlaceholder": "Voreinstellungen für Vertragspositionen durchsuchen",
+      "type": {
+        "allTypes": "Alle Arten",
+        "selectTypePlaceholder": "Typ auswählen"
+      }
+    },
+    "heading": "Voreinstellungen für Vertragszeilen",
+    "loading": "Voreinstellungen für Vertragszeilen werden geladen",
+    "toast": {
+      "contractLinePresetDeletedSuccessfully": "Vertragszeilenvoreinstellung erfolgreich gelöscht"
+    }
+  },
+  "preset": {
+    "fixed": {
+      "basics": {
+        "billingFrequencyLabel": "Abrechnungshäufigkeit *",
+        "billingFrequencyPlaceholder": "Wählen Sie die Abrechnungshäufigkeit aus",
+        "description": "Benennen Sie die Vertragsposition voreingestellt und wählen Sie aus, wie sie standardmäßig abgerechnet werden soll.",
+        "heading": "Grundlagen der Voreinstellung von Vertragszeilen",
+        "nameLabel": "Voreingestellter Name der Vertragszeile *",
+        "namePlaceholder": "z.B. Verwalteter Support – Gold"
+      },
+      "cardTitle": "Vertragszeilenvoreinstellung bearbeiten: {{name}} (behoben)",
+      "errors": {
+        "contractLineNotFoundOrInvalidType": "Vertragszeile nicht gefunden oder ungültiger Typ.",
+        "failedToLoadContractLinePresetConfiguration": "Die voreingestellte Konfiguration der Vertragszeile konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "failedToSaveContractLinePreset": "Die Voreinstellung für die Vertragszeile konnte nicht gespeichert werden",
+        "invalidContractLinePresetTypeOrNotFound": "Ungültiger Vertragszeilen-Voreinstellungstyp oder Vertragszeilen-Voreinstellung nicht gefunden."
+      },
+      "services": {
+        "associatedCardTitle": "Zugehörige Dienste"
+      },
+      "settings": {
+        "adjustForPartialPeriodsHelp": "Aktivieren Sie diese Option, wenn die wiederkehrende Gebühr auf den abgedeckten Teil eines Servicezeitraums skaliert werden soll, wenn der Vertrag innerhalb dieses Zeitraums beginnt oder endet.",
+        "adjustForPartialPeriodsLabel": "Passen Sie Teilperioden an",
+        "baseRateHelp": "Empfohlene wiederkehrende Gebühr für alle Festnetzdienste. Kann beim Hinzufügen dieser Voreinstellung zu einem Vertrag überschrieben werden.",
+        "baseRateLabel": "Wiederkehrender Basispreis (optional)",
+        "billingCycleAlignment": {
+          "options": {
+            "end": "Ende des Abrechnungszeitraums",
+            "prorated": "Proportionale Abdeckung",
+            "start": "Beginn des Abrechnungszeitraums"
+          }
+        },
+        "billingCycleAlignmentLabel": "Ausrichtung des Abrechnungszeitraums",
+        "billingCycleAlignmentPlaceholder": "Ausrichtung auswählen",
+        "billingTiming": {
+          "options": {
+            "advance": "Vorauszahlung – Rechnung zu Beginn der Periode",
+            "arrears": "Zahlungsrückstände – Rechnung nach Ablauf der Frist"
+          }
+        },
+        "billingTimingHelp": "Diese Voreinstellung behält ihren Kadenzbesitzer explizit bei, wenn sie in eine wiederkehrende Zeile kopiert wird. Der Abrechnungszeitpunkt steuert weiterhin, ob die kopierte wiederkehrende Zeile zu Beginn oder am Ende jedes abgedeckten Zeitraums abrechnet.",
+        "billingTimingLabel": "Abrechnungszeitpunkt",
+        "billingTimingPlaceholder": "Wählen Sie den Abrechnungszeitpunkt aus",
+        "description": "Definieren Sie den wiederkehrenden Basistarif und legen Sie fest, ob bei Teilzeitversicherungen die Gebühr angepasst werden soll. Servicezuweisungen können angepasst werden, sobald die Leitung aktiv ist.",
+        "heading": "Feste Gebühreneinstellungen"
+      },
+      "validation": {
+        "billingFrequency": "Abrechnungshäufigkeit",
+        "contractLinePresetName": "Voreingestellter Name der Vertragszeile",
+        "contractLineType": "Vertragszeilentyp"
+      }
+    },
+    "hourly": {
+      "basics": {
+        "billingFrequencyLabel": "Abrechnungshäufigkeit *",
+        "billingFrequencyPlaceholder": "Wählen Sie die Abrechnungshäufigkeit aus",
+        "cardTitle": "Vertragszeilenvoreinstellung bearbeiten: {{name}} (stündlich)",
+        "description": "Benennen Sie die Vertragsposition voreingestellt und wählen Sie aus, wie sie standardmäßig abgerechnet werden soll.",
+        "heading": "Grundlagen der Voreinstellung von Vertragszeilen",
+        "minimumBillableTimeHelp": "z. B. 15 Minuten – jeder Zeitaufwand, der darunter liegt, wird aufgerundet",
+        "minimumBillableTimeLabel": "Mindestabrechenbare Zeit (Minuten)",
+        "minutesPlaceholder": "z.B. 15",
+        "nameLabel": "Voreingestellter Name der Vertragszeile *",
+        "namePlaceholder": "z.B. Zeit- und Materialunterstützung",
+        "roundUpToNearestHelp": "z. B. 15 Minuten – Zeiteinträge werden auf das nächste Intervall aufgerundet",
+        "roundUpToNearestLabel": "Auf den nächsten Wert aufrunden (Minuten)",
+        "validation": {
+          "billingFrequency": "Abrechnungshäufigkeit",
+          "contractLinePresetName": "Voreingestellter Name der Vertragszeile"
+        }
+      },
+      "errors": {
+        "cannotSaveValidationErrors": "Speichern nicht möglich, es liegen Validierungsfehler in der voreingestellten Vertragszeile vor.",
+        "contractLineNotFoundOrInvalidType": "Vertragszeile nicht gefunden oder ungültiger Typ.",
+        "failedToLoadPlanConfiguration": "Die Plankonfiguration konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "failedToSaveContractLinePreset": "Die Voreinstellung für die Vertragszeile konnte nicht gespeichert werden",
+        "failedToSavePlanWideConfiguration": "Planweite Konfiguration konnte nicht gespeichert werden: {{message}}",
+        "failedToSaveServiceConfiguration": "Dienstkonfiguration konnte nicht gespeichert werden: {{message}}",
+        "invalidPlanTypeOrNotFound": "Ungültiger Plantyp oder Plan nicht gefunden."
+      },
+      "services": {
+        "manageCardTitle": "Verwalten Sie voreingestellte Vertragszeilendienste"
+      },
+      "validation": {
+        "afterHoursMultiplierMinOne": "Der Multiplikator außerhalb der Geschäftszeiten muss mindestens 1 betragen",
+        "overtimeRateNonNegative": "Der Überstundensatz darf nicht negativ sein",
+        "overtimeThresholdNonNegative": "Der Überstundenschwellenwert darf nicht negativ sein"
+      }
+    },
+    "usage": {
+      "actions": {
+        "saveAllConfigurations": "Alle Konfigurationen speichern"
+      },
+      "basics": {
+        "billingFrequencyLabel": "Abrechnungshäufigkeit *",
+        "billingFrequencyPlaceholder": "Wählen Sie die Abrechnungshäufigkeit aus",
+        "cardTitle": "Vertragszeilenvoreinstellung bearbeiten: {{name}} (Nutzung)",
+        "description": "Benennen Sie die Vertragsposition voreingestellt und wählen Sie aus, wie sie standardmäßig abgerechnet werden soll.",
+        "heading": "Grundlagen der Voreinstellung von Vertragszeilen",
+        "nameLabel": "Voreingestellter Name der Vertragszeile *",
+        "namePlaceholder": "z.B. Nutzungsbasierte Dienste",
+        "validation": {
+          "billingFrequency": "Abrechnungshäufigkeit",
+          "contractLinePresetName": "Voreingestellter Name der Vertragszeile"
+        }
+      },
+      "errors": {
+        "failedToLoadPlanServicesOrConfigurations": "Plandienste oder -konfigurationen konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "failedToSaveContractLinePreset": "Die Voreinstellung für die Vertragszeile konnte nicht gespeichert werden",
+        "failedToSaveOneOrMoreServiceConfigurations": "Eine oder mehrere Dienstkonfigurationen konnten nicht gespeichert werden. Bitte überprüfen Sie die Details und versuchen Sie es erneut.",
+        "invalidPlanTypeOrNotFound": "Ungültiger Plantyp oder Plan nicht gefunden.",
+        "noChangesDetected": "Es wurden keine Änderungen zum Speichern gefunden.",
+        "validationErrorDetails": "Validierungsfehler: {{details}}",
+        "validationErrorsInModifiedServices": "Speichern nicht möglich, in den geänderten Diensten liegen Validierungsfehler vor."
+      },
+      "services": {
+        "fallbackServiceName": "Dienst-ID: {{id}}",
+        "loadingConfiguration": "Konfiguration wird geladen...",
+        "manageCardTitle": "Verwalten Sie voreingestellte Vertragszeilendienste",
+        "pricingCardTitle": "Servicepreise",
+        "summary": {
+          "defaultUnit": "Einheit",
+          "loading": "Laden...",
+          "notSet": "Nicht festgelegt",
+          "ratePerUnit": "{{rate}} / {{unit}}",
+          "tieredPricing": "Staffelpreise ({{count}}-Stufen)"
+        }
+      },
+      "validation": {
+        "baseRateNonNegative": "Der Basiszinssatz darf nicht negativ sein.",
+        "baseRateRequiredWhenTieredOff": "Der Basispreis ist erforderlich, wenn die gestaffelte Preisgestaltung deaktiviert ist.",
+        "firstTierStartsAtZero": "Die erste Stufe muss bei 0 beginnen.",
+        "minimumUsageNonNegative": "Die Mindestnutzung darf nicht negativ sein.",
+        "onlyLastTierUnlimited": "Nur die letzte Stufe kann eine unbegrenzte Obergrenze haben.",
+        "tierGap": "Lücke zwischen Tier {{tier1}} und Tier {{tier2}} erkannt.",
+        "tierOverlap": "Stufe {{tier1}} überschneidet sich mit Stufe {{tier2}}.",
+        "tierRatesNonNegative": "Die Staffelsätze dürfen nicht negativ sein.",
+        "tiersRequiredWhenTieredOn": "Wenn die gestaffelte Preisgestaltung aktiviert ist, ist mindestens eine Stufe erforderlich.",
+        "tierUpperBound": "Tier {{tier}}: Obergrenze muss >= Untergrenze sein.",
+        "unitOfMeasureRequired": "Maßeinheit ist erforderlich."
+      }
+    }
+  },
+  "router": {
+    "contractLine": {
+      "loadFailed": "Die Vertragspositionsdetails konnten nicht geladen werden.",
+      "loading": "Vertragszeile wird geladen...",
+      "notFound": "Vertragszeile mit der ID {{id}} nicht gefunden.",
+      "unsupportedType": "Unbekannter oder nicht unterstützter Vertragszeilentyp: {{type}}"
+    },
+    "preset": {
+      "loadFailed": "Die voreingestellten Details der Vertragsposition konnten nicht geladen werden.",
+      "loading": "Voreinstellungen für Vertragszeilen werden geladen...",
+      "notFound": "Vertragszeilenvoreinstellung mit der ID {{id}} nicht gefunden.",
+      "unsupportedType": "Unbekannter oder nicht unterstützter voreingestellter Vertragszeilentyp: {{type}}"
+    }
+  },
+  "services": {
+    "generic": {
+      "addSelectedServices": "Ausgewählte ({{count}}) Dienste hinzufügen",
+      "addServicesHeading": "Fügen Sie Services zur Vertragszeile hinzu",
+      "allServicesAssociated": "Alle verfügbaren Leistungen sind bereits mit dieser Vertragszeile verknüpft.",
+      "badges": {
+        "billingMismatch": "Abrechnungskonflikt",
+        "defaultConfigType": "Standard"
+      },
+      "billingMethod": {
+        "fixed": "Festpreis",
+        "hourly": "Stündlich",
+        "usage": "Nutzungsbasiert"
+      },
+      "columns": {
+        "actions": "Aktionen",
+        "billingMethod": "Abrechnungsmethode",
+        "customRate": "Benutzerdefinierter Preis",
+        "derivedConfigType": "Abgeleiteter Konfigurationstyp",
+        "quantity": "Menge",
+        "serviceName": "Dienstname",
+        "serviceType": "Servicetyp",
+        "unitOfMeasure": "Maßeinheit"
+      },
+      "emptyState": "Mit dieser Vertragszeile sind derzeit keine Dienste verknüpft.",
+      "errors": {
+        "contractLineNotFound": "Vertragszeile mit der ID {{id}} nicht gefunden.",
+        "enterRateForService": "Bitte geben Sie einen Tarif für „{{serviceName}}“ ein (kein {{currency}}-Preis konfiguriert)",
+        "failedToAddServices": "Dienste konnten nicht hinzugefügt werden",
+        "failedToLoadServicesData": "Dienstdaten konnten nicht geladen werden",
+        "failedToRemoveService": "Der Dienst konnte nicht entfernt werden"
+      },
+      "loadingServices": "Dienste werden geladen...",
+      "serviceToAdd": {
+        "enterRatePlaceholder": "Geben Sie den Tarif ein",
+        "metadata": "Diensttyp: {{type}} | Methode: {{method}}",
+        "noCurrencyPrice": "Kein {{currency}}-Preis",
+        "rateDetail": "Rate: {{symbol}}{{amount}}"
+      },
+      "unknownService": "Unbekannter Dienst"
+    },
+    "hourlyPreset": {
+      "addSelectedServices": "Ausgewählte ({{count}}) Dienste hinzufügen",
+      "addServicesHeading": "Fügen Sie Services zur Vertragszeilenvoreinstellung hinzu",
+      "allServicesAssociated": "Alle verfügbaren Stundendienste sind dieser Voreinstellung bereits zugeordnet.",
+      "billingMethod": {
+        "fixed": "Festpreis",
+        "hourly": "Stündlich",
+        "usage": "Nutzungsbasiert"
+      },
+      "emptyState": "Mit dieser Vertragszeilenvoreinstellung sind derzeit keine Dienste verknüpft.",
+      "errors": {
+        "failedToLoadServicesData": "Dienstdaten konnten nicht geladen werden",
+        "failedToSaveServices": "Dienste konnten nicht gespeichert werden"
+      },
+      "hourlyRateLabel": "Stundensatz:",
+      "loadingServices": "Dienste werden geladen...",
+      "recommendBucketLabel": "Empfehlen Sie einen Eimer voller Stunden",
+      "serviceMetadata": "Diensttyp: {{type}} | Methode: {{method}}",
+      "serviceToAddMetadata": "Diensttyp: {{type}} | Methode: {{method}} | Standardrate: {{rate}}",
+      "toast": {
+        "savedSuccessfully": "Voreingestellte Vertragszeilendienste erfolgreich gespeichert"
+      },
+      "unknownService": "Unbekannter Dienst",
+      "unsavedChanges": {
+        "banner": "Sie haben nicht gespeicherte Änderungen. Klicken Sie auf „Änderungen speichern“, um sie zu übernehmen.",
+        "cancelLabel": "Bleiben Sie auf der Seite",
+        "confirmLabel": "Seite verlassen",
+        "dialogMessage": "Sie haben nicht gespeicherte Änderungen. Sind Sie sicher, dass Sie diese Seite verlassen möchten? Alle Änderungen gehen verloren.",
+        "dialogTitle": "Nicht gespeicherte Änderungen"
+      }
+    },
+    "usagePreset": {
+      "addSelectedServices": "Ausgewählte ({{count}}) Dienste hinzufügen",
+      "addServicesHeading": "Fügen Sie Services zur Vertragszeilenvoreinstellung hinzu",
+      "allServicesAssociated": "Alle verfügbaren nutzungsbasierten Dienste sind dieser Voreinstellung bereits zugeordnet.",
+      "billingMethod": {
+        "fixed": "Festpreis",
+        "hourly": "Stündlich",
+        "usage": "Nutzungsbasiert"
+      },
+      "defaultUnit": "Einheit",
+      "defaultUnits": "Einheiten",
+      "emptyState": "Mit dieser Vertragszeilenvoreinstellung sind derzeit keine Dienste verknüpft.",
+      "errors": {
+        "failedToLoadServicesData": "Dienstdaten konnten nicht geladen werden",
+        "failedToSaveServices": "Dienste konnten nicht gespeichert werden"
+      },
+      "loadingServices": "Dienste werden geladen...",
+      "ratePerUnitLabel": "Preis pro Einheit:",
+      "recommendBucketLabel": "Empfehlen Sie einen Eimer Verzehr",
+      "serviceMetadata": "Diensttyp: {{type}} | Methode: {{method}}",
+      "serviceToAddMetadata": "Diensttyp: {{type}} | Methode: {{method}} | Standardrate: {{rate}} | Einheit: {{unit}}",
+      "toast": {
+        "savedSuccessfully": "Voreingestellte Vertragszeilendienste erfolgreich gespeichert"
+      },
+      "unitLabel": "Einheit:",
+      "unitPlaceholder": "z. B. GB, Benutzer, Gerät",
+      "unknownService": "Unbekannter Dienst",
+      "unsavedChanges": {
+        "banner": "Sie haben nicht gespeicherte Änderungen. Klicken Sie auf „Änderungen speichern“, um sie zu übernehmen.",
+        "cancelLabel": "Bleiben Sie auf der Seite",
+        "confirmLabel": "Seite verlassen",
+        "dialogMessage": "Sie haben nicht gespeicherte Änderungen. Sind Sie sicher, dass Sie diese Seite verlassen möchten? Alle Änderungen gehen verloren.",
+        "dialogTitle": "Nicht gespeicherte Änderungen"
+      }
+    }
+  },
+  "typeSelector": {
+    "descriptions": {
+      "fixed": "Eine Festpreis-Vertragslinie mit konsistenter Abrechnung unabhängig von der Nutzung. Ideal für vorhersehbare Dienste.",
+      "hourly": "Zeitbasierte Abrechnung mit konfigurierbaren Tarifen. Am besten für variable Arbeitsbelastungen geeignet, die nach Zeitaufwand abgerechnet werden.",
+      "usage": "Nutzungsbasierte Abrechnung mit gestaffelten Preisoptionen. Perfekt für Dienstleistungen, die am Verbrauch gemessen werden."
+    },
+    "label": "Vertragszeilentyp",
+    "placeholder": "Wählen Sie den Vertragszeilentyp aus"
+  }
+}

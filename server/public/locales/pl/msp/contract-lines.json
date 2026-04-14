@@ -1,0 +1,803 @@
+{
+  "common": {
+    "actions": {
+      "add": "Dodać",
+      "cancel": "Anulować",
+      "configure": "Skonfiguruj",
+      "delete": "Usuwać",
+      "edit": "Redagować",
+      "openMenu": "Otwórz menu",
+      "remove": "Usunąć",
+      "reset": "Nastawić",
+      "save": "Ratować",
+      "saveChanges": "Zapisz zmiany",
+      "saveChangesDirty": "Zapisz zmiany *",
+      "saving": "Oszczędność..."
+    },
+    "errors": {
+      "errorWithMessage": "Błąd: {{message}}"
+    },
+    "labels": {
+      "no": "NIE",
+      "yes": "Tak"
+    },
+    "moneyPlaceholder": "0,00",
+    "notAvailable": "Nie dotyczy",
+    "tryAgain": "Spróbuj ponownie.",
+    "validation": {
+      "prefix": "Popraw następujące informacje:"
+    }
+  },
+  "configuration": {
+    "fixed": {
+      "basics": {
+        "billingFrequencyLabel": "Częstotliwość rozliczeń *",
+        "billingFrequencyPlaceholder": "Wybierz częstotliwość rozliczeń",
+        "billingTiming": {
+          "options": {
+            "advance": "Zaliczka - faktura na początek okresu",
+            "arrears": "Zaległości - faktura po zamknięciu okresu"
+          }
+        },
+        "billingTimingHelp": "Faktury zaliczkowe fakturują za nadchodzący okres na początku każdego cyklu.",
+        "billingTimingLabel": "Termin rozliczenia *",
+        "billingTimingPlaceholder": "Wybierz termin rozliczenia",
+        "cadenceOwner": {
+          "description": "Wybierz harmonogram określający okresy świadczenia usług tej linii cyklicznej.",
+          "label": "Właściciel Cadence",
+          "options": {
+            "client": {
+              "description": "Użyj kalendarza rozliczeniowego klienta, aby ta powtarzająca się linia była zgodna z normalną częstotliwością fakturowania klienta.",
+              "label": "Faktura zgodnie z harmonogramem rozliczeń klienta"
+            },
+            "contract": {
+              "description": "Użyj dat rocznicowych tej linii kontraktu. Kadencja kontraktowa obsługuje obecnie płatności cykliczne miesięczne, kwartalne, półroczne i roczne.",
+              "label": "Faktura z okazji rocznicy umowy"
+            }
+          }
+        },
+        "description": "Nazwij linię umowy i wybierz domyślny sposób rozliczeń.",
+        "heading": "Podstawy linii kontraktowej",
+        "nameLabel": "Nazwa linii kontraktu *",
+        "namePlaceholder": "np. Zarządzane wsparcie — złoto"
+      },
+      "cardTitle": "Edytuj linię kontraktu: {{name}} (naprawiono)",
+      "errors": {
+        "contractLineNotFoundOrInvalidType": "Nie znaleziono pozycji umowy lub nieprawidłowy typ.",
+        "failedToLoadContractLineConfiguration": "Nie udało się załadować konfiguracji linii kontraktu. Spróbuj ponownie.",
+        "failedToSaveContractLine": "Nie udało się zapisać linii kontraktu",
+        "invalidContractLineTypeOrNotFound": "Nieprawidłowy typ pozycji umowy lub nie znaleziono pozycji umowy."
+      },
+      "services": {
+        "associatedCardTitle": "Usługi powiązane"
+      },
+      "settings": {
+        "adjustForPartialPeriodsHelp": "Włącz tę opcję, jeśli opłata cykliczna powinna być skalowana do objętej części okresu świadczenia usługi, jeśli umowa rozpoczyna się lub kończy w tym okresie.",
+        "adjustForPartialPeriodsLabel": "Dostosuj do okresów częściowych",
+        "baseRateHelp": "Całkowita opłata cykliczna za wszystkie usługi stacjonarne łącznie",
+        "baseRateLabel": "Powtarzająca się stawka podstawowa *",
+        "billingCycleAlignment": {
+          "options": {
+            "end": "Koniec cyklu rozliczeniowego",
+            "prorated": "Proporcjonalne pokrycie",
+            "start": "Początek cyklu rozliczeniowego"
+          }
+        },
+        "billingCycleAlignmentLabel": "Wyrównanie cykli rozliczeniowych",
+        "billingCycleAlignmentPlaceholder": "Wybierz wyrównanie",
+        "description": "Zdefiniuj powtarzalną stawkę podstawową i czy ubezpieczenie częściowe powinno korygować opłatę. Przydział usług można dostosować, gdy linia jest aktywna.",
+        "heading": "Ustawienia opłat stałych"
+      },
+      "validation": {
+        "baseRateRequiredForFixedLines": "W przypadku łączy stacjonarnych wymagana jest stawka podstawowa",
+        "billingFrequency": "Częstotliwość rozliczeń",
+        "contractLineName": "Nazwa linii kontraktu",
+        "contractLineType": "Typ linii kontraktu"
+      }
+    },
+    "hourly": {
+      "actions": {
+        "saveConfiguration": "Zapisz konfigurację"
+      },
+      "basics": {
+        "billingFrequencyLabel": "Częstotliwość rozliczeń *",
+        "billingFrequencyPlaceholder": "Wybierz częstotliwość rozliczeń",
+        "cardTitle": "Edytuj linię kontraktu: {{name}} (co godzinę)",
+        "description": "Nazwij linię umowy i wybierz domyślny sposób rozliczeń.",
+        "heading": "Podstawy linii kontraktowej",
+        "nameLabel": "Nazwa linii kontraktu *",
+        "namePlaceholder": "np. Wsparcie czasowe i materiałowe",
+        "validation": {
+          "billingFrequency": "Częstotliwość rozliczeń",
+          "contractLineName": "Nazwa linii kontraktu"
+        }
+      },
+      "errors": {
+        "cannotSaveValidationErrors": "Nie można zapisać, występują błędy sprawdzania poprawności obejmujące całą linię umowy.",
+        "contractLineNotFoundOrInvalidType": "Nie znaleziono pozycji umowy lub nieprawidłowy typ.",
+        "failedToLoadPlanConfiguration": "Nie udało się załadować konfiguracji planu. Spróbuj ponownie.",
+        "failedToSaveContractLine": "Nie udało się zapisać linii kontraktu",
+        "failedToSavePlanWideConfiguration": "Nie udało się zapisać konfiguracji obejmującej cały plan: {{message}}",
+        "failedToSaveServiceConfiguration": "Nie udało się zapisać konfiguracji usługi: {{message}}",
+        "invalidPlanTypeOrNotFound": "Nieprawidłowy typ planu lub nie znaleziono planu."
+      },
+      "planWideSettings": {
+        "afterHours": {
+          "enableLabel": "Włącz mnożnik stawki po godzinach pracy",
+          "multiplierHelp": "Mnożnik dla godzin poza godzinami pracy (np. 1,5x).",
+          "multiplierLabel": "Mnożnik po godzinach",
+          "multiplierPlaceholder": "1,5",
+          "tooltip": "Zastosuj mnożnik do standardowej stawki godzinowej za pracę wykonywaną poza określonymi godzinami pracy (wymaga konfiguracji Godzin pracy)."
+        },
+        "overtime": {
+          "enableLabel": "Włącz stawki za nadgodziny",
+          "rateHelp": "Stawka stosowana po przekroczeniu progu.",
+          "rateLabel": "Stawka za nadgodziny ($/godz.)",
+          "thresholdHelp": "Godziny przed zastosowaniem OT.",
+          "thresholdLabel": "Próg nadgodzin (godziny/okres)",
+          "thresholdPlaceholder": "40",
+          "tooltip": "Zastosuj inną stawkę, jeśli łączna liczba godzin przepracowanych w okresie rozliczeniowym linii umowy przekroczy określony próg."
+        },
+        "trigger": "Ustawienia godzinowe linii kontraktowej (nadgodziny, godziny po godzinach)"
+      },
+      "services": {
+        "cardTitle": "Ceny usług i ustawienia",
+        "emptyState": "Żadne usługi nie są obecnie powiązane z tą linią kontraktu.",
+        "fallbackServiceName": "Identyfikator usługi: {{id}}",
+        "manageCardTitle": "Zarządzaj usługami linii kontraktowej",
+        "nonHourlyServiceMessage": "Tej usługi (metoda rozliczeń: {{method}}) nie można skonfigurować z określonymi stawkami godzinowymi w tym planie."
+      },
+      "validation": {
+        "afterHoursMultiplierMinOne": "Po godzinach mnożnik musi wynosić co najmniej 1",
+        "overtimeRateNonNegative": "Stawka za nadgodziny nie może być ujemna",
+        "overtimeThresholdNonNegative": "Próg nadgodzin nie może być ujemny"
+      }
+    },
+    "usage": {
+      "actions": {
+        "saveAllConfigurations": "Zapisz wszystkie konfiguracje"
+      },
+      "basics": {
+        "billingFrequencyLabel": "Częstotliwość rozliczeń *",
+        "billingFrequencyPlaceholder": "Wybierz częstotliwość rozliczeń",
+        "cardTitle": "Edytuj wiersz umowy: {{name}} (wykorzystanie)",
+        "description": "Nazwij linię umowy i wybierz domyślny sposób rozliczeń.",
+        "heading": "Podstawy linii kontraktowej",
+        "nameLabel": "Nazwa linii kontraktu *",
+        "namePlaceholder": "np. Usługi oparte na użytkowaniu",
+        "validation": {
+          "billingFrequency": "Częstotliwość rozliczeń",
+          "contractLineName": "Nazwa linii kontraktu"
+        }
+      },
+      "errors": {
+        "failedToLoadPlanServicesOrConfigurations": "Nie udało się załadować usług planu lub konfiguracji. Spróbuj ponownie.",
+        "failedToSaveContractLine": "Nie udało się zapisać linii kontraktu",
+        "failedToSaveOneOrMoreServiceConfigurations": "Nie udało się zapisać jednej lub więcej konfiguracji usług. Sprawdź szczegóły i spróbuj ponownie.",
+        "invalidPlanTypeOrNotFound": "Nieprawidłowy typ planu lub nie znaleziono planu.",
+        "noChangesDetected": "Nie wykryto żadnych zmian do zapisania.",
+        "validationErrorDetails": "Błąd sprawdzania poprawności: {{details}}",
+        "validationErrorsInModifiedServices": "Nie można zapisać, w zmodyfikowanych usługach występują błędy sprawdzania poprawności."
+      },
+      "services": {
+        "emptyStateWithHelper": "Żadne usługi nie są obecnie powiązane z tą linią kontraktu. Dodaj usługi poniżej, aby skonfigurować ich ceny.",
+        "fallbackServiceName": "Identyfikator usługi: {{id}}",
+        "loadingConfiguration": "Ładowanie konfiguracji...",
+        "manageCardTitle": "Zarządzaj usługami linii kontraktowej",
+        "pricingCardTitle": "Ceny usług",
+        "summary": {
+          "defaultUnit": "Jednostka",
+          "loading": "Załadunek...",
+          "notSet": "Nieustawione",
+          "ratePerUnit": "{{rate}} / {{unit}}",
+          "tieredPricing": "Ceny wielopoziomowe (poziomy {{count}})"
+        }
+      },
+      "validation": {
+        "baseRateNonNegative": "Stopa bazowa nie może być ujemna.",
+        "baseRateRequiredWhenTieredOff": "Stawka podstawowa jest wymagana, gdy ceny warstwowe są wyłączone.",
+        "firstTierStartsAtZero": "Pierwszy poziom musi zaczynać się od 0.",
+        "minimumUsageNonNegative": "Minimalne użycie nie może być ujemne.",
+        "onlyLastTierUnlimited": "Tylko ostatni poziom może mieć nieograniczoną górną granicę.",
+        "tierGap": "Wykryto lukę pomiędzy poziomem {{tier1}} i poziomem {{tier2}}.",
+        "tierOverlap": "Poziom {{tier1}} pokrywa się z poziomem {{tier2}}.",
+        "tierRatesNonNegative": "Stawki poziomów nie mogą być ujemne.",
+        "tiersRequiredWhenTieredOn": "Jeśli włączone są ceny wielopoziomowe, wymagany jest co najmniej jeden poziom.",
+        "tierUpperBound": "Poziom {{tier}}: Górna granica musi być >= dolna granica.",
+        "unitOfMeasureRequired": "Jednostka miary jest wymagana."
+      }
+    }
+  },
+  "dialog": {
+    "actions": {
+      "cancel": "Anulować",
+      "createPreset": "Utwórz ustawienie wstępne linii kontraktu",
+      "saving": "Oszczędność...",
+      "updatePreset": "Zaktualizuj ustawienie wstępne linii kontraktu"
+    },
+    "basics": {
+      "billingFrequencyLabel": "Częstotliwość rozliczeń *",
+      "billingFrequencyPlaceholder": "Wybierz częstotliwość rozliczeń",
+      "billingTiming": {
+        "options": {
+          "advance": "Zaliczka - faktura na początek okresu",
+          "arrears": "Zaległości - faktura po zamknięciu okresu"
+        }
+      },
+      "billingTimingLabel": "Termin rozliczenia *",
+      "billingTimingPlaceholder": "Wybierz termin rozliczenia",
+      "description": "Utwórz szablon wielokrotnego użytku, który można szybko dodać do umów lub szablonów umów. Zdefiniuj model rozliczeń, usługi i stawki domyślne, które zostaną skopiowane w przypadku użycia tego ustawienia wstępnego.",
+      "heading": "Podstawy gotowych linii kontraktowych",
+      "nameLabel": "Nazwa ustawienia linii kontraktu *",
+      "namePlaceholder": "np. Zarządzane wsparcie — złoto"
+    },
+    "billingModel": {
+      "cards": {
+        "fixed": {
+          "description": "Pobieraj stałą kwotę w każdym okresie rozliczeniowym.",
+          "title": "Stała opłata"
+        },
+        "hourly": {
+          "description": "Rachunek na podstawie zatwierdzonych wpisów czasowych i nakładek godzinowych.",
+          "title": "Cogodzinny"
+        },
+        "usage": {
+          "description": "Faktura za zużyte jednostki, takie jak urządzenia lub licencje.",
+          "title": "Oparte na użyciu"
+        }
+      },
+      "description": "Wybierz sposób rozliczeń pasujący do tej oferty. Usługi i nakładki można dołączać po utworzeniu linii.",
+      "heading": "Wybierz model rozliczeń *",
+      "timingHelp": {
+        "fixed": "Rozliczenie zaliczkowe fakturuje nadchodzący okres na początku cyklu.",
+        "nonFixed": "Linie godzinowe i oparte na wykorzystaniu zawsze są rozliczane z dołu."
+      }
+    },
+    "common": {
+      "moneyPlaceholder": "0,00",
+      "quantity": "Ilość"
+    },
+    "errors": {
+      "saveFailed": "Nie udało się zapisać ustawienia wstępnego linii kontraktu"
+    },
+    "fixed": {
+      "addItem": "Dodaj element",
+      "adjustForPartialPeriodsHelp": "Po włączeniu opłata cykliczna skaluje się do objętej części okresu świadczenia usługi, gdy umowa rozpoczyna się lub kończy w tym okresie.",
+      "adjustForPartialPeriodsLabel": "Dostosuj do okresów częściowych",
+      "alertBody": "Stawką bazową linii kontraktu jest kwota rachunku. Tutaj możesz także załączyć produkty; Ilości produktów są fakturowane jako jednostki, natomiast ilości usług z opłatą stałą służą wyłącznie do alokacji podatku.",
+      "alertTitle": "Usługi z opłatą stałą:",
+      "baseRateHelp": "Sugerowana opłata cykliczna za wszystkie usługi stałe. Można go zastąpić podczas dodawania tego ustawienia wstępnego do kontraktu.",
+      "baseRateLabel": "Cykliczna stawka podstawowa (opcjonalnie)",
+      "description": "Skonfiguruj usługi rozliczane według stałej, cyklicznej stawki, niezależnie od wykorzystania.",
+      "emptyState": "Nie dodano jeszcze żadnych pozycji z opłatami stałymi. Kliknij „Dodaj element” powyżej, aby rozpocząć.",
+      "heading": "Usługi z opłatą stałą",
+      "itemLabel": "Pozycja {{index}}",
+      "selectItemPlaceholder": "Wybierz element",
+      "servicesAndProducts": "Usługi i produkty"
+    },
+    "hourly": {
+      "addHourlyService": "Dodaj usługę godzinową",
+      "alertBody": "Usługi te są rozliczane na podstawie rzeczywistego czasu pracy. Każdorazowo wpis zostanie przemnożony przez stawkę godzinową w celu obliczenia kwoty faktury.",
+      "alertTitle": "Co to są usługi godzinowe?",
+      "description": "Skonfiguruj usługi rozliczane na podstawie śledzenia czasu. Idealny do pracy T&M (czas i materiały).",
+      "emptyState": "Nie dodano jeszcze żadnych usług godzinowych. Aby rozpocząć, kliknij powyżej opcję „Dodaj usługę godzinową”.",
+      "enterHourlyRate": "Podaj stawkę godzinową",
+      "heading": "Usługi godzinowe",
+      "hourlyRateLabel": "Stawka godzinowa",
+      "hourlyRateSummary": "{{rate}}/godz",
+      "minimumBillableTimeHelp": "np. 15 minut – każdy wpis o czasie krótszym niż ten zostanie zaokrąglony w górę",
+      "minimumBillableTimeLabel": "Minimalny czas rozliczeniowy (minuty)",
+      "minutesPlaceholder": "15",
+      "recommendBucketLabel": "Polecam kubeł godzin",
+      "roundUpToNearestHelp": "np. 15 minut — wpisy czasu będą zaokrąglane w górę do najbliższego przedziału",
+      "roundUpToNearestLabel": "Zaokrąglij do najbliższego (minuty)",
+      "selectServicePlaceholder": "Wybierz usługę",
+      "serviceLabel": "Serwis {{index}}",
+      "servicesHeading": "Usługi godzinowe"
+    },
+    "title": {
+      "add": "Dodaj ustawienie wstępne linii kontraktu",
+      "edit": "Edytuj ustawienie wstępne linii kontraktu"
+    },
+    "usage": {
+      "addUsageService": "Dodaj usługę opartą na wykorzystaniu",
+      "alertBody": "Opłaty za te usługi są rozliczane na podstawie rzeczywistego zużycia lub wskaźników użytkowania. Każda zużyta jednostka zostanie pomnożona przez stawkę jednostkową w celu obliczenia kwoty faktury.",
+      "alertTitle": "Czym są usługi oparte na użytkowaniu?",
+      "defaultUnit": "jednostka",
+      "defaultUnits": "jednostki",
+      "description": "Skonfiguruj usługi rozliczane na podstawie użycia lub zużycia.",
+      "emptyState": "Nie dodano jeszcze żadnych usług opartych na użytkowaniu. Aby rozpocząć, kliknij powyżej opcję „Dodaj usługę opartą na użytkowaniu”.",
+      "enterUnitRate": "Wprowadź stawkę jednostkową",
+      "heading": "Usługi oparte na użytkowaniu",
+      "ratePerUnitLabel": "Stawka za jednostkę",
+      "rateSummary": "{{rate}}/{{unit}}",
+      "recommendBucketLabel": "Polecam kubeł konsumpcji",
+      "searchServicesPlaceholder": "Wyszukaj usługi...",
+      "serviceLabel": "Serwis {{index}}",
+      "servicesHeading": "Usługi oparte na użytkowaniu",
+      "unitOfMeasureHelp": "np. GB, wywołanie API, transakcja",
+      "unitOfMeasureLabel": "Jednostka miary",
+      "unitOfMeasurePlaceholder": "np. GB, wywołanie API, użytkownik"
+    },
+    "validation": {
+      "billingFrequencyRequired": "Wymagana jest częstotliwość rozliczeń",
+      "contractLineTypeRequired": "Typ linii kontraktu jest wymagany",
+      "fixedServiceRequired": "Wymagana jest co najmniej jedna stała usługa lub produkt",
+      "hourlyRateRequired": "Usługa {{index}}: Wymagana stawka godzinowa",
+      "hourlyServiceRequired": "Wymagana jest co najmniej jedna usługa godzinowa",
+      "nameRequired": "Wymagana jest wstępnie ustawiona nazwa linii kontraktu",
+      "prefix": "Popraw następujące informacje:",
+      "serviceSelectRequired": "Usługa {{index}}: Proszę wybrać usługę",
+      "unitOfMeasureRequired": "Usługa {{index}}: Wymagana jest jednostka miary",
+      "unitRateRequired": "Usługa {{index}}: Wymagana jest stawka jednostkowa",
+      "usageServiceRequired": "Wymagana jest co najmniej jedna usługa oparta na użytkowaniu"
+    }
+  },
+  "forms": {
+    "bucketConfig": {
+      "labels": {
+        "allowRollover": "Pozwól, aby nieużywany {{units}} się przewrócił",
+        "overageRatePerUnit": "Wskaźnik nadwyżki według {{unit}}",
+        "totalInBucket": "Łącznie {{units}} w wiadrze"
+      },
+      "placeholders": {
+        "overageRate": "Wprowadź stawkę nadwyżki",
+        "totalHours": "Wprowadź łączną liczbę godzin"
+      },
+      "tooltips": {
+        "allowRollover": "Jeśli zaznaczone, niewykorzystane {{units}} z jednego okresu można wykorzystać w następnym.",
+        "overageRatePerUnit": "Stawka naliczana za każde wykorzystanie {{unit}} przekraczające kwotę uwzględnioną. (np. $)",
+        "totalInBucket": "Całkowita liczba {{units}} uwzględniona w tym zasobniku w okresie rozliczeniowym."
+      },
+      "units": {
+        "defaultPlural": "Jednostki",
+        "defaultSingular": "Jednostka"
+      }
+    },
+    "editQuantity": {
+      "dialogTitle": "Edytuj ilość usług",
+      "errors": {
+        "quantityGreaterThanZero": "Ilość musi być większa od zera",
+        "updateFailed": "Nie udało się zaktualizować ilości"
+      },
+      "heading": "Dostosuj ilość",
+      "helperText": "Pozostaw puste, aby użyć ceny katalogowej produktu w walucie kontraktu.",
+      "labels": {
+        "quantity": "Ilość",
+        "unitPriceOverrideOptional": "Zastąpienie ceny jednostkowej (opcjonalnie)"
+      }
+    },
+    "hourlyConfig": {
+      "labels": {
+        "hourlyRate": "Stawka godzinowa ($)",
+        "minimumBillableTime": "Minimalny czas rozliczeniowy (minuty)",
+        "roundUpToNearest": "Zaokrąglij do najbliższego (minuty)"
+      },
+      "placeholders": {
+        "minutes": "np. 15"
+      },
+      "tooltips": {
+        "hourlyRate": "Standardowa stawka pobierana za godzinę za tę usługę.",
+        "minimumBillableTime": "Minimalny czas trwania (w minutach), za który będzie naliczana opłata za dowolny wpis czasu, niezależnie od rzeczywistego czasu trwania.",
+        "roundUpToNearest": "Wpisy czasu będą zaokrąglane w górę do najbliższego określonego przedziału minutowego (np. 15 minut). Ustaw na 1 lub 0, aby wyłączyć zaokrąglanie."
+      },
+      "userTypeRates": {
+        "addNewRateLabel": "Dodaj nową stawkę",
+        "heading": "Stawki specyficzne dla typu użytkownika",
+        "options": {
+          "administrator": "Administrator",
+          "consultant": "Konsultant",
+          "engineer": "Inżynier",
+          "projectManager": "Kierownik projektu",
+          "technician": "Technik"
+        },
+        "perHourSuffix": "/godz",
+        "rateSrLabel": "Stawka ($/godz.)",
+        "selectTypePlaceholder": "Wybierz typ",
+        "tooltip": "Zdefiniuj różne stawki godzinowe dla określonych typów użytkowników pracujących w tej usłudze. Zastępują one domyślną stawkę godzinową usługi.",
+        "userTypeSrLabel": "Typ użytkownika",
+        "validation": {
+          "duplicateType": "Ten typ użytkownika ma już określoną stawkę.",
+          "selectTypeAndRate": "Wybierz typ użytkownika i wprowadź prawidłową, nieujemną stawkę."
+        }
+      }
+    },
+    "serviceForm": {
+      "errors": {
+        "failedToLoadServiceConfiguration": "Nie udało się załadować konfiguracji usługi",
+        "failedToUpdateService": "Nie udało się zaktualizować usługi",
+        "missingPlanOrServiceInformation": "Brak informacji o planie lub usłudze"
+      },
+      "loading": "Ładowanie konfiguracji usługi...",
+      "title": "Edytuj konfigurację usługi"
+    },
+    "tierEditor": {
+      "actions": {
+        "addTier": "Dodaj poziom"
+      },
+      "aria": {
+        "fromAmount": "Poziom {{tier}} od kwoty",
+        "rate": "Stawka poziomu {{tier}}",
+        "removeTier": "Usuń poziom {{tier}}",
+        "toAmount": "Poziom {{tier}} do kwoty"
+      },
+      "cardTitle": "Poziomy cenowe",
+      "columns": {
+        "from": "Od ({{unit}})",
+        "ratePerUnit": "Stawka za {{unit}}",
+        "to": "Do ({{unit}})"
+      },
+      "emptyState": "Nie zdefiniowano żadnych poziomów. Kliknij „Dodaj poziom”.",
+      "helperText": "Zdefiniuj zakresy użytkowania i odpowiadające im stawki. Pozostaw pole „Do” puste, aby ostatni poziom reprezentował nieograniczone wykorzystanie. Pierwsza warstwa musi zaczynać się od 0. Warstwy muszą sąsiadować ze sobą.",
+      "units": {
+        "defaultPlural": "Jednostki",
+        "defaultSingular": "Jednostka"
+      },
+      "unlimitedPlaceholder": "Nieograniczony"
+    },
+    "usageConfig": {
+      "labels": {
+        "defaultRatePerUnit": "Domyślna stawka za jednostkę",
+        "enableTieredPricing": "Włącz wielopoziomowe ceny dla {{serviceName}}",
+        "minimumUsage": "Minimalne użycie",
+        "unitOfMeasure": "Jednostka miary"
+      },
+      "placeholders": {
+        "minimumUsage": "0",
+        "selectUnit": "Wybierz jednostkę"
+      },
+      "requiredFieldHint": "Wskazuje pole wymagane.",
+      "tooltips": {
+        "defaultRatePerUnit": "Stawka za jednostkę (stosowana, jeśli ceny warstwowe są wyłączone).",
+        "minimumUsage": "Minimalna liczba jednostek podlegających rozliczeniu w okresie.",
+        "unitOfMeasure": "np. GB, Użytkownik, Urządzenie."
+      }
+    }
+  },
+  "list": {
+    "actions": {
+      "addContractLine": "Dodaj linię kontraktu"
+    },
+    "columns": {
+      "actions": "Działania",
+      "billingFrequency": "Częstotliwość rozliczeń",
+      "contractLineName": "Nazwa linii kontraktu",
+      "contractLineType": "Typ linii kontraktu",
+      "isCustom": "Jest niestandardowy"
+    },
+    "deleteDialog": {
+      "defaultEntityName": "tę linię kontraktu"
+    },
+    "errors": {
+      "failedToAddContractLineService": "Nie udało się dodać usługi linii kontraktu",
+      "failedToDeleteContractLine": "Nie udało się usunąć wiersza umowy",
+      "failedToFetchContractLines": "Nie udało się pobrać linii kontraktu",
+      "failedToFetchContractLineServices": "Nie udało się pobrać usług linii kontraktu",
+      "failedToRemoveContractLineService": "Nie udało się usunąć usługi linii kontraktu",
+      "failedToUpdateContractLineService": "Nie udało się zaktualizować usługi linii kontraktu",
+      "failedToValidateDeletion": "Nie udało się potwierdzić usunięcia. Spróbuj ponownie.",
+      "unknownErrorFetchingServiceTypes": "Wystąpił nieznany błąd podczas pobierania typów usług"
+    },
+    "heading": "Linie kontraktowe",
+    "planServices": {
+      "actions": {
+        "addService": "Dodaj usługę"
+      },
+      "columns": {
+        "actions": "Działania",
+        "customRate": "Stawka niestandardowa",
+        "quantity": "Ilość",
+        "serviceName": "Nazwa usługi",
+        "unitOfMeasure": "Jednostka miary"
+      },
+      "emptyStateSelectContractLine": "Wybierz linię umowy, aby zarządzać jej usługami",
+      "heading": "Usługi planu",
+      "selectServicePlaceholder": "Wybierz usługę...",
+      "servicesFor": "Usługi dla {{name}}"
+    },
+    "toast": {
+      "contractLineDeletedSuccessfully": "Wiersz umowy został pomyślnie usunięty"
+    }
+  },
+  "overview": {
+    "actions": {
+      "addContractLinePreset": "Dodaj ustawienie wstępne linii kontraktu"
+    },
+    "columns": {
+      "actions": "Działania",
+      "billingFrequency": "Częstotliwość rozliczeń",
+      "contractLineName": "Nazwa linii kontraktu",
+      "contractLineType": "Typ linii kontraktu"
+    },
+    "errors": {
+      "failedToFetchContractLinePresets": "Nie udało się pobrać gotowych ustawień linii kontraktu",
+      "unexpectedDeleteError": "Wystąpił nieoczekiwany błąd podczas usuwania ustawienia wstępnego linii kontraktu."
+    },
+    "filters": {
+      "searchPlaceholder": "Wyszukaj gotowe ustawienia linii kontraktu",
+      "type": {
+        "allTypes": "Wszystkie typy",
+        "selectTypePlaceholder": "Wybierz typ"
+      }
+    },
+    "heading": "Ustawienia linii kontraktu",
+    "loading": "Ładowanie ustawień linii kontraktu",
+    "toast": {
+      "contractLinePresetDeletedSuccessfully": "Pomyślnie usunięto ustawienie wstępne linii kontraktu"
+    }
+  },
+  "preset": {
+    "fixed": {
+      "basics": {
+        "billingFrequencyLabel": "Częstotliwość rozliczeń *",
+        "billingFrequencyPlaceholder": "Wybierz częstotliwość rozliczeń",
+        "description": "Nazwij wstępnie ustawioną linię umowy i wybierz domyślny sposób rozliczeń.",
+        "heading": "Podstawy gotowych linii kontraktowych",
+        "nameLabel": "Nazwa ustawienia linii kontraktu *",
+        "namePlaceholder": "np. Zarządzane wsparcie — złoto"
+      },
+      "cardTitle": "Edytuj ustawienie wstępne linii kontraktu: {{name}} (naprawiono)",
+      "errors": {
+        "contractLineNotFoundOrInvalidType": "Nie znaleziono pozycji umowy lub nieprawidłowy typ.",
+        "failedToLoadContractLinePresetConfiguration": "Nie udało się załadować wstępnej konfiguracji linii kontraktu. Spróbuj ponownie.",
+        "failedToSaveContractLinePreset": "Nie udało się zapisać ustawienia wstępnego linii kontraktu",
+        "invalidContractLinePresetTypeOrNotFound": "Nieprawidłowy typ linii kontraktu lub nie znaleziono presetu linii kontraktu."
+      },
+      "services": {
+        "associatedCardTitle": "Usługi powiązane"
+      },
+      "settings": {
+        "adjustForPartialPeriodsHelp": "Włącz tę opcję, jeśli opłata cykliczna powinna być skalowana do objętej części okresu świadczenia usługi, jeśli umowa rozpoczyna się lub kończy w tym okresie.",
+        "adjustForPartialPeriodsLabel": "Dostosuj do okresów częściowych",
+        "baseRateHelp": "Sugerowana opłata cykliczna za wszystkie usługi stałe. Można go zastąpić podczas dodawania tego ustawienia wstępnego do kontraktu.",
+        "baseRateLabel": "Cykliczna stawka podstawowa (opcjonalnie)",
+        "billingCycleAlignment": {
+          "options": {
+            "end": "Koniec cyklu rozliczeniowego",
+            "prorated": "Proporcjonalne pokrycie",
+            "start": "Początek cyklu rozliczeniowego"
+          }
+        },
+        "billingCycleAlignmentLabel": "Wyrównanie cykli rozliczeniowych",
+        "billingCycleAlignmentPlaceholder": "Wybierz wyrównanie",
+        "billingTiming": {
+          "options": {
+            "advance": "Zaliczka - faktura na początek okresu",
+            "arrears": "Zaległości - faktura po zamknięciu okresu"
+          }
+        },
+        "billingTimingHelp": "To ustawienie wstępne utrzymuje wyraźnie właściciela kadencji, gdy jest kopiowane do linii powtarzającej się. Czas rozliczeń w dalszym ciągu decyduje o tym, czy skopiowane rachunki cykliczne będą wystawiane na początku czy na końcu każdego okresu objętego umową.",
+        "billingTimingLabel": "Termin rozliczeń",
+        "billingTimingPlaceholder": "Wybierz termin rozliczenia",
+        "description": "Zdefiniuj powtarzalną stawkę podstawową i czy ubezpieczenie częściowe powinno korygować opłatę. Przydział usług można dostosować, gdy linia jest aktywna.",
+        "heading": "Ustawienia opłat stałych"
+      },
+      "validation": {
+        "billingFrequency": "Częstotliwość rozliczeń",
+        "contractLinePresetName": "Predefiniowana nazwa linii kontraktu",
+        "contractLineType": "Typ linii kontraktu"
+      }
+    },
+    "hourly": {
+      "basics": {
+        "billingFrequencyLabel": "Częstotliwość rozliczeń *",
+        "billingFrequencyPlaceholder": "Wybierz częstotliwość rozliczeń",
+        "cardTitle": "Edytuj ustawienie wstępne linii kontraktu: {{name}} (co godzinę)",
+        "description": "Nazwij wstępnie ustawioną linię umowy i wybierz domyślny sposób rozliczeń.",
+        "heading": "Podstawy gotowych linii kontraktowych",
+        "minimumBillableTimeHelp": "np. 15 minut – każdy wpis o czasie krótszym niż ten zostanie zaokrąglony w górę",
+        "minimumBillableTimeLabel": "Minimalny czas rozliczeniowy (minuty)",
+        "minutesPlaceholder": "np. 15",
+        "nameLabel": "Nazwa ustawienia linii kontraktu *",
+        "namePlaceholder": "np. Wsparcie czasowe i materiałowe",
+        "roundUpToNearestHelp": "np. 15 minut — wpisy czasu będą zaokrąglane w górę do najbliższego przedziału",
+        "roundUpToNearestLabel": "Zaokrąglij do najbliższego (minuty)",
+        "validation": {
+          "billingFrequency": "Częstotliwość rozliczeń",
+          "contractLinePresetName": "Predefiniowana nazwa linii kontraktu"
+        }
+      },
+      "errors": {
+        "cannotSaveValidationErrors": "Nie można zapisać, występują błędy sprawdzania poprawności dla całej linii kontraktu.",
+        "contractLineNotFoundOrInvalidType": "Nie znaleziono pozycji umowy lub nieprawidłowy typ.",
+        "failedToLoadPlanConfiguration": "Nie udało się załadować konfiguracji planu. Spróbuj ponownie.",
+        "failedToSaveContractLinePreset": "Nie udało się zapisać ustawienia wstępnego linii kontraktu",
+        "failedToSavePlanWideConfiguration": "Nie udało się zapisać konfiguracji obejmującej cały plan: {{message}}",
+        "failedToSaveServiceConfiguration": "Nie udało się zapisać konfiguracji usługi: {{message}}",
+        "invalidPlanTypeOrNotFound": "Nieprawidłowy typ planu lub nie znaleziono planu."
+      },
+      "services": {
+        "manageCardTitle": "Zarządzaj wstępnie ustawionymi usługami linii kontraktowej"
+      },
+      "validation": {
+        "afterHoursMultiplierMinOne": "Po godzinach mnożnik musi wynosić co najmniej 1",
+        "overtimeRateNonNegative": "Stawka za nadgodziny nie może być ujemna",
+        "overtimeThresholdNonNegative": "Próg nadgodzin nie może być ujemny"
+      }
+    },
+    "usage": {
+      "actions": {
+        "saveAllConfigurations": "Zapisz wszystkie konfiguracje"
+      },
+      "basics": {
+        "billingFrequencyLabel": "Częstotliwość rozliczeń *",
+        "billingFrequencyPlaceholder": "Wybierz częstotliwość rozliczeń",
+        "cardTitle": "Edytuj ustawienie wstępne linii kontraktu: {{name}} (wykorzystanie)",
+        "description": "Nazwij wstępnie ustawioną linię umowy i wybierz domyślny sposób rozliczeń.",
+        "heading": "Podstawy gotowych linii kontraktowych",
+        "nameLabel": "Nazwa ustawienia linii kontraktu *",
+        "namePlaceholder": "np. Usługi oparte na użytkowaniu",
+        "validation": {
+          "billingFrequency": "Częstotliwość rozliczeń",
+          "contractLinePresetName": "Predefiniowana nazwa linii kontraktu"
+        }
+      },
+      "errors": {
+        "failedToLoadPlanServicesOrConfigurations": "Nie udało się załadować usług planu lub konfiguracji. Spróbuj ponownie.",
+        "failedToSaveContractLinePreset": "Nie udało się zapisać ustawienia wstępnego linii kontraktu",
+        "failedToSaveOneOrMoreServiceConfigurations": "Nie udało się zapisać jednej lub więcej konfiguracji usług. Sprawdź szczegóły i spróbuj ponownie.",
+        "invalidPlanTypeOrNotFound": "Nieprawidłowy typ planu lub nie znaleziono planu.",
+        "noChangesDetected": "Nie wykryto żadnych zmian do zapisania.",
+        "validationErrorDetails": "Błąd sprawdzania poprawności: {{details}}",
+        "validationErrorsInModifiedServices": "Nie można zapisać, w zmodyfikowanych usługach występują błędy sprawdzania poprawności."
+      },
+      "services": {
+        "fallbackServiceName": "Identyfikator usługi: {{id}}",
+        "loadingConfiguration": "Ładowanie konfiguracji...",
+        "manageCardTitle": "Zarządzaj wstępnie ustawionymi usługami linii kontraktowej",
+        "pricingCardTitle": "Ceny usług",
+        "summary": {
+          "defaultUnit": "Jednostka",
+          "loading": "Załadunek...",
+          "notSet": "Nieustawione",
+          "ratePerUnit": "{{rate}} / {{unit}}",
+          "tieredPricing": "Ceny wielopoziomowe (poziomy {{count}})"
+        }
+      },
+      "validation": {
+        "baseRateNonNegative": "Stopa bazowa nie może być ujemna.",
+        "baseRateRequiredWhenTieredOff": "Stawka podstawowa jest wymagana, gdy ceny warstwowe są wyłączone.",
+        "firstTierStartsAtZero": "Pierwszy poziom musi zaczynać się od 0.",
+        "minimumUsageNonNegative": "Minimalne użycie nie może być ujemne.",
+        "onlyLastTierUnlimited": "Tylko ostatni poziom może mieć nieograniczoną górną granicę.",
+        "tierGap": "Wykryto lukę pomiędzy poziomem {{tier1}} i poziomem {{tier2}}.",
+        "tierOverlap": "Poziom {{tier1}} pokrywa się z poziomem {{tier2}}.",
+        "tierRatesNonNegative": "Stawki poziomów nie mogą być ujemne.",
+        "tiersRequiredWhenTieredOn": "Jeśli włączone są ceny wielopoziomowe, wymagany jest co najmniej jeden poziom.",
+        "tierUpperBound": "Poziom {{tier}}: Górna granica musi być >= dolna granica.",
+        "unitOfMeasureRequired": "Jednostka miary jest wymagana."
+      }
+    }
+  },
+  "router": {
+    "contractLine": {
+      "loadFailed": "Nie udało się wczytać szczegółów linii kontraktu.",
+      "loading": "Ładowanie linii kontraktu...",
+      "notFound": "Nie znaleziono wiersza umowy o identyfikatorze {{id}}.",
+      "unsupportedType": "Nieznany lub nieobsługiwany typ linii kontraktu: {{type}}"
+    },
+    "preset": {
+      "loadFailed": "Nie udało się załadować szczegółów ustawień linii kontraktu.",
+      "loading": "Ładowanie gotowych ustawień linii kontraktu...",
+      "notFound": "Nie znaleziono wstępnie ustawionej linii kontraktu o identyfikatorze {{id}}.",
+      "unsupportedType": "Nieznany lub nieobsługiwany typ ustawienia wstępnego linii kontraktu: {{type}}"
+    }
+  },
+  "services": {
+    "generic": {
+      "addSelectedServices": "Dodaj wybrane usługi ({{count}}).",
+      "addServicesHeading": "Dodaj usługi do linii kontraktu",
+      "allServicesAssociated": "Wszystkie dostępne usługi są już powiązane z tą linią kontraktu.",
+      "badges": {
+        "billingMismatch": "Niezgodność rozliczeń",
+        "defaultConfigType": "Domyślny"
+      },
+      "billingMethod": {
+        "fixed": "Stała cena",
+        "hourly": "Cogodzinny",
+        "usage": "Oparte na użytkowaniu"
+      },
+      "columns": {
+        "actions": "Działania",
+        "billingMethod": "Metoda rozliczeniowa",
+        "customRate": "Stawka niestandardowa",
+        "derivedConfigType": "Pochodny typ konfiguracji",
+        "quantity": "Ilość",
+        "serviceName": "Nazwa usługi",
+        "serviceType": "Typ usługi",
+        "unitOfMeasure": "Jednostka miary"
+      },
+      "emptyState": "Żadne usługi nie są obecnie powiązane z tą linią kontraktu.",
+      "errors": {
+        "contractLineNotFound": "Nie znaleziono wiersza umowy o identyfikatorze {{id}}.",
+        "enterRateForService": "Proszę wprowadzić stawkę dla \"{{serviceName}}\" (nie skonfigurowano ceny {{currency}})",
+        "failedToAddServices": "Nie udało się dodać usług",
+        "failedToLoadServicesData": "Nie udało się załadować danych usług",
+        "failedToRemoveService": "Nie udało się usunąć usługi"
+      },
+      "loadingServices": "Ładowanie usług...",
+      "serviceToAdd": {
+        "enterRatePlaceholder": "Wprowadź stawkę",
+        "metadata": "Typ usługi: {{type}} | Metoda: {{method}}",
+        "noCurrencyPrice": "Brak ceny {{currency}}",
+        "rateDetail": "Stawka: {{symbol}}{{amount}}"
+      },
+      "unknownService": "Nieznana usługa"
+    },
+    "hourlyPreset": {
+      "addSelectedServices": "Dodaj wybrane usługi ({{count}}).",
+      "addServicesHeading": "Dodaj usługi do ustawień linii kontraktu",
+      "allServicesAssociated": "Wszystkie dostępne usługi godzinowe są już powiązane z tym ustawieniem wstępnym.",
+      "billingMethod": {
+        "fixed": "Stała cena",
+        "hourly": "Cogodzinny",
+        "usage": "Oparte na użytkowaniu"
+      },
+      "emptyState": "Żadne usługi nie są aktualnie powiązane z tym ustawieniem linii kontraktu.",
+      "errors": {
+        "failedToLoadServicesData": "Nie udało się załadować danych usług",
+        "failedToSaveServices": "Nie udało się zapisać usług"
+      },
+      "hourlyRateLabel": "Stawka godzinowa:",
+      "loadingServices": "Ładowanie usług...",
+      "recommendBucketLabel": "Polecam kubeł godzin",
+      "serviceMetadata": "Typ usługi: {{type}} | Metoda: {{method}}",
+      "serviceToAddMetadata": "Typ usługi: {{type}} | Metoda: {{method}} | Stawka domyślna: {{rate}}",
+      "toast": {
+        "savedSuccessfully": "Zapisano wstępnie ustawione usługi linii kontraktu"
+      },
+      "unknownService": "Nieznana usługa",
+      "unsavedChanges": {
+        "banner": "Masz niezapisane zmiany. Kliknij „Zapisz zmiany”, aby je zastosować.",
+        "cancelLabel": "Pozostań na stronie",
+        "confirmLabel": "Opuść stronę",
+        "dialogMessage": "Masz niezapisane zmiany. Czy na pewno chcesz opuścić tę stronę? Wszystkie zmiany zostaną utracone.",
+        "dialogTitle": "Niezapisane zmiany"
+      }
+    },
+    "usagePreset": {
+      "addSelectedServices": "Dodaj wybrane usługi ({{count}}).",
+      "addServicesHeading": "Dodaj usługi do ustawień linii kontraktu",
+      "allServicesAssociated": "Wszystkie dostępne usługi oparte na użytkowaniu są już powiązane z tym ustawieniem wstępnym.",
+      "billingMethod": {
+        "fixed": "Stała cena",
+        "hourly": "Cogodzinny",
+        "usage": "Oparte na użytkowaniu"
+      },
+      "defaultUnit": "jednostka",
+      "defaultUnits": "jednostki",
+      "emptyState": "Żadne usługi nie są aktualnie powiązane z tym ustawieniem linii kontraktu.",
+      "errors": {
+        "failedToLoadServicesData": "Nie udało się załadować danych usług",
+        "failedToSaveServices": "Nie udało się zapisać usług"
+      },
+      "loadingServices": "Ładowanie usług...",
+      "ratePerUnitLabel": "Stawka za jednostkę:",
+      "recommendBucketLabel": "Polecam kubeł konsumpcji",
+      "serviceMetadata": "Typ usługi: {{type}} | Metoda: {{method}}",
+      "serviceToAddMetadata": "Typ usługi: {{type}} | Metoda: {{method}} | Stawka domyślna: {{rate}} | Jednostka: {{unit}}",
+      "toast": {
+        "savedSuccessfully": "Zapisano wstępnie ustawione usługi linii kontraktu"
+      },
+      "unitLabel": "Jednostka:",
+      "unitPlaceholder": "np. GB, użytkownik, urządzenie",
+      "unknownService": "Nieznana usługa",
+      "unsavedChanges": {
+        "banner": "Masz niezapisane zmiany. Kliknij „Zapisz zmiany”, aby je zastosować.",
+        "cancelLabel": "Pozostań na stronie",
+        "confirmLabel": "Opuść stronę",
+        "dialogMessage": "Masz niezapisane zmiany. Czy na pewno chcesz opuścić tę stronę? Wszystkie zmiany zostaną utracone.",
+        "dialogTitle": "Niezapisane zmiany"
+      }
+    }
+  },
+  "typeSelector": {
+    "descriptions": {
+      "fixed": "Linia umowna ze stałą ceną zapewniająca spójne rozliczenia niezależnie od użytkowania. Idealny do przewidywalnych usług.",
+      "hourly": "Rozliczenia czasowe z konfigurowalnymi stawkami. Najlepsze rozwiązanie w przypadku zmiennych obciążeń rozliczanych według poświęconego czasu.",
+      "usage": "Rozliczenia oparte na wykorzystaniu z wielopoziomowymi opcjami cenowymi. Idealny pod usługi mierzone konsumpcją."
+    },
+    "label": "Typ linii kontraktu",
+    "placeholder": "Wybierz typ linii kontraktu"
+  }
+}
