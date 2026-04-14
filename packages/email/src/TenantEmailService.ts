@@ -424,7 +424,7 @@ export class TenantEmailService extends BaseEmailService {
   private buildTenantFromAddress(): EmailAddress {
     const providerAddress = this.getProviderConfiguredAddress();
     const envAddress = this.parseAddress(process.env.EMAIL_FROM);
-    const fallbackName = providerAddress?.name || envAddress?.name || process.env.EMAIL_FROM_NAME || 'Portal Notifications';
+    const fallbackName = providerAddress?.name || envAddress?.name || process.env.EMAIL_FROM_NAME || 'Alga PSA Notifications';
     const fallbackEmail = providerAddress?.email || envAddress?.email || 'notifications@example.com';
 
     const baseEmail = providerAddress?.email || envAddress?.email || fallbackEmail;
