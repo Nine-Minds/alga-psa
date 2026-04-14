@@ -7,7 +7,7 @@
   {
     "id": "F002",
     "description": "Generate fr/msp/contracts.json translations for all keys in F001",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F003",
