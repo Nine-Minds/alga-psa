@@ -378,7 +378,7 @@
   {
     "id": "T048",
     "description": "msp/contract-lines.json English namespace file exists with all keys organized by component area and all values matching original hardcoded strings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
