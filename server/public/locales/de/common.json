@@ -351,7 +351,9 @@
       "namePlaceholder": "Ordnernamen eingeben",
       "loading": "Ordner werden geladen...",
       "rootOption": "Stamm (kein Ordner)",
-      "empty": "Keine Ordner vorhanden. Dokumente werden im Stammverzeichnis gespeichert."
+      "empty": "Keine Ordner vorhanden. Dokumente werden im Stammverzeichnis gespeichert.",
+      "showAllFolders": "Alle Ordner anzeigen",
+      "showEntityFolders": "Zugehörige Ordner anzeigen"
     },
     "filters": {
       "searchLabel": "Dokumente suchen",

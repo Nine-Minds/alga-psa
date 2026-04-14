@@ -9,7 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -60,6 +60,7 @@ import {
   WorkflowActionInputFixedPicker,
   WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES,
   type WorkflowActionInputPickerField,
+  type WorkflowPickerActions,
 } from './WorkflowActionInputFixedPicker';
 import { resolveWorkflowSchemaFieldEditor } from './workflowSchemaFieldEditor';
 
@@ -600,7 +601,8 @@ const SchemaForm: React.FC<{
   value: Record<string, unknown>;
   onChange: (next: Record<string, unknown>) => void;
   errors: ValidationIssue[];
-}> = ({ schema, value, onChange, errors }) => {
+  pickerActions: WorkflowPickerActions;
+}> = ({ schema, value, onChange, errors, pickerActions }) => {
   const renderField = (
     fieldSchema: JsonSchema,
     rootSchema: JsonSchema,
@@ -695,6 +697,7 @@ const SchemaForm: React.FC<{
             onChange={(nextValue) => onChange(setDeepValue(value, path, nextValue) as Record<string, unknown>)}
             idPrefix={`simulate-form-${fieldPath || 'root'}`}
             rootInputMapping={value as InputMapping}
+            actions={pickerActions}
           />
           {resolved.description && <div className="text-[11px] text-gray-500">{resolved.description}</div>}
           {fieldErrors.map((err) => (
@@ -929,7 +932,7 @@ const SimpleSeriesChart: React.FC<{ series: Array<{ day: string; count: number }
   );
 };
 
-export default function EventsCatalogV2() {
+export default function EventsCatalogV2({ pickerActions }: { pickerActions: WorkflowPickerActions }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -1333,7 +1336,17 @@ export default function EventsCatalogV2() {
       </div>
 
       {/* Details Drawer */}
-      <Dialog isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} title="Event details" className="max-w-4xl">
+      <Dialog
+        isOpen={!!selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        title="Event details"
+        className="max-w-4xl"
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button id="workflow-event-details-close" variant="ghost" onClick={() => setSelectedEvent(null)}>Close</Button>
+          </div>
+        }
+      >
         <DialogContent>
           {selectedEvent && (
             <div className="space-y-4">
@@ -1464,16 +1477,23 @@ export default function EventsCatalogV2() {
                 )}
               </Card>
 
-              <div className="flex justify-end">
-                <Button id="workflow-event-details-close" variant="ghost" onClick={() => setSelectedEvent(null)}>Close</Button>
-              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
       {/* Full Schema Modal */}
-      <Dialog isOpen={schemaModalOpen} onClose={() => setSchemaModalOpen(false)} title="Schema" className="max-w-4xl">
+      <Dialog
+        isOpen={schemaModalOpen}
+        onClose={() => setSchemaModalOpen(false)}
+        title="Schema"
+        className="max-w-4xl"
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button id="workflow-event-schema-close" variant="ghost" onClick={() => setSchemaModalOpen(false)}>Close</Button>
+          </div>
+        }
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Payload schema</DialogTitle>
@@ -1506,9 +1526,6 @@ export default function EventsCatalogV2() {
               />
             </div>
           )}
-          <DialogFooter>
-            <Button id="workflow-event-schema-close" variant="ghost" onClick={() => setSchemaModalOpen(false)}>Close</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1525,6 +1542,7 @@ export default function EventsCatalogV2() {
         eventType={simulateState.eventType}
         payloadSchemaRef={simulateState.payloadSchemaRef}
         onClose={() => setSimulateState({ open: false, eventType: null, payloadSchemaRef: null })}
+        pickerActions={pickerActions}
       />
 
       {/* Define Custom Event */}
@@ -1581,7 +1599,17 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
   }, [open, eventType]);
 
   return (
-    <Dialog isOpen={open} onClose={onClose} title="Metrics" className="max-w-4xl">
+    <Dialog
+      isOpen={open}
+      onClose={onClose}
+      title="Metrics"
+      className="max-w-4xl"
+      footer={
+        <div className="flex justify-end space-x-2">
+          <Button id="workflow-event-metrics-close" variant="ghost" onClick={onClose}>Close</Button>
+        </div>
+      }
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Metrics · {eventType ?? ''}</DialogTitle>
@@ -1717,9 +1745,6 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
             <div className="text-sm text-gray-500">No data available.</div>
           )}
         </div>
-        <DialogFooter>
-          <Button id="workflow-event-metrics-close" variant="ghost" onClick={onClose}>Close</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -1730,7 +1755,8 @@ const SimulateDialog: React.FC<{
   eventType: string | null;
   payloadSchemaRef: string | null;
   onClose: () => void;
-}> = ({ open, eventType, payloadSchemaRef, onClose }) => {
+  pickerActions: WorkflowPickerActions;
+}> = ({ open, eventType, payloadSchemaRef, onClose, pickerActions }) => {
   const [mode, setMode] = useState<'form' | 'json'>('form');
   const [schema, setSchema] = useState<any | null>(null);
   const [schemaRefOverride, setSchemaRefOverride] = useState<string>('');
@@ -1869,7 +1895,20 @@ const SimulateDialog: React.FC<{
   };
 
   return (
-    <Dialog isOpen={open} onClose={onClose} title="Simulate event" className="max-w-4xl">
+    <Dialog
+      isOpen={open}
+      onClose={onClose}
+      title="Simulate event"
+      className="max-w-4xl"
+      footer={
+        <div className="flex justify-end space-x-2">
+          <Button id="workflow-event-simulate-close" variant="ghost" onClick={onClose}>Close</Button>
+          <Button id="workflow-event-simulate-submit" onClick={submit} disabled={submitting || !eventType}>
+            {submitting ? 'Submitting…' : 'Simulate'}
+          </Button>
+        </div>
+      }
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Simulate · {eventType ?? ''}</DialogTitle>
@@ -1918,7 +1957,7 @@ const SimulateDialog: React.FC<{
           {mode === 'form' && (
             <div>
               <div className="text-xs font-medium text-gray-700 mb-2">Payload</div>
-              <SchemaForm schema={schema} value={formValue ?? {}} onChange={setFormValue} errors={errors} />
+              <SchemaForm schema={schema} value={formValue ?? {}} onChange={setFormValue} errors={errors} pickerActions={pickerActions} />
             </div>
           )}
 
@@ -1983,12 +2022,6 @@ const SimulateDialog: React.FC<{
           )}
         </div>
 
-        <DialogFooter>
-          <Button id="workflow-event-simulate-close" variant="ghost" onClick={onClose}>Close</Button>
-          <Button id="workflow-event-simulate-submit" onClick={submit} disabled={submitting || !eventType}>
-            {submitting ? 'Submitting…' : 'Simulate'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -2054,7 +2087,20 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
   };
 
   return (
-    <Dialog isOpen={open} onClose={() => onClose(false)} title="Define custom event" className="max-w-3xl">
+    <Dialog
+      isOpen={open}
+      onClose={() => onClose(false)}
+      title="Define custom event"
+      className="max-w-3xl"
+      footer={
+        <div className="flex justify-end space-x-2">
+          <Button id="workflow-event-custom-event-cancel" variant="ghost" onClick={() => onClose(false)}>Cancel</Button>
+          <Button id="workflow-event-custom-event-submit" onClick={submit} disabled={submitting}>
+            {submitting ? 'Creating…' : 'Create event'}
+          </Button>
+        </div>
+      }
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Define Custom Event</DialogTitle>
@@ -2106,12 +2152,6 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
           </div>
         </div>
 
-        <DialogFooter>
-          <Button id="workflow-event-custom-event-cancel" variant="ghost" onClick={() => onClose(false)}>Cancel</Button>
-          <Button id="workflow-event-custom-event-submit" onClick={submit} disabled={submitting}>
-            {submitting ? 'Creating…' : 'Create event'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

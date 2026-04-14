@@ -2,11 +2,13 @@ import React from 'react';
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getDefaultBillingSettings, updateDefaultBillingSettings } from "@alga-psa/billing/actions";
 import type { BillingSettings } from "@alga-psa/billing/actions";
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 
 const DefaultCurrencySettings = (): React.JSX.Element => {
+  const { t } = useTranslation('msp/billing-settings');
   const [settings, setSettings] = React.useState<BillingSettings>({
     zeroDollarInvoiceHandling: 'normal',
     suppressZeroDollarInvoices: false,
@@ -19,7 +21,7 @@ const DefaultCurrencySettings = (): React.JSX.Element => {
         const currentSettings = await getDefaultBillingSettings();
         setSettings(currentSettings);
       } catch (error) {
-        handleError(error, 'Failed to load settings');
+        handleError(error, t('general.currency.errors.load', { defaultValue: 'Failed to load settings' }));
       }
     };
 
@@ -39,10 +41,10 @@ const DefaultCurrencySettings = (): React.JSX.Element => {
       }
       if (result.success) {
         setSettings(newSettings);
-        toast.success("Default currency has been updated.");
+        toast.success(t('general.currency.toast.updated', { defaultValue: 'Default currency has been updated.' }));
       }
     } catch (error) {
-      handleError(error, 'Failed to save settings');
+      handleError(error, t('general.currency.errors.save', { defaultValue: 'Failed to save settings' }));
     }
   };
 
@@ -52,8 +54,8 @@ const DefaultCurrencySettings = (): React.JSX.Element => {
       options={CURRENCY_OPTIONS}
       value={settings.defaultCurrencyCode || 'USD'}
       onValueChange={handleCurrencyChange}
-      placeholder="Select currency"
-      label="Currency"
+      placeholder={t('general.currency.fields.currency.placeholder', { defaultValue: 'Select currency' })}
+      label={t('general.currency.fields.currency.label', { defaultValue: 'Currency' })}
       className="!w-fit"
     />
   );

@@ -11,6 +11,8 @@ npm-debug.log
 dist
 build
 **/dist
+!shared/dist
+!shared/dist/**
 !ee/packages/workflows/dist/**
 !packages/workflow-streams/dist/**
 !packages/event-schemas/dist/**
@@ -64,3 +66,7 @@ temp_wasm_compile
 **/.nx
 .next
 **/.next
+
+# Allow pre-built Next.js artifacts required by Docker builds
+!server/.next
+!server/.next/**

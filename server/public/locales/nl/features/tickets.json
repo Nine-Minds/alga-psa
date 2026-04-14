@@ -434,7 +434,11 @@
       "selectMasterTicket": "Hoofdticket selecteren...",
       "syncUpdates": "Wijzigingen synchroniseren van hoofd- naar onderliggende tickets (openbare reacties + workflowwijzigingen)",
       "syncUpdatesHelp": "Onderliggende tickets behouden hun huidige status wanneer ze worden gebundeld. Workflowvelden zijn standaard vergrendeld op onderliggende tickets. Interne notities blijven op het hoofdticket.",
-      "childrenDescription": "Onderliggende behouden hun huidige status; workflowvelden zijn vergrendeld op onderliggende tickets. Inkomende reacties op onderliggende tickets worden hieronder als alleen-lezen weergegeven."
+      "childrenDescription": "Onderliggende behouden hun huidige status; workflowvelden zijn vergrendeld op onderliggende tickets. Inkomende reacties op onderliggende tickets worden hieronder als alleen-lezen weergegeven.",
+      "checkingMasters": "Bestaande bundels controleren...",
+      "existingMasterSuffix": "(bestaand hoofdticket)",
+      "existingMasterLocked": "Eén geselecteerd ticket is al een hoofdticket. Dit wordt als hoofdticket gebruikt; de andere worden als onderliggende tickets toegevoegd.",
+      "multipleExistingMasters": "Meerdere geselecteerde tickets zijn al hoofdtickets ({{count}}). Ontkoppel alle op één na voordat je bundelt."
     },
     "auth": {
       "moveRequired": "Je moet zijn ingelogd om tickets te verplaatsen",

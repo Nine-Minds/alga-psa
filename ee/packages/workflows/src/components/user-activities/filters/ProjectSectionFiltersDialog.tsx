@@ -7,7 +7,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
   DialogDescription,
 } from "@alga-psa/ui/components/Dialog";
 import { Button } from "@alga-psa/ui/components/Button";
@@ -147,8 +146,18 @@ useEffect(() => {
     setSelectedPriorityId('all');
   };
 
+  const footer = (
+    <div className="flex justify-between w-full">
+      <Button id="project-filter-clear" variant="outline" onClick={handleClear}>Reset</Button>
+      <div>
+        <Button id="project-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>Cancel</Button>
+        <Button id="project-filter-apply" onClick={handleApply}>Apply Filters</Button>
+      </div>
+    </div>
+  );
+
   return (
-    <Dialog isOpen={isOpen} onClose={() => onOpenChange(false)}>
+    <Dialog isOpen={isOpen} onClose={() => onOpenChange(false)} footer={footer}>
       <DialogContent className="sm:max-w-[700]">
         <DialogHeader>
           <DialogTitle>Filter Project Tasks</DialogTitle>
@@ -255,15 +264,6 @@ useEffect(() => {
           </div>
 
         </div>
-        <DialogFooter>
-           <div className="flex justify-between w-full">
-             <Button id="project-filter-clear" variant="outline" onClick={handleClear}>Reset</Button>
-             <div>
-               <Button id="project-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>Cancel</Button>
-               <Button id="project-filter-apply" onClick={handleApply}>Apply Filters</Button>
-             </div>
-           </div>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

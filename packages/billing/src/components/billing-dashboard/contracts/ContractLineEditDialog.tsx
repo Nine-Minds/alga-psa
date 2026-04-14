@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -68,9 +68,30 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
       onClose={onClose}
       title={`Edit Contract Line: ${line.contract_line_name}`}
       className="max-w-md"
+      footer={(
+        <div className="flex justify-end space-x-2">
+          <Button
+            id="cancel-edit-line-btn"
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={isSaving}
+          >
+            Cancel
+          </Button>
+          <Button
+            id="save-edit-line-btn"
+            type="button"
+            onClick={() => (document.getElementById('contract-line-edit-form') as HTMLFormElement | null)?.requestSubmit()}
+            disabled={isSaving}
+          >
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+      )}
     >
       <DialogContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form id="contract-line-edit-form" onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -147,24 +168,6 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
             </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              id="cancel-edit-line-btn"
-              type="button"
-              variant="secondary"
-              onClick={onClose}
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
-            <Button
-              id="save-edit-line-btn"
-              type="submit"
-              disabled={isSaving}
-            >
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

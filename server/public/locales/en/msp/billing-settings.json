@@ -1,0 +1,1100 @@
+{
+  "tabs": {
+    "general": "General",
+    "quoting": "Quoting",
+    "tax": "Tax",
+    "payments": "Payments"
+  },
+  "general": {
+    "currency": {
+      "title": "Default Currency",
+      "description": "Set the default currency for new products, services, contracts, and quotes. This can be overridden per client in their billing configuration.",
+      "fields": {
+        "currency": {
+          "label": "Currency",
+          "placeholder": "Select currency"
+        }
+      },
+      "toast": {
+        "updated": "Default currency has been updated."
+      },
+      "errors": {
+        "load": "Failed to load settings",
+        "save": "Failed to save settings"
+      }
+    },
+    "invoiceNumbering": {
+      "title": "Invoice Numbering",
+      "description": "Customize how invoice numbers are generated and displayed."
+    },
+    "zeroDollar": {
+      "title": "Zero-Dollar Invoices",
+      "description": "Control how invoices with no charges are handled.",
+      "fields": {
+        "handling": {
+          "label": "Invoice Handling",
+          "placeholder": "Select handling option",
+          "help": "Choose how zero-dollar invoices should be handled when generated"
+        },
+        "suppress": {
+          "label": "Suppress Empty Invoices",
+          "help": "Skip creation of invoices with no line items"
+        }
+      },
+      "options": {
+        "draft": "Create as Draft",
+        "finalized": "Create and Finalize"
+      },
+      "toast": {
+        "updated": "Zero-dollar invoice settings have been updated."
+      },
+      "errors": {
+        "load": "Failed to load settings",
+        "save": "Failed to save settings"
+      }
+    },
+    "creditExpiration": {
+      "title": "Credit Expiration",
+      "description": "Configure when and how client credits expire.",
+      "fields": {
+        "enabled": {
+          "label": "Enable Credit Expiration",
+          "help": "When enabled, credits will expire after the specified period"
+        },
+        "expirationDays": {
+          "label": "Expiration Period (Days)",
+          "help": "Number of days after which credits will expire"
+        },
+        "notificationDays": {
+          "label": "Notification Days",
+          "placeholder": "e.g., 30, 7, 1",
+          "help": "Days before expiration to send notifications (comma-separated)"
+        }
+      },
+      "actions": {
+        "save": "Save"
+      },
+      "toast": {
+        "updated": "Credit expiration settings have been updated."
+      },
+      "errors": {
+        "load": "Failed to load settings",
+        "save": "Failed to save settings"
+      }
+    },
+    "renewal": {
+      "title": "Renewal Automation",
+      "description": "Configure default behavior when contracts reach their renewal date.",
+      "fields": {
+        "dueDateAction": {
+          "label": "Due Date Action",
+          "help": "Choose whether renewal due dates should create tickets or stay queue-only by default."
+        },
+        "ticketBoard": {
+          "label": "Renewal Ticket Board",
+          "placeholderLoading": "Loading boards...",
+          "placeholderSelect": "Select board"
+        },
+        "ticketStatus": {
+          "label": "Renewal Ticket Status",
+          "placeholderLoading": "Loading statuses...",
+          "placeholderSelect": "Select status",
+          "placeholderSelectBoardFirst": "Select a board first",
+          "help": "Renewal ticket statuses are scoped to the selected board."
+        }
+      },
+      "options": {
+        "createTicket": "Create ticket",
+        "queueOnly": "Queue only"
+      },
+      "states": {
+        "unnamedBoard": "Unnamed board"
+      },
+      "actions": {
+        "save": "Save",
+        "saving": "Saving..."
+      },
+      "toast": {
+        "updated": "Renewal automation settings have been updated."
+      },
+      "errors": {
+        "load": "Failed to load renewal automation settings",
+        "loadStatuses": "Failed to load renewal ticket statuses",
+        "save": "Failed to save renewal automation settings"
+      }
+    }
+  },
+  "quoting": {
+    "quoteNumbering": {
+      "title": "Quote Numbering",
+      "description": "Customize how quote numbers are generated and displayed."
+    }
+  },
+  "tax": {
+    "taxRegions": {
+      "title": "Tax Regions",
+      "description": "Manage tax regions and related settings."
+    },
+    "source": {
+      "title": "Tax Calculation Source",
+      "tooltip": "Choose whether taxes are calculated by Alga PSA or delegated to your external accounting system",
+      "description": "Configure how tax amounts are calculated for invoices.",
+      "fields": {
+        "defaultMethod": {
+          "label": "Default Tax Calculation Method"
+        }
+      },
+      "options": {
+        "internal": {
+          "label": "Internal (Alga PSA)",
+          "description": "Taxes are calculated automatically based on tax rates configured in Alga PSA."
+        },
+        "external": {
+          "label": "External (Accounting Package)",
+          "description": "Invoices are exported without tax. Tax is calculated by your accounting system and imported back."
+        }
+      },
+      "workflow": {
+        "title": "External Tax Calculation Workflow",
+        "step1": "Invoice is created without tax amounts",
+        "step2": "Invoice is exported to your connected accounting system (QuickBooks, Xero, etc.)",
+        "step3": "Tax is calculated by the accounting system based on its tax rules",
+        "step4": "Tax amounts are imported back to Alga PSA",
+        "step5": "Invoice totals are updated with the imported tax",
+        "note": "The accounting system used is determined automatically based on which system you export the invoice to."
+      },
+      "loading": "Loading settings...",
+      "actions": {
+        "cancel": "Cancel",
+        "save": "Save Settings",
+        "saving": "Saving..."
+      },
+      "toast": {
+        "saved": "Tax source settings saved successfully."
+      },
+      "errors": {
+        "load": "Failed to load tax source settings.",
+        "save": "Failed to save settings."
+      }
+    },
+    "regions": {
+      "title": "Manage Tax Regions",
+      "loading": "Loading regions...",
+      "fields": {
+        "code": {
+          "label": "Region Code",
+          "placeholder": "e.g., CA, NY, VAT-UK"
+        },
+        "name": {
+          "label": "Region Name",
+          "placeholder": "e.g., California, New York, United Kingdom VAT"
+        },
+        "active": {
+          "label": "Active"
+        }
+      },
+      "dialog": {
+        "addTitle": "Add New Tax Region",
+        "editTitle": "Edit Tax Region"
+      },
+      "actions": {
+        "add": "Add Tax Region",
+        "edit": "Edit",
+        "activate": "Activate",
+        "deactivate": "Deactivate",
+        "cancel": "Cancel",
+        "save": "Save Changes",
+        "saving": "Saving..."
+      },
+    "toast": {
+      "created": "Tax region created successfully.",
+      "updated": "Tax region updated successfully.",
+      "activatePending": "Attempting to activate {{name}}...",
+      "deactivatePending": "Attempting to deactivate {{name}}...",
+      "activated": "Tax region {{name}} activated successfully.",
+      "deactivated": "Tax region {{name}} deactivated successfully."
+    },
+    "errors": {
+      "load": "Failed to load tax regions.",
+      "create": "Failed to create tax region.",
+      "update": "Failed to update tax region.",
+      "activate": "Failed to activate tax region.",
+      "deactivate": "Failed to deactivate tax region."
+    }
+  },
+    "thresholds": {
+      "title": "Progressive Tax Brackets",
+      "tooltip": "Define progressive tax brackets where different rates apply to different portions of the amount. Each bracket applies only to the amount within its range.",
+      "loading": "Loading brackets...",
+      "empty": "No tax brackets defined. Add brackets to use progressive taxation.",
+      "noLimit": "No limit",
+      "above": "above",
+      "table": {
+        "minAmount": "Min Amount",
+        "maxAmount": "Max Amount"
+      },
+      "issuesTitle": "Bracket configuration issues:",
+      "issueNoMax": "Bracket starting at {{from}} has no max but is not the last bracket.",
+      "issueGap": "Gap between {{from}} and {{to}}",
+      "issueOverlap": "Overlap between brackets at {{at}}",
+      "preview": {
+        "title": "Calculation Preview",
+        "amount": "Amount:",
+        "taxable": "{{amount}} taxable = {{tax}}",
+        "totalTax": "Total Tax:",
+        "effective": "Effective: {{rate}}%"
+      },
+      "dialog": {
+        "addTitle": "Add Tax Bracket",
+        "editTitle": "Edit Tax Bracket",
+        "deleteTitle": "Delete Tax Bracket"
+      },
+      "fields": {
+        "minAmount": {
+          "label": "Min Amount *",
+          "placeholder": "e.g., 0"
+        },
+        "maxAmount": {
+          "label": "Max Amount (leave empty for no limit)",
+          "placeholder": "e.g., 10000 or empty"
+        },
+        "rate": {
+          "label": "Rate (%) *",
+          "placeholder": "e.g., 10"
+        }
+      },
+      "actions": {
+        "add": "Add Bracket",
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving...",
+        "deleting": "Deleting..."
+      },
+      "delete": {
+        "message": "Are you sure you want to delete the bracket {{range}}? This action cannot be undone.",
+        "lastWarning": "Warning: This is the last bracket. Deleting it will disable progressive taxation for this rate."
+      },
+      "toast": {
+        "created": "Tax bracket created successfully.",
+        "updated": "Tax bracket updated successfully.",
+        "deleted": "Tax bracket deleted successfully."
+      },
+      "errors": {
+        "load": "Failed to load tax brackets.",
+        "create": "Failed to create tax bracket.",
+        "update": "Failed to update tax bracket.",
+        "delete": "Failed to delete tax bracket."
+      }
+    },
+    "components": {
+      "title": "Tax Components",
+      "tooltip": "Components are applied in sequence order. Compound components calculate tax on the base amount plus previous taxes.",
+      "loading": "Loading components...",
+      "empty": "No tax components defined. Add components to create a composite tax.",
+      "preview": {
+        "title": "Calculation Preview ({{amount}} base)",
+        "compoundSuffix": ", compound",
+        "totalTax": "Total Tax:",
+        "effective": "Effective: {{rate}}%"
+      },
+      "dialog": {
+        "addTitle": "Add Tax Component",
+        "editTitle": "Edit Tax Component",
+        "deleteTitle": "Delete Tax Component"
+      },
+      "fields": {
+        "name": {
+          "label": "Name *",
+          "placeholder": "e.g., Federal Tax, State Tax"
+        },
+        "rate": {
+          "label": "Rate (%) *",
+          "placeholder": "e.g., 10"
+        },
+        "sequence": {
+          "label": "Sequence *",
+          "placeholder": "e.g., 1"
+        },
+        "compound": {
+          "label": "Compound Tax",
+          "help": "Calculate on base + previous taxes"
+        },
+        "startDate": {
+          "label": "Start Date (Optional)"
+        },
+        "endDate": {
+          "label": "End Date (Optional)"
+        }
+      },
+      "dateRange": {
+        "always": "Always",
+        "any": "Any",
+        "ongoing": "Ongoing"
+      },
+      "actions": {
+        "add": "Add Component",
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving...",
+        "deleting": "Deleting..."
+      },
+      "delete": {
+        "message": "Are you sure you want to delete the component \"{{name}}\"? This action cannot be undone."
+      },
+      "toast": {
+        "created": "Tax component created successfully.",
+        "updated": "Tax component updated successfully.",
+        "deleted": "Tax component deleted successfully."
+      },
+      "errors": {
+        "load": "Failed to load tax components.",
+        "create": "Failed to create tax component.",
+        "update": "Failed to update tax component.",
+        "delete": "Failed to delete tax component."
+      }
+    },
+    "holidays": {
+      "title": "Tax Holidays",
+      "titleWithName": "Tax Holidays for {{name}}",
+      "tooltip": "Tax holidays are temporary periods where this tax is not applied. Use them for promotions, seasonal exemptions, or government-mandated tax holidays.",
+      "loading": "Loading holidays...",
+      "empty": "No tax holidays defined. Add holidays to temporarily exempt this tax during specific periods.",
+      "summary": {
+        "active": "{{count}} active",
+        "upcoming": "{{count}} upcoming",
+        "expired": "{{count}} expired"
+      },
+      "dialog": {
+        "addTitle": "Add Tax Holiday",
+        "editTitle": "Edit Tax Holiday",
+        "deleteTitle": "Delete Tax Holiday"
+      },
+      "fields": {
+        "startDate": {
+          "label": "Start Date *"
+        },
+        "endDate": {
+          "label": "End Date *"
+        },
+        "description": {
+          "label": "Description (Optional)",
+          "placeholder": "e.g., Black Friday Sale, Government Tax Holiday"
+        }
+      },
+      "actions": {
+        "add": "Add Holiday",
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving...",
+        "deleting": "Deleting..."
+      },
+      "delete": {
+        "message": "Are you sure you want to delete the holiday \"{{description}}\" ({{dateRange}})? This action cannot be undone.",
+        "untitled": "Untitled"
+      },
+      "toast": {
+        "created": "Tax holiday created successfully.",
+        "updated": "Tax holiday updated successfully.",
+        "deleted": "Tax holiday deleted successfully."
+      },
+      "errors": {
+        "load": "Failed to load tax holidays.",
+        "create": "Failed to create tax holiday.",
+        "update": "Failed to update tax holiday.",
+        "delete": "Failed to delete tax holiday."
+      }
+    }
+  },
+  "payments": {
+    "title": "Payment Settings",
+    "description": "Configure how payment links work with your invoices.",
+    "loading": "Loading payment settings..."
+  },
+  "serviceCategories": {
+    "title": "Service Categories",
+    "dialog": {
+      "addTitle": "Add Service Category",
+      "editTitle": "Edit Service Category",
+      "deleteTitle": "Delete Service Category"
+    },
+    "fields": {
+      "categoryName": {
+        "label": "Category Name *",
+        "placeholder": "Enter category name"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Enter description"
+      },
+      "displayOrder": {
+        "label": "Display Order",
+        "placeholder": "Enter display order",
+        "help": "Controls the order in which service categories appear in dropdown menus throughout the platform. Lower numbers appear first."
+      }
+    },
+    "actions": {
+      "add": "Add Service Category",
+      "importFromStandard": "Import from Standard Categories",
+      "create": "Create",
+      "update": "Update"
+    },
+    "delete": {
+      "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+    },
+    "import": {
+      "title": "Import Standard Service Categories",
+      "empty": "No standard service categories available to import.",
+      "description": "Select standard service categories to import into your organization:",
+      "fetchError": "Failed to fetch available service categories for import"
+    },
+    "conflicts": {
+      "description": "The following items have conflicts. Choose how to resolve each:",
+      "nameExists": "A category with this name already exists.",
+      "rename": "Import with new name:",
+      "orderInUse": "Display order {{displayOrder}} is already in use.",
+      "reorder": "Import with order {{order}}"
+    },
+    "toast": {
+      "created": "Service category created successfully",
+      "updated": "Service category updated successfully",
+      "deleted": "Service category deleted successfully",
+      "imported": "Service categories imported successfully"
+    },
+    "errors": {
+      "fetch": "Failed to fetch service categories",
+      "missingId": "Category ID is missing",
+      "nameRequired": "Category name is required",
+      "save": "Failed to save service category",
+      "delete": "Failed to delete service category",
+      "import": "Failed to import service categories"
+    }
+  },
+  "serviceTypes": {
+    "title": "Custom Service Types",
+    "description": "Manage your organization's custom service types.",
+    "loading": "Loading service types...",
+    "dialog": {
+      "addTitle": "Add Custom Service Type",
+      "editTitle": "Edit Custom Service Type",
+      "deleteTitle": "Delete Service Type"
+    },
+    "fields": {
+      "name": {
+        "label": "Name *",
+        "placeholder": "e.g., Custom Support Tier *"
+      },
+      "description": {
+        "label": "Description (Optional)",
+        "placeholder": "Describe this service type"
+      },
+      "billingMethod": {
+        "label": "Billing Method *",
+        "placeholder": "Select billing method..."
+      },
+      "displayOrder": {
+        "label": "Display Order *",
+        "placeholder": "e.g., 1, 2, 3...",
+        "help": "Controls the order in which service types appear in dropdown menus throughout the platform. Lower numbers appear first.",
+        "usedOrders": "Used orders: {{orders}}"
+      }
+    },
+    "actions": {
+      "add": "Add Custom Type",
+      "importFromStandard": "Import from Standard Service Types",
+      "save": "Save",
+      "close": "Close"
+    },
+    "validation": {
+      "summary": "Please fill in the required fields:",
+      "name": "Service Type name",
+      "billingMethod": "Billing method",
+      "displayOrder": "Display order",
+      "orderInUse": "Order {{order}} is already used by \"{{name}}\""
+    },
+    "delete": {
+      "message": "Are you sure you want to delete the service type \"{{name}}\"? This cannot be undone.",
+      "errorPrefix": "Error: {{error}}"
+    },
+    "import": {
+      "title": "Import Standard Service Types",
+      "empty": "No standard service types available to import.",
+      "description": "Select standard service types to import into your organization:"
+    },
+    "conflicts": {
+      "description": "The following items have conflicts that need to be resolved:",
+      "nameExists": "Conflict: Name already exists",
+      "orderInUse": "Conflict: Order {{order}} is already in use",
+      "rename": "Import with different name:",
+      "reorder": "Import with different order:"
+    },
+    "toast": {
+      "importedCount": "Imported {{count}} service type",
+      "importedCount_other": "Imported {{count}} service types",
+      "skippedItem": "{{name}}: {{reason}}"
+    },
+    "errors": {
+      "fetch": "Failed to fetch service types",
+      "save": "Failed to save service type",
+      "delete": "Failed to delete service type",
+      "checkConflicts": "Failed to check conflicts",
+      "import": "Failed to import service types"
+    }
+  },
+  "serviceCatalog": {
+    "title": "Service Catalog Management",
+    "loading": "Loading services",
+    "dialog": {
+      "editTitle": "Edit Service"
+    },
+    "filters": {
+      "allServiceTypes": "All Service Types",
+      "serviceTypePlaceholder": "Filter by service type...",
+      "allBillingMethods": "All Billing Methods",
+      "billingMethodPlaceholder": "Filter by billing method..."
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Service Name",
+        "placeholder": "Service Name"
+      },
+      "serviceType": {
+        "label": "Service Type",
+        "placeholder": "Select service type..."
+      },
+      "billingMethod": {
+        "label": "Billing Method",
+        "placeholder": "Select billing method..."
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Description"
+      },
+      "pricing": {
+        "label": "Pricing *",
+        "primaryRateHelp": "The first currency is the primary rate.",
+        "multiCurrencyHelp": "Add prices in multiple currencies. The first currency is the primary rate.",
+        "placeholders": {
+          "currency": "Currency",
+          "rate": "0.00"
+        },
+        "rateType": {
+          "monthly": "Monthly",
+          "perHour": "Per Hour",
+          "usage": "Usage",
+          "rate": "Rate"
+        }
+      },
+      "unitOfMeasure": {
+        "label": "Unit of Measure *",
+        "placeholder": "e.g., GB, API call, user",
+        "help": "The measurable unit for billing (e.g., GB, API call, user)"
+      },
+      "taxRate": {
+        "label": "Tax Rate (Optional)",
+        "placeholder": "Select Tax Rate (or leave blank for Non-Taxable)",
+        "loading": "Loading rates..."
+      },
+      "sku": {
+        "label": "SKU",
+        "placeholder": "SKU"
+      },
+      "inventoryCount": {
+        "label": "Inventory Count",
+        "placeholder": "Inventory Count"
+      },
+      "seatLimit": {
+        "label": "Seat Limit",
+        "placeholder": "Seat Limit"
+      },
+      "licenseTerm": {
+        "label": "License Term",
+        "placeholder": "Select license term..."
+      }
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "addCurrency": "+ Add Currency",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes"
+    },
+    "table": {
+      "serviceName": "Service Name",
+      "serviceType": "Service Type",
+      "billingMethod": "Billing Method",
+      "pricing": "Pricing",
+      "unit": "Unit",
+      "taxRate": "Tax Rate",
+      "nonTaxable": "Non-Taxable",
+      "thisService": "this service"
+    },
+    "errors": {
+      "fetchServices": "Failed to fetch services",
+      "fetchCategories": "Failed to fetch categories",
+      "fetchServiceTypesUnknown": "An unknown error occurred while fetching service types",
+      "fetchTaxRates": "Failed to load tax rates.",
+      "serviceTypeRequired": "Service Type is required",
+      "priceRequired": "At least one price is required",
+      "missingId": "Cannot update service without an ID.",
+      "update": "Failed to update service",
+      "validateDelete": "Failed to validate deletion. Please try again.",
+      "delete": "Failed to delete service",
+      "deactivate": "Failed to deactivate service"
+    }
+  },
+  "products": {
+    "title": "Products",
+    "loading": "Loading products",
+    "thisProduct": "this product",
+    "actions": {
+      "add": "Add Product",
+      "search": "Search",
+      "edit": "Edit",
+      "restore": "Restore",
+      "archive": "Archive",
+      "delete": "Delete"
+    },
+    "filters": {
+      "searchPlaceholder": "Search by name, SKU, description...",
+      "allStatuses": "All Statuses",
+      "active": "Active",
+      "inactive": "Inactive",
+      "allCategories": "All Categories",
+      "allTypes": "All Types",
+      "loading": "Loading..."
+    },
+    "table": {
+      "product": "Product",
+      "sku": "SKU",
+      "type": "Type",
+      "category": "Category",
+      "label": "Label",
+      "pricing": "Pricing",
+      "taxRate": "Tax Rate",
+      "active": "Active",
+      "nonTaxable": "Non-Taxable"
+    },
+    "archive": {
+      "title": "Archive Product",
+      "message": "Archive {{name}}? It will be hidden from pickers by default and cannot be attached to new contracts/invoices until restored."
+    },
+    "permanentDelete": {
+      "title": "Delete Product Permanently",
+      "checking": "Checking if product can be deleted...",
+      "confirm": "Are you sure you want to permanently delete \"{{name}}\"? This action cannot be undone.",
+      "blocked": "Cannot delete \"{{name}}\" because it is associated with existing data:",
+      "archiveInstead": "To remove this product, first remove it from all associated records, or use Archive instead."
+    },
+    "errors": {
+      "fetch": "Failed to fetch products",
+      "restore": "Failed to restore product",
+      "archive": "Failed to archive product",
+      "checkAssociations": "Failed to check associations",
+      "delete": "Failed to delete product"
+    }
+  },
+  "quickAddService": {
+    "dialog": {
+      "title": "Add New Service"
+    },
+    "actions": {
+      "trigger": "Add Service",
+      "addCurrency": "+ Add Currency",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "save": "Save Service"
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Service Name *",
+        "placeholder": "Service Name"
+      },
+      "serviceType": {
+        "label": "Service Type *",
+        "placeholder": "Select service type..."
+      },
+      "billingMethod": {
+        "label": "Billing Method *",
+        "placeholder": "Select billing method..."
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Service Description"
+      },
+      "pricing": {
+        "label": "Pricing *",
+        "help": "Add prices in multiple currencies. The first currency is the primary rate.",
+        "placeholders": {
+          "currency": "Currency",
+          "rate": "0.00"
+        },
+        "rateType": {
+          "monthly": "Monthly",
+          "perHour": "Per Hour",
+          "usage": "Usage",
+          "rate": "Rate"
+        }
+      },
+      "unitOfMeasure": {
+        "label": "Unit of Measure *",
+        "placeholder": "e.g., GB, API call, user",
+        "help": "The measurable unit for billing (e.g., GB, API call, user)"
+      },
+      "taxRate": {
+        "label": "Tax Rate (Optional)",
+        "placeholder": "Select Tax Rate (optional)",
+        "loading": "Loading tax rates..."
+      },
+      "sku": {
+        "label": "SKU",
+        "placeholder": "SKU"
+      },
+      "inventoryCount": {
+        "label": "Inventory Count",
+        "placeholder": "Inventory Count"
+      },
+      "seatLimit": {
+        "label": "Seat Limit",
+        "placeholder": "Seat Limit"
+      },
+      "licenseTerm": {
+        "label": "License Term",
+        "placeholder": "Select license term..."
+      }
+    },
+    "validation": {
+      "summary": "Please fix the following errors:",
+      "serviceNameRequired": "Service name is required",
+      "serviceTypeRequired": "Service type is required",
+      "priceRequired": "At least one price is required",
+      "billingMethodRequired": "Billing method is required",
+      "skuRequiredForHardware": "SKU is required for Hardware",
+      "licenseTermRequired": "License term is required for Software Licenses",
+      "selectedTypeNotFound": "Selected service type not found"
+    },
+    "errors": {
+      "fetchCategories": "Failed to fetch categories",
+      "fetchTaxRates": "Failed to load tax rates.",
+      "create": "Failed to create service"
+    }
+  },
+  "quickAddProduct": {
+    "dialog": {
+      "addTitle": "Add Product",
+      "editTitle": "Edit Product"
+    },
+    "actions": {
+      "addCurrency": "+ Add Currency",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "create": "Create",
+      "save": "Save"
+    },
+    "fields": {
+      "productName": {
+        "label": "Product Name *"
+      },
+      "type": {
+        "label": "Type *",
+        "placeholder": "Select type..."
+      },
+      "sku": {
+        "label": "SKU"
+      },
+      "category": {
+        "label": "Category",
+        "placeholder": "Uncategorized",
+        "loading": "Loading..."
+      },
+      "label": {
+        "label": "Label",
+        "placeholder": "Optional freeform label"
+      },
+      "vendor": {
+        "label": "Vendor"
+      },
+      "manufacturer": {
+        "label": "Manufacturer"
+      },
+      "cost": {
+        "label": "Cost",
+        "placeholder": "0.00"
+      },
+      "billingMethod": {
+        "label": "Billing Method"
+      },
+      "pricing": {
+        "label": "Pricing *",
+        "help": "Add prices in multiple currencies. The first currency is the primary rate.",
+        "rateType": {
+          "rate": "Rate"
+        },
+        "placeholders": {
+          "currency": "Currency",
+          "rate": "0.00"
+        }
+      },
+      "taxRate": {
+        "label": "Tax Rate",
+        "placeholder": "Non-Taxable",
+        "loading": "Loading..."
+      },
+      "active": {
+        "label": "Active"
+      },
+      "unitOfMeasure": {
+        "label": "Unit of Measure *",
+        "placeholder": "e.g., each, item, license"
+      },
+      "license": {
+        "label": "License?"
+      },
+      "licenseTerm": {
+        "label": "License Term"
+      },
+      "description": {
+        "label": "Description"
+      }
+    },
+    "options": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "validation": {
+      "productNameRequired": "Product name is required",
+      "serviceTypeRequired": "Service type is required",
+      "unitOfMeasureRequired": "Unit of measure is required",
+      "priceRequired": "At least one price is required",
+      "currencyRequired": "Currency is required for each price",
+      "currencyUnique": "Each currency can only be used once",
+      "pricesNonNegative": "Prices must be non-negative",
+      "nonZeroPriceRequired": "At least one non-zero price is required"
+    },
+    "errors": {
+      "create": "Failed to create product",
+      "update": "Failed to update product"
+    }
+  },
+  "clientTaxSettings": {
+    "title": "Client Tax Settings",
+    "loading": "Loading tax settings...",
+    "noSettingsFound": "No tax settings found for this client.",
+    "createDefaultButton": "Create Default Tax Settings",
+    "alerts": {
+      "dismissError": "Dismiss error",
+      "dismissSuccess": "Dismiss success message"
+    },
+    "messages": {
+      "defaultCreated": "Default tax settings created successfully",
+      "createDefaultError": "Error creating default tax settings",
+      "fetchError": "Error fetching tax settings",
+      "updated": "Tax settings updated successfully",
+      "updateError": "Error updating tax settings",
+      "taxExemptEnabled": "Client marked as tax exempt.",
+      "taxExemptDisabled": "Tax exempt status removed from client.",
+      "taxExemptUpdateError": "Failed to update tax exempt status"
+    },
+    "validation": {
+      "thresholdNegativeMin": "Threshold {{index}} has a negative minimum amount",
+      "thresholdMaxLessThanMin": "Threshold {{index}} has a maximum amount less than its minimum amount",
+      "thresholdNegativeRate": "Threshold {{index}} has a negative rate",
+      "holidayMissingDates": "Holiday {{index}} is missing start or end date",
+      "holidayEndBeforeStart": "Holiday {{index}} has an end date before its start date"
+    },
+    "taxExempt": {
+      "title": "Tax Exempt Status",
+      "description": "Tax exempt clients will not have taxes applied to their invoices.",
+      "label": "Tax Exempt",
+      "tooltip": "When enabled, no taxes will be calculated for this client's invoices. Changes are logged for audit purposes.",
+      "status": {
+        "exempt": "Exempt",
+        "notExempt": "Not Exempt"
+      },
+      "certificate": {
+        "label": "Tax Exemption Certificate Number",
+        "placeholder": "Enter certificate number (optional)",
+        "help": "Optional: Store the client's tax exemption certificate number for reference."
+      },
+      "alert": {
+        "title": "Tax Exempt Client",
+        "description": "This client will not be charged any taxes on invoices. Make sure to keep their exemption certificate on file."
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "save": "Save Tax Exempt Status",
+        "saving": "Saving..."
+      }
+    },
+    "advanced": {
+      "title": "Advanced Tax Options",
+      "description": "Configure special tax handling for this client.",
+      "reverseCharge": {
+        "label": "Apply Reverse Charge",
+        "tooltip": "Reverse charge shifts the tax liability from the seller to the buyer. Common in B2B transactions across borders.",
+        "status": {
+          "enabled": "Enabled",
+          "disabled": "Disabled"
+        }
+      },
+      "taxSourceOverride": {
+        "label": "Tax Source Override",
+        "tooltip": "Override the tenant default tax source for this client. 'Internal' uses Alga's tax calculation. 'External' delegates tax calculation to the accounting system when invoices are exported.",
+        "placeholder": "Select tax source...",
+        "options": {
+          "default": "Use Tenant Default",
+          "internal": "Alga PSA Calculates Tax",
+          "external": "Accounting Package Calculates Tax"
+        },
+        "effective": {
+          "label": "Current effective tax source:",
+          "pendingExternal": "Pending External",
+          "overridden": "(overridden)"
+        },
+        "notAvailable": {
+          "messageStart": "Tax source override is not available. This feature must be enabled in the",
+          "link": "billing settings",
+          "messageEnd": "to allow per-client tax source overrides."
+        }
+      },
+      "actions": {
+        "reset": "Reset Changes",
+        "update": "Update Tax Settings",
+        "updating": "Updating..."
+      }
+    }
+  },
+  "common": {
+    "actions": {
+      "add": "Add",
+      "cancel": "Cancel",
+      "close": "Close",
+      "create": "Create",
+      "delete": "Delete",
+      "edit": "Edit",
+      "importSelected": "Import Selected",
+      "importWithResolutions": "Import with Resolutions",
+      "remove": "Remove",
+      "reset": "Reset",
+      "save": "Save",
+      "update": "Update"
+    },
+    "columns": {
+      "actions": "Actions",
+      "name": "Name",
+      "description": "Description",
+      "order": "Order",
+      "code": "Code",
+      "status": "Status",
+      "billingMethod": "Billing Method",
+      "rate": "Rate",
+      "dateRange": "Date Range",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "sequence": "Seq"
+    },
+    "billingMethod": {
+      "fixed": "Fixed",
+      "fixedFee": "Fixed Fee",
+      "hourly": "Hourly",
+      "usage": "Usage",
+      "usageBased": "Usage Based"
+    },
+    "licenseTerm": {
+      "monthly": "Monthly",
+      "annual": "Annual",
+      "perpetual": "Perpetual"
+    },
+    "statuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "upcoming": "Upcoming",
+      "expired": "Expired",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "yes": "Yes",
+      "no": "No",
+      "nonTaxable": "Non-Taxable"
+    },
+    "emptyValue": "-",
+    "notAvailable": "N/A",
+    "loading": "Loading...",
+    "a11y": {
+      "openMenu": "Open menu"
+    }
+  },
+  "import": {
+    "title": "Resolve Import Conflicts",
+    "selectAll": "Select all",
+    "skipItem": "Skip this item",
+    "headers": {
+      "name": "Name",
+      "description": "Description",
+      "order": "Order",
+      "billingMethod": "Billing Method"
+    }
+  },
+  "validation": {
+    "requiredFields": "Please fill in the required fields:"
+  },
+  "errors": {
+    "failedToLoadSettings": "Failed to load settings",
+    "failedToSaveSettings": "Failed to save settings"
+  },
+  "toast": {
+    "saved": "Saved successfully"
+  },
+  "numbering": {
+    "section": {
+      "title": "Number Format",
+      "description": "Define the prefix, digit padding, and current sequence."
+    },
+    "fields": {
+      "prefix": {
+        "label": "Number Prefix",
+        "help": "Optional prefix for the number sequence. Leave empty for no prefix or enter a custom prefix."
+      },
+      "minimumDigits": {
+        "label": "Minimum Digits",
+        "help": "Minimum number of digits for the sequential number. For example, 6 makes '1' become '000001'."
+      },
+      "initialValue": {
+        "label": "Initial Value",
+        "help": "Set the starting number for the sequence. This can only be set once.",
+        "placeholder": "Enter value"
+      },
+      "lastUsedNumber": {
+        "label": "Last Used Number",
+        "help": "The last number that was assigned. The next number will be one higher than this value."
+      },
+      "nextPreview": {
+        "label": "Next Number Preview",
+        "help": "This is the number that will be assigned to the next record."
+      }
+    },
+    "actions": {
+      "save": "Save Changes",
+      "cancel": "Cancel"
+    },
+    "dialog": {
+      "title": "Update Numbering Settings",
+      "message": "Changing these settings will affect how new numbers are generated. This change will not affect existing records. Are you sure you want to proceed?",
+      "confirm": "Update Settings"
+    },
+    "toast": {
+      "updated": "Settings updated successfully."
+    },
+    "errors": {
+      "load": "Failed to load numbering settings.",
+      "save": "Failed to update settings."
+    }
+  }
+}

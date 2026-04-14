@@ -77,8 +77,36 @@ export default function CancellationFeedbackModal({
     onClose();
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="cancel-feedback-cancel-btn"
+        variant="outline"
+        onClick={handleClose}
+        disabled={loading}
+      >
+        Keep Subscription
+      </Button>
+      <Button
+        id="cancel-feedback-submit-btn"
+        variant="default"
+        onClick={handleSubmit}
+        disabled={loading || !reasonText.trim()}
+      >
+        {loading ? 'Submitting...' : 'Submit Feedback'}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog isOpen={isOpen} onClose={handleClose} title="Cancel Subscription" className="max-w-[600px]" id="cancellation-feedback-modal">
+    <Dialog
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Cancel Subscription"
+      className="max-w-[600px]"
+      id="cancellation-feedback-modal"
+      footer={footer}
+    >
       <div className="space-y-6">
         {/* Warning */}
         <Alert variant="destructive" id="cancellation-warning-alert">
@@ -123,25 +151,6 @@ export default function CancellationFeedbackModal({
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button
-            id="cancel-feedback-cancel-btn"
-            variant="outline"
-            onClick={handleClose}
-            disabled={loading}
-          >
-            Keep Subscription
-          </Button>
-          <Button
-            id="cancel-feedback-submit-btn"
-            variant="default"
-            onClick={handleSubmit}
-            disabled={loading || !reasonText.trim()}
-          >
-            {loading ? 'Submitting...' : 'Submit Feedback'}
-          </Button>
-        </div>
       </div>
     </Dialog>
   );

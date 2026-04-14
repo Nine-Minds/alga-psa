@@ -1,6 +1,11 @@
 import { notFound } from 'next/navigation';
 import { getCurrentUser } from "@alga-psa/user-composition/actions";
-import { fetchTimeSheet } from '@alga-psa/scheduling/actions/timeSheetActions';
+import {
+  fetchTimeSheet,
+  fetchTimeSheetComments,
+} from '@alga-psa/scheduling/actions/timeSheetActions';
+import { fetchTimeEntriesForTimeSheet } from '@alga-psa/scheduling/actions/timeEntryActions';
+import { fetchWorkItemsForTimeSheet } from '@alga-psa/scheduling/actions/timeEntryWorkItemActions';
 import TimeSheetClient from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeSheetClient';
 import { createTenantKnex } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth';
@@ -50,12 +55,21 @@ export default async function TimeSheetPage({ params }: { params: Promise<{ id: 
       }
     }
 
+    const [initialEntries, initialWorkItems, initialComments] = await Promise.all([
+      fetchTimeEntriesForTimeSheet(timeSheet.id),
+      fetchWorkItemsForTimeSheet(timeSheet.id),
+      timeSheet.approval_status !== 'DRAFT' ? fetchTimeSheetComments(timeSheet.id) : Promise.resolve([]),
+    ]);
+
     return (
       <TimeSheetClient
         timeSheet={timeSheet}
         currentUser={currentUser}
         isManager={isManager}
         canReopenForEdits={canReopenForEdits}
+        initialEntries={initialEntries}
+        initialWorkItems={initialWorkItems}
+        initialComments={initialComments}
       />
     );
   } catch (error) {

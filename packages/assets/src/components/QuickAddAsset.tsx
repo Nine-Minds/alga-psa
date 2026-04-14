@@ -472,19 +472,39 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     }
   };
 
+  const quickAddAssetFooter = (
+    <div {...withDataAutomationId({ id: 'form-actions' })} className="flex justify-end space-x-2">
+      <Button {...withDataAutomationId({ id: 'cancel-button' })} type="button" variant="outline" onClick={handleClose}>
+        {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+      </Button>
+      <Button
+        {...withDataAutomationId({ id: 'submit-button' })}
+        type="button"
+        onClick={() => (document.getElementById('quick-add-asset-form') as HTMLFormElement | null)?.requestSubmit()}
+        disabled={isSubmitting}
+        className={(!formData.name.trim() || !formData.asset_tag.trim() || !formData.asset_type || (!clientId && !selectedClientId)) && !isSubmitting ? 'opacity-50' : ''}
+      >
+        {isSubmitting
+          ? t('quickAddAsset.actions.creating', { defaultValue: 'Creating...' })
+          : t('quickAddAsset.actions.createAsset', { defaultValue: 'Create Asset' })}
+      </Button>
+    </div>
+  );
+
   return (
     <>
       <Button {...withDataAutomationId({ id: 'quick-add-asset-button' })} onClick={() => setOpen(true)}>
         {t('quickAddAsset.actions.addAsset', { defaultValue: 'Add Asset' })}
       </Button>
-      
+
       <Dialog
         isOpen={open}
         onClose={handleClose}
         title={t('quickAddAsset.title', { defaultValue: 'Add New Asset' })}
-        className="max-w-[480px] max-h-[90vh] overflow-y-auto"
+        className="max-w-[480px]"
         id="quick-add-asset"
         disableFocusTrap
+        footer={quickAddAssetFooter}
       >
         <DialogContent>
           {hasAttemptedSubmit && error && (
@@ -504,7 +524,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
             </Alert>
           )}
           
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form id="quick-add-asset-form" onSubmit={handleSubmit} className="space-y-4">
             {!clientId && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">
@@ -628,22 +648,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                 {renderTypeSpecificFields()}
               </div>
             )}
-
-            <div {...withDataAutomationId({ id: 'form-actions' })} className="flex justify-end space-x-2 pt-4">
-              <Button {...withDataAutomationId({ id: 'cancel-button' })} type="button" variant="outline" onClick={handleClose}>
-                {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-              </Button>
-              <Button 
-                {...withDataAutomationId({ id: 'submit-button' })} 
-                type="submit" 
-                disabled={isSubmitting}
-                className={(!formData.name.trim() || !formData.asset_tag.trim() || !formData.asset_type || (!clientId && !selectedClientId)) && !isSubmitting ? 'opacity-50' : ''}
-              >
-                {isSubmitting
-                  ? t('quickAddAsset.actions.creating', { defaultValue: 'Creating...' })
-                  : t('quickAddAsset.actions.createAsset', { defaultValue: 'Create Asset' })}
-              </Button>
-            </div>
           </form>
         </DialogContent>
       </Dialog>

@@ -1140,6 +1140,20 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
         onClose={() => setRunActionMode(null)}
         title={runActionMode === 'cancel' ? 'Cancel Run' : 'Replay Run'}
         className="max-w-2xl"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="workflow-run-action-close" variant="outline" onClick={() => setRunActionMode(null)}>
+              Close
+            </Button>
+            <Button
+              id="workflow-run-action-confirm"
+              onClick={handleRunActionConfirm}
+              disabled={!actionReasonValid || isSubmittingAction || (runActionMode === 'replay' && !!replayPayloadError)}
+            >
+              {isSubmittingAction ? 'Working...' : runActionMode === 'cancel' ? 'Confirm Cancel' : 'Start Replay'}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <DialogHeader>
@@ -1177,18 +1191,6 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
             )}
           </div>
 
-	          <div className="mt-6 flex justify-end gap-2">
-	            <Button id="workflow-run-action-close" variant="outline" onClick={() => setRunActionMode(null)}>
-	              Close
-	            </Button>
-	            <Button
-	              id="workflow-run-action-confirm"
-	              onClick={handleRunActionConfirm}
-	              disabled={!actionReasonValid || isSubmittingAction || (runActionMode === 'replay' && !!replayPayloadError)}
-	            >
-	              {isSubmittingAction ? 'Working...' : runActionMode === 'cancel' ? 'Confirm Cancel' : 'Start Replay'}
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
     </div>

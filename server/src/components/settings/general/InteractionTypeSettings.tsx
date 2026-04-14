@@ -13,7 +13,7 @@ import {
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -325,13 +325,34 @@ const InteractionTypesSettings: React.FC = () => {
       />
 
       {/* Import Dialog */}
-      <Dialog 
-        isOpen={showImportDialog && importConflicts.length === 0} 
+      <Dialog
+        isOpen={showImportDialog && importConflicts.length === 0}
         onClose={() => {
           setShowImportDialog(false);
           setSelectedImportTypes([]);
-        }} 
+        }}
         title={t('interactions.types.dialog.import.title')}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-import-interaction-types"
+              variant="outline"
+              onClick={() => {
+                setShowImportDialog(false);
+                setSelectedImportTypes([]);
+              }}
+            >
+              {t('interactions.types.actions.cancel')}
+            </Button>
+            <Button
+              id="confirm-import-interaction-types"
+              onClick={handleCheckConflicts}
+              disabled={selectedImportTypes.length === 0}
+            >
+              {t('interactions.types.actions.importSelected')}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -386,35 +407,36 @@ const InteractionTypesSettings: React.FC = () => {
             )}
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id="cancel-import-interaction-types"
-            variant="outline"
-            onClick={() => {
-              setShowImportDialog(false);
-              setSelectedImportTypes([]);
-            }}
-          >
-            {t('interactions.types.actions.cancel')}
-          </Button>
-          <Button
-            id="confirm-import-interaction-types"
-            onClick={handleCheckConflicts}
-            disabled={selectedImportTypes.length === 0}
-          >
-            {t('interactions.types.actions.importSelected')}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       {/* Conflict Resolution Dialog */}
-      <Dialog 
-        isOpen={importConflicts.length > 0} 
+      <Dialog
+        isOpen={importConflicts.length > 0}
         onClose={() => {
           setImportConflicts([]);
           setConflictResolutions({});
-        }} 
+        }}
         title={t('interactions.types.dialog.conflicts.title')}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-resolve-conflicts"
+              variant="outline"
+              onClick={() => {
+                setImportConflicts([]);
+                setConflictResolutions({});
+              }}
+            >
+              {t('interactions.types.actions.cancel')}
+            </Button>
+            <Button
+              id="confirm-import-with-resolutions"
+              onClick={handleImport}
+            >
+              {t('interactions.types.dialog.conflicts.resolve')}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -496,24 +518,6 @@ const InteractionTypesSettings: React.FC = () => {
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id="cancel-resolve-conflicts"
-            variant="outline"
-            onClick={() => {
-              setImportConflicts([]);
-              setConflictResolutions({});
-            }}
-          >
-            {t('interactions.types.actions.cancel')}
-          </Button>
-          <Button
-            id="confirm-import-with-resolutions"
-            onClick={handleImport}
-          >
-            {t('interactions.types.dialog.conflicts.resolve')}
-          </Button>
-        </DialogFooter>
       </Dialog>
     </div>
   );

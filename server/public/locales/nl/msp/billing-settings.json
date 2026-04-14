@@ -1,0 +1,1100 @@
+{
+  "tabs": {
+    "general": "Algemeen",
+    "quoting": "Citeren",
+    "tax": "Belasting",
+    "payments": "Betalingen"
+  },
+  "general": {
+    "currency": {
+      "title": "Standaardvaluta",
+      "description": "Stel de standaardvaluta in voor nieuwe producten, diensten, contracten en offertes. Dit kan per klant worden overschreven in de factureringsconfiguratie.",
+      "fields": {
+        "currency": {
+          "label": "Munteenheid",
+          "placeholder": "Selecteer valuta"
+        }
+      },
+      "toast": {
+        "updated": "De standaardvaluta is bijgewerkt."
+      },
+      "errors": {
+        "load": "Kan instellingen niet laden",
+        "save": "Kan instellingen niet opslaan"
+      }
+    },
+    "invoiceNumbering": {
+      "title": "Factuurnummering",
+      "description": "Pas aan hoe factuurnummers worden gegenereerd en weergegeven."
+    },
+    "zeroDollar": {
+      "title": "Facturen van nul dollar",
+      "description": "Bepaal hoe facturen zonder kosten worden afgehandeld.",
+      "fields": {
+        "handling": {
+          "label": "Factuurafhandeling",
+          "placeholder": "Selecteer verwerkingsoptie",
+          "help": "Kies hoe nul-dollarfacturen moeten worden afgehandeld wanneer ze worden gegenereerd"
+        },
+        "suppress": {
+          "label": "Onderdruk lege facturen",
+          "help": "Sla het maken van facturen zonder regelitems over"
+        }
+      },
+      "options": {
+        "draft": "Maak als concept",
+        "finalized": "Creëer en voltooi"
+      },
+      "toast": {
+        "updated": "De instellingen voor nul-dollarfacturen zijn bijgewerkt."
+      },
+      "errors": {
+        "load": "Kan instellingen niet laden",
+        "save": "Kan instellingen niet opslaan"
+      }
+    },
+    "creditExpiration": {
+      "title": "Vervaldatum van het krediet",
+      "description": "Configureer wanneer en hoe klanttegoeden verlopen.",
+      "fields": {
+        "enabled": {
+          "label": "Schakel tegoedvervaldatum in",
+          "help": "Indien ingeschakeld, vervallen de tegoeden na de opgegeven periode"
+        },
+        "expirationDays": {
+          "label": "Vervalperiode (dagen)",
+          "help": "Aantal dagen waarna credits vervallen"
+        },
+        "notificationDays": {
+          "label": "Kennisgevingsdagen",
+          "placeholder": "bijvoorbeeld 30, 7, 1",
+          "help": "Dagen vóór de vervaldatum voor het verzenden van meldingen (door komma's gescheiden)"
+        }
+      },
+      "actions": {
+        "save": "Redden"
+      },
+      "toast": {
+        "updated": "Instellingen voor het verlopen van tegoeden zijn bijgewerkt."
+      },
+      "errors": {
+        "load": "Kan instellingen niet laden",
+        "save": "Kan instellingen niet opslaan"
+      }
+    },
+    "renewal": {
+      "title": "Automatisering van vernieuwing",
+      "description": "Configureer het standaardgedrag wanneer contracten hun verlengingsdatum bereiken.",
+      "fields": {
+        "dueDateAction": {
+          "label": "Actie op vervaldatum",
+          "help": "Kies of vervaldatums voor verlenging tickets moeten creëren of standaard alleen in de wachtrij moeten blijven."
+        },
+        "ticketBoard": {
+          "label": "Verlenging ticketbord",
+          "placeholderLoading": "Borden laden...",
+          "placeholderSelect": "Bord selecteren"
+        },
+        "ticketStatus": {
+          "label": "Status van verlengingsticket",
+          "placeholderLoading": "Statussen laden...",
+          "placeholderSelect": "Selecteer status",
+          "placeholderSelectBoardFirst": "Selecteer eerst een bord",
+          "help": "De status van het verlengingsticket is beperkt tot het geselecteerde bord."
+        }
+      },
+      "options": {
+        "createTicket": "Ticket aanmaken",
+        "queueOnly": "Alleen wachtrij"
+      },
+      "states": {
+        "unnamedBoard": "Naamloze bord"
+      },
+      "actions": {
+        "save": "Redden",
+        "saving": "Besparing..."
+      },
+      "toast": {
+        "updated": "De automatiseringsinstellingen voor verlenging zijn bijgewerkt."
+      },
+      "errors": {
+        "load": "Kan de automatiseringsinstellingen voor verlenging niet laden",
+        "loadStatuses": "Kan de status van het verlengingsticket niet laden",
+        "save": "Kan de automatiseringsinstellingen voor verlenging niet opslaan"
+      }
+    }
+  },
+  "quoting": {
+    "quoteNumbering": {
+      "title": "Citaatnummering",
+      "description": "Pas aan hoe offertenummers worden gegenereerd en weergegeven."
+    }
+  },
+  "tax": {
+    "taxRegions": {
+      "title": "Belastingregio's",
+      "description": "Beheer belastingregio's en gerelateerde instellingen."
+    },
+    "source": {
+      "title": "Bron van belastingberekening",
+      "tooltip": "Kies of belastingen worden berekend door Alga PSA of worden gedelegeerd aan uw externe boekhoudsysteem",
+      "description": "Configureer hoe belastingbedragen voor facturen worden berekend.",
+      "fields": {
+        "defaultMethod": {
+          "label": "Standaard belastingberekeningsmethode"
+        }
+      },
+      "options": {
+        "internal": {
+          "label": "Intern (Alga PSA)",
+          "description": "Belastingen worden automatisch berekend op basis van de belastingtarieven die zijn geconfigureerd in Alga PSA."
+        },
+        "external": {
+          "label": "Extern (boekhoudpakket)",
+          "description": "Facturen worden zonder belasting geëxporteerd. De belasting wordt berekend door uw boekhoudsysteem en terug geïmporteerd."
+        }
+      },
+      "workflow": {
+        "title": "Workflow voor externe belastingberekening",
+        "step1": "Factuur wordt aangemaakt zonder belastingbedragen",
+        "step2": "Factuur wordt geëxporteerd naar uw aangesloten boekhoudsysteem (QuickBooks, Xero, enz.)",
+        "step3": "Belasting wordt berekend door het boekhoudsysteem op basis van de belastingregels",
+        "step4": "Belastingbedragen worden terug geïmporteerd naar Alga PSA",
+        "step5": "Factuurtotalen worden bijgewerkt met de geïmporteerde belasting",
+        "note": "Het gebruikte boekhoudsysteem wordt automatisch bepaald op basis van het systeem waarnaar u de factuur exporteert."
+      },
+      "loading": "Instellingen laden...",
+      "actions": {
+        "cancel": "Annuleren",
+        "save": "Instellingen opslaan",
+        "saving": "Besparing..."
+      },
+      "toast": {
+        "saved": "Belastingbroninstellingen zijn succesvol opgeslagen."
+      },
+      "errors": {
+        "load": "Kan de belastingbroninstellingen niet laden.",
+        "save": "Kan instellingen niet opslaan."
+      }
+    },
+    "regions": {
+      "title": "Belastingregio's beheren",
+      "loading": "Regio's laden...",
+      "fields": {
+        "code": {
+          "label": "Regiocode",
+          "placeholder": "bijv. CA, NY, BTW-VK"
+        },
+        "name": {
+          "label": "Regionaam",
+          "placeholder": "bijv. BTW in Californië, New York, Verenigd Koninkrijk"
+        },
+        "active": {
+          "label": "Actief"
+        }
+      },
+      "dialog": {
+        "addTitle": "Nieuwe belastingregio toevoegen",
+        "editTitle": "Belastingregio bewerken"
+      },
+      "actions": {
+        "add": "Belastingregio toevoegen",
+        "edit": "Bewerking",
+        "activate": "Activeren",
+        "deactivate": "Deactiveren",
+        "cancel": "Annuleren",
+        "save": "Wijzigingen opslaan",
+        "saving": "Besparing..."
+      },
+      "toast": {
+        "created": "Belastingregio is succesvol aangemaakt.",
+        "updated": "Belastingregio is succesvol bijgewerkt.",
+        "activatePending": "Proberen {{name}} te activeren...",
+        "deactivatePending": "Proberen {{name}} te deactiveren...",
+        "activated": "Belastingregio {{name}} is succesvol geactiveerd.",
+        "deactivated": "Belastingregio {{name}} is succesvol gedeactiveerd."
+      },
+      "errors": {
+        "load": "Kan belastingregio's niet laden.",
+        "create": "Kan belastingregio niet maken.",
+        "update": "Kan de belastingregio niet updaten.",
+        "activate": "Kan belastingregio niet activeren.",
+        "deactivate": "Kan de belastingregio niet deactiveren."
+      }
+    },
+    "thresholds": {
+      "title": "Progressieve belastingschijven",
+      "tooltip": "Definieer progressieve belastingschijven waarbij verschillende tarieven van toepassing zijn op verschillende delen van het bedrag. Elke schijf is alleen van toepassing op het bedrag binnen zijn bereik.",
+      "loading": "Beugels laden...",
+      "empty": "Er zijn geen belastingschijven gedefinieerd. Voeg haakjes toe om progressieve belastingheffing te gebruiken.",
+      "noLimit": "Geen limiet",
+      "above": "boven",
+      "table": {
+        "minAmount": "Min. bedrag",
+        "maxAmount": "Maximaal bedrag"
+      },
+      "issuesTitle": "Problemen met de beugelconfiguratie:",
+      "issueNoMax": "Beugel vanaf {{from}} heeft geen maximum, maar is niet de laatste beugel.",
+      "issueGap": "Verschil tussen {{from}} en {{to}}",
+      "issueOverlap": "Overlapping tussen haakjes bij {{at}}",
+      "preview": {
+        "title": "Berekeningsvoorbeeld",
+        "amount": "Hoeveelheid:",
+        "taxable": "{{amount}} belastbaar = {{tax}}",
+        "totalTax": "Totale belasting:",
+        "effective": "Effectief: {{rate}}%"
+      },
+      "dialog": {
+        "addTitle": "Belastingschijf toevoegen",
+        "editTitle": "Belastingschijf bewerken",
+        "deleteTitle": "Belastingschijf verwijderen"
+      },
+      "fields": {
+        "minAmount": {
+          "label": "Min. bedrag *",
+          "placeholder": "bijvoorbeeld 0"
+        },
+        "maxAmount": {
+          "label": "Max. bedrag (leeg laten voor geen limiet)",
+          "placeholder": "bijvoorbeeld 10000 of leeg"
+        },
+        "rate": {
+          "label": "Tarief (%) *",
+          "placeholder": "bijvoorbeeld 10"
+        }
+      },
+      "actions": {
+        "add": "Beugel toevoegen",
+        "edit": "Bewerking",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren",
+        "save": "Redden",
+        "saving": "Besparing...",
+        "deleting": "Verwijderen..."
+      },
+      "delete": {
+        "message": "Weet u zeker dat u het haakje {{range}} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+        "lastWarning": "Waarschuwing: dit is het laatste haakje. Als u dit verwijdert, wordt de progressieve belastingheffing voor dit tarief uitgeschakeld."
+      },
+      "toast": {
+        "created": "Belastingschijf is succesvol aangemaakt.",
+        "updated": "Belastingschijf bijgewerkt.",
+        "deleted": "Belastingschijf is succesvol verwijderd."
+      },
+      "errors": {
+        "load": "Kan belastingschijven niet laden.",
+        "create": "Kan belastingschijf niet maken.",
+        "update": "Kan de belastingschijf niet updaten.",
+        "delete": "Kan de belastingschijf niet verwijderen."
+      }
+    },
+    "components": {
+      "title": "Belastingcomponenten",
+      "tooltip": "Componenten worden in volgorde toegepast. Samengestelde componenten berekenen de belasting over het basisbedrag plus eerdere belastingen.",
+      "loading": "Componenten laden...",
+      "empty": "Geen belastingcomponenten gedefinieerd. Voeg componenten toe om een ​​samengestelde belasting te creëren.",
+      "preview": {
+        "title": "Berekeningsvoorbeeld ({{amount}} basis)",
+        "compoundSuffix": ", verbinding",
+        "totalTax": "Totale belasting:",
+        "effective": "Effectief: {{rate}}%"
+      },
+      "dialog": {
+        "addTitle": "Belastingcomponent toevoegen",
+        "editTitle": "Belastingcomponent bewerken",
+        "deleteTitle": "Belastingcomponent verwijderen"
+      },
+      "fields": {
+        "name": {
+          "label": "Naam *",
+          "placeholder": "bijvoorbeeld federale belasting, staatsbelasting"
+        },
+        "rate": {
+          "label": "Tarief (%) *",
+          "placeholder": "bijvoorbeeld 10"
+        },
+        "sequence": {
+          "label": "Reeks *",
+          "placeholder": "bijvoorbeeld 1"
+        },
+        "compound": {
+          "label": "Samengestelde belasting",
+          "help": "Bereken op basis + voorgaande belastingen"
+        },
+        "startDate": {
+          "label": "Startdatum (optioneel)"
+        },
+        "endDate": {
+          "label": "Einddatum (optioneel)"
+        }
+      },
+      "dateRange": {
+        "always": "Altijd",
+        "any": "Elk",
+        "ongoing": "Lopend"
+      },
+      "actions": {
+        "add": "Component toevoegen",
+        "edit": "Bewerking",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren",
+        "save": "Redden",
+        "saving": "Besparing...",
+        "deleting": "Verwijderen..."
+      },
+      "delete": {
+        "message": "Weet u zeker dat u de component \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+      },
+      "toast": {
+        "created": "Belastingcomponent is succesvol aangemaakt.",
+        "updated": "Belastingcomponent bijgewerkt.",
+        "deleted": "Belastingcomponent is succesvol verwijderd."
+      },
+      "errors": {
+        "load": "Kan belastingcomponenten niet laden.",
+        "create": "Kan belastingcomponent niet maken.",
+        "update": "Kan de belastingcomponent niet bijwerken.",
+        "delete": "Kan belastingcomponent niet verwijderen."
+      }
+    },
+    "holidays": {
+      "title": "Belastingvrijstellingen",
+      "titleWithName": "Belastingvrijstellingen voor {{name}}",
+      "tooltip": "Belastingvrijstellingen zijn tijdelijke perioden waarin deze belasting niet wordt toegepast. Gebruik ze voor promoties, seizoensvrijstellingen of door de overheid verplichte belastingvrijstellingen.",
+      "loading": "Feestdagen laden...",
+      "empty": "Geen belastingvrijstellingen gedefinieerd. Voeg feestdagen toe om deze belasting tijdelijk vrij te stellen tijdens specifieke periodes.",
+      "summary": {
+        "active": "{{count}} actief",
+        "upcoming": "{{count}} binnenkort",
+        "expired": "{{count}} is verlopen"
+      },
+      "dialog": {
+        "addTitle": "Belastingvrijstelling toevoegen",
+        "editTitle": "Belastingvrijstelling bewerken",
+        "deleteTitle": "Belastingvrijstelling verwijderen"
+      },
+      "fields": {
+        "startDate": {
+          "label": "Startdatum *"
+        },
+        "endDate": {
+          "label": "Einddatum *"
+        },
+        "description": {
+          "label": "Beschrijving (optioneel)",
+          "placeholder": "bijvoorbeeld Black Friday-uitverkoop, overheidsbelastingvrijstelling"
+        }
+      },
+      "actions": {
+        "add": "Vakantie toevoegen",
+        "edit": "Bewerking",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren",
+        "save": "Redden",
+        "saving": "Besparing...",
+        "deleting": "Verwijderen..."
+      },
+      "delete": {
+        "message": "Weet u zeker dat u de feestdag \"{{description}}\" ({{dateRange}}) wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+        "untitled": "Zonder titel"
+      },
+      "toast": {
+        "created": "Belastingvrijstelling is succesvol aangemaakt.",
+        "updated": "Belastingvrijstelling succesvol bijgewerkt.",
+        "deleted": "Tax holiday is succesvol verwijderd."
+      },
+      "errors": {
+        "load": "Kan belastingvrijstellingen niet laden.",
+        "create": "Kan tax holiday niet maken.",
+        "update": "Kan tax holiday niet updaten.",
+        "delete": "Kan tax holiday niet verwijderen."
+      }
+    }
+  },
+  "payments": {
+    "title": "Betalingsinstellingen",
+    "description": "Configureer hoe betalingslinks werken met uw facturen.",
+    "loading": "Betalingsinstellingen laden..."
+  },
+  "serviceCategories": {
+    "title": "Servicecategorieën",
+    "dialog": {
+      "addTitle": "Servicecategorie toevoegen",
+      "editTitle": "Servicecategorie bewerken",
+      "deleteTitle": "Servicecategorie verwijderen"
+    },
+    "fields": {
+      "categoryName": {
+        "label": "Categorienaam *",
+        "placeholder": "Voer de categorienaam in"
+      },
+      "description": {
+        "label": "Beschrijving",
+        "placeholder": "Voer een beschrijving in"
+      },
+      "displayOrder": {
+        "label": "Weergavevolgorde",
+        "placeholder": "Geef de weergavevolgorde in",
+        "help": "Bepaalt de volgorde waarin servicecategorieën verschijnen in vervolgkeuzemenu's op het hele platform. Lagere cijfers verschijnen eerst."
+      }
+    },
+    "actions": {
+      "add": "Servicecategorie toevoegen",
+      "importFromStandard": "Importeren uit standaardcategorieën",
+      "create": "Creëren",
+      "update": "Update"
+    },
+    "delete": {
+      "message": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+    },
+    "import": {
+      "title": "Standaardservicecategorieën importeren",
+      "empty": "Er zijn geen standaard servicecategorieën beschikbaar om te importeren.",
+      "description": "Selecteer standaard servicecategorieën om in uw organisatie te importeren:",
+      "fetchError": "Kan beschikbare servicecategorieën voor import niet ophalen"
+    },
+    "conflicts": {
+      "description": "De volgende items hebben conflicten. Kies hoe u elk probleem wilt oplossen:",
+      "nameExists": "Er bestaat al een categorie met deze naam.",
+      "rename": "Importeren met nieuwe naam:",
+      "orderInUse": "Weergavevolgorde {{displayOrder}} is al in gebruik.",
+      "reorder": "Importeren met bestelling {{order}}"
+    },
+    "toast": {
+      "created": "Servicecategorie is succesvol aangemaakt",
+      "updated": "Servicecategorie is succesvol bijgewerkt",
+      "deleted": "Servicecategorie is succesvol verwijderd",
+      "imported": "Servicecategorieën zijn succesvol geïmporteerd"
+    },
+    "errors": {
+      "fetch": "Kan servicecategorieën niet ophalen",
+      "missingId": "Categorie-ID ontbreekt",
+      "nameRequired": "Categorienaam is vereist",
+      "save": "Kan de servicecategorie niet opslaan",
+      "delete": "Kan de servicecategorie niet verwijderen",
+      "import": "Kan servicecategorieën niet importeren"
+    }
+  },
+  "serviceTypes": {
+    "title": "Aangepaste servicetypen",
+    "description": "Beheer de aangepaste servicetypen van uw organisatie.",
+    "loading": "Servicetypen laden...",
+    "dialog": {
+      "addTitle": "Aangepast servicetype toevoegen",
+      "editTitle": "Aangepast servicetype bewerken",
+      "deleteTitle": "Servicetype verwijderen"
+    },
+    "fields": {
+      "name": {
+        "label": "Naam *",
+        "placeholder": "bijvoorbeeld aangepaste ondersteuningsniveau *"
+      },
+      "description": {
+        "label": "Beschrijving (optioneel)",
+        "placeholder": "Beschrijf dit servicetype"
+      },
+      "billingMethod": {
+        "label": "Factureringsmethode *",
+        "placeholder": "Selecteer factureringsmethode..."
+      },
+      "displayOrder": {
+        "label": "Weergavevolgorde *",
+        "placeholder": "bijvoorbeeld 1, 2, 3...",
+        "help": "Bepaalt de volgorde waarin servicetypen verschijnen in vervolgkeuzemenu's op het hele platform. Lagere cijfers verschijnen eerst.",
+        "usedOrders": "Gebruikte bestellingen: {{orders}}"
+      }
+    },
+    "actions": {
+      "add": "Aangepast type toevoegen",
+      "importFromStandard": "Importeren uit standaard servicetypen",
+      "save": "Redden",
+      "close": "Dichtbij"
+    },
+    "validation": {
+      "summary": "Vul de verplichte velden in:",
+      "name": "Naam servicetype",
+      "billingMethod": "Factureringsmethode",
+      "displayOrder": "Weergavevolgorde",
+      "orderInUse": "Bestelling {{order}} wordt al gebruikt door \"{{name}}\""
+    },
+    "delete": {
+      "message": "Weet u zeker dat u het servicetype \"{{name}}\" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
+      "errorPrefix": "Fout: {{error}}"
+    },
+    "import": {
+      "title": "Importeer standaard servicetypen",
+      "empty": "Er zijn geen standaard servicetypen beschikbaar om te importeren.",
+      "description": "Selecteer standaard servicetypen om in uw organisatie te importeren:"
+    },
+    "conflicts": {
+      "description": "De volgende items bevatten conflicten die moeten worden opgelost:",
+      "nameExists": "Conflict: Naam bestaat al",
+      "orderInUse": "Conflict: Bestelling {{order}} is al in gebruik",
+      "rename": "Importeren met andere naam:",
+      "reorder": "Importeren met andere volgorde:"
+    },
+    "toast": {
+      "importedCount": "Geïmporteerd servicetype {{count}}",
+      "importedCount_other": "Geïmporteerde {{count}} servicetypen",
+      "skippedItem": "{{name}}: {{reason}}"
+    },
+    "errors": {
+      "fetch": "Kan servicetypen niet ophalen",
+      "save": "Kan het servicetype niet opslaan",
+      "delete": "Kan het servicetype niet verwijderen",
+      "checkConflicts": "Kan conflicten niet controleren",
+      "import": "Kan servicetypen niet importeren"
+    }
+  },
+  "serviceCatalog": {
+    "title": "Servicecatalogusbeheer",
+    "loading": "Laaddiensten",
+    "dialog": {
+      "editTitle": "Dienst bewerken"
+    },
+    "filters": {
+      "allServiceTypes": "Alle servicetypen",
+      "serviceTypePlaceholder": "Filter op servicetype...",
+      "allBillingMethods": "Alle factureringsmethoden",
+      "billingMethodPlaceholder": "Filteren op factureringsmethode..."
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Dienstnaam",
+        "placeholder": "Dienstnaam"
+      },
+      "serviceType": {
+        "label": "Servicetype",
+        "placeholder": "Selecteer servicetype..."
+      },
+      "billingMethod": {
+        "label": "Factureringsmethode",
+        "placeholder": "Selecteer factureringsmethode..."
+      },
+      "description": {
+        "label": "Beschrijving",
+        "placeholder": "Beschrijving"
+      },
+      "pricing": {
+        "label": "Prijzen *",
+        "primaryRateHelp": "De eerste valuta is de primaire koers.",
+        "multiCurrencyHelp": "Voeg prijzen toe in meerdere valuta's. De eerste valuta is de primaire koers.",
+        "placeholders": {
+          "currency": "Munteenheid",
+          "rate": "0,00"
+        },
+        "rateType": {
+          "monthly": "Maandelijks",
+          "perHour": "Per uur",
+          "usage": "Gebruik",
+          "rate": "Tarief"
+        }
+      },
+      "unitOfMeasure": {
+        "label": "Maateenheid *",
+        "placeholder": "bijvoorbeeld GB, API-oproep, gebruiker",
+        "help": "De meetbare eenheid voor facturering (bijvoorbeeld GB, API-oproep, gebruiker)"
+      },
+      "taxRate": {
+        "label": "Belastingtarief (optioneel)",
+        "placeholder": "Selecteer belastingtarief (of laat leeg voor Niet-belastbaar)",
+        "loading": "Tarieven laden..."
+      },
+      "sku": {
+        "label": "SKU",
+        "placeholder": "SKU"
+      },
+      "inventoryCount": {
+        "label": "Voorraadtelling",
+        "placeholder": "Voorraadtelling"
+      },
+      "seatLimit": {
+        "label": "Zitlimiet",
+        "placeholder": "Zitlimiet"
+      },
+      "licenseTerm": {
+        "label": "Licentietermijn",
+        "placeholder": "Licentietermijn selecteren..."
+      }
+    },
+    "actions": {
+      "edit": "Bewerking",
+      "delete": "Verwijderen",
+      "addCurrency": "+ Valuta toevoegen",
+      "remove": "Verwijderen",
+      "cancel": "Annuleren",
+      "saveChanges": "Wijzigingen opslaan"
+    },
+    "table": {
+      "serviceName": "Dienstnaam",
+      "serviceType": "Servicetype",
+      "billingMethod": "Factureringsmethode",
+      "pricing": "Prijzen",
+      "unit": "Eenheid",
+      "taxRate": "Belastingtarief",
+      "nonTaxable": "Niet-belastbaar",
+      "thisService": "deze dienst"
+    },
+    "errors": {
+      "fetchServices": "Kan services niet ophalen",
+      "fetchCategories": "Kan categorieën niet ophalen",
+      "fetchServiceTypesUnknown": "Er is een onbekende fout opgetreden bij het ophalen van servicetypen",
+      "fetchTaxRates": "Kan belastingtarieven niet laden.",
+      "serviceTypeRequired": "Servicetype is vereist",
+      "priceRequired": "Er is minimaal één prijs vereist",
+      "missingId": "Kan de service niet updaten zonder ID.",
+      "update": "Kan de service niet updaten",
+      "validateDelete": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
+      "delete": "Kan service niet verwijderen",
+      "deactivate": "Kan de service niet deactiveren"
+    }
+  },
+  "products": {
+    "title": "Producten",
+    "loading": "Producten laden",
+    "thisProduct": "dit product",
+    "actions": {
+      "add": "Product toevoegen",
+      "search": "Zoekopdracht",
+      "edit": "Bewerking",
+      "restore": "Herstellen",
+      "archive": "Archief",
+      "delete": "Verwijderen"
+    },
+    "filters": {
+      "searchPlaceholder": "Zoek op naam, SKU, beschrijving...",
+      "allStatuses": "Alle statussen",
+      "active": "Actief",
+      "inactive": "Inactief",
+      "allCategories": "Alle categorieën",
+      "allTypes": "Alle soorten",
+      "loading": "Laden..."
+    },
+    "table": {
+      "product": "Product",
+      "sku": "SKU",
+      "type": "Type",
+      "category": "Categorie",
+      "label": "Label",
+      "pricing": "Prijzen",
+      "taxRate": "Belastingtarief",
+      "active": "Actief",
+      "nonTaxable": "Niet-belastbaar"
+    },
+    "archive": {
+      "title": "Product archiveren",
+      "message": "Archief {{name}}? Het wordt standaard verborgen voor pickers en kan pas aan nieuwe contracten/facturen worden gekoppeld als het is hersteld."
+    },
+    "permanentDelete": {
+      "title": "Product definitief verwijderen",
+      "checking": "Controleren of het product kan worden verwijderd...",
+      "confirm": "Weet u zeker dat u \"{{name}}\" definitief wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "blocked": "Kan \"{{name}}\" niet verwijderen omdat deze is gekoppeld aan bestaande gegevens:",
+      "archiveInstead": "Om dit product te verwijderen, verwijdert u het eerst uit alle gekoppelde records, of gebruikt u Archief."
+    },
+    "errors": {
+      "fetch": "Kan producten niet ophalen",
+      "restore": "Kan het product niet herstellen",
+      "archive": "Kan het product niet archiveren",
+      "checkAssociations": "Kan koppelingen niet controleren",
+      "delete": "Kan product niet verwijderen"
+    }
+  },
+  "quickAddService": {
+    "dialog": {
+      "title": "Nieuwe dienst toevoegen"
+    },
+    "actions": {
+      "trigger": "Dienst toevoegen",
+      "addCurrency": "+ Valuta toevoegen",
+      "remove": "Verwijderen",
+      "cancel": "Annuleren",
+      "save": "Dienst opslaan"
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Servicenaam *",
+        "placeholder": "Dienstnaam"
+      },
+      "serviceType": {
+        "label": "Servicetype *",
+        "placeholder": "Selecteer servicetype..."
+      },
+      "billingMethod": {
+        "label": "Factureringsmethode *",
+        "placeholder": "Selecteer factureringsmethode..."
+      },
+      "description": {
+        "label": "Beschrijving",
+        "placeholder": "Dienstbeschrijving"
+      },
+      "pricing": {
+        "label": "Prijzen *",
+        "help": "Voeg prijzen toe in meerdere valuta's. De eerste valuta is de primaire koers.",
+        "placeholders": {
+          "currency": "Munteenheid",
+          "rate": "0,00"
+        },
+        "rateType": {
+          "monthly": "Maandelijks",
+          "perHour": "Per uur",
+          "usage": "Gebruik",
+          "rate": "Tarief"
+        }
+      },
+      "unitOfMeasure": {
+        "label": "Maateenheid *",
+        "placeholder": "bijvoorbeeld GB, API-oproep, gebruiker",
+        "help": "De meetbare eenheid voor facturering (bijvoorbeeld GB, API-oproep, gebruiker)"
+      },
+      "taxRate": {
+        "label": "Belastingtarief (optioneel)",
+        "placeholder": "Selecteer belastingtarief (optioneel)",
+        "loading": "Belastingtarieven laden..."
+      },
+      "sku": {
+        "label": "SKU",
+        "placeholder": "SKU"
+      },
+      "inventoryCount": {
+        "label": "Voorraadtelling",
+        "placeholder": "Voorraadtelling"
+      },
+      "seatLimit": {
+        "label": "Zitlimiet",
+        "placeholder": "Zitlimiet"
+      },
+      "licenseTerm": {
+        "label": "Licentietermijn",
+        "placeholder": "Licentietermijn selecteren..."
+      }
+    },
+    "validation": {
+      "summary": "Los de volgende fouten op:",
+      "serviceNameRequired": "Servicenaam is vereist",
+      "serviceTypeRequired": "Servicetype is vereist",
+      "priceRequired": "Er is minimaal één prijs vereist",
+      "billingMethodRequired": "Factureringsmethode is vereist",
+      "skuRequiredForHardware": "SKU is vereist voor hardware",
+      "licenseTermRequired": "Voor softwarelicenties is een licentietermijn vereist",
+      "selectedTypeNotFound": "Geselecteerd servicetype niet gevonden"
+    },
+    "errors": {
+      "fetchCategories": "Kan categorieën niet ophalen",
+      "fetchTaxRates": "Kan belastingtarieven niet laden.",
+      "create": "Kan service niet maken"
+    }
+  },
+  "quickAddProduct": {
+    "dialog": {
+      "addTitle": "Product toevoegen",
+      "editTitle": "Product bewerken"
+    },
+    "actions": {
+      "addCurrency": "+ Valuta toevoegen",
+      "remove": "Verwijderen",
+      "cancel": "Annuleren",
+      "create": "Creëren",
+      "save": "Redden"
+    },
+    "fields": {
+      "productName": {
+        "label": "Productnaam *"
+      },
+      "type": {
+        "label": "Type *",
+        "placeholder": "Selecteer soort..."
+      },
+      "sku": {
+        "label": "SKU"
+      },
+      "category": {
+        "label": "Categorie",
+        "placeholder": "Niet gecategoriseerd",
+        "loading": "Laden..."
+      },
+      "label": {
+        "label": "Label",
+        "placeholder": "Optioneel vrije-vormlabel"
+      },
+      "vendor": {
+        "label": "Leverancier"
+      },
+      "manufacturer": {
+        "label": "Fabrikant"
+      },
+      "cost": {
+        "label": "Kosten",
+        "placeholder": "0,00"
+      },
+      "billingMethod": {
+        "label": "Factureringsmethode"
+      },
+      "pricing": {
+        "label": "Prijzen *",
+        "help": "Voeg prijzen toe in meerdere valuta's. De eerste valuta is de primaire koers.",
+        "rateType": {
+          "rate": "Tarief"
+        },
+        "placeholders": {
+          "currency": "Munteenheid",
+          "rate": "0,00"
+        }
+      },
+      "taxRate": {
+        "label": "Belastingtarief",
+        "placeholder": "Niet-belastbaar",
+        "loading": "Laden..."
+      },
+      "active": {
+        "label": "Actief"
+      },
+      "unitOfMeasure": {
+        "label": "Maateenheid *",
+        "placeholder": "bijvoorbeeld elk, item, licentie"
+      },
+      "license": {
+        "label": "Licentie?"
+      },
+      "licenseTerm": {
+        "label": "Licentietermijn"
+      },
+      "description": {
+        "label": "Beschrijving"
+      }
+    },
+    "options": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "yes": "Ja",
+      "no": "Nee"
+    },
+    "validation": {
+      "productNameRequired": "Productnaam is vereist",
+      "serviceTypeRequired": "Servicetype is vereist",
+      "unitOfMeasureRequired": "Maateenheid is vereist",
+      "priceRequired": "Er is minimaal één prijs vereist",
+      "currencyRequired": "Voor elke prijs is valuta vereist",
+      "currencyUnique": "Elke valuta kan slechts één keer worden gebruikt",
+      "pricesNonNegative": "Prijzen mogen niet negatief zijn",
+      "nonZeroPriceRequired": "Er is ten minste één prijs anders dan nul vereist"
+    },
+    "errors": {
+      "create": "Kan product niet maken",
+      "update": "Kan product niet updaten"
+    }
+  },
+  "clientTaxSettings": {
+    "title": "Belastinginstellingen voor klanten",
+    "loading": "Belastinginstellingen laden...",
+    "noSettingsFound": "Er zijn geen belastinginstellingen gevonden voor deze klant.",
+    "createDefaultButton": "Maak standaardbelastinginstellingen",
+    "alerts": {
+      "dismissError": "Fout afwijzen",
+      "dismissSuccess": "Succesbericht afwijzen"
+    },
+    "messages": {
+      "defaultCreated": "Standaardbelastinginstellingen zijn succesvol aangemaakt",
+      "createDefaultError": "Fout bij het maken van standaardbelastinginstellingen",
+      "fetchError": "Fout bij ophalen van belastinginstellingen",
+      "updated": "Belastinginstellingen zijn bijgewerkt",
+      "updateError": "Fout bij updaten van belastinginstellingen",
+      "taxExemptEnabled": "Klant gemarkeerd als belastingvrijgesteld.",
+      "taxExemptDisabled": "Belastingvrijstellingsstatus verwijderd van klant.",
+      "taxExemptUpdateError": "Kan de status van belastingvrijstelling niet bijwerken"
+    },
+    "validation": {
+      "thresholdNegativeMin": "Drempel {{index}} heeft een negatief minimumbedrag",
+      "thresholdMaxLessThanMin": "Drempel {{index}} heeft een maximumbedrag dat lager is dan het minimumbedrag",
+      "thresholdNegativeRate": "Drempel {{index}} heeft een negatief tarief",
+      "holidayMissingDates": "Vakantie {{index}} mist de begin- of einddatum",
+      "holidayEndBeforeStart": "Vakantie {{index}} heeft een einddatum die vóór de startdatum ligt"
+    },
+    "taxExempt": {
+      "title": "Belastingvrijstelling",
+      "description": "Op klanten met belastingvrijstelling wordt geen belasting toegepast op hun facturen.",
+      "label": "Belasting vrijgesteld",
+      "tooltip": "Indien ingeschakeld, wordt er geen belasting berekend op de facturen van deze klant. Wijzigingen worden geregistreerd voor auditdoeleinden.",
+      "status": {
+        "exempt": "Vrijstellen",
+        "notExempt": "Niet vrijgesteld"
+      },
+      "certificate": {
+        "label": "Certificaatnummer van belastingvrijstelling",
+        "placeholder": "Certificaatnummer invoeren (optioneel)",
+        "help": "Optioneel: Bewaar het nummer van het belastingvrijstellingscertificaat van de klant ter referentie."
+      },
+      "alert": {
+        "title": "Belastingvrijgestelde klant",
+        "description": "Bij deze klant wordt geen belasting op facturen in rekening gebracht. Zorg ervoor dat u hun vrijstellingscertificaat bewaart."
+      },
+      "actions": {
+        "cancel": "Annuleren",
+        "save": "Belastingvrijstellingsstatus opslaan",
+        "saving": "Besparing..."
+      }
+    },
+    "advanced": {
+      "title": "Geavanceerde belastingopties",
+      "description": "Configureer speciale belastingafhandeling voor deze klant.",
+      "reverseCharge": {
+        "label": "Pas omgekeerde kosten toe",
+        "tooltip": "Door verlegging verschuift de belastingplicht van de verkoper naar de koper. Vaak voorkomend bij B2B-transacties over de grenzen heen.",
+        "status": {
+          "enabled": "Ingeschakeld",
+          "disabled": "Gehandicapt"
+        }
+      },
+      "taxSourceOverride": {
+        "label": "Belastingbron overschrijven",
+        "tooltip": "Overschrijf de standaardbelastingbron van de tenant voor deze client. 'Intern' maakt gebruik van de belastingberekening van Alga. 'Extern' delegeert de belastingberekening aan het boekhoudsysteem wanneer facturen worden geëxporteerd.",
+        "placeholder": "Belastingbron selecteren...",
+        "options": {
+          "default": "Gebruik standaardtenant",
+          "internal": "Alga PSA berekent belasting",
+          "external": "Boekhoudpakket berekent belasting"
+        },
+        "effective": {
+          "label": "Huidige effectieve belastingbron:",
+          "pendingExternal": "In afwachting van extern",
+          "overridden": "(overschreven)"
+        },
+        "notAvailable": {
+          "messageStart": "Het overschrijven van de belastingbron is niet beschikbaar. Deze functie moet zijn ingeschakeld in de",
+          "link": "factureringsinstellingen",
+          "messageEnd": "om overschrijvingen van de belastingbron per klant toe te staan."
+        }
+      },
+      "actions": {
+        "reset": "Wijzigingen opnieuw instellen",
+        "update": "Belastinginstellingen bijwerken",
+        "updating": "Updaten..."
+      }
+    }
+  },
+  "common": {
+    "actions": {
+      "add": "Toevoegen",
+      "cancel": "Annuleren",
+      "close": "Dichtbij",
+      "create": "Creëren",
+      "delete": "Verwijderen",
+      "edit": "Bewerking",
+      "importSelected": "Geselecteerd importeren",
+      "importWithResolutions": "Importeren met resoluties",
+      "remove": "Verwijderen",
+      "reset": "Opnieuw instellen",
+      "save": "Redden",
+      "update": "Update"
+    },
+    "columns": {
+      "actions": "Acties",
+      "name": "Naam",
+      "description": "Beschrijving",
+      "order": "Volgorde",
+      "code": "Code",
+      "status": "Status",
+      "billingMethod": "Factureringsmethode",
+      "rate": "Tarief",
+      "dateRange": "Datumbereik",
+      "startDate": "Startdatum",
+      "endDate": "Einddatum",
+      "sequence": "Volg"
+    },
+    "billingMethod": {
+      "fixed": "Vast",
+      "fixedFee": "Vaste vergoeding",
+      "hourly": "Per uur",
+      "usage": "Gebruik",
+      "usageBased": "Gebruik gebaseerd"
+    },
+    "licenseTerm": {
+      "monthly": "Maandelijks",
+      "annual": "Jaarlijks",
+      "perpetual": "Doorlopend"
+    },
+    "statuses": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "upcoming": "Aankomend",
+      "expired": "Verlopen",
+      "enabled": "Ingeschakeld",
+      "disabled": "Gehandicapt",
+      "yes": "Ja",
+      "no": "Nee",
+      "nonTaxable": "Niet-belastbaar"
+    },
+    "emptyValue": "-",
+    "notAvailable": "N.v.t",
+    "loading": "Laden...",
+    "a11y": {
+      "openMenu": "Menu openen"
+    }
+  },
+  "import": {
+    "title": "Importconflicten oplossen",
+    "selectAll": "Selecteer alles",
+    "skipItem": "Sla dit artikel over",
+    "headers": {
+      "name": "Naam",
+      "description": "Beschrijving",
+      "order": "Volgorde",
+      "billingMethod": "Factureringsmethode"
+    }
+  },
+  "validation": {
+    "requiredFields": "Vul de verplichte velden in:"
+  },
+  "errors": {
+    "failedToLoadSettings": "Kan instellingen niet laden",
+    "failedToSaveSettings": "Kan instellingen niet opslaan"
+  },
+  "toast": {
+    "saved": "Succesvol opgeslagen"
+  },
+  "numbering": {
+    "section": {
+      "title": "Nummerformaat",
+      "description": "Stel het voorvoegsel, de cijferopvulling en de huidige reeks in."
+    },
+    "fields": {
+      "prefix": {
+        "label": "Nummervoorvoegsel",
+        "help": "Optioneel voorvoegsel voor de nummerreeks. Laat leeg voor geen voorvoegsel of voer een aangepast voorvoegsel in."
+      },
+      "minimumDigits": {
+        "label": "Minimaal aantal cijfers",
+        "help": "Minimaal aantal cijfers voor het volgnummer. Bijvoorbeeld 6 maakt van '1' '000001'."
+      },
+      "initialValue": {
+        "label": "Beginwaarde",
+        "help": "Stel het beginnummer van de reeks in. Dit kan slechts één keer worden ingesteld.",
+        "placeholder": "Waarde invoeren"
+      },
+      "lastUsedNumber": {
+        "label": "Laatst gebruikte nummer",
+        "help": "Het laatst toegewezen nummer. Het volgende nummer is één hoger dan deze waarde."
+      },
+      "nextPreview": {
+        "label": "Voorbeeld van volgend nummer",
+        "help": "Dit is het nummer dat aan het volgende record wordt toegewezen."
+      }
+    },
+    "actions": {
+      "save": "Wijzigingen opslaan",
+      "cancel": "Annuleren"
+    },
+    "dialog": {
+      "title": "Nummeringsinstellingen bijwerken",
+      "message": "Het wijzigen van deze instellingen beïnvloedt hoe nieuwe nummers worden gegenereerd. Deze wijziging heeft geen invloed op bestaande records. Weet u zeker dat u wilt doorgaan?",
+      "confirm": "Instellingen bijwerken"
+    },
+    "toast": {
+      "updated": "Instellingen succesvol bijgewerkt."
+    },
+    "errors": {
+      "load": "Kan nummeringsinstellingen niet laden.",
+      "save": "Kan instellingen niet bijwerken."
+    }
+  }
+}

@@ -308,12 +308,29 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     }
   };
 
+  const wizardFooter = (
+    <WizardNavigation
+      currentStep={currentStep}
+      totalSteps={TEMPLATE_STEPS.length}
+      onBack={handleBack}
+      onNext={handleNext}
+      onSkip={handleSkip}
+      onFinish={handleFinish}
+      isNextDisabled={isSaving}
+      isSkipDisabled={REQUIRED_TEMPLATE_STEPS.includes(currentStep)}
+      isLoading={isSaving}
+      nextLabel="Continue"
+      finishLabel="Publish Template"
+    />
+  );
+
   return (
     <Dialog
       isOpen={open}
       onClose={() => onOpenChange(false)}
       title="Create Contract Template"
       className="max-w-4xl max-h-[90vh]"
+      footer={wizardFooter}
     >
       <div className="flex flex-col h-full bg-[rgb(var(--color-card))] rounded-lg">
         <div className="flex-shrink-0 px-6 pt-6">
@@ -360,22 +377,6 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
               {errors[currentStep]}
             </div>
           )}
-        </div>
-
-        <div className="flex-shrink-0 px-6 pb-6 bg-[rgb(var(--color-card))]">
-          <WizardNavigation
-            currentStep={currentStep}
-            totalSteps={TEMPLATE_STEPS.length}
-            onBack={handleBack}
-            onNext={handleNext}
-            onSkip={handleSkip}
-            onFinish={handleFinish}
-            isNextDisabled={isSaving}
-            isSkipDisabled={REQUIRED_TEMPLATE_STEPS.includes(currentStep)}
-            isLoading={isSaving}
-            nextLabel="Continue"
-            finishLabel="Publish Template"
-          />
         </div>
       </div>
     </Dialog>

@@ -351,7 +351,9 @@
       "namePlaceholder": "Saisissez le nom du dossier",
       "loading": "Chargement des dossiers...",
       "rootOption": "Racine (aucun dossier)",
-      "empty": "Aucun dossier disponible. Les documents seront enregistrés à la racine."
+      "empty": "Aucun dossier disponible. Les documents seront enregistrés à la racine.",
+      "showAllFolders": "Afficher tous les dossiers",
+      "showEntityFolders": "Afficher les dossiers de l'entité"
     },
     "filters": {
       "searchLabel": "Rechercher des documents",

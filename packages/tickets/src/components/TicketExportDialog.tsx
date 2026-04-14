@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -129,12 +129,51 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
     }
   }, [filters, selectedFields, selectedTicketIds, t]);
 
+  const footer = (() => {
+    if (step === 'configure') {
+      return (
+        <div className="flex justify-end space-x-2">
+          <Button
+            id="export-cancel-btn"
+            variant="outline"
+            onClick={handleClose}
+          >
+            {t('actions.cancel', 'Cancel')}
+          </Button>
+          <Button
+            id="export-tickets-btn"
+            onClick={() => void handleExport()}
+            disabled={exportCount === 0 || noneSelected}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            {t('export.confirm', 'Export {{count}} Ticket', { count: exportCount })}
+          </Button>
+        </div>
+      );
+    }
+    if (step === 'complete') {
+      return (
+        <div className="flex justify-end space-x-2">
+          <Button
+            id="export-done-btn"
+            onClick={handleClose}
+          >
+            {t('export.done', 'Done')}
+          </Button>
+        </div>
+      );
+    }
+    return null;
+  })();
+
   return (
     <Dialog
       isOpen={isOpen}
       onClose={handleClose}
       title={t('export.title', 'Export Tickets')}
       className="max-w-lg"
+      footer={footer}
     >
       <DialogContent>
         {error && (
@@ -208,24 +247,6 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
               </p>
             </div>
 
-            <DialogFooter>
-              <Button
-                id="export-cancel-btn"
-                variant="outline"
-                onClick={handleClose}
-              >
-                {t('actions.cancel', 'Cancel')}
-              </Button>
-              <Button
-                id="export-tickets-btn"
-                onClick={() => void handleExport()}
-                disabled={exportCount === 0 || noneSelected}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                {t('export.confirm', 'Export {{count}} Ticket', { count: exportCount })}
-              </Button>
-            </DialogFooter>
           </div>
         )}
 
@@ -249,14 +270,6 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
                 count: exportedCount,
               })}
             </p>
-            <DialogFooter>
-              <Button
-                id="export-done-btn"
-                onClick={handleClose}
-              >
-                {t('export.done', 'Done')}
-              </Button>
-            </DialogFooter>
           </div>
         )}
       </DialogContent>

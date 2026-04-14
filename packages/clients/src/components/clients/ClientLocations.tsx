@@ -18,7 +18,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -732,9 +732,9 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
         </div>
       </div>
       {/* Location Form Dialog */}
-      <Dialog 
+      <Dialog
         id="client-location-dialog"
-        isOpen={isDialogOpen} 
+        isOpen={isDialogOpen}
         onClose={() => {
           setIsDialogOpen(false);
           setHasAttemptedSubmit(false);
@@ -744,10 +744,40 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
         title={editingLocation
           ? t('clients.locations.dialog.editTitle', 'Edit Location')
           : t('clients.locations.dialog.addTitle', 'Add New Location')}
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-location-button"
+              data-automation-id="cancel-location-button"
+              variant="outline"
+              onClick={() => {
+                setIsDialogOpen(false);
+                setHasAttemptedSubmit(false);
+                setValidationErrors([]);
+              }}
+              disabled={isLoading}
+              type="button"
+            >
+              {t('actions.cancel', 'Cancel')}
+            </Button>
+            <Button
+              id="save-location-button"
+              data-automation-id="save-location-button"
+              type="button"
+              onClick={() => (document.getElementById('client-location-form') as HTMLFormElement | null)?.requestSubmit()}
+              disabled={isLoading}
+              className={!formData.address_line1 || !formData.city || !formData.country_name ? 'opacity-50' : ''}
+            >
+              {isLoading
+                ? t('status.saving', 'Saving...')
+                : t('clients.locations.buttons.save', 'Save Location')}
+            </Button>
+          </div>
+        }
       >
         <DialogContent>
-          
-          <form onSubmit={(e) => { e.preventDefault(); handleSaveLocation(); }} className="space-y-4" noValidate>
+
+          <form id="client-location-form" onSubmit={(e) => { e.preventDefault(); handleSaveLocation(); }} className="space-y-4" noValidate>
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>
@@ -941,33 +971,6 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
               </div>
             </div>
             
-            <DialogFooter>
-              <Button 
-                id="cancel-location-button"
-                data-automation-id="cancel-location-button"
-                variant="outline" 
-                onClick={() => {
-                  setIsDialogOpen(false);
-                  setHasAttemptedSubmit(false);
-                  setValidationErrors([]);
-                }}
-                disabled={isLoading}
-                type="button"
-              >
-                {t('actions.cancel', 'Cancel')}
-              </Button>
-              <Button 
-                id="save-location-button"
-                data-automation-id="save-location-button"
-                type="submit"
-                disabled={isLoading}
-                className={!formData.address_line1 || !formData.city || !formData.country_name ? 'opacity-50' : ''}
-              >
-                {isLoading
-                  ? t('status.saving', 'Saving...')
-                  : t('clients.locations.buttons.save', 'Save Location')}
-              </Button>
-            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

@@ -387,6 +387,30 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
         title={t('clientBillingSchedule.title', { defaultValue: 'Billing Schedule' })}
         id="client-billing-schedule-dialog"
         disableFocusTrap
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="client-billing-schedule-close"
+              type="button"
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              disabled={saving}
+            >
+              {t('common.actions.close', { defaultValue: 'Close' })}
+            </Button>
+            <Button
+              id="client-billing-save-schedule"
+              type="button"
+              onClick={saveSchedule}
+              disabled={saving || bootstrapPreview?.status === 'blocked_invoiced_history'}
+              data-automation-id="client-billing-save-schedule"
+            >
+              {saving
+                ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                : t('clientBillingSchedule.save', { defaultValue: 'Save Schedule' })}
+            </Button>
+          </div>
+        }
       >
         <div className="space-y-4 p-1">
           <div className="text-sm text-gray-600">
@@ -514,29 +538,6 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
             {bootstrapPreviewLoading ? (
               <div className="text-xs text-gray-500">{t('clientBillingSchedule.updatingHistoryPreview', { defaultValue: 'Updating billing history bootstrap preview...' })}</div>
             ) : null}
-          </div>
-
-	          <div className="flex items-center justify-end gap-2 pt-2">
-	            <Button
-	              id="client-billing-schedule-close"
-	              type="button"
-	              variant="outline"
-	              onClick={() => setDialogOpen(false)}
-	              disabled={saving}
-	            >
-	              {t('common.actions.close', { defaultValue: 'Close' })}
-	            </Button>
-	            <Button
-	              id="client-billing-save-schedule"
-	              type="button"
-	              onClick={saveSchedule}
-	              disabled={saving || bootstrapPreview?.status === 'blocked_invoiced_history'}
-	              data-automation-id="client-billing-save-schedule"
-            >
-              {saving
-                ? t('common.actions.saving', { defaultValue: 'Saving...' })
-                : t('clientBillingSchedule.save', { defaultValue: 'Save Schedule' })}
-            </Button>
           </div>
 
           <div className="pt-2 border-t">

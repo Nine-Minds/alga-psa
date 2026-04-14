@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -60,12 +60,32 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
         }
     };
 
+    const footer = (
+        <div className="flex justify-end space-x-2">
+            <Button
+                id="plan-picker-cancel-btn"
+                variant="outline"
+                onClick={onClose}
+            >
+                {t('contractLinePickerDialog.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+                id="plan-picker-submit-btn"
+                onClick={handleSubmit}
+                disabled={!selectedPlan}
+            >
+                {initialValues ? t('contractLinePickerDialog.updatePlan', { defaultValue: 'Update Plan' }) : t('contractLinePickerDialog.addPlan', { defaultValue: 'Add Plan' })}
+            </Button>
+        </div>
+    );
+
     return (
-        <Dialog 
-          isOpen={isOpen} 
-          onClose={onClose} 
-          className="sm:max-w-4xl" 
+        <Dialog
+          isOpen={isOpen}
+          onClose={onClose}
+          className="sm:max-w-4xl"
           title={t('contractLinePickerDialog.title', { defaultValue: 'Select a Contract Line' })}
+          footer={footer}
         >
             <DialogContent>
                 <div className="mt-4 space-y-4">
@@ -156,24 +176,6 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
                     </div>
                 </div>
             </DialogContent>
-            <DialogFooter>
-                <div className="flex justify-end space-x-2">
-                    <Button 
-                        id="plan-picker-cancel-btn"
-                        variant="outline" 
-                        onClick={onClose}
-                    >
-                        {t('contractLinePickerDialog.cancel', { defaultValue: 'Cancel' })}
-                    </Button>
-                    <Button 
-                        id="plan-picker-submit-btn"
-                        onClick={handleSubmit}
-                        disabled={!selectedPlan}
-                    >
-                        {initialValues ? t('contractLinePickerDialog.updatePlan', { defaultValue: 'Update Plan' }) : t('contractLinePickerDialog.addPlan', { defaultValue: 'Add Plan' })}
-                    </Button>
-                </div>
-            </DialogFooter>
         </Dialog>
     );
 };

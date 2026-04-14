@@ -202,6 +202,7 @@
       "billable": "Płatne",
       "nonBillable": "Niepodlegające rozliczeniu",
       "workItem": "Przedmiot pracy",
+      "service": "Usługa",
       "duration": "Czas trwania",
       "notes": "Notatki",
       "entryChangeSuggestion": "Sugestia zmiany wpisu",

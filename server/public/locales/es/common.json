@@ -367,7 +367,9 @@
       "namePlaceholder": "Ingresa el nombre de la carpeta",
       "loading": "Cargando carpetas...",
       "rootOption": "Raíz (sin carpeta)",
-      "empty": "No hay carpetas disponibles. Los documentos se guardarán en la raíz."
+      "empty": "No hay carpetas disponibles. Los documentos se guardarán en la raíz.",
+      "showAllFolders": "Mostrar todas las carpetas",
+      "showEntityFolders": "Mostrar carpetas de la entidad"
     },
     "filters": {
       "searchLabel": "Buscar documentos",

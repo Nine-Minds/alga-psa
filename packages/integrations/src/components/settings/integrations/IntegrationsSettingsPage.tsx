@@ -10,7 +10,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import {
   Building2,
@@ -323,13 +322,6 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Beta notice */}
-      <Alert variant="info">
-        <AlertDescription>
-          {t('integrations.betaNotice')}
-        </AlertDescription>
-      </Alert>
-
       {/* Category tabs */}
       <CustomTabs
         tabs={tabContent}

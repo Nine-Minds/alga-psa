@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -158,13 +158,40 @@ export function ServiceSelectionDialog({
   }, [services]);
 
   return (
-    <Dialog 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      id="service-selection-dialog" 
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      id="service-selection-dialog"
       title="Add Services & Products to Plan"
+      footer={(
+        <div className="flex justify-between w-full">
+          <div>
+            {selectedServices.length > 0 && (
+              <span className="text-sm text-muted-foreground">
+                {selectedServices.length} service{selectedServices.length !== 1 ? 's' : ''} selected
+              </span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              id="cancel-service-selection-button"
+              variant="outline"
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="add-selected-services-button"
+              onClick={handleAddServices}
+              disabled={selectedServices.length === 0 || adding}
+            >
+              {adding ? 'Adding...' : 'Add Selected Services'}
+            </Button>
+          </div>
+        </div>
+      )}
     >
-      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
+      <DialogContent className="max-w-4xl flex flex-col">
 
         <div className="flex flex-col space-y-4 h-full">
           {/* Search and filters */}
@@ -286,34 +313,6 @@ export function ServiceSelectionDialog({
                 All {type}
               </Button>
             ))}
-          </div>
-        </div>
-        
-        <div className="mt-4">
-          <div className="flex justify-between w-full">
-            <div>
-              {selectedServices.length > 0 && (
-                <span className="text-sm text-muted-foreground">
-                  {selectedServices.length} service{selectedServices.length !== 1 ? 's' : ''} selected
-                </span>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                id="cancel-service-selection-button"
-                variant="outline"
-                onClick={onClose}
-              >
-                Cancel
-              </Button>
-              <Button
-                id="add-selected-services-button"
-                onClick={handleAddServices}
-                disabled={selectedServices.length === 0 || adding}
-              >
-                {adding ? 'Adding...' : 'Add Selected Services'}
-              </Button>
-            </div>
           </div>
         </div>
       </DialogContent>

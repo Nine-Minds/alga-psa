@@ -11,6 +11,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const DEFAULT_SETTINGS: BillingSettings = {
   zeroDollarInvoiceHandling: 'normal',
@@ -37,18 +38,27 @@ type StatusOption = {
   label: string;
 };
 
-const POLICY_OPTIONS = [
-  { value: 'create_ticket', label: 'Create ticket' },
-  { value: 'queue_only', label: 'Queue only' },
-];
-
 const RenewalAutomationSettings = (): React.JSX.Element => {
+  const { t } = useTranslation('msp/billing-settings');
   const [settings, setSettings] = React.useState<BillingSettings>(DEFAULT_SETTINGS);
   const [boardOptions, setBoardOptions] = React.useState<BoardOption[]>([]);
   const [statusOptions, setStatusOptions] = React.useState<StatusOption[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [loadingStatuses, setLoadingStatuses] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const policyOptions = React.useMemo(
+    () => ([
+      {
+        value: 'create_ticket',
+        label: t('general.renewal.options.createTicket', { defaultValue: 'Create ticket' }),
+      },
+      {
+        value: 'queue_only',
+        label: t('general.renewal.options.queueOnly', { defaultValue: 'Queue only' }),
+      },
+    ]),
+    [t]
+  );
 
   React.useEffect(() => {
     let active = true;
@@ -68,12 +78,14 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
         setBoardOptions(
           boards.map((board) => ({
             value: board.board_id ?? '',
-            label: board.board_name ?? 'Unnamed board',
+            label: board.board_name ?? t('general.renewal.states.unnamedBoard', { defaultValue: 'Unnamed board' }),
           }))
         );
       } catch (error) {
         if (active) {
-          handleError(error, 'Failed to load renewal automation settings');
+          handleError(error, t('general.renewal.errors.load', {
+            defaultValue: 'Failed to load renewal automation settings'
+          }));
         }
       } finally {
         if (active) {
@@ -87,7 +99,7 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     let active = true;
@@ -139,7 +151,9 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
             ? { ...current, renewalTicketStatusId: undefined }
             : current
         ));
-        handleError(error, 'Failed to load renewal ticket statuses');
+        handleError(error, t('general.renewal.errors.loadStatuses', {
+          defaultValue: 'Failed to load renewal ticket statuses'
+        }));
       } finally {
         if (active) {
           setLoadingStatuses(false);
@@ -152,7 +166,7 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
     return () => {
       active = false;
     };
-  }, [settings.renewalTicketBoardId]);
+  }, [settings.renewalTicketBoardId, t]);
 
   const handleSave = async () => {
     try {
@@ -163,9 +177,13 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
         return;
       }
 
-      toast.success('Renewal automation settings have been updated.');
+      toast.success(t('general.renewal.toast.updated', {
+        defaultValue: 'Renewal automation settings have been updated.'
+      }));
     } catch (error) {
-      handleError(error, 'Failed to save renewal automation settings');
+      handleError(error, t('general.renewal.errors.save', {
+        defaultValue: 'Failed to save renewal automation settings'
+      }));
     } finally {
       setSaving(false);
     }
@@ -176,10 +194,12 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="renewal-due-date-action-policy">Due Date Action</Label>
+        <Label htmlFor="renewal-due-date-action-policy">
+          {t('general.renewal.fields.dueDateAction.label', { defaultValue: 'Due Date Action' })}
+        </Label>
         <CustomSelect
           id="renewal-due-date-action-policy"
-          options={POLICY_OPTIONS}
+          options={policyOptions}
           value={settings.renewalDueDateActionPolicy ?? 'create_ticket'}
           onValueChange={(value) => {
             setSettings((current) => ({
@@ -191,14 +211,18 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
           disabled={loading || saving}
         />
         <p className="text-sm text-muted-foreground">
-          Choose whether renewal due dates should create tickets or stay queue-only by default.
+          {t('general.renewal.fields.dueDateAction.help', {
+            defaultValue: 'Choose whether renewal due dates should create tickets or stay queue-only by default.'
+          })}
         </p>
       </div>
 
       {isCreateTicketPolicy && (
         <>
           <div className="space-y-2">
-            <Label htmlFor="renewal-ticket-board">Renewal Ticket Board</Label>
+            <Label htmlFor="renewal-ticket-board">
+              {t('general.renewal.fields.ticketBoard.label', { defaultValue: 'Renewal Ticket Board' })}
+            </Label>
             <CustomSelect
               id="renewal-ticket-board"
               options={boardOptions}
@@ -210,14 +234,18 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
                   renewalTicketStatusId: undefined,
                 }));
               }}
-              placeholder={loading ? 'Loading boards...' : 'Select board'}
+              placeholder={loading
+                ? t('general.renewal.fields.ticketBoard.placeholderLoading', { defaultValue: 'Loading boards...' })
+                : t('general.renewal.fields.ticketBoard.placeholderSelect', { defaultValue: 'Select board' })}
               className="!w-fit"
               disabled={loading || saving}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="renewal-ticket-status">Renewal Ticket Status</Label>
+            <Label htmlFor="renewal-ticket-status">
+              {t('general.renewal.fields.ticketStatus.label', { defaultValue: 'Renewal Ticket Status' })}
+            </Label>
             <CustomSelect
               id="renewal-ticket-status"
               options={statusOptions}
@@ -230,14 +258,20 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
               }}
               placeholder={
                 settings.renewalTicketBoardId
-                  ? (loadingStatuses ? 'Loading statuses...' : 'Select status')
-                  : 'Select a board first'
+                  ? (loadingStatuses
+                    ? t('general.renewal.fields.ticketStatus.placeholderLoading', { defaultValue: 'Loading statuses...' })
+                    : t('general.renewal.fields.ticketStatus.placeholderSelect', { defaultValue: 'Select status' }))
+                  : t('general.renewal.fields.ticketStatus.placeholderSelectBoardFirst', {
+                    defaultValue: 'Select a board first'
+                  })
               }
               className="!w-fit"
               disabled={loading || saving || loadingStatuses || !settings.renewalTicketBoardId}
             />
             <p className="text-sm text-muted-foreground">
-              Renewal ticket statuses are scoped to the selected board.
+              {t('general.renewal.fields.ticketStatus.help', {
+                defaultValue: 'Renewal ticket statuses are scoped to the selected board.'
+              })}
             </p>
           </div>
         </>
@@ -249,7 +283,9 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
           onClick={handleSave}
           disabled={loading || saving}
         >
-          {saving ? 'Saving...' : 'Save'}
+          {saving
+            ? t('general.renewal.actions.saving', { defaultValue: 'Saving...' })
+            : t('general.renewal.actions.save', { defaultValue: 'Save' })}
         </Button>
       </div>
     </div>

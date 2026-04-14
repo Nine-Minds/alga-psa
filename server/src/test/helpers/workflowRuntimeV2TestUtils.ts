@@ -25,6 +25,9 @@ const workflowScheduleMigration = require(
 const workflowScheduleExpansionMigration = require(
   path.resolve(__dirname, '../../../../ee/server/migrations/20260308130000_expand_workflow_schedule_for_external_schedules.cjs')
 ) as { up: (knex: Knex) => Promise<void> };
+const workflowScheduleBusinessDayMigration = require(
+  path.resolve(__dirname, '../../../../ee/server/migrations/20260410120000_add_workflow_schedule_business_day_fields.cjs')
+) as { up: (knex: Knex) => Promise<void> };
 
 export async function ensureWorkflowScheduleStateTable(db: Knex): Promise<void> {
   const hasScheduleTable = await db.schema.hasTable('tenant_workflow_schedule');
@@ -36,6 +39,12 @@ export async function ensureWorkflowScheduleStateTable(db: Knex): Promise<void> 
   const hasPayloadColumn = await db.schema.hasColumn('tenant_workflow_schedule', 'payload_json');
   if (!hasNameColumn || !hasPayloadColumn) {
     await workflowScheduleExpansionMigration.up(db);
+  }
+
+  const hasDayTypeFilterColumn = await db.schema.hasColumn('tenant_workflow_schedule', 'day_type_filter');
+  const hasBusinessHoursScheduleIdColumn = await db.schema.hasColumn('tenant_workflow_schedule', 'business_hours_schedule_id');
+  if (!hasDayTypeFilterColumn || !hasBusinessHoursScheduleIdColumn) {
+    await workflowScheduleBusinessDayMigration.up(db);
   }
 }
 

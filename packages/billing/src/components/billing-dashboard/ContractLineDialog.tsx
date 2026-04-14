@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -1026,9 +1026,25 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
         title={editingPlan ? 'Edit Contract Line Preset' : 'Add Contract Line Preset'}
         className="max-w-3xl"
         hideCloseButton={!!editingPlan}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="contract-line-cancel" variant="outline" onClick={() => handleCloseRequest(true)}>
+              Cancel
+            </Button>
+            <Button
+              id="contract-line-submit"
+              type="button"
+              onClick={() => (document.getElementById('contract-line-dialog-form') as HTMLFormElement | null)?.requestSubmit()}
+              disabled={isSaving}
+              className={!planName.trim() || !planType || !billingFrequency ? 'opacity-50' : ''}
+            >
+              {isSaving ? 'Saving…' : editingPlan ? 'Update Contract Line Preset' : 'Create Contract Line Preset'}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
-          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+          <form id="contract-line-dialog-form" onSubmit={handleSubmit} className="space-y-6" noValidate>
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive">
                 <AlertDescription>
@@ -1271,19 +1287,6 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
               </section>
             )}
 
-            <DialogFooter>
-              <Button id="contract-line-cancel" variant="outline" onClick={() => handleCloseRequest(true)}>
-                Cancel
-              </Button>
-              <Button
-                id="contract-line-submit"
-                type="submit"
-                disabled={isSaving}
-                className={!planName.trim() || !planType || !billingFrequency ? 'opacity-50' : ''}
-              >
-                {isSaving ? 'Saving…' : editingPlan ? 'Update Contract Line Preset' : 'Create Contract Line Preset'}
-              </Button>
-            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

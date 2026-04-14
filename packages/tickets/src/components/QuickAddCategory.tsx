@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -185,8 +185,21 @@ export default function QuickAddCategory({
 
   const shouldShowBoardSelector = !preselectedBoardId && !formData.parent_category;
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button id="quick-add-category-cancel" type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
+        {t('actions.cancel', 'Cancel')}
+      </Button>
+      <Button id="quick-add-category-submit" type="button" onClick={() => void handleSubmit()} disabled={isSubmitting}>
+        {isSubmitting
+          ? t('settings.categories.creating', 'Creating...')
+          : t('actions.create', 'Create')}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog isOpen={isOpen} onClose={handleClose} title={t('settings.categories.addCategory', 'Add Category')}>
+    <Dialog isOpen={isOpen} onClose={handleClose} title={t('settings.categories.addCategory', 'Add Category')} footer={footer}>
       <DialogContent>
         <div className="space-y-4">
           {error && (
@@ -276,16 +289,6 @@ export default function QuickAddCategory({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button id="quick-add-category-cancel" type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
-            {t('actions.cancel', 'Cancel')}
-          </Button>
-          <Button id="quick-add-category-submit" type="button" onClick={() => void handleSubmit()} disabled={isSubmitting}>
-            {isSubmitting
-              ? t('settings.categories.creating', 'Creating...')
-              : t('actions.create', 'Create')}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

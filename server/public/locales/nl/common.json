@@ -351,7 +351,9 @@
       "namePlaceholder": "Voer de mapnaam in",
       "loading": "Mappen laden...",
       "rootOption": "Hoofdmap (geen map)",
-      "empty": "Geen mappen beschikbaar. Documenten worden in de hoofdmap opgeslagen."
+      "empty": "Geen mappen beschikbaar. Documenten worden in de hoofdmap opgeslagen.",
+      "showAllFolders": "Alle mappen tonen",
+      "showEntityFolders": "Entiteitsmappen tonen"
     },
     "filters": {
       "searchLabel": "Documenten zoeken",

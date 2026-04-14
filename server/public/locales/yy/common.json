@@ -367,7 +367,9 @@
       "namePlaceholder": "55555",
       "loading": "55555",
       "rootOption": "55555",
-      "empty": "55555"
+      "empty": "55555",
+      "showAllFolders": "55555",
+      "showEntityFolders": "55555"
     },
     "filters": {
       "searchLabel": "55555",

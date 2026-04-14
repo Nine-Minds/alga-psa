@@ -3,7 +3,7 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket creation intentionally composes ticket feature actions for customer-submitted requests. */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -160,11 +160,34 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
     [priorities]
   );
 
+  const footer = !isLoading ? (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="cancel-ticket-button"
+        type="button"
+        variant="outline"
+        onClick={handleClose}
+      >
+        {tCommon('common.cancel')}
+      </Button>
+      <Button
+        id="submit-ticket-button"
+        type="button"
+        variant="default"
+        disabled={isSubmitting}
+        onClick={() => (document.getElementById('client-add-ticket-form') as HTMLFormElement | null)?.requestSubmit()}
+      >
+        {isSubmitting ? t('create.submitting') : t('create.submit')}
+      </Button>
+    </div>
+  ) : undefined;
+
   return (
-    <Dialog 
-      isOpen={open} 
-      onClose={handleClose} 
+    <Dialog
+      isOpen={open}
+      onClose={handleClose}
       title={t('create.title')}
+      footer={footer}
     >
       <DialogContent className="max-w-2xl">
         {isLoading ? (
@@ -179,7 +202,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <form id="client-add-ticket-form" onSubmit={handleSubmit} className="space-y-4" noValidate>
               <Input
                 id="client-ticket-title"
                 value={title}
@@ -189,7 +212,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
                 }}
                 placeholder={t('create.titlePlaceholder')}
               />
-              
+
               <div className="min-w-0 w-full">
                 <TextEditor
                   key={`client-ticket-description-editor-${open ? descriptionEditorInstanceKey : 'closed'}`}
@@ -215,25 +238,6 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
                   placeholder={t('create.priorityPlaceholder')}
                 />
               </div>
-
-              <DialogFooter>
-                <Button
-                  id="cancel-ticket-button"
-                  type="button"
-                  variant="outline"
-                  onClick={handleClose}
-                >
-                  {tCommon('common.cancel')}
-                </Button>
-                <Button
-                  id="submit-ticket-button"
-                  type="submit"
-                  variant="default"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? t('create.submitting') : t('create.submit')}
-                </Button>
-              </DialogFooter>
             </form>
           </>
         )}

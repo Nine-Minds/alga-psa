@@ -434,7 +434,11 @@
       "selectMasterTicket": "Wybierz zgłoszenie nadrzędne...",
       "syncUpdates": "Synchronizuj aktualizacje z nadrzędnego do podrzędnych (publiczne odpowiedzi + zmiany przepływu pracy)",
       "syncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Pola przepływu pracy są domyślnie zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
-      "childrenDescription": "Podrzędne zachowują swój obecny status; pola przepływu pracy są zablokowane na zgłoszeniach podrzędnych. Odpowiedzi przychodzące na podrzędne są wyświetlane poniżej jako tylko do odczytu."
+      "childrenDescription": "Podrzędne zachowują swój obecny status; pola przepływu pracy są zablokowane na zgłoszeniach podrzędnych. Odpowiedzi przychodzące na podrzędne są wyświetlane poniżej jako tylko do odczytu.",
+      "checkingMasters": "Sprawdzanie istniejących połączeń...",
+      "existingMasterSuffix": "(istniejące zgłoszenie nadrzędne)",
+      "existingMasterLocked": "Jedno z wybranych zgłoszeń jest już zgłoszeniem nadrzędnym. Zostanie użyte jako nadrzędne; pozostałe zostaną dodane jako podrzędne.",
+      "multipleExistingMasters": "Wiele wybranych zgłoszeń jest już zgłoszeniami nadrzędnymi ({{count}}). Rozłącz wszystkie oprócz jednego przed łączeniem."
     },
     "auth": {
       "moveRequired": "Musisz być zalogowany, aby przenosić zgłoszenia",

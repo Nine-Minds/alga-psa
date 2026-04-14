@@ -1208,13 +1208,8 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
             title={t('templates.editor.clientPortalVisibility', 'Client Portal Visibility')}
             id="template-client-portal-config-dialog"
             className="max-w-lg"
-          >
-            <div className="p-4">
-              <ClientPortalConfigEditor
-                config={clientPortalConfig}
-                onChange={handleClientPortalConfigChange}
-              />
-              <div className="flex justify-end mt-4">
+            footer={
+              <div className="flex justify-end">
                 <Button
                   id="close-template-client-portal-config"
                   type="button"
@@ -1223,6 +1218,13 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                   {t('templates.editor.done', 'Done')}
                 </Button>
               </div>
+            }
+          >
+            <div className="p-4">
+              <ClientPortalConfigEditor
+                config={clientPortalConfig}
+                onChange={handleClientPortalConfigChange}
+              />
             </div>
           </Dialog>
         </div>

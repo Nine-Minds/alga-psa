@@ -211,6 +211,30 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
         title={t('relatedAssetsTab.dialog.title', { defaultValue: 'Link Asset' })}
         isOpen={isLinkDialogOpen}
         onClose={() => setIsLinkDialogOpen(false)}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-link-related-asset"
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsLinkDialogOpen(false)}
+              disabled={isSaving}
+            >
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="confirm-link-related-asset"
+              variant="default"
+              size="sm"
+              onClick={handleCreateRelationship}
+              disabled={isSaving || !selectedAssetId}
+            >
+              {isSaving
+                ? t('relatedAssetsTab.dialog.actions.linking', { defaultValue: 'Linking...' })
+                : t('relatedAssetsTab.dialog.actions.confirm', { defaultValue: 'Link asset' })}
+            </Button>
+          </div>
+        )}
       >
         <div className="space-y-4">
           <div className="space-y-2">
@@ -298,28 +322,6 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              id="cancel-link-related-asset"
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsLinkDialogOpen(false)}
-              disabled={isSaving}
-            >
-              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-            </Button>
-            <Button
-              id="confirm-link-related-asset"
-              variant="default"
-              size="sm"
-              onClick={handleCreateRelationship}
-              disabled={isSaving || !selectedAssetId}
-            >
-              {isSaving
-                ? t('relatedAssetsTab.dialog.actions.linking', { defaultValue: 'Linking...' })
-                : t('relatedAssetsTab.dialog.actions.confirm', { defaultValue: 'Link asset' })}
-            </Button>
-          </div>
         </div>
       </Dialog>
     </Card>

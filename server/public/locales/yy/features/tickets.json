@@ -230,7 +230,7 @@
     "deleteCommentAriaLabel": "55555",
     "inboundChildReplies": "55555",
     "childTicket": "55555",
-    "ticketPrefix": "55555"
+    "ticketPrefix": "55555 {{number}} 55555"
   },
   "responseState": {
     "awaitingYourResponse": "55555",
@@ -434,7 +434,11 @@
       "selectMasterTicket": "55555",
       "syncUpdates": "55555",
       "syncUpdatesHelp": "55555",
-      "childrenDescription": "55555"
+      "childrenDescription": "55555",
+      "checkingMasters": "55555",
+      "existingMasterSuffix": "55555",
+      "existingMasterLocked": "55555",
+      "multipleExistingMasters": "55555 {{count}} 55555"
     },
     "auth": {
       "moveRequired": "55555",

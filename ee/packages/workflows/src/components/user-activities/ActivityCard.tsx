@@ -37,13 +37,18 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
   // Color mapping based on activity type
   const typeColorMap: Record<ActivityType, string> = {
     [ActivityType.SCHEDULE]: 'border-success',
-    [ActivityType.PROJECT_TASK]: 'border-primary-500',
-    [ActivityType.TICKET]: 'border-purple-500',
+    [ActivityType.PROJECT_TASK]: '', // uses inline style
+    [ActivityType.TICKET]: 'border-primary-500',
     [ActivityType.TIME_ENTRY]: 'border-orange-500',
     [ActivityType.WORKFLOW_TASK]: 'border-destructive',
     [ActivityType.NOTIFICATION]: 'border-warning',
     [ActivityType.DOCUMENT]: 'border-teal-500',
   };
+
+  // Secondary color needs inline style since Tailwind doesn't resolve the CSS variable
+  const borderStyle = activity.type === ActivityType.PROJECT_TASK
+    ? { borderLeftColor: 'rgb(var(--color-secondary-500))' }
+    : undefined;
 
   // Priority indicator - only show when a real priority is set (has color from DB)
   const getPriorityDot = () => {
@@ -67,6 +72,7 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
   return (
     <div
       className={`p-4 border-l-4 ${typeColorMap[activity.type]} bg-white rounded-md shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
+      style={borderStyle}
       onClick={() => openActivityDrawer(activity)}
       id={`activity-card-${activity.id}`}
     >

@@ -1,0 +1,22 @@
+[
+  {"id": "F001", "description": "Create en/msp/service-catalog.json with all keys for 14 service catalog and tax rate components (~285-430 strings)", "implemented": false},
+  {"id": "F002", "description": "Wire useTranslation('msp/service-catalog') in TaxRates.tsx — table column headers, dialog title/labels, validation messages, button text, loading indicator", "implemented": false},
+  {"id": "F003", "description": "Wire useTranslation in TaxRateDetailPanel.tsx — tab labels (Details, Components, Brackets, Holidays), detail field labels, precedence info, composite badge, alert text", "implemented": false},
+  {"id": "F004", "description": "Wire useTranslation in ServiceForm.tsx — placeholder text, select labels (Service Type, Billing Method, Tax Rate), description label, submit button", "implemented": false},
+  {"id": "F005", "description": "Wire useTranslation in ServiceSelectionDialog.tsx — dialog title, search placeholder, table headers (Item Name, Type, Unit, Rate), Quick Add label, selection count, action buttons, loading/empty/error states", "implemented": false},
+  {"id": "F006", "description": "Wire useTranslation in ConfigurationTypeSelector.tsx — type labels (Fixed Price, Hourly Rate, Usage-Based, Bucket Hours), type descriptions, warning dialog title/body/buttons", "implemented": false},
+  {"id": "F007", "description": "Wire useTranslation in BaseServiceConfigPanel.tsx and ServiceConfigurationPanel (service-configurations/) — section headings, field labels (Quantity, Custom Rate), helper text, effective mode/default source labels, save/cancel buttons", "implemented": false},
+  {"id": "F008", "description": "Wire useTranslation in FixedServiceConfigPanel.tsx — section heading, proration toggle label, alignment options (Start of Billing Cycle, End of Billing Cycle, Proportional Coverage), helper text", "implemented": false},
+  {"id": "F009", "description": "Wire useTranslation in HourlyServiceConfigPanel.tsx — section heading, field labels (Minimum Billable Time, Round Up To Nearest), user type rate section (header, column headers, user type options, Add Rate button), validation messages", "implemented": false},
+  {"id": "F010", "description": "Wire useTranslation in UsageServiceConfigPanel.tsx — section heading, field labels (Unit of Measure, Minimum Usage Threshold), tiered pricing toggle, tier labels (From, To, Rate per), Add Tier button, validation messages, helper text", "implemented": false},
+  {"id": "F011", "description": "Wire useTranslation in BucketServiceConfigPanel.tsx — section heading, field labels (Total Minutes, Billing Period, Overage Rate), rollover toggle, mismatch warning, helper text, validation messages", "implemented": false},
+  {"id": "F012", "description": "Wire useTranslation in ServiceRateTiers.tsx — card title, table headers (Min Quantity, Max Quantity, Rate, Actions), Add Tier button, Save button, loading text, validation errors", "implemented": false},
+  {"id": "F013", "description": "Wire useTranslation in ServiceTaxSettings.tsx — card title, select label, Non-Taxable option, helper text, Save button, error messages", "implemented": false},
+  {"id": "F014", "description": "Wire useTranslation in ServiceConfigurationPanel (service-config/) — card title, card description, section headings (Unit of Measure, Base Rate), rate display text, loading/error states", "implemented": false},
+  {"id": "F015", "description": "Generate msp/service-catalog translations for 7 non-English production locales (de, es, fr, it, nl, pl, pt)", "implemented": false},
+  {"id": "F016", "description": "Generate pseudo-locale files (xx, yy) for msp/service-catalog via generate-pseudo-locales.cjs", "implemented": false},
+  {"id": "F017", "description": "Italian accent audit on it/msp/service-catalog.json", "implemented": false},
+  {"id": "F018", "description": "Update ROUTE_NAMESPACES to add 'msp/service-catalog' to /msp/settings route", "implemented": false},
+  {"id": "F019", "description": "validate-translations.cjs passes for msp/service-catalog across all 9 locales (0 errors, 0 warnings)", "implemented": false},
+  {"id": "F020", "description": "npm run build succeeds with no TypeScript errors after all wiring", "implemented": false}
+]

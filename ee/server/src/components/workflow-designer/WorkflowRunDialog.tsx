@@ -1417,7 +1417,26 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     'border-[rgb(var(--color-border-300))] bg-white text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-background-100))]';
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title="Run Workflow" className="max-w-4xl">
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Run Workflow"
+      className="max-w-4xl"
+      footer={(
+        <div className="flex justify-end space-x-2">
+          <Button id="run-dialog-close" variant="outline" onClick={onClose}>
+            Close
+          </Button>
+          <Button
+            id="run-dialog-start-run"
+            onClick={handleStartRun}
+            disabled={!canRun || isStartingRun || !!runPayloadError || (isSystem && !confirmSystemRun)}
+          >
+            {isStartingRun ? 'Starting...' : 'Start Run'}
+          </Button>
+        </div>
+      )}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
@@ -1831,18 +1850,6 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           )}
         </div>
 
-        <div className="mt-6 flex justify-end gap-2">
-          <Button id="run-dialog-close" variant="outline" onClick={onClose}>
-            Close
-          </Button>
-          <Button
-            id="run-dialog-start-run"
-            onClick={handleStartRun}
-            disabled={!canRun || isStartingRun || !!runPayloadError || (isSystem && !confirmSystemRun)}
-          >
-            {isStartingRun ? 'Starting...' : 'Start Run'}
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   );

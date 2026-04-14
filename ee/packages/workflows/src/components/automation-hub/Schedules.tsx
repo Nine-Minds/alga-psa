@@ -18,6 +18,7 @@ import {
   createWorkflowScheduleAction as createWorkflowScheduleActionDefault,
   deleteWorkflowScheduleAction as deleteWorkflowScheduleActionDefault,
   getWorkflowScheduleAction as getWorkflowScheduleActionDefault,
+  listWorkflowScheduleBusinessHoursAction as listWorkflowScheduleBusinessHoursActionDefault,
   listWorkflowDefinitionsPagedAction,
   listWorkflowSchedulesAction as listWorkflowSchedulesActionDefault,
   pauseWorkflowScheduleAction as pauseWorkflowScheduleActionDefault,
@@ -33,6 +34,11 @@ type WorkflowOption = {
 
 type WorkflowScheduleListItem = WorkflowScheduleStateRecord & {
   workflow_name?: string | null;
+  next_eligible_fire_at?: string | null;
+  effective_business_hours_schedule_id?: string | null;
+  effective_business_hours_schedule_name?: string | null;
+  business_hours_schedule_source?: 'override' | 'tenant_default' | null;
+  calendar_resolution_error?: string | null;
 };
 
 type StatusFilter = 'all' | 'enabled' | 'paused' | 'failed' | 'completed' | 'disabled';
@@ -82,10 +88,31 @@ const formatRelativeTimestamp = (value?: string | null): string => {
   return formatDistanceToNow(date, { addSuffix: true });
 };
 
+const toDayFilterLabel = (value?: string | null): string => {
+  if (value === 'business') return 'Business days';
+  if (value === 'non_business') return 'Non-business days';
+  return 'Any day';
+};
+
+const getNextFireDisplayText = (schedule: WorkflowScheduleListItem): string => {
+  if (schedule.trigger_type === 'recurring' && schedule.day_type_filter !== 'any') {
+    if (schedule.next_eligible_fire_at) {
+      return formatTimestamp(schedule.next_eligible_fire_at);
+    }
+    if (schedule.calendar_resolution_error) {
+      return 'Calendar misconfigured';
+    }
+    return 'No eligible upcoming run';
+  }
+
+  return formatTimestamp(schedule.next_fire_at ?? schedule.run_at);
+};
+
 const defaultScheduleActions: WorkflowSchedulesActions = {
   createWorkflowScheduleAction: createWorkflowScheduleActionDefault,
   deleteWorkflowScheduleAction: deleteWorkflowScheduleActionDefault,
   getWorkflowScheduleAction: getWorkflowScheduleActionDefault,
+  listWorkflowScheduleBusinessHoursAction: listWorkflowScheduleBusinessHoursActionDefault,
   listWorkflowSchedulesAction: listWorkflowSchedulesActionDefault,
   pauseWorkflowScheduleAction: pauseWorkflowScheduleActionDefault,
   resumeWorkflowScheduleAction: resumeWorkflowScheduleActionDefault,
@@ -278,10 +305,15 @@ export default function Schedules({
       dataIndex: 'next_fire_at',
       render: (_value, record) => (
         <div className="flex flex-col gap-1 text-sm text-[rgb(var(--color-text-700))]">
-          <span>{formatTimestamp(record.next_fire_at ?? record.run_at)}</span>
+          <span>{getNextFireDisplayText(record)}</span>
           {record.trigger_type === 'recurring' && record.cron ? (
             <span className="text-xs text-[rgb(var(--color-text-500))]">
               {record.cron}{record.timezone ? ` · ${record.timezone}` : ''}
+            </span>
+          ) : null}
+          {record.trigger_type === 'recurring' ? (
+            <span className="text-xs text-[rgb(var(--color-text-500))]">
+              {toDayFilterLabel(record.day_type_filter)}
             </span>
           ) : null}
         </div>

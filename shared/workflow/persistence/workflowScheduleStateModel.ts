@@ -7,6 +7,8 @@ export type WorkflowScheduleStateStatus =
   | 'completed'
   | 'failed';
 
+export type WorkflowScheduleDayTypeFilter = 'any' | 'business' | 'non_business';
+
 export type WorkflowScheduleStateRecord = {
   id: string;
   tenant_id: string;
@@ -14,6 +16,8 @@ export type WorkflowScheduleStateRecord = {
   workflow_version: number;
   name: string;
   trigger_type: 'schedule' | 'recurring';
+  day_type_filter: WorkflowScheduleDayTypeFilter;
+  business_hours_schedule_id?: string | null;
   run_at?: string | null;
   cron?: string | null;
   timezone?: string | null;

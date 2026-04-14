@@ -10,6 +10,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export interface EditContractLineServiceQuantityDialogProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export function EditContractLineServiceQuantityDialog({
   currentQuantity,
   onSave,
 }: EditContractLineServiceQuantityDialogProps) {
+  const { t } = useTranslation('msp/billing');
   const [quantity, setQuantity] = useState<string>(String(currentQuantity));
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,9 +52,11 @@ export function EditContractLineServiceQuantityDialog({
     setQuantity(value);
     // Basic validation on change
     if (value === '') {
-        setValidationError('Quantity cannot be empty.');
+        setValidationError(t('editQuantityDialog.validation.empty', { defaultValue: 'Quantity cannot be empty.' }));
     } else if (!/^\d+$/.test(value) || parseInt(value, 10) <= 0) {
-        setValidationError('Quantity must be a positive whole number.');
+        setValidationError(t('editQuantityDialog.validation.positiveWholeNumber', {
+          defaultValue: 'Quantity must be a positive whole number.',
+        }));
     } else {
         setValidationError(null);
     }
@@ -60,12 +64,14 @@ export function EditContractLineServiceQuantityDialog({
 
   const validateQuantity = (value: string): number | null => {
     if (value === '') {
-      setValidationError('Quantity cannot be empty.');
+      setValidationError(t('editQuantityDialog.validation.empty', { defaultValue: 'Quantity cannot be empty.' }));
       return null;
     }
     const num = parseInt(value, 10);
     if (isNaN(num) || !Number.isInteger(num) || num <= 0) {
-      setValidationError('Quantity must be a positive whole number.');
+      setValidationError(t('editQuantityDialog.validation.positiveWholeNumber', {
+        defaultValue: 'Quantity must be a positive whole number.',
+      }));
       return null;
     }
     setValidationError(null);
@@ -92,7 +98,9 @@ export function EditContractLineServiceQuantityDialog({
       onOpenChange(false); // Close dialog on successful save
     } catch (err: any) {
       console.error('Error saving quantity:', err);
-      setError(err.message || 'Failed to update quantity. Please try again.');
+      setError(err.message || t('editQuantityDialog.errors.saveFailed', {
+        defaultValue: 'Failed to update quantity. Please try again.',
+      }));
     } finally {
       setIsSaving(false);
     }
@@ -113,13 +121,16 @@ export function EditContractLineServiceQuantityDialog({
       onClose={handleDialogClose} 
       id="edit-contract-line-service-quantity-dialog" 
       className="sm:max-w-[425px]" 
-      title={`Edit Quantity for ${serviceName}`}
+      title={t('editQuantityDialog.title', {
+        defaultValue: 'Edit Quantity for {{serviceName}}',
+        serviceName,
+      })}
     >
       <DialogContent>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="quantity-input" className="text-right">
-              Quantity
+              {t('editQuantityDialog.fields.quantity', { defaultValue: 'Quantity' })}
             </Label>
             <Input
               id="quantity-input"
@@ -152,7 +163,7 @@ export function EditContractLineServiceQuantityDialog({
             onClick={handleCancel} // This calls onOpenChange(false) which is passed as onClose
             disabled={isSaving}
           >
-            Cancel
+            {t('editQuantityDialog.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button
             id="save-quantity-button"
@@ -162,10 +173,14 @@ export function EditContractLineServiceQuantityDialog({
           >
             {isSaving ? (
               <>
-                <LoadingIndicator spinnerProps={{ size: "sm" }} text="Saving..." className="mr-2" />
+                <LoadingIndicator
+                  spinnerProps={{ size: "sm" }}
+                  text={t('editQuantityDialog.actions.saving', { defaultValue: 'Saving...' })}
+                  className="mr-2"
+                />
               </>
             ) : (
-              'Save Quantity'
+              t('editQuantityDialog.actions.saveQuantity', { defaultValue: 'Save Quantity' })
             )}
           </Button>
         </DialogFooter>

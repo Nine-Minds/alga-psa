@@ -202,6 +202,7 @@
       "billable": "Abrechnungsfähig",
       "nonBillable": "Nicht abrechenbar",
       "workItem": "Arbeitselement",
+      "service": "Service",
       "duration": "Dauer",
       "notes": "Notizen",
       "entryChangeSuggestion": "Vorschlag zur Eintragsänderung",

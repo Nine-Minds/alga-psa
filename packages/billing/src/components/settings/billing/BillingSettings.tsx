@@ -9,6 +9,7 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import { NumberingSettings } from '@alga-psa/reference-data/components';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import DefaultCurrencySettings from './DefaultCurrencySettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
@@ -18,6 +19,8 @@ import { TaxRegionsManager } from '../tax/TaxRegionsManager';
 
 // Payment Settings Skeleton Component
 const PaymentSettingsSkeleton: React.FC = () => {
+  const { t } = useTranslation('msp/billing-settings');
+
   return (
     <div className="space-y-6">
       {/* Form Fields Skeleton */}
@@ -44,7 +47,9 @@ const PaymentSettingsSkeleton: React.FC = () => {
       {/* Loading Indicator */}
       <div className="flex flex-col items-center justify-center py-4">
         <Spinner size="md" />
-        <p className="mt-2 text-muted-foreground">Loading payment settings...</p>
+        <p className="mt-2 text-muted-foreground">
+          {t('payments.loading', { defaultValue: 'Loading payment settings...' })}
+        </p>
       </div>
     </div>
   );
@@ -79,6 +84,7 @@ const PaymentSettingsConfig = dynamic(
 const DEFAULT_BILLING_SECTION = 'general';
 
 const BillingSettings: React.FC = () => {
+  const { t } = useTranslation('msp/billing-settings');
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
   const { enabled: isQuotingEnabled } = useFeatureFlag('quoting-enabled', { defaultValue: false });
@@ -127,14 +133,16 @@ const BillingSettings: React.FC = () => {
   const tabContent: TabContent[] = [
     {
       id: 'general',
-      label: 'General',
+      label: t('tabs.general', { defaultValue: 'General' }),
       content: (
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Default Currency</CardTitle>
+              <CardTitle>{t('general.currency.title', { defaultValue: 'Default Currency' })}</CardTitle>
               <CardDescription>
-                Set the default currency for new products, services, contracts, and quotes. This can be overridden per client in their billing configuration.
+                {t('general.currency.description', {
+                  defaultValue: 'Set the default currency for new products, services, contracts, and quotes. This can be overridden per client in their billing configuration.'
+                })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -144,9 +152,11 @@ const BillingSettings: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Invoice Numbering</CardTitle>
+              <CardTitle>{t('general.invoiceNumbering.title', { defaultValue: 'Invoice Numbering' })}</CardTitle>
               <CardDescription>
-                Customize how invoice numbers are generated and displayed.
+                {t('general.invoiceNumbering.description', {
+                  defaultValue: 'Customize how invoice numbers are generated and displayed.'
+                })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -156,9 +166,11 @@ const BillingSettings: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Zero-Dollar Invoices</CardTitle>
+              <CardTitle>{t('general.zeroDollar.title', { defaultValue: 'Zero-Dollar Invoices' })}</CardTitle>
               <CardDescription>
-                Control how invoices with no charges are handled.
+                {t('general.zeroDollar.description', {
+                  defaultValue: 'Control how invoices with no charges are handled.'
+                })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -168,9 +180,11 @@ const BillingSettings: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Credit Expiration</CardTitle>
+              <CardTitle>{t('general.creditExpiration.title', { defaultValue: 'Credit Expiration' })}</CardTitle>
               <CardDescription>
-                Configure when and how client credits expire.
+                {t('general.creditExpiration.description', {
+                  defaultValue: 'Configure when and how client credits expire.'
+                })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -180,9 +194,11 @@ const BillingSettings: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Renewal Automation</CardTitle>
+              <CardTitle>{t('general.renewal.title', { defaultValue: 'Renewal Automation' })}</CardTitle>
               <CardDescription>
-                Configure default behavior when contracts reach their renewal date.
+                {t('general.renewal.description', {
+                  defaultValue: 'Configure default behavior when contracts reach their renewal date.'
+                })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -194,14 +210,16 @@ const BillingSettings: React.FC = () => {
     },
     ...(isQuotingEnabled ? [{
       id: 'quoting',
-      label: 'Quoting',
+      label: t('tabs.quoting', { defaultValue: 'Quoting' }),
       content: (
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Quote Numbering</CardTitle>
+              <CardTitle>{t('quoting.quoteNumbering.title', { defaultValue: 'Quote Numbering' })}</CardTitle>
               <CardDescription>
-                Customize how quote numbers are generated and displayed.
+                {t('quoting.quoteNumbering.description', {
+                  defaultValue: 'Customize how quote numbers are generated and displayed.'
+                })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -213,14 +231,18 @@ const BillingSettings: React.FC = () => {
     }] : []),
     {
       id: 'tax',
-      label: 'Tax',
+      label: t('tabs.tax', { defaultValue: 'Tax' }),
       content: (
         <div className="space-y-6">
           <TaxSourceSettings />
           <Card>
             <CardHeader>
-              <CardTitle>Tax Regions</CardTitle>
-              <CardDescription>Manage tax regions and related settings</CardDescription>
+              <CardTitle>{t('tax.taxRegions.title', { defaultValue: 'Tax Regions' })}</CardTitle>
+              <CardDescription>
+                {t('tax.taxRegions.description', {
+                  defaultValue: 'Manage tax regions and related settings'
+                })}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <TaxRegionsManager />
@@ -231,13 +253,15 @@ const BillingSettings: React.FC = () => {
     },
     {
       id: 'payments',
-      label: 'Payments',
+      label: t('tabs.payments', { defaultValue: 'Payments' }),
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Payment Settings</CardTitle>
+            <CardTitle>{t('payments.title', { defaultValue: 'Payment Settings' })}</CardTitle>
             <CardDescription>
-              Configure how payment links work with your invoices.
+              {t('payments.description', {
+                defaultValue: 'Configure how payment links work with your invoices.'
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent>

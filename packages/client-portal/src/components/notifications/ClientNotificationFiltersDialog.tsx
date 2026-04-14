@@ -5,7 +5,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@alga-psa/ui/components/Dialog';
@@ -85,8 +84,18 @@ export function ClientNotificationFiltersDialog({
     setSelectedCategory('all');
   };
 
+  const footer = (
+    <div className="flex w-full justify-between">
+      <Button id="notification-filter-clear" variant="outline" onClick={handleClear}>Reset</Button>
+      <div>
+        <Button id="notification-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>Cancel</Button>
+        <Button id="notification-filter-apply" onClick={handleApply}>Apply Filters</Button>
+      </div>
+    </div>
+  );
+
   return (
-    <Dialog isOpen={isOpen} onClose={() => onOpenChange(false)}>
+    <Dialog isOpen={isOpen} onClose={() => onOpenChange(false)} footer={footer}>
       <DialogContent className="sm:max-w-[700]">
         <DialogHeader>
           <DialogTitle>Filter Notifications</DialogTitle>
@@ -138,15 +147,6 @@ export function ClientNotificationFiltersDialog({
             />
           </div>
         </div>
-        <DialogFooter>
-          <div className="flex w-full justify-between">
-            <Button id="notification-filter-clear" variant="outline" onClick={handleClear}>Reset</Button>
-            <div>
-              <Button id="notification-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button id="notification-filter-apply" onClick={handleApply}>Apply Filters</Button>
-            </div>
-          </div>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

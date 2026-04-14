@@ -5,7 +5,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogHeader } from '@alga-psa/ui/components/Dialog';
 import {
   getEmailLogMetrics,
   getEmailLogs,
@@ -323,6 +323,13 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
         onClose={() => setSelected(null)}
         title="Email Log Details"
         draggable={false}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="email-log-detail-close" variant="outline" onClick={() => setSelected(null)}>
+              Close
+            </Button>
+          </div>
+        )}
       >
         <DialogHeader>
           <div className="text-sm text-[rgb(var(--color-text-500))]">{selected?.subject || 'No subject'}</div>
@@ -378,11 +385,6 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
             </div>
           )}
         </DialogContent>
-        <DialogFooter>
-          <Button id="email-log-detail-close" variant="outline" onClick={() => setSelected(null)}>
-            Close
-          </Button>
-        </DialogFooter>
       </Dialog>
     </div>
   );

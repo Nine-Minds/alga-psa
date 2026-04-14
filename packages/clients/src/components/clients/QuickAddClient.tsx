@@ -14,8 +14,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import {
   Dialog,
   DialogContent,
-  DialogTrigger,
-  DialogFooter
+  DialogTrigger
 } from '@alga-psa/ui/components/Dialog';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
@@ -652,6 +651,60 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   };
 
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="cancel-dialog-btn"
+        type="button"
+        variant="outline"
+        disabled={isSubmitting}
+        onClick={() => {
+          setHasAttemptedSubmit(false);
+          setValidationErrors([]);
+          setFieldErrors({});
+          onOpenChange(false);
+        }}
+      >
+        {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+      </Button>
+      <Button
+        id="create-another-client-btn"
+        type="button"
+        variant="secondary"
+        disabled={isSubmitting || !formData.client_name.trim()}
+        className={(!formData.client_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
+        onClick={() => { void handleSubmit(undefined, { addAnother: true }); }}
+      >
+        {isSubmitting
+          ? t('quickAddClient.creating', { defaultValue: 'Creating...' })
+          : t('quickAddClient.createAndAddAnother', { defaultValue: 'Create + Add Another' })}
+      </Button>
+      <Button
+        id="create-view-client-btn"
+        type="button"
+        variant="secondary"
+        disabled={isSubmitting || !formData.client_name.trim()}
+        className={(!formData.client_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
+        onClick={() => { void handleSubmit(undefined, { openAfterCreate: true }); }}
+      >
+        {isSubmitting
+          ? t('quickAddClient.creating', { defaultValue: 'Creating...' })
+          : t('quickAddClient.createAndView', { defaultValue: 'Create + View Client' })}
+      </Button>
+      <Button
+        id="create-client-btn"
+        type="button"
+        disabled={isSubmitting || !formData.client_name.trim()}
+        className={(!formData.client_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
+        onClick={() => { void handleSubmit(); }}
+      >
+        {isSubmitting
+          ? t('quickAddClient.creating', { defaultValue: 'Creating...' })
+          : t('quickAddClient.createClient', { defaultValue: 'Create' })}
+      </Button>
+    </div>
+  );
+
   return (
     <>
     <Dialog
@@ -659,11 +712,12 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       isOpen={open}
       onClose={() => onOpenChange(false)}
       title={t('quickAddClient.title', { defaultValue: 'Add New Client' })}
-      disableFocusTrap>
+      disableFocusTrap
+      footer={footer}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
         <form onSubmit={handleSubmit} id="quick-add-client-form" noValidate>
-          <div className="max-h-[60vh] overflow-y-auto px-1 py-4 space-y-6">
+          <div className="px-1 py-4 space-y-6">
             
             {/* Validation Errors */}
             {hasAttemptedSubmit && validationErrors.length > 0 && (
@@ -1097,58 +1151,6 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
             </div>
           </div>
         </form>
-
-        <DialogFooter>
-          <Button
-            id="cancel-dialog-btn"
-            type="button"
-            variant="outline"
-            disabled={isSubmitting}
-            onClick={() => {
-              setHasAttemptedSubmit(false);
-              setValidationErrors([]);
-              setFieldErrors({});
-              onOpenChange(false);
-            }}
-          >
-            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-          </Button>
-          <Button
-            id="create-another-client-btn"
-            type="button"
-            variant="secondary"
-            disabled={isSubmitting || !formData.client_name.trim()}
-            className={(!formData.client_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
-            onClick={() => { void handleSubmit(undefined, { addAnother: true }); }}
-          >
-            {isSubmitting
-              ? t('quickAddClient.creating', { defaultValue: 'Creating...' })
-              : t('quickAddClient.createAndAddAnother', { defaultValue: 'Create + Add Another' })}
-          </Button>
-          <Button
-            id="create-view-client-btn"
-            type="button"
-            variant="secondary"
-            disabled={isSubmitting || !formData.client_name.trim()}
-            className={(!formData.client_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
-            onClick={() => { void handleSubmit(undefined, { openAfterCreate: true }); }}
-          >
-            {isSubmitting
-              ? t('quickAddClient.creating', { defaultValue: 'Creating...' })
-              : t('quickAddClient.createAndView', { defaultValue: 'Create + View Client' })}
-          </Button>
-          <Button
-            id="create-client-btn"
-            type="button"
-            disabled={isSubmitting || !formData.client_name.trim()}
-            className={(!formData.client_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
-            onClick={() => { void handleSubmit(); }}
-          >
-            {isSubmitting
-              ? t('quickAddClient.creating', { defaultValue: 'Creating...' })
-              : t('quickAddClient.createClient', { defaultValue: 'Create' })}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
     </>
