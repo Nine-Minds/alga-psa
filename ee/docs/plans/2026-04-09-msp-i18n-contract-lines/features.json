@@ -157,7 +157,7 @@
   {
     "id": "F032",
     "description": "EditContractLineServiceQuantityDialog.tsx: Wire useTranslation and translate dialog title ('Edit Service Quantity'), 'Adjust Quantity' heading, 'Quantity' label, 'Unit price override (optional)' label, helper text ('Leave blank to use the product catalog price...'), validation error ('Quantity must be greater than zero'), Cancel/Save button text, and error fallback ('Failed to update quantity')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F033",
