@@ -14,21 +14,6 @@ describe('GET/POST /api/teams/package', () => {
     getTeamsAppPackageStatusMock.mockReset();
   });
 
-  it('T149/T150: maps disabled Teams package handoff responses to a stable 404 result in EE', async () => {
-    getTeamsAppPackageStatusMock.mockResolvedValue({
-      success: false,
-      error: 'Microsoft Teams integration is disabled for this tenant.',
-    });
-
-    const response = await GET();
-
-    expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toEqual({
-      success: false,
-      error: 'Microsoft Teams integration is disabled for this tenant.',
-    });
-  });
-
   it('T151/T152: delegates package handoff requests to the shared Teams package action when Teams is enabled', async () => {
     getTeamsAppPackageStatusMock.mockResolvedValue({
       success: true,

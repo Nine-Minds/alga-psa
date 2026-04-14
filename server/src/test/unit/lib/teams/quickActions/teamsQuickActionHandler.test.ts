@@ -530,27 +530,4 @@ describe('teamsQuickActionHandler', () => {
     });
   });
 
-  it('T231/T232: request handling returns a stable disabled response when Teams quick actions are gated off', async () => {
-    getTeamsRuntimeAvailabilityMock.mockResolvedValue({
-      enabled: false,
-      reason: 'flag_disabled',
-      flagKey: 'teams-integration-ui',
-      message: 'Microsoft Teams integration is disabled for this tenant.',
-    });
-
-    const response = await handleTeamsQuickActionRequest(
-      new Request('https://example.test/api/teams/quick-actions?tenantId=tenant-1', {
-        method: 'POST',
-        body: JSON.stringify(buildActivity()),
-      })
-    );
-    const payload = await response.json();
-
-    expect(response.status).toBe(404);
-    expect(payload).toEqual({
-      success: false,
-      error: 'Microsoft Teams integration is disabled for this tenant.',
-      reason: 'flag_disabled',
-    });
-  });
 });

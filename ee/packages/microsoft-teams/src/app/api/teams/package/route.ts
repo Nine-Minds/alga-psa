@@ -6,10 +6,6 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 function statusForPackageResult(error?: string): number {
-  if (error === TEAMS_AVAILABILITY_MESSAGES.flag_disabled) {
-    return 404;
-  }
-
   if (error === 'Forbidden') {
     return 403;
   }

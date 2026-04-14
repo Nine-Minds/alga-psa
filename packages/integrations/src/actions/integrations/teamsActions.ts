@@ -5,7 +5,6 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { createTenantKnex } from '@alga-psa/db';
 import { getTeamsAvailability } from '../../lib/teamsAvailability';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
-import { evaluateTenantFeatureFlag } from './tenantFeatureFlags';
 import {
   TEAMS_ALLOWED_ACTIONS,
   TEAMS_CAPABILITIES,
@@ -288,7 +287,10 @@ async function saveTeamsIntegrationSettingsImpl(
     };
 
     if (existing) {
-      await knex('teams_integrations').where({ tenant }).update(row);
+      // Citus distributes teams_integrations by `tenant`; the distribution column
+      // must never appear in an UPDATE SET clause, even when the value is unchanged.
+      const { tenant: _tenant, created_at: _createdAt, created_by: _createdBy, ...updatePayload } = row;
+      await knex('teams_integrations').where({ tenant }).update(updatePayload);
     } else {
       await knex('teams_integrations').insert(row);
     }
@@ -307,7 +309,6 @@ export const getTeamsIntegrationStatus = withAuth(async (
   { tenant }
 ): Promise<TeamsIntegrationStatusResponse> => {
   const availability = await getTeamsAvailability({
-    evaluateFlag: evaluateTenantFeatureFlag,
     tenantId: tenant,
     userId: (user as any)?.user_id,
   });
@@ -330,7 +331,6 @@ export const saveTeamsIntegrationSettings = withAuth(async (
   input: TeamsIntegrationSettingsInput
 ): Promise<TeamsIntegrationStatusResponse> => {
   const availability = await getTeamsAvailability({
-    evaluateFlag: evaluateTenantFeatureFlag,
     tenantId: tenant,
     userId: (user as any)?.user_id,
   });

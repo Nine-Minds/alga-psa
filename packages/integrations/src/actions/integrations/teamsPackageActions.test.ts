@@ -75,7 +75,6 @@ const hoisted = vi.hoisted(() => {
   return {
     state,
     hasPermissionMock: vi.fn(async (..._args: unknown[]) => true),
-    isFeatureFlagEnabledMock: vi.fn(async (..._args: unknown[]) => true),
     getTenantSecretMock: vi.fn(async (tenant: string, key: string) => state.tenantSecrets.get(`${tenant}:${key}`) || null),
     getAppSecretMock: vi.fn(async (key: string) => state.appSecrets.get(key) || null),
     knexMock,
@@ -83,7 +82,7 @@ const hoisted = vi.hoisted(() => {
 });
 
 const { microsoftProfiles, teamsIntegrations, tenantSecrets, appSecrets } = hoisted.state;
-const { hasPermissionMock, isFeatureFlagEnabledMock, getTenantSecretMock, getAppSecretMock, knexMock } = hoisted;
+const { hasPermissionMock, getTenantSecretMock, getAppSecretMock, knexMock } = hoisted;
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth:
@@ -106,14 +105,6 @@ vi.mock('@alga-psa/core/secrets', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: hoisted.knexMock }),
 }));
-
-vi.mock('@alga-psa/core', async () => {
-  const actual = await vi.importActual<object>('@alga-psa/core');
-  return {
-    ...actual,
-    isFeatureFlagEnabled: hoisted.isFeatureFlagEnabledMock,
-  };
-});
 
 vi.mock('@alga-psa/integrations/actions/integrations/providerReadiness', () => ({
   getMicrosoftProfileReadiness: vi.fn(async (tenant: string, config: any) => {
@@ -177,8 +168,6 @@ describe('Teams app package actions', () => {
     appSecrets.clear();
     hasPermissionMock.mockClear();
     hasPermissionMock.mockResolvedValue(true);
-    isFeatureFlagEnabledMock.mockClear();
-    isFeatureFlagEnabledMock.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -197,23 +186,6 @@ describe('Teams app package actions', () => {
     expect(result).toEqual({
       success: false,
       error: 'Microsoft Teams integration is only available in Enterprise Edition.',
-    });
-    expect(isFeatureFlagEnabledMock).not.toHaveBeenCalled();
-    expect(hasPermissionMock).not.toHaveBeenCalled();
-  });
-
-  it('T032/T037/T434: returns flag-disabled package results before loading Teams state when the tenant flag is off', async () => {
-    isFeatureFlagEnabledMock.mockResolvedValue(false);
-
-    const result = await getTeamsAppPackageStatus();
-
-    expect(result).toEqual({
-      success: false,
-      error: 'Microsoft Teams integration is disabled for this tenant.',
-    });
-    expect(isFeatureFlagEnabledMock).toHaveBeenCalledWith('teams-integration-ui', {
-      tenantId: 'tenant-1',
-      userId: 'user-1',
     });
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });

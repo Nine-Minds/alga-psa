@@ -220,25 +220,6 @@ describe('Teams integration actions', () => {
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
-  it('T032/T037/T225/T226/T434: returns a flag-disabled result before permissions or database access when the tenant flag is off', async () => {
-    isFeatureFlagEnabledMock.mockResolvedValue(false);
-
-    const result = await saveTeamsIntegrationSettings({
-      selectedProfileId: 'profile-1',
-      installStatus: 'install_pending',
-    });
-
-    expect(result).toEqual({
-      success: false,
-      error: 'Microsoft Teams integration is disabled for this tenant.',
-    });
-    expect(isFeatureFlagEnabledMock).toHaveBeenCalledWith('teams-integration-ui', {
-      tenantId: 'tenant-1',
-      userId: 'user-1',
-    });
-    expect(hasPermissionMock).not.toHaveBeenCalled();
-  });
-
   it('T083/T084: keeps the Teams integration record tenant-scoped and returns defaults when missing', async () => {
     addMicrosoftProfile({
       tenant: 'tenant-2',
