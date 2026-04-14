@@ -24,6 +24,7 @@ import { ServiceUsageConfigForm, ServiceUsageConfig, ServiceValidationErrors } f
 import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Keep GenericPlanServicesList for now, might remove in Phase 3
 import GenericPlanServicesList from './GenericContractLineServicesList';
@@ -61,6 +62,7 @@ export function UsagePlanConfiguration({
   contractLineId,
   className = '',
 }: UsagePlanConfigurationProps) {
+  const { t } = useTranslation('msp/contract-lines');
   // State for the base plan details
   const [plan, setPlan] = useState<IContractLine | null>(null);
 
@@ -101,7 +103,9 @@ export function UsagePlanConfiguration({
       // 0. Fetch base plan details first
       const fetchedPlan = await getContractLineById(contractLineId);
       if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Usage') {
-        setError('Invalid plan type or plan not found.');
+        setError(t('configuration.usage.errors.invalidPlanTypeOrNotFound', {
+          defaultValue: 'Invalid plan type or plan not found.',
+        }));
         setLoading(false);
         return;
       }
@@ -174,11 +178,13 @@ export function UsagePlanConfiguration({
 
     } catch (err) {
       console.error('Error fetching plan services or configurations:', err);
-      setError('Failed to load plan services or configurations. Please try again.');
+      setError(t('configuration.usage.errors.failedToLoadPlanServicesOrConfigurations', {
+        defaultValue: 'Failed to load plan services or configurations. Please try again.',
+      }));
     } finally {
       setLoading(false);
     }
-  }, [contractLineId]);
+  }, [contractLineId, t]);
 
   useEffect(() => {
     fetchPlanData();
@@ -187,8 +193,16 @@ export function UsagePlanConfiguration({
   // --- Plan Basics Handlers ---
   const validatePlanBasics = (): string[] => {
     const errors: string[] = [];
-    if (!planName.trim()) errors.push('Contract line name');
-    if (!billingFrequency) errors.push('Billing frequency');
+    if (!planName.trim()) {
+      errors.push(t('configuration.usage.basics.validation.contractLineName', {
+        defaultValue: 'Contract line name',
+      }));
+    }
+    if (!billingFrequency) {
+      errors.push(t('configuration.usage.basics.validation.billingFrequency', {
+        defaultValue: 'Billing frequency',
+      }));
+    }
     return errors;
   };
 
@@ -217,7 +231,11 @@ export function UsagePlanConfiguration({
       setIsBasicsDirty(false);
     } catch (error) {
       console.error('Error saving contract line basics:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save contract line';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('configuration.usage.errors.failedToSaveContractLine', {
+            defaultValue: 'Failed to save contract line',
+          });
       setPlanBasicsErrors([errorMessage]);
     } finally {
       setIsSavingBasics(false);
@@ -288,57 +306,84 @@ export function UsagePlanConfiguration({
     const isTiered = config.enable_tiered_pricing ?? false;
 
     if (!isTiered && (config.base_rate === undefined || config.base_rate === null)) {
-        errors.base_rate = 'Base rate is required when tiered pricing is off.';
+        errors.base_rate = t('configuration.usage.validation.baseRateRequiredWhenTieredOff', {
+          defaultValue: 'Base rate is required when tiered pricing is off.',
+        });
     } else if (config.base_rate !== undefined && config.base_rate < 0) {
-        errors.base_rate = 'Base rate cannot be negative.';
+        errors.base_rate = t('configuration.usage.validation.baseRateNonNegative', {
+          defaultValue: 'Base rate cannot be negative.',
+        });
     }
 
     if (config.minimum_usage !== undefined && config.minimum_usage < 0) {
-        errors.minimum_usage = 'Minimum usage cannot be negative.';
+        errors.minimum_usage = t('configuration.usage.validation.minimumUsageNonNegative', {
+          defaultValue: 'Minimum usage cannot be negative.',
+        });
     }
     if (!config.unit_of_measure) {
-        errors.unit_of_measure = 'Unit of measure is required.';
+        errors.unit_of_measure = t('configuration.usage.validation.unitOfMeasureRequired', {
+          defaultValue: 'Unit of measure is required.',
+        });
     }
 
     if (isTiered) {
         const tiers = config.tiers || [];
         if (tiers.length === 0) {
-            errors.tiers = 'At least one tier is required when tiered pricing is enabled.';
+            errors.tiers = t('configuration.usage.validation.tiersRequiredWhenTieredOn', {
+              defaultValue: 'At least one tier is required when tiered pricing is enabled.',
+            });
         } else {
             const sortedTiers = [...tiers].sort((a, b) => a.fromAmount - b.fromAmount);
             let tierErrorFound = false;
             for (let i = 0; i < sortedTiers.length; i++) {
                 const currentTier = sortedTiers[i];
                 if (currentTier.rate < 0) {
-                    errors.tiers = 'Tier rates cannot be negative.';
+                    errors.tiers = t('configuration.usage.validation.tierRatesNonNegative', {
+                      defaultValue: 'Tier rates cannot be negative.',
+                    });
                     tierErrorFound = true; break;
                 }
                 if (currentTier.toAmount !== null && currentTier.toAmount < currentTier.fromAmount) {
-                    errors.tiers = `Tier ${i + 1}: Upper bound must be >= lower bound.`;
+                    errors.tiers = t('configuration.usage.validation.tierUpperBound', {
+                      defaultValue: 'Tier {{tier}}: Upper bound must be >= lower bound.',
+                      tier: i + 1,
+                    });
                     tierErrorFound = true; break;
                 }
                 if (i < sortedTiers.length - 1) {
                     const nextTier = sortedTiers[i + 1];
                     if (currentTier.toAmount === null) {
-                        errors.tiers = 'Only the last tier can have an unlimited upper bound.';
+                        errors.tiers = t('configuration.usage.validation.onlyLastTierUnlimited', {
+                          defaultValue: 'Only the last tier can have an unlimited upper bound.',
+                        });
                         tierErrorFound = true; break;
                     }
                     // Allow adjacent: toAmount can equal next fromAmount
                     // Allow adjacent tiers: upper bound can equal next lower bound
                     if (currentTier.toAmount !== null && currentTier.toAmount > nextTier.fromAmount) {
-                         errors.tiers = `Tier ${i + 1} overlaps with Tier ${i + 2}.`;
+                         errors.tiers = t('configuration.usage.validation.tierOverlap', {
+                           defaultValue: 'Tier {{tier1}} overlaps with Tier {{tier2}}.',
+                           tier1: i + 1,
+                           tier2: i + 2,
+                         });
                          tierErrorFound = true; break;
                     }
                     // Check for gaps
                     // Check for gaps (ensure toAmount is not null before adding 1)
                     if (currentTier.toAmount !== null && currentTier.toAmount + 1 < nextTier.fromAmount) {
-                         errors.tiers = `Gap detected between Tier ${i + 1} and Tier ${i + 2}.`;
+                         errors.tiers = t('configuration.usage.validation.tierGap', {
+                           defaultValue: 'Gap detected between Tier {{tier1}} and Tier {{tier2}}.',
+                           tier1: i + 1,
+                           tier2: i + 2,
+                         });
                          tierErrorFound = true; break;
                     }
                 }
             }
             if (!tierErrorFound && sortedTiers[0]?.fromAmount !== 0) {
-                errors.tiers = 'The first tier must start from 0.';
+                errors.tiers = t('configuration.usage.validation.firstTierStartsAtZero', {
+                  defaultValue: 'The first tier must start from 0.',
+                });
             }
         }
     }
@@ -373,7 +418,9 @@ export function UsagePlanConfiguration({
     });
 
     if (changedServiceIds.length === 0) {
-      setSaveError("No changes detected to save.");
+      setSaveError(t('configuration.usage.errors.noChangesDetected', {
+        defaultValue: 'No changes detected to save.',
+      }));
       setSaveAttempted(false); // No actual save attempt needed
       return;
     }
@@ -393,7 +440,9 @@ export function UsagePlanConfiguration({
     // 3. Handle validation errors
     if (hasErrors) {
       setServiceValidationErrors(validationErrorsForChanged);
-      setSaveError("Cannot save, validation errors exist in the modified services.");
+      setSaveError(t('configuration.usage.errors.validationErrorsInModifiedServices', {
+        defaultValue: 'Cannot save, validation errors exist in the modified services.',
+      }));
       // TODO: Consider focusing/opening the first accordion item with an error
       console.log("Validation failed for changed services:", Object.keys(validationErrorsForChanged));
       return;
@@ -445,11 +494,19 @@ export function UsagePlanConfiguration({
       // 6. Handle errors
       console.error('Error saving service configurations:', err);
       // Attempt to parse Zod validation errors if available
-      let errorMessage = 'Failed to save one or more service configurations. Please check the details and try again.';
+      let errorMessage = t('configuration.usage.errors.failedToSaveOneOrMoreServiceConfigurations', {
+        defaultValue: 'Failed to save one or more service configurations. Please check the details and try again.',
+      });
       if (err.issues && Array.isArray(err.issues)) {
-          errorMessage = `Validation Error: ${err.issues.map((issue: any) => `${issue.path.join('.')} - ${issue.message}`).join(', ')}`;
+          errorMessage = t('configuration.usage.errors.validationErrorDetails', {
+            defaultValue: 'Validation Error: {{details}}',
+            details: err.issues.map((issue: any) => `${issue.path.join('.')} - ${issue.message}`).join(', '),
+          });
       } else if (err.message) {
-          errorMessage = `Error: ${err.message}`;
+          errorMessage = t('common.errors.errorWithMessage', {
+            defaultValue: 'Error: {{message}}',
+            message: err.message,
+          });
       }
       setSaveError(errorMessage);
     } finally {
@@ -477,13 +534,22 @@ export function UsagePlanConfiguration({
               {/* Contract Line Basics - Inline Editing */}
               <Card>
                   <CardHeader>
-                      <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Usage)</CardTitle>
+                      <CardTitle>
+                        {t('configuration.usage.basics.cardTitle', {
+                          defaultValue: 'Edit Contract Line: {{name}} (Usage)',
+                          name: plan?.contract_line_name || '...',
+                        })}
+                      </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
                       {planBasicsErrors.length > 0 && (
                           <Alert variant="destructive">
                               <AlertDescription>
-                                  <p className="font-medium mb-2">Please correct the following:</p>
+                                  <p className="font-medium mb-2">
+                                    {t('common.validation.prefix', {
+                                      defaultValue: 'Please correct the following:',
+                                    })}
+                                  </p>
                                   <ul className="list-disc list-inside space-y-1">
                                       {planBasicsErrors.map((err, idx) => (
                                           <li key={idx}>{err}</li>
@@ -495,14 +561,24 @@ export function UsagePlanConfiguration({
 
                       <section className="space-y-4">
                           <div>
-                              <h3 className="text-lg font-semibold">Contract Line Basics</h3>
+                              <h3 className="text-lg font-semibold">
+                                {t('configuration.usage.basics.heading', {
+                                  defaultValue: 'Contract Line Basics',
+                                })}
+                              </h3>
                               <p className="text-sm text-muted-foreground">
-                                  Name the contract line and choose how it should bill by default.
+                                  {t('configuration.usage.basics.description', {
+                                    defaultValue: 'Name the contract line and choose how it should bill by default.',
+                                  })}
                               </p>
                           </div>
                           <div className="space-y-3">
                               <div>
-                                  <Label htmlFor="name">Contract Line Name *</Label>
+                                  <Label htmlFor="name">
+                                    {t('configuration.usage.basics.nameLabel', {
+                                      defaultValue: 'Contract Line Name *',
+                                    })}
+                                  </Label>
                                   <Input
                                       id="name"
                                       value={planName}
@@ -510,13 +586,19 @@ export function UsagePlanConfiguration({
                                           setPlanName(e.target.value);
                                           markBasicsDirty();
                                       }}
-                                      placeholder="e.g. Usage-Based Services"
+                                      placeholder={t('configuration.usage.basics.namePlaceholder', {
+                                        defaultValue: 'e.g. Usage-Based Services',
+                                      })}
                                       required
                                   />
                               </div>
                               <div className="grid gap-4 md:grid-cols-2">
                                   <div>
-                                      <Label htmlFor="frequency">Billing Frequency *</Label>
+                                      <Label htmlFor="frequency">
+                                        {t('configuration.usage.basics.billingFrequencyLabel', {
+                                          defaultValue: 'Billing Frequency *',
+                                        })}
+                                      </Label>
                                       <CustomSelect
                                           id="frequency"
                                           value={billingFrequency}
@@ -525,7 +607,9 @@ export function UsagePlanConfiguration({
                                               markBasicsDirty();
                                           }}
                                           options={BILLING_FREQUENCY_OPTIONS}
-                                          placeholder="Select billing frequency"
+                                          placeholder={t('configuration.usage.basics.billingFrequencyPlaceholder', {
+                                            defaultValue: 'Select billing frequency',
+                                          })}
                                       />
                                   </div>
                               </div>
@@ -539,14 +623,16 @@ export function UsagePlanConfiguration({
                               onClick={handleResetPlanBasics}
                               disabled={isSavingBasics || !isBasicsDirty}
                           >
-                              Reset
+                              {t('common.actions.reset', { defaultValue: 'Reset' })}
                           </Button>
                           <Button
                               id="save-usage-plan-basics"
                               onClick={handleSavePlanBasics}
                               disabled={isSavingBasics || !isBasicsDirty}
                           >
-                              {isSavingBasics ? 'Saving…' : 'Save Changes'}
+                              {isSavingBasics
+                                ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                                : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
                           </Button>
                       </div>
                   </CardContent>
@@ -554,10 +640,19 @@ export function UsagePlanConfiguration({
 
               <Card>
                   <CardHeader>
-                      <CardTitle>Manage Contract Line Services</CardTitle>
+                      <CardTitle>
+                        {t('configuration.usage.services.manageCardTitle', {
+                          defaultValue: 'Manage Contract Line Services',
+                        })}
+                      </CardTitle>
                   </CardHeader>
                   <CardContent>
-                      <p className="text-muted-foreground mb-4">No services are currently associated with this contract line. Add services below to configure their pricing.</p>
+                      <p className="text-muted-foreground mb-4">
+                        {t('configuration.usage.services.emptyStateWithHelper', {
+                          defaultValue:
+                            'No services are currently associated with this contract line. Add services below to configure their pricing.',
+                        })}
+                      </p>
                       {/* Keep the GenericPlanServicesList to allow adding services */}
                       <GenericPlanServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} />
                   </CardContent>
@@ -571,13 +666,22 @@ export function UsagePlanConfiguration({
       {/* Contract Line Basics - Inline Editing */}
       <Card>
         <CardHeader>
-          <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Usage)</CardTitle>
+          <CardTitle>
+            {t('configuration.usage.basics.cardTitle', {
+              defaultValue: 'Edit Contract Line: {{name}} (Usage)',
+              name: plan?.contract_line_name || '...',
+            })}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {planBasicsErrors.length > 0 && (
             <Alert variant="destructive">
               <AlertDescription>
-                <p className="font-medium mb-2">Please correct the following:</p>
+                <p className="font-medium mb-2">
+                  {t('common.validation.prefix', {
+                    defaultValue: 'Please correct the following:',
+                  })}
+                </p>
                 <ul className="list-disc list-inside space-y-1">
                   {planBasicsErrors.map((err, idx) => (
                     <li key={idx}>{err}</li>
@@ -589,14 +693,24 @@ export function UsagePlanConfiguration({
 
           <section className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">Contract Line Basics</h3>
+              <h3 className="text-lg font-semibold">
+                {t('configuration.usage.basics.heading', {
+                  defaultValue: 'Contract Line Basics',
+                })}
+              </h3>
               <p className="text-sm text-muted-foreground">
-                Name the contract line and choose how it should bill by default.
+                {t('configuration.usage.basics.description', {
+                  defaultValue: 'Name the contract line and choose how it should bill by default.',
+                })}
               </p>
             </div>
             <div className="space-y-3">
               <div>
-                <Label htmlFor="name">Contract Line Name *</Label>
+                <Label htmlFor="name">
+                  {t('configuration.usage.basics.nameLabel', {
+                    defaultValue: 'Contract Line Name *',
+                  })}
+                </Label>
                 <Input
                   id="name"
                   value={planName}
@@ -604,12 +718,18 @@ export function UsagePlanConfiguration({
                     setPlanName(e.target.value);
                     markBasicsDirty();
                   }}
-                  placeholder="e.g. Usage-Based Services"
+                  placeholder={t('configuration.usage.basics.namePlaceholder', {
+                    defaultValue: 'e.g. Usage-Based Services',
+                  })}
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="frequency">Billing Frequency *</Label>
+                <Label htmlFor="frequency">
+                  {t('configuration.usage.basics.billingFrequencyLabel', {
+                    defaultValue: 'Billing Frequency *',
+                  })}
+                </Label>
                 <CustomSelect
                   id="frequency"
                   value={billingFrequency}
@@ -618,7 +738,9 @@ export function UsagePlanConfiguration({
                     markBasicsDirty();
                   }}
                   options={BILLING_FREQUENCY_OPTIONS}
-                  placeholder="Select billing frequency"
+                  placeholder={t('configuration.usage.basics.billingFrequencyPlaceholder', {
+                    defaultValue: 'Select billing frequency',
+                  })}
                 />
               </div>
             </div>
@@ -631,14 +753,16 @@ export function UsagePlanConfiguration({
               onClick={handleResetPlanBasics}
               disabled={isSavingBasics || !isBasicsDirty}
             >
-              Reset
+              {t('common.actions.reset', { defaultValue: 'Reset' })}
             </Button>
             <Button
               id="save-usage-plan-basics"
               onClick={handleSavePlanBasics}
               disabled={isSavingBasics || !isBasicsDirty}
             >
-              {isSavingBasics ? 'Saving…' : 'Save Changes'}
+              {isSavingBasics
+                ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
             </Button>
           </div>
         </CardContent>
@@ -647,7 +771,11 @@ export function UsagePlanConfiguration({
       {/* Service Pricing Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>Service Pricing</CardTitle>
+          <CardTitle>
+            {t('configuration.usage.services.pricingCardTitle', {
+              defaultValue: 'Service Pricing',
+            })}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {saveError && (
@@ -671,18 +799,34 @@ export function UsagePlanConfiguration({
                     className="flex flex-1 items-center justify-between p-3 font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg]:rotate-180 bg-muted/20"
                   >
                     <div className="flex flex-col text-left"> {/* Use flex-col for name and summary */}
-                      <span>{service.service?.service_name || `Service ID: ${service.configuration.service_id}`}</span>
+                      <span>
+                        {service.service?.service_name || t('configuration.usage.services.fallbackServiceName', {
+                          defaultValue: 'Service ID: {{id}}',
+                          id: service.configuration.service_id,
+                        })}
+                      </span>
                       {/* Add Summary Span */}
                       <span className="text-xs font-normal text-muted-foreground">
                         {(() => {
                           const config = serviceConfigs[service.configuration.service_id];
-                          if (!config) return 'Loading...';
+                          if (!config) {
+                            return t('configuration.usage.services.summary.loading', { defaultValue: 'Loading...' });
+                          }
                           if (config.enable_tiered_pricing) {
-                            return `Tiered Pricing (${config.tiers?.length || 0} tiers)`;
+                            return t('configuration.usage.services.summary.tieredPricing', {
+                              defaultValue: 'Tiered Pricing ({{count}} tiers)',
+                              count: config.tiers?.length || 0,
+                            });
                           } else {
-                            const rate = config.base_rate !== undefined ? `$${config.base_rate.toFixed(2)}` : 'Not Set';
-                            const unit = config.unit_of_measure || 'Unit';
-                            return `${rate} / ${unit}`;
+                            const rate = config.base_rate !== undefined
+                              ? `$${config.base_rate.toFixed(2)}`
+                              : t('configuration.usage.services.summary.notSet', { defaultValue: 'Not Set' });
+                            const unit = config.unit_of_measure || t('configuration.usage.services.summary.defaultUnit', { defaultValue: 'Unit' });
+                            return t('configuration.usage.services.summary.ratePerUnit', {
+                              defaultValue: '{{rate}} / {{unit}}',
+                              rate,
+                              unit,
+                            });
                           }
                         })()}
                       </span>
@@ -707,7 +851,11 @@ export function UsagePlanConfiguration({
                         onTiersChange={handleTiersChange}
                       />
                     ) : (
-                      <div className="text-muted-foreground">Loading configuration...</div>
+                      <div className="text-muted-foreground">
+                        {t('configuration.usage.services.loadingConfiguration', {
+                          defaultValue: 'Loading configuration...',
+                        })}
+                      </div>
                     )}
                   </div>
                 </Accordion.Content>
@@ -718,7 +866,13 @@ export function UsagePlanConfiguration({
           {/* Save Button */}
           <div className="flex justify-end pt-4">
             <Button id="save-all-service-configs-button" onClick={handleSave} disabled={saving || loading}>
-              {saving ? <LoadingIndicator spinnerProps={{ size: "sm" }} text="Save All Configurations" /> : "Save All Configurations"}
+              {saving
+                ? <LoadingIndicator spinnerProps={{ size: "sm" }} text={t('configuration.usage.actions.saveAllConfigurations', {
+                    defaultValue: 'Save All Configurations',
+                  })} />
+                : t('configuration.usage.actions.saveAllConfigurations', {
+                    defaultValue: 'Save All Configurations',
+                  })}
             </Button>
           </div>
         </CardContent>
@@ -727,7 +881,11 @@ export function UsagePlanConfiguration({
       {/* Keep Services List for adding/removing services */}
        <Card>
            <CardHeader>
-            <CardTitle>Manage Contract Line Services</CardTitle>
+            <CardTitle>
+              {t('configuration.usage.services.manageCardTitle', {
+                defaultValue: 'Manage Contract Line Services',
+              })}
+            </CardTitle>
            </CardHeader>
            <CardContent>
                <GenericPlanServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} disableEditing={true} />

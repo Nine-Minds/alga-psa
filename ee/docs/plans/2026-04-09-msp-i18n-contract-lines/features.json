@@ -27,7 +27,7 @@
   {
     "id": "F006",
     "description": "UsageContractLineConfiguration.tsx: Wire useTranslation and translate plan basics section (card title with interpolated plan name and '(Usage)' suffix, section heading, labels, placeholders), Reset/Save Changes buttons with saving state",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F007",

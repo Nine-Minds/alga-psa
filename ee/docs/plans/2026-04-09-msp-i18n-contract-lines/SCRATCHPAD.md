@@ -75,3 +75,6 @@
 - (2026-04-14) Validation strings for plan-wide hourly settings (`overtimeRate`, `overtimeThreshold`, `afterHoursMultiplier`) now use i18n keys; interpolation paths are ready for locale coverage.
 - (2026-04-14) Verification command run: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/HourlyContractLineConfiguration.tsx` (warnings only, no errors).
 - (2026-04-14) `F005` covered in `contract-lines/HourlyContractLineConfiguration.tsx`: translated service rates card title, fallback service name (`Service ID: {{id}}`), non-hourly configurability message with `{{method}}`, reset/save labels, sticky save button/loading text, manage services card title, empty states, and save error fallbacks.
+- (2026-04-14) `F006` implemented in `contract-lines/UsageContractLineConfiguration.tsx`: wired `useTranslation('msp/contract-lines')`, translated usage plan basics card title with `{{name}} (Usage)`, basics section heading/description/labels/placeholders, and reset/save button labels including saving state.
+- (2026-04-14) Plan basics validation/save fallback strings in the same component now use translated defaults.
+- (2026-04-14) Verification command run: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/UsageContractLineConfiguration.tsx` (warnings only, no errors).
