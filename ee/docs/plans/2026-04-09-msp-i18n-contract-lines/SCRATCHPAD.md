@@ -127,3 +127,7 @@
 - (2026-04-13) **F034 verification**: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/ContractLineTypeRouter.tsx` (pass, no errors).
 - (2026-04-13) **F035 complete** (`ContractLinePresetTypeRouter.tsx`): wired `useTranslation('msp/contract-lines')`; translated loading text, not-found message with `{{id}}`, load-failed error, and unsupported preset type message with `{{type}}` interpolation.
 - (2026-04-13) **F035 verification**: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/ContractLinePresetTypeRouter.tsx` (pass, no errors).
+- (2026-04-13) **F036 complete**: created `server/public/locales/en/msp/contract-lines.json` with 509 keys extracted from all `useTranslation('msp/contract-lines')` component calls (including static `t()` defaults plus `labelKey`/`descriptionKey` dynamic maps and type-selector description variants).
+- (2026-04-13) **F036 verification runbook**:
+  - Extraction/build script (AST-based, local one-off) to assemble key/default pairs from 21 contract-line components.
+  - Coverage check script confirmed `missing 0` for static/dynamic key references against `en/msp/contract-lines.json`.

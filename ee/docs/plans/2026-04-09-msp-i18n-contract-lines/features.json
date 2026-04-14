@@ -177,7 +177,7 @@
   {
     "id": "F036",
     "description": "Create msp/contract-lines.json namespace file in server/public/locales/en/ with all extracted keys organized by component area",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F037",
