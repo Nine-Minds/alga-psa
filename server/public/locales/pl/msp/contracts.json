@@ -1,0 +1,201 @@
+{
+  "common": {
+    "actions": {
+      "back": "Z powrotem",
+      "cancel": "Anulować",
+      "close": "Zamknąć",
+      "create": "Tworzyć",
+      "delete": "Usuwać",
+      "discard": "Wyrzucać",
+      "edit": "Redagować",
+      "refresh": "Odświeżać",
+      "remove": "Usunąć",
+      "retry": "Spróbować ponownie",
+      "save": "Ratować",
+      "saveChanges": "Zapisz zmiany",
+      "saveChangesDirty": "Zapisz zmiany *",
+      "saving": "Oszczędność...",
+      "view": "Pogląd"
+    },
+    "alerts": {
+      "saveSuccess": "Zmiany zostały zapisane pomyślnie.",
+      "systemManagedDefault": "Jest to umowa domyślna zarządzana przez system."
+    },
+    "empty": {
+      "none": "Nic",
+      "notAvailable": "Nie dotyczy",
+      "notSpecified": "Nie określono",
+      "ongoing": "Bieżący"
+    },
+    "errors": {
+      "failedToLoad": "Nie udało się załadować danych.",
+      "failedToSave": "Nie udało się zapisać zmian.",
+      "validationPrefix": "Popraw następujące informacje:"
+    },
+    "labels": {
+      "created": "Stworzony",
+      "currency": "Waluta",
+      "description": "Opis",
+      "lastUpdated": "Ostatnia aktualizacja",
+      "name": "Nazwa",
+      "status": "Status"
+    },
+    "tabs": {
+      "clientContracts": "Umowy klienckie",
+      "drafts": "Warcaby",
+      "templates": "Szablony"
+    }
+  },
+  "status": {
+    "active": "Aktywny",
+    "draft": "Projekt",
+    "expired": "Wygasły",
+    "terminated": "Zakończony"
+  },
+  "renewal": {
+    "labels": {
+      "decisionDue": "Decyzja należna",
+      "mode": "Tryb odnowienia",
+      "noticeDays": "Okres wypowiedzenia",
+      "source": "Źródło odnowienia",
+      "termMonths": "Okres odnowienia"
+    },
+    "modes": {
+      "auto": "Automatyczne odnawianie",
+      "manual": "Ręczne odnowienie",
+      "none": "Nieodnawialne"
+    },
+    "source": {
+      "contract": "Umowa",
+      "tenantDefault": "Domyślność najemcy"
+    }
+  },
+  "billing": {
+    "cadenceOwner": {
+      "client": "Harmonogram klienta",
+      "contract": "Rocznica umowy"
+    },
+    "frequency": {
+      "annually": "Rocznie",
+      "biweekly": "Dwutygodniowy",
+      "monthly": "Miesięczny",
+      "quarterly": "Kwartalny",
+      "weekly": "Tygodnik"
+    },
+    "labels": {
+      "billingFrequency": "Częstotliwość rozliczeń",
+      "timing": "Termin rozliczeń"
+    },
+    "timing": {
+      "advance": "Z góry",
+      "arrears": "Zalegający"
+    }
+  },
+  "po": {
+    "labels": {
+      "amount": "Kwota zamówienia",
+      "number": "Numer zamówienia",
+      "required": "Wymagane zamówienie"
+    }
+  },
+  "contractDetail": {
+    "cards": {
+      "assignment": "Przypisanie klienta",
+      "clientOwnership": "Własność klienta",
+      "contractDetails": "Szczegóły umowy",
+      "header": "Nagłówek umowy",
+      "quickActions": "Szybkie działania",
+      "renewalHandling": "Obsługa odnowień"
+    },
+    "dialogs": {
+      "delete": {
+        "confirm": "Usuń umowę",
+        "description": "Czy na pewno chcesz usunąć tę umowę? Tej akcji nie można cofnąć.",
+        "title": "Usuń umowę"
+      },
+      "discard": {
+        "confirm": "Odrzuć zmiany",
+        "description": "Odrzucić niezapisane zmiany?",
+        "title": "Odrzuć zmiany"
+      },
+      "leave": {
+        "confirm": "Opuść stronę",
+        "description": "Masz niezapisane zmiany. Opuścić tę stronę bez zapisywania?",
+        "title": "Niezapisane zmiany"
+      }
+    },
+    "invoices": {
+      "columns": {
+        "amount": "Kwota",
+        "createdAt": "Stworzony",
+        "dueDate": "Termin",
+        "invoiceNumber": "Faktura #",
+        "status": "Status"
+      },
+      "empty": "Nie znaleziono faktur dla tej umowy.",
+      "loading": "Ładowanie faktur...",
+      "title": "Faktury kontraktowe"
+    },
+    "labels": {
+      "client": "Klient",
+      "contractName": "Nazwa umowy",
+      "description": "Opis",
+      "noClientAssigned": "Nie przypisano żadnego klienta",
+      "noDescription": "Brak opisu",
+      "systemManagedDefault": "Domyślne zarządzane przez system",
+      "useTenantDefaults": "Użyj ustawień domyślnych dzierżawy"
+    },
+    "quickActions": {
+      "deleteContract": "Usuń umowę",
+      "manageContractLines": "Zarządzaj liniami kontraktowymi",
+      "managePricingSchedules": "Zarządzaj harmonogramami cenowymi",
+      "viewDocuments": "Zobacz dokumenty",
+      "viewInvoices": "Zobacz faktury"
+    },
+    "tabs": {
+      "documents": "Dokumenty",
+      "invoices": "Faktury",
+      "lines": "Linie kontraktowe",
+      "overview": "Przegląd",
+      "pricing": "Harmonogramy cenowe"
+    },
+    "validation": {
+      "billingFrequencyRequired": "Wymagana jest częstotliwość rozliczeń.",
+      "contractNameRequired": "Nazwa umowy jest wymagana."
+    }
+  },
+  "contractHeader": {},
+  "contractOverview": {},
+  "contractDialog": {},
+  "contractForm": {},
+  "contractLines": {},
+  "contractLineEdit": {},
+  "contractLineRate": {},
+  "addLines": {},
+  "createCustomLine": {},
+  "pricingSchedules": {},
+  "contractsList": {},
+  "clientContracts": {},
+  "templatesTab": {},
+  "detailSwitcher": {},
+  "templateDetail": {},
+  "quickStart": {},
+  "servicePicker": {},
+  "bucketOverlay": {},
+  "frequencyOverride": {},
+  "wizard": {},
+  "wizardBasics": {},
+  "wizardFixed": {},
+  "wizardProducts": {},
+  "wizardHourly": {},
+  "wizardUsage": {},
+  "wizardReview": {},
+  "templateWizard": {},
+  "templateBasics": {},
+  "templateFixed": {},
+  "templateProducts": {},
+  "templateHourly": {},
+  "templateUsage": {},
+  "templateReview": {},
+  "templatePreview": {}
+}

@@ -67,3 +67,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/plans/2026-04-09-msp-i18n-contracts/SCRATCHPAD.md server/public/locales/nl/msp/contracts.json && git commit -m "feat(F005): add dutch contracts locale namespace"- **(2026-04-14)** `F006` completed: generated [`server/public/locales/it/msp/contracts.json`](../../../../server/public/locales/it/msp/contracts.json) from English source with placeholder-safe machine translation.
 - **(2026-04-14)** Italian accent audit note: machine output preserves accented graphemes where emitted by translator; full strict audit will be enforced again during `F009` (`validate-translations.cjs`).
 - **(2026-04-14)** Verification: `jq empty server/public/locales/it/msp/contracts.json`.
+- **(2026-04-14)** `F007` completed: generated [`server/public/locales/pl/msp/contracts.json`](../../../../server/public/locales/pl/msp/contracts.json) from English source with placeholder-safe machine translation.
+- **(2026-04-14)** Verification: `jq empty server/public/locales/pl/msp/contracts.json`.
