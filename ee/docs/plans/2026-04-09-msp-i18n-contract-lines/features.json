@@ -167,7 +167,7 @@
   {
     "id": "F034",
     "description": "ContractLineTypeRouter.tsx: Wire useTranslation and translate loading text ('Loading Contract Line...'), error messages ('Contract line with ID {id} not found', 'Failed to load contract line details', 'Unknown or unsupported contract line type: {type}')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F035",
