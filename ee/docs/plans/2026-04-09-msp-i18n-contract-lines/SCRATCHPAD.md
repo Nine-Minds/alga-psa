@@ -144,3 +144,5 @@
   - `server/public/locales/xx/msp/contract-lines.json` (fill `1111`)
   - `server/public/locales/yy/msp/contract-lines.json` (fill `5555`)
 - (2026-04-13) **F038 implementation note**: used the same leaf-string replacement semantics as `scripts/generate-pseudo-locale.ts`, preserving interpolation tokens (`{{...}}`) while replacing text payloads.
+- (2026-04-13) **F039 complete**: ran `node scripts/validate-translations.cjs` after adding `msp/contract-lines` locale files.
+- (2026-04-13) **F039 result**: `PASSED` with `Errors: 0` and `Warnings: 0` across production locales (`de/es/fr/it/nl/pl`) and pseudo-locales (`xx/yy`).

@@ -192,7 +192,7 @@
   {
     "id": "F039",
     "description": "Run validate-translations.cjs and fix any validation errors across all locale files for msp/contract-lines",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F040",
