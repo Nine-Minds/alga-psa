@@ -338,7 +338,7 @@
   {
     "id": "T043",
     "description": "ServiceBucketConfigForm.tsx: dynamic unit pluralization works correctly with translated labels",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
