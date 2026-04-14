@@ -122,7 +122,7 @@
   {
     "id": "T016",
     "description": "UsageContractLinePresetConfiguration.tsx: preset basics section uses 'Contract Line Preset' terminology in translated heading and labels",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
