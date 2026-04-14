@@ -47,7 +47,7 @@
   {
     "id": "F010",
     "description": "Add msp/contracts to the '/msp/billing' route in ROUTE_NAMESPACES in packages/core/src/lib/i18n/config.ts",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F011",
