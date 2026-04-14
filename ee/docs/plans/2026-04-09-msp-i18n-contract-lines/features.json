@@ -47,7 +47,7 @@
   {
     "id": "F010",
     "description": "HourlyContractLinePresetConfiguration.tsx: Wire useTranslation and translate preset basics section (card title with interpolated preset name and '(Hourly)' suffix, labels, Minimum Billable Time / Round Up To Nearest with helper text), Reset/Save Changes buttons",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F011",
