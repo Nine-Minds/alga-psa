@@ -138,7 +138,7 @@
   {
     "id": "T018",
     "description": "HourlyContractLinePresetConfiguration.tsx: preset basics section renders translated name label, minimum billable time, and round up to nearest with helper text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
