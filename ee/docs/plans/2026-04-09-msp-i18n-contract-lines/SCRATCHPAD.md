@@ -62,3 +62,10 @@
 - **Generate pseudo-locales**: `npx ts-node scripts/generate-pseudo-locale.ts --locale xx --fill "1111"`
 - **Count keys**: `node -e "const o=JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/contract-lines.json'));const c=(o,p='')=>{let n=0;for(const[k,v]of Object.entries(o)){if(typeof v==='object'&&v!==null)n+=c(v,p+k+'.');else n++}return n};console.log(c(o))"`
 - **Visual QA**: Enable `msp-i18n-enabled` flag locally, switch to `xx` locale, navigate to Billing > Contract Lines and exercise all configuration screens
+
+## Progress Log
+
+- (2026-04-14) `F001` completed in `ContractLineDialog.tsx` by wiring `useTranslation('msp/contract-lines')` and translating dialog title, basics labels/placeholders, and validation prefix using `t(..., { defaultValue })`.
+- (2026-04-14) Preemptively translated additional `ContractLineDialog.tsx` strings for `F002`/`F003` in the same pass to minimize repeated churn in a 1k+ LOC file; feature flags will still be advanced one-by-one in checklist order.
+- (2026-04-14) Validation errors in `validateForm()` now use interpolation-based i18n keys (for example `Service {{index}}...`) to align with acceptance criteria for dynamic validation text.
+- (2026-04-14) Verification command run: `npx eslint packages/billing/src/components/billing-dashboard/ContractLineDialog.tsx` (warnings only, no errors).

@@ -27,17 +27,20 @@ import { BucketOverlayFields } from './contracts/BucketOverlayFields';
 import { BucketOverlayInput } from './contracts/ContractWizard';
 import { ServiceCatalogPicker } from './contracts/ServiceCatalogPicker';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 
 const BILLING_TIMING_OPTIONS = [
   {
     value: 'arrears',
-    label: 'Arrears – invoice after the period closes',
+    labelKey: 'dialog.basics.billingTiming.options.arrears',
+    defaultLabel: 'Arrears - invoice after the period closes',
   },
   {
     value: 'advance',
-    label: 'Advance – invoice at the start of the period',
+    labelKey: 'dialog.basics.billingTiming.options.advance',
+    defaultLabel: 'Advance - invoice at the start of the period',
   },
 ] as const;
 
@@ -50,6 +53,7 @@ interface ContractLineDialogProps {
 }
 
 export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: ContractLineDialogProps) {
+  const { t } = useTranslation('msp/contract-lines');
   const [open, setOpen] = useState(false);
   const [planName, setPlanName] = useState('');
   const [planType, setPlanType] = useState<PlanType | null>(null);
@@ -217,48 +221,108 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
   const validateForm = (): string[] => {
     const errors: string[] = [];
-    if (!planName.trim()) errors.push('Contract Line Preset Name is required');
-    if (!billingFrequency) errors.push('Billing frequency is required');
-    if (!planType) errors.push('Contract Line Type is required');
+    if (!planName.trim()) {
+      errors.push(
+        t('dialog.validation.nameRequired', {
+          defaultValue: 'Contract line preset name is required',
+        }),
+      );
+    }
+    if (!billingFrequency) {
+      errors.push(
+        t('dialog.validation.billingFrequencyRequired', {
+          defaultValue: 'Billing frequency is required',
+        }),
+      );
+    }
+    if (!planType) {
+      errors.push(
+        t('dialog.validation.contractLineTypeRequired', {
+          defaultValue: 'Contract line type is required',
+        }),
+      );
+    }
 
     if (planType === 'Fixed') {
       if (fixedServices.length === 0) {
-        errors.push('At least one fixed service or product is required');
+        errors.push(
+          t('dialog.validation.fixedServiceRequired', {
+            defaultValue: 'At least one fixed service or product is required',
+          }),
+        );
       }
       // Base rate is now optional for presets - it can be set when creating actual contracts
       // Check that all services are selected
       fixedServices.forEach((service, index) => {
         if (!service.service_id) {
-          errors.push(`Service ${index + 1}: Please select a service`);
+          errors.push(
+            t('dialog.validation.serviceSelectRequired', {
+              defaultValue: 'Service {{index}}: Please select a service',
+              index: index + 1,
+            }),
+          );
         }
       });
     } else if (planType === 'Hourly') {
       if (hourlyServices.length === 0) {
-        errors.push('At least one hourly service is required');
+        errors.push(
+          t('dialog.validation.hourlyServiceRequired', {
+            defaultValue: 'At least one hourly service is required',
+          }),
+        );
       }
       // Check that all services have rates
       hourlyServices.forEach((service, index) => {
         if (!service.service_id) {
-          errors.push(`Service ${index + 1}: Please select a service`);
+          errors.push(
+            t('dialog.validation.serviceSelectRequired', {
+              defaultValue: 'Service {{index}}: Please select a service',
+              index: index + 1,
+            }),
+          );
         }
         if (!service.hourly_rate || service.hourly_rate === 0) {
-          errors.push(`Service ${index + 1}: Hourly rate is required`);
+          errors.push(
+            t('dialog.validation.hourlyRateRequired', {
+              defaultValue: 'Service {{index}}: Hourly rate is required',
+              index: index + 1,
+            }),
+          );
         }
       });
     } else if (planType === 'Usage') {
       if (usageServices.length === 0) {
-        errors.push('At least one usage-based service is required');
+        errors.push(
+          t('dialog.validation.usageServiceRequired', {
+            defaultValue: 'At least one usage-based service is required',
+          }),
+        );
       }
       // Check that all services have rates and units
       usageServices.forEach((service, index) => {
         if (!service.service_id) {
-          errors.push(`Service ${index + 1}: Please select a service`);
+          errors.push(
+            t('dialog.validation.serviceSelectRequired', {
+              defaultValue: 'Service {{index}}: Please select a service',
+              index: index + 1,
+            }),
+          );
         }
         if (!service.unit_rate || service.unit_rate === 0) {
-          errors.push(`Service ${index + 1}: Unit rate is required`);
+          errors.push(
+            t('dialog.validation.unitRateRequired', {
+              defaultValue: 'Service {{index}}: Unit rate is required',
+              index: index + 1,
+            }),
+          );
         }
         if (!service.unit_of_measure?.trim()) {
-          errors.push(`Service ${index + 1}: Unit of measure is required`);
+          errors.push(
+            t('dialog.validation.unitOfMeasureRequired', {
+              defaultValue: 'Service {{index}}: Unit of measure is required',
+              index: index + 1,
+            }),
+          );
         }
       });
     }
@@ -378,7 +442,9 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       onPlanAdded(savedPresetId);
     } catch (error) {
       console.error('Error saving contract line preset:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save contract line preset';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('dialog.errors.saveFailed', { defaultValue: 'Failed to save contract line preset' });
       setValidationErrors([errorMessage]);
     } finally {
       setIsSaving(false);
@@ -449,16 +515,24 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       <div className="space-y-4">
         <Alert variant="info">
           <AlertDescription className="text-sm">
-            <strong>Fixed Fee Services:</strong> The contract line's base rate is the billed amount.
-            You can also attach <strong>Products</strong> here; product quantities are billed as units, while fixed-fee service quantities are used for
-            <em> tax allocation</em> only.
+            <strong>
+              {t('dialog.fixed.alertTitle', {
+                defaultValue: 'Fixed Fee Services:',
+              })}
+            </strong>{' '}
+            {t('dialog.fixed.alertBody', {
+              defaultValue:
+                "The contract line's base rate is the billed amount. You can also attach products here; product quantities are billed as units, while fixed-fee service quantities are used for tax allocation only.",
+            })}
           </AlertDescription>
         </Alert>
 
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Services & Products
+            {t('dialog.fixed.servicesAndProducts', {
+              defaultValue: 'Services & Products',
+            })}
           </Label>
 
           {fixedServices.map((service, index) => (
@@ -466,7 +540,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`fixed-service-${index}`} className="text-sm">
-                    Item {index + 1}
+                    {t('dialog.fixed.itemLabel', {
+                      defaultValue: 'Item {{index}}',
+                      index: index + 1,
+                    })}
                   </Label>
                   <ServiceCatalogPicker
                     value={service.service_id}
@@ -482,14 +559,16 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       markDirty();
                     }}
                     itemKinds={['service', 'product']}
-                    placeholder="Select an item"
+                    placeholder={t('dialog.fixed.selectItemPlaceholder', {
+                      defaultValue: 'Select an item',
+                    })}
                     className="w-full"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor={`quantity-${index}`} className="text-sm">
-                    Quantity
+                    {t('dialog.common.quantity', { defaultValue: 'Quantity' })}
                   </Label>
                   <Input
                     id={`quantity-${index}`}
@@ -523,14 +602,16 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             className="w-full"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Item
+            {t('dialog.fixed.addItem', { defaultValue: 'Add Item' })}
           </Button>
         </div>
 
         {fixedServices.length === 0 && (
           <div className="p-4 bg-muted border border-[rgb(var(--color-border-200))] rounded-md">
             <p className="text-sm text-muted-foreground text-center">
-              No fixed fee items added yet. Click "Add Item" above to get started.
+              {t('dialog.fixed.emptyState', {
+                defaultValue: 'No fixed fee items added yet. Click "Add Item" above to get started.',
+              })}
             </p>
           </div>
         )}
@@ -564,8 +645,15 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       <div className="space-y-4">
         <Alert variant="info">
           <AlertDescription className="text-sm">
-            <strong>What are Hourly Services?</strong> These services are billed based on actual time tracked.
-            Each time entry will be multiplied by the hourly rate to calculate the invoice amount.
+            <strong>
+              {t('dialog.hourly.alertTitle', {
+                defaultValue: 'What are Hourly Services?',
+              })}
+            </strong>{' '}
+            {t('dialog.hourly.alertBody', {
+              defaultValue:
+                'These services are billed based on actual time tracked. Each time entry will be multiplied by the hourly rate to calculate the invoice amount.',
+            })}
           </AlertDescription>
         </Alert>
 
@@ -574,37 +662,49 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             <div className="space-y-2">
               <Label htmlFor="minimum-billable-time" className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                Minimum Billable Time (minutes)
+                {t('dialog.hourly.minimumBillableTimeLabel', {
+                  defaultValue: 'Minimum Billable Time (minutes)',
+                })}
               </Label>
               <Input
                 id="minimum-billable-time"
                 type="number"
                 value={minimumBillableTime || ''}
                 onChange={(e) => setMinimumBillableTime(parseInt(e.target.value) || undefined)}
-                placeholder="15"
+                placeholder={t('dialog.hourly.minutesPlaceholder', { defaultValue: '15' })}
                 min="0"
                 step="15"
                 className="w-32"
               />
-              <p className="text-xs text-muted-foreground">e.g., 15 minutes - any time entry less than this will be rounded up</p>
+              <p className="text-xs text-muted-foreground">
+                {t('dialog.hourly.minimumBillableTimeHelp', {
+                  defaultValue: 'e.g., 15 minutes - any time entry less than this will be rounded up',
+                })}
+              </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="round-up-to-nearest" className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                Round Up To Nearest (minutes)
+                {t('dialog.hourly.roundUpToNearestLabel', {
+                  defaultValue: 'Round Up To Nearest (minutes)',
+                })}
               </Label>
               <Input
                 id="round-up-to-nearest"
                 type="number"
                 value={roundUpToNearest || ''}
                 onChange={(e) => setRoundUpToNearest(parseInt(e.target.value) || undefined)}
-                placeholder="15"
+                placeholder={t('dialog.hourly.minutesPlaceholder', { defaultValue: '15' })}
                 min="0"
                 step="15"
                 className="w-32"
               />
-              <p className="text-xs text-muted-foreground">e.g., 15 minutes - time entries will be rounded up to the nearest interval</p>
+              <p className="text-xs text-muted-foreground">
+                {t('dialog.hourly.roundUpToNearestHelp', {
+                  defaultValue: 'e.g., 15 minutes - time entries will be rounded up to the nearest interval',
+                })}
+              </p>
             </div>
           </>
         )}
@@ -612,7 +712,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
-            Hourly Services
+            {t('dialog.hourly.servicesHeading', { defaultValue: 'Hourly Services' })}
           </Label>
 
           {hourlyServices.map((service, index) => (
@@ -620,7 +720,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`hourly-service-${index}`} className="text-sm">
-                    Service {index + 1}
+                    {t('dialog.hourly.serviceLabel', {
+                      defaultValue: 'Service {{index}}',
+                      index: index + 1,
+                    })}
                   </Label>
                   <ServiceCatalogPicker
                     value={service.service_id}
@@ -643,7 +746,9 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       markDirty();
                     }}
                     itemKinds={['service']}
-                    placeholder="Select a service"
+                    placeholder={t('dialog.hourly.selectServicePlaceholder', {
+                      defaultValue: 'Select a service',
+                    })}
                     className="w-full"
                   />
                 </div>
@@ -651,7 +756,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 <div className="space-y-2">
                   <Label htmlFor={`hourly-rate-${index}`} className="text-sm flex items-center gap-2">
                     <Coins className="h-3 w-3" />
-                    Hourly Rate
+                    {t('dialog.hourly.hourlyRateLabel', { defaultValue: 'Hourly Rate' })}
                   </Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
@@ -679,19 +784,26 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                           setHourlyServiceRateInputs(prev => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
                         }
                       }}
-                      placeholder="0.00"
+                      placeholder={t('dialog.common.moneyPlaceholder', { defaultValue: '0.00' })}
                       className="pl-10"
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {service.hourly_rate ? `${formatCurrency(service.hourly_rate)}/hour` : 'Enter hourly rate'}
+                    {service.hourly_rate
+                      ? t('dialog.hourly.hourlyRateSummary', {
+                          defaultValue: '{{rate}}/hour',
+                          rate: formatCurrency(service.hourly_rate),
+                        })
+                      : t('dialog.hourly.enterHourlyRate', { defaultValue: 'Enter hourly rate' })}
                   </p>
                 </div>
 
                 {/* Bucket Overlay Section */}
                 <div className="space-y-3 pt-3 border-t border-dashed border-[rgb(var(--color-border-200))]">
                   <SwitchWithLabel
-                    label="Recommend bucket of hours"
+                    label={t('dialog.hourly.recommendBucketLabel', {
+                      defaultValue: 'Recommend bucket of hours',
+                    })}
                     checked={Boolean(service.bucket_overlay)}
                     onCheckedChange={(checked) => {
                       const newServices = [...hourlyServices];
@@ -756,14 +868,16 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             className="w-full"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Hourly Service
+            {t('dialog.hourly.addHourlyService', { defaultValue: 'Add Hourly Service' })}
           </Button>
         </div>
 
         {hourlyServices.length === 0 && (
           <div className="p-4 bg-muted border border-[rgb(var(--color-border-200))] rounded-md">
             <p className="text-sm text-muted-foreground text-center">
-              No hourly services added yet. Click "Add Hourly Service" above to get started.
+              {t('dialog.hourly.emptyState', {
+                defaultValue: 'No hourly services added yet. Click "Add Hourly Service" above to get started.',
+              })}
             </p>
           </div>
         )}
@@ -824,15 +938,22 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       <div className="space-y-4">
         <Alert variant="info">
           <AlertDescription className="text-sm">
-            <strong>What are Usage-Based Services?</strong> These services are billed based on actual consumption or usage metrics.
-            Each unit consumed will be multiplied by the unit rate to calculate the invoice amount.
+            <strong>
+              {t('dialog.usage.alertTitle', {
+                defaultValue: 'What are Usage-Based Services?',
+              })}
+            </strong>{' '}
+            {t('dialog.usage.alertBody', {
+              defaultValue:
+                'These services are billed based on actual consumption or usage metrics. Each unit consumed will be multiplied by the unit rate to calculate the invoice amount.',
+            })}
           </AlertDescription>
         </Alert>
 
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
-            Usage-Based Services
+            {t('dialog.usage.servicesHeading', { defaultValue: 'Usage-Based Services' })}
           </Label>
 
           {usageServices.map((service, index) => (
@@ -840,7 +961,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`usage-service-${index}`} className="text-sm">
-                    Service {index + 1}
+                    {t('dialog.usage.serviceLabel', {
+                      defaultValue: 'Service {{index}}',
+                      index: index + 1,
+                    })}
                   </Label>
                   <ServiceCatalogPicker
                     id={`usage-service-${index}`}
@@ -856,7 +980,9 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       })
                     }
                     itemKinds={['service']}
-                    placeholder="Search services..."
+                    placeholder={t('dialog.usage.searchServicesPlaceholder', {
+                      defaultValue: 'Search services...',
+                    })}
                     debounceMs={300}
                   />
                 </div>
@@ -865,7 +991,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                   <div className="space-y-2">
                     <Label htmlFor={`unit-rate-${index}`} className="text-sm flex items-center gap-2">
                       <Coins className="h-3 w-3" />
-                      Rate per Unit
+                      {t('dialog.usage.ratePerUnitLabel', { defaultValue: 'Rate per Unit' })}
                     </Label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
@@ -893,28 +1019,38 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                             setUsageServiceRateInputs(prev => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
                           }
                         }}
-                        placeholder="0.00"
+                        placeholder={t('dialog.common.moneyPlaceholder', { defaultValue: '0.00' })}
                         className="pl-10"
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {service.unit_rate ? `${formatCurrency(service.unit_rate)}/${service.unit_of_measure || 'unit'}` : 'Enter unit rate'}
+                      {service.unit_rate
+                        ? t('dialog.usage.rateSummary', {
+                            defaultValue: '{{rate}}/{{unit}}',
+                            rate: formatCurrency(service.unit_rate),
+                            unit: service.unit_of_measure || t('dialog.usage.defaultUnit', { defaultValue: 'unit' }),
+                          })
+                        : t('dialog.usage.enterUnitRate', { defaultValue: 'Enter unit rate' })}
                     </p>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor={`unit-measure-${index}`} className="text-sm">
-                      Unit of Measure
+                      {t('dialog.usage.unitOfMeasureLabel', { defaultValue: 'Unit of Measure' })}
                     </Label>
                     <Input
                       id={`unit-measure-${index}`}
                       type="text"
-                      value={service.unit_of_measure || 'unit'}
+                      value={service.unit_of_measure || t('dialog.usage.defaultUnit', { defaultValue: 'unit' })}
                       onChange={(e) => handleUnitChange(index, e.target.value)}
-                      placeholder="e.g., GB, API call, user"
+                      placeholder={t('dialog.usage.unitOfMeasurePlaceholder', {
+                        defaultValue: 'e.g., GB, API call, user',
+                      })}
                     />
                     <p className="text-xs text-muted-foreground">
-                      e.g., GB, API call, transaction
+                      {t('dialog.usage.unitOfMeasureHelp', {
+                        defaultValue: 'e.g., GB, API call, transaction',
+                      })}
                     </p>
                   </div>
                 </div>
@@ -922,7 +1058,9 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 {/* Bucket Overlay Section */}
                 <div className="space-y-3 pt-3 border-t border-dashed border-[rgb(var(--color-border-200))]">
                   <SwitchWithLabel
-                    label="Recommend bucket of consumption"
+                    label={t('dialog.usage.recommendBucketLabel', {
+                      defaultValue: 'Recommend bucket of consumption',
+                    })}
                     checked={Boolean(service.bucket_overlay)}
                     onCheckedChange={(checked) => {
                       const newServices = [...usageServices];
@@ -959,7 +1097,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         setUsageServices(newServices);
                         markDirty();
                       }}
-                      unitLabel={service.unit_of_measure || 'units'}
+                      unitLabel={service.unit_of_measure || t('dialog.usage.defaultUnits', { defaultValue: 'units' })}
                       automationId={`usage-bucket-${index}`}
                       billingFrequency={billingFrequency}
                     />
@@ -988,14 +1126,17 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             className="w-full"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Usage-Based Service
+            {t('dialog.usage.addUsageService', { defaultValue: 'Add Usage-Based Service' })}
           </Button>
         </div>
 
         {usageServices.length === 0 && (
           <div className="p-4 bg-muted border border-[rgb(var(--color-border-200))] rounded-md">
             <p className="text-sm text-muted-foreground text-center">
-              No usage-based services added yet. Click "Add Usage-Based Service" above to get started.
+              {t('dialog.usage.emptyState', {
+                defaultValue:
+                  'No usage-based services added yet. Click "Add Usage-Based Service" above to get started.',
+              })}
             </p>
           </div>
         )}
@@ -1023,13 +1164,15 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       <Dialog
         isOpen={open}
         onClose={() => handleCloseRequest(false)}
-        title={editingPlan ? 'Edit Contract Line Preset' : 'Add Contract Line Preset'}
+        title={editingPlan
+          ? t('dialog.title.edit', { defaultValue: 'Edit Contract Line Preset' })
+          : t('dialog.title.add', { defaultValue: 'Add Contract Line Preset' })}
         className="max-w-3xl"
         hideCloseButton={!!editingPlan}
         footer={(
           <div className="flex justify-end space-x-2">
             <Button id="contract-line-cancel" variant="outline" onClick={() => handleCloseRequest(true)}>
-              Cancel
+              {t('dialog.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               id="contract-line-submit"
@@ -1038,7 +1181,11 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
               disabled={isSaving}
               className={!planName.trim() || !planType || !billingFrequency ? 'opacity-50' : ''}
             >
-              {isSaving ? 'Saving…' : editingPlan ? 'Update Contract Line Preset' : 'Create Contract Line Preset'}
+              {isSaving
+                ? t('dialog.actions.saving', { defaultValue: 'Saving...' })
+                : editingPlan
+                  ? t('dialog.actions.updatePreset', { defaultValue: 'Update Contract Line Preset' })
+                  : t('dialog.actions.createPreset', { defaultValue: 'Create Contract Line Preset' })}
             </Button>
           </div>
         )}
@@ -1048,7 +1195,11 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive">
                 <AlertDescription>
-                  <p className="font-medium mb-2">Please correct the following:</p>
+                  <p className="font-medium mb-2">
+                    {t('dialog.validation.prefix', {
+                      defaultValue: 'Please correct the following:',
+                    })}
+                  </p>
                   <ul className="list-disc list-inside space-y-1">
                     {validationErrors.map((err, idx) => (
                       <li key={idx}>{err}</li>
@@ -1060,14 +1211,21 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
             <section className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold">Contract Line Preset Basics</h3>
+                <h3 className="text-lg font-semibold">
+                  {t('dialog.basics.heading', { defaultValue: 'Contract Line Preset Basics' })}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Create a reusable template that can be quickly added to contracts or contract templates. Define the billing model, services, and default rates that will be copied when this preset is used.
+                  {t('dialog.basics.description', {
+                    defaultValue:
+                      'Create a reusable template that can be quickly added to contracts or contract templates. Define the billing model, services, and default rates that will be copied when this preset is used.',
+                  })}
                 </p>
               </div>
               <div className="space-y-3">
                 <div>
-                  <Label htmlFor="name">Contract Line Preset Name *</Label>
+                  <Label htmlFor="name">
+                    {t('dialog.basics.nameLabel', { defaultValue: 'Contract Line Preset Name *' })}
+                  </Label>
                   <Input
                     id="name"
                     value={planName}
@@ -1076,13 +1234,17 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       clearErrorIfSubmitted();
                       markDirty();
                     }}
-                    placeholder="e.g. Managed Support – Gold"
+                    placeholder={t('dialog.basics.namePlaceholder', {
+                      defaultValue: 'e.g. Managed Support - Gold',
+                    })}
                     required
                     className={hasAttemptedSubmit && !planName.trim() ? 'border-red-500' : ''}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="frequency">Billing Frequency *</Label>
+                  <Label htmlFor="frequency">
+                    {t('dialog.basics.billingFrequencyLabel', { defaultValue: 'Billing Frequency *' })}
+                  </Label>
                   <CustomSelect
                     id="frequency"
                     value={billingFrequency}
@@ -1092,12 +1254,16 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       markDirty();
                     }}
                     options={BILLING_FREQUENCY_OPTIONS}
-                    placeholder="Select billing frequency"
+                    placeholder={t('dialog.basics.billingFrequencyPlaceholder', {
+                      defaultValue: 'Select billing frequency',
+                    })}
                     className={hasAttemptedSubmit && !billingFrequency ? 'ring-1 ring-red-500' : ''}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="billing-timing">Billing Timing *</Label>
+                  <Label htmlFor="billing-timing">
+                    {t('dialog.basics.billingTimingLabel', { defaultValue: 'Billing Timing *' })}
+                  </Label>
                   <CustomSelect
                     id="billing-timing"
                     value={billingTiming}
@@ -1111,18 +1277,24 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                     }}
                     options={BILLING_TIMING_OPTIONS.map((option) => ({
                       value: option.value,
-                      label: option.label,
+                      label: t(option.labelKey, { defaultValue: option.defaultLabel }),
                     }))}
                     disabled={planType !== 'Fixed'}
-                    placeholder="Select billing timing"
+                    placeholder={t('dialog.basics.billingTimingPlaceholder', {
+                      defaultValue: 'Select billing timing',
+                    })}
                   />
                   {planType !== 'Fixed' ? (
                     <p className="text-xs text-muted-foreground mt-1">
-                      Hourly and usage-based lines always bill in arrears.
+                      {t('dialog.billingModel.timingHelp.nonFixed', {
+                        defaultValue: 'Hourly and usage-based lines always bill in arrears.',
+                      })}
                     </p>
                   ) : (
                     <p className="text-xs text-muted-foreground mt-1">
-                      Advance billing invoices the upcoming period at the cycle start.
+                      {t('dialog.billingModel.timingHelp.fixed', {
+                        defaultValue: 'Advance billing invoices the upcoming period at the cycle start.',
+                      })}
                     </p>
                   )}
                 </div>
@@ -1131,9 +1303,14 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
             <section className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold">Choose a Billing Model *</h3>
+                <h3 className="text-lg font-semibold">
+                  {t('dialog.billingModel.heading', { defaultValue: 'Choose a Billing Model *' })}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Select the billing behavior that fits this offering. Services and overlays can be attached once the line exists.
+                  {t('dialog.billingModel.description', {
+                    defaultValue:
+                      'Select the billing behavior that fits this offering. Services and overlays can be attached once the line exists.',
+                  })}
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -1141,22 +1318,34 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                   [
                     {
                       key: 'Fixed' as PlanType,
-                      title: 'Fixed Fee',
-                      description: 'Charge a flat amount every billing period.',
+                      title: t('dialog.billingModel.cards.fixed.title', {
+                        defaultValue: 'Fixed Fee',
+                      }),
+                      description: t('dialog.billingModel.cards.fixed.description', {
+                        defaultValue: 'Charge a flat amount every billing period.',
+                      }),
                       icon: Package,
                       accent: 'text-blue-600',
                     },
                     {
                       key: 'Hourly' as PlanType,
-                      title: 'Hourly',
-                      description: 'Bill based on approved time entries and hourly overlays.',
+                      title: t('dialog.billingModel.cards.hourly.title', {
+                        defaultValue: 'Hourly',
+                      }),
+                      description: t('dialog.billingModel.cards.hourly.description', {
+                        defaultValue: 'Bill based on approved time entries and hourly overlays.',
+                      }),
                       icon: Clock,
                       accent: 'text-emerald-600',
                     },
                     {
                       key: 'Usage' as PlanType,
-                      title: 'Usage-Based',
-                      description: 'Invoice for units consumed such as devices or licenses.',
+                      title: t('dialog.billingModel.cards.usage.title', {
+                        defaultValue: 'Usage-Based',
+                      }),
+                      description: t('dialog.billingModel.cards.usage.description', {
+                        defaultValue: 'Invoice for units consumed such as devices or licenses.',
+                      }),
                       icon: Activity,
                       accent: 'text-orange-600',
                     },
@@ -1189,9 +1378,14 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             {planType === 'Fixed' && (
               <section className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-semibold">Fixed Fee Services</h3>
+                  <h3 className="text-lg font-semibold">
+                    {t('dialog.fixed.heading', { defaultValue: 'Fixed Fee Services' })}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    Set up services that are billed at a fixed recurring rate, regardless of usage.
+                    {t('dialog.fixed.description', {
+                      defaultValue:
+                        'Set up services that are billed at a fixed recurring rate, regardless of usage.',
+                    })}
                   </p>
                 </div>
                 {renderFixedConfig()}
@@ -1199,7 +1393,11 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 {fixedServices.length > 0 && (
                   <>
                     <div className="space-y-2 pt-4 border-t">
-                      <Label htmlFor="base-rate">Recurring Base Rate (Optional)</Label>
+                      <Label htmlFor="base-rate">
+                        {t('dialog.fixed.baseRateLabel', {
+                          defaultValue: 'Recurring Base Rate (Optional)',
+                        })}
+                      </Label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                         <Input
@@ -1226,17 +1424,24 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                               setBaseRateInput((cents / 100).toFixed(2));
                             }
                           }}
-                          placeholder="0.00"
+                          placeholder={t('dialog.common.moneyPlaceholder', { defaultValue: '0.00' })}
                           className="pl-10"
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground">Suggested recurring fee for all fixed services. Can be overridden when adding this preset to a contract.</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('dialog.fixed.baseRateHelp', {
+                          defaultValue:
+                            'Suggested recurring fee for all fixed services. Can be overridden when adding this preset to a contract.',
+                        })}
+                      </p>
                     </div>
 
                     <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
                       <div className="flex items-center justify-between">
                         <Label htmlFor="enable-proration" className="font-medium text-[rgb(var(--color-text-800))]">
-                          Adjust for Partial Periods
+                          {t('dialog.fixed.adjustForPartialPeriodsLabel', {
+                            defaultValue: 'Adjust for Partial Periods',
+                          })}
                         </Label>
                         <Switch
                           id="enable-proration"
@@ -1255,7 +1460,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      When enabled, the recurring fee scales to the covered portion of a service period when the contract starts or ends inside that period.
+                      {t('dialog.fixed.adjustForPartialPeriodsHelp', {
+                        defaultValue:
+                          'When enabled, the recurring fee scales to the covered portion of a service period when the contract starts or ends inside that period.',
+                      })}
                     </p>
                   </div>
                 </>
@@ -1266,9 +1474,14 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             {planType === 'Hourly' && (
               <section className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-semibold">Hourly Services</h3>
+                  <h3 className="text-lg font-semibold">
+                    {t('dialog.hourly.heading', { defaultValue: 'Hourly Services' })}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    Configure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.
+                    {t('dialog.hourly.description', {
+                      defaultValue:
+                        'Configure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.',
+                    })}
                   </p>
                 </div>
                 {renderHourlyConfig()}
@@ -1278,9 +1491,13 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             {planType === 'Usage' && (
               <section className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-semibold">Usage-Based Services</h3>
+                  <h3 className="text-lg font-semibold">
+                    {t('dialog.usage.heading', { defaultValue: 'Usage-Based Services' })}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    Configure services that are billed based on usage or consumption.
+                    {t('dialog.usage.description', {
+                      defaultValue: 'Configure services that are billed based on usage or consumption.',
+                    })}
                   </p>
                 </div>
                 {renderUsageConfig()}

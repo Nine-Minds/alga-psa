@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "ContractLineDialog.tsx: Wire useTranslation('msp/contract-lines') and translate dialog title, preset basics section (name label, frequency label, billing timing label), placeholder text, and validation error prefix ('Please correct the following')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F002",
