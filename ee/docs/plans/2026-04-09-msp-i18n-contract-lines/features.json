@@ -42,7 +42,7 @@
   {
     "id": "F009",
     "description": "UsageContractLinePresetConfiguration.tsx: Translate service pricing card, accordion summaries, Save All Configurations button, manage preset services card title, empty state, and all error/validation messages ('No changes detected to save', 'Cannot save, validation errors exist')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F010",
