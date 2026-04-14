@@ -112,7 +112,7 @@
   {
     "id": "F023",
     "description": "FixedContractLinePresetConfiguration.tsx: Translate fixed fee settings section (heading, description, 'Recurring Base Rate (Optional)' label, helper text about overriding, proration label/description), billing cycle alignment options ('Start of Billing Cycle', 'End of Billing Cycle', 'Proportional Coverage'), associated services card title, Reset/Save Changes buttons, validation/error messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F024",
