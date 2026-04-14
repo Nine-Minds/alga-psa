@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Trash2, Plus, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Define TierConfig locally or import if available globally
 export interface TierConfig {
@@ -35,6 +36,7 @@ export function ServiceTierEditor({
   disabled = false,
   onTiersChange,
 }: ServiceTierEditorProps) {
+  const { t } = useTranslation('msp/contract-lines');
 
   const handleAddTier = () => {
     const sortedTiers = [...tiers].sort((a, b) => a.fromAmount - b.fromAmount);
@@ -108,7 +110,9 @@ export function ServiceTierEditor({
   return (
     <Card className="bg-muted/40">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-base">Pricing Tiers</CardTitle>
+        <CardTitle className="text-base">
+          {t('forms.tierEditor.cardTitle', { defaultValue: 'Pricing Tiers' })}
+        </CardTitle>
         <Button
           id={`add-tier-button-${serviceId}`}
           type="button"
@@ -117,7 +121,7 @@ export function ServiceTierEditor({
           onClick={handleAddTier}
           disabled={disabled}
         >
-          <Plus className="h-4 w-4 mr-1" /> Add Tier
+          <Plus className="h-4 w-4 mr-1" /> {t('forms.tierEditor.actions.addTier', { defaultValue: 'Add Tier' })}
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -128,15 +132,32 @@ export function ServiceTierEditor({
           </Alert>
         )}
         {tiers.length === 0 && !validationError ? (
-          <p className="text-sm text-muted-foreground">No tiers defined. Click "Add Tier".</p>
+          <p className="text-sm text-muted-foreground">
+            {t('forms.tierEditor.emptyState', { defaultValue: 'No tiers defined. Click "Add Tier".' })}
+          </p>
         ) : null}
         {tiers.length > 0 && (
           <div className="space-y-2">
             {/* Header Row */}
             <div className="grid grid-cols-11 gap-2 items-center font-medium text-xs text-muted-foreground px-2">
-              <div className="col-span-3">From ({unitOfMeasure || 'Units'})</div>
-              <div className="col-span-3">To ({unitOfMeasure || 'Units'})</div>
-              <div className="col-span-4">Rate per {unitOfMeasure || 'Unit'}</div>
+              <div className="col-span-3">
+                {t('forms.tierEditor.columns.from', {
+                  defaultValue: 'From ({{unit}})',
+                  unit: unitOfMeasure || t('forms.tierEditor.units.defaultPlural', { defaultValue: 'Units' }),
+                })}
+              </div>
+              <div className="col-span-3">
+                {t('forms.tierEditor.columns.to', {
+                  defaultValue: 'To ({{unit}})',
+                  unit: unitOfMeasure || t('forms.tierEditor.units.defaultPlural', { defaultValue: 'Units' }),
+                })}
+              </div>
+              <div className="col-span-4">
+                {t('forms.tierEditor.columns.ratePerUnit', {
+                  defaultValue: 'Rate per {{unit}}',
+                  unit: unitOfMeasure || t('forms.tierEditor.units.defaultSingular', { defaultValue: 'Unit' }),
+                })}
+              </div>
               <div className="col-span-1"></div> {/* Spacer for delete button */}
             </div>
             {/* Tier Rows */}
@@ -151,7 +172,10 @@ export function ServiceTierEditor({
                     disabled={disabled || index === 0} // First tier 'from' is always 0
                     min={0}
                     step={1}
-                    aria-label={`Tier ${index + 1} From Amount`}
+                    aria-label={t('forms.tierEditor.aria.fromAmount', {
+                      defaultValue: 'Tier {{tier}} From Amount',
+                      tier: index + 1,
+                    })}
                   />
                 </div>
                 <div className="col-span-3">
@@ -160,12 +184,17 @@ export function ServiceTierEditor({
                     type="number"
                     value={tier.toAmount === null ? '' : tier.toAmount.toString()}
                     onChange={(e) => handleTierFieldChange(tier.id, 'toAmount', e.target.value)}
-                    placeholder={index === sortedTiers.length - 1 ? "Unlimited" : ""}
+                    placeholder={index === sortedTiers.length - 1
+                      ? t('forms.tierEditor.unlimitedPlaceholder', { defaultValue: 'Unlimited' })
+                      : ''}
                     // Allow editing 'To' amount for intermediate tiers to fix gaps/overlaps
                     disabled={disabled}
                     min={tier.fromAmount}
                     step={1}
-                    aria-label={`Tier ${index + 1} To Amount`}
+                    aria-label={t('forms.tierEditor.aria.toAmount', {
+                      defaultValue: 'Tier {{tier}} To Amount',
+                      tier: index + 1,
+                    })}
                   />
                 </div>
                 <div className="col-span-4">
@@ -177,7 +206,10 @@ export function ServiceTierEditor({
                     disabled={disabled}
                     min={0}
                     step={0.01}
-                    aria-label={`Tier ${index + 1} Rate`}
+                    aria-label={t('forms.tierEditor.aria.rate', {
+                      defaultValue: 'Tier {{tier}} Rate',
+                      tier: index + 1,
+                    })}
                   />
                 </div>
                 <div className="col-span-1 flex justify-end">
@@ -189,7 +221,10 @@ export function ServiceTierEditor({
                     onClick={() => handleRemoveTier(tier.id)}
                     disabled={disabled || tiers.length <= 1} // Cannot remove if only one tier exists
                     className="text-destructive hover:bg-destructive/10"
-                    aria-label={`Remove Tier ${index + 1}`}
+                    aria-label={t('forms.tierEditor.aria.removeTier', {
+                      defaultValue: 'Remove Tier {{tier}}',
+                      tier: index + 1,
+                    })}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -199,7 +234,10 @@ export function ServiceTierEditor({
           </div>
         )}
         <p className="text-xs text-muted-foreground pt-2">
-          Define usage ranges and their corresponding rates. Leave 'To' blank for the last tier to represent unlimited usage. The first tier must start from 0. Tiers must be contiguous.
+          {t('forms.tierEditor.helperText', {
+            defaultValue:
+              "Define usage ranges and their corresponding rates. Leave 'To' blank for the last tier to represent unlimited usage. The first tier must start from 0. Tiers must be contiguous.",
+          })}
         </p>
       </CardContent>
     </Card>

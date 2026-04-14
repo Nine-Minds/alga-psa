@@ -142,7 +142,7 @@
   {
     "id": "F029",
     "description": "ServiceTierEditor.tsx: Wire useTranslation and translate card title ('Pricing Tiers'), 'Add Tier' button, column headers ('From (Units)', 'To (Units)', 'Rate per Unit' with interpolated unit), empty state ('No tiers defined. Click \"Add Tier\".'), helper text about tier rules, aria-labels ('Tier N From Amount', 'Tier N To Amount', 'Tier N Rate', 'Remove Tier N'), and 'Unlimited' placeholder",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F030",
