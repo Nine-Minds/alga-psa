@@ -1,0 +1,201 @@
+{
+  "common": {
+    "actions": {
+      "back": "55555",
+      "cancel": "55555",
+      "close": "55555",
+      "create": "55555",
+      "delete": "55555",
+      "discard": "55555",
+      "edit": "55555",
+      "refresh": "55555",
+      "remove": "55555",
+      "retry": "55555",
+      "save": "55555",
+      "saveChanges": "55555",
+      "saveChangesDirty": "55555",
+      "saving": "55555",
+      "view": "55555"
+    },
+    "alerts": {
+      "saveSuccess": "55555",
+      "systemManagedDefault": "55555"
+    },
+    "empty": {
+      "none": "55555",
+      "notAvailable": "55555",
+      "notSpecified": "55555",
+      "ongoing": "55555"
+    },
+    "errors": {
+      "failedToLoad": "55555",
+      "failedToSave": "55555",
+      "validationPrefix": "55555"
+    },
+    "labels": {
+      "created": "55555",
+      "currency": "55555",
+      "description": "55555",
+      "lastUpdated": "55555",
+      "name": "55555",
+      "status": "55555"
+    },
+    "tabs": {
+      "clientContracts": "55555",
+      "drafts": "55555",
+      "templates": "55555"
+    }
+  },
+  "status": {
+    "active": "55555",
+    "draft": "55555",
+    "expired": "55555",
+    "terminated": "55555"
+  },
+  "renewal": {
+    "labels": {
+      "decisionDue": "55555",
+      "mode": "55555",
+      "noticeDays": "55555",
+      "source": "55555",
+      "termMonths": "55555"
+    },
+    "modes": {
+      "auto": "55555",
+      "manual": "55555",
+      "none": "55555"
+    },
+    "source": {
+      "contract": "55555",
+      "tenantDefault": "55555"
+    }
+  },
+  "billing": {
+    "cadenceOwner": {
+      "client": "55555",
+      "contract": "55555"
+    },
+    "frequency": {
+      "annually": "55555",
+      "biweekly": "55555",
+      "monthly": "55555",
+      "quarterly": "55555",
+      "weekly": "55555"
+    },
+    "labels": {
+      "billingFrequency": "55555",
+      "timing": "55555"
+    },
+    "timing": {
+      "advance": "55555",
+      "arrears": "55555"
+    }
+  },
+  "po": {
+    "labels": {
+      "amount": "55555",
+      "number": "55555",
+      "required": "55555"
+    }
+  },
+  "contractDetail": {
+    "cards": {
+      "assignment": "55555",
+      "clientOwnership": "55555",
+      "contractDetails": "55555",
+      "header": "55555",
+      "quickActions": "55555",
+      "renewalHandling": "55555"
+    },
+    "dialogs": {
+      "delete": {
+        "confirm": "55555",
+        "description": "55555",
+        "title": "55555"
+      },
+      "discard": {
+        "confirm": "55555",
+        "description": "55555",
+        "title": "55555"
+      },
+      "leave": {
+        "confirm": "55555",
+        "description": "55555",
+        "title": "55555"
+      }
+    },
+    "invoices": {
+      "columns": {
+        "amount": "55555",
+        "createdAt": "55555",
+        "dueDate": "55555",
+        "invoiceNumber": "55555",
+        "status": "55555"
+      },
+      "empty": "55555",
+      "loading": "55555",
+      "title": "55555"
+    },
+    "labels": {
+      "client": "55555",
+      "contractName": "55555",
+      "description": "55555",
+      "noClientAssigned": "55555",
+      "noDescription": "55555",
+      "systemManagedDefault": "55555",
+      "useTenantDefaults": "55555"
+    },
+    "quickActions": {
+      "deleteContract": "55555",
+      "manageContractLines": "55555",
+      "managePricingSchedules": "55555",
+      "viewDocuments": "55555",
+      "viewInvoices": "55555"
+    },
+    "tabs": {
+      "documents": "55555",
+      "invoices": "55555",
+      "lines": "55555",
+      "overview": "55555",
+      "pricing": "55555"
+    },
+    "validation": {
+      "billingFrequencyRequired": "55555",
+      "contractNameRequired": "55555"
+    }
+  },
+  "contractHeader": {},
+  "contractOverview": {},
+  "contractDialog": {},
+  "contractForm": {},
+  "contractLines": {},
+  "contractLineEdit": {},
+  "contractLineRate": {},
+  "addLines": {},
+  "createCustomLine": {},
+  "pricingSchedules": {},
+  "contractsList": {},
+  "clientContracts": {},
+  "templatesTab": {},
+  "detailSwitcher": {},
+  "templateDetail": {},
+  "quickStart": {},
+  "servicePicker": {},
+  "bucketOverlay": {},
+  "frequencyOverride": {},
+  "wizard": {},
+  "wizardBasics": {},
+  "wizardFixed": {},
+  "wizardProducts": {},
+  "wizardHourly": {},
+  "wizardUsage": {},
+  "wizardReview": {},
+  "templateWizard": {},
+  "templateBasics": {},
+  "templateFixed": {},
+  "templateProducts": {},
+  "templateHourly": {},
+  "templateUsage": {},
+  "templateReview": {},
+  "templatePreview": {}
+}

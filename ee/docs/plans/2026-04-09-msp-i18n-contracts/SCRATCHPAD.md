@@ -69,3 +69,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Verification: `jq empty server/public/locales/it/msp/contracts.json`.
 - **(2026-04-14)** `F007` completed: generated [`server/public/locales/pl/msp/contracts.json`](../../../../server/public/locales/pl/msp/contracts.json) from English source with placeholder-safe machine translation.
 - **(2026-04-14)** Verification: `jq empty server/public/locales/pl/msp/contracts.json`.
+- **(2026-04-14)** `F008` completed: ran `node scripts/generate-pseudo-locales.cjs`, which regenerated pseudo-locales including `xx/msp/contracts.json` and `yy/msp/contracts.json`.
+- **(2026-04-14)** Verification: `jq empty server/public/locales/xx/msp/contracts.json && jq empty server/public/locales/yy/msp/contracts.json` and spot-check confirmed `xx` values are `11111` patterns.

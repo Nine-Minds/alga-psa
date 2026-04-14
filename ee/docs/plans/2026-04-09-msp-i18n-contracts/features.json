@@ -37,7 +37,7 @@
   {
     "id": "F008",
     "description": "Run `node scripts/generate-pseudo-locales.cjs` to generate xx/msp/contracts.json and yy/msp/contracts.json pseudo-locale files from English source",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F009",
