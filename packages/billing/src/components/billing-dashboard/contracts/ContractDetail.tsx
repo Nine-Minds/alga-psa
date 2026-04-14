@@ -60,8 +60,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { cn } from '@alga-psa/ui/lib/utils';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const formatDate = (value?: string | Date | null): string => {
   if (!value) {
@@ -135,6 +134,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   renderClientDetails
 }) => {
   const { t } = useTranslation('msp/contracts');
+  const { formatCurrency } = useFormatters();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -202,7 +202,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
   const currencyMeta = useMemo(() => {
     const currencyCode = contract?.currency_code ?? 'USD';
-    const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode });
+    const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode });
     const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
     const symbol =
       formatter.formatToParts(0).find((part) => part.type === 'currency')?.value ?? currencyCode;
@@ -214,6 +214,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       symbol,
     };
   }, [contract?.currency_code]);
+  const formatMinorCurrency = useCallback((amountMinorUnits: number, currencyCode: string) => {
+    const { fractionDigits } = getCurrencyMeta(currencyCode);
+    const majorUnits = Number(amountMinorUnits) / Math.pow(10, fractionDigits);
+    return formatCurrency(majorUnits, currencyCode);
+  }, [formatCurrency]);
 
   const renewalModeOptions = useMemo(
     () => [
@@ -1063,7 +1068,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     if (!defaultTemplateId) {
       openDrawer(
         <div className="p-4 text-sm text-red-600">
-          No invoice templates are available for preview.
+          {t('contractDetail.invoices.noTemplatesAvailable', {
+            defaultValue: 'No invoice templates are available for preview.',
+          })}
         </div>,
         undefined,
         undefined,
@@ -1083,41 +1090,39 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       undefined,
       '1100px'
     );
-  }, [invoiceTemplates, openDrawer]);
+  }, [invoiceTemplates, openDrawer, t]);
 
   const invoiceColumns = useMemo<ColumnDefinition<BillingInvoiceViewModel>[]>(() => [
     {
-      title: 'Invoice #',
+      title: t('contractDetail.invoices.columns.invoiceNumber', { defaultValue: 'Invoice #' }),
       dataIndex: 'invoice_number',
-      render: (value) => value || '—',
+      render: (value) => value || t('common.empty.notAvailable', { defaultValue: 'N/A' }),
     },
     {
-      title: 'Status',
+      title: t('contractDetail.invoices.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       render: (value) => renderInvoiceStatusBadge(value),
     },
     {
-      title: 'Invoice Date',
+      title: t('contractDetail.invoices.columns.invoiceDate', { defaultValue: 'Invoice Date' }),
       dataIndex: 'invoice_date',
       render: (value) => formatDate(value),
     },
     {
-      title: 'Due Date',
+      title: t('contractDetail.invoices.columns.dueDate', { defaultValue: 'Due Date' }),
       dataIndex: 'due_date',
       render: (value) => formatDate(value),
     },
     {
-      title: 'Amount',
+      title: t('contractDetail.invoices.columns.amount', { defaultValue: 'Amount' }),
       dataIndex: 'total_amount',
-      render: (value, record) =>
-        formatCurrencyFromMinorUnits(
-          Number(value),
-          'en-US',
-          record.currencyCode || 'USD'
-        ),
+      render: (value, record) => formatMinorCurrency(
+        Number(value),
+        record.currencyCode || 'USD'
+      ),
     },
     {
-      title: 'Preview',
+      title: t('contractDetail.invoices.columns.preview', { defaultValue: 'Preview' }),
       dataIndex: 'invoice_id',
       width: '120px',
       render: (_, record) => (
@@ -1131,11 +1136,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           }}
         >
           <Eye className="h-4 w-4 mr-1" />
-          Preview
+          {t('contractDetail.invoices.preview', { defaultValue: 'Preview' })}
         </Button>
       ),
     },
-  ], [handleOpenInvoicePreview, renderInvoiceStatusBadge]);
+  ], [formatMinorCurrency, handleOpenInvoicePreview, renderInvoiceStatusBadge, t]);
 
   if (isLoading) {
     return (
@@ -1808,11 +1813,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                               <div className="flex items-center justify-between">
                                 <span>{t('po.labels.amount', { defaultValue: 'PO Amount' })}</span>
                                 <span className="font-medium">
-                                  {formatCurrencyFromMinorUnits(
-                                    Number(assignments[0].po_amount),
-                                    'en-US',
-                                    currencyMeta.currencyCode
-                                  )}
+                                  {formatMinorCurrency(Number(assignments[0].po_amount), currencyMeta.currencyCode)}
                                 </span>
                               </div>
                             )}
@@ -2363,11 +2364,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 ) : (
                                   <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                     {editData.po_amount != null
-                                      ? formatCurrencyFromMinorUnits(
-                                          Number(editData.po_amount),
-                                          'en-US',
-                                          currencyMeta.currencyCode
-                                        )
+                                      ? formatMinorCurrency(Number(editData.po_amount), currencyMeta.currencyCode)
                                       : t('common.empty.notAvailable', { defaultValue: 'N/A' })}
                                   </p>
                                 )}
@@ -2385,7 +2382,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <Package className="h-4 w-4 text-purple-600" />
-                    Quick Actions
+                    {t('contractDetail.quickActions.title', { defaultValue: 'Quick Actions' })}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-3">
@@ -2396,7 +2393,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     disabled={isSystemManagedDefault}
                   >
                     <Layers3 className="mr-2 h-4 w-4" />
-                    Manage Contract Lines
+                    {t('contractDetail.quickActions.manageContractLines', {
+                      defaultValue: 'Manage Contract Lines',
+                    })}
                   </Button>
                   <Button
                     id="edit-manage-pricing"
@@ -2405,15 +2404,17 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     disabled={isSystemManagedDefault}
                   >
                     <CalendarClock className="mr-2 h-4 w-4" />
-                    Manage Pricing Schedules
+                    {t('contractDetail.quickActions.managePricingSchedules', {
+                      defaultValue: 'Manage Pricing Schedules',
+                    })}
                   </Button>
                   <Button id="edit-view-documents" variant="outline" onClick={() => handleTabChange('documents')}>
                     <File className="mr-2 h-4 w-4" />
-                    View Documents
+                    {t('contractDetail.quickActions.viewDocuments', { defaultValue: 'View Documents' })}
                   </Button>
                   <Button id="edit-view-invoices" variant="outline" onClick={() => handleTabChange('invoices')}>
                     <FileText className="mr-2 h-4 w-4" />
-                    View Invoices
+                    {t('contractDetail.quickActions.viewInvoices', { defaultValue: 'View Invoices' })}
                   </Button>
                   {!isSystemManagedDefault ? (
                     <Button
@@ -2422,7 +2423,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                       onClick={() => setShowDeleteConfirm(true)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Contract
+                      {t('contractDetail.quickActions.deleteContract', {
+                        defaultValue: 'Delete Contract',
+                      })}
                     </Button>
                   ) : null}
                 </CardContent>
@@ -2435,7 +2438,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   variant="outline"
                   onClick={handleCancelClick}
                 >
-                  Cancel
+                  {t('common.actions.cancel', { defaultValue: 'Cancel' })}
                 </Button>
                 <Button
                   id="save-edit-contract-btn"
@@ -2444,7 +2447,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   className={!editContractName.trim() || !editBillingFrequency ? 'opacity-50' : ''}
                 >
                   <span className={hasUnsavedChanges ? 'font-bold' : ''}>
-                    {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
+                    {isSaving
+                      ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                      : hasUnsavedChanges
+                        ? t('common.actions.saveChangesDirty', { defaultValue: 'Save Changes *' })
+                        : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
                   </span>
                   {!isSaving && <Save className="ml-2 h-4 w-4" />}
                 </Button>
@@ -2476,7 +2483,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           }) : (
             <Card>
               <CardContent className="py-6 text-center text-muted-foreground">
-                Loading documents...
+                {t('contractDetail.documents.loading', { defaultValue: 'Loading documents...' })}
               </CardContent>
             </Card>
           )}
@@ -2487,13 +2494,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
             <CardHeader>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <FileText className="h-4 w-4 text-blue-600" />
-                Contract Invoices
+                {t('contractDetail.invoices.title', { defaultValue: 'Contract Invoices' })}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  Select an invoice to open a full preview in the drawer.
+                  {t('contractDetail.invoices.selectForPreview', {
+                    defaultValue: 'Select an invoice to open a full preview in the drawer.',
+                  })}
                 </p>
                 <Button
                   id="contract-invoices-refresh"
@@ -2502,7 +2511,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   onClick={() => void loadContractInvoices()}
                   disabled={isLoadingInvoices}
                 >
-                  Refresh
+                  {t('common.actions.refresh', { defaultValue: 'Refresh' })}
                 </Button>
               </div>
 
@@ -2514,11 +2523,16 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
               {isLoadingInvoices ? (
                 <div className="py-10">
-                  <LoadingIndicator text="Loading contract invoices..." spinnerProps={{ size: 'sm' }} />
+                  <LoadingIndicator
+                    text={t('contractDetail.invoices.loading', { defaultValue: 'Loading invoices...' })}
+                    spinnerProps={{ size: 'sm' }}
+                  />
                 </div>
               ) : contractInvoices.length === 0 ? (
                 <div className="py-10 text-center text-sm text-muted-foreground">
-                  No invoices are associated with this contract yet.
+                  {t('contractDetail.invoices.empty', {
+                    defaultValue: 'No invoices found for this contract.',
+                  })}
                 </div>
               ) : (
                 <DataTable
@@ -2538,30 +2552,38 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         isOpen={showCancelConfirm}
         onClose={handleCancelDismiss}
         onConfirm={handleCancelConfirm}
-        title="Discard Changes"
-        message="Are you sure you want to discard all changes? Any unsaved changes will be lost."
-        confirmLabel="Discard Changes"
-        cancelLabel="Continue Editing"
+        title={t('contractDetail.dialogs.discard.title', { defaultValue: 'Discard Changes' })}
+        message={t('contractDetail.dialogs.discard.message', {
+          defaultValue: 'Are you sure you want to discard all changes? Any unsaved changes will be lost.',
+        })}
+        confirmLabel={t('contractDetail.dialogs.discard.confirm', { defaultValue: 'Discard Changes' })}
+        cancelLabel={t('contractDetail.dialogs.discard.cancel', { defaultValue: 'Continue Editing' })}
       />
 
       <ConfirmationDialog
         isOpen={showNavigateAwayConfirm}
         onClose={handleNavigateAwayDismiss}
         onConfirm={handleNavigateAwayConfirm}
-        title="Unsaved Changes"
-        message="You have unsaved changes. Are you sure you want to leave this page? All changes will be lost."
-        confirmLabel="Leave Page"
-        cancelLabel="Stay on Page"
+        title={t('contractDetail.dialogs.unsaved.title', { defaultValue: 'Unsaved Changes' })}
+        message={t('contractDetail.dialogs.unsaved.message', {
+          defaultValue: 'You have unsaved changes. Are you sure you want to leave this page? All changes will be lost.',
+        })}
+        confirmLabel={t('contractDetail.dialogs.unsaved.confirm', { defaultValue: 'Leave Page' })}
+        cancelLabel={t('contractDetail.dialogs.unsaved.cancel', { defaultValue: 'Stay on Page' })}
       />
 
       <ConfirmationDialog
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDeleteContract}
-        title="Delete Contract"
-        message="Are you sure you want to delete this contract? This action cannot be undone and will remove all associated data."
-        confirmLabel={isDeleting ? 'Deleting…' : 'Delete Contract'}
-        cancelLabel="Cancel"
+        title={t('contractDetail.dialogs.delete.title', { defaultValue: 'Delete Contract' })}
+        message={t('contractDetail.dialogs.delete.message', {
+          defaultValue: 'Are you sure you want to delete this contract? This action cannot be undone and will remove all associated data.',
+        })}
+        confirmLabel={isDeleting
+          ? t('contractDetail.dialogs.delete.deleting', { defaultValue: 'Deleting…' })
+          : t('contractDetail.dialogs.delete.confirm', { defaultValue: 'Delete Contract' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
         isConfirming={isDeleting}
       />
     </div>

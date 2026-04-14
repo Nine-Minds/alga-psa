@@ -184,18 +184,29 @@
     },
     "dialogs": {
       "delete": {
+        "cancel": "Cancel",
         "confirm": "Delete Contract",
+        "deleting": "Deleting…",
         "description": "Are you sure you want to delete this contract? This action cannot be undone.",
+        "message": "Are you sure you want to delete this contract? This action cannot be undone and will remove all associated data.",
         "title": "Delete Contract"
       },
       "discard": {
+        "cancel": "Continue Editing",
         "confirm": "Discard Changes",
         "description": "Discard your unsaved changes?",
+        "message": "Are you sure you want to discard all changes? Any unsaved changes will be lost.",
         "title": "Discard Changes"
       },
       "leave": {
         "confirm": "Leave Page",
         "description": "You have unsaved changes. Leave this page without saving?",
+        "title": "Unsaved Changes"
+      },
+      "unsaved": {
+        "cancel": "Stay on Page",
+        "confirm": "Leave Page",
+        "message": "You have unsaved changes. Are you sure you want to leave this page? All changes will be lost.",
         "title": "Unsaved Changes"
       }
     },
@@ -204,11 +215,16 @@
         "amount": "Amount",
         "createdAt": "Created",
         "dueDate": "Due Date",
+        "invoiceDate": "Invoice Date",
         "invoiceNumber": "Invoice #",
+        "preview": "Preview",
         "status": "Status"
       },
       "empty": "No invoices found for this contract.",
       "loading": "Loading invoices...",
+      "noTemplatesAvailable": "No invoice templates are available for preview.",
+      "preview": "Preview",
+      "selectForPreview": "Select an invoice to open a full preview in the drawer.",
       "title": "Contract Invoices"
     },
     "labels": {
@@ -224,6 +240,7 @@
       "deleteContract": "Delete Contract",
       "manageContractLines": "Manage Contract Lines",
       "managePricingSchedules": "Manage Pricing Schedules",
+      "title": "Quick Actions",
       "viewDocuments": "View Documents",
       "viewInvoices": "View Invoices"
     },
@@ -284,3 +301,6 @@
   "templateReview": {},
   "templatePreview": {}
 }
+    "documents": {
+      "loading": "Loading documents..."
+    },

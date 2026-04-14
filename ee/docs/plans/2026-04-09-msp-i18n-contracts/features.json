@@ -72,7 +72,7 @@
   {
     "id": "F015",
     "description": "Wire useTranslation('msp/contracts') in ContractDetail.tsx -- translate Quick Actions card (Manage Contract Lines, Manage Pricing Schedules, View Documents, View Invoices, Delete Contract), save/cancel buttons ('Save Changes', 'Save Changes *', 'Saving...', 'Cancel'), confirmation dialogs (Discard Changes, Unsaved Changes/Leave Page, Delete Contract), invoice tab (Contract Invoices title, refresh button, loading/empty states, column headers), and replace hardcoded 'en-US' locale in formatCurrencyFromMinorUnits calls with useFormatters()",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F016",
