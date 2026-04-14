@@ -410,7 +410,7 @@
   {
     "id": "T052",
     "description": "ROUTE_NAMESPACES includes msp/contract-lines for billing-related routes so the namespace is loaded when navigating to contract line pages",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
