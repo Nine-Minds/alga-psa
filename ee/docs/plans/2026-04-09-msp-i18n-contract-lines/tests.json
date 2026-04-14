@@ -106,7 +106,7 @@
   {
     "id": "T014",
     "description": "UsageContractLineConfiguration.tsx: service pricing accordion summary text correctly renders 'Tiered Pricing (N tiers)' or rate/unit format with translated labels",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
