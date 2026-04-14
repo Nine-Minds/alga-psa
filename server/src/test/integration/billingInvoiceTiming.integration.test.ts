@@ -1073,6 +1073,25 @@ it('T069: hourly recurring charges bill approved time entries that fall inside a
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
+  const blockedHourlyMaterializationPlan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-08T00:00:00Z',
+    materializedAt: '2026-04-12T00:00:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-08T00:00:00Z',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: hourlyLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'hourly',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${hourlyLine.contractLineId}:approval-blocked:v1`,
+    sourceRunKey: 'integration-approval-blocked-hourly',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(blockedHourlyMaterializationPlan.records[0]);
 
   const februaryEntry = await createApprovedTimeEntryForContractLine({
     clientId: contextLike.clientId,
@@ -1146,6 +1165,25 @@ it('T070: hourly recurring charges with no billable time inside the service peri
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
+  const windowSpecificMaterializationPlan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-08T00:00:00Z',
+    materializedAt: '2026-04-12T00:05:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-08T00:00:00Z',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: hourlyLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'hourly',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${hourlyLine.contractLineId}:approval-window-specific:v1`,
+    sourceRunKey: 'integration-approval-window-specific',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(windowSpecificMaterializationPlan.records[0]);
 
   await createApprovedTimeEntryForContractLine({
     clientId: contextLike.clientId,
@@ -1177,6 +1215,414 @@ it('T070: hourly recurring charges with no billable time inside the service peri
     total: 0,
   });
   expect(invoice?.invoice_charges ?? []).toHaveLength(0);
+}, HOOK_TIMEOUT);
+
+it('T001/T004: recurring due-work marks a contract-hourly window as approval-blocked when matching uninvoiced time is non-approved, while ignoring already invoiced entries', async () => {
+  setupCommonMocks({ tenantId, userId: 'approval-blocked-hourly-user', permissionCheck: () => true });
+
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Approval Blocked Hourly Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-01-01',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+
+  const hourlyLine = await createHourlyContractLine(contextLike, {
+    serviceName: 'Approval Blocked Hourly Service',
+    planName: 'Approval Blocked Hourly Plan',
+    baseRateCents: 12000,
+    startDate: '2025-02-08',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+  const blockedHourlyMaterializationPlan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-08T00:00:00Z',
+    materializedAt: '2026-04-12T00:00:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-08T00:00:00Z',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: hourlyLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'hourly',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${hourlyLine.contractLineId}:approval-blocked-hourly:v1`,
+    sourceRunKey: 'integration-approval-blocked-hourly',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(blockedHourlyMaterializationPlan.records[0]);
+
+  await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId,
+    serviceId: hourlyLine.serviceId,
+    contractLineId: hourlyLine.contractLineId,
+    startTime: '2025-02-14T10:00:00.000Z',
+    endTime: '2025-02-14T11:00:00.000Z',
+    approvalStatus: 'SUBMITTED',
+  });
+  await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId,
+    serviceId: hourlyLine.serviceId,
+    contractLineId: hourlyLine.contractLineId,
+    startTime: '2025-02-16T10:00:00.000Z',
+    endTime: '2025-02-16T11:00:00.000Z',
+    approvalStatus: 'CHANGES_REQUESTED',
+    invoiced: true,
+  });
+
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Approval Blocked Hourly Client',
+  });
+  const blockedCandidate = dueWork.invoiceCandidates.find((candidate) =>
+    candidate.clientName === 'Approval Blocked Hourly Client',
+  );
+
+  expect(blockedCandidate).toBeTruthy();
+  expect(blockedCandidate).toMatchObject({
+    canGenerate: false,
+    approvalBlockedEntryCount: 1,
+  });
+  expect(blockedCandidate?.blockedReason).toContain('1 unapproved entry');
+  expect(blockedCandidate?.members[0]?.approvalBlockedEntryCount).toBe(1);
+}, HOOK_TIMEOUT);
+
+it('parity: recurring due-work blocks uniquely assignable unassigned hourly time on the persisted service-period end date and treats null approval status as non-approved', async () => {
+  setupCommonMocks({ tenantId, userId: 'approval-unique-unassigned-user', permissionCheck: () => true });
+
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Approval Unique Unassigned Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-01-01',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+
+  const hourlyLine = await createHourlyContractLine(contextLike, {
+    serviceName: 'Approval Unique Unassigned Service',
+    planName: 'Approval Unique Unassigned Plan',
+    baseRateCents: 12000,
+    startDate: '2025-02-08',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+  const uniqueUnassignedMaterializationPlan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-08T00:00:00Z',
+    materializedAt: '2026-04-12T00:02:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-08T00:00:00Z',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: hourlyLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'hourly',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${hourlyLine.contractLineId}:approval-unique-unassigned:v1`,
+    sourceRunKey: 'integration-approval-unique-unassigned',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(uniqueUnassignedMaterializationPlan.records[0]);
+
+  await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId,
+    serviceId: hourlyLine.serviceId,
+    contractLineId: null,
+    startTime: '2025-03-07T10:00:00.000Z',
+    endTime: '2025-03-07T11:00:00.000Z',
+    approvalStatus: null,
+  });
+
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Approval Unique Unassigned Client',
+  });
+  const blockedCandidate = dueWork.invoiceCandidates.find((candidate) =>
+    candidate.clientName === 'Approval Unique Unassigned Client',
+  );
+
+  expect(blockedCandidate).toBeTruthy();
+  expect(blockedCandidate).toMatchObject({
+    canGenerate: false,
+    approvalBlockedEntryCount: 1,
+  });
+  expect(blockedCandidate?.blockedReason).toContain('1 unapproved entry');
+  expect(blockedCandidate?.members[0]?.approvalBlockedEntryCount).toBe(1);
+
+  await expect(
+    generateInvoiceForSelectionInput(blockedCandidate!.members[0]!.selectorInput),
+  ).rejects.toThrow('1 unapproved entry');
+}, HOOK_TIMEOUT);
+
+it('T002: recurring due-work does not block a window for unrelated non-approved time outside that window service-period semantics', async () => {
+  setupCommonMocks({ tenantId, userId: 'approval-window-specific-user', permissionCheck: () => true });
+
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Approval Window Specific Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-01-01',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+
+  const hourlyLine = await createHourlyContractLine(contextLike, {
+    serviceName: 'Approval Window Specific Service',
+    planName: 'Approval Window Specific Plan',
+    baseRateCents: 12000,
+    startDate: '2025-02-08',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+  const windowSpecificMaterializationPlan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-08T00:00:00Z',
+    materializedAt: '2026-04-12T00:05:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-08T00:00:00Z',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: hourlyLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'hourly',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${hourlyLine.contractLineId}:approval-window-specific:v1`,
+    sourceRunKey: 'integration-approval-window-specific',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(windowSpecificMaterializationPlan.records[0]);
+
+  await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId,
+    serviceId: hourlyLine.serviceId,
+    contractLineId: hourlyLine.contractLineId,
+    startTime: '2025-02-15T10:00:00.000Z',
+    endTime: '2025-02-15T12:00:00.000Z',
+    approvalStatus: 'APPROVED',
+  });
+  await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId,
+    serviceId: hourlyLine.serviceId,
+    contractLineId: hourlyLine.contractLineId,
+    startTime: '2025-03-12T10:00:00.000Z',
+    endTime: '2025-03-12T12:00:00.000Z',
+    approvalStatus: 'SUBMITTED',
+  });
+
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Approval Window Specific Client',
+  });
+  const readyCandidate = dueWork.invoiceCandidates.find((candidate) =>
+    candidate.clientName === 'Approval Window Specific Client',
+  );
+
+  expect(readyCandidate).toBeTruthy();
+  expect(readyCandidate).toMatchObject({
+    canGenerate: true,
+    approvalBlockedEntryCount: 0,
+  });
+}, HOOK_TIMEOUT);
+
+it('T003/T008/T017: mixed-charge recurring windows are blocked in full by matching non-approved hourly time, and generation rejects stale direct attempts', async () => {
+  setupCommonMocks({ tenantId, userId: 'approval-mixed-window-user', permissionCheck: () => true });
+
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Approval Mixed Window Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-01-01',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Approval Mixed Fixed Service',
+    planName: 'Approval Mixed Fixed Plan',
+    baseRateCents: 18000,
+    startDate: '2025-02-08',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+  const hourlyLine = await createHourlyContractLine(contextLike, {
+    serviceName: 'Approval Mixed Hourly Service',
+    planName: 'Approval Mixed Hourly Plan',
+    baseRateCents: 12000,
+    startDate: '2025-02-08',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+  const mixedFixedMaterializationPlan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-08T00:00:00Z',
+    materializedAt: '2026-04-12T00:10:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-08T00:00:00Z',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: fixedLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${fixedLine.contractLineId}:approval-mixed-fixed:v1`,
+    sourceRunKey: 'integration-approval-mixed-fixed',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  const mixedHourlyMaterializationPlan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-08T00:00:00Z',
+    materializedAt: '2026-04-12T00:10:30.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-08T00:00:00Z',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: hourlyLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'hourly',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${hourlyLine.contractLineId}:approval-mixed-hourly:v1`,
+    sourceRunKey: 'integration-approval-mixed-hourly',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(mixedFixedMaterializationPlan.records[0]);
+  await upsertRecurringServicePeriodRecord(mixedHourlyMaterializationPlan.records[0]);
+
+  await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId,
+    serviceId: hourlyLine.serviceId,
+    contractLineId: hourlyLine.contractLineId,
+    startTime: '2025-02-18T10:00:00.000Z',
+    endTime: '2025-02-18T11:00:00.000Z',
+    approvalStatus: 'DRAFT',
+  });
+
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Approval Mixed Window Client',
+  });
+  const blockedCandidate = dueWork.invoiceCandidates.find((candidate) =>
+    candidate.clientName === 'Approval Mixed Window Client',
+  );
+
+  expect(blockedCandidate).toBeTruthy();
+  expect(blockedCandidate?.memberCount).toBeGreaterThanOrEqual(2);
+  expect(blockedCandidate).toMatchObject({
+    canGenerate: false,
+    approvalBlockedEntryCount: 1,
+  });
+
+  const fixedMember = blockedCandidate?.members.find((member) => member.contractLineId === fixedLine.contractLineId);
+  expect(fixedMember).toBeTruthy();
+
+  await expect(
+    generateInvoiceForSelectionInput(fixedMember!.selectorInput),
+  ).rejects.toThrow('1 unapproved entry');
+}, HOOK_TIMEOUT);
+
+it('T009/T011: server-side guard re-checks approval state at generation time and windows transition from Needs Approval to Ready after approval', async () => {
+  setupCommonMocks({ tenantId, userId: 'approval-transition-user', permissionCheck: () => true });
+
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Approval Transition Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-01-01',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+
+  const hourlyLine = await createHourlyContractLine(contextLike, {
+    serviceName: 'Approval Transition Service',
+    planName: 'Approval Transition Plan',
+    baseRateCents: 12000,
+    startDate: '2025-02-08',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+  const transitionMaterializationPlan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-08T00:00:00Z',
+    materializedAt: '2026-04-12T00:15:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-08T00:00:00Z',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: hourlyLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'hourly',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${hourlyLine.contractLineId}:approval-transition:v1`,
+    sourceRunKey: 'integration-approval-transition',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(transitionMaterializationPlan.records[0]);
+
+  const mutableEntry = await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId,
+    serviceId: hourlyLine.serviceId,
+    contractLineId: hourlyLine.contractLineId,
+    startTime: '2025-02-20T10:00:00.000Z',
+    endTime: '2025-02-20T12:00:00.000Z',
+    approvalStatus: 'APPROVED',
+  });
+
+  const initiallyReadyDueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Approval Transition Client',
+  });
+  const readyMember = initiallyReadyDueWork.invoiceCandidates
+    .flatMap((candidate) => candidate.members)
+    .find((member) => member.contractLineId === hourlyLine.contractLineId);
+  expect(readyMember).toBeTruthy();
+  expect(readyMember?.canGenerate).toBe(true);
+
+  await db('time_entries')
+    .where({ tenant: tenantId, entry_id: mutableEntry.entry_id })
+    .update({ approval_status: 'SUBMITTED' });
+
+  await expect(
+    generateInvoiceForSelectionInput(readyMember!.selectorInput),
+  ).rejects.toThrow('1 unapproved entry');
+
+  await db('time_entries')
+    .where({ tenant: tenantId, entry_id: mutableEntry.entry_id })
+    .update({ approval_status: 'APPROVED' });
+
+  const refreshedDueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Approval Transition Client',
+  });
+  const refreshedCandidate = refreshedDueWork.invoiceCandidates.find((candidate) =>
+    candidate.clientName === 'Approval Transition Client',
+  );
+  expect(refreshedCandidate).toBeTruthy();
+  expect(refreshedCandidate).toMatchObject({
+    canGenerate: true,
+    approvalBlockedEntryCount: 0,
+  });
 }, HOOK_TIMEOUT);
 
 it('T071: usage recurring charges bill usage records that fall inside a contract-cadence service period, not the nearest client billing cycle', async () => {
@@ -4652,9 +5098,11 @@ async function getInvoiceDetailRows(invoiceId: string) {
 async function createApprovedTimeEntryForContractLine(params: {
   clientId: string;
   serviceId: string;
-  contractLineId: string;
+  contractLineId?: string | null;
   startTime: string;
   endTime: string;
+  approvalStatus?: 'APPROVED' | 'DRAFT' | 'SUBMITTED' | 'CHANGES_REQUESTED' | null;
+  invoiced?: boolean;
 }) {
   const userId = await createUser(db, tenantId, {
     user_type: 'internal',
@@ -4665,17 +5113,25 @@ async function createApprovedTimeEntryForContractLine(params: {
     assignedTo: userId,
   });
 
-  return createTestTimeEntry(db, tenantId, {
+  const entry = await createTestTimeEntry(db, tenantId, {
     work_item_id: ticketId,
     work_item_type: 'ticket',
     service_id: params.serviceId,
     user_id: userId,
-    approval_status: 'APPROVED',
-    contract_line_id: params.contractLineId,
+    approval_status: params.approvalStatus ?? 'APPROVED',
+    contract_line_id: params.contractLineId ?? null,
     start_time: new Date(params.startTime),
     end_time: new Date(params.endTime),
-    invoiced: false,
+    invoiced: params.invoiced ?? false,
   });
+
+  if (params.approvalStatus === null) {
+    await db('time_entries')
+      .where({ tenant: tenantId, entry_id: entry.entry_id })
+      .update({ approval_status: null });
+  }
+
+  return entry;
 }
 
 async function createUsageRecordForContractLine(params: {

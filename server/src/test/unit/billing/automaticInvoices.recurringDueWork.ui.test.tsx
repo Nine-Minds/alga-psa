@@ -20,8 +20,8 @@ function normalizeTableName(tableName: string): string {
   return tableName.split(/\s+as\s+/i)[0].trim();
 }
 
-function normalizeColumn(column: string): string {
-  return column
+function normalizeColumn(column: unknown): string {
+  return String(column)
     .replace(/^LOWER\(/i, '')
     .replace(/^DATE\(/i, '')
     .replace(/\)$/g, '')
@@ -86,6 +86,11 @@ function createQueryBuilder(rows: Row[]) {
     whereIn: vi.fn((column: string, values: any[]) => {
       const normalized = normalizeColumn(column);
       resultRows = resultRows.filter((row) => values.includes(row[normalized]));
+      return builder;
+    }),
+    whereNotIn: vi.fn((column: string, values: any[]) => {
+      const normalized = normalizeColumn(column);
+      resultRows = resultRows.filter((row) => !values.includes(row[normalized]));
       return builder;
     }),
     whereNull: vi.fn((column: string) => {
@@ -193,6 +198,13 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: dbMocks.createTenantKnex,
   withTransaction: dbMocks.withTransaction,
+  runWithTenant: async (_tenant: string, callback: () => Promise<unknown> | unknown) => callback(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
 }));
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
@@ -377,7 +389,7 @@ function createInvoicedContractRow() {
 
 function buildInvoiceCandidate(
   members: any[],
-  options: { candidateKey?: string } = {},
+  options: { candidateKey?: string; approvalBlockedEntryCount?: number } = {},
 ): IRecurringDueWorkInvoiceCandidate {
   const first = members[0];
   const servicePeriodStart = members
@@ -408,7 +420,13 @@ function buildInvoiceCandidate(
     splitReasons: [],
     memberCount: members.length,
     canGenerate,
-    blockedReason: canGenerate ? null : 'Blocked',
+    blockedReason: options.approvalBlockedEntryCount && options.approvalBlockedEntryCount > 0
+      ? `Blocked until approval: ${options.approvalBlockedEntryCount} unapproved ${options.approvalBlockedEntryCount === 1 ? 'entry' : 'entries'}.`
+      : canGenerate
+        ? null
+        : 'Blocked',
+    approvalBlockedEntryCount: options.approvalBlockedEntryCount ?? 0,
+    hasApprovalBlockers: Boolean(options.approvalBlockedEntryCount && options.approvalBlockedEntryCount > 0),
     members,
   };
 }
@@ -420,13 +438,17 @@ describe('AutomaticInvoices recurring due-work UI', () => {
   const getRecurringInvoiceHistoryPaginatedMock = vi.spyOn(billingCycleActions, 'getRecurringInvoiceHistoryPaginated');
   const previewInvoiceForSelectionInputMock = vi.spyOn(
     invoiceGenerationActions,
-    'previewInvoiceForSelectionInput',
+    'previewGroupedInvoicesForSelectionInputs',
   );
   const getPurchaseOrderOverageForSelectionInputMock = vi.spyOn(
     invoiceGenerationActions,
     'getPurchaseOrderOverageForSelectionInput',
   );
   const generateInvoicesAsRecurringBillingRunMock = vi.spyOn(
+    recurringBillingRunActions,
+    'generateGroupedInvoicesAsRecurringBillingRun',
+  );
+  const generateLegacyInvoicesAsRecurringBillingRunMock = vi.spyOn(
     recurringBillingRunActions,
     'generateInvoicesAsRecurringBillingRun',
   );
@@ -443,6 +465,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     cleanup();
     vi.clearAllMocks();
     dbMocks.missingTables.clear();
+    window.history.replaceState({}, '', '/msp/billing?tab=invoicing&subtab=generate');
 
     dbMocks.rowsByTable.client_billing_cycles = [
       {
@@ -526,18 +549,23 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     });
     previewInvoiceForSelectionInputMock.mockResolvedValue({
       success: true,
-      data: {
-        invoiceNumber: 'PREVIEW',
-        issueDate: '2025-04-08',
-        dueDate: '2025-04-15',
-        currencyCode: 'USD',
-        customer: { name: 'Acme Co', address: '100 Main St' },
-        tenantClient: { name: 'Tenant', address: '500 Billing Ave', logoUrl: null },
-        items: [],
-        subtotal: 0,
-        tax: 0,
-        total: 0,
-      },
+      invoiceCount: 1,
+      previews: [{
+        previewGroupKey: 'default-preview-group',
+        selectorInputs: [createClientRow().selectorInput],
+        data: {
+          invoiceNumber: 'PREVIEW',
+          issueDate: '2025-04-08',
+          dueDate: '2025-04-15',
+          currencyCode: 'USD',
+          customer: { name: 'Acme Co', address: '100 Main St' },
+          tenantClient: { name: 'Tenant', address: '500 Billing Ave', logoUrl: null },
+          items: [],
+          subtotal: 0,
+          tax: 0,
+          total: 0,
+        },
+      }],
     } as any);
     getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue(null);
     const contractRow = createContractRow();
@@ -570,6 +598,14 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       failedCount: 0,
       failures: [],
     });
+    generateLegacyInvoicesAsRecurringBillingRunMock.mockResolvedValue({
+      runId: 'legacy-run-1',
+      selectionKey: 'legacy-selection-1',
+      retryKey: 'legacy-retry-1',
+      invoicesCreated: 0,
+      failedCount: 0,
+      failures: [],
+    });
   });
 
   it('T025: AutomaticInvoices loads ready rows from the due-work reader instead of getAvailableBillingPeriods', async () => {
@@ -579,7 +615,6 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledWith({
         page: 1,
         pageSize: 10,
-        searchTerm: '',
         dateRange: {
           from: undefined,
           to: expect.any(String),
@@ -619,6 +654,183 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(screen.getByText('Recurring Invoice History')).toBeInTheDocument();
   });
 
+  it('T005/T006/T010/T011/T012: AutomaticInvoices renders Needs Approval above Ready to Invoice and moves approval-blocked windows out of ready selection', async () => {
+    const blockedRow = {
+      ...createContractRow(),
+      clientId: 'client-blocked',
+      clientName: 'Blocked Co',
+      contractLineId: 'blocked-line-1',
+      contractName: 'Blocked Contract',
+      contractLineName: 'Blocked Hourly',
+      canGenerate: false,
+      blockedReason: 'Blocked until approval: 2 unapproved entries.',
+      approvalBlockedEntryCount: 2,
+    };
+    const readyRow = {
+      ...createClientRow(),
+      clientId: 'client-ready',
+      clientName: 'Ready Co',
+      canGenerate: true,
+      approvalBlockedEntryCount: 0,
+    };
+
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [
+        buildInvoiceCandidate([blockedRow], {
+          candidateKey: 'candidate-blocked-t005',
+          approvalBlockedEntryCount: 2,
+        }),
+        buildInvoiceCandidate([readyRow], {
+          candidateKey: 'candidate-ready-t005',
+          approvalBlockedEntryCount: 0,
+        }),
+      ],
+      materializationGaps: [],
+      total: 2,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    const needsApprovalSection = await screen.findByTestId('needs-approval-section');
+    const sectionHeadings = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((heading) => heading.textContent?.trim());
+    expect(sectionHeadings.indexOf('Needs Approval')).toBeLessThan(
+      sectionHeadings.indexOf('Ready to Invoice'),
+    );
+    expect(within(needsApprovalSection).getByText('Blocked Co')).toBeInTheDocument();
+    expect(within(needsApprovalSection).getByText('2 unapproved entries')).toBeInTheDocument();
+    expect(
+      within(needsApprovalSection).getByRole('link', { name: 'Review Approvals' }),
+    ).toHaveAttribute(
+      'href',
+      '/msp/time-sheet-approvals?clientId=client-blocked&windowStart=2025-04-08&windowEnd=2025-05-08',
+    );
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    expect(within(readyTable).queryByText('Blocked Co')).toBeNull();
+    expect(within(readyTable).getByText('Ready Co')).toBeInTheDocument();
+  });
+
+  it('T006/T012: Needs Approval rows are informational only and do not become selectable/generatable targets', async () => {
+    const blockedRow = {
+      ...createContractRow(),
+      clientId: 'client-blocked-only',
+      clientName: 'Blocked Only Co',
+      canGenerate: false,
+      blockedReason: 'Blocked until approval: 1 unapproved entry.',
+      approvalBlockedEntryCount: 1,
+    };
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [
+        buildInvoiceCandidate([blockedRow], {
+          candidateKey: 'candidate-blocked-only',
+          approvalBlockedEntryCount: 1,
+        }),
+      ],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    const needsApprovalSection = await screen.findByTestId('needs-approval-section');
+    expect(within(needsApprovalSection).getByText('Blocked Only Co')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Preview Selected/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(0\)/i }),
+    ).toBeDisabled();
+  });
+
+  it('persists the automatic client filter in the URL and scopes it to needs/ready rows only', async () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/msp/billing?tab=invoicing&subtab=generate&automaticClientFilter=Blocked',
+    );
+
+    const blockedRow = {
+      ...createContractRow(),
+      clientId: 'client-blocked-filtered',
+      clientName: 'Blocked Co',
+      canGenerate: false,
+      blockedReason: 'Blocked until approval: 1 unapproved entry.',
+      approvalBlockedEntryCount: 1,
+    };
+    const readyRow = {
+      ...createClientRow(),
+      clientId: 'client-ready-filtered',
+      clientName: 'Ready Co',
+      canGenerate: true,
+      approvalBlockedEntryCount: 0,
+    };
+
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [
+        buildInvoiceCandidate([blockedRow], {
+          candidateKey: 'candidate-blocked-filtered',
+          approvalBlockedEntryCount: 1,
+        }),
+        buildInvoiceCandidate([readyRow], {
+          candidateKey: 'candidate-ready-filtered',
+          approvalBlockedEntryCount: 0,
+        }),
+      ],
+      materializationGaps: [
+        {
+          executionIdentityKey: 'gap-blocked-filtered',
+          selectionKey: 'gap-selection-blocked-filtered',
+          clientId: 'client-gap-filtered',
+          clientName: 'Repair Co',
+          scheduleKey: 'schedule:tenant-1:client_contract_line:line-gap:client:advance',
+          periodKey: 'period:2025-03-01:2025-04-01',
+          billingCycleId: 'cycle-gap',
+          invoiceWindowStart: '2025-03-01',
+          invoiceWindowEnd: '2025-04-01',
+          servicePeriodStart: '2025-03-01',
+          servicePeriodEnd: '2025-04-01',
+          reason: 'missing_service_period_materialization',
+          detail: 'Recurring service periods were not materialized for this canonical client-cadence execution window.',
+        },
+      ],
+      total: 2,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    const filterInput = await screen.findByDisplayValue('Blocked');
+    expect(filterInput).toBeInTheDocument();
+
+    const needsApprovalSection = await screen.findByTestId('needs-approval-section');
+    expect(within(needsApprovalSection).getByText('Blocked Co')).toBeInTheDocument();
+    expect(within(needsApprovalSection).queryByText('Ready Co')).toBeNull();
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    expect(within(readyTable).queryByText('Ready Co')).toBeNull();
+
+    const gapPanel = await screen.findByTestId('recurring-materialization-gap-panel');
+    expect(within(gapPanel).getByText('Repair Co')).toBeInTheDocument();
+
+    fireEvent.change(filterInput, { target: { value: 'Ready' } });
+
+    await waitFor(() => {
+      expect(window.location.search).toContain('automaticClientFilter=Ready');
+      expect(within(needsApprovalSection).queryByText('Blocked Co')).toBeNull();
+      expect(within(readyTable).getByText('Ready Co')).toBeInTheDocument();
+    });
+
+    expect(within(gapPanel).getByText('Repair Co')).toBeInTheDocument();
+  });
+
   it('T004: AutomaticInvoices loads through the real due-work action in a migrated schema with no `client_contract_lines` table', async () => {
     dbMocks.missingTables.add('client_contract_lines');
     getAvailableRecurringDueWorkMock.mockImplementation(originalGetAvailableRecurringDueWork);
@@ -629,7 +841,6 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledWith({
         page: 1,
         pageSize: 10,
-        searchTerm: '',
         dateRange: {
           from: undefined,
           to: expect.any(String),
@@ -653,11 +864,12 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     expect(screen.getByText('2025-03-08 to 2025-04-08')).toBeInTheDocument();
     expect(screen.getByText('2025-04-08 to 2025-05-08')).toBeInTheDocument();
-    expect(screen.getByText('Zenith Annual Support')).toBeInTheDocument();
-    expect(screen.getByText('Managed Services')).toBeInTheDocument();
+    expect(screen.getByText('1 contract')).toBeInTheDocument();
+    expect(screen.getByText('1 line')).toBeInTheDocument();
     expect(screen.getAllByText('Service-period-backed').length).toBeGreaterThan(0);
 
-    fireEvent.click(document.getElementById('select-candidate-client-default')!);
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    fireEvent.click(within(readyTable).getAllByRole('checkbox')[0]!);
 
     await waitFor(() => {
       expect(
@@ -770,7 +982,11 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
 
     await waitFor(() => {
-      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledWith(clientRow.selectorInput);
+      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledWith([
+        expect.objectContaining({
+          selectorInputs: [clientRow.selectorInput],
+        }),
+      ]);
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
 
@@ -781,21 +997,20 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     await waitFor(() => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
-        targets: [
+        groupedTargets: [
           expect.objectContaining({
-            selectorInput: clientRow.selectorInput,
-            executionWindow: clientRow.executionWindow,
+            selectorInputs: [clientRow.selectorInput],
           }),
         ],
       });
     });
 
     const [generateCall] = generateInvoicesAsRecurringBillingRunMock.mock.calls;
-    expect(generateCall?.[0]?.targets?.[0]?.billingCycleId).toBeUndefined();
-    expect(generateCall?.[0]?.targets?.[0]?.selectorInput?.billingCycleId).toBeUndefined();
+    expect(generateCall?.[0]?.groupedTargets?.[0]?.billingCycleId).toBeNull();
+    expect(generateCall?.[0]?.groupedTargets?.[0]?.selectorInputs?.[0]?.billingCycleId).toBeUndefined();
   });
 
-  it('T012/T013/T091: client-cadence ready rows use canonical selector input while still preserving passive billing-cycle metadata for the table', async () => {
+  it('T007/T012/T013/T091: client-cadence ready rows use canonical selector input while still preserving passive billing-cycle metadata for the table', async () => {
     const clientRow = createClientRow();
     getAvailableRecurringDueWorkMock.mockResolvedValue({
       invoiceCandidates: [buildInvoiceCandidate([clientRow])],
@@ -821,7 +1036,11 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
 
     await waitFor(() => {
-      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledWith(clientRow.selectorInput);
+      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledWith([
+        expect.objectContaining({
+          selectorInputs: [clientRow.selectorInput],
+        }),
+      ]);
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
 
@@ -832,10 +1051,9 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     await waitFor(() => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
-        targets: [
+        groupedTargets: [
           expect.objectContaining({
-            selectorInput: clientRow.selectorInput,
-            executionWindow: clientRow.executionWindow,
+            selectorInputs: [clientRow.selectorInput],
             billingCycleId: 'cycle-2025-03',
           }),
         ],
@@ -843,9 +1061,9 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     });
 
     const [generateCall] = generateInvoicesAsRecurringBillingRunMock.mock.calls;
-    expect(generateCall?.[0]?.targets?.[0]?.billingCycleId).toBe('cycle-2025-03');
-    expect(generateCall?.[0]?.targets?.[0]?.selectorInput?.billingCycleId).toBeUndefined();
-    expect(generateCall?.[0]?.targets?.[0]?.selectorInput?.executionWindow?.kind).toBe(
+    expect(generateCall?.[0]?.groupedTargets?.[0]?.billingCycleId).toBe('cycle-2025-03');
+    expect(generateCall?.[0]?.groupedTargets?.[0]?.selectorInputs?.[0]?.billingCycleId).toBeUndefined();
+    expect(generateCall?.[0]?.groupedTargets?.[0]?.selectorInputs?.[0]?.executionWindow?.kind).toBe(
       'client_cadence_window',
     );
   });
@@ -895,13 +1113,19 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     fireEvent.click(within(readyTable).getAllByRole('checkbox')[0]!);
 
     const previewButton = screen.getByRole('button', { name: /Preview Selected/i });
-    expect(previewButton).toBeDisabled();
+    expect(previewButton).not.toBeDisabled();
     expect(screen.getByTestId('grouped-preview-unavailable-copy')).toHaveTextContent(
-      'Preview is only available for single-obligation candidates.',
+      'Preview supports grouped selections; direct "Generate from preview" remains single-selection only.',
     );
 
     fireEvent.click(previewButton);
-    expect(previewInvoiceForSelectionInputMock).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledWith([
+        expect.objectContaining({
+          selectorInputs: [contractRow.selectorInput, groupedMember.selectorInput],
+        }),
+      ]);
+    });
   });
 
   it('T098: AutomaticInvoices preview for a single-member candidate remains enabled and uses that candidate selector input', async () => {
@@ -933,7 +1157,11 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     fireEvent.click(previewButton);
 
     await waitFor(() => {
-      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledWith(contractRow.selectorInput);
+      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledWith([
+        expect.objectContaining({
+          selectorInputs: [contractRow.selectorInput],
+        }),
+      ]);
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
   });
@@ -981,8 +1209,8 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(screen.getByText('Zenith Health')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Zenith Annual Support')).toBeInTheDocument();
-    expect(screen.getByText('Managed Services')).toBeInTheDocument();
+    expect(screen.getByText('1 contract')).toBeInTheDocument();
+    expect(screen.getByText('1 line')).toBeInTheDocument();
     expect(screen.queryByText('No contract context')).toBeNull();
   });
 
@@ -992,6 +1220,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       ...createContractRow(),
       contractName: null,
       contractLineName: null,
+      attribution: { isComplete: false },
       executionIdentityKey: `${fullMember.executionIdentityKey}:partial-contract-metadata-warning`,
       selectorInput: {
         ...fullMember.selectorInput,
@@ -1086,7 +1315,11 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
 
     await waitFor(() => {
-      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledWith(clientRow.selectorInput);
+      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledWith([
+        expect.objectContaining({
+          selectorInputs: [clientRow.selectorInput],
+        }),
+      ]);
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
   });
@@ -1095,18 +1328,23 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     const contractRow = createContractRow();
     previewInvoiceForSelectionInputMock.mockResolvedValueOnce({
       success: true,
-      data: {
-        invoiceNumber: 'PREVIEW',
-        issueDate: '2025-05-08',
-        dueDate: '2025-05-15',
-        currencyCode: 'USD',
-        customer: { name: 'Zenith Health', address: '200 Support Way' },
-        tenantClient: { name: 'Tenant', address: '500 Billing Ave', logoUrl: null },
-        items: [],
-        subtotal: 0,
-        tax: 0,
-        total: 0,
-      },
+      invoiceCount: 1,
+      previews: [{
+        previewGroupKey: 'candidate-contract-t033',
+        selectorInputs: [contractRow.selectorInput],
+        data: {
+          invoiceNumber: 'PREVIEW',
+          issueDate: '2025-05-08',
+          dueDate: '2025-05-15',
+          currencyCode: 'USD',
+          customer: { name: 'Zenith Health', address: '200 Support Way' },
+          tenantClient: { name: 'Tenant', address: '500 Billing Ave', logoUrl: null },
+          items: [],
+          subtotal: 0,
+          tax: 0,
+          total: 0,
+        },
+      }],
     } as any);
 
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
@@ -1120,7 +1358,11 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
 
     await waitFor(() => {
-      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledWith(contractRow.selectorInput);
+      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledWith([
+        expect.objectContaining({
+          selectorInputs: [contractRow.selectorInput],
+        }),
+      ]);
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
   });
@@ -1151,17 +1393,16 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     await waitFor(() => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
-        targets: [
+        groupedTargets: [
           expect.objectContaining({
-            selectorInput: contractRow.selectorInput,
-            executionWindow: contractRow.executionWindow,
+            selectorInputs: [contractRow.selectorInput],
           }),
         ],
       });
     });
 
     const [generateCall] = generateInvoicesAsRecurringBillingRunMock.mock.calls;
-    expect(generateCall?.[0]?.targets?.[0]?.billingCycleId).toBeUndefined();
+    expect(generateCall?.[0]?.groupedTargets?.[0]?.billingCycleId).toBeNull();
   });
 
   it('T027/T031/T035: mixed selection generates with execution-window targets and maps failures back to unbridged contract rows', async () => {
@@ -1212,14 +1453,12 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     await waitFor(() => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
-        targets: [
+        groupedTargets: [
           expect.objectContaining({
-            executionWindow: contractRow.executionWindow,
-            selectorInput: contractRow.selectorInput,
+            selectorInputs: [contractRow.selectorInput],
           }),
           expect.objectContaining({
-            selectorInput: clientRow.selectorInput,
-            executionWindow: clientRow.executionWindow,
+            selectorInputs: [clientRow.selectorInput],
           }),
         ],
       });
@@ -1320,7 +1559,6 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledWith({
         page: 2,
         pageSize: 10,
-        searchTerm: '',
         dateRange: {
           from: undefined,
           to: expect.any(String),

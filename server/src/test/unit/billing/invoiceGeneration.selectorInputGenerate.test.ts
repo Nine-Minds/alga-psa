@@ -289,6 +289,7 @@ const mocks = vi.hoisted(() => {
       analytics: { capture: vi.fn() },
       AnalyticsEvents: { INVOICE_GENERATED: 'invoice_generated' },
     })),
+    detectRecurringApprovalBlockers: vi.fn(async () => new Map()),
     getFullInvoiceById,
   };
 });
@@ -394,6 +395,16 @@ vi.mock('../../../../../packages/billing/src/services/taxService', () => ({
   },
 }));
 
+vi.mock('../../../../../packages/billing/src/actions/recurringApprovalBlockers', async () => {
+  const actual = await vi.importActual<typeof import('../../../../../packages/billing/src/actions/recurringApprovalBlockers')>(
+    '../../../../../packages/billing/src/actions/recurringApprovalBlockers',
+  );
+  return {
+    ...actual,
+    detectRecurringApprovalBlockers: mocks.detectRecurringApprovalBlockers,
+  };
+});
+
 vi.mock('../../../../../packages/billing/src/lib/authHelpers', () => ({
   getAnalyticsAsync: mocks.getAnalyticsAsync,
 }));
@@ -419,6 +430,8 @@ describe('selector-input recurring generation', () => {
     mocks.validateClientBillingEmail.mockResolvedValue({ valid: true });
     mocks.calculateBilling.mockResolvedValue(mocks.clientBillingResult);
     mocks.calculateBillingForExecutionWindow.mockResolvedValue(mocks.contractBillingResult);
+    mocks.detectRecurringApprovalBlockers.mockResolvedValue(new Map());
+    mocks.rowsByTable.time_entries = [];
   });
 
   it('T006: recurring generation API accepts a client-cadence selector-input window with no `client_contract_lines` table', async () => {
@@ -631,5 +644,35 @@ describe('selector-input recurring generation', () => {
         expect.objectContaining({ client_contract_id: 'assignment-2' }),
       ]),
     );
+  });
+
+  it('T008/T009: selector-input generation re-checks approval blockers and rejects when matching recurring window time is non-approved', async () => {
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+    mocks.rowsByTable.recurring_service_periods.splice(
+      0,
+      mocks.rowsByTable.recurring_service_periods.length,
+      buildContractCadenceServicePeriodRow({
+        lifecycle_state: 'generated',
+        owner_client_id: 'client-1',
+        invoice_window_start: '2025-02-08',
+        invoice_window_end: '2025-03-08',
+      }),
+    );
+
+    mocks.detectRecurringApprovalBlockers.mockResolvedValue(
+      new Map([[selectorInput.executionWindow.identityKey, 1]]),
+    );
+
+    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
+      message: 'Blocked until approval: 1 unapproved entry.',
+      executionIdentityKey: selectorInput.executionWindow.identityKey,
+    });
+    expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
   });
 });
