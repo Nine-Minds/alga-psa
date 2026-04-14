@@ -298,7 +298,7 @@
   {
     "id": "T038",
     "description": "ContractLinesOverview.tsx: filter section renders translated search placeholder, type filter options, reset button, and loading indicator text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
