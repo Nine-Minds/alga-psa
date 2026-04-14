@@ -70,3 +70,4 @@
 - (2026-04-14) Validation errors in `validateForm()` now use interpolation-based i18n keys (for example `Service {{index}}...`) to align with acceptance criteria for dynamic validation text.
 - (2026-04-14) Verification command run: `npx eslint packages/billing/src/components/billing-dashboard/ContractLineDialog.tsx` (warnings only, no errors).
 - (2026-04-14) `F002` covered by the same `ContractLineDialog.tsx` translation pass: billing model chooser heading/description, fixed/hourly/usage card title+description strings, billing timing option labels, and fixed vs non-fixed billing timing helper text are now `t()` backed.
+- (2026-04-14) `F003` covered in `ContractLineDialog.tsx`: fixed/hourly/usage config headings, alerts, service labels/placeholders, rate/unit/proration copy, bucket recommendation labels, empty states, indexed service labels, and footer action labels (`Cancel`, submit variants, saving state) are now translated with defaults.

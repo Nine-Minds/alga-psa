@@ -12,7 +12,7 @@
   {
     "id": "F003",
     "description": "ContractLineDialog.tsx: Translate type-specific config sections -- Fixed (alert info, 'Services & Products', 'Item N', 'Add Item', empty state, 'Recurring Base Rate', proration label/description), Hourly (alert info, 'Minimum Billable Time', 'Round Up To Nearest', 'Hourly Services', 'Service N', rate labels, bucket switch, 'Add Hourly Service', empty state), Usage (alert info, 'Usage-Based Services', 'Service N', 'Rate per Unit', 'Unit of Measure', bucket switch, 'Add Usage-Based Service', empty state) -- plus Cancel/Submit button text with saving state",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F004",
