@@ -1,0 +1,201 @@
+{
+  "common": {
+    "actions": {
+      "back": "Rug",
+      "cancel": "Annuleren",
+      "close": "Dichtbij",
+      "create": "Creëren",
+      "delete": "Verwijderen",
+      "discard": "Weggooien",
+      "edit": "Bewerking",
+      "refresh": "Vernieuwen",
+      "remove": "Verwijderen",
+      "retry": "Opnieuw proberen",
+      "save": "Redden",
+      "saveChanges": "Wijzigingen opslaan",
+      "saveChangesDirty": "Wijzigingen opslaan *",
+      "saving": "Besparing...",
+      "view": "Weergave"
+    },
+    "alerts": {
+      "saveSuccess": "Wijzigingen zijn succesvol opgeslagen.",
+      "systemManagedDefault": "Dit is een door het systeem beheerd standaardcontract."
+    },
+    "empty": {
+      "none": "Geen",
+      "notAvailable": "N.v.t",
+      "notSpecified": "Niet gespecificeerd",
+      "ongoing": "Lopend"
+    },
+    "errors": {
+      "failedToLoad": "Kan gegevens niet laden.",
+      "failedToSave": "Kan wijzigingen niet opslaan.",
+      "validationPrefix": "Corrigeer het volgende:"
+    },
+    "labels": {
+      "created": "Gemaakt",
+      "currency": "Munteenheid",
+      "description": "Beschrijving",
+      "lastUpdated": "Laatst bijgewerkt",
+      "name": "Naam",
+      "status": "Status"
+    },
+    "tabs": {
+      "clientContracts": "Klantcontracten",
+      "drafts": "Concepten",
+      "templates": "Sjablonen"
+    }
+  },
+  "status": {
+    "active": "Actief",
+    "draft": "Voorlopige versie",
+    "expired": "Verlopen",
+    "terminated": "Beëindigd"
+  },
+  "renewal": {
+    "labels": {
+      "decisionDue": "Beslissing verschuldigd",
+      "mode": "Verlengingsmodus",
+      "noticeDays": "Opzegtermijn",
+      "source": "Verlengingsbron",
+      "termMonths": "Verlengingstermijn"
+    },
+    "modes": {
+      "auto": "Automatisch verlengen",
+      "manual": "Handmatige verlenging",
+      "none": "Niet-verlengend"
+    },
+    "source": {
+      "contract": "Contract",
+      "tenantDefault": "Standaard van huurder"
+    }
+  },
+  "billing": {
+    "cadenceOwner": {
+      "client": "Cliënt schema",
+      "contract": "Contractverjaardag"
+    },
+    "frequency": {
+      "annually": "Jaarlijks",
+      "biweekly": "Tweewekelijks",
+      "monthly": "Maandelijks",
+      "quarterly": "Driemaandelijks",
+      "weekly": "Wekelijks"
+    },
+    "labels": {
+      "billingFrequency": "Factureringsfrequentie",
+      "timing": "Factureringstijdstip"
+    },
+    "timing": {
+      "advance": "Van tevoren",
+      "arrears": "Met betalingsachterstand"
+    }
+  },
+  "po": {
+    "labels": {
+      "amount": "PO-bedrag",
+      "number": "PO-nummer",
+      "required": "PO vereist"
+    }
+  },
+  "contractDetail": {
+    "cards": {
+      "assignment": "Klantopdracht",
+      "clientOwnership": "Eigendom van de klant",
+      "contractDetails": "Contractdetails",
+      "header": "Contractkop",
+      "quickActions": "Snelle acties",
+      "renewalHandling": "Verlengingsafhandeling"
+    },
+    "dialogs": {
+      "delete": {
+        "confirm": "Contract verwijderen",
+        "description": "Weet u zeker dat u dit contract wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+        "title": "Contract verwijderen"
+      },
+      "discard": {
+        "confirm": "Wijzigingen negeren",
+        "description": "Uw niet-opgeslagen wijzigingen verwijderen?",
+        "title": "Wijzigingen negeren"
+      },
+      "leave": {
+        "confirm": "Verlaat pagina",
+        "description": "U heeft niet-opgeslagen wijzigingen. Deze pagina verlaten zonder op te slaan?",
+        "title": "Niet-opgeslagen wijzigingen"
+      }
+    },
+    "invoices": {
+      "columns": {
+        "amount": "Hoeveelheid",
+        "createdAt": "Gemaakt",
+        "dueDate": "Deadline",
+        "invoiceNumber": "Factuur #",
+        "status": "Status"
+      },
+      "empty": "Er zijn geen facturen gevonden voor dit contract.",
+      "loading": "Facturen laden...",
+      "title": "Contractfacturen"
+    },
+    "labels": {
+      "client": "Cliënt",
+      "contractName": "Contractnaam",
+      "description": "Beschrijving",
+      "noClientAssigned": "Geen klant toegewezen",
+      "noDescription": "Geen beschrijving",
+      "systemManagedDefault": "Door systeem beheerde standaard",
+      "useTenantDefaults": "Standaardwaarden voor tenants gebruiken"
+    },
+    "quickActions": {
+      "deleteContract": "Contract verwijderen",
+      "manageContractLines": "Contractregels beheren",
+      "managePricingSchedules": "Beheer prijsschema's",
+      "viewDocuments": "Documenten bekijken",
+      "viewInvoices": "Facturen bekijken"
+    },
+    "tabs": {
+      "documents": "Documenten",
+      "invoices": "Facturen",
+      "lines": "Contractlijnen",
+      "overview": "Overzicht",
+      "pricing": "Prijsschema's"
+    },
+    "validation": {
+      "billingFrequencyRequired": "Factureringsfrequentie is vereist.",
+      "contractNameRequired": "Contractnaam is vereist."
+    }
+  },
+  "contractHeader": {},
+  "contractOverview": {},
+  "contractDialog": {},
+  "contractForm": {},
+  "contractLines": {},
+  "contractLineEdit": {},
+  "contractLineRate": {},
+  "addLines": {},
+  "createCustomLine": {},
+  "pricingSchedules": {},
+  "contractsList": {},
+  "clientContracts": {},
+  "templatesTab": {},
+  "detailSwitcher": {},
+  "templateDetail": {},
+  "quickStart": {},
+  "servicePicker": {},
+  "bucketOverlay": {},
+  "frequencyOverride": {},
+  "wizard": {},
+  "wizardBasics": {},
+  "wizardFixed": {},
+  "wizardProducts": {},
+  "wizardHourly": {},
+  "wizardUsage": {},
+  "wizardReview": {},
+  "templateWizard": {},
+  "templateBasics": {},
+  "templateFixed": {},
+  "templateProducts": {},
+  "templateHourly": {},
+  "templateUsage": {},
+  "templateReview": {},
+  "templatePreview": {}
+}
