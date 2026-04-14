@@ -50,7 +50,7 @@
   {
     "id": "T007",
     "description": "ContractLineDialog.tsx: Usage config section renders translated alert info, 'Usage-Based Services' label, 'Rate per Unit', 'Unit of Measure', and 'Add Usage-Based Service' button",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
