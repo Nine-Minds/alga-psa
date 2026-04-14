@@ -154,7 +154,7 @@
   {
     "id": "T020",
     "description": "UsageContractLinePresetServicesList.tsx: table column headers are translated and action menu items display translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
