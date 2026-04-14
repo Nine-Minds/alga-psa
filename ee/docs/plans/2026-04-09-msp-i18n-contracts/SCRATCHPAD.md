@@ -74,3 +74,6 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** `F009` completed: ran `node scripts/validate-translations.cjs` after adding `msp/contracts` locale files.
 - **(2026-04-14)** Validation result: `Errors: 0`, `Warnings: 0`, `PASSED`.
 - **(2026-04-14)** `F010` completed: updated `ROUTE_NAMESPACES['/msp/billing']` in `packages/core/src/lib/i18n/config.ts` to preload `msp/contracts` alongside existing billing namespaces.
+- **(2026-04-14)** `F011` completed in `ContractDetail.tsx`: wired `useTranslation('msp/contracts')` and translated tab labels (`Overview`, `Contract Lines`, `Pricing Schedules`, `Documents`, `Invoices`), unsaved-changes warning copy, save-success toast/alert copy, system-managed-default informational alert copy, and validation alert heading/field labels.
+- **(2026-04-14)** Added corresponding `contractDetail.alerts.*`, `contractDetail.systemManaged.*`, and `contractDetail.validation.*` keys in `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractDetail.tsx` (pass; warnings only, no errors).

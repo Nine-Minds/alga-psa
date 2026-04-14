@@ -52,7 +52,7 @@
   {
     "id": "F011",
     "description": "Wire useTranslation('msp/contracts') in ContractDetail.tsx -- translate tab labels (Overview, Contract Lines, Pricing Schedules, Documents, Invoices), unsaved changes alert, save success alert, system-managed default alert, and validation error messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F012",

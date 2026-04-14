@@ -61,6 +61,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const formatDate = (value?: string | Date | null): string => {
   if (!value) {
@@ -140,6 +141,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   serverUserId,
   renderClientDetails
 }) => {
+  const { t } = useTranslation('msp/contracts');
   const searchParams = useSearchParams();
   const router = useRouter();
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
@@ -743,10 +745,18 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
     const errors: string[] = [];
     if (!editContractName.trim()) {
-      errors.push('Contract name');
+      errors.push(
+        t('contractDetail.validation.contractName', {
+          defaultValue: 'Contract name',
+        })
+      );
     }
     if (!editBillingFrequency) {
-      errors.push('Billing frequency');
+      errors.push(
+        t('contractDetail.validation.billingFrequency', {
+          defaultValue: 'Billing frequency',
+        })
+      );
     }
 
     if (errors.length > 0) {
@@ -845,7 +855,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error('Error updating contract:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update contract';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('contractDetail.validation.failedToUpdate', {
+          defaultValue: 'Failed to update contract',
+        });
       setValidationErrors([errorMessage]);
     } finally {
       setIsSaving(false);
@@ -1252,11 +1266,21 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-4 flex flex-wrap gap-2">
-          <TabsTrigger value="edit">Overview</TabsTrigger>
-          <TabsTrigger value="lines" disabled={isSystemManagedDefault}>Contract Lines</TabsTrigger>
-          <TabsTrigger value="pricing" disabled={isSystemManagedDefault}>Pricing Schedules</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="edit">
+            {t('contractDetail.tabs.overview', { defaultValue: 'Overview' })}
+          </TabsTrigger>
+          <TabsTrigger value="lines" disabled={isSystemManagedDefault}>
+            {t('contractDetail.tabs.lines', { defaultValue: 'Contract Lines' })}
+          </TabsTrigger>
+          <TabsTrigger value="pricing" disabled={isSystemManagedDefault}>
+            {t('contractDetail.tabs.pricing', { defaultValue: 'Pricing Schedules' })}
+          </TabsTrigger>
+          <TabsTrigger value="documents">
+            {t('contractDetail.tabs.documents', { defaultValue: 'Documents' })}
+          </TabsTrigger>
+          <TabsTrigger value="invoices">
+            {t('contractDetail.tabs.invoices', { defaultValue: 'Invoices' })}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="edit">
@@ -1264,7 +1288,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
             {hasUnsavedChanges && (
               <Alert variant="warning">
                 <AlertDescription>
-                  You have unsaved changes. Click "Save Changes" to apply them.
+                  {t('contractDetail.alerts.unsavedChanges', {
+                    defaultValue: 'You have unsaved changes. Click "Save Changes" to apply them.',
+                  })}
                 </AlertDescription>
               </Alert>
             )}
@@ -1272,7 +1298,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
             {saveSuccess && (
               <Alert variant="success">
                 <AlertDescription>
-                  Contract saved successfully!
+                  {t('contractDetail.alerts.saveSuccess', {
+                    defaultValue: 'Contract saved successfully!',
+                  })}
                 </AlertDescription>
               </Alert>
             )}
@@ -1281,10 +1309,26 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
               <Alert variant="info" data-testid="system-managed-default-contract-alert">
                 <AlertDescription>
                   <div className="space-y-1">
-                    <div className="font-medium">System-managed default contract</div>
-                    <div>Created automatically for uncontracted work.</div>
-                    <div>This contract is attribution-only and does not control recurring billing behavior.</div>
-                    <div>To configure custom billing behavior, create or edit a normal user-authored contract.</div>
+                    <div className="font-medium">
+                      {t('contractDetail.systemManaged.title', {
+                        defaultValue: 'System-managed default contract',
+                      })}
+                    </div>
+                    <div>
+                      {t('contractDetail.systemManaged.createdAutomatically', {
+                        defaultValue: 'Created automatically for uncontracted work.',
+                      })}
+                    </div>
+                    <div>
+                      {t('contractDetail.systemManaged.attributionOnly', {
+                        defaultValue: 'This contract is attribution-only and does not control recurring billing behavior.',
+                      })}
+                    </div>
+                    <div>
+                      {t('contractDetail.systemManaged.configureCustom', {
+                        defaultValue: 'To configure custom billing behavior, create or edit a normal user-authored contract.',
+                      })}
+                    </div>
                   </div>
                 </AlertDescription>
               </Alert>
@@ -1299,7 +1343,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                       <p>{validationErrors[0]}</p>
                     ) : (
                       <>
-                        <p className="font-medium mb-2">Please fix the following errors:</p>
+                        <p className="font-medium mb-2">
+                          {t('contractDetail.validation.fixErrors', {
+                            defaultValue: 'Please fix the following errors:',
+                          })}
+                        </p>
                         <ul className="list-disc list-inside space-y-1">
                           {validationErrors.map((err, index) => (
                             <li key={index}>{err}</li>

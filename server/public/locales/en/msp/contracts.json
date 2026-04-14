@@ -99,6 +99,10 @@
     }
   },
   "contractDetail": {
+    "alerts": {
+      "saveSuccess": "Contract saved successfully!",
+      "unsavedChanges": "You have unsaved changes. Click \"Save Changes\" to apply them."
+    },
     "cards": {
       "assignment": "Client Assignment",
       "clientOwnership": "Client Ownership",
@@ -152,6 +156,12 @@
       "viewDocuments": "View Documents",
       "viewInvoices": "View Invoices"
     },
+    "systemManaged": {
+      "attributionOnly": "This contract is attribution-only and does not control recurring billing behavior.",
+      "configureCustom": "To configure custom billing behavior, create or edit a normal user-authored contract.",
+      "createdAutomatically": "Created automatically for uncontracted work.",
+      "title": "System-managed default contract"
+    },
     "tabs": {
       "documents": "Documents",
       "invoices": "Invoices",
@@ -161,7 +171,11 @@
     },
     "validation": {
       "billingFrequencyRequired": "Billing frequency is required.",
-      "contractNameRequired": "Contract name is required."
+      "billingFrequency": "Billing frequency",
+      "contractName": "Contract name",
+      "contractNameRequired": "Contract name is required.",
+      "failedToUpdate": "Failed to update contract",
+      "fixErrors": "Please fix the following errors:"
     }
   },
   "contractHeader": {},
