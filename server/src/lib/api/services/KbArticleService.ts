@@ -5,7 +5,7 @@
 
 import { randomUUID } from 'crypto';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
-import { convertMarkdownToBlockNote, BlockNoteBlock } from '@shared/lib/utils/contentConversion';
+import { convertMarkdownToBlocks, type BlockNoteBlock } from '@shared/lib/utils/markdownToBlocks';
 import { ListOptions } from '../controllers/types';
 import { NotFoundError } from '../middleware/apiMiddleware';
 import type { CreateKbArticleData, UpdateKbArticleData, UpdateKbArticleContentData } from '../schemas/kbArticle';
@@ -244,7 +244,7 @@ export class KbArticleService extends BaseService<any> {
       if (data.content_format === 'blocknote') {
         blocks = JSON.parse(data.content);
       } else {
-        blocks = await convertMarkdownToBlockNote(data.content);
+        blocks = convertMarkdownToBlocks(data.content);
       }
 
       if (blocks.length > 0) {
@@ -476,7 +476,7 @@ export class KbArticleService extends BaseService<any> {
     if (data.format === 'blocknote') {
       blocks = JSON.parse(data.content);
     } else {
-      blocks = await convertMarkdownToBlockNote(data.content);
+      blocks = convertMarkdownToBlocks(data.content);
     }
 
     const now = new Date();
