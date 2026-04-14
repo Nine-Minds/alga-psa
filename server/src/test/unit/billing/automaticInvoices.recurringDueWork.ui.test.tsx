@@ -465,6 +465,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     cleanup();
     vi.clearAllMocks();
     dbMocks.missingTables.clear();
+    window.history.replaceState({}, '', '/msp/billing?tab=invoicing&subtab=generate');
 
     dbMocks.rowsByTable.client_billing_cycles = [
       {
@@ -614,7 +615,6 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledWith({
         page: 1,
         pageSize: 10,
-        searchTerm: '',
         dateRange: {
           from: undefined,
           to: expect.any(String),
@@ -748,6 +748,89 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     ).toBeDisabled();
   });
 
+  it('persists the automatic client filter in the URL and scopes it to needs/ready rows only', async () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/msp/billing?tab=invoicing&subtab=generate&automaticClientFilter=Blocked',
+    );
+
+    const blockedRow = {
+      ...createContractRow(),
+      clientId: 'client-blocked-filtered',
+      clientName: 'Blocked Co',
+      canGenerate: false,
+      blockedReason: 'Blocked until approval: 1 unapproved entry.',
+      approvalBlockedEntryCount: 1,
+    };
+    const readyRow = {
+      ...createClientRow(),
+      clientId: 'client-ready-filtered',
+      clientName: 'Ready Co',
+      canGenerate: true,
+      approvalBlockedEntryCount: 0,
+    };
+
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [
+        buildInvoiceCandidate([blockedRow], {
+          candidateKey: 'candidate-blocked-filtered',
+          approvalBlockedEntryCount: 1,
+        }),
+        buildInvoiceCandidate([readyRow], {
+          candidateKey: 'candidate-ready-filtered',
+          approvalBlockedEntryCount: 0,
+        }),
+      ],
+      materializationGaps: [
+        {
+          executionIdentityKey: 'gap-blocked-filtered',
+          selectionKey: 'gap-selection-blocked-filtered',
+          clientId: 'client-gap-filtered',
+          clientName: 'Repair Co',
+          scheduleKey: 'schedule:tenant-1:client_contract_line:line-gap:client:advance',
+          periodKey: 'period:2025-03-01:2025-04-01',
+          billingCycleId: 'cycle-gap',
+          invoiceWindowStart: '2025-03-01',
+          invoiceWindowEnd: '2025-04-01',
+          servicePeriodStart: '2025-03-01',
+          servicePeriodEnd: '2025-04-01',
+          reason: 'missing_service_period_materialization',
+          detail: 'Recurring service periods were not materialized for this canonical client-cadence execution window.',
+        },
+      ],
+      total: 2,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    const filterInput = await screen.findByDisplayValue('Blocked');
+    expect(filterInput).toBeInTheDocument();
+
+    const needsApprovalSection = await screen.findByTestId('needs-approval-section');
+    expect(within(needsApprovalSection).getByText('Blocked Co')).toBeInTheDocument();
+    expect(within(needsApprovalSection).queryByText('Ready Co')).toBeNull();
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    expect(within(readyTable).queryByText('Ready Co')).toBeNull();
+
+    const gapPanel = await screen.findByTestId('recurring-materialization-gap-panel');
+    expect(within(gapPanel).getByText('Repair Co')).toBeInTheDocument();
+
+    fireEvent.change(filterInput, { target: { value: 'Ready' } });
+
+    await waitFor(() => {
+      expect(window.location.search).toContain('automaticClientFilter=Ready');
+      expect(within(needsApprovalSection).queryByText('Blocked Co')).toBeNull();
+      expect(within(readyTable).getByText('Ready Co')).toBeInTheDocument();
+    });
+
+    expect(within(gapPanel).getByText('Repair Co')).toBeInTheDocument();
+  });
+
   it('T004: AutomaticInvoices loads through the real due-work action in a migrated schema with no `client_contract_lines` table', async () => {
     dbMocks.missingTables.add('client_contract_lines');
     getAvailableRecurringDueWorkMock.mockImplementation(originalGetAvailableRecurringDueWork);
@@ -758,7 +841,6 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledWith({
         page: 1,
         pageSize: 10,
-        searchTerm: '',
         dateRange: {
           from: undefined,
           to: expect.any(String),
@@ -1477,7 +1559,6 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledWith({
         page: 2,
         pageSize: 10,
-        searchTerm: '',
         dateRange: {
           from: undefined,
           to: expect.any(String),

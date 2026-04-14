@@ -190,6 +190,16 @@ const getTodayDate = (): Date => {
 const buildServicePeriodRepairHref = (scheduleKey: string) =>
   `/msp/billing?tab=service-periods&scheduleKey=${encodeURIComponent(scheduleKey)}`;
 
+const AUTOMATIC_INVOICES_CLIENT_FILTER_QUERY_PARAM = 'automaticClientFilter';
+
+const readAutomaticInvoicesClientFilterFromLocation = (): string => {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return new URLSearchParams(window.location.search).get(AUTOMATIC_INVOICES_CLIENT_FILTER_QUERY_PARAM) ?? '';
+};
+
 const buildReviewApprovalsHref = (input: {
   clientId: string;
   windowStart: string;
@@ -336,8 +346,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReversing, setIsReversing] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
-  const [clientFilter, setClientFilter] = useState<string>('');
-  const [debouncedClientFilter, setDebouncedClientFilter] = useState<string>('');
+  const [clientFilter, setClientFilter] = useState<string>(() => readAutomaticInvoicesClientFilterFromLocation());
+  const [debouncedClientFilter, setDebouncedClientFilter] = useState<string>(() => readAutomaticInvoicesClientFilterFromLocation());
 
   // Date range filter state (pending = user selection, applied = active filter)
   const [pendingDateRange, setPendingDateRange] = useState<DateRange>(() => ({
@@ -421,10 +431,27 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   const initialLoadDone = useRef(false);
 
-  // Debounce client filter for server-side search
+  // Debounce client filter for local ready/blocked row filtering and persist it in the URL.
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedClientFilter(clientFilter);
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const normalizedFilter = clientFilter.trim();
+        if (normalizedFilter) {
+          params.set(AUTOMATIC_INVOICES_CLIENT_FILTER_QUERY_PARAM, normalizedFilter);
+        } else {
+          params.delete(AUTOMATIC_INVOICES_CLIENT_FILTER_QUERY_PARAM);
+        }
+
+        const nextSearch = params.toString();
+        const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
+        const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        if (nextUrl !== currentUrl) {
+          window.history.replaceState(window.history.state, '', nextUrl);
+        }
+      }
+
       if (initialLoadDone.current) {
         setCurrentReadyPage(1);
         setSelectedTargets(new Set()); // Clear selection when filter changes
@@ -469,7 +496,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         const result = await getAvailableRecurringDueWork({
           page: currentReadyPage,
           pageSize: pageSize,
-          searchTerm: debouncedClientFilter,
           dateRange: dateRangeFilter
         });
 
@@ -502,10 +528,16 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     return () => {
       isMounted = false;
     };
-  }, [currentReadyPage, pageSize, debouncedClientFilter, appliedDateRange, refreshTrigger]);
+  }, [currentReadyPage, pageSize, appliedDateRange, refreshTrigger]);
 
-  // For server-side pagination, filteredPeriods is just periods
-  const filteredPeriods = periods;
+  const normalizedReadyClientFilter = debouncedClientFilter.trim().toLowerCase();
+
+  // Client filtering is intentionally scoped to Needs Approval + Ready to Invoice only.
+  const filteredPeriods = normalizedReadyClientFilter.length === 0
+    ? periods
+    : periods.filter((period) =>
+        (period.clientName ?? '').toLowerCase().includes(normalizedReadyClientFilter),
+      );
   const parentGroups = buildRecurringInvoiceParentGroups(filteredPeriods);
   const needsApprovalParentGroups = parentGroups.filter(
     (group) => (group.candidate.approvalBlockedEntryCount ?? 0) > 0,
@@ -1604,7 +1636,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             onPageChange={handleReadyPageChange}
             pageSize={pageSize}
             onItemsPerPageChange={handlePageSizeChange}
-            totalItems={totalPeriods}
+            totalItems={normalizedReadyClientFilter.length > 0 ? filteredPeriods.length : totalPeriods}
             // Fixed rowClassName prop - removed cursor-pointer since row click is disabled
             rowClassName={() => ""}
           />
