@@ -346,7 +346,7 @@
   {
     "id": "T044",
     "description": "EditContractLineServiceQuantityDialog.tsx: dialog title, heading, form labels, helper text, validation error, and buttons render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
