@@ -52,7 +52,7 @@
   {
     "id": "F011",
     "description": "HourlyContractLinePresetConfiguration.tsx: Translate manage preset services card title, error states ('Contract line not found or invalid type', 'Invalid plan type or plan not found', 'Failed to load plan configuration'), and all shared validation/save error messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F012",
