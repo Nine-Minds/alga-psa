@@ -137,7 +137,7 @@
   {
     "id": "F028",
     "description": "ContractLinesOverview.tsx: Translate filter section (search placeholder 'Search contract line presets', type filter 'All types' option, 'Reset' clear-filters button text), loading indicator text ('Loading contract line presets'), toast messages ('Contract line preset deleted successfully'), and error alerts",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F029",

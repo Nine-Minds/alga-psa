@@ -112,3 +112,4 @@
 - (2026-04-14) Verification command run: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/ContractLineServiceForm.tsx` (warnings only, no errors).
 - (2026-04-14) `F027` implemented in `contract-lines/ContractLinesOverview.tsx`: wired `useTranslation('msp/contract-lines')`; translated page heading, `Add Contract Line Preset` button, presets table column headers, action menu labels (`Edit`, `Delete`), and screen-reader `Open menu` text.
 - (2026-04-14) Verification command run: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/ContractLinesOverview.tsx` (warnings only, no errors).
+- (2026-04-14) `F028` covered in `contract-lines/ContractLinesOverview.tsx`: translated filter/search placeholders, `All types` option, reset-filters button text, loading indicator text, delete-success toast, and delete/fetch error messages.
