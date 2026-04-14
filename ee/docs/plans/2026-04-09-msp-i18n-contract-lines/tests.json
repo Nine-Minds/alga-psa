@@ -162,7 +162,7 @@
   {
     "id": "T021",
     "description": "UsageContractLinePresetServicesList.tsx: service addition UI renders translated checkbox details with interpolated service type, method, and rate",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
