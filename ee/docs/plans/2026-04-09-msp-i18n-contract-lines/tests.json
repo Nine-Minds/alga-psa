@@ -322,7 +322,7 @@
   {
     "id": "T041",
     "description": "ServiceUsageConfigForm.tsx: form labels, tooltip content, required field indicator, and tiered pricing switch label with interpolated service name are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
