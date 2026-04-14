@@ -254,7 +254,11 @@
     "clientCreatedContactFailed": "Cliente creado pero no pudo agregar contacto.",
     "usersLoadError": "No se pudieron cargar usuarios para la selección del administrador de cuentas.",
     "countriesLoadError": "No se pudieron cargar los países.",
-    "phoneTypeSuggestionsError": "No se pudieron cargar las sugerencias de tipo de teléfono de contacto."
+    "phoneTypeSuggestionsError": "No se pudieron cargar las sugerencias de tipo de teléfono de contacto.",
+    "created": "\"{{name}}\" creado. Agregue otro cliente a continuación.",
+    "createAndAddAnother": "Crear + Agregar otro",
+    "createAndView": "Crear + Ver cliente",
+    "additionalDetails": "Detalles adicionales"
   },
   "clientCreatedDialog": {
     "title": "Cliente creado",

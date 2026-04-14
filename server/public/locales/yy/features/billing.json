@@ -3,7 +3,8 @@
   "overview": "55555",
   "tabs": {
     "overview": "55555",
-    "invoices": "55555"
+    "invoices": "55555",
+    "quotes": "55555"
   },
   "currentContractLine": "55555",
   "nextInvoice": "55555",
@@ -49,7 +50,18 @@
     "tax": "55555",
     "taxBreakdown": "55555",
     "manualInvoice": "55555",
-    "credits": "55555"
+    "credits": "55555",
+    "financialArtifactSummary": "55555",
+    "servicePeriod": "55555",
+    "servicePeriods": "55555",
+    "financialOnlyLine": "55555",
+    "downloadStarted": "55555",
+    "downloadComplete": "55555",
+    "emailStarted": "55555",
+    "emailSent": "55555",
+    "advanceTiming": "55555",
+    "arrearsTiming": "55555",
+    "paymentSummaryServicePeriods": "55555"
   },
   "frequency": {
     "monthly": "55555",
@@ -70,7 +82,15 @@
     "serviceCategory": "55555",
     "statusDescription": "55555 {{status}} 55555 {{expiry}} 55555",
     "expiresOn": "55555 {{date}} 55555",
-    "noExpiry": "55555"
+    "noExpiry": "55555",
+    "cadenceOwnerContractDescription": "55555",
+    "cadenceOwnerClientDescription": "55555",
+    "cadenceOwnerContract": "55555",
+    "cadenceOwnerClient": "55555",
+    "billingTimingAdvance": "55555",
+    "billingTimingArrears": "55555",
+    "cadenceOwner": "55555",
+    "billingTiming": "55555"
   },
   "payment": {
     "method": "55555",
@@ -94,5 +114,11 @@
     "loadingInvoices": "55555",
     "paymentSuccessful": "55555",
     "paymentFailed": "55555"
+  },
+  "quotes": {
+    "pendingQuotes": "55555",
+    "awaitingResponse": "55555 {{count}} 55555",
+    "noPending": "55555",
+    "viewAll": "55555"
   }
 }

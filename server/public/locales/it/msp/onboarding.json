@@ -189,7 +189,9 @@
     },
     "header": {
       "title": "Crea il tuo primo servizio",
-      "description": "Aggiungi un servizio e scegli come deve essere fatturato. Il tipo di servizio identifica la categoria del servizio, mentre la modalità di fatturazione controlla il comportamento dei prezzi."
+      "description": "Aggiungi un servizio e scegli come deve essere fatturato. Il tipo di servizio identifica la categoria del servizio, mentre la modalità di fatturazione controlla il comportamento dei prezzi.",
+      "serviceTitle": "Crea il tuo primo servizio",
+      "serviceDescription": "Aggiungi un servizio e scegli come deve essere fatturato. Il tipo di servizio identifica la categoria di servizio, mentre la modalità di fatturazione controlla il comportamento dei prezzi."
     },
     "created": {
       "title": "Servizio creato con successo!",
@@ -217,6 +219,10 @@
       "defaultRate": {
         "label": "Tariffa predefinita",
         "placeholder": "150"
+      },
+      "defaultCurrency": {
+        "label": "Valuta predefinita *",
+        "description": "Questa valuta verrà utilizzata come predefinita per tutta la fatturazione: servizi, contratti, preventivi e fatture. Puoi sovrascriverla per cliente in seguito."
       }
     },
     "billingMethods": {

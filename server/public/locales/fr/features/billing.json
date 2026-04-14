@@ -3,7 +3,8 @@
   "overview": "Aperçu",
   "tabs": {
     "overview": "Aperçu",
-    "invoices": "Factures"
+    "invoices": "Factures",
+    "quotes": "Devis"
   },
   "currentContractLine": "Forfait actuel",
   "nextInvoice": "Prochaine facture",
@@ -49,7 +50,18 @@
     "tax": "Taxes",
     "taxBreakdown": "Ventilation des taxes",
     "manualInvoice": "Facture manuelle",
-    "credits": "Crédits"
+    "credits": "Crédits",
+    "financialArtifactSummary": "Facture financière uniquement. Les périodes de service récurrentes n'apparaissent que sur les lignes de détail récurrentes.",
+    "servicePeriod": "Période de service",
+    "servicePeriods": "Périodes de service",
+    "financialOnlyLine": "Ligne financière uniquement. Aucune période de service récurrente.",
+    "downloadStarted": "Préparation du téléchargement PDF...",
+    "downloadComplete": "PDF téléchargé avec succès.",
+    "emailStarted": "Envoi de l'e-mail de facture...",
+    "emailSent": "E-mail de facture envoyé avec succès.",
+    "advanceTiming": "Par avance",
+    "arrearsTiming": "À terme échu",
+    "paymentSummaryServicePeriods": "Le paiement règle le solde de la facture pour ces périodes de service récurrentes. Ouvrez les détails de la facture ci-dessous pour le détail complet ligne par ligne."
   },
   "frequency": {
     "monthly": "Mensuel",
@@ -70,7 +82,15 @@
     "serviceCategory": "Catégorie de service",
     "statusDescription": "Ce forfait est actuellement {{status}} et {{expiry}}.",
     "expiresOn": "expire le {{date}}",
-    "noExpiry": "n'expire pas"
+    "noExpiry": "n'expire pas",
+    "cadenceOwnerContractDescription": "Les périodes de service récurrentes suivent la cadence de l'anniversaire du contrat pour cette ligne.",
+    "cadenceOwnerClientDescription": "Les périodes de service récurrentes suivent le calendrier de facturation du client pour cette ligne.",
+    "cadenceOwnerContract": "Anniversaire du contrat",
+    "cadenceOwnerClient": "Calendrier de facturation du client",
+    "billingTimingAdvance": "Par avance",
+    "billingTimingArrears": "À terme échu",
+    "cadenceOwner": "Propriétaire de la cadence",
+    "billingTiming": "Moment de facturation"
   },
   "payment": {
     "method": "Mode de paiement",
@@ -94,5 +114,11 @@
     "loadingInvoices": "Chargement des factures...",
     "paymentSuccessful": "Paiement traité avec succès",
     "paymentFailed": "Échec du paiement. Veuillez réessayer."
+  },
+  "quotes": {
+    "pendingQuotes": "Devis en attente",
+    "awaitingResponse": "{{count}} devis en attente de votre réponse",
+    "noPending": "Aucun devis en attente",
+    "viewAll": "Voir tous les devis"
   }
 }

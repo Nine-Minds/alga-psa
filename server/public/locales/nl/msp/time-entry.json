@@ -28,7 +28,8 @@
       "copyToAnotherDay": "Kopieer naar een andere dag",
       "viewDetails": "Bekijk details",
       "manageTimePeriods": "Beheer tijdsperioden",
-      "selectWorkItem": "Selecteer Werkitem"
+      "selectWorkItem": "Selecteer Werkitem",
+      "clearFilter": "Filter wissen"
     },
     "states": {
       "inProgress": "Bezig",
@@ -165,7 +166,8 @@
       "next": "Volgende",
       "pageInfo": "Pagina {{current}} van {{total}} ({{records}} totaal aantal records)"
     },
-    "interactionType": "{{type}} • {{client}}"
+    "interactionType": "{{type}} • {{client}}",
+    "currentSelection": "Huidig werkitem"
   },
   "timeSheetHeader": {
     "title": "Urenregistratie",
@@ -329,6 +331,11 @@
     "dayGroup": {
       "entryOne": "{{count}} invoer",
       "entryOther": "{{count}} vermeldingen"
+    },
+    "focusFilter": {
+      "summary": "{{count}} items weergegeven voor {{workItem}} op {{date}}",
+      "description": "Alleen items uit de geselecteerde rastercel zijn zichtbaar.",
+      "backToGrid": "Terug naar raster"
     }
   },
   "selectedWorkItem": {

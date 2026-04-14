@@ -67,7 +67,8 @@
     "loadSlotsFailed": "Kan beschikbare tijdsloten niet laden. Probeer het opnieuw.",
     "createFailed": "Kan afspraakverzoek niet maken. Probeer het opnieuw.",
     "updateFailed": "Kan afspraakverzoek niet bijwerken. Probeer het opnieuw.",
-    "loadFailed": "Kan afspraken niet laden. Probeer het opnieuw."
+    "loadFailed": "Kan afspraken niet laden. Probeer het opnieuw.",
+    "notFound": "Afspraakverzoek niet gevonden"
   },
   "messages": {
     "requestSuccess": "Afspraakverzoek succesvol ingediend!",

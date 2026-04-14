@@ -189,7 +189,9 @@
     },
     "header": {
       "title": "Utwórz swoją pierwszą usługę",
-      "description": "Dodaj usługę i wybierz sposób jej rozliczania. Typ usługi identyfikuje kategorię usługi, a tryb rozliczeń kontroluje zachowanie cenowe."
+      "description": "Dodaj usługę i wybierz sposób jej rozliczania. Typ usługi identyfikuje kategorię usługi, a tryb rozliczeń kontroluje zachowanie cenowe.",
+      "serviceTitle": "Utwórz swoją pierwszą usługę",
+      "serviceDescription": "Dodaj usługę i wybierz sposób jej rozliczania. Typ usługi określa kategorię usługi, a tryb rozliczania kontroluje zachowanie cen."
     },
     "created": {
       "title": "Usługa została utworzona!",
@@ -217,6 +219,10 @@
       "defaultRate": {
         "label": "Stawka domyślna",
         "placeholder": "150"
+      },
+      "defaultCurrency": {
+        "label": "Domyślna waluta *",
+        "description": "Ta waluta będzie używana jako domyślna w całym rozliczaniu — usługi, umowy, oferty i faktury. Możesz ją później zastąpić dla każdego klienta."
       }
     },
     "billingMethods": {

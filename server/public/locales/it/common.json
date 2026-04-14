@@ -420,7 +420,13 @@
           "asc": "Mostra dalla A alla Z",
           "desc": "Mostra dalla Z alla A"
         }
-      }
+      },
+      "clientVisibility": {
+        "all": "Tutti",
+        "visible": "Visibile al cliente",
+        "hidden": "Solo interno"
+      },
+      "clientVisibilityLabel": "Visibilità cliente"
     },
     "selector": {
       "title": "Seleziona documenti",
@@ -460,7 +466,9 @@
       "loading": "Caricamento cartelle...",
       "title": "Cartelle",
       "collapse": "Comprimi cartelle",
-      "allDocuments": "Tutti i documenti"
+      "allDocuments": "Tutti i documenti",
+      "expand": "Mostra cartelle",
+      "deleteTitle": "Elimina cartella"
     },
     "folderManager": {
       "title": "Crea nuova cartella",
@@ -477,7 +485,35 @@
         "Tickets": "Ticket",
         "Time Entries": "Registrazioni tempo"
       }
-    }
+    },
+    "list": {
+      "name": "Nome",
+      "folder": "Cartella",
+      "size": "Dimensione",
+      "modified": "Modificato",
+      "visibility": "Visibilità",
+      "actions": "Azioni"
+    },
+    "hasShareLinks": "Ha link di condivisione attivi",
+    "visibility": {
+      "clientVisible": "Visibile al cliente",
+      "internalOnly": "Interno",
+      "markedVisible": "\"{{name}}\" è ora visibile nel portale cliente",
+      "markedHidden": "\"{{name}}\" è ora nascosto dal portale cliente",
+      "toggleFailed": "Impossibile aggiornare la visibilità della cartella",
+      "cascadeTitle": "Aggiorna visibilità documento",
+      "cascadeMakeVisible": "Vuoi anche rendere visibili tutti i {{count}} documento/i in \"{{name}}\" nel portale cliente?",
+      "cascadeMakeHidden": "Vuoi anche nascondere tutti i {{count}} documento/i in \"{{name}}\" dal portale cliente?",
+      "cascadeYes": "Sì, aggiorna documenti",
+      "cascadeNo": "No, solo cartella"
+    },
+    "share": "Condividi",
+    "videoPlaybackFailed": "Impossibile riprodurre questo video nel browser",
+    "videoPlaybackIssue": "Hai problemi a riprodurre il video?",
+    "downloadVideo": "Scarica video",
+    "downloadAsPdf": "Scarica come PDF",
+    "downloadAsMarkdown": "Scarica come Markdown",
+    "move": "Sposta"
   },
   "notifications": {},
   "surveys": {
@@ -624,6 +660,18 @@
         },
         "noTemplates": "Crea un modello di sondaggio prima di aggiungere i trigger.",
         "prioritiesMixed": "Le board selezionate utilizzano tipi di priorità diversi. Vengono mostrate tutte le priorità."
+      },
+      "preview": {
+        "heading": "Anteprima pagina di risposta",
+        "tabs": {
+          "survey": "Modulo sondaggio",
+          "thankYou": "Grazie"
+        },
+        "noPrompt": "Richiesta sondaggio",
+        "commentPlaceholder": "I commenti dei clienti appariranno qui...",
+        "noThankYou": "Messaggio di ringraziamento",
+        "notice": "Questa anteprima mostra ciò che i clienti vedono dopo aver fatto clic sul link del sondaggio nella loro email.",
+        "editEmailTemplate": "Modifica modello email sondaggio"
       }
     },
     "response": {
@@ -876,6 +924,11 @@
     "notSpecified": "Non specificato",
     "unknown": "Sconosciuto",
     "uploading": "Caricamento...",
-    "submitting": "Invio..."
+    "submitting": "Invio...",
+    "edited": "modificato",
+    "editComment": "Modifica commento",
+    "deleteCommentAriaLabel": "Elimina commento",
+    "deleteComment": "Elimina commento",
+    "deleteCommentConfirmation": "Sei sicuro di voler eliminare questo commento? Questa azione non può essere annullata."
   }
 }

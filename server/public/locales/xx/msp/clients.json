@@ -254,7 +254,11 @@
     "clientCreatedContactFailed": "11111",
     "usersLoadError": "11111",
     "countriesLoadError": "11111",
-    "phoneTypeSuggestionsError": "11111"
+    "phoneTypeSuggestionsError": "11111",
+    "created": "11111 {{name}} 11111",
+    "createAndAddAnother": "11111",
+    "createAndView": "11111",
+    "additionalDetails": "11111"
   },
   "clientCreatedDialog": {
     "title": "11111",

@@ -14,7 +14,8 @@
     "portal": "Portal",
     "notifications": "Notificaciones",
     "documents": "Documentos",
-    "knowledgeBase": "Base de conocimiento"
+    "knowledgeBase": "Base de conocimiento",
+    "requestServices": "Solicitar servicios"
   },
   "dashboard": {
     "title": "Panel",
@@ -137,7 +138,9 @@
         "description": "Consulta los documentos y recursos compartidos"
       }
     },
-    "forgotPassword": "¿Olvidaste tu contraseña?"
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "sessionEndedTitle": "Sesión finalizada",
+    "sessionEndedMessage": "Se ha cerrado su sesión. Vuelva a iniciar sesión."
   },
   "account": {
     "title": "Cuenta",
@@ -339,7 +342,9 @@
       "uploadError": "No se pudo subir. Inténtalo de nuevo.",
       "deleteSuccess": "Eliminado correctamente.",
       "deleteError": "No se pudo eliminar.",
-      "deleteConfirm": "¿Seguro que quieres eliminar esto? Esta acción no se puede deshacer."
+      "deleteConfirm": "¿Seguro que quieres eliminar esto? Esta acción no se puede deshacer.",
+      "linking": "Vinculando...",
+      "linkDocument": "Vincular documento"
     },
     "validation": {
       "clientNameRequired": "El nombre de la empresa es obligatorio",

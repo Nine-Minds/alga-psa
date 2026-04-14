@@ -415,7 +415,9 @@
       },
       "status": {
         "label": "Status *",
-        "placeholder": "Wybierz status"
+        "placeholder": "Wybierz status",
+        "selectBoardFirst": "Najpierw wybierz tablicę",
+        "loading": "Ładowanie statusów..."
       },
       "priority": {
         "label": "Priorytet *",

@@ -102,6 +102,11 @@
       "totalQuantity": "11111",
       "increasingImmediate": "11111",
       "billedMonthly": "11111"
+    },
+    "solo": {
+      "title": "11111",
+      "description": "11111",
+      "upgradeCta": "11111"
     }
   },
   "removalModal": {

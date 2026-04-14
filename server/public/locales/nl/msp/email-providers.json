@@ -415,7 +415,9 @@
       },
       "status": {
         "label": "Status *",
-        "placeholder": "Selecteer status"
+        "placeholder": "Selecteer status",
+        "selectBoardFirst": "Selecteer eerst een board",
+        "loading": "Statussen laden..."
       },
       "priority": {
         "label": "Prioriteit *",

@@ -37,7 +37,9 @@
     "noSla": "Aucun SLA",
     "onTrack": "En bonne voie",
     "breached": "Violation",
-    "paused": "En pause"
+    "paused": "En pause",
+    "allResponseStatuses": "Tous les statuts de réponse",
+    "responseStatus": "Statut de réponse"
   },
   "create": {
     "title": "Créer un ticket d'assistance",
@@ -189,7 +191,8 @@
     "failedToUpdateComment": "Échec de la mise à jour du commentaire",
     "failedToDeleteComment": "Échec de la suppression du commentaire",
     "deleteOwnCommentError": "Vous ne pouvez supprimer que vos propres commentaires",
-    "failedToUpdateTicketStatus": "Échec de la mise à jour du statut du ticket"
+    "failedToUpdateTicketStatus": "Échec de la mise à jour du statut du ticket",
+    "noTitle": "Aucun titre"
   },
   "conversation": {
     "comments": "Commentaires",
@@ -230,7 +233,8 @@
     "deleteCommentAriaLabel": "Supprimer le commentaire",
     "inboundChildReplies": "Réponses entrantes sur les tickets enfants (lecture seule)",
     "childTicket": "Ticket enfant",
-    "ticketPrefix": "Ticket {{number}}"
+    "ticketPrefix": "Ticket {{number}}",
+    "clipboardDraftCancelMessage": "Ce brouillon inclut des images collées qui ont déjà été téléchargées comme documents de ticket. Les conserver ou les supprimer définitivement ?"
   },
   "responseState": {
     "awaitingYourResponse": "En attente de votre réponse",
@@ -764,7 +768,8 @@
       "columns": {
         "sla": "ANS",
         "createdBy": "Créé par",
-        "actions": "Actes"
+        "actions": "Actes",
+        "tags": "Étiquettes"
       },
       "requiredSuffix": "(requis)",
       "tagsUnderTitle": "Afficher sous le titre",
@@ -1025,5 +1030,22 @@
     "minutes": "minutes",
     "invalidDateTime": "Date/heure invalide",
     "declined": "Refusé"
+  },
+  "categories": {
+    "itilBadge": "ITIL"
+  },
+  "tickets": {
+    "conversation": {
+      "closeStatus": "Statut de clôture",
+      "noStatusChange": "Ne pas changer le statut"
+    }
+  },
+  "common": {
+    "continueEditing": "Continuer l'édition"
+  },
+  "details": {
+    "bundle": {
+      "childrenDescription": "Tickets enfants regroupés dans ce ticket maître"
+    }
   }
 }

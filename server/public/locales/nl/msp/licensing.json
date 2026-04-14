@@ -102,6 +102,11 @@
       "totalQuantity": "Hiermee stelt u het totale abonnementsaantal in (geen toevoeging aan huidige licenties)",
       "increasingImmediate": "Licenties verhogen: directe toegang met een naar rato berekende kostenpost",
       "billedMonthly": "Licenties worden maandelijks gefactureerd en kunnen op elk moment worden opgezegd"
+    },
+    "solo": {
+      "title": "Solo omvat één gebruiker",
+      "description": "Het Solo-abonnement is ontworpen voor één gebruiker en ondersteunt het toevoegen van licenties niet. Upgrade naar Pro om meer gebruikers aan uw team toe te voegen.",
+      "upgradeCta": "Upgraden naar Pro"
     }
   },
   "removalModal": {

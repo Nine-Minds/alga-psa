@@ -37,7 +37,9 @@
     "noSla": "Sin SLA",
     "onTrack": "En curso",
     "breached": "Vencido",
-    "paused": "Pausado"
+    "paused": "Pausado",
+    "allResponseStatuses": "Todos los estados de respuesta",
+    "responseStatus": "Estado de respuesta"
   },
   "create": {
     "title": "Crear ticket de soporte",
@@ -189,7 +191,8 @@
     "failedToUpdateComment": "No se pudo actualizar el comentario",
     "failedToDeleteComment": "No se pudo eliminar el comentario",
     "deleteOwnCommentError": "Solo puedes eliminar tus propios comentarios",
-    "failedToUpdateTicketStatus": "No se pudo actualizar el estado del ticket"
+    "failedToUpdateTicketStatus": "No se pudo actualizar el estado del ticket",
+    "noTitle": "Sin título"
   },
   "conversation": {
     "comments": "Comentarios",
@@ -230,7 +233,8 @@
     "deleteCommentAriaLabel": "Eliminar comentario",
     "inboundChildReplies": "Respuestas entrantes en tickets secundarios (solo lectura)",
     "childTicket": "Ticket secundario",
-    "ticketPrefix": "Ticket {{number}}"
+    "ticketPrefix": "Ticket {{number}}",
+    "clipboardDraftCancelMessage": "Este borrador incluye imágenes pegadas que ya se cargaron como documentos del ticket. ¿Mantenerlas o eliminarlas permanentemente?"
   },
   "responseState": {
     "awaitingYourResponse": "Esperando su respuesta",
@@ -764,7 +768,8 @@
       "columns": {
         "sla": "SLA",
         "createdBy": "Creado por",
-        "actions": "Acciones"
+        "actions": "Acciones",
+        "tags": "Etiquetas"
       },
       "requiredSuffix": "(obligatorio)",
       "tagsUnderTitle": "Mostrar debajo del título",
@@ -1025,5 +1030,22 @@
     "minutes": "minutos",
     "invalidDateTime": "Fecha/hora no válida",
     "declined": "Rechazada"
+  },
+  "categories": {
+    "itilBadge": "ITIL"
+  },
+  "tickets": {
+    "conversation": {
+      "closeStatus": "Cerrar estado",
+      "noStatusChange": "No cambiar el estado"
+    }
+  },
+  "common": {
+    "continueEditing": "Continuar editando"
+  },
+  "details": {
+    "bundle": {
+      "childrenDescription": "Tickets secundarios agrupados en este ticket principal"
+    }
   }
 }

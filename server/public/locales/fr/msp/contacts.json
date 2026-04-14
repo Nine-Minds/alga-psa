@@ -156,7 +156,9 @@
       "client": "Client",
       "tags": "Étiquettes",
       "role": "Rôle",
-      "notes": "Notes"
+      "notes": "Notes",
+      "primaryEmailLabel": "Libellé de l'e-mail principal",
+      "additionalEmails": "Adresses e-mail supplémentaires"
     },
     "unassigned": "Sélectionner un champ",
     "errors": {
@@ -207,7 +209,10 @@
       "clientFieldDescription": "client (correspond aux clients existants par nom)",
       "noteLabel": "Remarque :",
       "noteDescription": "L’import/export CSV dans la version 1 gère un seul numéro de téléphone par défaut par contact. Les étiquettes doivent être séparées par des virgules.",
-      "downloadTemplate": "Télécharger le modèle CSV"
+      "downloadTemplate": "Télécharger le modèle CSV",
+      "emailFieldsLabel": "Champs e-mail :",
+      "emailFieldsDescription": "primary_email_type (work/personal/billing/other ou un libellé personnalisé), additional_email_addresses (utilisez `label:email@example.com | label:email@example.com`)",
+      "hybridEmailNote": "L'import/export CSV conserve `email` comme e-mail de contact principal/par défaut. Les étiquettes doivent être des valeurs séparées par des virgules."
     },
     "mapping": {
       "title": "Mapper les champs du contact aux colonnes CSV",
@@ -460,7 +465,8 @@
       "status": "Statut :",
       "notes": "Notes :",
       "notesPlaceholder": "Ajoutez des notes supplémentaires sur le contact...",
-      "tags": "Étiquettes :"
+      "tags": "Étiquettes :",
+      "emailAddresses": "Adresses e-mail :"
     },
     "loading": {
       "destinations": "Chargement des destinations..."
@@ -499,7 +505,9 @@
       "createdAt": "Créé le",
       "updatedAt": "Mis à jour le",
       "notes": "Notes :",
-      "tags": "Étiquettes :"
+      "tags": "Étiquettes :",
+      "emailAddresses": "Adresses e-mail :",
+      "defaultEmail": "Par défaut"
     },
     "status": {
       "active": "Actif",

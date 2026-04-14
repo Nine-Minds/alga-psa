@@ -102,6 +102,11 @@
       "totalQuantity": "Dies legt die Gesamtzahl Ihres Abonnements fest (keine Addition zu bestehenden Lizenzen)",
       "increasingImmediate": "Lizenzerhöhungen: sofortiger Zugriff mit anteiliger Berechnung",
       "billedMonthly": "Lizenzen werden monatlich berechnet und können jederzeit gekündigt werden"
+    },
+    "solo": {
+      "title": "Solo umfasst einen Benutzer",
+      "description": "Der Solo-Tarif ist für einen einzelnen Benutzer konzipiert und unterstützt das Hinzufügen von Lizenzen nicht. Upgraden Sie auf Pro, um Ihrem Team weitere Benutzer hinzuzufügen.",
+      "upgradeCta": "Upgrade auf Pro"
     }
   },
   "removalModal": {

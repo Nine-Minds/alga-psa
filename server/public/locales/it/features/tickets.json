@@ -37,7 +37,9 @@
     "noSla": "Nessun SLA",
     "onTrack": "In linea",
     "breached": "Violato",
-    "paused": "In pausa"
+    "paused": "In pausa",
+    "allResponseStatuses": "Tutti gli stati di risposta",
+    "responseStatus": "Stato risposta"
   },
   "create": {
     "title": "Crea ticket di supporto",
@@ -189,7 +191,8 @@
     "failedToUpdateComment": "Impossibile aggiornare il commento",
     "failedToDeleteComment": "Impossibile eliminare il commento",
     "deleteOwnCommentError": "Puoi eliminare solo i tuoi commenti",
-    "failedToUpdateTicketStatus": "Impossibile aggiornare lo stato del ticket"
+    "failedToUpdateTicketStatus": "Impossibile aggiornare lo stato del ticket",
+    "noTitle": "Nessun titolo"
   },
   "conversation": {
     "comments": "Commenti",
@@ -230,7 +233,8 @@
     "deleteCommentAriaLabel": "Elimina commento",
     "inboundChildReplies": "Risposte in entrata su ticket secondari (sola lettura)",
     "childTicket": "Ticket secondario",
-    "ticketPrefix": "Ticket {{number}}"
+    "ticketPrefix": "Ticket {{number}}",
+    "clipboardDraftCancelMessage": "Questa bozza include immagini incollate che sono già state caricate come documenti del ticket. Mantenerle o eliminarle definitivamente?"
   },
   "responseState": {
     "awaitingYourResponse": "In attesa della tua risposta",
@@ -764,7 +768,8 @@
       "columns": {
         "sla": "SLA",
         "createdBy": "Creato da",
-        "actions": "Azioni"
+        "actions": "Azioni",
+        "tags": "Tag"
       },
       "requiredSuffix": "(obbligatorio)",
       "tagsUnderTitle": "Mostra sotto il titolo",
@@ -1025,5 +1030,22 @@
     "minutes": "minuti",
     "invalidDateTime": "Data/ora non valida",
     "declined": "Rifiutato"
+  },
+  "categories": {
+    "itilBadge": "ITIL"
+  },
+  "tickets": {
+    "conversation": {
+      "closeStatus": "Stato di chiusura",
+      "noStatusChange": "Non modificare lo stato"
+    }
+  },
+  "common": {
+    "continueEditing": "Continua modifica"
+  },
+  "details": {
+    "bundle": {
+      "childrenDescription": "Ticket figli raggruppati in questo ticket master"
+    }
   }
 }

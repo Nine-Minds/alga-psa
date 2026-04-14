@@ -254,7 +254,11 @@
     "clientCreatedContactFailed": "Client created but failed to add contact.",
     "usersLoadError": "Failed to load users for Account Manager selection.",
     "countriesLoadError": "Failed to load countries.",
-    "phoneTypeSuggestionsError": "Failed to load contact phone type suggestions."
+    "phoneTypeSuggestionsError": "Failed to load contact phone type suggestions.",
+    "created": "\"{{name}}\" created. Add another client below.",
+    "createAndAddAnother": "Create + Add Another",
+    "createAndView": "Create + View Client",
+    "additionalDetails": "Additional Details"
   },
   "clientCreatedDialog": {
     "title": "Client Created",

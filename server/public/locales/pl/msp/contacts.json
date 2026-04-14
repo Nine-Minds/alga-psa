@@ -156,7 +156,9 @@
       "client": "Klient",
       "tags": "Tagi",
       "role": "Rola",
-      "notes": "Notatki"
+      "notes": "Notatki",
+      "primaryEmailLabel": "Etykieta głównego e-maila",
+      "additionalEmails": "Dodatkowe adresy e-mail"
     },
     "unassigned": "Wybierz pole",
     "errors": {
@@ -207,7 +209,10 @@
       "clientFieldDescription": "client (dopasowuje istniejących klientów po nazwie)",
       "noteLabel": "Uwaga:",
       "noteDescription": "Import/eksport CSV w wersji 1 obsługuje tylko jeden domyślny numer telefonu na kontakt. Tagi powinny być wartościami rozdzielanymi przecinkami.",
-      "downloadTemplate": "Pobierz szablon CSV"
+      "downloadTemplate": "Pobierz szablon CSV",
+      "emailFieldsLabel": "Pola e-mail:",
+      "emailFieldsDescription": "primary_email_type (work/personal/billing/other lub niestandardowa etykieta), additional_email_addresses (użyj `label:email@example.com | label:email@example.com`)",
+      "hybridEmailNote": "Import/eksport CSV zachowuje `email` jako główny/domyślny adres e-mail kontaktu. Tagi powinny być wartościami oddzielonymi przecinkami."
     },
     "mapping": {
       "title": "Mapuj pola kontaktu do kolumn CSV",
@@ -460,7 +465,8 @@
       "status": "Status:",
       "notes": "Notatki:",
       "notesPlaceholder": "Dodaj dodatkowe notatki o kontakcie...",
-      "tags": "Tagi:"
+      "tags": "Tagi:",
+      "emailAddresses": "Adresy e-mail:"
     },
     "loading": {
       "destinations": "Ładowanie miejsc docelowych..."
@@ -499,7 +505,9 @@
       "createdAt": "Utworzono",
       "updatedAt": "Zaktualizowano",
       "notes": "Notatki:",
-      "tags": "Tagi:"
+      "tags": "Tagi:",
+      "emailAddresses": "Adresy e-mail:",
+      "defaultEmail": "Domyślny"
     },
     "status": {
       "active": "Aktywny",

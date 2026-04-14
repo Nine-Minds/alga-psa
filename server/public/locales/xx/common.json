@@ -420,7 +420,13 @@
           "asc": "11111",
           "desc": "11111"
         }
-      }
+      },
+      "clientVisibility": {
+        "all": "11111",
+        "visible": "11111",
+        "hidden": "11111"
+      },
+      "clientVisibilityLabel": "11111"
     },
     "selector": {
       "title": "11111",
@@ -460,7 +466,9 @@
       "loading": "11111",
       "title": "11111",
       "collapse": "11111",
-      "allDocuments": "11111"
+      "allDocuments": "11111",
+      "expand": "11111",
+      "deleteTitle": "11111"
     },
     "folderManager": {
       "title": "11111",
@@ -477,7 +485,35 @@
         "Tickets": "11111",
         "Time Entries": "11111"
       }
-    }
+    },
+    "list": {
+      "name": "11111",
+      "folder": "11111",
+      "size": "11111",
+      "modified": "11111",
+      "visibility": "11111",
+      "actions": "11111"
+    },
+    "hasShareLinks": "11111",
+    "visibility": {
+      "clientVisible": "11111",
+      "internalOnly": "11111",
+      "markedVisible": "11111 {{name}} 11111",
+      "markedHidden": "11111 {{name}} 11111",
+      "toggleFailed": "11111",
+      "cascadeTitle": "11111",
+      "cascadeMakeVisible": "11111 {{count}} 11111 {{name}} 11111",
+      "cascadeMakeHidden": "11111 {{count}} 11111 {{name}} 11111",
+      "cascadeYes": "11111",
+      "cascadeNo": "11111"
+    },
+    "share": "11111",
+    "videoPlaybackFailed": "11111",
+    "videoPlaybackIssue": "11111",
+    "downloadVideo": "11111",
+    "downloadAsPdf": "11111",
+    "downloadAsMarkdown": "11111",
+    "move": "11111"
   },
   "surveys": {
     "common": {
@@ -623,6 +659,18 @@
         },
         "noTemplates": "11111",
         "prioritiesMixed": "11111"
+      },
+      "preview": {
+        "heading": "11111",
+        "tabs": {
+          "survey": "11111",
+          "thankYou": "11111"
+        },
+        "noPrompt": "11111",
+        "commentPlaceholder": "11111",
+        "noThankYou": "11111",
+        "notice": "11111",
+        "editEmailTemplate": "11111"
       }
     },
     "response": {
@@ -800,7 +848,12 @@
     "required": "11111",
     "optional": "11111",
     "notSpecified": "11111",
-    "unknown": "11111"
+    "unknown": "11111",
+    "edited": "11111",
+    "editComment": "11111",
+    "deleteCommentAriaLabel": "11111",
+    "deleteComment": "11111",
+    "deleteCommentConfirmation": "11111"
   },
   "sessionManagement": {
     "title": "11111",

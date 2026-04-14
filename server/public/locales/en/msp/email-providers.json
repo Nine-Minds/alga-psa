@@ -415,7 +415,9 @@
       },
       "status": {
         "label": "Status *",
-        "placeholder": "Select status"
+        "placeholder": "Select status",
+        "selectBoardFirst": "Select board first",
+        "loading": "Loading statuses..."
       },
       "priority": {
         "label": "Priority *",
