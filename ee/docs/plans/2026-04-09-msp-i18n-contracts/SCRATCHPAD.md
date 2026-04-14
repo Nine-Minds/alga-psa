@@ -128,3 +128,8 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Contract-line type/frequency summaries now use shared enum formatters via `useFormatContractLineType()` + `useFormatBillingFrequency()`.
 - **(2026-04-14)** Added `contractLines.*` keys for top-level list UI in `server/public/locales/en/msp/contracts.json`.
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractLines.tsx` (pass; warnings only) and `jq empty server/public/locales/en/msp/contracts.json` (pass).
+- **(2026-04-14)** `F026` completed in `ContractLines.tsx`: localized inline edit/configuration UI (billing timing, cadence owner, minimum/round-up fields, fixed/usage guidance), service-detail labels, save/cancel/saving controls, inline loading text, and bucket section labels/value templates.
+- **(2026-04-14)** Added translated delete confirmation before removing a contract line (`window.confirm` with interpolated line name).
+- **(2026-04-14)** Localized error-state fallbacks for contract-lines load/refresh/remove/editability/update flows in this component.
+- **(2026-04-14)** Expanded `contractLines.errors|dialogs|configuration|services|bucket|loading.inline` keys in `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractLines.tsx` (pass; warnings only) and `jq empty server/public/locales/en/msp/contracts.json` (pass).

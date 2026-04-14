@@ -82,9 +82,25 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
   const { t } = useTranslation('msp/contracts');
   const formatBillingFrequency = useFormatBillingFrequency();
   const formatContractLineType = useFormatContractLineType();
+  const billingTimingOptions = [
+    {
+      value: 'advance',
+      label: t('billing.timing.advance', { defaultValue: 'In Advance' }),
+    },
+    {
+      value: 'arrears',
+      label: t('billing.timing.arrears', { defaultValue: 'In Arrears' }),
+    },
+  ] as const;
   const cadenceOwnerOptions = [
-    { value: 'client', label: 'Client schedule' },
-    { value: 'contract', label: 'Contract anniversary' },
+    {
+      value: 'client',
+      label: t('billing.cadenceOwner.client', { defaultValue: 'Client schedule' }),
+    },
+    {
+      value: 'contract',
+      label: t('billing.cadenceOwner.contract', { defaultValue: 'Contract anniversary' }),
+    },
   ] as const;
 
   const [contractLines, setContractLines] = useState<DetailedContractLineMapping[]>([]);
@@ -118,7 +134,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       setContractLines(detailedContractLines);
     } catch (err) {
       console.error('Error fetching contract lines:', err);
-      setError('Failed to load contract lines');
+      setError(t('contractLines.errors.failedToLoad', { defaultValue: 'Failed to load contract lines' }));
     } finally {
       setIsLoading(false);
     }
@@ -173,7 +189,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       onContractLinesChanged?.();
     } catch (err) {
       console.error('Error refreshing contract lines:', err);
-      setError('Failed to refresh contract lines');
+      setError(t('contractLines.errors.failedToRefresh', { defaultValue: 'Failed to refresh contract lines' }));
       throw err;
     }
   };
@@ -187,7 +203,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       onContractLinesChanged?.();
     } catch (err) {
       console.error('Error removing contract line:', err);
-      setError(err instanceof Error ? err.message : 'Failed to remove contract line');
+      setError(err instanceof Error
+        ? err.message
+        : t('contractLines.errors.failedToRemove', { defaultValue: 'Failed to remove contract line' }));
     }
   };
 
@@ -199,7 +217,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       const hasInvoices = await checkContractHasInvoices(contract.contract_id);
 
       if (hasInvoices) {
-        setError('Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated.');
+        setError(t('contractLines.errors.cannotEditWithInvoices', {
+          defaultValue: 'Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated.',
+        }));
         return;
       }
 
@@ -255,7 +275,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       setEditBucketConfigs(bucketConfigsData);
     } catch (err) {
       console.error('Error checking contract invoices:', err);
-      setError('Failed to check if contract can be edited');
+      setError(t('contractLines.errors.failedToCheckEditable', {
+        defaultValue: 'Failed to check if contract can be edited',
+      }));
     }
   };
 
@@ -347,7 +369,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       onContractLinesChanged?.();
     } catch (err) {
       console.error('Error updating contract line:', err);
-      setError('Failed to update contract line');
+      setError(t('contractLines.errors.failedToUpdate', { defaultValue: 'Failed to update contract line' }));
     } finally {
       setSavingLineId((current) => (current === contractLineId ? null : current));
     }
@@ -601,6 +623,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
+                          const confirmed = window.confirm(t('contractLines.dialogs.confirmRemove', {
+                            defaultValue: 'Remove contract line "{{name}}"?',
+                            name: line.contract_line_name,
+                          }));
+                          if (!confirmed) return;
                           handleRemoveContractLine(line.contract_line_id);
                         }}
                         className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
@@ -620,7 +647,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                           <LoadingIndicator
                             layout="inline"
                             spinnerProps={{ size: 'sm' }}
-                            text="Loading..."
+                            text={t('contractLines.loading.inline', { defaultValue: 'Loading...' })}
                           />
                         </div>
                       ) : (
@@ -629,9 +656,13 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                           <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4 space-y-4">
                             <div className="flex flex-wrap items-start justify-between gap-3">
                               <div>
-                                <p className="font-semibold text-[rgb(var(--color-text-900))]">Contract Line Configuration</p>
+                                <p className="font-semibold text-[rgb(var(--color-text-900))]">
+                                  {t('contractLines.configuration.title', { defaultValue: 'Contract Line Configuration' })}
+                                </p>
                                 <p className="text-xs text-muted-foreground">
-                                  Settings that apply to this contract line
+                                  {t('contractLines.configuration.description', {
+                                    defaultValue: 'Settings that apply to this contract line',
+                                  })}
                                 </p>
                               </div>
                               {editingLineId === line.contract_line_id ? (
@@ -647,12 +678,12 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                     {isSavingLine ? (
                                       <>
                                         <Loader2 className="h-4 w-4 animate-spin" />
-                                        Saving...
+                                        {t('common.actions.saving', { defaultValue: 'Saving...' })}
                                       </>
                                     ) : (
                                       <>
                                         <Check className="h-4 w-4" />
-                                        Save
+                                        {t('common.actions.save', { defaultValue: 'Save' })}
                                       </>
                                     )}
                                   </Button>
@@ -666,7 +697,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                     disabled={isSavingLine}
                                   >
                                     <X className="h-4 w-4" />
-                                    Cancel
+                                    {t('common.actions.cancel', { defaultValue: 'Cancel' })}
                                   </Button>
                                 </div>
                               ) : null}
@@ -676,7 +707,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                             <div className="grid gap-4 md:grid-cols-2">
                               <div>
                                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  Billing Timing
+                                  {t('billing.labels.timing', { defaultValue: 'Billing Timing' })}
                                 </Label>
                                 {editingLineId === line.contract_line_id ? (
                                   <CustomSelect
@@ -686,23 +717,20 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                       ...editLineData,
                                       billing_timing: value as 'arrears' | 'advance'
                                     })}
-                                    options={[
-                                      { value: 'advance', label: 'Advance (bill at start of period)' },
-                                      { value: 'arrears', label: 'Arrears (bill at end of period)' }
-                                    ]}
+                                    options={[...billingTimingOptions]}
                                     className="mt-1"
                                   />
                                 ) : (
                                   <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                     {(line.billing_timing || 'arrears') === 'advance'
-                                      ? 'Advance (bill at start of period)'
-                                      : 'Arrears (bill at end of period)'}
+                                      ? t('billing.timing.advance', { defaultValue: 'In Advance' })
+                                      : t('billing.timing.arrears', { defaultValue: 'In Arrears' })}
                                   </p>
                                 )}
                               </div>
                               <div>
                                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  Cadence Owner
+                                  {t('billing.labels.cadenceOwner', { defaultValue: 'Cadence Owner' })}
                                 </Label>
                                 {editingLineId === line.contract_line_id ? (
                                   <CustomSelect
@@ -718,8 +746,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                 ) : (
                                   <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                     {(line.cadence_owner || 'client') === 'contract'
-                                      ? 'Contract anniversary'
-                                      : 'Client schedule'}
+                                      ? t('billing.cadenceOwner.contract', { defaultValue: 'Contract anniversary' })
+                                      : t('billing.cadenceOwner.client', { defaultValue: 'Client schedule' })}
                                   </p>
                                 )}
                               </div>
@@ -731,7 +759,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                 <>
                                   <div>
                                     <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                      Minimum Billable Time (minutes)
+                                      {t('contractLines.configuration.minimumBillableTime', {
+                                        defaultValue: 'Minimum Billable Time (minutes)',
+                                      })}
                                     </Label>
                                     {editingLineId === line.contract_line_id ? (
                                       <Input
@@ -748,13 +778,18 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                       />
                                     ) : (
                                       <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-                                        {line.minimum_billable_time || 15} minutes
+                                        {t('contractLines.configuration.minutesValue', {
+                                          count: line.minimum_billable_time || 15,
+                                          defaultValue: '{{count}} minutes',
+                                        })}
                                       </p>
                                     )}
                                   </div>
                                   <div>
                                     <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                      Round Up To Nearest (minutes)
+                                      {t('contractLines.configuration.roundUpToNearest', {
+                                        defaultValue: 'Round Up To Nearest (minutes)',
+                                      })}
                                     </Label>
                                     {editingLineId === line.contract_line_id ? (
                                       <Input
@@ -771,7 +806,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                       />
                                     ) : (
                                       <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-                                        {line.round_up_to_nearest || 15} minutes
+                                        {t('contractLines.configuration.minutesValue', {
+                                          count: line.round_up_to_nearest || 15,
+                                          defaultValue: '{{count}} minutes',
+                                        })}
                                       </p>
                                     )}
                                   </div>
@@ -782,14 +820,20 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                               {line.contract_line_type === 'Fixed' && (
                                 <div className="col-span-2 space-y-2">
                                   <p className="text-sm text-muted-foreground">
-                                    Fixed contract lines bill a flat recurring fee regardless of individual service rates.
+                                    {t('contractLines.configuration.fixedInfo', {
+                                      defaultValue: 'Fixed contract lines bill a flat recurring fee regardless of individual service rates.',
+                                    })}
                                   </p>
                                   <Alert variant="info">
                                     <AlertDescription className="text-xs">
-                                      <strong>About service rates below:</strong> For fixed fee lines, the service rate and quantity
-                                      are used only for <em>tax allocation</em> purposes — they determine how the fixed fee is
-                                      proportionally attributed across services for tax calculations. The actual billed amount
-                                      is the contract line's base rate shown above.
+                                      <strong>
+                                        {t('contractLines.configuration.fixedInfoHeading', {
+                                          defaultValue: 'About service rates below:',
+                                        })}
+                                      </strong>{' '}
+                                      {t('contractLines.configuration.fixedInfoDetails', {
+                                        defaultValue: 'For fixed fee lines, the service rate and quantity are used only for tax allocation purposes. They determine how the fixed fee is proportionally attributed across services for tax calculations. The actual billed amount is the contract line\'s base rate shown above.',
+                                      })}
                                     </AlertDescription>
                                   </Alert>
                                 </div>
@@ -799,7 +843,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                               {line.contract_line_type === 'Usage' && (
                                 <div className="col-span-2">
                                   <p className="text-sm text-muted-foreground">
-                                    Usage-based contract lines are configured per service with unit rates.
+                                    {t('contractLines.configuration.usageInfo', {
+                                      defaultValue: 'Usage-based contract lines are configured per service with unit rates.',
+                                    })}
                                   </p>
                                 </div>
                               )}
@@ -809,11 +855,18 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                           {/* Services List Section */}
                           <div>
                             <h4 className="text-sm font-medium text-[rgb(var(--color-text-700))] mb-3">
-                              Services ({services.filter(s => s.configuration.configuration_type !== 'Bucket').length})
+                              {t('contractLines.services.title', {
+                                count: services.filter(s => s.configuration.configuration_type !== 'Bucket').length,
+                                defaultValue: 'Services ({{count}})',
+                              })}
                             </h4>
                             {services.filter(s => s.configuration.configuration_type !== 'Bucket').length === 0 ? (
                               <div className="text-center py-8 text-muted-foreground bg-muted rounded-lg border border-[rgb(var(--color-border-200))]">
-                                <p className="text-sm">No services configured for this contract line.</p>
+                                <p className="text-sm">
+                                  {t('contractLines.services.empty', {
+                                    defaultValue: 'No services configured for this contract line.',
+                                  })}
+                                </p>
                               </div>
                             ) : (
                               <div className="space-y-3">
@@ -834,12 +887,20 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                               {serviceConfig.service.service_name}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
-                                              {serviceConfig.configuration.configuration_type} Service
+                                              {t('contractLines.services.typeLabel', {
+                                                defaultValue: '{{type}} Service',
+                                                type: formatContractLineType(serviceConfig.configuration.configuration_type),
+                                              })}
                                             </p>
                                           </div>
                                           {serviceConfig.configuration.configuration_type !== 'Hourly' && (
                                             <Badge className="bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] border-[rgb(var(--color-primary-200))]">
-                                              Qty: {isEditing ? (editData.quantity ?? serviceConfig.configuration.quantity ?? 1) : (serviceConfig.configuration.quantity || 1)}
+                                              {t('contractLines.services.quantityShort', {
+                                                defaultValue: 'Qty: {{quantity}}',
+                                                quantity: isEditing
+                                                  ? (editData.quantity ?? serviceConfig.configuration.quantity ?? 1)
+                                                  : (serviceConfig.configuration.quantity || 1),
+                                              })}
                                             </Badge>
                                           )}
                                         </div>
@@ -850,7 +911,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                         {serviceConfig.configuration.configuration_type !== 'Hourly' && (
                                           <div>
                                             <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                              {line.contract_line_type === 'Fixed' ? 'Quantity (for tax allocation)' : 'Quantity'}
+                                              {line.contract_line_type === 'Fixed'
+                                                ? t('contractLines.services.quantityTaxAllocation', {
+                                                  defaultValue: 'Quantity (for tax allocation)',
+                                                })
+                                                : t('contractLines.services.quantity', { defaultValue: 'Quantity' })}
                                             </Label>
                                             {isEditing ? (
                                               <Input
@@ -878,9 +943,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                         {/* Rate field - varies by type */}
                                         <div>
                                           <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                            {serviceConfig.configuration.configuration_type === 'Hourly' ? 'Hourly Rate' :
-                                             serviceConfig.configuration.configuration_type === 'Usage' ? 'Unit Rate' :
-                                             'Rate (for tax allocation)'}
+                                            {serviceConfig.configuration.configuration_type === 'Hourly'
+                                              ? t('contractLines.services.hourlyRate', { defaultValue: 'Hourly Rate' })
+                                              : serviceConfig.configuration.configuration_type === 'Usage'
+                                              ? t('contractLines.services.unitRate', { defaultValue: 'Unit Rate' })
+                                              : t('contractLines.services.rateTaxAllocation', { defaultValue: 'Rate (for tax allocation)' })}
                                           </Label>
                                           {isEditing ? (
                                             <div className="relative mt-1">
@@ -929,7 +996,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                         {serviceConfig.configuration.configuration_type === 'Usage' && (
                                           <div>
                                             <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                              Unit of Measure
+                                              {t('contractLines.services.unitOfMeasure', { defaultValue: 'Unit of Measure' })}
                                             </Label>
                                             {isEditing ? (
                                               <Input
@@ -943,12 +1010,13 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                                     unit_of_measure: e.target.value
                                                   }
                                                 })}
-                                                placeholder="unit"
+                                                placeholder={t('contractLines.services.unitPlaceholder', { defaultValue: 'unit' })}
                                                 className="mt-1"
                                               />
                                             ) : (
                                               <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-                                                {serviceConfig.typeConfig?.unit_of_measure || 'unit'}
+                                                {serviceConfig.typeConfig?.unit_of_measure
+                                                  || t('contractLines.services.unitPlaceholder', { defaultValue: 'unit' })}
                                               </p>
                                             )}
                                           </div>
@@ -959,7 +1027,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                       {isEditing && (serviceConfig.configuration.configuration_type === 'Hourly' || serviceConfig.configuration.configuration_type === 'Usage') && (
                                         <div className="col-span-2 pt-4 border-t border-dashed border-[rgb(var(--color-border-200))]">
                                           <SwitchWithLabel
-                                            label="Enable bucket usage tracking"
+                                            label={t('contractLines.bucket.enableTracking', {
+                                              defaultValue: 'Enable bucket usage tracking',
+                                            })}
                                             checked={Boolean(editBucketConfigs[serviceConfig.service.service_id])}
                                             onCheckedChange={(checked) => {
                                               const serviceId = serviceConfig.service.service_id;
@@ -1006,19 +1076,52 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                       {!isEditing && serviceConfig.bucketConfig && (
                                         <div className="col-span-2 pt-4 border-t border-dashed border-[rgb(var(--color-border-200))]">
                                           <div className="rounded-md border border-primary-100 bg-primary-50 p-4">
-                                            <p className="text-sm font-medium text-primary-900 mb-2">Bucket Configuration</p>
+                                            <p className="text-sm font-medium text-primary-900 mb-2">
+                                              {t('contractLines.bucket.title', { defaultValue: 'Bucket Configuration' })}
+                                            </p>
                                             <div className="text-sm text-primary-800 space-y-1">
                                               {serviceConfig.bucketConfig.total_minutes && (
-                                                <p>Included: {serviceConfig.configuration.configuration_type === 'Hourly' ? `${(serviceConfig.bucketConfig.total_minutes / 60).toFixed(2)} hours` : `${serviceConfig.bucketConfig.total_minutes} ${serviceConfig.typeConfig?.unit_of_measure || 'units'}`}</p>
+                                                <p>
+                                                  {t('contractLines.bucket.included', {
+                                                    defaultValue: 'Included: {{value}}',
+                                                    value: serviceConfig.configuration.configuration_type === 'Hourly'
+                                                      ? t('contractLines.bucket.hoursValue', {
+                                                        defaultValue: '{{hours}} hours',
+                                                        hours: (serviceConfig.bucketConfig.total_minutes / 60).toFixed(2),
+                                                      })
+                                                      : t('contractLines.bucket.unitsValue', {
+                                                        defaultValue: '{{count}} {{units}}',
+                                                        count: serviceConfig.bucketConfig.total_minutes,
+                                                        units: serviceConfig.typeConfig?.unit_of_measure || t('contractLines.bucket.defaultUnits', { defaultValue: 'units' }),
+                                                      }),
+                                                  })}
+                                                </p>
                                               )}
                                               {serviceConfig.bucketConfig.overage_rate && (
-                                                <p>Overage Rate: {formatRate(serviceConfig.bucketConfig.overage_rate)} per {serviceConfig.configuration.configuration_type === 'Hourly' ? 'hour' : serviceConfig.typeConfig?.unit_of_measure || 'unit'}</p>
+                                                <p>
+                                                  {t('contractLines.bucket.overageRate', {
+                                                    defaultValue: 'Overage Rate: {{rate}} per {{unit}}',
+                                                    rate: formatRate(serviceConfig.bucketConfig.overage_rate),
+                                                    unit: serviceConfig.configuration.configuration_type === 'Hourly'
+                                                      ? t('contractLines.bucket.hour', { defaultValue: 'hour' })
+                                                      : serviceConfig.typeConfig?.unit_of_measure || t('contractLines.bucket.defaultUnit', { defaultValue: 'unit' }),
+                                                  })}
+                                                </p>
                                               )}
                                               {serviceConfig.bucketConfig.billing_period && (
-                                                <p>Billing Period: {serviceConfig.bucketConfig.billing_period}</p>
+                                                <p>
+                                                  {t('contractLines.bucket.billingPeriod', {
+                                                    defaultValue: 'Billing Period: {{period}}',
+                                                    period: formatBillingFrequency(serviceConfig.bucketConfig.billing_period),
+                                                  })}
+                                                </p>
                                               )}
                                               {serviceConfig.bucketConfig.allow_rollover && (
-                                                <p>Rollover: Enabled</p>
+                                                <p>
+                                                  {t('contractLines.bucket.rolloverEnabled', {
+                                                    defaultValue: 'Rollover: Enabled',
+                                                  })}
+                                                </p>
                                               )}
                                             </div>
                                           </div>

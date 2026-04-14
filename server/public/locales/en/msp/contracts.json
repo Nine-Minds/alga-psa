@@ -374,6 +374,19 @@
       "createCustom": "Create Custom",
       "expandLine": "Expand contract line"
     },
+    "bucket": {
+      "billingPeriod": "Billing Period: {{period}}",
+      "defaultUnit": "unit",
+      "defaultUnits": "units",
+      "enableTracking": "Enable bucket usage tracking",
+      "hour": "hour",
+      "hoursValue": "{{hours}} hours",
+      "included": "Included: {{value}}",
+      "overageRate": "Overage Rate: {{rate}} per {{unit}}",
+      "rolloverEnabled": "Rollover: Enabled",
+      "title": "Bucket Configuration",
+      "unitsValue": "{{count}} {{units}}"
+    },
     "columns": {
       "actions": "Actions",
       "frequency": "Frequency",
@@ -382,20 +395,56 @@
       "services": "Services",
       "type": "Type"
     },
+    "configuration": {
+      "description": "Settings that apply to this contract line",
+      "fixedInfo": "Fixed contract lines bill a flat recurring fee regardless of individual service rates.",
+      "fixedInfoDetails": "For fixed fee lines, the service rate and quantity are used only for tax allocation purposes. They determine how the fixed fee is proportionally attributed across services for tax calculations. The actual billed amount is the contract line's base rate shown above.",
+      "fixedInfoHeading": "About service rates below:",
+      "minimumBillableTime": "Minimum Billable Time (minutes)",
+      "minutesValue": "{{count}} minutes",
+      "roundUpToNearest": "Round Up To Nearest (minutes)",
+      "title": "Contract Line Configuration",
+      "usageInfo": "Usage-based contract lines are configured per service with unit rates."
+    },
     "customRate": "Custom",
     "description": {
       "default": "Manage the contract lines and services for this contract",
       "readOnly": "This system-managed default contract is attribution-only. Contract line authoring is disabled."
     },
+    "dialogs": {
+      "confirmRemove": "Remove contract line \"{{name}}\"?"
+    },
     "empty": {
       "noneAdded": "No contract lines added yet.",
       "selectAbove": "Select a contract line above to get started."
     },
+    "errors": {
+      "cannotEditWithInvoices": "Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated.",
+      "failedToCheckEditable": "Failed to check if contract can be edited",
+      "failedToLoad": "Failed to load contract lines",
+      "failedToRefresh": "Failed to refresh contract lines",
+      "failedToRemove": "Failed to remove contract line",
+      "failedToUpdate": "Failed to update contract line"
+    },
     "loading": {
-      "contractLines": "Loading contract lines"
+      "contractLines": "Loading contract lines",
+      "inline": "Loading..."
     },
     "serviceCountPlural": "{{count}} services",
     "serviceCountSingle": "{{count}} service",
+    "services": {
+      "empty": "No services configured for this contract line.",
+      "hourlyRate": "Hourly Rate",
+      "quantity": "Quantity",
+      "quantityShort": "Qty: {{quantity}}",
+      "quantityTaxAllocation": "Quantity (for tax allocation)",
+      "rateTaxAllocation": "Rate (for tax allocation)",
+      "title": "Services ({{count}})",
+      "typeLabel": "{{type}} Service",
+      "unitOfMeasure": "Unit of Measure",
+      "unitPlaceholder": "unit",
+      "unitRate": "Unit Rate"
+    },
     "title": "Contract Lines"
   },
   "contractLineEdit": {},

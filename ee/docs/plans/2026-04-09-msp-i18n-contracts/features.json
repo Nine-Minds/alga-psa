@@ -127,7 +127,7 @@
   {
     "id": "F026",
     "description": "Wire useTranslation('msp/contracts') in ContractLines.tsx -- translate inline edit fields (rate, cadence owner, billing timing), service configuration details, bucket overlay display, save/cancel controls, delete confirmation, and loading/error states",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F027",
