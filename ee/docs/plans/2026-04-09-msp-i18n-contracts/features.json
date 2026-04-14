@@ -152,7 +152,7 @@
   {
     "id": "F031",
     "description": "Wire useTranslation('msp/contracts') in Contracts.tsx -- translate row action menus (View, Edit, Delete, Resume Draft, Discard Draft), status badges, confirmation dialogs (delete contract, discard draft), and toast messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F032",

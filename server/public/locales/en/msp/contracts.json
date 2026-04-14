@@ -605,18 +605,62 @@
   "pricingSchedules": {},
   "contractsList": {
     "actions": {
+      "deleting": "Deleting…",
       "createContract": "Create Contract",
       "createTemplate": "Create Template",
+      "openMenu": "Open menu",
       "quickAdd": "Quick Add"
+      ,
+      "resume": "Resume",
+      "restore": "Restore",
+      "setToActive": "Set to Active",
+      "terminate": "Terminate"
+    },
+    "columns": {
+      "actions": "Actions",
+      "client": "Client",
+      "contractName": "Contract Name",
+      "created": "Created",
+      "description": "Description",
+      "endDate": "End Date",
+      "lastModified": "Last Modified",
+      "sourceTemplate": "Source Template",
+      "startDate": "Start Date",
+      "status": "Status"
+    },
+    "dialogs": {
+      "deleteClient": {
+        "clientSuffix": " for {{clientName}}",
+        "message": "Are you sure you want to permanently delete the client contract \"{{contractName}}\"{{clientSuffix}}? This action cannot be undone.",
+        "title": "Delete client contract?"
+      },
+      "deleteTemplate": {
+        "message": "Are you sure you want to permanently delete the template \"{{contractName}}\"? This action cannot be undone.",
+        "title": "Delete contract template?"
+      },
+      "discardDraft": {
+        "message": "This will permanently delete the draft \"{{contractName}}\" for {{clientName}}.\nThis action cannot be undone.",
+        "title": "Discard Draft Contract?"
+      }
     },
     "drafts": {
       "badgeCount": "{{count}} draft contracts"
     },
     "empty": {
-      "noDrafts": "No draft contracts. Start creating a new contract to save as draft."
+      "dash": "—",
+      "noDescription": "No description",
+      "noDrafts": "No draft contracts. Start creating a new contract to save as draft.",
+      "unknownClient": "Unknown client",
+      "untitledContract": "Untitled contract",
+      "untitledDraft": "Untitled draft",
+      "untitledTemplate": "Untitled template"
     },
     "errors": {
       "failedToFetch": "Failed to fetch contracts"
+    },
+    "heading": {
+      "description": "Templates are reusable definitions. Client contracts are client-owned instances.",
+      "title": "Contracts"
     },
     "loading": {
       "contracts": "Loading contracts..."
@@ -628,6 +672,19 @@
       "draftsPlaceholder": "Search drafts...",
       "templatesAriaLabel": "Search contract templates",
       "templatesPlaceholder": "Search templates..."
+    },
+    "status": {
+      "archived": "Archived",
+      "published": "Published"
+    },
+    "toasts": {
+      "draftDiscarded": "Draft discarded",
+      "failedToActivateContract": "Failed to activate contract",
+      "failedToDeleteContract": "Failed to delete contract",
+      "failedToDiscardDraft": "Failed to discard draft",
+      "failedToRestoreContract": "Failed to restore contract",
+      "failedToResumeDraft": "Failed to resume draft",
+      "failedToTerminateContract": "Failed to terminate contract"
     }
   },
   "clientContracts": {},
