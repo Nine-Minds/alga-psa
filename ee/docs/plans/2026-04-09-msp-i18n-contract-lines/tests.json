@@ -402,7 +402,7 @@
   {
     "id": "T051",
     "description": "validate-translations.cjs passes with zero errors for the msp/contract-lines namespace across all locales",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
