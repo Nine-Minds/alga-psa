@@ -130,7 +130,7 @@
   {
     "id": "T017",
     "description": "UsageContractLinePresetConfiguration.tsx: save/validation error messages ('No changes detected to save', 'Cannot save, validation errors exist') are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]
