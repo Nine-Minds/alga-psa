@@ -132,7 +132,7 @@
   {
     "id": "F027",
     "description": "ContractLinesOverview.tsx: Wire useTranslation and translate page heading ('Contract Line Presets'), 'Add Contract Line Preset' button, table column headers ('Contract Line Name', 'Billing Frequency', 'Contract Line Type', 'Actions'), action menu items ('Edit', 'Delete'), screen reader text ('Open menu')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F028",
