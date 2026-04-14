@@ -58,9 +58,7 @@ function renderAvailabilityCard(availability: Extract<TeamsAvailability, { enabl
   return (
     <Card className="m-6 p-6 text-sm text-gray-700">
       <div className="space-y-2">
-        <h1 className="text-lg font-semibold text-gray-900">
-          {availability.reason === 'flag_disabled' ? 'Teams integration disabled' : 'Teams tab unavailable'}
-        </h1>
+        <h1 className="text-lg font-semibold text-gray-900">Teams tab unavailable</h1>
         <p>{availability.message}</p>
         <p>Ask a PSA administrator to enable Teams for this tenant before reopening the personal tab.</p>
       </div>

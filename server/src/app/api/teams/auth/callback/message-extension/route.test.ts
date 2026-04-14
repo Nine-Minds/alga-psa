@@ -115,21 +115,4 @@ describe('GET /api/teams/auth/callback/message-extension', () => {
     await expect(forbiddenResponse.text()).resolves.toContain('This Teams tab request does not match your PSA tenant.');
   });
 
-  it('T133: returns a disabled payload when the tenant flag is off before resolving Teams auth state', async () => {
-    getTeamsAvailabilityMock.mockResolvedValue({
-      enabled: false,
-      reason: 'flag_disabled',
-      flagKey: 'teams-integration-ui',
-      message: 'Microsoft Teams integration is disabled for this tenant.',
-    });
-
-    const response = await GET(
-      new Request('https://example.com/api/teams/auth/callback/message-extension?tenantId=tenant-1') as any
-    );
-
-    expect(response.status).toBe(200);
-    await expect(response.text()).resolves.toContain('"status":"disabled"');
-    await expect(response.text()).resolves.toContain('Microsoft Teams integration is disabled for this tenant.');
-    expect(resolveTeamsTabAuthStateMock).not.toHaveBeenCalled();
-  });
 });

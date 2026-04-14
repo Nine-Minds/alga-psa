@@ -131,22 +131,4 @@ describe('GET /api/teams/auth/callback/bot', () => {
     await expect(response.text()).resolves.toContain('"status":"not_configured"');
     await expect(response.text()).resolves.toContain('Teams is not configured for this tenant');
   });
-
-  it('T071/T123: returns a disabled payload when the Teams flag is off for the tenant', async () => {
-    getTeamsAvailabilityMock.mockResolvedValue({
-      enabled: false,
-      reason: 'flag_disabled',
-      flagKey: 'teams-integration-ui',
-      message: 'Microsoft Teams integration is disabled for this tenant.',
-    });
-
-    const response = await GET(
-      new Request('https://example.com/api/teams/auth/callback/bot?tenantId=tenant-1') as any
-    );
-
-    expect(response.status).toBe(200);
-    await expect(response.text()).resolves.toContain('"status":"disabled"');
-    await expect(response.text()).resolves.toContain('Microsoft Teams integration is disabled for this tenant.');
-    expect(resolveTeamsTabAuthStateMock).not.toHaveBeenCalled();
-  });
 });

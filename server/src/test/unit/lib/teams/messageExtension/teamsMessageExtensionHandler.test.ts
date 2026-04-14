@@ -4,7 +4,6 @@ import { TicketService } from 'server/src/lib/api/services/TicketService';
 import { ContactService } from 'server/src/lib/api/services/ContactService';
 import {
   handleTeamsMessageExtensionActivity,
-  handleTeamsMessageExtensionRequest,
   type TeamsMessageExtensionActivity,
 } from '../../../../../../../ee/server/src/lib/teams/messageExtension/teamsMessageExtensionHandler';
 
@@ -1712,27 +1711,4 @@ describe('teamsMessageExtensionHandler', () => {
     });
   });
 
-  it('T133/T134: request handling returns a stable disabled response when Teams message extensions are gated off', async () => {
-    getTeamsRuntimeAvailabilityMock.mockResolvedValue({
-      enabled: false,
-      reason: 'flag_disabled',
-      flagKey: 'teams-integration-ui',
-      message: 'Microsoft Teams integration is disabled for this tenant.',
-    });
-
-    const response = await handleTeamsMessageExtensionRequest(
-      new Request('https://example.test/api/teams/message-extension/query?tenantId=tenant-1', {
-        method: 'POST',
-        body: JSON.stringify(buildActivity()),
-      })
-    );
-    const payload = await response.json();
-
-    expect(response.status).toBe(404);
-    expect(payload).toEqual({
-      success: false,
-      error: 'Microsoft Teams integration is disabled for this tenant.',
-      reason: 'flag_disabled',
-    });
-  });
 });
