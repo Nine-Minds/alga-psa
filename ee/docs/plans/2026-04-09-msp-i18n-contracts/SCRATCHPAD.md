@@ -155,3 +155,7 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Added explicit translated empty states for template/client/draft filtered views (`noTemplates`, `noClientContracts`, `noDraftMatches`) so each sub-tab has user-visible empty-copy coverage.
 - **(2026-04-14)** Expanded `contractsList.columns|heading|empty` keys in `server/public/locales/en/msp/contracts.json`.
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/Contracts.tsx` (pass; warnings only), `jq empty server/public/locales/en/msp/contracts.json` (pass).
+- **(2026-04-14)** `F033` completed in `ClientContractsTab.tsx`: wired `useTranslation('msp/contracts')`, localized client-contract table headers (including added billing-frequency + PO indicator columns), status badges, search placeholder/aria labels, row action menu labels, and related fallback/toast copy.
+- **(2026-04-14)** Added a localized terminate confirmation dialog flow (`contractToTerminate` state + `ConfirmationDialog`) so terminate is explicitly confirmed before mutation.
+- **(2026-04-14)** Expanded `clientContracts.*` keys in `server/public/locales/en/msp/contracts.json` (columns, search, dialogs, toasts, PO labels, upcoming-renewals labels/statuses/actions/window options).
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx` (pass; warnings only) and `jq empty server/public/locales/en/msp/contracts.json` (pass).

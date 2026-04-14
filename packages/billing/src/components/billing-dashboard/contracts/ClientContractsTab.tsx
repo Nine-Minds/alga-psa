@@ -41,6 +41,8 @@ import { ContractWizard } from './ContractWizard';
 import { ContractDialog } from './ContractDialog';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 interface ClientContractsTabProps {
   onRefreshNeeded?: () => void;
@@ -70,6 +72,8 @@ const toWidgetRenewalRows = (rows: RenewalQueueRow[]): RenewalQueueRow[] =>
   rows.filter((row) => row.contract_type === 'fixed-term' || row.contract_type === 'evergreen');
 
 const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded, refreshTrigger }) => {
+  const { t } = useTranslation('msp/contracts');
+  const formatBillingFrequency = useFormatBillingFrequency();
   const router = useRouter();
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
   const [renewalRows, setRenewalRows] = useState<RenewalQueueRow[]>([]);
@@ -87,7 +91,13 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     contractName: string;
     clientName?: string;
   } | null>(null);
+  const [contractToTerminate, setContractToTerminate] = useState<{
+    clientContractId: string;
+    contractName: string;
+    clientName?: string;
+  } | null>(null);
   const [isDeletingContract, setIsDeletingContract] = useState(false);
+  const [isTerminatingContract, setIsTerminatingContract] = useState(false);
 
   useEffect(() => {
     void fetchClientContracts();
@@ -121,7 +131,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       setError(null);
     } catch (err) {
       console.error('Error fetching client contracts:', err);
-      setError('Failed to fetch client contracts');
+      setError(t('clientContracts.errors.failedToFetch', { defaultValue: 'Failed to fetch client contracts' }));
     } finally {
       setIsLoading(false);
     }
@@ -141,7 +151,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       onRefreshNeeded?.();
       setContractToDelete(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete contract';
+      const message = err instanceof Error
+        ? err.message
+        : t('clientContracts.toasts.failedToDelete', { defaultValue: 'Failed to delete contract' });
       toast.error(message);
     } finally {
       setIsDeletingContract(false);
@@ -149,6 +161,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
   };
 
   const handleTerminateContract = async (clientContractId?: string) => {
+    setIsTerminatingContract(true);
     try {
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
@@ -156,9 +169,14 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       await updateClientContractForBilling(clientContractId, { is_active: false });
       await fetchClientContracts();
       onRefreshNeeded?.();
+      setContractToTerminate(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to terminate contract';
+      const message = err instanceof Error
+        ? err.message
+        : t('clientContracts.toasts.failedToTerminate', { defaultValue: 'Failed to terminate contract' });
       toast.error(message);
+    } finally {
+      setIsTerminatingContract(false);
     }
   };
 
@@ -171,7 +189,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       await fetchClientContracts();
       onRefreshNeeded?.();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to restore contract';
+      const message = err instanceof Error
+        ? err.message
+        : t('clientContracts.toasts.failedToRestore', { defaultValue: 'Failed to restore contract' });
       toast.error(message);
     }
   };
@@ -185,7 +205,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       await fetchClientContracts();
       onRefreshNeeded?.();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to activate contract';
+      const message = err instanceof Error
+        ? err.message
+        : t('clientContracts.toasts.failedToActivate', { defaultValue: 'Failed to activate contract' });
       toast.error(message);
     }
   };
@@ -201,7 +223,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       setDraftToResume(draftData);
       setShowClientWizard(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to resume draft';
+      const message = err instanceof Error
+        ? err.message
+        : t('clientContracts.toasts.failedToResumeDraft', { defaultValue: 'Failed to resume draft' });
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -228,21 +252,21 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
   const renderStatusBadge = (status: string) => {
     const normalized = (status || 'draft').toLowerCase();
     const statusConfig: Record<string, { variant: 'success' | 'default-muted' | 'warning' | 'error' | 'info'; label: string }> = {
-      active: { variant: 'success', label: 'Active' },
-      draft: { variant: 'default-muted', label: 'Draft' },
-      terminated: { variant: 'warning', label: 'Terminated' },
-      expired: { variant: 'error', label: 'Expired' },
-      published: { variant: 'success', label: 'Published' },
-      archived: { variant: 'default-muted', label: 'Archived' },
+      active: { variant: 'success', label: t('status.active', { defaultValue: 'Active' }) },
+      draft: { variant: 'default-muted', label: t('status.draft', { defaultValue: 'Draft' }) },
+      terminated: { variant: 'warning', label: t('status.terminated', { defaultValue: 'Terminated' }) },
+      expired: { variant: 'error', label: t('status.expired', { defaultValue: 'Expired' }) },
+      published: { variant: 'success', label: t('contractsList.status.published', { defaultValue: 'Published' }) },
+      archived: { variant: 'default-muted', label: t('contractsList.status.archived', { defaultValue: 'Archived' }) },
     };
     const config = statusConfig[normalized] ?? statusConfig.draft;
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
   const formatDateValue = (value: unknown): string => {
-    if (!value) return '—';
+    if (!value) return t('contractsList.empty.dash', { defaultValue: '—' });
     if (!(typeof value === 'string' || typeof value === 'number' || value instanceof Date)) {
-      return '—';
+      return t('contractsList.empty.dash', { defaultValue: '—' });
     }
 
     // Treat YYYY-MM-DD as a date-only value to avoid timezone shifts.
@@ -253,40 +277,48 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
         const month = Number(dateOnlyMatch[2]);
         const day = Number(dateOnlyMatch[3]);
         const dateOnly = new Date(Date.UTC(year, month - 1, day, 12));
-        return isNaN(dateOnly.getTime()) ? '—' : dateOnly.toLocaleDateString();
+        return isNaN(dateOnly.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : dateOnly.toLocaleDateString();
       }
     }
 
     const date = new Date(value);
-    return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+    return isNaN(date.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : date.toLocaleDateString();
   };
 
   const clientContractColumns: ColumnDefinition<IContractWithClient>[] = [
     {
-      title: 'Client',
+      title: t('clientContracts.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
       render: (value: string | null) =>
-        typeof value === 'string' && value.trim().length > 0 ? value : '—',
+        typeof value === 'string' && value.trim().length > 0
+          ? value
+          : t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
-      title: 'Source Template',
+      title: t('clientContracts.columns.sourceTemplate', { defaultValue: 'Source Template' }),
       dataIndex: 'template_contract_name',
       render: (value: string | null) =>
-        value && value.trim().length > 0 ? value : '—',
+        value && value.trim().length > 0 ? value : t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
-      title: 'Contract Name',
+      title: t('clientContracts.columns.contractName', { defaultValue: 'Contract Name' }),
       dataIndex: 'contract_name',
       render: (value: string | null, record) => {
         const hasName = typeof value === 'string' && value.trim().length > 0;
         const isSystemManagedDefault = record.is_system_managed_default === true;
         return (
           <div className="space-y-1">
-            <span>{hasName ? value : '—'}</span>
+            <span>{hasName ? value : t('contractsList.empty.dash', { defaultValue: '—' })}</span>
             {isSystemManagedDefault ? (
               <>
-                <Badge variant="info">System-managed default</Badge>
-                <p className="text-xs text-muted-foreground">Attribution-only. Created automatically for uncontracted work.</p>
+                <Badge variant="info">
+                  {t('contractDetail.systemManaged.title', { defaultValue: 'System-managed default contract' })}
+                </Badge>
+                <p className="text-xs text-muted-foreground">
+                  {t('contractDetail.systemManaged.createdAutomatically', {
+                    defaultValue: 'Created automatically for uncontracted work.',
+                  })}
+                </p>
               </>
             ) : null}
           </div>
@@ -294,22 +326,36 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       },
     },
     {
-      title: 'Start Date',
+      title: t('clientContracts.columns.startDate', { defaultValue: 'Start Date' }),
       dataIndex: 'start_date',
       render: (value: unknown) => formatDateValue(value),
     },
     {
-      title: 'End Date',
+      title: t('clientContracts.columns.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
       render: (value: unknown) => formatDateValue(value),
     },
     {
-      title: 'Status',
+      title: t('clientContracts.columns.billingFrequency', { defaultValue: 'Billing Frequency' }),
+      dataIndex: 'billing_frequency',
+      render: (value: string | null, record) => formatBillingFrequency(value ?? record.billing_frequency),
+    },
+    {
+      title: t('clientContracts.columns.poIndicator', { defaultValue: 'PO' }),
+      dataIndex: 'contract_id',
+      render: (_: string, record) => (
+        (record as any).po_required
+          ? t('clientContracts.po.required', { defaultValue: 'Required' })
+          : t('clientContracts.po.notRequired', { defaultValue: 'Not required' })
+      ),
+    },
+    {
+      title: t('clientContracts.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'assignment_status',
       render: (value: string | null, record) => renderStatusBadge(value ?? record.status),
     },
     {
-      title: 'Actions',
+      title: t('clientContracts.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'contract_id',
       render: (value, record) => {
         const isSystemManagedDefault = record.is_system_managed_default === true;
@@ -322,7 +368,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                 className="h-8 w-8 p-0"
                 onClick={(event) => event.stopPropagation()}
               >
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">
+                  {t('contractsList.actions.openMenu', { defaultValue: 'Open menu' })}
+                </span>
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -339,7 +387,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                   navigateToContract(record.contract_id, record.client_contract_id);
                 }}
               >
-                {(record.assignment_status ?? record.status) === 'draft' && !isSystemManagedDefault ? 'Resume' : 'View details'}
+                {(record.assignment_status ?? record.status) === 'draft' && !isSystemManagedDefault
+                  ? t('contractsList.actions.resume', { defaultValue: 'Resume' })
+                  : t('clientContracts.actions.viewDetails', { defaultValue: 'View details' })}
               </DropdownMenuItem>
               {!isSystemManagedDefault && (record.assignment_status ?? record.status) === 'active' && (
                 <DropdownMenuItem
@@ -347,10 +397,16 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                   className="text-orange-600 focus:text-orange-600"
                   onClick={(event) => {
                     event.stopPropagation();
-                    void handleTerminateContract(record.client_contract_id);
+                    if (!record.client_contract_id) return;
+                    setContractToTerminate({
+                      clientContractId: record.client_contract_id,
+                      contractName: record.contract_name?.trim()
+                        || t('contractsList.empty.untitledContract', { defaultValue: 'Untitled contract' }),
+                      clientName: record.client_name?.trim() || undefined,
+                    });
                   }}
                 >
-                  Terminate
+                  {t('contractsList.actions.terminate', { defaultValue: 'Terminate' })}
                 </DropdownMenuItem>
               )}
               {!isSystemManagedDefault && (record.assignment_status ?? record.status) === 'terminated' && (
@@ -362,7 +418,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                     void handleRestoreContract(record.client_contract_id);
                   }}
                 >
-                  Restore
+                  {t('contractsList.actions.restore', { defaultValue: 'Restore' })}
                 </DropdownMenuItem>
               )}
               {!isSystemManagedDefault && (record.assignment_status ?? record.status) === 'draft' && (
@@ -374,7 +430,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                     void handleSetToActive(record.client_contract_id);
                   }}
                 >
-                  Set to Active
+                  {t('contractsList.actions.setToActive', { defaultValue: 'Set to Active' })}
                 </DropdownMenuItem>
               )}
               {!isSystemManagedDefault ? (
@@ -386,13 +442,14 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                     if (record.contract_id) {
                       setContractToDelete({
                         contractId: record.contract_id,
-                        contractName: record.contract_name?.trim() || 'Untitled contract',
+                        contractName: record.contract_name?.trim()
+                          || t('contractsList.empty.untitledContract', { defaultValue: 'Untitled contract' }),
                         clientName: record.client_name?.trim() || undefined,
                       });
                     }
                   }}
                 >
-                  Delete
+                  {t('common.actions.delete', { defaultValue: 'Delete' })}
                 </DropdownMenuItem>
               ) : null}
             </DropdownMenuContent>
@@ -414,11 +471,19 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     );
   });
   const renderRenewalStatusBadge = (status: RenewalQueueRow['status']) => {
-    if (status === 'renewing') return <Badge variant="success">Renewing</Badge>;
-    if (status === 'non_renewing') return <Badge variant="warning">Non-renewing</Badge>;
-    if (status === 'snoozed') return <Badge variant="info">Snoozed</Badge>;
-    if (status === 'completed') return <Badge variant="default-muted">Completed</Badge>;
-    return <Badge variant="default">Pending</Badge>;
+    if (status === 'renewing') {
+      return <Badge variant="success">{t('clientContracts.upcoming.status.renewing', { defaultValue: 'Renewing' })}</Badge>;
+    }
+    if (status === 'non_renewing') {
+      return <Badge variant="warning">{t('clientContracts.upcoming.status.nonRenewing', { defaultValue: 'Non-renewing' })}</Badge>;
+    }
+    if (status === 'snoozed') {
+      return <Badge variant="info">{t('clientContracts.upcoming.status.snoozed', { defaultValue: 'Snoozed' })}</Badge>;
+    }
+    if (status === 'completed') {
+      return <Badge variant="default-muted">{t('clientContracts.upcoming.status.completed', { defaultValue: 'Completed' })}</Badge>;
+    }
+    return <Badge variant="default">{t('clientContracts.upcoming.status.pending', { defaultValue: 'Pending' })}</Badge>;
   };
 
   const handleMarkRenewalRowRenewing = async (row: RenewalQueueRow) => {
@@ -441,7 +506,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       await refreshRenewalRows();
       onRefreshNeeded?.();
     } catch (mutationError) {
-      const message = mutationError instanceof Error ? mutationError.message : 'Failed to mark renewal as renewing';
+      const message = mutationError instanceof Error
+        ? mutationError.message
+        : t('clientContracts.toasts.failedToMarkRenewing', { defaultValue: 'Failed to mark renewal as renewing' });
       toast.error(message);
       await refreshRenewalRows();
     } finally {
@@ -469,7 +536,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       await refreshRenewalRows();
       onRefreshNeeded?.();
     } catch (mutationError) {
-      const message = mutationError instanceof Error ? mutationError.message : 'Failed to mark renewal as non-renewing';
+      const message = mutationError instanceof Error
+        ? mutationError.message
+        : t('clientContracts.toasts.failedToMarkNonRenewing', { defaultValue: 'Failed to mark renewal as non-renewing' });
       toast.error(message);
       await refreshRenewalRows();
     } finally {
@@ -479,43 +548,46 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
 
   const upcomingRenewalColumns: ColumnDefinition<RenewalQueueRow>[] = [
     {
-      title: 'Client',
+      title: t('clientContracts.upcoming.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
       render: (value: string | null, record) =>
         typeof value === 'string' && value.trim().length > 0 ? value : record.client_id,
     },
     {
-      title: 'Contract',
+      title: t('clientContracts.upcoming.columns.contract', { defaultValue: 'Contract' }),
       dataIndex: 'contract_name',
       render: (value: string | null, record) =>
         typeof value === 'string' && value.trim().length > 0 ? value : record.contract_id,
     },
     {
-      title: 'Type',
+      title: t('clientContracts.upcoming.columns.type', { defaultValue: 'Type' }),
       dataIndex: 'contract_type',
       render: (value: RenewalQueueRow['contract_type']) => (
         <Badge variant={value === 'evergreen' ? 'info' : 'default'}>
-          {value === 'evergreen' ? 'Evergreen' : 'Fixed-term'}
+          {value === 'evergreen'
+            ? t('clientContracts.upcoming.type.evergreen', { defaultValue: 'Evergreen' })
+            : t('clientContracts.upcoming.type.fixedTerm', { defaultValue: 'Fixed-term' })}
         </Badge>
       ),
     },
     {
-      title: 'Decision Due',
+      title: t('clientContracts.upcoming.columns.decisionDue', { defaultValue: 'Decision Due' }),
       dataIndex: 'decision_due_date',
       render: (value: string | undefined) => formatDateValue(value),
     },
     {
-      title: 'Days Until Due',
+      title: t('clientContracts.upcoming.columns.daysUntilDue', { defaultValue: 'Days Until Due' }),
       dataIndex: 'days_until_due',
-      render: (value: number | undefined) => (typeof value === 'number' ? String(value) : '—'),
+      render: (value: number | undefined) =>
+        (typeof value === 'number' ? String(value) : t('contractsList.empty.dash', { defaultValue: '—' })),
     },
     {
-      title: 'Status',
+      title: t('clientContracts.upcoming.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       render: (value: RenewalQueueRow['status']) => renderRenewalStatusBadge(value),
     },
     {
-      title: 'Actions',
+      title: t('clientContracts.upcoming.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'client_contract_id',
       render: (_value: string, row: RenewalQueueRow) => {
         const hasMarkRenewing = row.available_actions.includes('mark_renewing');
@@ -523,7 +595,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
         const isPending = Boolean(pendingUpcomingRenewalActions[row.client_contract_id]);
 
         if (!hasMarkRenewing && !hasMarkNonRenewing) {
-          return <span className="text-[rgb(var(--color-text-400))]">—</span>;
+          return <span className="text-[rgb(var(--color-text-400))]">{t('contractsList.empty.dash', { defaultValue: '—' })}</span>;
         }
 
         return (
@@ -537,7 +609,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                 data-testid="upcoming-renewals-row-actions-trigger"
                 disabled={isPending}
               >
-                <span className="sr-only">Open renewal actions</span>
+                <span className="sr-only">
+                  {t('clientContracts.upcoming.actions.openMenu', { defaultValue: 'Open renewal actions' })}
+                </span>
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -549,7 +623,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                   navigateToContract(row.contract_id, row.client_contract_id);
                 }}
               >
-                Edit
+                {t('common.actions.edit', { defaultValue: 'Edit' })}
               </DropdownMenuItem>
               {hasMarkRenewing && (
                 <DropdownMenuItem
@@ -560,7 +634,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                     void handleMarkRenewalRowRenewing(row);
                   }}
                 >
-                  Mark renewing
+                  {t('clientContracts.upcoming.actions.markRenewing', { defaultValue: 'Mark renewing' })}
                 </DropdownMenuItem>
               )}
               {hasMarkNonRenewing && (
@@ -572,7 +646,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                     void handleMarkRenewalRowNonRenewing(row);
                   }}
                 >
-                  Mark non-renewing
+                  {t('clientContracts.upcoming.actions.markNonRenewing', { defaultValue: 'Mark non-renewing' })}
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -585,10 +659,10 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
   const totalUpcomingRenewals = renewalRows.length;
 
   const renewalBucketOptions: SelectOption[] = [
-    { value: '30', label: 'Next 30 days' },
-    { value: '60', label: 'Next 60 days' },
-    { value: '90', label: 'Next 90 days' },
-    { value: 'all', label: 'All' },
+    { value: '30', label: t('clientContracts.upcoming.window.next30', { defaultValue: 'Next 30 days' }) },
+    { value: '60', label: t('clientContracts.upcoming.window.next60', { defaultValue: 'Next 60 days' }) },
+    { value: '90', label: t('clientContracts.upcoming.window.next90', { defaultValue: 'Next 90 days' }) },
+    { value: 'all', label: t('clientContracts.upcoming.window.all', { defaultValue: 'All' }) },
   ];
 
   const filteredUpcomingRenewals = renewalRows.filter((row) => {
@@ -621,7 +695,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
             className="py-12 text-muted-foreground"
             layout="stacked"
             spinnerProps={{ size: 'md' }}
-            text="Loading client contracts..."
+            text={t('clientContracts.loading', { defaultValue: 'Loading client contracts...' })}
             textClassName="text-muted-foreground"
           />
         </Box>
@@ -652,10 +726,13 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
           >
             <TabsList className="mb-4">
               <TabsTrigger value="contracts" data-testid="client-contracts-tab-trigger">
-                Contracts
+                {t('clientContracts.tabs.contracts', { defaultValue: 'Contracts' })}
               </TabsTrigger>
               <TabsTrigger value="upcoming-renewals" data-testid="upcoming-renewals-tab-trigger">
-                Upcoming Renewals ({totalUpcomingRenewals})
+                {t('clientContracts.tabs.upcomingRenewals', {
+                  defaultValue: 'Upcoming Renewals ({{count}})',
+                  count: totalUpcomingRenewals,
+                })}
               </TabsTrigger>
             </TabsList>
 
@@ -668,11 +745,13 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                   />
                   <Input
                     type="text"
-                    placeholder="Search by client or contract..."
+                    placeholder={t('clientContracts.search.placeholder', {
+                      defaultValue: 'Search by client or contract...',
+                    })}
                     value={clientSearchTerm}
                     onChange={(event) => setClientSearchTerm(event.target.value)}
                     className="pl-10"
-                    aria-label="Search client contracts"
+                    aria-label={t('clientContracts.search.ariaLabel', { defaultValue: 'Search client contracts' })}
                   />
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -688,7 +767,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                         className="inline-flex items-center gap-2"
                       >
                         <Plus className="h-4 w-4" />
-                        Quick Add
+                        {t('contractsList.actions.quickAdd', { defaultValue: 'Quick Add' })}
                       </Button>
                     }
                   />
@@ -701,7 +780,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                     className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
                   >
                     <Wand2 className="h-4 w-4" />
-                    Create Contract
+                    {t('contractsList.actions.createContract', { defaultValue: 'Create Contract' })}
                   </Button>
                 </div>
               </div>
@@ -722,9 +801,13 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
               >
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <h3 className="text-sm font-semibold">Upcoming Renewals</h3>
+                    <h3 className="text-sm font-semibold">
+                      {t('clientContracts.upcoming.title', { defaultValue: 'Upcoming Renewals' })}
+                    </h3>
                     <p className="text-xs text-[rgb(var(--color-text-500))]">
-                      Contracts with renewal decisions due within the selected window.
+                      {t('clientContracts.upcoming.description', {
+                        defaultValue: 'Contracts with renewal decisions due within the selected window.',
+                      })}
                     </p>
                   </div>
                   <div
@@ -736,7 +819,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                       options={renewalBucketOptions}
                       value={renewalsWindow}
                       onValueChange={(value) => setRenewalsWindow(value as UpcomingRenewalWindow)}
-                      placeholder="Select renewal window"
+                      placeholder={t('clientContracts.upcoming.windowPlaceholder', {
+                        defaultValue: 'Select renewal window',
+                      })}
                     />
                   </div>
                 </div>
@@ -749,11 +834,15 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                 />
                 <Input
                   type="text"
-                  placeholder="Filter upcoming renewals..."
+                  placeholder={t('clientContracts.upcoming.filterPlaceholder', {
+                    defaultValue: 'Filter upcoming renewals...',
+                  })}
                   value={renewalsSearchTerm}
                   onChange={(event) => setRenewalsSearchTerm(event.target.value)}
                   className="pl-10"
-                  aria-label="Filter upcoming renewals"
+                  aria-label={t('clientContracts.upcoming.filterAriaLabel', {
+                    defaultValue: 'Filter upcoming renewals',
+                  })}
                   data-testid="upcoming-renewals-list-filter"
                 />
               </div>
@@ -763,7 +852,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                   className="rounded-md border border-dashed border-[rgb(var(--color-border-200))] p-4 text-sm text-[rgb(var(--color-text-500))]"
                   data-testid="upcoming-renewals-empty-state"
                 >
-                  No upcoming renewals for the selected window.
+                  {t('clientContracts.upcoming.empty', {
+                    defaultValue: 'No upcoming renewals for the selected window.',
+                  })}
                 </div>
               ) : (
                 <DataTable
@@ -803,17 +894,56 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
           }
         }}
         onConfirm={confirmDeleteContract}
-        title="Delete client contract?"
+        title={t('contractsList.dialogs.deleteClient.title', { defaultValue: 'Delete client contract?' })}
         message={
           contractToDelete
-            ? `Are you sure you want to permanently delete the client contract "${contractToDelete.contractName}"${
-                contractToDelete.clientName ? ` for ${contractToDelete.clientName}` : ''
-              }? This action cannot be undone.`
+            ? t('contractsList.dialogs.deleteClient.message', {
+              defaultValue: 'Are you sure you want to permanently delete the client contract "{{contractName}}"{{clientSuffix}}? This action cannot be undone.',
+              contractName: contractToDelete.contractName,
+              clientSuffix: contractToDelete.clientName
+                ? t('contractsList.dialogs.deleteClient.clientSuffix', {
+                  defaultValue: ' for {{clientName}}',
+                  clientName: contractToDelete.clientName,
+                })
+                : '',
+            })
             : ''
         }
-        cancelLabel="Cancel"
-        confirmLabel={isDeletingContract ? 'Deleting…' : 'Delete'}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        confirmLabel={isDeletingContract
+          ? t('contractsList.actions.deleting', { defaultValue: 'Deleting…' })
+          : t('common.actions.delete', { defaultValue: 'Delete' })}
         isConfirming={isDeletingContract}
+      />
+      <ConfirmationDialog
+        id="client-contracts-tab-terminate-confirmation"
+        isOpen={!!contractToTerminate}
+        onClose={() => {
+          if (!isTerminatingContract) {
+            setContractToTerminate(null);
+          }
+        }}
+        onConfirm={() => void handleTerminateContract(contractToTerminate?.clientContractId)}
+        title={t('clientContracts.dialogs.terminate.title', { defaultValue: 'Terminate client contract?' })}
+        message={
+          contractToTerminate
+            ? t('clientContracts.dialogs.terminate.message', {
+              defaultValue: 'Are you sure you want to terminate "{{contractName}}"{{clientSuffix}}?',
+              contractName: contractToTerminate.contractName,
+              clientSuffix: contractToTerminate.clientName
+                ? t('clientContracts.dialogs.terminate.clientSuffix', {
+                  defaultValue: ' for {{clientName}}',
+                  clientName: contractToTerminate.clientName,
+                })
+                : '',
+            })
+            : ''
+        }
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        confirmLabel={isTerminatingContract
+          ? t('contractsList.actions.deleting', { defaultValue: 'Deleting…' })
+          : t('contractsList.actions.terminate', { defaultValue: 'Terminate' })}
+        isConfirming={isTerminatingContract}
       />
     </>
   );

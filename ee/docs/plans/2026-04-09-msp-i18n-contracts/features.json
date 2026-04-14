@@ -162,7 +162,7 @@
   {
     "id": "F033",
     "description": "Wire useTranslation('msp/contracts') in ClientContractsTab.tsx -- translate column headers (Contract Name, Client, Status, Start Date, End Date, Billing Frequency, Actions), status badge labels, search placeholder, row action menus (View, Terminate), and terminate confirmation dialog",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F034",

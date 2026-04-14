@@ -690,7 +690,93 @@
       "failedToTerminateContract": "Failed to terminate contract"
     }
   },
-  "clientContracts": {},
+  "clientContracts": {
+    "actions": {
+      "viewDetails": "View details"
+    },
+    "columns": {
+      "actions": "Actions",
+      "billingFrequency": "Billing Frequency",
+      "client": "Client",
+      "contractName": "Contract Name",
+      "endDate": "End Date",
+      "poIndicator": "PO",
+      "sourceTemplate": "Source Template",
+      "startDate": "Start Date",
+      "status": "Status"
+    },
+    "dialogs": {
+      "terminate": {
+        "clientSuffix": " for {{clientName}}",
+        "message": "Are you sure you want to terminate \"{{contractName}}\"{{clientSuffix}}?",
+        "title": "Terminate client contract?"
+      }
+    },
+    "errors": {
+      "failedToFetch": "Failed to fetch client contracts"
+    },
+    "loading": "Loading client contracts...",
+    "po": {
+      "notRequired": "Not required",
+      "required": "Required"
+    },
+    "search": {
+      "ariaLabel": "Search client contracts",
+      "placeholder": "Search by client or contract..."
+    },
+    "tabs": {
+      "contracts": "Contracts",
+      "upcomingRenewals": "Upcoming Renewals ({{count}})"
+    },
+    "toasts": {
+      "failedToActivate": "Failed to activate contract",
+      "failedToDelete": "Failed to delete contract",
+      "failedToMarkNonRenewing": "Failed to mark renewal as non-renewing",
+      "failedToMarkRenewing": "Failed to mark renewal as renewing",
+      "failedToRestore": "Failed to restore contract",
+      "failedToResumeDraft": "Failed to resume draft",
+      "failedToTerminate": "Failed to terminate contract"
+    },
+    "upcoming": {
+      "actions": {
+        "markNonRenewing": "Mark non-renewing",
+        "markRenewing": "Mark renewing",
+        "openMenu": "Open renewal actions"
+      },
+      "columns": {
+        "actions": "Actions",
+        "client": "Client",
+        "contract": "Contract",
+        "daysUntilDue": "Days Until Due",
+        "decisionDue": "Decision Due",
+        "status": "Status",
+        "type": "Type"
+      },
+      "description": "Contracts with renewal decisions due within the selected window.",
+      "empty": "No upcoming renewals for the selected window.",
+      "filterAriaLabel": "Filter upcoming renewals",
+      "filterPlaceholder": "Filter upcoming renewals...",
+      "status": {
+        "completed": "Completed",
+        "nonRenewing": "Non-renewing",
+        "pending": "Pending",
+        "renewing": "Renewing",
+        "snoozed": "Snoozed"
+      },
+      "title": "Upcoming Renewals",
+      "type": {
+        "evergreen": "Evergreen",
+        "fixedTerm": "Fixed-term"
+      },
+      "window": {
+        "all": "All",
+        "next30": "Next 30 days",
+        "next60": "Next 60 days",
+        "next90": "Next 90 days"
+      },
+      "windowPlaceholder": "Select renewal window"
+    }
+  },
   "templatesTab": {},
   "detailSwitcher": {},
   "templateDetail": {
