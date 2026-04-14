@@ -22,7 +22,7 @@
   {
     "id": "F005",
     "description": "HourlyContractLineConfiguration.tsx: Translate service rates accordion (card title 'Service Rates & Settings', service name fallback, non-hourly service message with interpolated billing method), save button text with loading state, manage services card title, empty state messages, error messages, and Reset/Save Changes buttons",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F006",
