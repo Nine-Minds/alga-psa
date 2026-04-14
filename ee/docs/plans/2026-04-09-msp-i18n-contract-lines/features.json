@@ -102,7 +102,7 @@
   {
     "id": "F021",
     "description": "FixedContractLineConfiguration.tsx: Translate fixed fee settings section (heading, description, 'Recurring Base Rate *' label, helper text, 'Adjust for Partial Periods' label/description, billing cycle alignment options), associated services card title, Reset/Save Changes buttons, validation errors, and error states",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F022",
