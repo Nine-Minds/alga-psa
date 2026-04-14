@@ -99,6 +99,7 @@ export function registerProjectActions(): void {
         phase_id: phaseId,
         task_name: input.title,
         description: input.description ?? null,
+        description_rich_text: null,
         assigned_to: assignedTo,
         due_date: input.due_date ?? null,
         status_id: statusId,

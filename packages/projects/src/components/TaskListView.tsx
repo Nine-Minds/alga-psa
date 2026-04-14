@@ -5,6 +5,7 @@ import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTaskDependency } fr
 import { ITag } from '@alga-psa/types';
 import { ITaskResource } from '@alga-psa/types';
 import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch, Calendar, GripVertical, Plus, CheckSquare, Paperclip, Zap } from 'lucide-react';
+import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -127,6 +128,17 @@ export default function TaskListView({
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
 
+  // Memoize plain-text descriptions so JSON.parse runs at most once per task
+  // per tasks-array change, instead of repeatedly during search, filter, and
+  // per-row render passes.
+  const taskDescriptionTextMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const task of tasks) {
+      map.set(task.task_id, extractTaskDescriptionText(task.description_rich_text ?? task.description));
+    }
+    return map;
+  }, [tasks]);
+
   // Auto-expand titles and descriptions when search matches
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -145,7 +157,8 @@ export default function TaskListView({
 
     tasks.forEach(task => {
       const matchesName = regex.test(task.task_name);
-      const matchesDescription = task.description ? regex.test(task.description) : false;
+      const descText = taskDescriptionTextMap.get(task.task_id) ?? '';
+      const matchesDescription = descText ? regex.test(descText) : false;
 
       // Auto-expand title if it matches and is long enough to be truncated
       if (matchesName && task.task_name.length > 50) {
@@ -160,7 +173,7 @@ export default function TaskListView({
 
     setExpandedTitles(newExpandedTitles);
     setExpandedDescriptions(newExpandedDescriptions);
-  }, [searchQuery, searchCaseSensitive, searchWholeWord, tasks]);
+  }, [searchQuery, searchCaseSensitive, searchWholeWord, tasks, taskDescriptionTextMap]);
 
   // Fetch avatar URLs for assignees and additional agents
   useEffect(() => {
@@ -230,15 +243,16 @@ export default function TaskListView({
       const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
       filtered = filtered.filter(task => {
         const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
+        const descText = taskDescriptionTextMap.get(task.task_id) ?? '';
         const taskDescription = searchCaseSensitive
-          ? (task.description ?? '')
-          : (task.description?.toLowerCase() ?? '');
+          ? descText
+          : descText.toLowerCase();
 
         if (searchWholeWord) {
           // Use word boundary regex for whole word matching
           const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
-          return wordRegex.test(task.task_name) || wordRegex.test(task.description ?? '');
+          return wordRegex.test(task.task_name) || wordRegex.test(descText);
         } else {
           return taskName.includes(query) || taskDescription.includes(query);
         }
@@ -295,7 +309,7 @@ export default function TaskListView({
     }
 
     return filtered;
-  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, taskResources]);
+  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, taskResources, taskDescriptionTextMap]);
 
   // Group tasks by phase and status - include ALL phases and ALL statuses for drag-and-drop
   const phaseGroups = useMemo((): PhaseGroup[] => {
@@ -926,6 +940,7 @@ export default function TaskListView({
                             const additionalCount = resources.length;
                             const checklist = checklistItems[task.task_id];
                             const docCount = documentCounts[task.task_id] || 0;
+                            const descText = taskDescriptionTextMap.get(task.task_id) ?? '';
                             const isDragging = draggedTask?.task_id === task.task_id;
                             const showDropIndicator = isDropTarget && dropIndicatorIndex === taskIndex;
 
@@ -992,15 +1007,15 @@ export default function TaskListView({
                                         </button>
                                       )}
                                     </div>
-                                    {task.description && (
+                                    {descText && (
                                       <div className="mt-0.5">
                                         <p
                                           className={`text-xs text-gray-500 ${!expandedDescriptions.has(task.task_id) ? 'line-clamp-1' : ''}`}
-                                          title={!expandedDescriptions.has(task.task_id) ? task.description : undefined}
+                                          title={!expandedDescriptions.has(task.task_id) ? descText : undefined}
                                         >
-                                          {highlightSearchMatch(task.description, searchQuery, searchCaseSensitive, searchWholeWord)}
+                                          {highlightSearchMatch(descText, searchQuery, searchCaseSensitive, searchWholeWord)}
                                         </p>
-                                        {task.description.length > 80 && (
+                                        {descText.length > 80 && (
                                           <button
                                             type="button"
                                             onClick={(e) => {

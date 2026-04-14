@@ -1199,6 +1199,7 @@ export const moveTaskToPhase = withAuth(async (
                 // Preserve other important fields
                 task_name: existingTask.task_name,
                 description: existingTask.description,
+                description_rich_text: existingTask.description_rich_text,
                 assigned_to: existingTask.assigned_to,
                 estimated_hours: existingTask.estimated_hours,
                 actual_hours: existingTask.actual_hours,
@@ -1374,6 +1375,7 @@ export const duplicateTaskToPhase = withAuth(async (
             const newTaskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'wbs_code' | 'created_at' | 'updated_at' | 'tenant'> = {
                 task_name: originalTask.task_name + ' (Copy)', // Add (Copy) suffix
                 description: originalTask.description,
+                description_rich_text: originalTask.description_rich_text,
                 due_date: originalTask.due_date,
                 estimated_hours: originalTask.estimated_hours,
                 actual_hours: 0, // Reset actual hours for the new task

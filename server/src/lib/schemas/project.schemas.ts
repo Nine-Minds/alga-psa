@@ -80,6 +80,7 @@ export const projectTaskSchema = tenantSchema.extend({
   phase_id: z.string(),
   task_name: z.string(),
   description: z.string().nullable(),
+  description_rich_text: z.string().nullable().optional(),
   assigned_to: z.string().uuid().nullable().or(z.literal('unassigned')),
   estimated_hours: z.number().nullable(),
   actual_hours: z.number().nullable(),

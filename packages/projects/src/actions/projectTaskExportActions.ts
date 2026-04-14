@@ -6,6 +6,7 @@ import { withAuth, throwPermissionError } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { Knex } from 'knex';
+import { extractTaskDescriptionText } from '../lib/taskRichText';
 
 const MAX_EXPORT_ROWS = 10000;
 
@@ -67,6 +68,7 @@ interface TaskRow {
   task_id: string;
   task_name: string;
   description: string | null;
+  description_rich_text: string | null;
   phase_id: string;
   assigned_to: string | null;
   assigned_team_id: string | null;
@@ -129,7 +131,7 @@ function taskToRow(
 
   return {
     task_name: task.task_name || '',
-    description: task.description || '',
+    description: extractTaskDescriptionText(task.description_rich_text ?? task.description) || '',
     phase: phaseName,
     status: statusName,
     is_closed: isClosed,

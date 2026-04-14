@@ -44,6 +44,10 @@ import {
   buildProjectTaskStatusChangedPayload,
 } from '@alga-psa/workflow-streams';
 
+type InternalUpdateProjectTaskData = UpdateProjectTaskData & {
+  description_rich_text?: string | null;
+};
+
 async function resolveUserName(
   trx: Knex.Transaction,
   tenant: string,
@@ -672,7 +676,7 @@ export class ProjectService extends BaseService<IProject> {
     }
 
 
-  async updateTask(taskId: string, data: UpdateProjectTaskData, context: ServiceContext): Promise<IProjectTask> {
+  async updateTask(taskId: string, data: InternalUpdateProjectTaskData, context: ServiceContext): Promise<IProjectTask> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
@@ -1362,7 +1366,10 @@ export class ProjectService extends BaseService<IProject> {
         phase_id: phaseId,
         tenant: context.tenant
       })
-      .orderBy('sort_order');
+      .orderBy([
+        { column: 'order_key', order: 'asc' },
+        { column: 'wbs_code', order: 'asc' }
+      ]);
 
     return tasks;
   }

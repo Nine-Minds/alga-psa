@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTruncationDetection } from '@alga-psa/ui/hooks';
+import { extractTaskDescriptionText } from '../../lib/taskRichText';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
@@ -1019,7 +1020,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     const query = searchQuery.toLowerCase();
     return phaseTasks.filter((task) =>
       task.task_name.toLowerCase().includes(query) ||
-      (task.description && task.description.toLowerCase().includes(query))
+      (task.description && extractTaskDescriptionText(task.description_rich_text ?? task.description).toLowerCase().includes(query))
     );
   }, [phaseTasks, searchQuery]);
 
@@ -2187,7 +2188,7 @@ function TaskCard({
             ref={descriptionRef}
             className={`${zoomScales.descSize} text-gray-600 dark:text-gray-400 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
           >
-            {task.description}
+            {extractTaskDescriptionText(task.description_rich_text ?? task.description)}
           </p>
           {(isDescriptionTruncated || isDescriptionExpanded) && (
             <Button

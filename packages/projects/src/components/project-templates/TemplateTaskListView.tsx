@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { extractTaskDescriptionText } from '../../lib/taskRichText';
 import {
   IProjectTemplatePhase,
   IProjectTemplateTask,
@@ -755,9 +756,9 @@ export default function TemplateTaskListView({
                                       {task.description && (
                                         <p
                                           className="text-xs text-gray-500 mt-0.5 line-clamp-1"
-                                          title={task.description}
+                                          title={extractTaskDescriptionText(task.description_rich_text ?? task.description)}
                                         >
-                                          {task.description}
+                                          {extractTaskDescriptionText(task.description_rich_text ?? task.description)}
                                         </p>
                                       )}
                                     </div>
