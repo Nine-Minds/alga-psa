@@ -17,7 +17,7 @@
   {
     "id": "F004",
     "description": "HourlyContractLineConfiguration.tsx: Wire useTranslation and translate plan basics section (card title with interpolated plan name, section heading, labels, placeholders), plan-wide hourly settings accordion trigger text, overtime section (switch label, tooltip, rate/threshold labels and helper text), after-hours section (switch label, tooltip, multiplier label and helper text)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F005",

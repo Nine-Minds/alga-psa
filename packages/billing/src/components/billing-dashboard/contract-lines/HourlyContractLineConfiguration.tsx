@@ -22,6 +22,7 @@ import { getContractLineServicesWithConfigurations } from '@alga-psa/billing/act
 import GenericPlanServicesList from './GenericContractLineServicesList';
 import { IContractLine, IService as IBillingService } from '@alga-psa/types'; // Use IService from billing.interfaces
 import { ServiceHourlyConfigForm } from './ServiceHourlyConfigForm';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
     upsertPlanServiceHourlyConfiguration, // Correct action import
     upsertUserTypeRatesForConfig // Added import for user type rates action
@@ -103,6 +104,7 @@ export function HourlyPlanConfiguration({
   contractLineId,
   className = '',
 }: HourlyPlanConfigurationProps) {
+  const { t } = useTranslation('msp/contract-lines');
   // Plan-wide state
   const [plan, setPlan] = useState<HourlyPlanData | null>(null);
   const [initialPlanData, setInitialPlanData] = useState<Partial<HourlyPlanData>>({}); // For plan-wide change detection
@@ -160,7 +162,9 @@ export function HourlyPlanConfiguration({
       // Fetch base plan details
       const fetchedPlan = await getContractLineById(contractLineId) as HourlyPlanData;
       if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Hourly') {
-        setError('Invalid plan type or plan not found.');
+        setError(t('configuration.hourly.errors.invalidPlanTypeOrNotFound', {
+          defaultValue: 'Invalid plan type or plan not found.',
+        }));
         setLoading(false);
         return;
       }
@@ -255,11 +259,13 @@ export function HourlyPlanConfiguration({
 
     } catch (err) {
       console.error('Error fetching plan data:', err);
-      setError('Failed to load plan configuration. Please try again.');
+      setError(t('configuration.hourly.errors.failedToLoadPlanConfiguration', {
+        defaultValue: 'Failed to load plan configuration. Please try again.',
+      }));
     } finally {
       setLoading(false);
     }
-  }, [contractLineId]);
+  }, [contractLineId, t]);
 
   // Callback to refresh data when services are added/removed
   const handleServicesChanged = useCallback(() => {
@@ -274,16 +280,28 @@ export function HourlyPlanConfiguration({
   // Validate PLAN-WIDE inputs
   useEffect(() => {
     const newErrors: typeof planValidationErrors = {};
-    if (enableOvertime && overtimeRate !== undefined && overtimeRate < 0) newErrors.overtimeRate = 'Overtime rate cannot be negative';
-    if (enableOvertime && overtimeThreshold !== undefined && overtimeThreshold < 0) newErrors.overtimeThreshold = 'Overtime threshold cannot be negative';
-    if (enableAfterHoursRate && afterHoursMultiplier !== undefined && afterHoursMultiplier < 1) newErrors.afterHoursMultiplier = 'After hours multiplier must be at least 1';
+    if (enableOvertime && overtimeRate !== undefined && overtimeRate < 0) {
+      newErrors.overtimeRate = t('configuration.hourly.validation.overtimeRateNonNegative', {
+        defaultValue: 'Overtime rate cannot be negative',
+      });
+    }
+    if (enableOvertime && overtimeThreshold !== undefined && overtimeThreshold < 0) {
+      newErrors.overtimeThreshold = t('configuration.hourly.validation.overtimeThresholdNonNegative', {
+        defaultValue: 'Overtime threshold cannot be negative',
+      });
+    }
+    if (enableAfterHoursRate && afterHoursMultiplier !== undefined && afterHoursMultiplier < 1) {
+      newErrors.afterHoursMultiplier = t('configuration.hourly.validation.afterHoursMultiplierMinOne', {
+        defaultValue: 'After hours multiplier must be at least 1',
+      });
+    }
     // Removed newUserTypeRate validation: if (newUserTypeRate !== undefined && newUserTypeRate < 0) newErrors.newUserTypeRate = 'User type rate cannot be negative';
 
     // Only update state if errors have actually changed
     if (!isEqual(newErrors, planValidationErrors)) {
         setPlanValidationErrors(newErrors);
     }
-  }, [enableOvertime, overtimeRate, overtimeThreshold, enableAfterHoursRate, afterHoursMultiplier, planValidationErrors]); // Removed newUserTypeRate from deps
+  }, [enableOvertime, overtimeRate, overtimeThreshold, enableAfterHoursRate, afterHoursMultiplier, planValidationErrors, t]); // Removed newUserTypeRate from deps
 
   // --- Updated Handlers for Service Config State ---
 
@@ -318,8 +336,16 @@ export function HourlyPlanConfiguration({
   // Plan basics save/reset handlers
   const validatePlanBasics = (): string[] => {
     const errors: string[] = [];
-    if (!planName.trim()) errors.push('Contract line name');
-    if (!billingFrequency) errors.push('Billing frequency');
+    if (!planName.trim()) {
+      errors.push(t('configuration.hourly.basics.validation.contractLineName', {
+        defaultValue: 'Contract line name',
+      }));
+    }
+    if (!billingFrequency) {
+      errors.push(t('configuration.hourly.basics.validation.billingFrequency', {
+        defaultValue: 'Billing frequency',
+      }));
+    }
     return errors;
   };
 
@@ -348,7 +374,11 @@ export function HourlyPlanConfiguration({
       setIsBasicsDirty(false);
     } catch (error) {
       console.error('Error saving contract line basics:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save contract line';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('configuration.hourly.errors.failedToSaveContractLine', {
+            defaultValue: 'Failed to save contract line',
+          });
       setPlanBasicsErrors([errorMessage]);
     } finally {
       setIsSavingBasics(false);
@@ -373,7 +403,9 @@ export function HourlyPlanConfiguration({
     // Note: Service validation is now primarily handled within the upsert action via Zod.
 
     if (hasPlanErrors) { // Only check plan errors client-side for now
-        setSaveError("Cannot save, contract line-wide validation errors exist.");
+        setSaveError(t('configuration.hourly.errors.cannotSaveValidationErrors', {
+          defaultValue: 'Cannot save, contract line-wide validation errors exist.',
+        }));
         setSaving(false);
         return;
     }
@@ -434,7 +466,10 @@ export function HourlyPlanConfiguration({
         // Extract Zod error messages if available
         const message = err.message?.includes("Validation Error:")
             ? err.message
-            : `Failed to save service configuration: ${err.message || 'Please try again.'}`;
+            : t('configuration.hourly.errors.failedToSaveServiceConfiguration', {
+                defaultValue: 'Failed to save service configuration: {{message}}',
+                message: err.message || t('common.tryAgain', { defaultValue: 'Please try again.' }),
+              });
         setSaveError(message);
         // Potentially map Zod errors back to serviceValidationErrors state here if needed
     }
@@ -493,7 +528,10 @@ export function HourlyPlanConfiguration({
 
     } catch (err: any) {
         console.error('Error saving plan-wide configuration:', err);
-        setSaveError(`Failed to save plan-wide configuration: ${err.message || 'Please try again.'}`);
+        setSaveError(t('configuration.hourly.errors.failedToSavePlanWideConfiguration', {
+          defaultValue: 'Failed to save plan-wide configuration: {{message}}',
+          message: err.message || t('common.tryAgain', { defaultValue: 'Please try again.' }),
+        }));
     } finally {
         setSaving(false);
     }
@@ -534,7 +572,13 @@ export function HourlyPlanConfiguration({
   }
 
    if (!plan) {
-      return <div className="p-4">Contract line not found or invalid type.</div>;
+      return (
+        <div className="p-4">
+          {t('configuration.hourly.errors.contractLineNotFoundOrInvalidType', {
+            defaultValue: 'Contract line not found or invalid type.',
+          })}
+        </div>
+      );
   }
 
   const hasUnsavedPlanChanges = !isEqual(
@@ -564,7 +608,9 @@ export function HourlyPlanConfiguration({
                 <Accordion.Item value="plan-wide-settings" className="border rounded-md overflow-hidden">
                     <Accordion.Header className="flex">
                          <Accordion.Trigger className="flex flex-1 items-center justify-between p-4 font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg]:rotate-180">
-                            Contract Line Hourly Settings (Overtime, After-Hours)
+                            {t('configuration.hourly.planWideSettings.trigger', {
+                              defaultValue: 'Contract Line Hourly Settings (Overtime, After-Hours)',
+                            })}
                             <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
                         </Accordion.Trigger>
                     </Accordion.Header>
@@ -577,7 +623,9 @@ export function HourlyPlanConfiguration({
                                 <div className="flex items-center space-x-2">
                                 <Switch id="enable-overtime" checked={enableOvertime} onCheckedChange={setEnableOvertime} disabled={saving} />
                                 <Label htmlFor="enable-overtime" className="cursor-pointer flex items-center">
-                                    Enable Overtime Rates
+                                    {t('configuration.hourly.planWideSettings.overtime.enableLabel', {
+                                      defaultValue: 'Enable Overtime Rates',
+                                    })}
                                     <Tooltip.Root delayDuration={100}>
                                         <Tooltip.Trigger asChild>
                                             <Button id="overtime-rate-tooltip-trigger" variant="ghost" size="sm" className="ml-1 h-5 w-5 p-0">
@@ -585,7 +633,12 @@ export function HourlyPlanConfiguration({
                                             </Button>
                                         </Tooltip.Trigger>
                                          <Tooltip.Content side="top" className="max-w-xs bg-[rgb(var(--color-text-800))] text-[rgb(var(--color-text-50))] p-2 rounded shadow-lg text-sm z-50">
-                                            <p>Apply a different rate when total hours worked within the contract line's billing period exceed a specified threshold.</p>
+                                            <p>
+                                              {t('configuration.hourly.planWideSettings.overtime.tooltip', {
+                                                defaultValue:
+                                                  "Apply a different rate when total hours worked within the contract line's billing period exceed a specified threshold.",
+                                              })}
+                                            </p>
                                         </Tooltip.Content>
                                     </Tooltip.Root>
                                 </Label>
@@ -593,7 +646,11 @@ export function HourlyPlanConfiguration({
                                 {enableOvertime && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-8">
                                     <div>
-                                    <Label htmlFor="overtime-rate">Overtime Rate ($/hr)</Label>
+                                    <Label htmlFor="overtime-rate">
+                                      {t('configuration.hourly.planWideSettings.overtime.rateLabel', {
+                                        defaultValue: 'Overtime Rate ($/hr)',
+                                      })}
+                                    </Label>
                                     <div className="relative">
                                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                                       <Input
@@ -619,25 +676,43 @@ export function HourlyPlanConfiguration({
                                             setOvertimeRateInput((cents / 100).toFixed(2));
                                           }
                                         }}
-                                        placeholder="0.00"
+                                        placeholder={t('common.moneyPlaceholder', { defaultValue: '0.00' })}
                                         disabled={saving}
                                         className={`pl-10 ${planValidationErrors.overtimeRate ? 'border-red-500' : ''}`}
                                       />
                                     </div>
                                     {planValidationErrors.overtimeRate && <p className="text-sm text-red-500 mt-1">{planValidationErrors.overtimeRate}</p>}
-                                    {!planValidationErrors.overtimeRate && <p className="text-sm text-muted-foreground mt-1">Rate applied after threshold.</p>}
+                                    {!planValidationErrors.overtimeRate && (
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {t('configuration.hourly.planWideSettings.overtime.rateHelp', {
+                                          defaultValue: 'Rate applied after threshold.',
+                                        })}
+                                      </p>
+                                    )}
                                     </div>
                                     <div>
-                                    <Label htmlFor="overtime-threshold">Overtime Threshold (hrs/period)</Label>
+                                    <Label htmlFor="overtime-threshold">
+                                      {t('configuration.hourly.planWideSettings.overtime.thresholdLabel', {
+                                        defaultValue: 'Overtime Threshold (hrs/period)',
+                                      })}
+                                    </Label>
                                     <Input
                                         id="overtime-threshold" type="number"
                                         value={overtimeThreshold?.toString() || ''}
                                         onChange={handleNumberInputChange(setOvertimeThreshold)}
-                                        placeholder="40" disabled={saving} min={0} step={1}
+                                        placeholder={t('configuration.hourly.planWideSettings.overtime.thresholdPlaceholder', {
+                                          defaultValue: '40',
+                                        })} disabled={saving} min={0} step={1}
                                         className={planValidationErrors.overtimeThreshold ? 'border-red-500' : ''}
                                     />
                                     {planValidationErrors.overtimeThreshold && <p className="text-sm text-red-500 mt-1">{planValidationErrors.overtimeThreshold}</p>}
-                                    {!planValidationErrors.overtimeThreshold && <p className="text-sm text-muted-foreground mt-1">Hours before OT applies.</p>}
+                                    {!planValidationErrors.overtimeThreshold && (
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {t('configuration.hourly.planWideSettings.overtime.thresholdHelp', {
+                                          defaultValue: 'Hours before OT applies.',
+                                        })}
+                                      </p>
+                                    )}
                                     </div>
                                 </div>
                                 )}
@@ -648,7 +723,9 @@ export function HourlyPlanConfiguration({
                                 <div className="flex items-center space-x-2">
                                 <Switch id="enable-after-hours" checked={enableAfterHoursRate} onCheckedChange={setEnableAfterHoursRate} disabled={saving} />
                                 <Label htmlFor="enable-after-hours" className="cursor-pointer flex items-center">
-                                    Enable After-Hours Rate Multiplier
+                                    {t('configuration.hourly.planWideSettings.afterHours.enableLabel', {
+                                      defaultValue: 'Enable After-Hours Rate Multiplier',
+                                    })}
                                     <Tooltip.Root delayDuration={100}>
                                         <Tooltip.Trigger asChild>
                                             <Button id="after-hours-tooltip-trigger" variant="ghost" size="sm" className="ml-1 h-5 w-5 p-0">
@@ -656,14 +733,23 @@ export function HourlyPlanConfiguration({
                                             </Button>
                                         </Tooltip.Trigger>
                                         <Tooltip.Content side="top" className="max-w-xs bg-[rgb(var(--color-text-800))] text-[rgb(var(--color-text-50))] p-2 rounded shadow-lg text-sm z-50">
-                                            <p>Apply a multiplier to the standard hourly rate for work performed outside of defined business hours (requires Business Hours configuration).</p>
+                                            <p>
+                                              {t('configuration.hourly.planWideSettings.afterHours.tooltip', {
+                                                defaultValue:
+                                                  'Apply a multiplier to the standard hourly rate for work performed outside of defined business hours (requires Business Hours configuration).',
+                                              })}
+                                            </p>
                                         </Tooltip.Content>
                                     </Tooltip.Root>
                                 </Label>
                                 </div>
                                 {enableAfterHoursRate && (
                                 <div className="pl-8">
-                                    <Label htmlFor="after-hours-multiplier">After-Hours Multiplier</Label>
+                                    <Label htmlFor="after-hours-multiplier">
+                                      {t('configuration.hourly.planWideSettings.afterHours.multiplierLabel', {
+                                        defaultValue: 'After-Hours Multiplier',
+                                      })}
+                                    </Label>
                                     <Input
                                       id="after-hours-multiplier"
                                       type="text"
@@ -686,12 +772,20 @@ export function HourlyPlanConfiguration({
                                           setAfterHoursMultiplierInput(multiplier.toFixed(2));
                                         }
                                       }}
-                                      placeholder="1.5"
+                                      placeholder={t('configuration.hourly.planWideSettings.afterHours.multiplierPlaceholder', {
+                                        defaultValue: '1.5',
+                                      })}
                                       disabled={saving}
                                       className={`w-full md:w-1/2 ${planValidationErrors.afterHoursMultiplier ? 'border-red-500' : ''}`}
                                     />
                                     {planValidationErrors.afterHoursMultiplier && <p className="text-sm text-red-500 mt-1">{planValidationErrors.afterHoursMultiplier}</p>}
-                                    {!planValidationErrors.afterHoursMultiplier && <p className="text-sm text-muted-foreground mt-1">Multiplier for non-business hours (e.g., 1.5x).</p>}
+                                    {!planValidationErrors.afterHoursMultiplier && (
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {t('configuration.hourly.planWideSettings.afterHours.multiplierHelp', {
+                                          defaultValue: 'Multiplier for non-business hours (e.g., 1.5x).',
+                                        })}
+                                      </p>
+                                    )}
                                 </div>
                                 )}
                             </div>
@@ -703,13 +797,22 @@ export function HourlyPlanConfiguration({
             {/* Contract Line Basics - Inline Editing */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Hourly)</CardTitle>
+                    <CardTitle>
+                      {t('configuration.hourly.basics.cardTitle', {
+                        defaultValue: 'Edit Contract Line: {{name}} (Hourly)',
+                        name: plan?.contract_line_name || '...',
+                      })}
+                    </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     {planBasicsErrors.length > 0 && (
                         <Alert variant="destructive">
                             <AlertDescription>
-                                <p className="font-medium mb-2">Please correct the following:</p>
+                                <p className="font-medium mb-2">
+                                  {t('common.validation.prefix', {
+                                    defaultValue: 'Please correct the following:',
+                                  })}
+                                </p>
                                 <ul className="list-disc list-inside space-y-1">
                                     {planBasicsErrors.map((err, idx) => (
                                         <li key={idx}>{err}</li>
@@ -721,14 +824,24 @@ export function HourlyPlanConfiguration({
 
                     <section className="space-y-4">
                         <div>
-                            <h3 className="text-lg font-semibold">Contract Line Basics</h3>
+                            <h3 className="text-lg font-semibold">
+                              {t('configuration.hourly.basics.heading', {
+                                defaultValue: 'Contract Line Basics',
+                              })}
+                            </h3>
                             <p className="text-sm text-muted-foreground">
-                                Name the contract line and choose how it should bill by default.
+                                {t('configuration.hourly.basics.description', {
+                                  defaultValue: 'Name the contract line and choose how it should bill by default.',
+                                })}
                             </p>
                         </div>
                         <div className="space-y-3">
                             <div>
-                                <Label htmlFor="hourly-name">Contract Line Name *</Label>
+                                <Label htmlFor="hourly-name">
+                                  {t('configuration.hourly.basics.nameLabel', {
+                                    defaultValue: 'Contract Line Name *',
+                                  })}
+                                </Label>
                                 <Input
                                     id="hourly-name"
                                     value={planName}
@@ -736,12 +849,18 @@ export function HourlyPlanConfiguration({
                                         setPlanName(e.target.value);
                                         markBasicsDirty();
                                     }}
-                                    placeholder="e.g. Time & Materials Support"
+                                    placeholder={t('configuration.hourly.basics.namePlaceholder', {
+                                      defaultValue: 'e.g. Time & Materials Support',
+                                    })}
                                     required
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="hourly-frequency">Billing Frequency *</Label>
+                                <Label htmlFor="hourly-frequency">
+                                  {t('configuration.hourly.basics.billingFrequencyLabel', {
+                                    defaultValue: 'Billing Frequency *',
+                                  })}
+                                </Label>
                                 <CustomSelect
                                     id="hourly-frequency"
                                     value={billingFrequency}
@@ -750,7 +869,9 @@ export function HourlyPlanConfiguration({
                                         markBasicsDirty();
                                     }}
                                     options={BILLING_FREQUENCY_OPTIONS}
-                                    placeholder="Select billing frequency"
+                                    placeholder={t('configuration.hourly.basics.billingFrequencyPlaceholder', {
+                                      defaultValue: 'Select billing frequency',
+                                    })}
                                 />
                             </div>
                         </div>
@@ -763,14 +884,16 @@ export function HourlyPlanConfiguration({
                             onClick={handleResetPlanBasics}
                             disabled={isSavingBasics || !isBasicsDirty}
                         >
-                            Reset
+                            {t('common.actions.reset', { defaultValue: 'Reset' })}
                         </Button>
                         <Button
                             id="save-hourly-plan-basics"
                             onClick={handleSavePlanBasics}
                             disabled={isSavingBasics || !isBasicsDirty}
                         >
-                            {isSavingBasics ? 'Saving…' : 'Save Changes'}
+                            {isSavingBasics
+                              ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                              : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
                         </Button>
                     </div>
                 </CardContent>
@@ -779,7 +902,11 @@ export function HourlyPlanConfiguration({
             {/* Service Specific Settings */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Service Rates & Settings</CardTitle>
+                    <CardTitle>
+                      {t('configuration.hourly.services.cardTitle', {
+                        defaultValue: 'Service Rates & Settings',
+                      })}
+                    </CardTitle>
                 </CardHeader>
                 <CardContent>
                     {serviceConfigs.length > 0 ? (
@@ -790,7 +917,10 @@ export function HourlyPlanConfiguration({
                                     <Accordion.Header className="flex">
                                         <Accordion.Trigger className="flex flex-1 items-center justify-between p-4 font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg]:rotate-180">
                                             {/* Use optional chaining for service name */}
-                                            {serviceConfig.service?.service_name ?? `Service ID: ${serviceConfig.service_id}`}
+                                            {serviceConfig.service?.service_name ?? t('configuration.hourly.services.fallbackServiceName', {
+                                              defaultValue: 'Service ID: {{id}}',
+                                              id: serviceConfig.service_id,
+                                            })}
                                             <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
                                         </Accordion.Trigger>
                                     </Accordion.Header>
@@ -809,7 +939,10 @@ export function HourlyPlanConfiguration({
                                                 />
                                             ) : (
                                                 <p className="text-muted-foreground text-sm">
-                                                    This service (Billing Method: {serviceConfig.service?.billing_method || 'N/A'}) cannot be configured with specific hourly rates on this plan.
+                                                    {t('configuration.hourly.services.nonHourlyServiceMessage', {
+                                                      defaultValue: 'This service (Billing Method: {{method}}) cannot be configured with specific hourly rates on this plan.',
+                                                      method: serviceConfig.service?.billing_method || t('common.notAvailable', { defaultValue: 'N/A' }),
+                                                    })}
                                                 </p>
                                             )}
                                         </div>
@@ -818,7 +951,11 @@ export function HourlyPlanConfiguration({
                             ))}
                         </Accordion.Root>
                     ) : (
-                        <p className="text-muted-foreground">No services are currently associated with this contract line.</p>
+                        <p className="text-muted-foreground">
+                          {t('configuration.hourly.services.emptyState', {
+                            defaultValue: 'No services are currently associated with this contract line.',
+                          })}
+                        </p>
                     )}
                 </CardContent>
             </Card>
@@ -830,14 +967,20 @@ export function HourlyPlanConfiguration({
                     // Disable save if saving, no changes, or plan-wide errors exist. Service errors handled by action.
                     disabled={saving || !hasUnsavedChanges || Object.values(planValidationErrors).some(e => e)}
                 >
-                {saving ? <LoadingIndicator spinnerProps={{ size: "sm" }} text="Save Configuration" /> : "Save Configuration"}
+                {saving
+                  ? <LoadingIndicator spinnerProps={{ size: "sm" }} text={t('configuration.hourly.actions.saveConfiguration', { defaultValue: 'Save Configuration' })} />
+                  : t('configuration.hourly.actions.saveConfiguration', { defaultValue: 'Save Configuration' })}
                 </Button>
             </div>
 
             {/* Add Services to Contract Line */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Manage Contract Line Services</CardTitle>
+                    <CardTitle>
+                      {t('configuration.hourly.services.manageCardTitle', {
+                        defaultValue: 'Manage Contract Line Services',
+                      })}
+                    </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <GenericPlanServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} disableEditing={true} />
