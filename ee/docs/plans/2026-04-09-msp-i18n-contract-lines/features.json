@@ -187,7 +187,7 @@
   {
     "id": "F038",
     "description": "Generate pseudo-locale files (xx, yy) for msp/contract-lines namespace",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F039",

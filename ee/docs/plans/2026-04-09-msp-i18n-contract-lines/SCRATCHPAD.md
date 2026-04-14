@@ -140,3 +140,7 @@
   - `server/public/locales/pl/msp/contract-lines.json`
 - (2026-04-13) **F037 runbook**: used a local Node script to translate from `en/msp/contract-lines.json` via Google Translate endpoint with placeholder protection for `{{...}}` interpolation tokens and JSON structure preservation.
 - (2026-04-13) **F037 verification**: key/shape/interpolation parity check against English returned, per locale, `missing: 0`, `extra: 0`, `phMismatch: 0`, `keys: 509`.
+- (2026-04-13) **F038 complete**: added pseudo-locale namespace files:
+  - `server/public/locales/xx/msp/contract-lines.json` (fill `1111`)
+  - `server/public/locales/yy/msp/contract-lines.json` (fill `5555`)
+- (2026-04-13) **F038 implementation note**: used the same leaf-string replacement semantics as `scripts/generate-pseudo-locale.ts`, preserving interpolation tokens (`{{...}}`) while replacing text payloads.
