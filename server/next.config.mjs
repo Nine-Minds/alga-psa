@@ -1040,6 +1040,10 @@ const nextConfig = {
     '@opentelemetry/semantic-conventions',
     '@opentelemetry/api',
     'expo-server-sdk',
+    // Pulls in jsdom + Tiptap + a React subgraph whose transitive
+    // `createContext` calls get mangled when bundled — keep it external so
+    // Node requires it normally at runtime.
+    '@blocknote/server-util',
   ],
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {
