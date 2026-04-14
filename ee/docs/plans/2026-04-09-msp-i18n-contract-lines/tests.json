@@ -58,7 +58,7 @@
   {
     "id": "T008",
     "description": "ContractLineDialog.tsx: validation error messages are translated (required fields, service-specific errors with interpolated index)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
