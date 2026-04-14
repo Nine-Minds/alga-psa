@@ -112,7 +112,7 @@
   {
     "id": "F023",
     "description": "Wire useTranslation('msp/contracts') in CreateCustomContractLineDialog.tsx -- translate bucket overlay section, proration toggle, minimum billable time, rounding settings, validation messages, and save/cancel buttons",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F024",

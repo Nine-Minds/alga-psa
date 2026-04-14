@@ -320,6 +320,8 @@
   "contractLineRate": {},
   "addLines": {},
   "createCustomLine": {
+    "addBucketOfConsumption": "Add bucket of consumption",
+    "addBucketOfHours": "Add bucket of hours",
     "adjustForPartialPeriods": "Adjust for Partial Periods",
     "adjustForPartialPeriodsHelp": "When enabled, the recurring fee scales to the covered portion of a service period when the contract starts or ends inside that period.",
     "basicsDescription": "Create a custom contract line directly for this contract.",
@@ -350,11 +352,28 @@
     "hourlyServicesDescription": "Configure services that are billed based on time tracked.",
     "hourlyServicesTitle": "Hourly Services",
     "moneyPlaceholder": "0.00",
+    "minimumBillableTimeLabel": "Minimum Billable Time (minutes)",
     "recurringBaseRateHelp": "Recurring fee for all fixed services.",
     "recurringBaseRateLabel": "Recurring Base Rate",
+    "roundUpToNearestLabel": "Round Up To Nearest (minutes)",
     "title": "Create Custom Contract Line",
     "usageServicesDescription": "Configure services that are billed based on usage or consumption.",
-    "usageServicesTitle": "Usage-Based Services"
+    "usageServicesTitle": "Usage-Based Services",
+    "validation": {
+      "billingFrequencyRequired": "Billing frequency is required",
+      "contractLineNameRequired": "Contract Line Name is required",
+      "contractLineTypeRequired": "Contract Line Type is required",
+      "failedToCreate": "Failed to create contract line",
+      "fixedServiceRequired": "At least one fixed service or product is required",
+      "fixedServiceSelectRequired": "Item {{index}}: Please select a service or product",
+      "hourlyRateRequired": "Service {{index}}: Hourly rate is required",
+      "hourlyServiceRequired": "At least one hourly service is required",
+      "hourlyServiceSelectRequired": "Service {{index}}: Please select a service",
+      "unitOfMeasureRequired": "Service {{index}}: Unit of measure is required",
+      "unitRateRequired": "Service {{index}}: Unit rate is required",
+      "usageServiceRequired": "At least one usage-based service is required",
+      "usageServiceSelectRequired": "Service {{index}}: Please select a service"
+    }
   },
   "pricingSchedules": {},
   "contractsList": {},

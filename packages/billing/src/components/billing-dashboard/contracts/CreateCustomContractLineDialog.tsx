@@ -87,44 +87,80 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
 
   const validateForm = (): string[] => {
     const errors: string[] = [];
-    if (!planName.trim()) errors.push('Contract Line Name is required');
-    if (!billingFrequency) errors.push('Billing frequency is required');
-    if (!planType) errors.push('Contract Line Type is required');
+    if (!planName.trim()) {
+      errors.push(t('createCustomLine.validation.contractLineNameRequired', {
+        defaultValue: 'Contract Line Name is required',
+      }));
+    }
+    if (!billingFrequency) {
+      errors.push(t('createCustomLine.validation.billingFrequencyRequired', {
+        defaultValue: 'Billing frequency is required',
+      }));
+    }
+    if (!planType) {
+      errors.push(t('createCustomLine.validation.contractLineTypeRequired', {
+        defaultValue: 'Contract Line Type is required',
+      }));
+    }
 
     if (planType === 'Fixed') {
       if (fixedServices.length === 0) {
-        errors.push('At least one fixed service or product is required');
+        errors.push(t('createCustomLine.validation.fixedServiceRequired', {
+          defaultValue: 'At least one fixed service or product is required',
+        }));
       }
       fixedServices.forEach((service, index) => {
         if (!service.service_id) {
-          errors.push(`Item ${index + 1}: Please select a service or product`);
+          errors.push(t('createCustomLine.validation.fixedServiceSelectRequired', {
+            defaultValue: 'Item {{index}}: Please select a service or product',
+            index: index + 1,
+          }));
         }
       });
     } else if (planType === 'Hourly') {
       if (hourlyServices.length === 0) {
-        errors.push('At least one hourly service is required');
+        errors.push(t('createCustomLine.validation.hourlyServiceRequired', {
+          defaultValue: 'At least one hourly service is required',
+        }));
       }
       hourlyServices.forEach((service, index) => {
         if (!service.service_id) {
-          errors.push(`Service ${index + 1}: Please select a service`);
+          errors.push(t('createCustomLine.validation.hourlyServiceSelectRequired', {
+            defaultValue: 'Service {{index}}: Please select a service',
+            index: index + 1,
+          }));
         }
         if (!service.hourly_rate || service.hourly_rate === 0) {
-          errors.push(`Service ${index + 1}: Hourly rate is required`);
+          errors.push(t('createCustomLine.validation.hourlyRateRequired', {
+            defaultValue: 'Service {{index}}: Hourly rate is required',
+            index: index + 1,
+          }));
         }
       });
     } else if (planType === 'Usage') {
       if (usageServices.length === 0) {
-        errors.push('At least one usage-based service is required');
+        errors.push(t('createCustomLine.validation.usageServiceRequired', {
+          defaultValue: 'At least one usage-based service is required',
+        }));
       }
       usageServices.forEach((service, index) => {
         if (!service.service_id) {
-          errors.push(`Service ${index + 1}: Please select a service`);
+          errors.push(t('createCustomLine.validation.usageServiceSelectRequired', {
+            defaultValue: 'Service {{index}}: Please select a service',
+            index: index + 1,
+          }));
         }
         if (!service.unit_rate || service.unit_rate === 0) {
-          errors.push(`Service ${index + 1}: Unit rate is required`);
+          errors.push(t('createCustomLine.validation.unitRateRequired', {
+            defaultValue: 'Service {{index}}: Unit rate is required',
+            index: index + 1,
+          }));
         }
         if (!service.unit_of_measure?.trim()) {
-          errors.push(`Service ${index + 1}: Unit of measure is required`);
+          errors.push(t('createCustomLine.validation.unitOfMeasureRequired', {
+            defaultValue: 'Service {{index}}: Unit of measure is required',
+            index: index + 1,
+          }));
         }
       });
     }
@@ -213,7 +249,11 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
       onClose();
     } catch (error) {
       console.error('Error creating contract line:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create contract line';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('createCustomLine.validation.failedToCreate', {
+          defaultValue: 'Failed to create contract line',
+        });
       setValidationErrors([errorMessage]);
     } finally {
       setIsSaving(false);
@@ -384,7 +424,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
             <div className="space-y-2">
               <Label htmlFor="minimum-billable-time" className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                Minimum Billable Time (minutes)
+                {t('createCustomLine.minimumBillableTimeLabel', {
+                  defaultValue: 'Minimum Billable Time (minutes)',
+                })}
               </Label>
               <Input
                 id="minimum-billable-time"
@@ -401,7 +443,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
             <div className="space-y-2">
               <Label htmlFor="round-up-to-nearest" className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                Round Up To Nearest (minutes)
+                {t('createCustomLine.roundUpToNearestLabel', {
+                  defaultValue: 'Round Up To Nearest (minutes)',
+                })}
               </Label>
               <Input
                 id="round-up-to-nearest"
@@ -498,7 +542,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 {/* Bucket Overlay Section */}
                 <div className="space-y-3 pt-3 border-t border-dashed border-[rgb(var(--color-border-200))]">
                   <SwitchWithLabel
-                    label="Add bucket of hours"
+                    label={t('createCustomLine.addBucketOfHours', {
+                      defaultValue: 'Add bucket of hours',
+                    })}
                     checked={Boolean(service.bucket_overlay)}
                     onCheckedChange={(checked) => {
                       const newServices = [...hourlyServices];
@@ -706,7 +752,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 {/* Bucket Overlay Section */}
                 <div className="space-y-3 pt-3 border-t border-dashed border-[rgb(var(--color-border-200))]">
                   <SwitchWithLabel
-                    label="Add bucket of consumption"
+                    label={t('createCustomLine.addBucketOfConsumption', {
+                      defaultValue: 'Add bucket of consumption',
+                    })}
                     checked={Boolean(service.bucket_overlay)}
                     onCheckedChange={(checked) => {
                       const newServices = [...usageServices];

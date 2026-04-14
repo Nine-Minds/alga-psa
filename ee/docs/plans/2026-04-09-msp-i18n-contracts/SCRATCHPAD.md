@@ -116,3 +116,6 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Shared enum migration in this file: replaced deprecated `BILLING_FREQUENCY_OPTIONS` with `useBillingFrequencyOptions()`.
 - **(2026-04-14)** Added `createCustomLine.*` keys to `server/public/locales/en/msp/contracts.json`.
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx` (pass; warnings only, no errors).
+- **(2026-04-14)** `F023` completed in `CreateCustomContractLineDialog.tsx`: localized form validation/error messages, bucket-overlay toggles (`Add bucket of hours/consumption`), and hourly minimum/round-up labels. Dialog create failure fallback message now uses `t()`.
+- **(2026-04-14)** Added `createCustomLine.validation.*` plus additional bucket/hourly-label keys in `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx` (pass; warnings only, no errors).
