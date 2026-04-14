@@ -194,7 +194,7 @@
   {
     "id": "T025",
     "description": "GenericContractLineServicesList.tsx: billing method display labels ('Fixed Price', 'Hourly', 'Usage Based') and config type badge text are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
