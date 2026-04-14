@@ -121,3 +121,5 @@
 - (2026-04-13) **F031 verification**: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/ServiceBucketConfigForm.tsx` (pass; pre-existing `any` warning only).
 - (2026-04-13) **F032 complete** (`EditContractLineServiceQuantityDialog.tsx`): wired `useTranslation('msp/contract-lines')`; translated dialog title, quantity heading, quantity/unit-price labels, helper text, validation error (`Quantity must be greater than zero`), fallback update error, and Cancel/Save actions.
 - (2026-04-13) **F032 verification**: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/EditContractLineServiceQuantityDialog.tsx` (pass; pre-existing `any` warning only).
+- (2026-04-13) **F033 complete** (`ContractLineTypeSelector.tsx`): wired `useTranslation('msp/contract-lines')`; translated `Contract Line Type` label, dropdown placeholder, and fixed/hourly/usage description copy used in cards and dropdown option descriptions.
+- (2026-04-13) **F033 verification**: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/ContractLineTypeSelector.tsx` (pass, no errors).

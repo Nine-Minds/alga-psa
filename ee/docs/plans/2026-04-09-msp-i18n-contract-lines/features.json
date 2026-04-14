@@ -162,7 +162,7 @@
   {
     "id": "F033",
     "description": "ContractLineTypeSelector.tsx: Wire useTranslation and translate 'Contract Line Type' label, plan type descriptions (Fixed/Hourly/Usage descriptions used in cards and dropdown), and 'Select contract line type' placeholder",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F034",
