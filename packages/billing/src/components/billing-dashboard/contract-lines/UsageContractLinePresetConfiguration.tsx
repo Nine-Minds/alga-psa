@@ -22,7 +22,7 @@ import { IContractLineServiceConfiguration, IContractLineServiceUsageConfig, ICo
 import { getContractLinePresetById, updateContractLinePreset } from '@alga-psa/billing/actions/contractLinePresetActions'; // Added action to get base plan details
 import { ServiceUsageConfigForm, ServiceUsageConfig, ServiceValidationErrors } from './ServiceUsageConfigForm'; // Import the new form component and types
 import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
-import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -62,6 +62,7 @@ export function UsagePresetConfiguration({
   className = '',
 }: UsagePresetConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const billingFrequencyOptions = useBillingFrequencyOptions();
   // State for the base plan details
   const [plan, setPlan] = useState<IContractLinePreset | null>(null);
 
@@ -602,7 +603,7 @@ export function UsagePresetConfiguration({
                                               setBillingFrequency(value);
                                               markBasicsDirty();
                                           }}
-                                          options={BILLING_FREQUENCY_OPTIONS}
+                                          options={billingFrequencyOptions}
                                           placeholder={t('preset.usage.basics.billingFrequencyPlaceholder', {
                                             defaultValue: 'Select billing frequency',
                                           })}
@@ -726,7 +727,7 @@ export function UsagePresetConfiguration({
                     setBillingFrequency(value);
                     markBasicsDirty();
                   }}
-                  options={BILLING_FREQUENCY_OPTIONS}
+                  options={billingFrequencyOptions}
                   placeholder={t('preset.usage.basics.billingFrequencyPlaceholder', {
                     defaultValue: 'Select billing frequency',
                   })}

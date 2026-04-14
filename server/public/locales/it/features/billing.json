@@ -94,5 +94,17 @@
     "loadingInvoices": "Caricamento fatture...",
     "paymentSuccessful": "Pagamento elaborato correttamente",
     "paymentFailed": "Il pagamento non è andato a buon fine. Riprova."
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "Mensile",
+      "quarterly": "Trimestrale",
+      "annually": "Annuale"
+    },
+    "contractLineType": {
+      "Fixed": "Fisso",
+      "Hourly": "A ore",
+      "Usage": "A consumo"
+    }
   }
 }

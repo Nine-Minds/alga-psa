@@ -16,7 +16,7 @@ import * as Accordion from '@radix-ui/react-accordion';
 import * as Tooltip from '@radix-ui/react-tooltip'; // Correct Radix UI import
 // Removed incorrect import: import { TooltipContent, TooltipProvider, TooltipTrigger } from '@alga-psa/ui/components/Tooltip';
 import { getContractLinePresetById, updateContractLinePreset } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { getContractLineServicesWithConfigurations } from '@alga-psa/billing/actions/contractLineServiceActions'; // Corrected import path
 import HourlyContractLinePresetServicesList from './HourlyContractLinePresetServicesList';
@@ -105,6 +105,7 @@ export function HourlyPresetConfiguration({
   className = '',
 }: HourlyPresetConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const billingFrequencyOptions = useBillingFrequencyOptions();
   // Plan-wide state
   const [plan, setPlan] = useState<HourlyPlanData | null>(null);
   const [initialPlanData, setInitialPlanData] = useState<Partial<HourlyPlanData>>({}); // For plan-wide change detection
@@ -558,14 +559,6 @@ export function HourlyPresetConfiguration({
       }
   };
 
-  const userTypeOptions = [
-    { value: 'technician', label: 'Technician' },
-    { value: 'engineer', label: 'Engineer' },
-    { value: 'consultant', label: 'Consultant' },
-    { value: 'project_manager', label: 'Project Manager' },
-    { value: 'admin', label: 'Administrator' }
-  ];
-
   if (loading && !plan) {
     return <div className="flex justify-center items-center p-8"><Spinner size="sm" /></div>;
   }
@@ -687,7 +680,7 @@ export function HourlyPresetConfiguration({
                                         setBillingFrequency(value);
                                         markBasicsDirty();
                                     }}
-                                    options={BILLING_FREQUENCY_OPTIONS}
+                                    options={billingFrequencyOptions}
                                     placeholder={t('preset.hourly.basics.billingFrequencyPlaceholder', {
                                       defaultValue: 'Select billing frequency',
                                     })}

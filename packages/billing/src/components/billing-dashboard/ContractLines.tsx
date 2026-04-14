@@ -26,7 +26,10 @@ import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
-import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from '@alga-psa/billing/constants/billing';
+import {
+  useFormatBillingFrequency,
+  useFormatContractLineType,
+} from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { add } from 'date-fns';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -37,6 +40,8 @@ interface ContractLinesProps {
 
 const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const { t } = useTranslation('msp/contract-lines');
+  const formatBillingFrequency = useFormatBillingFrequency();
+  const formatContractLineType = useFormatContractLineType();
   const router = useRouter();
   const [contractLines, setContractLines] = useState<IContractLine[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -242,12 +247,12 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
     {
       title: t('list.columns.billingFrequency', { defaultValue: 'Billing Frequency' }),
       dataIndex: 'billing_frequency',
-      render: (value) => BILLING_FREQUENCY_DISPLAY[value] || value,
+      render: (value) => formatBillingFrequency(value),
     },
     {
       title: t('list.columns.contractLineType', { defaultValue: 'Contract Line Type' }),
       dataIndex: 'contract_line_type',
-      render: (value) => PLAN_TYPE_DISPLAY[value] || value,
+      render: (value) => formatContractLineType(value),
     },
     {
       title: t('list.columns.isCustom', { defaultValue: 'Is Custom' }),

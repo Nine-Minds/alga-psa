@@ -94,5 +94,17 @@
     "loadingInvoices": "Loading invoices...",
     "paymentSuccessful": "Payment processed successfully",
     "paymentFailed": "Payment failed. Please try again."
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "annually": "Annually"
+    },
+    "contractLineType": {
+      "Fixed": "Fixed",
+      "Hourly": "Hourly",
+      "Usage": "Usage Based"
+    }
   }
 }

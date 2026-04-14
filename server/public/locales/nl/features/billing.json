@@ -94,5 +94,17 @@
     "loadingInvoices": "Facturen worden geladen...",
     "paymentSuccessful": "Betaling succesvol verwerkt",
     "paymentFailed": "Betaling mislukt. Probeer het opnieuw."
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "Maandelijks",
+      "quarterly": "Per kwartaal",
+      "annually": "Jaarlijks"
+    },
+    "contractLineType": {
+      "Fixed": "Vast",
+      "Hourly": "Per uur",
+      "Usage": "Op verbruik"
+    }
   }
 }

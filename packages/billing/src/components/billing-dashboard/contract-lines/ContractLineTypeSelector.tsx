@@ -2,7 +2,7 @@
 
 import React from 'react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { PLAN_TYPE_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useContractLineTypeOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 // Removed Card import as we'll use divs for custom styling
 import { Clock, Package, Shapes } from 'lucide-react'; // Import original icons
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -40,6 +40,7 @@ export function PlanTypeSelector({
   showCards = false
 }: PlanTypeSelectorProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const planTypeOptions = useContractLineTypeOptions();
   const getPlanTypeDescription = (planType: PlanType) => t(`typeSelector.descriptions.${planType.toLowerCase()}`, {
     defaultValue: PLAN_TYPE_DESCRIPTION_DEFAULTS[planType],
   });
@@ -65,7 +66,7 @@ export function PlanTypeSelector({
           {(Object.keys(PLAN_TYPE_DESCRIPTION_DEFAULTS) as PlanType[]).map((planType) => {
             const IconComponent = PLAN_TYPE_ICONS[planType];
             const isSelected = value === planType;
-            const planLabel = PLAN_TYPE_OPTIONS.find(opt => opt.value === planType)?.label || planType;
+            const planLabel = planTypeOptions.find(opt => opt.value === planType)?.label || planType;
 
             const isCardDisabled = disabled || planType !== 'Fixed'; // Check if this specific card should be disabled
 
@@ -117,7 +118,7 @@ export function PlanTypeSelector({
       </label>
       <CustomSelect
         id="plan-type-selector"
-        options={PLAN_TYPE_OPTIONS.map(option => ({
+        options={planTypeOptions.map(option => ({
           ...option,
           description: showDescriptions ? getPlanTypeDescription(option.value as PlanType) : undefined,
           icon: PLAN_TYPE_ICONS[option.value as PlanType],

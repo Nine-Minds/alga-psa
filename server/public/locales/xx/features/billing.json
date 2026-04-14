@@ -94,5 +94,17 @@
     "loadingInvoices": "11111",
     "paymentSuccessful": "11111",
     "paymentFailed": "11111"
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "11111",
+      "quarterly": "11111",
+      "annually": "11111"
+    },
+    "contractLineType": {
+      "Fixed": "11111",
+      "Hourly": "11111",
+      "Usage": "11111"
+    }
   }
 }

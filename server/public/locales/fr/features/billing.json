@@ -94,5 +94,17 @@
     "loadingInvoices": "Chargement des factures...",
     "paymentSuccessful": "Paiement traité avec succès",
     "paymentFailed": "Échec du paiement. Veuillez réessayer."
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "Mensuel",
+      "quarterly": "Trimestriel",
+      "annually": "Annuel"
+    },
+    "contractLineType": {
+      "Fixed": "Forfait",
+      "Hourly": "Horaire",
+      "Usage": "À l'usage"
+    }
   }
 }

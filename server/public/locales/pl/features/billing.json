@@ -94,5 +94,17 @@
     "loadingInvoices": "Ładowanie faktur...",
     "paymentSuccessful": "Płatność przetworzona pomyślnie",
     "paymentFailed": "Płatność nie powiodła się. Spróbuj ponownie."
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "Miesięcznie",
+      "quarterly": "Kwartalnie",
+      "annually": "Rocznie"
+    },
+    "contractLineType": {
+      "Fixed": "Stała stawka",
+      "Hourly": "Godzinowe",
+      "Usage": "Na podstawie zużycia"
+    }
   }
 }

@@ -94,5 +94,17 @@
     "loadingInvoices": "Rechnungen werden geladen...",
     "paymentSuccessful": "Zahlung erfolgreich verarbeitet",
     "paymentFailed": "Zahlung fehlgeschlagen. Bitte versuche es erneut."
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "Monatlich",
+      "quarterly": "Vierteljährlich",
+      "annually": "Jährlich"
+    },
+    "contractLineType": {
+      "Fixed": "Festpreis",
+      "Hourly": "Stündlich",
+      "Usage": "Nutzungsbasiert"
+    }
   }
 }

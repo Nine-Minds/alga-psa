@@ -20,7 +20,7 @@ import {
 } from '@alga-psa/billing/actions/contractLinePresetActions';
 import { IService, IContractLinePreset } from '@alga-psa/types';
 import FixedContractLinePresetServicesList from '../FixedContractLinePresetServicesList'; // Import the preset-specific component
-import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -49,6 +49,7 @@ export function FixedPresetConfiguration({
   className = '',
 }: FixedPresetConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const billingFrequencyOptions = useBillingFrequencyOptions();
   const [plan, setPlan] = useState<IContractLinePreset | null>(null);
   const [services, setServices] = useState<IService[]>([]);
   const [planLoading, setPlanLoading] = useState(true);
@@ -291,7 +292,7 @@ export function FixedPresetConfiguration({
                     setBillingFrequency(value);
                     markDirty();
                   }}
-                  options={BILLING_FREQUENCY_OPTIONS}
+                  options={billingFrequencyOptions}
                   placeholder={t('preset.fixed.basics.billingFrequencyPlaceholder', {
                     defaultValue: 'Select billing frequency',
                   })}

@@ -19,7 +19,7 @@ import {
 import { IContractLinePreset } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
-import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { getCurrencySymbol } from '@alga-psa/core';
 import { getServiceById } from '@alga-psa/billing/actions';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
@@ -54,6 +54,7 @@ interface ContractLineDialogProps {
 
 export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: ContractLineDialogProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const billingFrequencyOptions = useBillingFrequencyOptions();
   const [open, setOpen] = useState(false);
   const [planName, setPlanName] = useState('');
   const [planType, setPlanType] = useState<PlanType | null>(null);
@@ -1253,7 +1254,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       clearErrorIfSubmitted();
                       markDirty();
                     }}
-                    options={BILLING_FREQUENCY_OPTIONS}
+                    options={billingFrequencyOptions}
                     placeholder={t('dialog.basics.billingFrequencyPlaceholder', {
                       defaultValue: 'Select billing frequency',
                     })}

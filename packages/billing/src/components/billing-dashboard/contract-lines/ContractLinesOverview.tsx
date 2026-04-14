@@ -20,7 +20,11 @@ import { IContractLinePreset, IServiceType } from '@alga-psa/types'; // Added IS
 import { getServiceTypesForSelection } from '@alga-psa/billing/actions'; // Added import for fetching types
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
-import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY, CONTRACT_LINE_TYPE_DISPLAY } from '@alga-psa/billing/constants/billing';
+import { CONTRACT_LINE_TYPE_VALUES } from '@alga-psa/billing/constants/billing';
+import {
+  useFormatBillingFrequency,
+  useFormatContractLineType,
+} from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -28,6 +32,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const ContractLinesOverview: React.FC = () => {
   const { t } = useTranslation('msp/contract-lines');
+  const formatBillingFrequency = useFormatBillingFrequency();
+  const formatContractLineType = useFormatContractLineType();
   const [contractLines, setContractLines] = useState<IContractLinePreset[]>([]);
   const [editingPlan, setEditingPlan] = useState<IContractLinePreset | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -111,10 +117,10 @@ const ContractLinesOverview: React.FC = () => {
   // Contract line type filter options
   const typeFilterOptions = [
     { value: 'all', label: t('overview.filters.type.allTypes', { defaultValue: 'All types' }) },
-    ...Object.entries(CONTRACT_LINE_TYPE_DISPLAY).map(([value, label]) => ({
+    ...CONTRACT_LINE_TYPE_VALUES.map((value) => ({
       value,
-      label
-    }))
+      label: formatContractLineType(value),
+    })),
   ];
 
   const contractLineColumns: ColumnDefinition<IContractLinePreset>[] = [
@@ -125,12 +131,12 @@ const ContractLinesOverview: React.FC = () => {
     {
       title: t('overview.columns.billingFrequency', { defaultValue: 'Billing Frequency' }),
       dataIndex: 'billing_frequency',
-      render: (value) => BILLING_FREQUENCY_DISPLAY[value] || value,
+      render: (value) => formatBillingFrequency(value),
     },
     {
       title: t('overview.columns.contractLineType', { defaultValue: 'Contract Line Type' }),
       dataIndex: 'contract_line_type',
-      render: (value) => PLAN_TYPE_DISPLAY[value] || value,
+      render: (value) => formatContractLineType(value),
     },
     {
       title: t('overview.columns.actions', { defaultValue: 'Actions' }),
