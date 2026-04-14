@@ -127,7 +127,7 @@
   {
     "id": "F026",
     "description": "ContractLineServiceForm.tsx: Wire useTranslation and translate dialog title ('Edit Service Configuration'), loading state text ('Loading service configuration...'), error messages ('Missing plan or service information', 'Failed to load service configuration', 'Failed to update service')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F027",
