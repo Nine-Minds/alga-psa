@@ -67,7 +67,7 @@
   {
     "id": "F014",
     "description": "HourlyContractLinePresetServicesList.tsx: Wire useTranslation and translate table column headers, action menu items, empty state messages, and 'Add Services' section heading",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F015",

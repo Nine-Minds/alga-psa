@@ -89,3 +89,6 @@
 - (2026-04-14) Billing method display labels in local `BILLING_METHOD_OPTIONS` now resolve through translation keys (`Fixed Price`, `Hourly`, `Usage Based`).
 - (2026-04-14) Verification command run: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/UsageContractLinePresetServicesList.tsx` (warnings only, no errors).
 - (2026-04-14) `F013` covered in `contract-lines/UsageContractLinePresetServicesList.tsx`: translated add-service metadata/interpolation strings, `Add Selected ({{count}}) Services` CTA, bucket overlay defaults/labels, save/reset controls, unsaved-change banner + confirmation dialog labels/messages, success toast, and error fallbacks.
+- (2026-04-14) `F014` implemented in `contract-lines/HourlyContractLinePresetServicesList.tsx`: wired `useTranslation('msp/contract-lines')`; translated hourly-preset services list heading/empty/loading copy, service metadata line, action-menu screen-reader + remove label, hourly rate label, bucket switch label, and add-services section heading/empty-state text.
+- (2026-04-14) Local billing method labels (`Fixed Price`, `Hourly`, `Usage Based`) now flow through i18n keys in this component as well.
+- (2026-04-14) Verification command run: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/HourlyContractLinePresetServicesList.tsx` (warnings only, no errors).
