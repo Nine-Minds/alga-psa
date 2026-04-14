@@ -112,3 +112,7 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** `F021` completed in `ContractTemplateDetail.tsx`: localized template guidance edit/review sections (`Usage Notes`, `Recommended Cadence`, `Tags`, placeholders/hints, save/cancel/saving labels) and translated template-level save/error feedback messages (`Template name is required`, billing-frequency required, failed-update basics/guidance, failed-load template).
 - **(2026-04-14)** Added `templateDetail.guidance.*` and `templateDetail.validation.*` keys in `server/public/locales/en/msp/contracts.json`.
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractTemplateDetail.tsx` (pass; warnings only, no errors).
+- **(2026-04-14)** `F022` completed in `CreateCustomContractLineDialog.tsx`: wired `useTranslation('msp/contracts')`, localized dialog shell labels/actions, contract-line basics section, billing-frequency + billing-timing labels/options, billing-model selector copy (Fixed/Hourly/Usage cards), and top-level per-type section headers/descriptions.
+- **(2026-04-14)** Shared enum migration in this file: replaced deprecated `BILLING_FREQUENCY_OPTIONS` with `useBillingFrequencyOptions()`.
+- **(2026-04-14)** Added `createCustomLine.*` keys to `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx` (pass; warnings only, no errors).

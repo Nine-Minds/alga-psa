@@ -107,7 +107,7 @@
   {
     "id": "F022",
     "description": "Wire useTranslation('msp/contracts') in CreateCustomContractLineDialog.tsx -- translate dialog title, line type selector (Fixed/Hourly/Usage), service picker section, configuration fields per type (base rate, hourly rate, unit rate, unit of measure), and billing frequency override",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F023",
