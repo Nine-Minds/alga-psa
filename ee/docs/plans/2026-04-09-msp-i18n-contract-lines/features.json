@@ -82,7 +82,7 @@
   {
     "id": "F017",
     "description": "GenericContractLineServicesList.tsx: Translate action menu items ('Configure', 'Remove'), 'Add Services to Contract Line' heading, empty states ('No services currently associated...', 'All available services are already associated...', 'Loading services...'), service list item detail text ('Service Type: X | Method: Y | Rate: Z', 'No {currency} price'), 'Enter rate' placeholder, 'Add Selected (N) Services' button, billing mismatch badge, and error alerts",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F018",
