@@ -137,7 +137,7 @@
   {
     "id": "F028",
     "description": "Wire useTranslation('msp/contracts') in AddContractLinesDialog.tsx -- translate dialog title, search placeholder, type filter options, preset list, rate override section, quantity fields, select/deselect controls, and save/cancel buttons",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F029",

@@ -449,7 +449,67 @@
   },
   "contractLineEdit": {},
   "contractLineRate": {},
-  "addLines": {},
+  "addLines": {
+    "actions": {
+      "addPlural": "Add ({{count}}) Presets",
+      "addSingle": "Add ({{count}}) Preset",
+      "adding": "Adding..."
+    },
+    "empty": {
+      "noMatches": "No presets match your search.",
+      "noneAvailable": "No contract line presets available."
+    },
+    "filters": {
+      "allTypes": "All types",
+      "reset": "Reset",
+      "searchPlaceholder": "Search presets...",
+      "typePlaceholder": "Select type"
+    },
+    "fixedConfig": {
+      "defaultBaseRate": "Default Base Rate:",
+      "defaultRatePlaceholder": "Default: ${{rate}}",
+      "enterBaseRate": "Enter base rate",
+      "leaveBlankDefault": "Leave blank to use the default rate",
+      "notSet": "Not set",
+      "overrideBaseRate": "Override Base Rate",
+      "title": "Fixed Rate Configuration"
+    },
+    "hourlyConfig": {
+      "defaultRate": "Default: ${{rate}}",
+      "hourlyRate": "Hourly Rate",
+      "minimumBillableMinutes": "Minimum billable minutes",
+      "roundUpToNearest": "Round up to nearest (minutes)",
+      "servicesAndRates": "Services & Hourly Rates",
+      "title": "Time Billing Configuration"
+    },
+    "loading": "Loading contract line presets...",
+    "selectPresetsTitle": "Select Contract Line Presets to Add",
+    "selection": {
+      "deselectPreset": "Deselect preset",
+      "selectPreset": "Select preset",
+      "selectedPlural": "{{count}} presets selected",
+      "selectedSingle": "{{count}} preset selected"
+    },
+    "serviceCountPlural": "{{count}} services",
+    "serviceCountSingle": "{{count}} service",
+    "services": {
+      "configuration": "Services Configuration",
+      "empty": "No services configured for this preset",
+      "fixedReferenceHelp": "These services are included for reference only. The fixed rate above determines the billing amount.",
+      "includedReference": "Services Included (Reference)",
+      "quantityShort": "Qty: {{quantity}}",
+      "unknownService": "Unknown Service"
+    },
+    "title": "Add Contract Lines from Presets",
+    "usageConfig": {
+      "defaultRate": "Default: ${{rate}}",
+      "quantity": "Quantity",
+      "ratePerUnit": "Rate (per unit)",
+      "unitHint": "e.g., GB, API call, user",
+      "unitOfMeasure": "Unit of Measure",
+      "unitPlaceholder": "unit"
+    }
+  },
   "createCustomLine": {
     "addBucketOfConsumption": "Add bucket of consumption",
     "addBucketOfHours": "Add bucket of hours",
