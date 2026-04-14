@@ -330,7 +330,7 @@
   {
     "id": "T042",
     "description": "ServiceBucketConfigForm.tsx: labels with interpolated unit names, tooltip content, and rollover checkbox label are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
