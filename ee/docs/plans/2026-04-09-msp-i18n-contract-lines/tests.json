@@ -370,7 +370,7 @@
   {
     "id": "T047",
     "description": "ContractLinePresetTypeRouter.tsx: loading text and all error messages render translated text with interpolated ID/type values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
