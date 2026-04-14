@@ -218,7 +218,7 @@
   {
     "id": "T028",
     "description": "ContractLines.tsx: plan services section renders translated heading, 'Services for {name}' with interpolation, empty state, service table headers, and 'Add Service' button",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
