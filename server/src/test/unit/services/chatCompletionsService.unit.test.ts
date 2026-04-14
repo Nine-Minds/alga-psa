@@ -742,37 +742,41 @@ describe('ChatCompletionsService (unit)', () => {
     expect(parsed.reasoning).toBe('fallback reasoning');
   });
 
-  it('streams a visible fallback message when execute tool proposal targets an unknown function entry', async () => {
+  it('retries with a corrective function message when execute tool proposal targets an unknown entryId', async () => {
     process.env.AI_CHAT_PROVIDER = 'openrouter';
     setSecrets({
       OPENROUTER_API_KEY: 'openrouter-key',
       OPENROUTER_CHAT_MODEL: 'openrouter/model',
     });
 
-    openAiCreateSpy.mockResolvedValueOnce(
-      buildChunkStream([
-        {
-          choices: [
-            {
-              index: 0,
-              delta: {
-                tool_calls: [
-                  {
-                    index: 0,
-                    id: 'tool-call-missing-entry',
-                    type: 'function',
-                    function: {
-                      name: 'call_api_endpoint',
-                      arguments: JSON.stringify({ entryId: 'missing.entry' }),
+    openAiCreateSpy
+      .mockResolvedValueOnce(
+        buildChunkStream([
+          {
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      id: 'tool-call-missing-entry',
+                      type: 'function',
+                      function: {
+                        name: 'call_api_endpoint',
+                        arguments: JSON.stringify({ entryId: 'missing.entry' }),
+                      },
                     },
-                  },
-                ],
+                  ],
+                },
               },
-            },
-          ],
-        },
-      ]),
-    );
+            ],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        buildFinishResponseChunkStream('Recovered after registry miss.'),
+      );
 
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
 
@@ -784,12 +788,25 @@ describe('ChatCompletionsService (unit)', () => {
     }
 
     expect(streamedEvents).toEqual([
-      {
-        type: 'content_delta',
-        delta: 'I couldn\'t run "missing.entry" because that function is not available.',
-      },
+      { type: 'content_delta', delta: 'Recovered after registry miss.' },
       { type: 'done' },
     ]);
+    expect(openAiCreateSpy).toHaveBeenCalledTimes(2);
+
+    const retryCallArgs = openAiCreateSpy.mock.calls[1][0] as {
+      messages: Array<{ role: string; name?: string; content?: string }>;
+    };
+    const toolMessages = retryCallArgs.messages.filter((m) => m.role === 'tool');
+    expect(toolMessages.length).toBeGreaterThan(0);
+    const lastToolMessage = toolMessages[toolMessages.length - 1];
+    const parsedContent = JSON.parse(lastToolMessage.content ?? '{}') as {
+      error?: string;
+      requested_entry_id?: string;
+      suggestions?: unknown;
+    };
+    expect(parsedContent.requested_entry_id).toBe('missing.entry');
+    expect(parsedContent.error).toMatch(/missing\.entry/);
+    expect(Array.isArray(parsedContent.suggestions)).toBe(true);
   });
 
   it('retries streamed tool calls when the model emits invalid JSON arguments', async () => {

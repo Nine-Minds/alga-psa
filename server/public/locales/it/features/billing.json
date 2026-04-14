@@ -3,7 +3,8 @@
   "overview": "Panoramica",
   "tabs": {
     "overview": "Panoramica",
-    "invoices": "Fatture"
+    "invoices": "Fatture",
+    "quotes": "Preventivi"
   },
   "currentContractLine": "Linea di contratto attuale",
   "nextInvoice": "Prossima fattura",
@@ -49,7 +50,18 @@
     "tax": "Imposta",
     "taxBreakdown": "Dettaglio imposte",
     "manualInvoice": "Fattura manuale",
-    "credits": "Crediti"
+    "credits": "Crediti",
+    "financialArtifactSummary": "Fattura solo finanziaria. I periodi di servizio ricorrenti appaiono solo sulle righe di dettaglio ricorrenti.",
+    "servicePeriod": "Periodo di servizio",
+    "servicePeriods": "Periodi di servizio",
+    "financialOnlyLine": "Riga solo finanziaria. Nessun periodo di servizio ricorrente.",
+    "downloadStarted": "Preparazione del download PDF...",
+    "downloadComplete": "PDF scaricato correttamente.",
+    "emailStarted": "Invio email fattura...",
+    "emailSent": "Email della fattura inviata correttamente.",
+    "advanceTiming": "Anticipato",
+    "arrearsTiming": "Posticipato",
+    "paymentSummaryServicePeriods": "Il pagamento salda il saldo della fattura per questi periodi di servizio ricorrenti. Apri i dettagli della fattura di seguito per la ripartizione completa riga per riga."
   },
   "frequency": {
     "monthly": "Mensile",
@@ -70,7 +82,15 @@
     "serviceCategory": "Categoria di servizio",
     "statusDescription": "Questa linea di contratto è attualmente {{status}} e {{expiry}}.",
     "expiresOn": "scade il {{date}}",
-    "noExpiry": "non scade"
+    "noExpiry": "non scade",
+    "cadenceOwnerContractDescription": "I periodi di servizio ricorrenti seguono la cadenza dell'anniversario del contratto per questa riga.",
+    "cadenceOwnerClientDescription": "I periodi di servizio ricorrenti seguono la pianificazione di fatturazione del cliente per questa riga.",
+    "cadenceOwnerContract": "Anniversario del contratto",
+    "cadenceOwnerClient": "Pianificazione di fatturazione del cliente",
+    "billingTimingAdvance": "Anticipato",
+    "billingTimingArrears": "Posticipato",
+    "cadenceOwner": "Proprietario della cadenza",
+    "billingTiming": "Tempistica di fatturazione"
   },
   "payment": {
     "method": "Metodo di pagamento",
@@ -94,6 +114,12 @@
     "loadingInvoices": "Caricamento fatture...",
     "paymentSuccessful": "Pagamento elaborato correttamente",
     "paymentFailed": "Il pagamento non è andato a buon fine. Riprova."
+  },
+  "quotes": {
+    "pendingQuotes": "Preventivi in sospeso",
+    "awaitingResponse": "{{count}} preventivo/i in attesa della tua risposta",
+    "noPending": "Nessun preventivo in sospeso",
+    "viewAll": "Visualizza tutti i preventivi"
   },
   "enums": {
     "billingFrequency": {

@@ -404,7 +404,13 @@
           "asc": "Afficher de A à Z",
           "desc": "Afficher de Z à A"
         }
-      }
+      },
+      "clientVisibility": {
+        "all": "Tous",
+        "visible": "Visible pour le client",
+        "hidden": "Interne uniquement"
+      },
+      "clientVisibilityLabel": "Visibilité pour le client"
     },
     "selector": {
       "title": "Sélectionner des documents",
@@ -444,7 +450,9 @@
       "loading": "Chargement des dossiers...",
       "title": "Dossiers",
       "collapse": "Replier les dossiers",
-      "allDocuments": "Tous les documents"
+      "allDocuments": "Tous les documents",
+      "expand": "Afficher les dossiers",
+      "deleteTitle": "Supprimer le dossier"
     },
     "folderManager": {
       "title": "Créer un nouveau dossier",
@@ -461,7 +469,35 @@
         "Tickets": "Tickets",
         "Time Entries": "Entrées de temps"
       }
-    }
+    },
+    "list": {
+      "name": "Nom",
+      "folder": "Dossier",
+      "size": "Taille",
+      "modified": "Modifié",
+      "visibility": "Visibilité",
+      "actions": "Actions"
+    },
+    "hasShareLinks": "A des liens de partage actifs",
+    "visibility": {
+      "clientVisible": "Visible pour le client",
+      "internalOnly": "Interne",
+      "markedVisible": "« {{name}} » est désormais visible dans le portail client",
+      "markedHidden": "« {{name}} » est désormais masqué dans le portail client",
+      "toggleFailed": "Échec de la mise à jour de la visibilité du dossier",
+      "cascadeTitle": "Mettre à jour la visibilité des documents",
+      "cascadeMakeVisible": "Souhaitez-vous également rendre visibles les {{count}} document(s) de « {{name}} » dans le portail client ?",
+      "cascadeMakeHidden": "Souhaitez-vous également masquer les {{count}} document(s) de « {{name}} » du portail client ?",
+      "cascadeYes": "Oui, mettre à jour les documents",
+      "cascadeNo": "Non, dossier uniquement"
+    },
+    "share": "Partager",
+    "videoPlaybackFailed": "Impossible de lire cette vidéo dans le navigateur",
+    "videoPlaybackIssue": "Problèmes de lecture de la vidéo ?",
+    "downloadVideo": "Télécharger la vidéo",
+    "downloadAsPdf": "Télécharger en PDF",
+    "downloadAsMarkdown": "Télécharger en Markdown",
+    "move": "Déplacer"
   },
   "fields": {
     "notes": "Notes"
@@ -623,6 +659,18 @@
         },
         "noTemplates": "Créez un modèle d’enquête avant d’ajouter des déclencheurs.",
         "prioritiesMixed": "Les tableaux sélectionnés utilisent différents types de priorité. Toutes les priorités sont affichées."
+      },
+      "preview": {
+        "heading": "Aperçu de la page de réponse",
+        "tabs": {
+          "survey": "Formulaire d'enquête",
+          "thankYou": "Merci"
+        },
+        "noPrompt": "Invite de l'enquête",
+        "commentPlaceholder": "Les commentaires des clients apparaîtront ici...",
+        "noThankYou": "Message de remerciement",
+        "notice": "Cet aperçu montre ce que les clients voient après avoir cliqué sur le lien d'enquête dans leur e-mail.",
+        "editEmailTemplate": "Modifier le modèle d'e-mail d'enquête"
       }
     },
     "response": {
@@ -876,6 +924,11 @@
     "notSpecified": "Non spécifié",
     "unknown": "Inconnu",
     "uploading": "Téléchargement...",
-    "submitting": "Envoi..."
+    "submitting": "Envoi...",
+    "edited": "modifié",
+    "editComment": "Modifier le commentaire",
+    "deleteCommentAriaLabel": "Supprimer le commentaire",
+    "deleteComment": "Supprimer le commentaire",
+    "deleteCommentConfirmation": "Êtes-vous sûr de vouloir supprimer ce commentaire ? Cette action est irréversible."
   }
 }

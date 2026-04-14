@@ -285,5 +285,8 @@
       "reviewOverdue": "Die Überprüfung war fällig am {{date}}",
       "reviewDue": "Überprüfung fällig am {{date}}"
     }
+  },
+  "common": {
+    "done": "Fertig"
   }
 }

@@ -28,7 +28,8 @@
       "copyToAnotherDay": "Copier vers un autre jour",
       "viewDetails": "Afficher les détails",
       "manageTimePeriods": "Gérer les périodes",
-      "selectWorkItem": "Sélectionner un élément de travail"
+      "selectWorkItem": "Sélectionner un élément de travail",
+      "clearFilter": "Effacer le filtre"
     },
     "states": {
       "inProgress": "En cours",
@@ -165,7 +166,8 @@
       "next": "Suivant",
       "pageInfo": "Page {{current}} sur {{total}} ({{records}} enregistrements totaux)"
     },
-    "interactionType": "{{type}} • {{client}}"
+    "interactionType": "{{type}} • {{client}}",
+    "currentSelection": "Élément de travail actuel"
   },
   "timeSheetHeader": {
     "title": "Feuille de temps",
@@ -329,6 +331,11 @@
     "dayGroup": {
       "entryOne": "{{count}} entrée",
       "entryOther": "{{count}} entrées"
+    },
+    "focusFilter": {
+      "summary": "Affichage de {{count}} entrées pour {{workItem}} le {{date}}",
+      "description": "Seules les entrées de la cellule sélectionnée sont visibles.",
+      "backToGrid": "Retour à la grille"
     }
   },
   "selectedWorkItem": {

@@ -102,6 +102,11 @@
       "totalQuantity": "Esto establece la cantidad total de su suscripción (no se añade a las licencias actuales)",
       "increasingImmediate": "Aumentar licencias: acceso inmediato con cargo prorrateado",
       "billedMonthly": "Las licencias se facturan mensualmente y pueden cancelarse en cualquier momento"
+    },
+    "solo": {
+      "title": "Solo incluye un usuario",
+      "description": "El plan Solo está diseñado para un solo usuario y no admite agregar licencias. Actualice a Pro para agregar más usuarios a su equipo.",
+      "upgradeCta": "Actualizar a Pro"
     }
   },
   "removalModal": {

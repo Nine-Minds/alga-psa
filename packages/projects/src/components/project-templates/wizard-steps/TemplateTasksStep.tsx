@@ -1,6 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
+import {
+  extractTaskDescriptionText,
+  parseTaskRichTextContent,
+  serializeTaskRichTextContent,
+} from '../../../lib/taskRichText';
+import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
+import { TextEditor } from '@alga-psa/ui/editor';
+import type { PartialBlock } from '@blocknote/core';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -49,6 +58,65 @@ export function TemplateTasksStep({
   );
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [saveAttempted, setSaveAttempted] = useState<Set<string>>(new Set());
+  const tasksRef = useRef(data.tasks);
+  const pendingMarkdownBlocks = useRef<Map<string, PartialBlock[]>>(new Map());
+
+  React.useEffect(() => {
+    tasksRef.current = data.tasks;
+  }, [data.tasks]);
+
+  const updateTask = useCallback((temp_id: string, updates: Partial<TemplateTask>) => {
+    const updated = tasksRef.current.map((t) => (t.temp_id === temp_id ? { ...t, ...updates } : t));
+    updateData({ tasks: updated });
+  }, [updateData]);
+
+  const flushDescriptionChange = useCallback((taskTempId: string) => {
+    const existing = markdownTimers.current.get(taskTempId);
+    if (existing) {
+      clearTimeout(existing);
+      markdownTimers.current.delete(taskTempId);
+    }
+
+    const blocks = pendingMarkdownBlocks.current.get(taskTempId);
+    if (!blocks) {
+      return;
+    }
+
+    updateTask(taskTempId, {
+      description: convertBlockNoteToMarkdown(blocks),
+    });
+    pendingMarkdownBlocks.current.delete(taskTempId);
+  }, [updateTask]);
+
+  // Debounce the expensive markdown conversion when typing in the
+  // description editor. Rich text JSON is saved immediately; the
+  // markdown description follows after 300ms of inactivity.
+  const markdownTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const handleDescriptionChange = useCallback((taskTempId: string, blocks: PartialBlock[]) => {
+    // Immediately save the cheap rich text serialization
+    updateTask(taskTempId, {
+      description_rich_text: serializeTaskRichTextContent(blocks),
+    });
+    pendingMarkdownBlocks.current.set(taskTempId, blocks);
+    // Debounce the markdown conversion
+    const existing = markdownTimers.current.get(taskTempId);
+    if (existing) clearTimeout(existing);
+    markdownTimers.current.set(
+      taskTempId,
+      setTimeout(() => {
+        flushDescriptionChange(taskTempId);
+      }, 300),
+    );
+  }, [flushDescriptionChange, updateTask]);
+
+  React.useEffect(() => {
+    const pendingBlocksRef = pendingMarkdownBlocks;
+    return () => {
+      for (const taskTempId of pendingBlocksRef.current.keys()) {
+        flushDescriptionChange(taskTempId);
+      }
+    };
+  }, [flushDescriptionChange]);
 
   // Fetch teams when teams-v2 is enabled
   React.useEffect(() => {
@@ -106,17 +174,18 @@ export function TemplateTasksStep({
   };
 
   const removeTask = (temp_id: string) => {
+    const existing = markdownTimers.current.get(temp_id);
+    if (existing) {
+      clearTimeout(existing);
+      markdownTimers.current.delete(temp_id);
+    }
+    pendingMarkdownBlocks.current.delete(temp_id);
     const updatedTasks = data.tasks.filter((t) => t.temp_id !== temp_id);
     const updatedChecklists = data.checklist_items.filter((c) => c.task_temp_id !== temp_id);
     updateData({ tasks: updatedTasks, checklist_items: updatedChecklists });
     if (editingTaskId === temp_id) {
       setEditingTaskId(null);
     }
-  };
-
-  const updateTask = (temp_id: string, updates: Partial<TemplateTask>) => {
-    const updated = data.tasks.map((t) => (t.temp_id === temp_id ? { ...t, ...updates } : t));
-    updateData({ tasks: updated });
   };
 
   const addChecklistItem = (task_temp_id: string) => {
@@ -222,13 +291,15 @@ export function TemplateTasksStep({
 
                         <div>
                           <Label>{t('fields.description', 'Description')}</Label>
-                          <TextArea
-                            value={task.description || ''}
-                            onChange={(e) =>
-                              updateTask(task.temp_id, { description: e.target.value })
+                          <TextEditor
+                            key={`wizard-task-desc-${task.temp_id}`}
+                            id={`wizard-task-description-${task.temp_id}`}
+                            initialContent={parseTaskRichTextContent(task.description_rich_text ?? task.description)}
+                            onContentChange={(blocks: PartialBlock[]) =>
+                              handleDescriptionChange(task.temp_id, blocks)
                             }
+                            searchMentions={searchUsersForMentions}
                             placeholder={t('templates.wizard.tasks.descriptionPlaceholder', 'Describe what needs to be done...')}
-                            rows={2}
                           />
                         </div>
 
@@ -471,6 +542,7 @@ export function TemplateTasksStep({
                                 if (!task.task_name.trim()) {
                                   setSaveAttempted(prev => new Set([...prev, task.temp_id]));
                                 } else {
+                                  flushDescriptionChange(task.temp_id);
                                   setSaveAttempted(prev => {
                                     const next = new Set(prev);
                                     next.delete(task.temp_id);
@@ -496,6 +568,7 @@ export function TemplateTasksStep({
                                 if (!task.task_name.trim()) {
                                   removeTask(task.temp_id);
                                 } else {
+                                  flushDescriptionChange(task.temp_id);
                                   setEditingTaskId(null);
                                 }
                               }}
@@ -515,7 +588,7 @@ export function TemplateTasksStep({
                             </h4>
                             {task.description && (
                               <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                                {task.description}
+                                {extractTaskDescriptionText(task.description_rich_text ?? task.description)}
                               </p>
                             )}
                             <div className="flex gap-4 mt-2 text-xs text-gray-600">

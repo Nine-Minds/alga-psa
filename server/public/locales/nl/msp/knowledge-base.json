@@ -285,5 +285,8 @@
       "reviewOverdue": "Beoordeling moest {{date}} zijn",
       "reviewDue": "Beoordeling gepland voor {{date}}"
     }
+  },
+  "common": {
+    "done": "Klaar"
   }
 }

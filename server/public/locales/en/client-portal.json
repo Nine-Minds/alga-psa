@@ -14,7 +14,8 @@
     "portal": "Portal",
     "notifications": "Notifications",
     "documents": "Documents",
-    "knowledgeBase": "Knowledge Base"
+    "knowledgeBase": "Knowledge Base",
+    "requestServices": "Request Services"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -137,7 +138,9 @@
         "description": "View shared documents and resources"
       }
     },
-    "forgotPassword": "Forgot password?"
+    "forgotPassword": "Forgot password?",
+    "sessionEndedTitle": "Session Ended",
+    "sessionEndedMessage": "Your session has been signed out. Please sign in again."
   },
   "account": {
     "title": "Account",
@@ -339,7 +342,9 @@
       "uploadError": "Failed to upload. Please try again.",
       "deleteSuccess": "Deleted successfully.",
       "deleteError": "Failed to delete.",
-      "deleteConfirm": "Are you sure you want to delete this? This action cannot be undone."
+      "deleteConfirm": "Are you sure you want to delete this? This action cannot be undone.",
+      "linking": "Linking...",
+      "linkDocument": "Link Document"
     },
     "validation": {
       "clientNameRequired": "Client name is required",

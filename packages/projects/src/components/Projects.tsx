@@ -127,6 +127,8 @@ interface ProjectsProps {
   initialProjects: IProject[];
   clients: IClient[];
   initialFilters?: Partial<ProjectListFilters>;
+  initialProjectTags?: Record<string, ITag[]>;
+  initialAllUniqueTags?: ITag[];
 }
 
 export const DEFAULT_PROJECT_FILTERS: ProjectListFilters = {
@@ -135,7 +137,7 @@ export const DEFAULT_PROJECT_FILTERS: ProjectListFilters = {
   pageSize: 10,
 };
 
-export default function Projects({ initialProjects, clients, initialFilters }: ProjectsProps) {
+export default function Projects({ initialProjects, clients, initialFilters, initialProjectTags, initialAllUniqueTags }: ProjectsProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   const projectListT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
     t(`projectList.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
@@ -167,9 +169,10 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
   const { openDrawer, closeDrawer } = useDrawer();
   const clientDrawer = useClientDrawer();
 
-  // Tag-related state (for display, not filtering — projectTagsRef maps entity tags)
-  const projectTagsRef = useRef<Record<string, ITag[]>>({});
-  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
+  // Tag-related state. Seeded from server-fetched tags so URL-based tag filters
+  // work on the very first render (bookmarked/pasted URLs).
+  const projectTagsRef = useRef<Record<string, ITag[]>>(initialProjectTags ?? {});
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(initialAllUniqueTags ?? []);
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
 
   // Picker-internal UI state (not URL-persisted)
@@ -437,7 +440,8 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
     });
 
     return filtered;
-  }, [projects, activeFilters, deadlineFilterValue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tagsVersion tracks projectTagsRef mutations
+  }, [projects, activeFilters, deadlineFilterValue, tagsVersion]);
 
   const handleEditProject = (project: IProject) => {
     openDrawer(

@@ -404,7 +404,13 @@
           "asc": "Toon van A tot Z",
           "desc": "Toon van Z tot A"
         }
-      }
+      },
+      "clientVisibility": {
+        "all": "Alle",
+        "visible": "Zichtbaar voor klant",
+        "hidden": "Alleen intern"
+      },
+      "clientVisibilityLabel": "Zichtbaarheid voor klant"
     },
     "selector": {
       "title": "Documenten selecteren",
@@ -444,7 +450,9 @@
       "loading": "Mappen laden...",
       "title": "Mappen",
       "collapse": "Mappen samenvouwen",
-      "allDocuments": "Alle documenten"
+      "allDocuments": "Alle documenten",
+      "expand": "Mappen tonen",
+      "deleteTitle": "Map verwijderen"
     },
     "folderManager": {
       "title": "Nieuwe map maken",
@@ -461,7 +469,35 @@
         "Tickets": "Tickets",
         "Time Entries": "Tijdregistraties"
       }
-    }
+    },
+    "list": {
+      "name": "Naam",
+      "folder": "Map",
+      "size": "Grootte",
+      "modified": "Gewijzigd",
+      "visibility": "Zichtbaarheid",
+      "actions": "Acties"
+    },
+    "hasShareLinks": "Heeft actieve deellinks",
+    "visibility": {
+      "clientVisible": "Zichtbaar voor klant",
+      "internalOnly": "Intern",
+      "markedVisible": "\"{{name}}\" is nu zichtbaar in het klantportaal",
+      "markedHidden": "\"{{name}}\" is nu verborgen voor het klantportaal",
+      "toggleFailed": "Kan zichtbaarheid van map niet bijwerken",
+      "cascadeTitle": "Documentzichtbaarheid bijwerken",
+      "cascadeMakeVisible": "Wilt u ook alle {{count}} document(en) in \"{{name}}\" zichtbaar maken in het klantportaal?",
+      "cascadeMakeHidden": "Wilt u ook alle {{count}} document(en) in \"{{name}}\" verbergen voor het klantportaal?",
+      "cascadeYes": "Ja, documenten bijwerken",
+      "cascadeNo": "Nee, alleen map"
+    },
+    "share": "Delen",
+    "videoPlaybackFailed": "Kan deze video niet afspelen in de browser",
+    "videoPlaybackIssue": "Problemen met het afspelen van de video?",
+    "downloadVideo": "Video downloaden",
+    "downloadAsPdf": "Downloaden als PDF",
+    "downloadAsMarkdown": "Downloaden als Markdown",
+    "move": "Verplaatsen"
   },
   "fields": {
     "notes": "Notities"
@@ -623,6 +659,18 @@
         },
         "noTemplates": "Maak eerst een enquêtemal voordat u triggers toevoegt.",
         "prioritiesMixed": "De geselecteerde boards gebruiken verschillende prioriteitstypen. Alle prioriteiten worden getoond."
+      },
+      "preview": {
+        "heading": "Voorbeeld van antwoordpagina",
+        "tabs": {
+          "survey": "Enquêteformulier",
+          "thankYou": "Bedankt"
+        },
+        "noPrompt": "Enquêtetekst",
+        "commentPlaceholder": "Klantopmerkingen verschijnen hier...",
+        "noThankYou": "Bedankbericht",
+        "notice": "Dit voorbeeld toont wat klanten zien nadat ze op de enquêtelink in hun e-mail hebben geklikt.",
+        "editEmailTemplate": "E-mailsjabloon enquête bewerken"
       }
     },
     "response": {
@@ -876,6 +924,11 @@
     "notSpecified": "Niet gespecificeerd",
     "unknown": "Onbekend",
     "uploading": "Uploaden...",
-    "submitting": "Verzenden..."
+    "submitting": "Verzenden...",
+    "edited": "bewerkt",
+    "editComment": "Commentaar bewerken",
+    "deleteCommentAriaLabel": "Commentaar verwijderen",
+    "deleteComment": "Commentaar verwijderen",
+    "deleteCommentConfirmation": "Weet u zeker dat u dit commentaar wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
   }
 }

@@ -1,6 +1,7 @@
 import Projects from '@alga-psa/projects/components/Projects';
 import { getAllClientsForProjects, getProjects } from '@alga-psa/projects/actions/projectActions';
-import type { IClient, IProject } from '@alga-psa/types';
+import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
+import type { IClient, IProject, ITag } from '@alga-psa/types';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { Metadata } from 'next';
 import type { ProjectListFilters } from '@alga-psa/projects/components/Projects';
@@ -21,6 +22,28 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   ]);
 
   const projectsData: IProject[] = isActionPermissionError(projectsResult) ? [] : projectsResult;
+
+  // Fetch tags alongside projects so URL-based tag filters work on the first render.
+  // Without this, `findTagsByEntityIds` runs in a client `useEffect` and the filter
+  // applied before tags load matches nothing (breaks bookmarked/pasted tag filter URLs).
+  const projectIds = projectsData
+    .map(project => project.project_id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+  const [projectTagsList, allProjectTags] = await Promise.all([
+    projectIds.length > 0
+      ? findTagsByEntityIds(projectIds, 'project').catch(() => [] as ITag[])
+      : Promise.resolve([] as ITag[]),
+    findAllTagsByType('project').catch(() => [] as ITag[]),
+  ]);
+
+  const initialProjectTags: Record<string, ITag[]> = {};
+  for (const tag of projectTagsList) {
+    if (!initialProjectTags[tag.tagged_id]) {
+      initialProjectTags[tag.tagged_id] = [];
+    }
+    initialProjectTags[tag.tagged_id].push(tag);
+  }
 
   // Parse search parameters into initial filter values
   const initialFilters: Partial<ProjectListFilters> = {};
@@ -80,6 +103,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       initialProjects={projectsData}
       clients={clientsData}
       initialFilters={initialFilters}
+      initialProjectTags={initialProjectTags}
+      initialAllUniqueTags={allProjectTags}
     />
   );
 }

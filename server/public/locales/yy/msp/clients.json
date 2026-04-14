@@ -254,7 +254,11 @@
     "clientCreatedContactFailed": "55555",
     "usersLoadError": "55555",
     "countriesLoadError": "55555",
-    "phoneTypeSuggestionsError": "55555"
+    "phoneTypeSuggestionsError": "55555",
+    "created": "55555 {{name}} 55555",
+    "createAndAddAnother": "55555",
+    "createAndView": "55555",
+    "additionalDetails": "55555"
   },
   "clientCreatedDialog": {
     "title": "55555",

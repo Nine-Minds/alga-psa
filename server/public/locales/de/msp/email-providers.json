@@ -415,7 +415,9 @@
       },
       "status": {
         "label": "Status *",
-        "placeholder": "Status auswählen"
+        "placeholder": "Status auswählen",
+        "selectBoardFirst": "Zuerst Board auswählen",
+        "loading": "Status werden geladen..."
       },
       "priority": {
         "label": "Priorität *",

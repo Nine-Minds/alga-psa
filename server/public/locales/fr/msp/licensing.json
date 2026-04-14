@@ -102,6 +102,11 @@
       "totalQuantity": "Cela définit la quantité totale de votre abonnement (et non un ajout aux licences actuelles)",
       "increasingImmediate": "Augmentation de licences : accès immédiat avec facturation au prorata",
       "billedMonthly": "Les licences sont facturées mensuellement et peuvent être résiliées à tout moment"
+    },
+    "solo": {
+      "title": "Solo inclut un utilisateur",
+      "description": "Le plan Solo est conçu pour un utilisateur unique et ne permet pas d'ajouter des licences. Passez à Pro pour ajouter plus d'utilisateurs à votre équipe.",
+      "upgradeCta": "Passer à Pro"
     }
   },
   "removalModal": {

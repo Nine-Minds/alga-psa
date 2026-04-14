@@ -3,7 +3,8 @@
   "overview": "Przegląd",
   "tabs": {
     "overview": "Przegląd",
-    "invoices": "Faktury"
+    "invoices": "Faktury",
+    "quotes": "Oferty"
   },
   "currentContractLine": "Aktualna linia umowy",
   "nextInvoice": "Następna faktura",
@@ -49,7 +50,18 @@
     "tax": "Podatek",
     "taxBreakdown": "Rozbicie podatku",
     "manualInvoice": "Faktura ręczna",
-    "credits": "Kredyty"
+    "credits": "Kredyty",
+    "financialArtifactSummary": "Faktura tylko finansowa. Cykliczne okresy usług pojawiają się tylko w cyklicznych wierszach szczegółów.",
+    "servicePeriod": "Okres usługi",
+    "servicePeriods": "Okresy usług",
+    "financialOnlyLine": "Wiersz tylko finansowy. Brak cyklicznego okresu usługi.",
+    "downloadStarted": "Przygotowywanie pobierania PDF...",
+    "downloadComplete": "PDF pobrany pomyślnie.",
+    "emailStarted": "Wysyłanie wiadomości z fakturą...",
+    "emailSent": "Wiadomość z fakturą została wysłana pomyślnie.",
+    "advanceTiming": "Z góry",
+    "arrearsTiming": "Z dołu",
+    "paymentSummaryServicePeriods": "Płatność rozlicza saldo faktury dla tych cyklicznych okresów usług. Otwórz poniżej szczegóły faktury, aby zobaczyć pełny podział wiersz po wierszu."
   },
   "frequency": {
     "monthly": "Miesięcznie",
@@ -70,7 +82,15 @@
     "serviceCategory": "Kategoria usługi",
     "statusDescription": "Ta linia umowy jest obecnie {{status}} i {{expiry}}.",
     "expiresOn": "wygaśnie {{date}}",
-    "noExpiry": "nie wygaśnie"
+    "noExpiry": "nie wygaśnie",
+    "cadenceOwnerContractDescription": "Cykliczne okresy usług podążają za rytmem rocznicy umowy dla tej pozycji.",
+    "cadenceOwnerClientDescription": "Cykliczne okresy usług podążają za harmonogramem rozliczeń klienta dla tej pozycji.",
+    "cadenceOwnerContract": "Rocznica umowy",
+    "cadenceOwnerClient": "Harmonogram rozliczeń klienta",
+    "billingTimingAdvance": "Z góry",
+    "billingTimingArrears": "Z dołu",
+    "cadenceOwner": "Właściciel cyklu",
+    "billingTiming": "Termin rozliczenia"
   },
   "payment": {
     "method": "Metoda płatności",
@@ -94,6 +114,12 @@
     "loadingInvoices": "Ładowanie faktur...",
     "paymentSuccessful": "Płatność przetworzona pomyślnie",
     "paymentFailed": "Płatność nie powiodła się. Spróbuj ponownie."
+  },
+  "quotes": {
+    "pendingQuotes": "Oczekujące oferty",
+    "awaitingResponse": "{{count}} ofert(a) oczekuje na Twoją odpowiedź",
+    "noPending": "Brak oczekujących ofert",
+    "viewAll": "Wyświetl wszystkie oferty"
   },
   "enums": {
     "billingFrequency": {

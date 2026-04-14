@@ -71,6 +71,7 @@ const ProjectTaskModel = {
       const validColumns = [
         'task_name',
         'description',
+        'description_rich_text',
         'assigned_to',
         'estimated_hours',
         'due_date',
@@ -101,6 +102,7 @@ const ProjectTaskModel = {
               break;
             case 'task_name':
             case 'description':
+            case 'description_rich_text':
             case 'wbs_code':
             case 'project_status_mapping_id':
             case 'order_key':

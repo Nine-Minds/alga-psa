@@ -102,6 +102,11 @@
       "totalQuantity": "Questo imposta la quantità totale dell'abbonamento (non un'aggiunta alle licenze attuali)",
       "increasingImmediate": "Aumento delle licenze: accesso immediato con addebito proporzionale",
       "billedMonthly": "Le licenze sono fatturate mensilmente e possono essere annullate in qualsiasi momento"
+    },
+    "solo": {
+      "title": "Solo include un utente",
+      "description": "Il piano Solo è progettato per un singolo utente e non supporta l'aggiunta di licenze. Esegui l'upgrade a Pro per aggiungere altri utenti al tuo team.",
+      "upgradeCta": "Esegui upgrade a Pro"
     }
   },
   "removalModal": {

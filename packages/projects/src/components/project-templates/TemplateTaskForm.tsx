@@ -1,7 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { useState, useEffect, useRef } from 'react';
+import {
+  parseTaskRichTextContent,
+  serializeTaskRichTextContent,
+  serializeTaskDescriptions,
+  isTaskRichTextEmpty,
+} from '../../lib/taskRichText';
+import { TextEditor } from '@alga-psa/ui/editor';
+import type { BlockNoteEditor, PartialBlock } from '@blocknote/core';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -116,7 +125,15 @@ export function TemplateTaskForm({
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [taskName, setTaskName] = useState('');
-  const [description, setDescription] = useState('');
+  const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
+    parseTaskRichTextContent(null)
+  );
+  const [descriptionEditorKey, setDescriptionEditorKey] = useState(0);
+  // Live BlockNote editor instance — used so dirty checks read the normalized
+  // document and don't false-positive when BlockNote adds default props/IDs.
+  const blockNoteEditorRef = useRef<BlockNoteEditor<any, any, any> | null>(null);
+  // Serialized baseline captured after editor normalization completes.
+  const initialDescriptionSerializedRef = useRef<string | null>(null);
   const [estimatedHours, setEstimatedHours] = useState<string>('');
   const [durationDays, setDurationDays] = useState<string>('');
   const [taskTypeKey, setTaskTypeKey] = useState('');
@@ -146,7 +163,7 @@ export function TemplateTaskForm({
   // Track initial values for dirty state checking
   const [initialValues, setInitialValues] = useState<{
     taskName: string;
-    description: string;
+    descriptionSerialized: string;
     estimatedHours: string;
     durationDays: string;
     taskTypeKey: string;
@@ -216,7 +233,10 @@ export function TemplateTaskForm({
 
       if (task) {
         const taskNameVal = task.task_name || '';
-        const descriptionVal = task.description || '';
+        const descriptionBlocks = parseTaskRichTextContent(task.description_rich_text ?? task.description);
+        const descriptionSerializedVal = isTaskRichTextEmpty(descriptionBlocks)
+          ? ''
+          : serializeTaskRichTextContent(descriptionBlocks);
         const estimatedHoursVal = task.estimated_hours ? (Number(task.estimated_hours) / 60).toString() : '';
         const durationDaysVal = task.duration_days?.toString() || '';
         const taskTypeKeyVal = task.task_type_key || '';
@@ -248,7 +268,8 @@ export function TemplateTaskForm({
         });
 
         setTaskName(taskNameVal);
-        setDescription(descriptionVal);
+        setDescriptionContent(descriptionBlocks);
+        setDescriptionEditorKey(prev => prev + 1);
         setEstimatedHours(estimatedHoursVal);
         setDurationDays(durationDaysVal);
         setTaskTypeKey(taskTypeKeyVal);
@@ -264,7 +285,7 @@ export function TemplateTaskForm({
 
         formValues = {
           taskName: taskNameVal,
-          description: descriptionVal,
+          descriptionSerialized: descriptionSerializedVal,
           estimatedHours: estimatedHoursVal,
           durationDays: durationDaysVal,
           taskTypeKey: taskTypeKeyVal,
@@ -282,7 +303,8 @@ export function TemplateTaskForm({
         const statusMappingIdVal = initialStatusMappingId || statusMappings[0]?.template_status_mapping_id || '';
 
         setTaskName('');
-        setDescription('');
+        setDescriptionContent(parseTaskRichTextContent(null));
+        setDescriptionEditorKey(prev => prev + 1);
         setEstimatedHours('');
         setDurationDays('');
         setTaskTypeKey('');
@@ -298,7 +320,7 @@ export function TemplateTaskForm({
 
         formValues = {
           taskName: '',
-          description: '',
+          descriptionSerialized: '',
           estimatedHours: '',
           durationDays: '',
           taskTypeKey: '',
@@ -321,6 +343,32 @@ export function TemplateTaskForm({
       setShowCancelConfirm(false);
     }
   }, [open, task, taskAssignments, statusMappings, initialStatusMappingId, checklistItems, dependencies, allTasks]);
+
+  // Capture the BlockNote-normalized description as the dirty-check baseline
+  // after the editor initializes. Without this, opening a task and changing
+  // nothing can flag "unsaved changes" because BlockNote adds block IDs /
+  // default props on load and parseTaskRichTextContent's output doesn't match.
+  useEffect(() => {
+    if (!open) return;
+    initialDescriptionSerializedRef.current = null;
+    let frameId: number | null = null;
+    const capture = () => {
+      const editor = blockNoteEditorRef.current;
+      if (editor) {
+        const blocks = editor.document as PartialBlock[];
+        initialDescriptionSerializedRef.current = isTaskRichTextEmpty(blocks)
+          ? ''
+          : serializeTaskRichTextContent(blocks);
+        frameId = null;
+        return;
+      }
+      frameId = requestAnimationFrame(capture);
+    };
+    frameId = requestAnimationFrame(capture);
+    return () => {
+      if (frameId !== null) cancelAnimationFrame(frameId);
+    };
+  }, [open, task?.template_task_id, descriptionEditorKey]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -350,10 +398,18 @@ export function TemplateTaskForm({
           dependencyType: d.dependencyType,
         }));
 
+      // Serialize the rich-text description. Prefer the live editor document
+      // (which has BlockNote's normalized form) so saves preserve what the
+      // user actually sees.
+      const liveBlocks = (blockNoteEditorRef.current?.document as PartialBlock[] | undefined) ?? descriptionContent;
+      const { description: descriptionMd, description_rich_text: descriptionRichText } =
+        serializeTaskDescriptions(liveBlocks);
+
       await onSave(
         {
           task_name: taskName.trim(),
-          description: description.trim() || undefined,
+          description: descriptionMd ?? undefined,
+          description_rich_text: descriptionRichText ?? undefined,
           // Convert from hours (display) to minutes (storage)
           estimated_hours: estimatedHours ? Math.round(parseFloat(estimatedHours) * 60) : undefined,
           duration_days: durationDays ? parseInt(durationDays) : undefined,
@@ -461,7 +517,16 @@ export function TemplateTaskForm({
 
     // Compare simple values
     if (taskName !== initialValues.taskName) return true;
-    if (description !== initialValues.description) return true;
+    // Read current description from the live editor when available so both
+    // sides of the comparison use BlockNote's normalized form (same pattern
+    // as TaskForm). Fall back to the React state when the editor isn't
+    // attached yet (very early dirty-checks before first paint).
+    const liveBlocks = (blockNoteEditorRef.current?.document as PartialBlock[] | undefined) ?? descriptionContent;
+    const currentDescriptionSerialized = isTaskRichTextEmpty(liveBlocks)
+      ? ''
+      : serializeTaskRichTextContent(liveBlocks);
+    const baselineDescriptionSerialized = initialDescriptionSerializedRef.current ?? initialValues.descriptionSerialized;
+    if (currentDescriptionSerialized !== baselineDescriptionSerialized) return true;
     if (estimatedHours !== initialValues.estimatedHours) return true;
     if (durationDays !== initialValues.durationDays) return true;
     if (taskTypeKey !== initialValues.taskTypeKey) return true;
@@ -579,13 +644,14 @@ export function TemplateTaskForm({
               <Label htmlFor="task-description" className="block text-sm font-medium text-gray-700 mb-1">
                 {t('fields.description', 'Description')}
               </Label>
-              <TextArea
-                id="task-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+              <TextEditor
+                key={descriptionEditorKey}
+                id={`template-task-description-${task?.template_task_id || 'new'}`}
+                initialContent={descriptionContent}
+                onContentChange={setDescriptionContent}
+                editorRef={blockNoteEditorRef}
+                searchMentions={searchUsersForMentions}
                 placeholder={t('templates.taskForm.descriptionPlaceholder', 'Task description (optional)')}
-                rows={3}
-                disabled={isSubmitting}
               />
             </div>
 

@@ -156,7 +156,9 @@
       "client": "Klant",
       "tags": "Tags",
       "role": "Rol",
-      "notes": "Notities"
+      "notes": "Notities",
+      "primaryEmailLabel": "Label primaire e-mail",
+      "additionalEmails": "Aanvullende e-mailadressen"
     },
     "unassigned": "Veld selecteren",
     "errors": {
@@ -207,7 +209,10 @@
       "clientFieldDescription": "client (komt overeen met bestaande klanten op naam)",
       "noteLabel": "Opmerking:",
       "noteDescription": "CSV-import/export in v1 ondersteunt één standaard telefoonnummer per contact. Tags moeten komma-gescheiden waarden zijn.",
-      "downloadTemplate": "CSV-sjabloon downloaden"
+      "downloadTemplate": "CSV-sjabloon downloaden",
+      "emailFieldsLabel": "E-mailvelden:",
+      "emailFieldsDescription": "primary_email_type (work/personal/billing/other of een aangepast label), additional_email_addresses (gebruik `label:email@example.com | label:email@example.com`)",
+      "hybridEmailNote": "CSV-import/-export behoudt `email` als primair/standaard contact-e-mailadres. Labels moeten door komma's gescheiden waarden zijn."
     },
     "mapping": {
       "title": "Contactvelden koppelen aan CSV-kolommen",
@@ -460,7 +465,8 @@
       "status": "Status:",
       "notes": "Notities:",
       "notesPlaceholder": "Voeg eventuele extra notities over het contact toe...",
-      "tags": "Tags:"
+      "tags": "Tags:",
+      "emailAddresses": "E-mailadressen:"
     },
     "loading": {
       "destinations": "Bestemmingen laden..."
@@ -499,7 +505,9 @@
       "createdAt": "Aangemaakt op",
       "updatedAt": "Bijgewerkt op",
       "notes": "Notities:",
-      "tags": "Tags:"
+      "tags": "Tags:",
+      "emailAddresses": "E-mailadressen:",
+      "defaultEmail": "Standaard"
     },
     "status": {
       "active": "Actief",

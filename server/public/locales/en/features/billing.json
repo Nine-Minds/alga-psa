@@ -3,7 +3,8 @@
   "overview": "Overview",
   "tabs": {
     "overview": "Overview",
-    "invoices": "Invoices"
+    "invoices": "Invoices",
+    "quotes": "Quotes"
   },
   "currentContractLine": "Current Contract Line",
   "nextInvoice": "Next Invoice",
@@ -49,7 +50,18 @@
     "tax": "Tax",
     "taxBreakdown": "Tax Breakdown",
     "manualInvoice": "Manual Invoice",
-    "credits": "Credits"
+    "credits": "Credits",
+    "financialArtifactSummary": "Financial-only invoice. Recurring service periods appear only on recurring detail lines.",
+    "servicePeriod": "Service Period",
+    "servicePeriods": "Service Periods",
+    "financialOnlyLine": "Financial-only line. No recurring service period.",
+    "downloadStarted": "Preparing PDF download...",
+    "downloadComplete": "PDF downloaded successfully.",
+    "emailStarted": "Sending invoice email...",
+    "emailSent": "Invoice email sent successfully.",
+    "advanceTiming": "Advance",
+    "arrearsTiming": "Arrears",
+    "paymentSummaryServicePeriods": "Payment settles the invoice balance for these recurring service periods. Open the invoice details below for the full line-by-line breakdown."
   },
   "frequency": {
     "monthly": "Monthly",
@@ -70,7 +82,15 @@
     "serviceCategory": "Service Category",
     "statusDescription": "This contract line is currently {{status}} and will {{expiry}}.",
     "expiresOn": "expire on {{date}}",
-    "noExpiry": "not expire"
+    "noExpiry": "not expire",
+    "cadenceOwnerContractDescription": "Recurring service periods follow the contract anniversary cadence for this line.",
+    "cadenceOwnerClientDescription": "Recurring service periods follow the client billing schedule for this line.",
+    "cadenceOwnerContract": "Contract anniversary",
+    "cadenceOwnerClient": "Client billing schedule",
+    "billingTimingAdvance": "Advance",
+    "billingTimingArrears": "Arrears",
+    "cadenceOwner": "Cadence Owner",
+    "billingTiming": "Billing Timing"
   },
   "payment": {
     "method": "Payment Method",
@@ -94,6 +114,12 @@
     "loadingInvoices": "Loading invoices...",
     "paymentSuccessful": "Payment processed successfully",
     "paymentFailed": "Payment failed. Please try again."
+  },
+  "quotes": {
+    "pendingQuotes": "Pending Quotes",
+    "awaitingResponse": "{{count}} quote(s) awaiting your response",
+    "noPending": "No pending quotes",
+    "viewAll": "View All Quotes"
   },
   "enums": {
     "billingFrequency": {

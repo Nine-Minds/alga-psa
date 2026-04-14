@@ -232,7 +232,9 @@ export const createTemplateFromProject = withAuth(async (
           tenant,
           template_phase_id: templatePhaseId,
           task_name: task.task_name,
-          description: task.description,
+          // Preserve both description formats verbatim.
+          description: task.description || null,
+          description_rich_text: task.description_rich_text || null,
           estimated_hours: task.estimated_hours,
           task_type_key: task.task_type_key,
           priority_id: task.priority_id,
@@ -701,6 +703,7 @@ export const applyTemplate = withAuth(async (
           phase_id: newPhaseId,
           task_name: templateTask.task_name,
           description: templateTask.description,
+          description_rich_text: templateTask.description_rich_text,
           estimated_hours: templateTask.estimated_hours,
           task_type_key: templateTask.task_type_key || 'task',
           priority_id: templateTask.priority_id,
@@ -1715,6 +1718,7 @@ export const updateTemplateTask = withAuth(async (
   data: {
     task_name?: string;
     description?: string;
+    description_rich_text?: string;
     estimated_hours?: number;
     duration_days?: number;
     task_type_key?: string;

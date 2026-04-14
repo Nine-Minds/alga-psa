@@ -67,7 +67,8 @@
     "loadSlotsFailed": "Échec du chargement des créneaux horaires disponibles. Veuillez réessayer.",
     "createFailed": "Échec de la création de la demande de rendez-vous. Veuillez réessayer.",
     "updateFailed": "Échec de la mise à jour de la demande de rendez-vous. Veuillez réessayer.",
-    "loadFailed": "Échec du chargement des rendez-vous. Veuillez réessayer."
+    "loadFailed": "Échec du chargement des rendez-vous. Veuillez réessayer.",
+    "notFound": "Demande de rendez-vous introuvable"
   },
   "messages": {
     "requestSuccess": "Demande de rendez-vous soumise avec succès !",

@@ -69,7 +69,6 @@ export async function GET(): Promise<Response> {
 
   if (!result.success || !result.package) {
     const status =
-      result.error === TEAMS_AVAILABILITY_MESSAGES.flag_disabled ? 404 :
       result.error === 'Forbidden' ? 403 :
       result.error === TEAMS_AVAILABILITY_MESSAGES.ce_unavailable ? 501 : 400;
 

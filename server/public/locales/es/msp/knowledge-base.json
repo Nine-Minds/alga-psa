@@ -285,5 +285,8 @@
       "reviewOverdue": "La revisión venció el {{date}}",
       "reviewDue": "Revisión pendiente {{date}}"
     }
+  },
+  "common": {
+    "done": "Hecho"
   }
 }

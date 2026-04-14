@@ -82,7 +82,6 @@ export const ticketFilterSchema = baseFilterSchema.extend({
   priority_id: uuidSchema.optional(),
   is_open: booleanTransform.optional(),
   is_closed: booleanTransform.optional(),
-  is_overdue: booleanTransform.optional(),
   has_assignment: booleanTransform.optional(),
   entered_from: z.string().datetime().optional(),
   entered_to: z.string().datetime().optional(),

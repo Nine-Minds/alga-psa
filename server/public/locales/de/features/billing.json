@@ -3,7 +3,8 @@
   "overview": "Übersicht",
   "tabs": {
     "overview": "Übersicht",
-    "invoices": "Rechnungen"
+    "invoices": "Rechnungen",
+    "quotes": "Angebote"
   },
   "currentContractLine": "Aktueller Tarif",
   "nextInvoice": "Nächste Rechnung",
@@ -49,7 +50,18 @@
     "tax": "Steuer",
     "taxBreakdown": "Steueraufstellung",
     "manualInvoice": "Manuelle Rechnung",
-    "credits": "Gutschriften"
+    "credits": "Gutschriften",
+    "financialArtifactSummary": "Nur-Finanzrechnung. Wiederkehrende Leistungszeiträume erscheinen nur auf wiederkehrenden Detailzeilen.",
+    "servicePeriod": "Leistungszeitraum",
+    "servicePeriods": "Leistungszeiträume",
+    "financialOnlyLine": "Nur-Finanzzeile. Kein wiederkehrender Leistungszeitraum.",
+    "downloadStarted": "PDF-Download wird vorbereitet...",
+    "downloadComplete": "PDF erfolgreich heruntergeladen.",
+    "emailStarted": "Rechnungs-E-Mail wird gesendet...",
+    "emailSent": "Rechnungs-E-Mail erfolgreich gesendet.",
+    "advanceTiming": "Im Voraus",
+    "arrearsTiming": "Nachträglich",
+    "paymentSummaryServicePeriods": "Die Zahlung begleicht den Rechnungssaldo für diese wiederkehrenden Leistungszeiträume. Öffnen Sie unten die Rechnungsdetails für die vollständige zeilenweise Aufschlüsselung."
   },
   "frequency": {
     "monthly": "Monatlich",
@@ -70,7 +82,15 @@
     "serviceCategory": "Servicekategorie",
     "statusDescription": "Dieser Tarif ist derzeit {{status}} und wird {{expiry}}.",
     "expiresOn": "am {{date}} enden",
-    "noExpiry": "nicht enden"
+    "noExpiry": "nicht enden",
+    "cadenceOwnerContractDescription": "Wiederkehrende Leistungszeiträume folgen dem Vertragsjubiläums-Rhythmus für diese Position.",
+    "cadenceOwnerClientDescription": "Wiederkehrende Leistungszeiträume folgen dem Kundenabrechnungsplan für diese Position.",
+    "cadenceOwnerContract": "Vertragsjubiläum",
+    "cadenceOwnerClient": "Kundenabrechnungsplan",
+    "billingTimingAdvance": "Im Voraus",
+    "billingTimingArrears": "Nachträglich",
+    "cadenceOwner": "Rhythmusinhaber",
+    "billingTiming": "Abrechnungszeitpunkt"
   },
   "payment": {
     "method": "Zahlungsmethode",
@@ -94,6 +114,12 @@
     "loadingInvoices": "Rechnungen werden geladen...",
     "paymentSuccessful": "Zahlung erfolgreich verarbeitet",
     "paymentFailed": "Zahlung fehlgeschlagen. Bitte versuche es erneut."
+  },
+  "quotes": {
+    "pendingQuotes": "Ausstehende Angebote",
+    "awaitingResponse": "{{count}} Angebot(e) warten auf Ihre Antwort",
+    "noPending": "Keine ausstehenden Angebote",
+    "viewAll": "Alle Angebote anzeigen"
   },
   "enums": {
     "billingFrequency": {

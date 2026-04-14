@@ -209,6 +209,7 @@ type ChatProps = {
   hf: HfInference | null;
   initialChatId?: string | null;
   autoSendPrompt?: string | null;
+  initialMentions?: ChatMention[];
   onChatIdChange?: (chatId: string | null) => void;
   autoApprovedHttpMethods?: string[];
   onHasMessagesChange?: (hasMessages: boolean) => void;
@@ -270,6 +271,7 @@ export const Chat: React.FC<ChatProps> = ({
   hf,
   initialChatId,
   autoSendPrompt,
+  initialMentions,
   onChatIdChange,
   autoApprovedHttpMethods,
   onHasMessagesChange,
@@ -501,10 +503,11 @@ export const Chat: React.FC<ChatProps> = ({
     }
     requestAnimationFrame(autoResizeTextarea);
 
-    // Detect @mention query
+    // Detect @mention query — allow spaces so ticket titles / client names work.
+    // Negative lookahead excludes already-confirmed mentions like "@Ticket: …".
     const cursorPos = e.target.selectionStart ?? value.length;
     const textBeforeCursor = value.slice(0, cursorPos);
-    const mentionMatch = textBeforeCursor.match(/(?:^|\s)@([a-zA-Z0-9_#\-]{0,30})$/);
+    const mentionMatch = textBeforeCursor.match(/(?:^|\s)@(?!\w+:\s)([^\n@]{0,60})$/);
     setMentionQuery(mentionMatch ? mentionMatch[1] : null);
 
     if (onUserInput) {
@@ -691,7 +694,11 @@ export const Chat: React.FC<ChatProps> = ({
 
   const handleSend = useCallback(async (
     trimmedMessage: string,
-    options?: { reuseExistingUserMessage?: boolean; baseConversation?: ChatCompletionMessage[] },
+    options?: {
+      reuseExistingUserMessage?: boolean;
+      baseConversation?: ChatCompletionMessage[];
+      mentionsOverride?: ChatMention[];
+    },
   ) => {
     const reuseExistingUserMessage = options?.reuseExistingUserMessage ?? false;
     setFunctionError(null);
@@ -768,7 +775,7 @@ export const Chat: React.FC<ChatProps> = ({
     }
 
     // Send all mentions that have chips visible — user controls removal via chip X button
-    const activeMentions = mentions;
+    const activeMentions = options?.mentionsOverride ?? mentions;
 
     setMessageText('');
     setMentions([]);
@@ -979,8 +986,8 @@ export const Chat: React.FC<ChatProps> = ({
       return;
     }
     autoSendRef.current = true;
-    void handleSend(prompt);
-  }, [autoSendPrompt, handleSend]);
+    void handleSend(prompt, { mentionsOverride: initialMentions });
+  }, [autoSendPrompt, handleSend, initialMentions]);
 
   const handleFunctionAction = useCallback(async (action: 'approve' | 'decline') => {
     if (!pendingFunction) {
@@ -1733,29 +1740,30 @@ export const Chat: React.FC<ChatProps> = ({
                 ))}
               </div>
             )}
-            <textarea
-              ref={inputRef}
-              id={textareaId}
-              value={messageText}
-              onChange={handleInputChange}
-              placeholder={generatingResponse ? 'Generating text...' : 'Send a message'}
-              className="chat-input"
-              onKeyDown={handleTextareaKeyDown}
-              rows={3}
-              disabled={generatingResponse || isFunction}
-              aria-label="Message Alga"
-              aria-busy={generatingResponse || isFunction}
-              data-automation-id="chat-input"
-            />
-            {mentionQuery !== null && (
-              <ChatMentionPopup
-                ref={mentionPopupRef}
-                query={mentionQuery}
-                onSelect={handleMentionSelect}
-                onDismiss={() => setMentionQuery(null)}
-                anchorRef={inputRef}
+            <div className="chat-input-wrapper">
+              <textarea
+                ref={inputRef}
+                id={textareaId}
+                value={messageText}
+                onChange={handleInputChange}
+                placeholder={generatingResponse ? 'Generating text...' : 'Send a message'}
+                className="chat-input"
+                onKeyDown={handleTextareaKeyDown}
+                rows={3}
+                disabled={generatingResponse || isFunction}
+                aria-label="Message Alga"
+                aria-busy={generatingResponse || isFunction}
+                data-automation-id="chat-input"
               />
-            )}
+              {mentionQuery !== null && (
+                <ChatMentionPopup
+                  ref={mentionPopupRef}
+                  query={mentionQuery}
+                  onSelect={handleMentionSelect}
+                  onDismiss={() => setMentionQuery(null)}
+                />
+              )}
+            </div>
             <p className="chat-input__hint">
               {isMultilineMode
                 ? 'Multiline mode: Enter adds a new line. Ctrl+Enter or ⌘+Enter sends.'

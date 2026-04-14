@@ -33,7 +33,15 @@
     "createdAt": "Gemaakt op",
     "updatedAt": "Bijgewerkt op",
     "assignedTeam": "Toegewezen team",
-    "phase": "Fase"
+    "phase": "Fase",
+    "priorityLevel": "Prioriteitsniveau",
+    "seeLess": "Minder tonen",
+    "seeMore": "Meer tonen",
+    "checklistItems": "Checklistitems",
+    "of": "van",
+    "complete": "voltooid",
+    "additionalAgents": "Aanvullende agenten",
+    "unassigned": "Niet toegewezen"
   },
   "phases": {
     "title": "Projectfasen",
@@ -96,7 +104,8 @@
       "projectManager": "Project Manager",
       "tags": "Tags",
       "actions": "Actions"
-    }
+    },
+    "unknownUser": "Onbekend"
   },
   "quickAdd": {
     "title": "Nieuw project toevoegen",
@@ -204,6 +213,7 @@
     "moveTaskTitle": "Verplaats taak",
     "confirmMoveTaskMessage": "Are you sure you want to move task \"{{taskName}}\" from phase \"{{sourcePhase}}\" to \"{{targetPhase}}\"?",
     "moveTaskFailed": "Failed to move task. Please try again.",
+    "loading": "Bezig met laden...",
     "loadingListView": "Lijstweergave laden...",
     "importSuccess": "Geïmporteerde {{phases}} fasen en {{tasks}} taken",
     "importFailed": "Import failed: {{error}}",
@@ -642,7 +652,8 @@
       "taskPlaceholder": "Selecteer een taak",
       "linkedSuccess": "Ticket succesvol aan taak gekoppeld",
       "linking": "Linking...",
-      "confirm": "Link"
+      "confirm": "Link",
+      "linkTicketError": "Ticket koppelen mislukt"
     },
     "prefillFromTicket": {
       "title": "Vooraf invullen vanaf ticket",
@@ -787,7 +798,9 @@
       "order": "Order",
       "this_status": "this status",
       "last_closed_error": "Er moet ten minste één status gemarkeerd blijven als gesloten",
-      "last_closed_delete_error": "Kan de laatste gesloten status voor dit type niet verwijderen."
+      "last_closed_delete_error": "Kan de laatste gesloten status voor dit type niet verwijderen.",
+      "addStatus": "Nieuwe status toevoegen",
+      "add_from_library": "Status toevoegen"
     }
   },
   "templates": {
@@ -1322,5 +1335,10 @@
     "duplicateName": "Een status met deze naam bestaat al",
     "createdSuccess": "Status \"{{name}}\" succesvol aangemaakt",
     "createFailed": "Kan status niet aanmaken"
+  },
+  "dependencies": {
+    "dependsOn": "Afhankelijk van",
+    "unknownTask": "Onbekende taak",
+    "blocks": "Blokkeert"
   }
 }

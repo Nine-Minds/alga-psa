@@ -156,7 +156,9 @@
       "client": "Cliente",
       "tags": "Tag",
       "role": "Ruolo",
-      "notes": "Note"
+      "notes": "Note",
+      "primaryEmailLabel": "Etichetta email principale",
+      "additionalEmails": "Indirizzi email aggiuntivi"
     },
     "unassigned": "Seleziona campo",
     "errors": {
@@ -207,7 +209,10 @@
       "clientFieldDescription": "client (corrisponde ai clienti esistenti per nome)",
       "noteLabel": "Nota:",
       "noteDescription": "Nella v1 l'import/export CSV gestisce un solo numero di telefono predefinito per contatto. I tag devono essere valori separati da virgole.",
-      "downloadTemplate": "Scarica modello CSV"
+      "downloadTemplate": "Scarica modello CSV",
+      "emailFieldsLabel": "Campi email:",
+      "emailFieldsDescription": "primary_email_type (work/personal/billing/other o un'etichetta personalizzata), additional_email_addresses (usa `label:email@example.com | label:email@example.com`)",
+      "hybridEmailNote": "L'importazione/esportazione CSV mantiene `email` come email di contatto principale/predefinita. I tag devono essere valori separati da virgola."
     },
     "mapping": {
       "title": "Mappa i campi contatto alle colonne CSV",
@@ -460,7 +465,8 @@
       "status": "Stato:",
       "notes": "Note:",
       "notesPlaceholder": "Aggiungi eventuali note aggiuntive sul contatto...",
-      "tags": "Tag:"
+      "tags": "Tag:",
+      "emailAddresses": "Indirizzi email:"
     },
     "loading": {
       "destinations": "Caricamento destinazioni..."
@@ -499,7 +505,9 @@
       "createdAt": "Creato il",
       "updatedAt": "Aggiornato il",
       "notes": "Note:",
-      "tags": "Tag:"
+      "tags": "Tag:",
+      "emailAddresses": "Indirizzi email:",
+      "defaultEmail": "Predefinito"
     },
     "status": {
       "active": "Attivo",

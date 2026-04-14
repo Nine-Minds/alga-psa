@@ -7,6 +7,7 @@ import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { ITaskResource } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
+import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
@@ -375,28 +376,28 @@ export default function ProjectDetail({
   const [taskDocumentCounts, setTaskDocumentCounts] = useState<Map<string, number>>(new Map());
   const [taskCommentCounts, setTaskCommentCounts] = useState<Record<string, number>>({});
 
+  const matchesSearch = useCallback((task: IProjectTask): boolean => {
+    if (!searchQuery.trim()) return true;
+    const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
+    const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
+    const descText = extractTaskDescriptionText(task.description_rich_text ?? task.description);
+    const taskDescription = searchCaseSensitive ? descText : descText.toLowerCase();
+
+    if (searchWholeWord) {
+      const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
+      return wordRegex.test(task.task_name) || wordRegex.test(descText);
+    }
+    return taskName.includes(query) || taskDescription.includes(query);
+  }, [searchQuery, searchCaseSensitive, searchWholeWord]);
+
   const filteredTasks = useMemo(() => {
     if (!selectedPhase) return [];
     let tasks = projectTasks.filter(task => task.wbs_code.startsWith(selectedPhase.wbs_code + '.'));
 
     // Apply search filter
     if (searchQuery.trim()) {
-      const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
-      tasks = tasks.filter(task => {
-        const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
-        const taskDescription = searchCaseSensitive
-          ? (task.description ?? '')
-          : (task.description?.toLowerCase() ?? '');
-
-        if (searchWholeWord) {
-          // Use word boundary regex for whole word matching
-          const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
-          return wordRegex.test(task.task_name) || wordRegex.test(task.description ?? '');
-        } else {
-          return taskName.includes(query) || taskDescription.includes(query);
-        }
-      });
+      tasks = tasks.filter(matchesSearch);
     }
 
     // Apply priority filter
@@ -454,7 +455,7 @@ export default function ProjectDetail({
     }
 
     return tasks;
-  }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
+  }, [projectTasks, selectedPhase, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
 
   const phaseStatusLookup = useMemo(
     () => new Map(projectStatuses.map((status) => [status.project_status_mapping_id, status])),
@@ -494,21 +495,7 @@ export default function ProjectDetail({
 
     // Apply search filter
     if (searchQuery.trim()) {
-      const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
-      filtered = filtered.filter(task => {
-        const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
-        const taskDescription = searchCaseSensitive
-          ? (task.description ?? '')
-          : (task.description?.toLowerCase() ?? '');
-
-        if (searchWholeWord) {
-          const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
-          return wordRegex.test(task.task_name) || wordRegex.test(task.description ?? '');
-        } else {
-          return taskName.includes(query) || taskDescription.includes(query);
-        }
-      });
+      filtered = filtered.filter(matchesSearch);
     }
 
     // Apply priority filter
@@ -560,7 +547,7 @@ export default function ProjectDetail({
     }
 
     return filtered;
-  }, [allProjectTasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, allProjectTaskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, allProjectTaskResources]);
+  }, [allProjectTasks, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, allProjectTaskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, allProjectTaskResources]);
 
   // Calculate filtered phase task counts (like list view's phaseGroups)
   // Falls back to server-fetched counts while allProjectTasks is loading
@@ -1284,7 +1271,7 @@ export default function ProjectDetail({
 
   // Second effect: Once tasks are loaded, open the specific task
   useEffect(() => {
-    if (!initialTaskId || projectTasks.length === 0 || showQuickAdd || hasOpenedInitialTask.current) return;
+    if (!initialTaskId || projectTasks.length === 0 || hasOpenedInitialTask.current) return;
 
     // Find the task in the loaded tasks
     const taskToOpen = projectTasks.find(task => task.task_id === initialTaskId);
@@ -1296,7 +1283,7 @@ export default function ProjectDetail({
       setShowQuickAdd(true);
       hasOpenedInitialTask.current = true; // Mark that we've opened the task
     }
-  }, [initialTaskId, projectTasks, showQuickAdd]);
+  }, [initialTaskId, projectTasks]);
 
   // Fetch document counts once when phase tasks load (not on filter changes)
   const phaseTaskIds = useMemo(() => projectTasks.map(t => t.task_id).sort().join(','), [projectTasks]);

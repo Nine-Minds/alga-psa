@@ -37,7 +37,9 @@
     "noSla": "Ohne SLA",
     "onTrack": "Im Plan",
     "breached": "Verletzt",
-    "paused": "Pausiert"
+    "paused": "Pausiert",
+    "allResponseStatuses": "Alle Antwortstatus",
+    "responseStatus": "Antwortstatus"
   },
   "create": {
     "title": "Support-Ticket erstellen",
@@ -189,7 +191,8 @@
     "failedToUpdateComment": "Kommentar konnte nicht aktualisiert werden",
     "failedToDeleteComment": "Kommentar konnte nicht gelöscht werden",
     "deleteOwnCommentError": "Du kannst nur deine eigenen Kommentare löschen",
-    "failedToUpdateTicketStatus": "Ticketstatus konnte nicht aktualisiert werden"
+    "failedToUpdateTicketStatus": "Ticketstatus konnte nicht aktualisiert werden",
+    "noTitle": "Kein Titel"
   },
   "conversation": {
     "comments": "Kommentare",
@@ -230,7 +233,8 @@
     "deleteCommentAriaLabel": "Kommentar löschen",
     "inboundChildReplies": "Eingehende Antworten auf untergeordnete Tickets (schreibgeschützt)",
     "childTicket": "Untergeordnetes Ticket",
-    "ticketPrefix": "Ticket {{number}}"
+    "ticketPrefix": "Ticket {{number}}",
+    "clipboardDraftCancelMessage": "Dieser Entwurf enthält eingefügte Bilder, die bereits als Ticket-Dokumente hochgeladen wurden. Beibehalten oder dauerhaft löschen?"
   },
   "responseState": {
     "awaitingYourResponse": "Warten auf Ihre Antwort",
@@ -764,7 +768,8 @@
       "columns": {
         "sla": "SLA",
         "createdBy": "Erstellt von",
-        "actions": "Aktionen"
+        "actions": "Aktionen",
+        "tags": "Schlagwörter"
       },
       "requiredSuffix": "(erforderlich)",
       "tagsUnderTitle": "Unter dem Titel anzeigen",
@@ -1025,5 +1030,22 @@
     "minutes": "Minuten",
     "invalidDateTime": "Ungültiges Datum/Uhrzeit",
     "declined": "Abgelehnt"
+  },
+  "categories": {
+    "itilBadge": "ITIL"
+  },
+  "tickets": {
+    "conversation": {
+      "closeStatus": "Status schließen",
+      "noStatusChange": "Status nicht ändern"
+    }
+  },
+  "common": {
+    "continueEditing": "Bearbeitung fortsetzen"
+  },
+  "details": {
+    "bundle": {
+      "childrenDescription": "Untergeordnete Tickets, die in diesem Master-Ticket gebündelt sind"
+    }
   }
 }

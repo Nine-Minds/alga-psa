@@ -28,7 +28,8 @@
       "copyToAnotherDay": "11111",
       "viewDetails": "11111",
       "manageTimePeriods": "11111",
-      "selectWorkItem": "11111"
+      "selectWorkItem": "11111",
+      "clearFilter": "11111"
     },
     "states": {
       "inProgress": "11111",
@@ -165,7 +166,8 @@
       "next": "11111",
       "pageInfo": "11111 {{current}} 11111 {{total}} 11111 {{records}} 11111"
     },
-    "interactionType": "11111 {{type}} 11111 {{client}} 11111"
+    "interactionType": "11111 {{type}} 11111 {{client}} 11111",
+    "currentSelection": "11111"
   },
   "timeSheetHeader": {
     "title": "11111",
@@ -329,6 +331,11 @@
     "dayGroup": {
       "entryOne": "11111 {{count}} 11111",
       "entryOther": "11111 {{count}} 11111"
+    },
+    "focusFilter": {
+      "summary": "11111 {{count}} 11111 {{workItem}} 11111 {{date}} 11111",
+      "description": "11111",
+      "backToGrid": "11111"
     }
   },
   "selectedWorkItem": {
