@@ -186,7 +186,7 @@
   {
     "id": "T024",
     "description": "GenericContractLineServicesList.tsx: all 8 table column headers render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
