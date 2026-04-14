@@ -7,7 +7,7 @@
   {
     "id": "F002",
     "description": "ContractLineDialog.tsx: Translate billing model selector (section heading, Fixed Fee/Hourly/Usage-Based card titles and descriptions), billing timing options labels and helper text ('Hourly and usage-based lines always bill in arrears', 'Advance billing invoices the upcoming period')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F003",

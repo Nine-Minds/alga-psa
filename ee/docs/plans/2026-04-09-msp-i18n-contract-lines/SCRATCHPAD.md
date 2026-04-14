@@ -69,3 +69,4 @@
 - (2026-04-14) Preemptively translated additional `ContractLineDialog.tsx` strings for `F002`/`F003` in the same pass to minimize repeated churn in a 1k+ LOC file; feature flags will still be advanced one-by-one in checklist order.
 - (2026-04-14) Validation errors in `validateForm()` now use interpolation-based i18n keys (for example `Service {{index}}...`) to align with acceptance criteria for dynamic validation text.
 - (2026-04-14) Verification command run: `npx eslint packages/billing/src/components/billing-dashboard/ContractLineDialog.tsx` (warnings only, no errors).
+- (2026-04-14) `F002` covered by the same `ContractLineDialog.tsx` translation pass: billing model chooser heading/description, fixed/hourly/usage card title+description strings, billing timing option labels, and fixed vs non-fixed billing timing helper text are now `t()` backed.
