@@ -250,7 +250,7 @@
   {
     "id": "T032",
     "description": "FixedContractLinePresetConfiguration.tsx: fixed fee settings renders translated 'Recurring Base Rate (Optional)' with override helper text, and billing timing label with cadence explanation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
