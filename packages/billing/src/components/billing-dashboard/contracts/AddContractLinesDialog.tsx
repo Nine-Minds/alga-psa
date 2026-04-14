@@ -17,6 +17,7 @@ import {
 } from '@alga-psa/billing/actions/contractLinePresetActions';
 import { getServices } from '@alga-psa/billing/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   useContractLineTypeOptions,
@@ -60,6 +61,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
   const [presetServiceCounts, setPresetServiceCounts] = useState<Record<string, number>>({});
   const [isAdding, setIsAdding] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [availablePresets, setAvailablePresets] = useState<IContractLinePreset[]>([]);
 
   // Rate overrides for presets (stores in cents)
@@ -98,10 +100,12 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
     setPresetServiceInputs({});
     setHourlyPresetOverrides({});
     setHourlyPresetInputs({});
+    setError(null);
   };
 
   const loadContractLinePresets = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const presets = await getContractLinePresets();
       setAvailablePresets(presets);
@@ -124,6 +128,9 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
       setPresetServiceCounts(counts);
     } catch (error) {
       console.error('Error loading contract line presets:', error);
+      setError(t('addLines.errors.failedToLoadPresets', {
+        defaultValue: 'Failed to load contract line presets.',
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -285,6 +292,9 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
         }
       } catch (error) {
         console.error(`Error loading services for preset ${presetId}:`, error);
+        setError(t('addLines.errors.failedToLoadPresetDetails', {
+          defaultValue: 'Failed to load preset details.',
+        }));
       }
     }
   };
@@ -293,6 +303,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
     if (selectedPresetIds.size === 0) return;
 
     setIsAdding(true);
+    setError(null);
     try {
       // Add each selected preset to the contract
       await Promise.all(
@@ -340,6 +351,9 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
       onClose();
     } catch (error) {
       console.error('Error adding contract line presets:', error);
+      setError(t('addLines.errors.failedToAddPresets', {
+        defaultValue: 'Failed to add selected presets.',
+      }));
     } finally {
       setIsAdding(false);
     }
@@ -383,6 +397,11 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
 
       <DialogContent className="flex flex-col">
         <div className="space-y-4 flex flex-col h-full">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
           {/* Search and Filter Row - outside overflow container */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             {/* Search Input */}

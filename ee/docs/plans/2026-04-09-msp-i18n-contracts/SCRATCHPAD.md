@@ -141,3 +141,7 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Shared enum migration in this file: replaced deprecated `CONTRACT_LINE_TYPE_DISPLAY` map with `useContractLineTypeOptions()` and used `useFormatContractLineType()` for preset type badges.
 - **(2026-04-14)** Added initial `addLines.*` namespace keys in `server/public/locales/en/msp/contracts.json`.
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/AddContractLinesDialog.tsx` (pass; warnings only), `rg -n "CONTRACT_LINE_TYPE_DISPLAY|_DISPLAY|_OPTIONS" .../AddContractLinesDialog.tsx` (no matches), and `jq empty server/public/locales/en/msp/contracts.json` (pass).
+- **(2026-04-14)** `F029` completed in `AddContractLinesDialog.tsx`: localized expanded preset detail sections (fixed-rate config, services reference/configuration, hourly overrides, usage quantity/rate/unit fields, default-rate helper text), plus empty-search and loading states.
+- **(2026-04-14)** Added localized dialog-level validation/error feedback for preset load/details/add failures and rendered them via destructive `Alert`.
+- **(2026-04-14)** Expanded `addLines.errors.*` and additional detail keys in `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/AddContractLinesDialog.tsx` (pass; warnings only) and `jq empty server/public/locales/en/msp/contracts.json` (pass).

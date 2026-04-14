@@ -142,7 +142,7 @@
   {
     "id": "F029",
     "description": "Wire useTranslation('msp/contracts') in AddContractLinesDialog.tsx -- translate expanded preset details (services, rates, configurations), empty search results, loading state, and validation messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F030",

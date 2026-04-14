@@ -459,6 +459,11 @@
       "noMatches": "No presets match your search.",
       "noneAvailable": "No contract line presets available."
     },
+    "errors": {
+      "failedToAddPresets": "Failed to add selected presets.",
+      "failedToLoadPresetDetails": "Failed to load preset details.",
+      "failedToLoadPresets": "Failed to load contract line presets."
+    },
     "filters": {
       "allTypes": "All types",
       "reset": "Reset",
