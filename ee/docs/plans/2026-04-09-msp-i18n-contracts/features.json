@@ -57,7 +57,7 @@
   {
     "id": "F012",
     "description": "Wire useTranslation('msp/contracts') in ContractDetail.tsx -- translate Contract Details card: contract name label, description label, edit/save/cancel buttons, 'No description' placeholder, 'System-managed default' badge",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F013",

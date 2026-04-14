@@ -111,6 +111,21 @@
       "quickActions": "Quick Actions",
       "renewalHandling": "Renewal Handling"
     },
+    "detailsCard": {
+      "actions": {
+        "cancelDescription": "Cancel description edits",
+        "cancelName": "Cancel contract name",
+        "editDescription": "Edit contract description",
+        "editName": "Edit contract name",
+        "saveDescription": "Save description",
+        "saveName": "Save contract name"
+      },
+      "contractNameLabel": "Contract Name *",
+      "contractNamePlaceholder": "Enter contract name",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Enter contract description",
+      "title": "Contract Details"
+    },
     "dialogs": {
       "delete": {
         "confirm": "Delete Contract",

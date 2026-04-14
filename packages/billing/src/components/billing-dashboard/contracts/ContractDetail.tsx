@@ -1365,15 +1365,23 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <Pencil className="h-4 w-4 text-blue-600" />
-                      Contract Details
+                      {t('contractDetail.detailsCard.title', { defaultValue: 'Contract Details' })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <Label htmlFor="edit-contract-name">Contract Name *</Label>
+                        <Label htmlFor="edit-contract-name">
+                          {t('contractDetail.detailsCard.contractNameLabel', {
+                            defaultValue: 'Contract Name *',
+                          })}
+                        </Label>
                         {isSystemManagedDefault ? (
-                          <Badge variant="info">System-managed default</Badge>
+                          <Badge variant="info">
+                            {t('contractDetail.labels.systemManagedDefault', {
+                              defaultValue: 'System-managed default',
+                            })}
+                          </Badge>
                         ) : null}
                         {!isEditingName && (
                           <Button
@@ -1384,13 +1392,23 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             onClick={() => setIsEditingName(true)}
                             className="h-5 w-5 p-0"
                             disabled={isSystemManagedDefault}
+                            aria-label={t('contractDetail.detailsCard.actions.editName', {
+                              defaultValue: 'Edit contract name',
+                            })}
+                            title={t('contractDetail.detailsCard.actions.editName', {
+                              defaultValue: 'Edit contract name',
+                            })}
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
                         )}
                       </div>
                       {isSystemManagedDefault ? (
-                        <p className="text-xs text-muted-foreground">Created automatically for uncontracted work</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t('contractDetail.systemManaged.createdAutomatically', {
+                            defaultValue: 'Created automatically for uncontracted work.',
+                          })}
+                        </p>
                       ) : null}
                       {isEditingName ? (
                         <div className="flex items-center gap-2">
@@ -1401,7 +1419,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                               setEditContractName(e.target.value);
                               clearErrorIfSubmitted();
                             }}
-                            placeholder="Enter contract name"
+                            placeholder={t('contractDetail.detailsCard.contractNamePlaceholder', {
+                              defaultValue: 'Enter contract name',
+                            })}
                             required
                             className={hasAttemptedSubmit && !editContractName.trim() ? 'border-red-500' : ''}
                           />
@@ -1410,6 +1430,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             type="button"
                             size="sm"
                             onClick={() => setIsEditingName(false)}
+                            aria-label={t('contractDetail.detailsCard.actions.saveName', {
+                              defaultValue: 'Save contract name',
+                            })}
+                            title={t('contractDetail.detailsCard.actions.saveName', {
+                              defaultValue: 'Save contract name',
+                            })}
                           >
                             <Check className="h-4 w-4" />
                           </Button>
@@ -1422,6 +1448,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                               setEditContractName(contract.contract_name);
                               setIsEditingName(false);
                             }}
+                            aria-label={t('contractDetail.detailsCard.actions.cancelName', {
+                              defaultValue: 'Cancel contract name',
+                            })}
+                            title={t('contractDetail.detailsCard.actions.cancelName', {
+                              defaultValue: 'Cancel contract name',
+                            })}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -1432,7 +1464,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <Label htmlFor="edit-description">Description</Label>
+                        <Label htmlFor="edit-description">
+                          {t('contractDetail.detailsCard.descriptionLabel', {
+                            defaultValue: 'Description',
+                          })}
+                        </Label>
                         {!isEditingDescription && (
                           <Button
                             id="edit-description-btn"
@@ -1442,6 +1478,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             onClick={() => setIsEditingDescription(true)}
                             className="h-5 w-5 p-0"
                             disabled={isSystemManagedDefault}
+                            aria-label={t('contractDetail.detailsCard.actions.editDescription', {
+                              defaultValue: 'Edit contract description',
+                            })}
+                            title={t('contractDetail.detailsCard.actions.editDescription', {
+                              defaultValue: 'Edit contract description',
+                            })}
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
@@ -1453,7 +1495,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             id="edit-description"
                             value={editDescription}
                             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditDescription(e.target.value)}
-                            placeholder="Enter contract description"
+                            placeholder={t('contractDetail.detailsCard.descriptionPlaceholder', {
+                              defaultValue: 'Enter contract description',
+                            })}
                             className="min-h-[100px]"
                           />
                           <div className="flex gap-2">
@@ -1462,6 +1506,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                               type="button"
                               size="sm"
                               onClick={() => setIsEditingDescription(false)}
+                              aria-label={t('contractDetail.detailsCard.actions.saveDescription', {
+                                defaultValue: 'Save description',
+                              })}
+                              title={t('contractDetail.detailsCard.actions.saveDescription', {
+                                defaultValue: 'Save description',
+                              })}
                             >
                               <Check className="h-4 w-4" />
                             </Button>
@@ -1474,13 +1524,21 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 setEditDescription(contract.contract_description ?? '');
                                 setIsEditingDescription(false);
                               }}
+                              aria-label={t('contractDetail.detailsCard.actions.cancelDescription', {
+                                defaultValue: 'Cancel description edits',
+                              })}
+                              title={t('contractDetail.detailsCard.actions.cancelDescription', {
+                                defaultValue: 'Cancel description edits',
+                              })}
                             >
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
                       ) : (
-                        <p className="text-base text-[rgb(var(--color-text-700))]">{editDescription || 'No description'}</p>
+                        <p className="text-base text-[rgb(var(--color-text-700))]">
+                          {editDescription || t('contractDetail.labels.noDescription', { defaultValue: 'No description' })}
+                        </p>
                       )}
                     </div>
                   </CardContent>
