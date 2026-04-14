@@ -120,5 +120,17 @@
     "awaitingResponse": "{{count}} offerte(s) wacht(en) op uw reactie",
     "noPending": "Geen openstaande offertes",
     "viewAll": "Alle offertes bekijken"
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "Maandelijks",
+      "quarterly": "Per kwartaal",
+      "annually": "Jaarlijks"
+    },
+    "contractLineType": {
+      "Fixed": "Vast",
+      "Hourly": "Per uur",
+      "Usage": "Op verbruik"
+    }
   }
 }

@@ -120,5 +120,17 @@
     "awaitingResponse": "11111 {{count}} 11111",
     "noPending": "11111",
     "viewAll": "11111"
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "11111",
+      "quarterly": "11111",
+      "annually": "11111"
+    },
+    "contractLineType": {
+      "Fixed": "11111",
+      "Hourly": "11111",
+      "Usage": "11111"
+    }
   }
 }

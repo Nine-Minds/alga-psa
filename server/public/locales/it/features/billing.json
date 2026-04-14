@@ -120,5 +120,17 @@
     "awaitingResponse": "{{count}} preventivo/i in attesa della tua risposta",
     "noPending": "Nessun preventivo in sospeso",
     "viewAll": "Visualizza tutti i preventivi"
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "Mensile",
+      "quarterly": "Trimestrale",
+      "annually": "Annuale"
+    },
+    "contractLineType": {
+      "Fixed": "Fisso",
+      "Hourly": "A ore",
+      "Usage": "A consumo"
+    }
   }
 }

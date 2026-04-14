@@ -9,6 +9,7 @@ import { Info, Trash2 } from 'lucide-react'; // Import Trash2
 import { getCurrencySymbol } from '@alga-psa/core';
 import { IContractLineServiceHourlyConfig, IUserTypeRate } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect'; // Import CustomSelect
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Define the structure for the configuration object (using imported interface)
 // export interface IServiceHourlyConfig { ... } // Removed local definition
@@ -49,6 +50,7 @@ export function ServiceHourlyConfigForm({
   onUserTypeRatesChange, // Destructure new prop
   className = '',
 }: ServiceHourlyConfigFormProps) {
+  const { t } = useTranslation('msp/contract-lines');
   // Local state for input values (hourly_rate is handled specially for display)
   // Local state for input values (hourly_rate is handled specially for display)
   const [displayHourlyRate, setDisplayHourlyRate] = useState<string>('');
@@ -122,11 +124,15 @@ export function ServiceHourlyConfigForm({
   // --- User Type Rate Handlers ---
   const handleAddUserTypeRate = () => {
     if (!newUserType || newUserTypeRateValue === undefined || newUserTypeRateValue < 0) {
-        setUserTypeError('Please select a user type and enter a valid non-negative rate.');
+        setUserTypeError(t('forms.hourlyConfig.userTypeRates.validation.selectTypeAndRate', {
+          defaultValue: 'Please select a user type and enter a valid non-negative rate.',
+        }));
         return;
     }
     if (userTypeRates.some(rate => rate.user_type === newUserType)) {
-        setUserTypeError('This user type already has a specific rate.');
+        setUserTypeError(t('forms.hourlyConfig.userTypeRates.validation.duplicateType', {
+          defaultValue: 'This user type already has a specific rate.',
+        }));
         return;
     }
 
@@ -178,11 +184,11 @@ export function ServiceHourlyConfigForm({
     };
 
    const userTypeOptions = [
-     { value: 'technician', label: 'Technician' },
-     { value: 'engineer', label: 'Engineer' },
-     { value: 'consultant', label: 'Consultant' },
-     { value: 'project_manager', label: 'Project Manager' },
-     { value: 'admin', label: 'Administrator' }
+     { value: 'technician', label: t('forms.hourlyConfig.userTypeRates.options.technician', { defaultValue: 'Technician' }) },
+     { value: 'engineer', label: t('forms.hourlyConfig.userTypeRates.options.engineer', { defaultValue: 'Engineer' }) },
+     { value: 'consultant', label: t('forms.hourlyConfig.userTypeRates.options.consultant', { defaultValue: 'Consultant' }) },
+     { value: 'project_manager', label: t('forms.hourlyConfig.userTypeRates.options.projectManager', { defaultValue: 'Project Manager' }) },
+     { value: 'admin', label: t('forms.hourlyConfig.userTypeRates.options.administrator', { defaultValue: 'Administrator' }) }
      // Add other relevant user types here
    ];
 
@@ -209,8 +215,15 @@ export function ServiceHourlyConfigForm({
       {/* Hourly Rate */}
       <div>
         <div className="flex items-center">
-          <Label htmlFor="hourly-rate">Hourly Rate ($)</Label>
-          {renderTooltip('The standard rate charged per hour for this service.', `hourly-rate-tooltip-${configId}`)}
+          <Label htmlFor="hourly-rate">
+            {t('forms.hourlyConfig.labels.hourlyRate', { defaultValue: 'Hourly Rate ($)' })}
+          </Label>
+          {renderTooltip(
+            t('forms.hourlyConfig.tooltips.hourlyRate', {
+              defaultValue: 'The standard rate charged per hour for this service.',
+            }),
+            `hourly-rate-tooltip-${configId}`,
+          )}
         </div>
 
         {/* This section was incorrectly placed here by the previous diff, removing it */}
@@ -223,7 +236,7 @@ export function ServiceHourlyConfigForm({
             value={displayHourlyRate} // Use local state for display formatting
             onChange={handleHourlyRateChange} // Update display state on change
             onBlur={handleHourlyRateBlur} // Process value and update parent on blur
-            placeholder="0.00"
+            placeholder={t('common.moneyPlaceholder', { defaultValue: '0.00' })}
             disabled={disabled}
             className={`pl-10 ${validationErrors.hourly_rate ? 'border-red-500' : ''}`}
           />
@@ -236,15 +249,25 @@ export function ServiceHourlyConfigForm({
       {/* Minimum Billable Time */}
       <div>
         <div className="flex items-center">
-          <Label htmlFor="minimum-billable-time">Minimum Billable Time (minutes)</Label>
-          {renderTooltip('The minimum duration (in minutes) that will be billed for any time entry, regardless of actual duration.', `min-time-tooltip-${configId}`)}
+          <Label htmlFor="minimum-billable-time">
+            {t('forms.hourlyConfig.labels.minimumBillableTime', {
+              defaultValue: 'Minimum Billable Time (minutes)',
+            })}
+          </Label>
+          {renderTooltip(
+            t('forms.hourlyConfig.tooltips.minimumBillableTime', {
+              defaultValue:
+                'The minimum duration (in minutes) that will be billed for any time entry, regardless of actual duration.',
+            }),
+            `min-time-tooltip-${configId}`,
+          )}
         </div>
         <Input
           id="minimum-billable-time"
           type="number"
           value={config.minimum_billable_time?.toString() ?? ''} // Bind directly to prop
           onChange={handleMinutesInputChange('minimum_billable_time')} // Use generic handler
-          placeholder="e.g., 15"
+          placeholder={t('forms.hourlyConfig.placeholders.minutes', { defaultValue: 'e.g., 15' })}
           disabled={disabled}
           min={0}
           step={1}
@@ -258,15 +281,25 @@ export function ServiceHourlyConfigForm({
       {/* Round Up To Nearest */}
       <div>
         <div className="flex items-center">
-          <Label htmlFor="round-up-to-nearest">Round Up To Nearest (minutes)</Label>
-          {renderTooltip('Time entries will be rounded up to the nearest specified minute interval (e.g., 15 minutes). Set to 1 or 0 to disable rounding.', `round-up-tooltip-${configId}`)}
+          <Label htmlFor="round-up-to-nearest">
+            {t('forms.hourlyConfig.labels.roundUpToNearest', {
+              defaultValue: 'Round Up To Nearest (minutes)',
+            })}
+          </Label>
+          {renderTooltip(
+            t('forms.hourlyConfig.tooltips.roundUpToNearest', {
+              defaultValue:
+                'Time entries will be rounded up to the nearest specified minute interval (e.g., 15 minutes). Set to 1 or 0 to disable rounding.',
+            }),
+            `round-up-tooltip-${configId}`,
+          )}
         </div>
         <Input
           id="round-up-to-nearest"
           type="number"
           value={config.round_up_to_nearest?.toString() ?? ''} // Bind directly to prop
           onChange={handleMinutesInputChange('round_up_to_nearest')} // Use generic handler
-          placeholder="e.g., 15"
+          placeholder={t('forms.hourlyConfig.placeholders.minutes', { defaultValue: 'e.g., 15' })}
           disabled={disabled}
           min={0} // Allow 0 or 1 for no rounding
           step={1}
@@ -280,8 +313,14 @@ export function ServiceHourlyConfigForm({
       {/* User Type Specific Rates Section (Moved Here) */}
       <div className="space-y-4 pt-4 border-t">
            <Label className="font-medium text-base flex items-center">
-               User Type Specific Rates
-               {renderTooltip('Define different hourly rates for specific user types working on this service. These override the service\'s default hourly rate.', `user-type-rate-tooltip-${configId}`)}
+               {t('forms.hourlyConfig.userTypeRates.heading', { defaultValue: 'User Type Specific Rates' })}
+               {renderTooltip(
+                 t('forms.hourlyConfig.userTypeRates.tooltip', {
+                   defaultValue:
+                     "Define different hourly rates for specific user types working on this service. These override the service's default hourly rate.",
+                 }),
+                 `user-type-rate-tooltip-${configId}`,
+               )}
            </Label>
 
            {/* List existing rates */}
@@ -290,7 +329,7 @@ export function ServiceHourlyConfigForm({
                {userTypeRates.map((item, index) => (
                    <div key={item.rate_id || `new-${index}`} className="flex items-center justify-between gap-2 p-2 border rounded bg-background">
                        <span className="font-medium">
-                           {userTypeOptions.find(opt => opt.value === item.user_type)?.label || item.user_type}: {getCurrencySymbol('USD')}{Number(item.rate / 100).toFixed(2)}/hr
+                           {userTypeOptions.find(opt => opt.value === item.user_type)?.label || item.user_type}: {getCurrencySymbol('USD')}{Number(item.rate / 100).toFixed(2)}{t('forms.hourlyConfig.userTypeRates.perHourSuffix', { defaultValue: '/hr' })}
                        </span>
                        <Button id={`remove-user-type-rate-${configId}-${index}`} variant="ghost" size="sm" onClick={() => handleRemoveUserTypeRate(index)} disabled={disabled}>
                            <Trash2 className="h-4 w-4 text-destructive" />
@@ -302,22 +341,30 @@ export function ServiceHourlyConfigForm({
 
            {/* Add new rate form */}
            <div className="space-y-2 pt-2">
-               <Label className="text-sm font-medium">Add New Rate</Label>
+               <Label className="text-sm font-medium">
+                 {t('forms.hourlyConfig.userTypeRates.addNewRateLabel', { defaultValue: 'Add New Rate' })}
+               </Label>
                <div className="space-y-2"> {/* Removed flex classes, added space-y */}
                    <div> {/* Removed flex-1 and min-w */}
-                       <Label htmlFor={`new-user-type-${configId}`} className="sr-only">User Type</Label>
+                       <Label htmlFor={`new-user-type-${configId}`} className="sr-only">
+                         {t('forms.hourlyConfig.userTypeRates.userTypeSrLabel', { defaultValue: 'User Type' })}
+                       </Label>
                        <CustomSelect
                            id={`new-user-type-${configId}`}
                            options={userTypeOptions}
                            onValueChange={setNewUserType}
                            value={newUserType}
-                           placeholder="Select type"
+                           placeholder={t('forms.hourlyConfig.userTypeRates.selectTypePlaceholder', {
+                             defaultValue: 'Select type',
+                           })}
                            disabled={disabled}
                            className="mt-1"
                        />
                    </div>
                    <div className="mt-2"> {/* Removed flex-1 and min-w, added margin */}
-                       <Label htmlFor={`new-user-type-rate-${configId}`} className="sr-only">Rate ($/hr)</Label>
+                       <Label htmlFor={`new-user-type-rate-${configId}`} className="sr-only">
+                         {t('forms.hourlyConfig.userTypeRates.rateSrLabel', { defaultValue: 'Rate ($/hr)' })}
+                       </Label>
                        <div className="relative">
                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                          <Input
@@ -327,7 +374,7 @@ export function ServiceHourlyConfigForm({
                              value={newUserTypeRateInput}
                              onChange={handleNewRateInputChange}
                              onBlur={handleNewRateInputBlur}
-                             placeholder="0.00"
+                             placeholder={t('common.moneyPlaceholder', { defaultValue: '0.00' })}
                              disabled={disabled}
                              className={`pl-10 mt-1 ${userTypeError ? 'border-red-500' : ''}`}
                          />
@@ -340,7 +387,7 @@ export function ServiceHourlyConfigForm({
                        disabled={disabled || !newUserType || newUserTypeRateValue === undefined || (newUserTypeRateValue < 0) || !!userTypeError} // Check < 0 only if defined
                        className="mt-2 w-full" // Added margin and full width
                    >
-                       Add
+                       {t('common.actions.add', { defaultValue: 'Add' })}
                    </Button>
                </div>
                 {userTypeError && <p className="text-sm text-red-500 mt-1">{userTypeError}</p>}

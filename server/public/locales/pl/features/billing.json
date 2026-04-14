@@ -120,5 +120,17 @@
     "awaitingResponse": "{{count}} ofert(a) oczekuje na Twoją odpowiedź",
     "noPending": "Brak oczekujących ofert",
     "viewAll": "Wyświetl wszystkie oferty"
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "Miesięcznie",
+      "quarterly": "Kwartalnie",
+      "annually": "Rocznie"
+    },
+    "contractLineType": {
+      "Fixed": "Stała stawka",
+      "Hourly": "Godzinowe",
+      "Usage": "Na podstawie zużycia"
+    }
   }
 }

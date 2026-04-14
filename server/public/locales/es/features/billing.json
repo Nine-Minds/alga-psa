@@ -120,5 +120,17 @@
     "awaitingResponse": "{{count}} presupuesto(s) esperando su respuesta",
     "noPending": "No hay presupuestos pendientes",
     "viewAll": "Ver todos los presupuestos"
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "Mensual",
+      "quarterly": "Trimestral",
+      "annually": "Anual"
+    },
+    "contractLineType": {
+      "Fixed": "Fijo",
+      "Hourly": "Por hora",
+      "Usage": "Basado en uso"
+    }
   }
 }

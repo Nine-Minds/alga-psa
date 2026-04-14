@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AlertCircle } from 'lucide-react';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getContractLineById } from '@alga-psa/billing/actions/contractLineAction';
 import { IContractLine } from '@alga-psa/types';
 
@@ -18,6 +19,7 @@ interface PlanTypeRouterProps {
 }
 
 export function PlanTypeRouter({ contractLineId }: PlanTypeRouterProps) {
+  const { t } = useTranslation('msp/contract-lines');
   const [planType, setPlanType] = useState<IContractLine['contract_line_type'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,22 +32,34 @@ export function PlanTypeRouter({ contractLineId }: PlanTypeRouterProps) {
       if (plan) {
         setPlanType(plan.contract_line_type);
       } else {
-        setError(`Contract line with ID ${contractLineId} not found.`);
+        setError(t('router.contractLine.notFound', {
+          defaultValue: 'Contract line with ID {{id}} not found.',
+          id: contractLineId,
+        }));
       }
     } catch (err) {
       console.error(`Error fetching contract line type for ID ${contractLineId}:`, err);
-      setError('Failed to load contract line details.');
+      setError(t('router.contractLine.loadFailed', {
+        defaultValue: 'Failed to load contract line details.',
+      }));
     } finally {
       setLoading(false);
     }
-  }, [contractLineId]);
+  }, [contractLineId, t]);
 
   useEffect(() => {
     fetchPlanType();
   }, [fetchPlanType]);
 
   if (loading) {
-    return <div className="flex justify-center items-center p-8"><LoadingIndicator spinnerProps={{ size: "sm" }} text="Loading Contract Line..." /></div>;
+    return (
+      <div className="flex justify-center items-center p-8">
+        <LoadingIndicator
+          spinnerProps={{ size: 'sm' }}
+          text={t('router.contractLine.loading', { defaultValue: 'Loading Contract Line...' })}
+        />
+      </div>
+    );
   }
 
   if (error) {
@@ -68,7 +82,12 @@ export function PlanTypeRouter({ contractLineId }: PlanTypeRouterProps) {
       return (
         <Alert variant="destructive" className="m-4">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Unknown or unsupported contract line type: {planType}</AlertDescription>
+          <AlertDescription>
+            {t('router.contractLine.unsupportedType', {
+              defaultValue: 'Unknown or unsupported contract line type: {{type}}',
+              type: planType ?? '',
+            })}
+          </AlertDescription>
         </Alert>
       );
   }

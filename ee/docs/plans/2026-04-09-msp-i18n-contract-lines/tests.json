@@ -2,313 +2,417 @@
   {
     "id": "T001",
     "description": "ContractLineDialog.tsx: dialog title renders translated text for both add and edit modes",
-    "implemented": false,
-    "featureIds": ["F001"]
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
   },
   {
     "id": "T002",
     "description": "ContractLineDialog.tsx: preset basics labels (name, frequency, billing timing) render translated text with required markers",
-    "implemented": false,
-    "featureIds": ["F001"]
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
   },
   {
     "id": "T003",
     "description": "ContractLineDialog.tsx: billing model selector cards display translated titles and descriptions for Fixed/Hourly/Usage",
-    "implemented": false,
-    "featureIds": ["F002"]
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
   },
   {
     "id": "T004",
     "description": "ContractLineDialog.tsx: billing timing helper text renders correct translated variant based on whether planType is Fixed or not",
-    "implemented": false,
-    "featureIds": ["F002"]
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
   },
   {
     "id": "T005",
     "description": "ContractLineDialog.tsx: Fixed config section renders translated alert info, 'Services & Products' label, 'Add Item' button, empty state, base rate label, and proration label",
-    "implemented": false,
-    "featureIds": ["F003"]
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
   },
   {
     "id": "T006",
     "description": "ContractLineDialog.tsx: Hourly config section renders translated alert info, 'Minimum Billable Time', 'Hourly Services' label, rate label, bucket switch, and 'Add Hourly Service' button",
-    "implemented": false,
-    "featureIds": ["F003"]
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
   },
   {
     "id": "T007",
     "description": "ContractLineDialog.tsx: Usage config section renders translated alert info, 'Usage-Based Services' label, 'Rate per Unit', 'Unit of Measure', and 'Add Usage-Based Service' button",
-    "implemented": false,
-    "featureIds": ["F003"]
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
   },
   {
     "id": "T008",
     "description": "ContractLineDialog.tsx: validation error messages are translated (required fields, service-specific errors with interpolated index)",
-    "implemented": false,
-    "featureIds": ["F003"]
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
   },
   {
     "id": "T009",
     "description": "HourlyContractLineConfiguration.tsx: plan basics card title includes interpolated plan name with '(Hourly)' suffix, translated section heading and description",
-    "implemented": false,
-    "featureIds": ["F004"]
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
   },
   {
     "id": "T010",
     "description": "HourlyContractLineConfiguration.tsx: hourly settings accordion displays translated trigger text, overtime switch label, tooltip content, rate/threshold labels and helper text",
-    "implemented": false,
-    "featureIds": ["F004"]
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
   },
   {
     "id": "T011",
     "description": "HourlyContractLineConfiguration.tsx: after-hours section renders translated switch label, tooltip content, and multiplier label with helper text",
-    "implemented": false,
-    "featureIds": ["F004"]
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
   },
   {
     "id": "T012",
     "description": "HourlyContractLineConfiguration.tsx: service rates card title, empty state, non-hourly service message with interpolated billing method, and save button text are all translated",
-    "implemented": false,
-    "featureIds": ["F005"]
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
   },
   {
     "id": "T013",
     "description": "UsageContractLineConfiguration.tsx: plan basics card title includes interpolated plan name with '(Usage)' suffix, and section heading/description are translated",
-    "implemented": false,
-    "featureIds": ["F006"]
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
   },
   {
     "id": "T014",
     "description": "UsageContractLineConfiguration.tsx: service pricing accordion summary text correctly renders 'Tiered Pricing (N tiers)' or rate/unit format with translated labels",
-    "implemented": false,
-    "featureIds": ["F007"]
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
   },
   {
     "id": "T015",
     "description": "UsageContractLineConfiguration.tsx: Save All Configurations button and empty state are translated",
-    "implemented": false,
-    "featureIds": ["F007"]
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
   },
   {
     "id": "T016",
     "description": "UsageContractLinePresetConfiguration.tsx: preset basics section uses 'Contract Line Preset' terminology in translated heading and labels",
-    "implemented": false,
-    "featureIds": ["F008"]
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
   },
   {
     "id": "T017",
     "description": "UsageContractLinePresetConfiguration.tsx: save/validation error messages ('No changes detected to save', 'Cannot save, validation errors exist') are translated",
-    "implemented": false,
-    "featureIds": ["F009"]
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
   },
   {
     "id": "T018",
     "description": "HourlyContractLinePresetConfiguration.tsx: preset basics section renders translated name label, minimum billable time, and round up to nearest with helper text",
-    "implemented": false,
-    "featureIds": ["F010"]
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
   },
   {
     "id": "T019",
     "description": "HourlyContractLinePresetConfiguration.tsx: error states render translated messages for not found and invalid type scenarios",
-    "implemented": false,
-    "featureIds": ["F011"]
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
   },
   {
     "id": "T020",
     "description": "UsageContractLinePresetServicesList.tsx: table column headers are translated and action menu items display translated text",
-    "implemented": false,
-    "featureIds": ["F012"]
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
   },
   {
     "id": "T021",
     "description": "UsageContractLinePresetServicesList.tsx: service addition UI renders translated checkbox details with interpolated service type, method, and rate",
-    "implemented": false,
-    "featureIds": ["F013"]
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
   },
   {
     "id": "T022",
     "description": "HourlyContractLinePresetServicesList.tsx: table column headers are translated and action menu items display translated text",
-    "implemented": false,
-    "featureIds": ["F014"]
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
   },
   {
     "id": "T023",
     "description": "HourlyContractLinePresetServicesList.tsx: unsaved changes confirmation dialog text and toast messages are translated",
-    "implemented": false,
-    "featureIds": ["F015"]
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
   },
   {
     "id": "T024",
     "description": "GenericContractLineServicesList.tsx: all 8 table column headers render translated text",
-    "implemented": false,
-    "featureIds": ["F016"]
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
   },
   {
     "id": "T025",
     "description": "GenericContractLineServicesList.tsx: billing method display labels ('Fixed Price', 'Hourly', 'Usage Based') and config type badge text are translated",
-    "implemented": false,
-    "featureIds": ["F016"]
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
   },
   {
     "id": "T026",
     "description": "GenericContractLineServicesList.tsx: 'Add Services to Contract Line' section renders translated heading, empty state messages, service detail text, and button label with count",
-    "implemented": false,
-    "featureIds": ["F017"]
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
   },
   {
     "id": "T027",
     "description": "ContractLines.tsx: table column headers, action menu items, and heading render translated text",
-    "implemented": false,
-    "featureIds": ["F018"]
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
   },
   {
     "id": "T028",
     "description": "ContractLines.tsx: plan services section renders translated heading, 'Services for {name}' with interpolation, empty state, service table headers, and 'Add Service' button",
-    "implemented": false,
-    "featureIds": ["F019"]
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
   },
   {
     "id": "T029",
     "description": "FixedContractLineConfiguration.tsx: contract line basics section renders translated heading, description, and all form labels including cadence owner options",
-    "implemented": false,
-    "featureIds": ["F020"]
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
   },
   {
     "id": "T030",
     "description": "FixedContractLineConfiguration.tsx: fixed fee settings section renders translated heading, base rate label, proration label/description, and billing cycle alignment options",
-    "implemented": false,
-    "featureIds": ["F021"]
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
   },
   {
     "id": "T031",
     "description": "FixedContractLinePresetConfiguration.tsx: preset basics section uses 'Contract Line Preset' terminology in translated labels",
-    "implemented": false,
-    "featureIds": ["F022"]
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
   },
   {
     "id": "T032",
     "description": "FixedContractLinePresetConfiguration.tsx: fixed fee settings renders translated 'Recurring Base Rate (Optional)' with override helper text, and billing timing label with cadence explanation",
-    "implemented": false,
-    "featureIds": ["F023"]
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
   },
   {
     "id": "T033",
     "description": "ServiceHourlyConfigForm.tsx: hourly rate, minimum billable time, and round up to nearest labels and tooltip content render translated text",
-    "implemented": false,
-    "featureIds": ["F024"]
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
   },
   {
     "id": "T034",
     "description": "ServiceHourlyConfigForm.tsx: user type specific rates section renders translated heading, tooltip, 'Add New Rate' label, and 'Add' button",
-    "implemented": false,
-    "featureIds": ["F025"]
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
   },
   {
     "id": "T035",
     "description": "ServiceHourlyConfigForm.tsx: user type option labels ('Technician', 'Engineer', etc.) are translated and validation errors render translated text",
-    "implemented": false,
-    "featureIds": ["F025"]
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
   },
   {
     "id": "T036",
     "description": "ContractLineServiceForm.tsx: dialog title and loading/error state messages render translated text",
-    "implemented": false,
-    "featureIds": ["F026"]
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
   },
   {
     "id": "T037",
     "description": "ContractLinesOverview.tsx: page heading, button text, and table column headers render translated text",
-    "implemented": false,
-    "featureIds": ["F027"]
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
   },
   {
     "id": "T038",
     "description": "ContractLinesOverview.tsx: filter section renders translated search placeholder, type filter options, reset button, and loading indicator text",
-    "implemented": false,
-    "featureIds": ["F028"]
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
   },
   {
     "id": "T039",
     "description": "ServiceTierEditor.tsx: card title, 'Add Tier' button, column headers with interpolated unit, empty state, helper text, and aria-labels are all translated",
-    "implemented": false,
-    "featureIds": ["F029"]
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
   },
   {
     "id": "T040",
     "description": "ServiceTierEditor.tsx: 'Unlimited' placeholder in last tier 'To' field renders translated text",
-    "implemented": false,
-    "featureIds": ["F029"]
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
   },
   {
     "id": "T041",
     "description": "ServiceUsageConfigForm.tsx: form labels, tooltip content, required field indicator, and tiered pricing switch label with interpolated service name are translated",
-    "implemented": false,
-    "featureIds": ["F030"]
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
   },
   {
     "id": "T042",
     "description": "ServiceBucketConfigForm.tsx: labels with interpolated unit names, tooltip content, and rollover checkbox label are translated",
-    "implemented": false,
-    "featureIds": ["F031"]
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
   },
   {
     "id": "T043",
     "description": "ServiceBucketConfigForm.tsx: dynamic unit pluralization works correctly with translated labels",
-    "implemented": false,
-    "featureIds": ["F031"]
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
   },
   {
     "id": "T044",
     "description": "EditContractLineServiceQuantityDialog.tsx: dialog title, heading, form labels, helper text, validation error, and buttons render translated text",
-    "implemented": false,
-    "featureIds": ["F032"]
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
   },
   {
     "id": "T045",
     "description": "ContractLineTypeSelector.tsx: 'Contract Line Type' label, plan type descriptions, and placeholder render translated text",
-    "implemented": false,
-    "featureIds": ["F033"]
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
   },
   {
     "id": "T046",
     "description": "ContractLineTypeRouter.tsx: loading text and all error messages render translated text with interpolated ID/type values",
-    "implemented": false,
-    "featureIds": ["F034"]
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
   },
   {
     "id": "T047",
     "description": "ContractLinePresetTypeRouter.tsx: loading text and all error messages render translated text with interpolated ID/type values",
-    "implemented": false,
-    "featureIds": ["F035"]
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
   },
   {
     "id": "T048",
     "description": "msp/contract-lines.json English namespace file exists with all keys organized by component area and all values matching original hardcoded strings",
-    "implemented": false,
-    "featureIds": ["F036"]
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
   },
   {
     "id": "T049",
     "description": "All 7 production language files (fr, es, de, nl, it, pl) exist for msp/contract-lines and contain translations for every key in the English file",
-    "implemented": false,
-    "featureIds": ["F037"]
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ]
   },
   {
     "id": "T050",
     "description": "Pseudo-locale files (xx, yy) exist for msp/contract-lines and cover all keys",
-    "implemented": false,
-    "featureIds": ["F038"]
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ]
   },
   {
     "id": "T051",
     "description": "validate-translations.cjs passes with zero errors for the msp/contract-lines namespace across all locales",
-    "implemented": false,
-    "featureIds": ["F039"]
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
   },
   {
     "id": "T052",
     "description": "ROUTE_NAMESPACES includes msp/contract-lines for billing-related routes so the namespace is loaded when navigating to contract line pages",
-    "implemented": false,
-    "featureIds": ["F040"]
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ]
   }
 ]

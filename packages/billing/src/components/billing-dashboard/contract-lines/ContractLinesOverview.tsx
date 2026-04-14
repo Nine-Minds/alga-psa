@@ -20,12 +20,20 @@ import { IContractLinePreset, IServiceType } from '@alga-psa/types'; // Added IS
 import { getServiceTypesForSelection } from '@alga-psa/billing/actions'; // Added import for fetching types
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
-import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY, CONTRACT_LINE_TYPE_DISPLAY } from '@alga-psa/billing/constants/billing';
+import { CONTRACT_LINE_TYPE_VALUES } from '@alga-psa/billing/constants/billing';
+import {
+  useFormatBillingFrequency,
+  useFormatContractLineType,
+} from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const ContractLinesOverview: React.FC = () => {
+  const { t } = useTranslation('msp/contract-lines');
+  const formatBillingFrequency = useFormatBillingFrequency();
+  const formatContractLineType = useFormatContractLineType();
   const [contractLines, setContractLines] = useState<IContractLinePreset[]>([]);
   const [editingPlan, setEditingPlan] = useState<IContractLinePreset | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +68,9 @@ const ContractLinesOverview: React.FC = () => {
       setError(null);
     } catch (error) {
       console.error('Error fetching contract line presets:', error);
-      setError('Failed to fetch contract line presets');
+      setError(t('overview.errors.failedToFetchContractLinePresets', {
+        defaultValue: 'Failed to fetch contract line presets',
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -81,9 +91,13 @@ const ContractLinesOverview: React.FC = () => {
     try {
       await deleteContractLinePreset(presetId);
       await fetchContractLines();
-      toast.success('Contract line preset deleted successfully');
+      toast.success(t('overview.toast.contractLinePresetDeletedSuccessfully', {
+        defaultValue: 'Contract line preset deleted successfully',
+      }));
     } catch (error) {
-      handleError(error, 'An unexpected error occurred while deleting the contract line preset.');
+      handleError(error, t('overview.errors.unexpectedDeleteError', {
+        defaultValue: 'An unexpected error occurred while deleting the contract line preset.',
+      }));
     }
   };
 
@@ -102,30 +116,30 @@ const ContractLinesOverview: React.FC = () => {
 
   // Contract line type filter options
   const typeFilterOptions = [
-    { value: 'all', label: 'All types' },
-    ...Object.entries(CONTRACT_LINE_TYPE_DISPLAY).map(([value, label]) => ({
+    { value: 'all', label: t('overview.filters.type.allTypes', { defaultValue: 'All types' }) },
+    ...CONTRACT_LINE_TYPE_VALUES.map((value) => ({
       value,
-      label
-    }))
+      label: formatContractLineType(value),
+    })),
   ];
 
   const contractLineColumns: ColumnDefinition<IContractLinePreset>[] = [
     {
-      title: 'Contract Line Name',
+      title: t('overview.columns.contractLineName', { defaultValue: 'Contract Line Name' }),
       dataIndex: 'preset_name',
     },
     {
-      title: 'Billing Frequency',
+      title: t('overview.columns.billingFrequency', { defaultValue: 'Billing Frequency' }),
       dataIndex: 'billing_frequency',
-      render: (value) => BILLING_FREQUENCY_DISPLAY[value] || value,
+      render: (value) => formatBillingFrequency(value),
     },
     {
-      title: 'Contract Line Type',
+      title: t('overview.columns.contractLineType', { defaultValue: 'Contract Line Type' }),
       dataIndex: 'contract_line_type',
-      render: (value) => PLAN_TYPE_DISPLAY[value] || value,
+      render: (value) => formatContractLineType(value),
     },
     {
-      title: 'Actions',
+      title: t('overview.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'preset_id',
       render: (value, record) => (
         <DropdownMenu>
@@ -136,7 +150,9 @@ const ContractLinesOverview: React.FC = () => {
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">
+                {t('common.actions.openMenu', { defaultValue: 'Open menu' })}
+              </span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -150,7 +166,7 @@ const ContractLinesOverview: React.FC = () => {
                 }
               }}
             >
-              Edit
+              {t('common.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id="delete-contract-line-menu-item"
@@ -162,7 +178,7 @@ const ContractLinesOverview: React.FC = () => {
                 }
               }}
             >
-              Delete
+              {t('common.actions.delete', { defaultValue: 'Delete' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -180,7 +196,9 @@ const ContractLinesOverview: React.FC = () => {
     <Card size="2">
       <Box p="4">
         <div className="flex justify-between items-center mb-4">
-          <Heading as="h3" size="4">Contract Line Presets</Heading>
+          <Heading as="h3" size="4">
+            {t('overview.heading', { defaultValue: 'Contract Line Presets' })}
+          </Heading>
           <ContractLineDialog
             onPlanAdded={(newPresetId) => {
               if (newPresetId) {
@@ -193,7 +211,7 @@ const ContractLinesOverview: React.FC = () => {
             triggerButton={
               <Button id='add-contract-line-button'>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Contract Line Preset
+                {t('overview.actions.addContractLinePreset', { defaultValue: 'Add Contract Line Preset' })}
               </Button>
             }
             allServiceTypes={allServiceTypes} // Pass the fetched service types
@@ -213,7 +231,9 @@ const ContractLinesOverview: React.FC = () => {
             <Input
               id="contract-line-search"
               type="text"
-              placeholder="Search contract line presets"
+              placeholder={t('overview.filters.searchPlaceholder', {
+                defaultValue: 'Search contract line presets',
+              })}
               className="pl-10 pr-4 py-2 w-64"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -228,7 +248,9 @@ const ContractLinesOverview: React.FC = () => {
               options={typeFilterOptions}
               value={filterType}
               onValueChange={(value) => setFilterType(value)}
-              placeholder="Select type"
+              placeholder={t('overview.filters.type.selectTypePlaceholder', {
+                defaultValue: 'Select type',
+              })}
               customStyles={{
                 content: 'mt-1'
               }}
@@ -248,7 +270,7 @@ const ContractLinesOverview: React.FC = () => {
               className="flex items-center gap-1 bg-card"
             >
               <XCircle className="h-4 w-4" />
-              <span>Reset</span>
+              <span>{t('common.actions.reset', { defaultValue: 'Reset' })}</span>
             </Button>
           )}
         </div>
@@ -258,7 +280,7 @@ const ContractLinesOverview: React.FC = () => {
             layout="stacked"
             className="py-10 text-muted-foreground"
             spinnerProps={{ size: 'md' }}
-            text="Loading contract line presets"
+            text={t('overview.loading', { defaultValue: 'Loading contract line presets' })}
           />
         ) : (
           <DataTable

@@ -9,6 +9,7 @@ import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Info } from 'lucide-react';
 import { ServiceTierEditor, TierConfig } from './ServiceTierEditor'; // Import the tier editor and its config type
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Define the shape of the configuration for a single service
 export interface ServiceUsageConfig {
@@ -48,6 +49,7 @@ export function ServiceUsageConfigForm({
     onConfigChange,
     onTiersChange,
 }: ServiceUsageConfigFormProps) {
+    const { t } = useTranslation('msp/contract-lines');
     // Local state for formatted rate input
     const [baseRateInput, setBaseRateInput] = React.useState<string>('');
 
@@ -93,8 +95,10 @@ export function ServiceUsageConfigForm({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <Label htmlFor={`usage-contract-line-base-rate-${serviceId}`} className="inline-flex items-center">
-                        Default Rate per Unit { !isTiered && <span className="text-destructive">*</span>}
-                        <Tooltip content="Rate per unit (used if tiered pricing is off).">
+                        {t('forms.usageConfig.labels.defaultRatePerUnit', { defaultValue: 'Default Rate per Unit' })} { !isTiered && <span className="text-destructive">*</span>}
+                        <Tooltip content={t('forms.usageConfig.tooltips.defaultRatePerUnit', {
+                            defaultValue: 'Rate per unit (used if tiered pricing is off).',
+                        })}>
                             <Info className="h-4 w-4 text-muted-foreground ml-1 cursor-help" />
                         </Tooltip>
                     </Label>
@@ -123,7 +127,7 @@ export function ServiceUsageConfigForm({
                                     setBaseRateInput((cents / 100).toFixed(2));
                                 }
                             }}
-                            placeholder="0.00"
+                            placeholder={t('common.moneyPlaceholder', { defaultValue: '0.00' })}
                             disabled={disabled || isTiered}
                             className={`pl-10 ${saveAttempted && validationErrors.base_rate ? 'border-red-500' : ''}`}
                         />
@@ -132,15 +136,17 @@ export function ServiceUsageConfigForm({
                 </div>
                 <div>
                     <Label htmlFor={`usage-contract-line-unit-of-measure-${serviceId}`} className="inline-flex items-center">
-                        Unit of Measure <span className="text-destructive">*</span>
-                        <Tooltip content="e.g., GB, User, Device.">
+                        {t('forms.usageConfig.labels.unitOfMeasure', { defaultValue: 'Unit of Measure' })} <span className="text-destructive">*</span>
+                        <Tooltip content={t('forms.usageConfig.tooltips.unitOfMeasure', {
+                            defaultValue: 'e.g., GB, User, Device.',
+                        })}>
                             <Info className="h-4 w-4 text-muted-foreground ml-1 cursor-help" />
                         </Tooltip>
                     </Label>
                     <UnitOfMeasureInput
                         value={unit}
                         onChange={handleUnitOfMeasureChange}
-                        placeholder="Select unit"
+                        placeholder={t('forms.usageConfig.placeholders.selectUnit', { defaultValue: 'Select unit' })}
                         disabled={disabled}
                         serviceType="Usage" // Assuming Usage type for now
                         className={saveAttempted && validationErrors.unit_of_measure ? 'border-red-500' : ''}
@@ -149,8 +155,10 @@ export function ServiceUsageConfigForm({
                 </div>
                 <div>
                     <Label htmlFor={`minimum-usage-${serviceId}`} className="inline-flex items-center">
-                        Minimum Usage
-                        <Tooltip content="Minimum billable units per period.">
+                        {t('forms.usageConfig.labels.minimumUsage', { defaultValue: 'Minimum Usage' })}
+                        <Tooltip content={t('forms.usageConfig.tooltips.minimumUsage', {
+                            defaultValue: 'Minimum billable units per period.',
+                        })}>
                             <Info className="h-4 w-4 text-muted-foreground ml-1 cursor-help" />
                         </Tooltip>
                     </Label>
@@ -159,7 +167,7 @@ export function ServiceUsageConfigForm({
                         type="number"
                         value={config.minimum_usage?.toString() || ''}
                         onChange={handleNumberInputChange('minimum_usage')}
-                        placeholder="0"
+                        placeholder={t('forms.usageConfig.placeholders.minimumUsage', { defaultValue: '0' })}
                         disabled={disabled}
                         min={0} step={1}
                         className={saveAttempted && validationErrors.minimum_usage ? 'border-red-500' : ''}
@@ -167,7 +175,10 @@ export function ServiceUsageConfigForm({
                     {saveAttempted && validationErrors.minimum_usage && <p className="text-sm text-red-500 mt-1">{validationErrors.minimum_usage}</p>}
                 </div>
             </div>
-             <p className="text-xs text-muted-foreground pt-2"><span className="text-destructive">*</span> Indicates a required field.</p>
+             <p className="text-xs text-muted-foreground pt-2">
+                <span className="text-destructive">*</span>{' '}
+                {t('forms.usageConfig.requiredFieldHint', { defaultValue: 'Indicates a required field.' })}
+             </p>
 
             {/* Tiered Pricing Section */}
             <div className="space-y-3 pt-3">
@@ -178,7 +189,12 @@ export function ServiceUsageConfigForm({
                         onCheckedChange={handleSwitchChange('enable_tiered_pricing')}
                         disabled={disabled}
                     />
-                    <Label htmlFor={`enable-tiered-pricing-${serviceId}`} className="cursor-pointer">Enable Tiered Pricing for {serviceName}</Label>
+                    <Label htmlFor={`enable-tiered-pricing-${serviceId}`} className="cursor-pointer">
+                        {t('forms.usageConfig.labels.enableTieredPricing', {
+                            defaultValue: 'Enable Tiered Pricing for {{serviceName}}',
+                            serviceName,
+                        })}
+                    </Label>
                 </div>
 
                 {isTiered && (

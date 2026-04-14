@@ -27,6 +27,26 @@ MSP operators configuring services, rate tiers, tax rates, and billing types see
 - Translating sub-components imported from other packages (e.g., `TaxComponentEditor`, `TaxThresholdEditor`, `TaxHolidayManager`).
 - Translating client-portal-facing billing views (those use `features/billing.json`).
 
+## In scope: shared enum label migration (carried over from contract-lines batch)
+
+The contract-lines batch (shipped 2026-04-14) introduced a localized option-hook pattern for shared billing enums. See [`.ai/translation/enum-labels-pattern.md`](../../../../.ai/translation/enum-labels-pattern.md) for the full recipe. This batch owns **one** carried-over call site:
+
+| File | Line | Current import | Target hook |
+|---|---|---|---|
+| `service-configurations/BucketServiceConfigPanel.tsx` | 116 | `BILLING_FREQUENCY_OPTIONS` from `@alga-psa/billing/constants/billing` | `useBillingFrequencyOptions` from `@alga-psa/billing/hooks/useBillingEnumOptions` |
+
+Migration is mechanical: replace the import, call `const billingFrequencyOptions = useBillingFrequencyOptions();` at the top of the component body, and pass `billingFrequencyOptions` into the `<CustomSelect>`. The `features/billing` namespace is already loaded on `/msp/billing` and `/client-portal/billing`; if `BucketServiceConfigPanel` renders under `/msp/settings`, add `features/billing` to that route entry in `packages/core/src/lib/i18n/config.ts` alongside the `msp/service-catalog` registration.
+
+### Local enum constants (not the shared pattern — translate in-place)
+
+`ConfigurationTypeSelector`, `HourlyServiceConfigPanel`, `ServiceForm`, and `FixedServiceConfigPanel` also contain module-level constant arrays with hardcoded English labels (`CONFIGURATION_TYPE_OPTIONS`, `userTypeOptions`, billing-method options, `alignmentOptions`). These are **component-local** and should NOT be extracted into the shared `useBillingEnumOptions` hook. Instead:
+
+1. Move the array inside the component body so it has access to `t()`.
+2. Keep value fields untranslated (data identifiers); wrap each `label` with `t('service-catalog.<section>.options.<value>', { defaultValue: '...' })`.
+3. If the same array is used by multiple sibling components in this batch, extract a small hook colocated with them (e.g., `useUserTypeRateOptions()` in `service-configurations/` or nearby).
+
+The dividing line: shared across feature areas → published hook in `packages/billing/src/hooks/`; local to one feature area → inline `t()` or a hook living in the same directory.
+
 ## File Inventory
 
 | # | Component | Path (relative to `packages/billing/src/components/billing-dashboard/`) | LOC | Est. Strings | Key content |
@@ -95,3 +115,6 @@ Add `msp/service-catalog` to the existing `/msp/settings` route entry:
 - [ ] German translations don't overflow in form labels, dialog fields, or table headers.
 - [ ] `npm run build` succeeds with no TypeScript errors.
 - [ ] Currency values use `useFormatters()` where applicable (rate display in ServiceRateTiers, ServiceSelectionDialog).
+- [ ] `BucketServiceConfigPanel.tsx` imports `useBillingFrequencyOptions` from `@alga-psa/billing/hooks/useBillingEnumOptions` (not `BILLING_FREQUENCY_OPTIONS` from the deprecated constants file). Verify with `rg -n 'BILLING_FREQUENCY_OPTIONS|BILLING_FREQUENCY_DISPLAY' packages/billing/src/components/billing-dashboard/service-configurations/`.
+- [ ] If `BucketServiceConfigPanel` renders under a route that does not already load `features/billing`, that route entry in `packages/core/src/lib/i18n/config.ts` has been updated.
+- [ ] Local enum constants (`CONFIGURATION_TYPE_OPTIONS`, `userTypeOptions`, billing-method options, `alignmentOptions`) have been moved inside their component bodies with `label` fields wrapped in `t()` calls (values remain untranslated).

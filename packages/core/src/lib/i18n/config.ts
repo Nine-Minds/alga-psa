@@ -139,7 +139,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/jobs': ['common', 'msp/core', 'msp/jobs'],
   '/msp/tickets': ['common', 'msp/core', 'features/tickets'],
   '/msp/projects': ['common', 'msp/core', 'features/projects'],
-  '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/reports', 'msp/billing'],
+  '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/reports', 'msp/billing', 'msp/contract-lines'],
   '/msp/clients': ['common', 'msp/core', 'msp/clients'],
   '/msp/contacts': ['common', 'msp/core', 'msp/contacts'],
   '/msp/assets': ['common', 'msp/core', 'msp/assets'],
