@@ -349,3 +349,28 @@
     "documents": {
       "loading": "Loading documents..."
     },
+    "po": {
+      "amountLabel": "PO Amount (Optional)",
+      "amountPlaceholder": "0.00",
+      "comingSoon": "Invoice integration coming soon. Settings will be saved but PO enforcement won't be active until a future release.",
+      "noteLabel": "Note:",
+      "numberLabel": "PO Number *",
+      "numberPlaceholder": "e.g., PO-2024-12345",
+      "requirePurchaseOrder": "Require Purchase Order",
+      "requirePurchaseOrderTooltip": "When enabled, invoices cannot be generated for this contract unless a PO number is provided."
+    },
+    "presets": {
+      "allTypes": "All types",
+      "empty": "No contract line presets available. You can add them later.",
+      "heading": "Contract Line Presets (Optional)",
+      "headingTooltip": "Select contract line presets to copy into this contract. You can add more later.",
+      "loading": "Loading contract line presets...",
+      "noMatches": "No contract line presets match your search.",
+      "resetFilters": "Reset",
+      "searchPlaceholder": "Search contract line presets...",
+      "selectedPlural": "{{count}} contract line presets selected",
+      "selectedSingle": "{{count}} contract line preset selected",
+      "serviceCountPlural": "{{count}} services",
+      "serviceCountSingle": "{{count}} service",
+      "typePlaceholder": "Select type"
+    },

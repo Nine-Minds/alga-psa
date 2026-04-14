@@ -17,8 +17,10 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { IClient } from '@alga-psa/types';
 import { createClientContractForBilling, getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { CONTRACT_LINE_TYPE_DISPLAY } from '@alga-psa/billing/constants/billing';
-import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import {
+  useBillingFrequencyOptions,
+  useContractLineTypeOptions,
+} from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { HelpCircle, Info, Plus, XCircle, ChevronDown, ChevronUp, Search, Coins } from 'lucide-react';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -49,6 +51,7 @@ interface ContractDialogProps {
 export function ContractDialog({ onContractSaved, editingContract, onClose, triggerButton }: ContractDialogProps) {
   const { t } = useTranslation('msp/contracts');
   const billingFrequencyOptions = useBillingFrequencyOptions();
+  const contractLineTypeOptions = useContractLineTypeOptions();
   const renewalModeOptions = [
     { value: 'manual', label: t('renewal.modes.manual', { defaultValue: 'Manual renewal' }) },
     { value: 'auto', label: t('renewal.modes.auto', { defaultValue: 'Auto-renew' }) },
@@ -799,16 +802,26 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
             {/* Contract Line Presets Selection */}
             <div className="border-t pt-4 space-y-3">
               <div className="flex items-center gap-2">
-                <Label>Contract Line Presets (Optional)</Label>
-                <Tooltip content="Select contract line presets to copy into this contract. You can add more later.">
+                <Label>
+                  {t('contractDialog.presets.heading', { defaultValue: 'Contract Line Presets (Optional)' })}
+                </Label>
+                <Tooltip content={t('contractDialog.presets.headingTooltip', {
+                  defaultValue: 'Select contract line presets to copy into this contract. You can add more later.',
+                })}>
                   <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
                 </Tooltip>
               </div>
 
               {isLoadingContractLinePresets ? (
-                <div className="text-sm text-muted-foreground">Loading contract line presets...</div>
+                <div className="text-sm text-muted-foreground">
+                  {t('contractDialog.presets.loading', { defaultValue: 'Loading contract line presets...' })}
+                </div>
               ) : availableContractLinePresets.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No contract line presets available. You can add them later.</div>
+                <div className="text-sm text-muted-foreground">
+                  {t('contractDialog.presets.empty', {
+                    defaultValue: 'No contract line presets available. You can add them later.',
+                  })}
+                </div>
               ) : (
                 <>
                   {/* Search and Filter Row */}
@@ -821,7 +834,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                       />
                       <Input
                         type="text"
-                        placeholder="Search contract line presets..."
+                        placeholder={t('contractDialog.presets.searchPlaceholder', {
+                          defaultValue: 'Search contract line presets...',
+                        })}
                         value={contractLinePresetSearchTerm}
                         onChange={(e) => setContractLinePresetSearchTerm(e.target.value)}
                         className="pl-10"
@@ -833,15 +848,17 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                       <CustomSelect
                         id="contract-line-preset-type-filter"
                         options={[
-                          { value: 'all', label: 'All types' },
-                          ...Object.entries(CONTRACT_LINE_TYPE_DISPLAY).map(([value, label]) => ({
+                          { value: 'all', label: t('contractDialog.presets.allTypes', { defaultValue: 'All types' }) },
+                          ...contractLineTypeOptions.map(({ value, label }) => ({
                             value,
                             label
                           }))
                         ]}
                         value={contractLinePresetTypeFilter}
                         onValueChange={(value) => setContractLinePresetTypeFilter(value)}
-                        placeholder="Select type"
+                        placeholder={t('contractDialog.presets.typePlaceholder', {
+                          defaultValue: 'Select type',
+                        })}
                       />
                     </div>
 
@@ -857,7 +874,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                         }}
                       >
                         <XCircle className="h-4 w-4 mr-1" />
-                        Reset
+                        {t('contractDialog.presets.resetFilters', { defaultValue: 'Reset' })}
                       </Button>
                     )}
                   </div>
@@ -865,7 +882,11 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                   {/* Contract Line Presets List */}
                   <div className="max-h-64 overflow-y-auto border rounded-md p-2 space-y-1">
                     {filteredContractLinePresets.length === 0 ? (
-                      <div className="text-sm text-muted-foreground p-2">No contract line presets match your search.</div>
+                      <div className="text-sm text-muted-foreground p-2">
+                        {t('contractDialog.presets.noMatches', {
+                          defaultValue: 'No contract line presets match your search.',
+                        })}
+                      </div>
                     ) : (
                       filteredContractLinePresets.map((preset) => {
                         if (!preset.preset_id) return null;
@@ -909,7 +930,17 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                   </Badge>
                                   <span className="text-xs text-muted-foreground">{preset.billing_frequency}</span>
                                   {serviceCount > 0 && (
-                                    <span className="text-xs text-muted-foreground">• {serviceCount} service{serviceCount !== 1 ? 's' : ''}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      • {serviceCount === 1
+                                        ? t('contractDialog.presets.serviceCountSingle', {
+                                          count: serviceCount,
+                                          defaultValue: '{{count}} service',
+                                        })
+                                        : t('contractDialog.presets.serviceCountPlural', {
+                                          count: serviceCount,
+                                          defaultValue: '{{count}} services',
+                                        })}
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -1356,7 +1387,15 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
 
               {selectedContractLinePresetIds.size > 0 && (
                 <div className="text-sm text-primary-600">
-                  {selectedContractLinePresetIds.size} contract line preset{selectedContractLinePresetIds.size > 1 ? 's' : ''} selected
+                  {selectedContractLinePresetIds.size === 1
+                    ? t('contractDialog.presets.selectedSingle', {
+                      count: selectedContractLinePresetIds.size,
+                      defaultValue: '{{count}} contract line preset selected',
+                    })
+                    : t('contractDialog.presets.selectedPlural', {
+                      count: selectedContractLinePresetIds.size,
+                      defaultValue: '{{count}} contract line presets selected',
+                    })}
                 </div>
               )}
             </div>
@@ -1367,9 +1406,13 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Label htmlFor="po_required" className="text-sm font-medium">
-                      Require Purchase Order
+                      {t('contractDialog.po.requirePurchaseOrder', {
+                        defaultValue: 'Require Purchase Order',
+                      })}
                     </Label>
-                    <Tooltip content="When enabled, invoices cannot be generated for this contract unless a PO number is provided.">
+                    <Tooltip content={t('contractDialog.po.requirePurchaseOrderTooltip', {
+                      defaultValue: 'When enabled, invoices cannot be generated for this contract unless a PO number is provided.',
+                    })}>
                       <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
                     </Tooltip>
                   </div>
@@ -1386,7 +1429,12 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                 <Alert variant="info">
                   <Info className="h-4 w-4" />
                   <AlertDescription className="text-xs">
-                    <span className="font-medium">Note:</span> Invoice integration coming soon. Settings will be saved but PO enforcement won't be active until a future release.
+                    <span className="font-medium">
+                      {t('contractDialog.po.noteLabel', { defaultValue: 'Note:' })}
+                    </span>{' '}
+                    {t('contractDialog.po.comingSoon', {
+                      defaultValue: 'Invoice integration coming soon. Settings will be saved but PO enforcement won\'t be active until a future release.',
+                    })}
                   </AlertDescription>
                 </Alert>
               )}
@@ -1395,7 +1443,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
               {poRequired && (
                 <div className="space-y-3 pl-4 border-l-2 border-blue-200">
                   <div>
-                    <Label htmlFor="po_number">PO Number *</Label>
+                    <Label htmlFor="po_number">
+                      {t('contractDialog.po.numberLabel', { defaultValue: 'PO Number *' })}
+                    </Label>
                     <Input
                       id="po_number"
                       type="text"
@@ -1404,13 +1454,17 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                         setPoNumber(e.target.value);
                         clearErrorIfSubmitted();
                       }}
-                      placeholder="e.g., PO-2024-12345"
+                      placeholder={t('contractDialog.po.numberPlaceholder', {
+                        defaultValue: 'e.g., PO-2024-12345',
+                      })}
                       className="w-full"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="po_amount">PO Amount (Optional)</Label>
+                    <Label htmlFor="po_amount">
+                      {t('contractDialog.po.amountLabel', { defaultValue: 'PO Amount (Optional)' })}
+                    </Label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                       <Input
@@ -1436,7 +1490,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                             setPoAmountInput((cents / 100).toFixed(2));
                           }
                         }}
-                        placeholder="0.00"
+                        placeholder={t('contractDialog.po.amountPlaceholder', { defaultValue: '0.00' })}
                         className="pl-10"
                       />
                     </div>

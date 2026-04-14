@@ -82,7 +82,7 @@
   {
     "id": "F017",
     "description": "Wire useTranslation('msp/contracts') in ContractDialog.tsx -- translate PO section (PO Required, PO Number, PO Amount), contract line preset section (Contract Line Presets heading, search placeholder, type filter, preset details, rate overrides, service overrides), and save/cancel button labels",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F018",

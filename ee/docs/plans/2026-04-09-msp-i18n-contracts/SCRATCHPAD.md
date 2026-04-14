@@ -95,3 +95,7 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Migrated `ContractDialog.tsx` billing-frequency select from deprecated `BILLING_FREQUENCY_OPTIONS` to `useBillingFrequencyOptions()`.
 - **(2026-04-14)** Added initial `contractDialog.title|actions|form|validation` keys to `server/public/locales/en/msp/contracts.json`.
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractDialog.tsx` (pass; warnings only, no errors).
+- **(2026-04-14)** `F017` completed in `ContractDialog.tsx`: localized PO section labels/copy (`Require Purchase Order`, PO number/amount labels/placeholders, note banner text) and preset-picker shell copy (section heading, loading/empty states, search placeholder, type filter labels, reset, no-match text, selected-count summary).
+- **(2026-04-14)** Shared enum migration in this file: replaced deprecated `CONTRACT_LINE_TYPE_DISPLAY` option-builder with `useContractLineTypeOptions()` for the preset type filter.
+- **(2026-04-14)** Expanded `contractDialog.presets.*` and `contractDialog.po.*` keys in `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractDialog.tsx` (pass; warnings only, no errors).
