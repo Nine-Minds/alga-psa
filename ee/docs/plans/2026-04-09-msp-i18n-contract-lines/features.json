@@ -152,7 +152,7 @@
   {
     "id": "F031",
     "description": "ServiceBucketConfigForm.tsx: Wire useTranslation and translate labels ('Total {Units} in Bucket', 'Overage Rate per {Unit}', 'Allow unused {units} to roll over'), tooltip content strings with interpolated unit names, placeholder text ('Enter total hours', 'Enter overage rate'), and dynamic unit pluralization",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F032",

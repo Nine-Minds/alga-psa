@@ -117,3 +117,5 @@
 - (2026-04-13) **F029 verification**: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/ServiceTierEditor.tsx` (pass, no errors).
 - (2026-04-13) **F030 complete** (`ServiceUsageConfigForm.tsx`): wired `useTranslation('msp/contract-lines')` and translated labels/tooltips/placeholders for default rate/unit/minimum usage, required field indicator, and tiered pricing switch with `{{serviceName}}` interpolation.
 - (2026-04-13) **F030 verification**: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/ServiceUsageConfigForm.tsx` (pass; pre-existing warnings only: `any` type and unused handler).
+- (2026-04-13) **F031 complete** (`ServiceBucketConfigForm.tsx`): wired `useTranslation('msp/contract-lines')` and translated bucket labels/tooltips/placeholders with unit interpolation (`{{unit}}`/`{{units}}`), while preserving dynamic unit pluralization via `pluralizeUnit()` for runtime unit labels.
+- (2026-04-13) **F031 verification**: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/ServiceBucketConfigForm.tsx` (pass; pre-existing `any` warning only).
