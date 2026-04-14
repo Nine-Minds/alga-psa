@@ -1582,7 +1582,34 @@ export class TicketService extends BaseService<ITicket> {
                 .from('clients as c')
                 .whereRaw('c.client_id = t.client_id')
                 .andWhere('c.tenant', query.client.raw('t.tenant'))
-                .andWhereILike('c.client_name', `%${value}%`);
+                .andWhere('c.client_name', value);
+          });
+          break;
+        case 'contact_name':
+          query.whereExists(function() {
+            this.select('*')
+                .from('contacts as cn')
+                .whereRaw('cn.contact_name_id = t.contact_name_id')
+                .andWhere('cn.tenant', query.client.raw('t.tenant'))
+                .andWhere('cn.full_name', value);
+          });
+          break;
+        case 'board_name':
+          query.whereExists(function() {
+            this.select('*')
+                .from('boards as b')
+                .whereRaw('b.board_id = t.board_id')
+                .andWhere('b.tenant', query.client.raw('t.tenant'))
+                .andWhere('b.board_name', value);
+          });
+          break;
+        case 'category_name':
+          query.whereExists(function() {
+            this.select('*')
+                .from('categories as cat')
+                .whereRaw('cat.category_id = t.category_id')
+                .andWhere('cat.tenant', query.client.raw('t.tenant'))
+                .andWhere('cat.category_name', value);
           });
           break;
         case 'search':
@@ -1619,7 +1646,7 @@ export class TicketService extends BaseService<ITicket> {
                 .from('priorities as p')
                 .whereRaw('p.priority_id = t.priority_id')
                 .andWhere('p.tenant', query.client.raw('t.tenant'))
-                .andWhereILike('p.priority_name', `%${value}%`);
+                .andWhere('p.priority_name', value);
           });
           break;
         case 'status_name':
@@ -1628,7 +1655,7 @@ export class TicketService extends BaseService<ITicket> {
                 .from('statuses as s')
                 .whereRaw('s.status_id = t.status_id')
                 .andWhere('s.tenant', query.client.raw('t.tenant'))
-                .andWhereILike('s.name', `%${value}%`);
+                .andWhere('s.name', value);
           });
           break;
         case 'entered_from':

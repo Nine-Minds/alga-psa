@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
-import { createPortal } from 'react-dom';
 import {
   Ticket,
   Building2,
@@ -50,16 +49,28 @@ interface ChatMentionPopupProps {
   query: string;
   onSelect: (entity: MentionableEntity) => void;
   onDismiss: () => void;
-  anchorRef: React.RefObject<HTMLTextAreaElement | null>;
+  placement?: 'above' | 'below';
 }
 
 export const ChatMentionPopup = forwardRef<ChatMentionPopupHandle, ChatMentionPopupProps>(
-  function ChatMentionPopup({ query, onSelect, onDismiss, anchorRef }, ref) {
+  function ChatMentionPopup({ query, onSelect, onDismiss, placement = 'above' }, ref) {
     const [results, setResults] = useState<MentionSearchResults>({});
     const [loading, setLoading] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const popupRef = useRef<HTMLDivElement>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const onSelectRef = useRef(onSelect);
+    useEffect(() => {
+      onSelectRef.current = onSelect;
+    }, [onSelect]);
+    const queryRef = useRef(query);
+    useEffect(() => {
+      queryRef.current = query;
+    }, [query]);
+    const resultsRef = useRef<MentionSearchResults>(results);
+    useEffect(() => {
+      resultsRef.current = results;
+    }, [results]);
 
     // Flatten results into a single ordered list for keyboard navigation
     const flatItems: MentionableEntity[] = [];
@@ -70,10 +81,49 @@ export const ChatMentionPopup = forwardRef<ChatMentionPopupHandle, ChatMentionPo
       }
     }
 
+    // Auto-select when the query uniquely identifies one entity: exactly one
+    // result's matchName (or displayName) equals the query (case-insensitive)
+    // and no other result has that query as a proper prefix. Returns true if
+    // auto-selection fired.
+    const tryAutoSelect = useCallback(
+      (data: MentionSearchResults, q: string): boolean => {
+        const queryNorm = q.trim().toLowerCase();
+        if (queryNorm.length === 0) return false;
+
+        const allItems: MentionableEntity[] = [];
+        for (const category of CATEGORY_ORDER) {
+          const items = data[category];
+          if (items) allItems.push(...items);
+        }
+        const normalize = (s: string) => s.trim().toLowerCase();
+        const keyOf = (item: MentionableEntity) =>
+          normalize(item.matchName ?? item.displayName);
+        const exactMatches = allItems.filter((item) => keyOf(item) === queryNorm);
+        const hasExtension = allItems.some((item) => {
+          const key = keyOf(item);
+          return key.startsWith(queryNorm) && key !== queryNorm;
+        });
+        if (exactMatches.length === 1 && !hasExtension) {
+          onSelectRef.current(exactMatches[0]);
+          return true;
+        }
+        return false;
+      },
+      [],
+    );
+
     // Search when query changes
     useEffect(() => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
+      }
+
+      // Fast path: if the previously-loaded results already contain a unique
+      // match for the current query, auto-select immediately instead of
+      // waiting for another debounced search round-trip. Lets typing a space
+      // after a complete name fire auto-select without a visible delay.
+      if (tryAutoSelect(resultsRef.current, query)) {
+        return;
       }
 
       setLoading(true);
@@ -82,6 +132,12 @@ export const ChatMentionPopup = forwardRef<ChatMentionPopupHandle, ChatMentionPo
           const data = await searchEntitiesForMention(query);
           setResults(data);
           setSelectedIndex(0);
+
+          // Guard against stale searches: only auto-select if the query the
+          // popup is currently showing matches the one we searched for.
+          if (queryRef.current === query) {
+            tryAutoSelect(data, query);
+          }
         } catch {
           setResults({});
         } finally {
@@ -94,7 +150,7 @@ export const ChatMentionPopup = forwardRef<ChatMentionPopupHandle, ChatMentionPo
           clearTimeout(debounceRef.current);
         }
       };
-    }, [query]);
+    }, [query, tryAutoSelect]);
 
     // Keyboard handler exposed via ref
     const handleKeyDown = useCallback(
@@ -138,22 +194,13 @@ export const ChatMentionPopup = forwardRef<ChatMentionPopupHandle, ChatMentionPo
       }
     }, [selectedIndex]);
 
-    // Position popup above the textarea
-    const anchorEl = anchorRef.current;
-    if (!anchorEl) return null;
-
-    const rect = anchorEl.getBoundingClientRect();
-    const style: React.CSSProperties = {
-      position: 'fixed',
-      bottom: window.innerHeight - rect.top + 4,
-      left: rect.left,
-      width: Math.min(rect.width, 400),
-    };
-
     let flatIndex = 0;
 
-    const popup = (
-      <div className="chat-mention-popup" style={style} ref={popupRef}>
+    const placementClass =
+      placement === 'below' ? 'chat-mention-popup--below' : 'chat-mention-popup--above';
+
+    return (
+      <div className={`chat-mention-popup ${placementClass}`} ref={popupRef}>
         {loading && flatItems.length === 0 ? (
           <div className="chat-mention-popup__loading">
             <Loader2 size={16} className="chat-mention-popup__spinner" />
@@ -203,7 +250,5 @@ export const ChatMentionPopup = forwardRef<ChatMentionPopupHandle, ChatMentionPo
         )}
       </div>
     );
-
-    return createPortal(popup, document.body);
   },
 );

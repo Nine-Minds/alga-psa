@@ -419,22 +419,19 @@ export class ChatCompletionsService {
             parsedArgs,
           );
           if (!entry) {
+            const requestedEntryId =
+              typeof (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name) === 'string'
+                ? ((parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name) as string)
+                : '';
             this.logWarn('stream_tool_execute_entry_unavailable', {
               iteration,
-              requestedEntryId:
-                typeof (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name) === 'string'
-                  ? (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name)
-                  : undefined,
+              requestedEntryId: requestedEntryId || undefined,
             });
-            yield {
-              type: 'content_delta',
-              delta: this.buildUnavailableFunctionMessage(
-                functionName,
-                parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name,
-              ),
-            };
-            yield { type: 'done' };
-            return;
+            conversation = [
+              ...conversation,
+              this.buildEntryLookupRetryFunctionMessage(requestedEntryId, toolCallId),
+            ];
+            continue;
           }
 
           const preparedArgs = { ...parsedArgs };
@@ -1204,17 +1201,19 @@ export class ChatCompletionsService {
             parsedArgs,
           );
           if (!entry) {
+            const requestedEntryId =
+              typeof (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name) === 'string'
+                ? ((parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name) as string)
+                : '';
             this.logWarn('tool_execute_entry_unavailable', {
               iteration,
-              requestedEntryId:
-                typeof (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name) === 'string'
-                  ? (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name)
-                  : undefined,
+              requestedEntryId: requestedEntryId || undefined,
             });
-            return {
-              type: 'error',
-              error: `Function ${parsedArgs.entryId ?? functionName} is not available.`,
-            };
+            conversation = [
+              ...conversation,
+              this.buildEntryLookupRetryFunctionMessage(requestedEntryId, toolCallId),
+            ];
+            continue;
           }
 
           const preparedArgs = { ...parsedArgs };
@@ -2547,6 +2546,30 @@ export class ChatCompletionsService {
         ? entryId.trim()
         : functionName;
     return `I couldn't run "${target}" because that function is not available.`;
+  }
+
+  private static buildEntryLookupRetryFunctionMessage(
+    requestedEntryId: string,
+    toolCallId: string,
+  ): ChatCompletionMessage {
+    const suggestions = requestedEntryId
+      ? this.searchRegistry(requestedEntryId, 5)
+      : [];
+
+    const errorMessage = requestedEntryId
+      ? `No registry entry matches entryId=${JSON.stringify(requestedEntryId)}. Retry ${EXECUTE_TOOL_NAME} using one of the suggested entryIds below, or call ${SEARCH_TOOL_NAME} for a broader search.`
+      : `${EXECUTE_TOOL_NAME} requires an entryId that matches a registry entry. Call ${SEARCH_TOOL_NAME} to discover the correct entryId, then retry.`;
+
+    return {
+      role: 'function',
+      name: EXECUTE_TOOL_NAME,
+      content: JSON.stringify({
+        error: errorMessage,
+        ...(requestedEntryId ? { requested_entry_id: requestedEntryId } : {}),
+        suggestions,
+      }),
+      tool_call_id: toolCallId,
+    };
   }
 
   private static buildFunctionMetadata(entry: ChatApiRegistryEntry, args: Record<string, unknown>): FunctionMetadata {
