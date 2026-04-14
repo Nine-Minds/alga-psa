@@ -210,7 +210,7 @@
   {
     "id": "T027",
     "description": "ContractLines.tsx: table column headers, action menu items, and heading render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
