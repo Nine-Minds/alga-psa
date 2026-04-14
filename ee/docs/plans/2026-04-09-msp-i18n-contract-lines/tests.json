@@ -42,7 +42,7 @@
   {
     "id": "T006",
     "description": "ContractLineDialog.tsx: Hourly config section renders translated alert info, 'Minimum Billable Time', 'Hourly Services' label, rate label, bucket switch, and 'Add Hourly Service' button",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
