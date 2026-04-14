@@ -124,3 +124,7 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Added `createCustomLine.*` keys for service preview and rate-display strings in `server/public/locales/en/msp/contracts.json`.
 - **(2026-04-14)** Repaired invalid `server/public/locales/en/msp/contracts.json` structure by reintegrating orphaned `contractDialog.documents|po|presets|presetDetails` and `templateDetail.composition` blocks back into the main object (file now parses via `jq`).
 - **(2026-04-14)** Verification: `jq empty server/public/locales/en/msp/contracts.json` and `npx eslint packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx` (pass; warning-only lint).
+- **(2026-04-14)** `F025` completed in `ContractLines.tsx`: wired `useTranslation('msp/contracts')` and localized section title/description, Add from Presets + Create Custom buttons, empty state copy, loading text, expand/collapse button labels, summary metadata labels (Name/Type/Frequency/Rate/Services), and action labels.
+- **(2026-04-14)** Contract-line type/frequency summaries now use shared enum formatters via `useFormatContractLineType()` + `useFormatBillingFrequency()`.
+- **(2026-04-14)** Added `contractLines.*` keys for top-level list UI in `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractLines.tsx` (pass; warnings only) and `jq empty server/public/locales/en/msp/contracts.json` (pass).

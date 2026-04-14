@@ -122,7 +122,7 @@
   {
     "id": "F025",
     "description": "Wire useTranslation('msp/contracts') in ContractLines.tsx -- translate section header, Add Lines / Create Custom buttons, expand/collapse controls, line type badges, column labels (Name, Type, Frequency, Rate, Services, Actions), and empty state message",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F026",

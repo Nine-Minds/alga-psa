@@ -33,6 +33,8 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
 import { getCurrencySymbol } from '@alga-psa/core';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 interface ContractLinesProps {
   contract: IContract;
@@ -77,6 +79,9 @@ interface ServiceConfiguration {
 }
 
 const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLinesChanged, isReadOnly = false }) => {
+  const { t } = useTranslation('msp/contracts');
+  const formatBillingFrequency = useFormatBillingFrequency();
+  const formatContractLineType = useFormatContractLineType();
   const cadenceOwnerOptions = [
     { value: 'client', label: 'Client schedule' },
     { value: 'contract', label: 'Contract anniversary' },
@@ -419,7 +424,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
             layout="stacked"
             className="py-6 text-muted-foreground"
             spinnerProps={{ size: 'md' }}
-            text="Loading contract lines"
+            text={t('contractLines.loading.contractLines', { defaultValue: 'Loading contract lines' })}
           />
         </Box>
       </Card>
@@ -431,11 +436,17 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       <Box p="4" className="space-y-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-lg font-medium">Contract Lines</h3>
+            <h3 className="text-lg font-medium">
+              {t('contractLines.title', { defaultValue: 'Contract Lines' })}
+            </h3>
             <p className="text-sm text-muted-foreground">
               {isReadOnly
-                ? 'This system-managed default contract is attribution-only. Contract line authoring is disabled.'
-                : 'Manage the contract lines and services for this contract'}
+                ? t('contractLines.description.readOnly', {
+                  defaultValue: 'This system-managed default contract is attribution-only. Contract line authoring is disabled.',
+                })
+                : t('contractLines.description.default', {
+                  defaultValue: 'Manage the contract lines and services for this contract',
+                })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -446,7 +457,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
               disabled={isReadOnly}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add from Presets
+              {t('contractLines.actions.addFromPresets', { defaultValue: 'Add from Presets' })}
             </Button>
             <Button
               id="create-custom-contract-line-btn"
@@ -454,7 +465,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
               disabled={isReadOnly}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Create Custom
+              {t('contractLines.actions.createCustom', { defaultValue: 'Create Custom' })}
             </Button>
           </div>
         </div>
@@ -468,8 +479,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
 
         {contractLines.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            <p>No contract lines added yet.</p>
-            <p className="text-sm mt-1">Select a contract line above to get started.</p>
+            <p>{t('contractLines.empty.noneAdded', { defaultValue: 'No contract lines added yet.' })}</p>
+            <p className="text-sm mt-1">
+              {t('contractLines.empty.selectAbove', { defaultValue: 'Select a contract line above to get started.' })}
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -490,6 +503,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                       type="button"
                       onClick={() => toggleExpand(line.contract_line_id)}
                       className="p-1 hover:bg-muted rounded transition-colors"
+                      aria-label={isExpanded
+                        ? t('contractLines.actions.collapseLine', { defaultValue: 'Collapse contract line' })
+                        : t('contractLines.actions.expandLine', { defaultValue: 'Expand contract line' })}
                     >
                       {isExpanded ? (
                         <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -500,9 +516,13 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
 
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-[rgb(var(--color-text-900))]">
+                        <span className="sr-only">
+                          {t('contractLines.columns.name', { defaultValue: 'Name' })}:{' '}
+                        </span>
                         {line.contract_line_name}
                       </div>
                       <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                        <span>{t('contractLines.columns.type', { defaultValue: 'Type' })}:</span>
                         <Badge
                           variant={
                             line.contract_line_type === 'Fixed'
@@ -515,34 +535,52 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                           }
                           className="text-xs"
                         >
-                          {line.contract_line_type}
+                          {formatContractLineType(line.contract_line_type)}
                         </Badge>
                         <span>•</span>
-                        <span>{line.billing_frequency}</span>
+                        <span>
+                          {t('contractLines.columns.frequency', { defaultValue: 'Frequency' })}: {formatBillingFrequency(line.billing_frequency)}
+                        </span>
                         {services.length > 0 && (
                           <>
                             <span>•</span>
-                            <span>{services.length} service{services.length !== 1 ? 's' : ''}</span>
+                            <span>
+                              {t('contractLines.columns.services', { defaultValue: 'Services' })}:{' '}
+                              {services.length === 1
+                                ? t('contractLines.serviceCountSingle', {
+                                  count: services.length,
+                                  defaultValue: '{{count}} service',
+                                })
+                                : t('contractLines.serviceCountPlural', {
+                                  count: services.length,
+                                  defaultValue: '{{count}} services',
+                                })}
+                            </span>
                           </>
                         )}
                         {line.default_rate !== null && line.default_rate !== undefined && (
                           <>
                             <span>•</span>
-                            <span>Base: {formatRate(line.default_rate)}</span>
+                            <span>
+                              {t('contractLines.columns.rate', { defaultValue: 'Rate' })}: {formatRate(line.default_rate)}
+                            </span>
                           </>
                         )}
                         {line.custom_rate !== null && line.custom_rate !== undefined && (
                           <>
                             <span>•</span>
                             <span className="text-blue-600 font-medium">
-                              Custom: {formatRate(line.custom_rate)}
+                              {t('contractLines.customRate', { defaultValue: 'Custom' })}: {formatRate(line.custom_rate)}
                             </span>
                           </>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div
+                      className="flex items-center gap-2"
+                      aria-label={t('contractLines.columns.actions', { defaultValue: 'Actions' })}
+                    >
                       <Button
                         id={`edit-${line.contract_line_id}`}
                         variant="ghost"
@@ -555,7 +593,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                         disabled={isReadOnly}
                       >
                         <Edit className="h-4 w-4 mr-1" />
-                        Edit
+                        {t('common.actions.edit', { defaultValue: 'Edit' })}
                       </Button>
                       <Button
                         id={`remove-${line.contract_line_id}`}
@@ -569,7 +607,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                         disabled={isReadOnly}
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
-                        Remove
+                        {t('common.actions.remove', { defaultValue: 'Remove' })}
                       </Button>
                     </div>
                   </div>

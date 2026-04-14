@@ -367,7 +367,37 @@
     }
   },
   "contractForm": {},
-  "contractLines": {},
+  "contractLines": {
+    "actions": {
+      "addFromPresets": "Add from Presets",
+      "collapseLine": "Collapse contract line",
+      "createCustom": "Create Custom",
+      "expandLine": "Expand contract line"
+    },
+    "columns": {
+      "actions": "Actions",
+      "frequency": "Frequency",
+      "name": "Name",
+      "rate": "Rate",
+      "services": "Services",
+      "type": "Type"
+    },
+    "customRate": "Custom",
+    "description": {
+      "default": "Manage the contract lines and services for this contract",
+      "readOnly": "This system-managed default contract is attribution-only. Contract line authoring is disabled."
+    },
+    "empty": {
+      "noneAdded": "No contract lines added yet.",
+      "selectAbove": "Select a contract line above to get started."
+    },
+    "loading": {
+      "contractLines": "Loading contract lines"
+    },
+    "serviceCountPlural": "{{count}} services",
+    "serviceCountSingle": "{{count}} service",
+    "title": "Contract Lines"
+  },
   "contractLineEdit": {},
   "contractLineRate": {},
   "addLines": {},
