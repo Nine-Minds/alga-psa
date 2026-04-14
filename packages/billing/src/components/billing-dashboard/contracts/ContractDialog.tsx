@@ -960,20 +960,32 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                 {preset.contract_line_type === 'Fixed' && (
                                   <div className="bg-card rounded-md p-4 border border-[rgb(var(--color-border-200))]">
                                     <div className="flex items-center justify-between mb-3">
-                                      <Label className="text-sm font-semibold text-[rgb(var(--color-text-900))]">Fixed Rate Configuration</Label>
+                                      <Label className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+                                        {t('contractDialog.presetDetails.fixedRateConfiguration', {
+                                          defaultValue: 'Fixed Rate Configuration',
+                                        })}
+                                      </Label>
                                     </div>
                                     <div className="space-y-2">
                                       <div className="text-sm">
-                                        <span className="font-medium text-[rgb(var(--color-text-700))]">Default Base Rate:</span>
+                                        <span className="font-medium text-[rgb(var(--color-text-700))]">
+                                          {t('contractDialog.presetDetails.defaultBaseRate', {
+                                            defaultValue: 'Default Base Rate:',
+                                          })}
+                                        </span>
                                         <span className="ml-2 text-[rgb(var(--color-text-900))] font-semibold">
                                           {fixedConfig?.base_rate !== null && fixedConfig?.base_rate !== undefined
                                             ? `$${(fixedConfig.base_rate / 100).toFixed(2)}`
-                                            : 'Not set'}
+                                            : t('contractDialog.presetDetails.notSet', {
+                                              defaultValue: 'Not set',
+                                            })}
                                         </span>
                                       </div>
                                       <div>
                                         <Label htmlFor={`rate-override-${preset.preset_id}`} className="text-sm font-medium text-[rgb(var(--color-text-700))]">
-                                          Override Base Rate
+                                          {t('contractDialog.presetDetails.overrideBaseRate', {
+                                            defaultValue: 'Override Base Rate',
+                                          })}
                                         </Label>
                                         <div className="relative mt-1.5">
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -1015,12 +1027,21 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                                 });
                                               }
                                             }}
-                                            placeholder={fixedConfig?.base_rate ? `Default: $${(fixedConfig.base_rate / 100).toFixed(2)}` : 'Enter base rate'}
+                                            placeholder={fixedConfig?.base_rate
+                                              ? t('contractDialog.presetDetails.defaultRatePlaceholder', {
+                                                defaultValue: 'Default: ${{rate}}',
+                                                rate: (fixedConfig.base_rate / 100).toFixed(2),
+                                              })
+                                              : t('contractDialog.presetDetails.enterBaseRate', {
+                                                defaultValue: 'Enter base rate',
+                                              })}
                                             className="pl-8 h-9 text-sm"
                                           />
                                         </div>
                                         <p className="text-xs text-muted-foreground mt-1">
-                                          Leave blank to use the default rate
+                                          {t('contractDialog.presetDetails.leaveBlankDefaultRate', {
+                                            defaultValue: 'Leave blank to use the default rate',
+                                          })}
                                         </p>
                                       </div>
                                     </div>
@@ -1030,22 +1051,39 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                 {/* Services Configuration */}
                                 <div className="bg-card rounded-md p-4 border border-[rgb(var(--color-border-200))]">
                                   <Label className="text-sm font-semibold text-[rgb(var(--color-text-900))] mb-3 block">
-                                    {preset.contract_line_type === 'Fixed' ? 'Services Included (Reference)' : 'Services Configuration'}
+                                    {preset.contract_line_type === 'Fixed'
+                                      ? t('contractDialog.presetDetails.servicesIncludedReference', {
+                                        defaultValue: 'Services Included (Reference)',
+                                      })
+                                      : t('contractDialog.presetDetails.servicesConfiguration', {
+                                        defaultValue: 'Services Configuration',
+                                      })}
                                   </Label>
                                   {services.length === 0 ? (
-                                    <div className="text-sm text-muted-foreground italic">No services configured for this preset</div>
+                                    <div className="text-sm text-muted-foreground italic">
+                                      {t('contractDialog.presetDetails.noServicesConfigured', {
+                                        defaultValue: 'No services configured for this preset',
+                                      })}
+                                    </div>
                                   ) : preset.contract_line_type === 'Fixed' ? (
                                     /* For Fixed presets, show services as read-only reference */
                                     <div className="space-y-2">
                                       <p className="text-xs text-muted-foreground mb-3">
-                                        These services are included for reference only. The fixed rate above determines the billing amount.
+                                        {t('contractDialog.presetDetails.fixedServicesReferenceHelp', {
+                                          defaultValue: 'These services are included for reference only. The fixed rate above determines the billing amount.',
+                                        })}
                                       </p>
                                       {services.map((service) => (
                                         <div key={service.service_id} className="bg-muted rounded-md p-2 border border-[rgb(var(--color-border-200))]">
                                           <div className="flex items-center justify-between">
                                             <span className="text-sm text-[rgb(var(--color-text-900))]">{service.service_name}</span>
                                             {service.quantity && service.quantity > 1 && (
-                                              <span className="text-xs text-muted-foreground">Qty: {service.quantity}</span>
+                                              <span className="text-xs text-muted-foreground">
+                                                {t('contractDialog.presetDetails.quantityShort', {
+                                                  defaultValue: 'Qty: {{quantity}}',
+                                                  quantity: service.quantity,
+                                                })}
+                                              </span>
                                             )}
                                           </div>
                                         </div>
@@ -1056,11 +1094,17 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                     <div className="space-y-4">
                                       {/* Hourly Configuration */}
                                       <div className="bg-muted rounded-md p-3 border border-[rgb(var(--color-border-200))]">
-                                        <Label className="text-xs font-semibold text-[rgb(var(--color-text-900))] mb-2 block">Time Billing Configuration</Label>
+                                        <Label className="text-xs font-semibold text-[rgb(var(--color-text-900))] mb-2 block">
+                                          {t('contractDialog.presetDetails.timeBillingConfiguration', {
+                                            defaultValue: 'Time Billing Configuration',
+                                          })}
+                                        </Label>
                                         <div className="grid grid-cols-2 gap-3">
                                           <div>
                                             <Label htmlFor={`min-billable-${preset.preset_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
-                                              Minimum billable minutes
+                                              {t('contractDialog.presetDetails.minimumBillableMinutes', {
+                                                defaultValue: 'Minimum billable minutes',
+                                              })}
                                             </Label>
                                             <Input
                                               id={`min-billable-${preset.preset_id}`}
@@ -1099,7 +1143,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                           </div>
                                           <div>
                                             <Label htmlFor={`round-up-${preset.preset_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
-                                              Round up to nearest (minutes)
+                                              {t('contractDialog.presetDetails.roundUpToNearestMinutes', {
+                                                defaultValue: 'Round up to nearest (minutes)',
+                                              })}
                                             </Label>
                                             <Input
                                               id={`round-up-${preset.preset_id}`}
@@ -1141,7 +1187,11 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
 
                                       {/* Services with hourly rates */}
                                       <div>
-                                        <Label className="text-xs font-semibold text-[rgb(var(--color-text-900))] mb-2 block">Services & Hourly Rates</Label>
+                                        <Label className="text-xs font-semibold text-[rgb(var(--color-text-900))] mb-2 block">
+                                          {t('contractDialog.presetDetails.servicesHourlyRates', {
+                                            defaultValue: 'Services & Hourly Rates',
+                                          })}
+                                        </Label>
                                         <div className="space-y-2">
                                           {services.map((service) => {
                                             const customRateValue = service.custom_rate !== undefined && service.custom_rate !== null
@@ -1162,7 +1212,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                                 <div className="font-medium text-sm text-[rgb(var(--color-text-900))] mb-2">{service.service_name}</div>
                                                 <div>
                                                   <Label htmlFor={`hourly-rate-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
-                                                    Hourly Rate
+                                                    {t('contractDialog.presetDetails.hourlyRate', {
+                                                      defaultValue: 'Hourly Rate',
+                                                    })}
                                                   </Label>
                                                   <div className="relative mt-1">
                                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -1219,7 +1271,10 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                                     />
                                                   </div>
                                                   <p className="text-xs text-muted-foreground mt-0.5">
-                                                    Default: ${(service.default_rate! / 100).toFixed(2)}
+                                                    {t('contractDialog.presetDetails.defaultRateValue', {
+                                                      defaultValue: 'Default: ${{rate}}',
+                                                      rate: (service.default_rate! / 100).toFixed(2),
+                                                    })}
                                                   </p>
                                                 </div>
                                               </div>
@@ -1253,7 +1308,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                             <div className="grid grid-cols-3 gap-3">
                                               <div>
                                                 <Label htmlFor={`quantity-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
-                                                  Quantity
+                                                  {t('contractDialog.presetDetails.quantity', {
+                                                    defaultValue: 'Quantity',
+                                                  })}
                                                 </Label>
                                                 <Input
                                                   id={`quantity-${preset.preset_id}-${service.service_id}`}
@@ -1293,7 +1350,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                               </div>
                                               <div>
                                                 <Label htmlFor={`rate-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
-                                                  Rate (per unit)
+                                                  {t('contractDialog.presetDetails.ratePerUnit', {
+                                                    defaultValue: 'Rate (per unit)',
+                                                  })}
                                                 </Label>
                                                 <div className="relative mt-1">
                                                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -1350,12 +1409,17 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                                   />
                                                 </div>
                                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                                  Default: ${(service.default_rate! / 100).toFixed(2)}
+                                                  {t('contractDialog.presetDetails.defaultRateValue', {
+                                                    defaultValue: 'Default: ${{rate}}',
+                                                    rate: (service.default_rate! / 100).toFixed(2),
+                                                  })}
                                                 </p>
                                               </div>
                                               <div>
                                                 <Label htmlFor={`unit-measure-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
-                                                  Unit of Measure
+                                                  {t('contractDialog.presetDetails.unitOfMeasure', {
+                                                    defaultValue: 'Unit of Measure',
+                                                  })}
                                                 </Label>
                                                 <Input
                                                   id={`unit-measure-${preset.preset_id}-${service.service_id}`}
@@ -1365,7 +1429,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                                   className="h-9 text-sm mt-1 bg-muted"
                                                 />
                                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                                  e.g., GB, API call, user
+                                                  {t('contractDialog.presetDetails.unitOfMeasureHint', {
+                                                    defaultValue: 'e.g., GB, API call, user',
+                                                  })}
                                                 </p>
                                               </div>
                                             </div>

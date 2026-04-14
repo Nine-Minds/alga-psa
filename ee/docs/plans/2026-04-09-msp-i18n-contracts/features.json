@@ -87,7 +87,7 @@
   {
     "id": "F018",
     "description": "Wire useTranslation('msp/contracts') in ContractDialog.tsx -- translate preset service details (quantity, rate, hourly config labels), expanded preset info, and all tooltip/help text strings",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F019",
