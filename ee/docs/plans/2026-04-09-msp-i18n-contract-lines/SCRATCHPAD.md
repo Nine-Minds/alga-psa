@@ -148,3 +148,5 @@
 - (2026-04-13) **F039 result**: `PASSED` with `Errors: 0` and `Warnings: 0` across production locales (`de/es/fr/it/nl/pl`) and pseudo-locales (`xx/yy`).
 - (2026-04-13) **F040 complete**: updated `ROUTE_NAMESPACES['/msp/billing']` in `packages/core/src/lib/i18n/config.ts` to include `msp/contract-lines`, ensuring contract-line namespace is preloaded for billing dashboard navigation.
 - (2026-04-13) **F040 verification**: `npx eslint packages/core/src/lib/i18n/config.ts` (pass, no errors).
+- (2026-04-13) **T001 complete**: added `packages/billing/tests/billing-dashboard/ContractLinesSubbatch.i18n.test.ts` (52 test cases covering T001-T052) and verified `T001` dialog-title i18n wiring through key assertions in `ContractLineDialog.tsx`.
+- (2026-04-13) **Test verification run**: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractLinesSubbatch.i18n.test.ts` -> `52 passed`.
