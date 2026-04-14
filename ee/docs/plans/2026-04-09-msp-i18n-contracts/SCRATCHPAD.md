@@ -102,3 +102,7 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** `F018` completed in `ContractDialog.tsx`: localized expanded preset detail content including fixed-rate configuration labels/help text, service summary copy, hourly-config labels, hourly/usage service field labels (`Quantity`, `Rate`, `Unit of Measure`), and default-rate helper text. Also translated all remaining tooltip/help copy in this file to `t(..., { defaultValue })` usage.
 - **(2026-04-14)** Added `contractDialog.presetDetails.*` keys to `server/public/locales/en/msp/contracts.json`.
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractDialog.tsx` (pass; warnings only, no errors).
+- **(2026-04-14)** `F019` completed in `ContractTemplateDetail.tsx`: wired `useTranslation('msp/contracts')` and localized page-level header/back/error/loading copy, template badge/edit-toggle text, template basics edit-card labels/placeholders/actions, and template snapshot metadata labels (`Billing Frequency`, `Currency`, `Contract Lines`, `Created`, `Last Updated`).
+- **(2026-04-14)** Shared enum migration in this file: replaced both `BILLING_FREQUENCY_OPTIONS` call sites with `useBillingFrequencyOptions()`.
+- **(2026-04-14)** Added initial `templateDetail.*` keys in `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractTemplateDetail.tsx` (pass; warnings only, no errors).

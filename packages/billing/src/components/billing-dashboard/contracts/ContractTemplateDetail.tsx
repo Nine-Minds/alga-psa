@@ -29,12 +29,13 @@ import {
 } from '@alga-psa/billing/actions/contractActions';
 import { getContractLineServicesWithConfigurations, getTemplateLineServicesWithConfigurations } from '@alga-psa/billing/actions/contractLineServiceActions';
 import { toPlainDate } from '@alga-psa/core';
-import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions';
 import GenericPlanServicesList from '../contract-lines/GenericContractLineServicesList';
 import { ContractLineEditDialog } from './ContractLineEditDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type TemplateMetadataService = {
   service_id?: string;
@@ -156,6 +157,8 @@ function isUsageConfig(
 }
 
 const ContractTemplateDetail: React.FC = () => {
+  const { t } = useTranslation('msp/contracts');
+  const billingFrequencyOptions = useBillingFrequencyOptions();
   const router = useRouter();
   const searchParams = useSearchParams();
   const contractId = searchParams?.get('contractId') ?? undefined;
@@ -572,7 +575,7 @@ const ContractTemplateDetail: React.FC = () => {
           className="py-12 text-muted-foreground"
           layout="stacked"
           spinnerProps={{ size: 'md' }}
-          text="Loading template..."
+          text={t('templateDetail.loadingTemplate', { defaultValue: 'Loading template...' })}
         />
       </div>
     );
@@ -589,10 +592,12 @@ const ContractTemplateDetail: React.FC = () => {
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          ← Back to Templates
+          {t('templateDetail.backToTemplatesArrow', { defaultValue: '← Back to Templates' })}
         </Button>
         <Alert variant="destructive">
-          <AlertDescription>{error || 'Contract template not found'}</AlertDescription>
+          <AlertDescription>
+            {error || t('templateDetail.templateNotFound', { defaultValue: 'Contract template not found' })}
+          </AlertDescription>
         </Alert>
       </div>
     );
@@ -611,7 +616,7 @@ const ContractTemplateDetail: React.FC = () => {
               className="gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Templates
+              {t('templateDetail.backToTemplates', { defaultValue: 'Back to Templates' })}
             </Button>
             <Badge
               variant={(() => {
@@ -629,7 +634,9 @@ const ContractTemplateDetail: React.FC = () => {
             >
               {humanize(contract.status)}
             </Badge>
-            <Badge variant="secondary">Template</Badge>
+            <Badge variant="secondary">
+              {t('templateDetail.templateBadge', { defaultValue: 'Template' })}
+            </Badge>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Heading as="h2" size="7" className="text-[rgb(var(--color-text-900))]">
@@ -650,7 +657,9 @@ const ContractTemplateDetail: React.FC = () => {
               className="h-8 px-2 text-xs gap-1.5"
             >
               <Pencil className="h-3.5 w-3.5" />
-              {isEditingBasics ? 'Close' : 'Edit'}
+              {isEditingBasics
+                ? t('common.actions.close', { defaultValue: 'Close' })
+                : t('common.actions.edit', { defaultValue: 'Edit' })}
             </Button>
           </div>
           {contract.contract_description && (
@@ -661,7 +670,9 @@ const ContractTemplateDetail: React.FC = () => {
         {isEditingBasics && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))]">Edit Template Basics</CardTitle>
+              <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))]">
+                {t('templateDetail.editBasicsTitle', { defaultValue: 'Edit Template Basics' })}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {basicsError && (
@@ -677,45 +688,61 @@ const ContractTemplateDetail: React.FC = () => {
                 }}
               >
                 <div className="space-y-2">
-                  <Label htmlFor="template-name-inline">Template Name *</Label>
+                  <Label htmlFor="template-name-inline">
+                    {t('templateDetail.form.templateNameLabel', { defaultValue: 'Template Name *' })}
+                  </Label>
                   <Input
                     id="template-name-inline"
                     value={basicsForm.contract_name}
                     onChange={(event) =>
                       setBasicsForm((prev) => ({ ...prev, contract_name: event.target.value }))
                     }
-                    placeholder="Managed Services Starter, Premium Support Bundle, etc."
+                    placeholder={t('templateDetail.form.templateNamePlaceholder', {
+                      defaultValue: 'Managed Services Starter, Premium Support Bundle, etc.',
+                    })}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="template-description-inline">Internal Notes</Label>
+                  <Label htmlFor="template-description-inline">
+                    {t('templateDetail.form.internalNotesLabel', { defaultValue: 'Internal Notes' })}
+                  </Label>
                   <TextArea
                     id="template-description-inline"
                     value={basicsForm.contract_description}
                     onChange={(event) =>
                       setBasicsForm((prev) => ({ ...prev, contract_description: event.target.value }))
                     }
-                    placeholder="Describe where this template applies, onboarding tips, or approval requirements."
+                    placeholder={t('templateDetail.form.internalNotesPlaceholder', {
+                      defaultValue: 'Describe where this template applies, onboarding tips, or approval requirements.',
+                    })}
                     className="min-h-[96px]"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="template-billing-frequency-inline">Recommended Billing Frequency *</Label>
+                    <Label htmlFor="template-billing-frequency-inline">
+                      {t('templateDetail.form.recommendedBillingFrequencyLabel', {
+                        defaultValue: 'Recommended Billing Frequency *',
+                      })}
+                    </Label>
                     <CustomSelect
                       id="template-billing-frequency-inline"
-                      options={BILLING_FREQUENCY_OPTIONS}
+                      options={billingFrequencyOptions}
                       value={basicsForm.billing_frequency}
                       onValueChange={(value) =>
                         setBasicsForm((prev) => ({ ...prev, billing_frequency: value }))
                       }
-                      placeholder="Select billing cadence"
+                      placeholder={t('templateDetail.form.recommendedBillingFrequencyPlaceholder', {
+                        defaultValue: 'Select billing cadence',
+                      })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="template-currency-code-inline">Currency</Label>
+                    <Label htmlFor="template-currency-code-inline">
+                      {t('common.labels.currency', { defaultValue: 'Currency' })}
+                    </Label>
                     <CustomSelect
                       id="template-currency-code-inline"
                       options={CURRENCY_OPTIONS}
@@ -723,7 +750,9 @@ const ContractTemplateDetail: React.FC = () => {
                       onValueChange={(value) =>
                         setBasicsForm((prev) => ({ ...prev, currency_code: value }))
                       }
-                      placeholder="Select currency"
+                      placeholder={t('templateDetail.form.currencyPlaceholder', {
+                        defaultValue: 'Select currency',
+                      })}
                     />
                   </div>
                 </div>
@@ -736,7 +765,7 @@ const ContractTemplateDetail: React.FC = () => {
                     onClick={handleCancelBasics}
                     disabled={isSavingBasics}
                   >
-                    Cancel
+                    {t('common.actions.cancel', { defaultValue: 'Cancel' })}
                   </Button>
                   <Button
                     id="save-template-basics"
@@ -744,7 +773,9 @@ const ContractTemplateDetail: React.FC = () => {
                     disabled={isSavingBasics}
                     className="gap-2"
                   >
-                    {isSavingBasics ? 'Saving...' : 'Save Changes'}
+                    {isSavingBasics
+                      ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                      : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
                   </Button>
                 </div>
               </form>
@@ -785,10 +816,10 @@ const ContractTemplateDetail: React.FC = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="template-recommended-cadence-inline">Recommended Cadence</Label>
-                  <CustomSelect
-                    id="template-recommended-cadence-inline"
-                    options={BILLING_FREQUENCY_OPTIONS}
-                    value={guidanceForm.recommendedCadence}
+                    <CustomSelect
+                      id="template-recommended-cadence-inline"
+                      options={billingFrequencyOptions}
+                      value={guidanceForm.recommendedCadence}
                     onValueChange={(value) =>
                       setGuidanceForm((prev) => ({ ...prev, recommendedCadence: value }))
                     }
@@ -837,19 +868,21 @@ const ContractTemplateDetail: React.FC = () => {
         <section className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-[rgb(var(--color-text-700))]">Template Snapshot</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[rgb(var(--color-text-700))]">
+                {t('templateDetail.templateSnapshotTitle', { defaultValue: 'Template Snapshot' })}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-[rgb(var(--color-text-700))]">
               <div className="flex items-center justify-between">
-                <span>Billing Frequency</span>
+                <span>{t('billing.labels.billingFrequency', { defaultValue: 'Billing Frequency' })}</span>
                 <span className="font-medium">{humanize(contract.billing_frequency)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Currency</span>
+                <span>{t('common.labels.currency', { defaultValue: 'Currency' })}</span>
                 <span className="font-medium">{contract.currency_code ?? 'USD'}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Contract Lines</span>
+                <span>{t('contractDetail.tabs.lines', { defaultValue: 'Contract Lines' })}</span>
                 <span className="font-medium">{summary?.contractLineCount ?? templateLines.length}</span>
               </div>
               <div className="flex items-center justify-between">
@@ -857,11 +890,11 @@ const ContractTemplateDetail: React.FC = () => {
                 <span className="font-medium">{totalServices}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Created</span>
+                <span>{t('common.labels.created', { defaultValue: 'Created' })}</span>
                 <span className="font-medium">{formatDate(contract.created_at)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Last Updated</span>
+                <span>{t('common.labels.lastUpdated', { defaultValue: 'Last Updated' })}</span>
                 <span className="font-medium">{formatDate(contract.updated_at)}</span>
               </div>
             </CardContent>

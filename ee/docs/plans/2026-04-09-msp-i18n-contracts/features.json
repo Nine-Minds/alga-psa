@@ -92,7 +92,7 @@
   {
     "id": "F019",
     "description": "Wire useTranslation('msp/contracts') in ContractTemplateDetail.tsx -- translate page header, back button, tab labels, template metadata section (name, description, billing frequency, currency, status, dates), and edit form labels",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F020",

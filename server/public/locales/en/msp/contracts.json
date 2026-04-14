@@ -325,7 +325,24 @@
   "clientContracts": {},
   "templatesTab": {},
   "detailSwitcher": {},
-  "templateDetail": {},
+  "templateDetail": {
+    "backToTemplates": "Back to Templates",
+    "backToTemplatesArrow": "← Back to Templates",
+    "editBasicsTitle": "Edit Template Basics",
+    "form": {
+      "currencyPlaceholder": "Select currency",
+      "internalNotesLabel": "Internal Notes",
+      "internalNotesPlaceholder": "Describe where this template applies, onboarding tips, or approval requirements.",
+      "recommendedBillingFrequencyLabel": "Recommended Billing Frequency *",
+      "recommendedBillingFrequencyPlaceholder": "Select billing cadence",
+      "templateNameLabel": "Template Name *",
+      "templateNamePlaceholder": "Managed Services Starter, Premium Support Bundle, etc."
+    },
+    "loadingTemplate": "Loading template...",
+    "templateBadge": "Template",
+    "templateNotFound": "Contract template not found",
+    "templateSnapshotTitle": "Template Snapshot"
+  },
   "quickStart": {},
   "servicePicker": {},
   "bucketOverlay": {},
