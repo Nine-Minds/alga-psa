@@ -37,7 +37,9 @@
     "noSla": "11111",
     "onTrack": "11111",
     "breached": "11111",
-    "paused": "11111"
+    "paused": "11111",
+    "allResponseStatuses": "11111",
+    "responseStatus": "11111"
   },
   "create": {
     "title": "11111",
@@ -189,7 +191,8 @@
     "failedToUpdateComment": "11111",
     "failedToDeleteComment": "11111",
     "deleteOwnCommentError": "11111",
-    "failedToUpdateTicketStatus": "11111"
+    "failedToUpdateTicketStatus": "11111",
+    "noTitle": "11111"
   },
   "conversation": {
     "comments": "11111",
@@ -230,7 +233,8 @@
     "deleteCommentAriaLabel": "11111",
     "inboundChildReplies": "11111",
     "childTicket": "11111",
-    "ticketPrefix": "11111 {{number}} 11111"
+    "ticketPrefix": "11111 {{number}} 11111",
+    "clipboardDraftCancelMessage": "11111"
   },
   "responseState": {
     "awaitingYourResponse": "11111",
@@ -764,7 +768,8 @@
       "columns": {
         "sla": "11111",
         "createdBy": "11111",
-        "actions": "11111"
+        "actions": "11111",
+        "tags": "11111"
       },
       "requiredSuffix": "11111",
       "tagsUnderTitle": "11111",
@@ -1025,5 +1030,22 @@
     "minutes": "11111",
     "invalidDateTime": "11111",
     "declined": "11111"
+  },
+  "categories": {
+    "itilBadge": "11111"
+  },
+  "tickets": {
+    "conversation": {
+      "closeStatus": "11111",
+      "noStatusChange": "11111"
+    }
+  },
+  "common": {
+    "continueEditing": "11111"
+  },
+  "details": {
+    "bundle": {
+      "childrenDescription": "11111"
+    }
   }
 }

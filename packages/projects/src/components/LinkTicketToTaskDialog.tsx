@@ -133,7 +133,7 @@ export default function LinkTicketToTaskDialog({
       setSelectedPhaseId('');
       setSelectedTaskId('');
     } catch (error) {
-      handleError(error, t('taskTicketLinks.linkTicketError', 'Failed to link ticket'));
+      handleError(error, t('dialogs.linkTicketToTask.linkTicketError', 'Failed to link ticket'));
     } finally {
       setIsLinking(false);
     }

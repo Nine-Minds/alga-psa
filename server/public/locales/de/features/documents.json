@@ -218,5 +218,8 @@
     "cascadeMakeHidden": "Möchten Sie auch alle {{count}} Dokument(e) in \"{{name}}\" im Kundenportal ausblenden?",
     "cascadeYes": "Ja, Dokumente aktualisieren",
     "cascadeNo": "Nein, nur Ordner"
+  },
+  "empty": {
+    "default": "Keine Dokumente gefunden"
   }
 }

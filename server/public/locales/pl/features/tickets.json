@@ -37,7 +37,9 @@
     "noSla": "Brak SLA",
     "onTrack": "W normie",
     "breached": "Naruszone",
-    "paused": "Wstrzymane"
+    "paused": "Wstrzymane",
+    "allResponseStatuses": "Wszystkie statusy odpowiedzi",
+    "responseStatus": "Status odpowiedzi"
   },
   "create": {
     "title": "Utwórz zgłoszenie wsparcia",
@@ -189,7 +191,8 @@
     "failedToUpdateComment": "Nie udało się zaktualizować komentarza",
     "failedToDeleteComment": "Nie udało się usunąć komentarza",
     "deleteOwnCommentError": "Możesz usuwać tylko własne komentarze",
-    "failedToUpdateTicketStatus": "Nie udało się zaktualizować statusu zgłoszenia"
+    "failedToUpdateTicketStatus": "Nie udało się zaktualizować statusu zgłoszenia",
+    "noTitle": "Bez tytułu"
   },
   "conversation": {
     "comments": "Komentarze",
@@ -230,7 +233,8 @@
     "deleteCommentAriaLabel": "Usuń komentarz",
     "inboundChildReplies": "Odpowiedzi przychodzące na zgłoszenia podrzędne (tylko do odczytu)",
     "childTicket": "Zgłoszenie podrzędne",
-    "ticketPrefix": "Zgłoszenie {{number}}"
+    "ticketPrefix": "Zgłoszenie {{number}}",
+    "clipboardDraftCancelMessage": "Ten szkic zawiera wklejone obrazy, które zostały już przesłane jako dokumenty zgłoszenia. Zachować je czy usunąć na stałe?"
   },
   "responseState": {
     "awaitingYourResponse": "Oczekuje na Twoją odpowiedź",
@@ -764,7 +768,8 @@
       "columns": {
         "sla": "SLA",
         "createdBy": "Utworzone przez",
-        "actions": "Akcje"
+        "actions": "Akcje",
+        "tags": "Tagi"
       },
       "requiredSuffix": "(wymagane)",
       "tagsUnderTitle": "Wyświetl pod tytułem",
@@ -1025,5 +1030,22 @@
     "minutes": "minutach",
     "invalidDateTime": "Nieprawidłowa data/godzina",
     "declined": "Odrzucony"
+  },
+  "categories": {
+    "itilBadge": "ITIL"
+  },
+  "tickets": {
+    "conversation": {
+      "closeStatus": "Status zamknięcia",
+      "noStatusChange": "Nie zmieniaj statusu"
+    }
+  },
+  "common": {
+    "continueEditing": "Kontynuuj edycję"
+  },
+  "details": {
+    "bundle": {
+      "childrenDescription": "Zgłoszenia podrzędne zgrupowane w tym zgłoszeniu głównym"
+    }
   }
 }

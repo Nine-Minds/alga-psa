@@ -415,7 +415,9 @@
       },
       "status": {
         "label": "Statut *",
-        "placeholder": "Sélectionnez le statut"
+        "placeholder": "Sélectionnez le statut",
+        "selectBoardFirst": "Sélectionnez d'abord un tableau",
+        "loading": "Chargement des statuts..."
       },
       "priority": {
         "label": "Priorité *",

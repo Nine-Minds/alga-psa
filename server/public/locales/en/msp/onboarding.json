@@ -189,7 +189,9 @@
     },
     "header": {
       "title": "Create Your First Service",
-      "description": "Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior."
+      "description": "Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior.",
+      "serviceTitle": "Create Your First Service",
+      "serviceDescription": "Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior."
     },
     "created": {
       "title": "Service created successfully!",
@@ -217,6 +219,10 @@
       "defaultRate": {
         "label": "Default Rate",
         "placeholder": "150"
+      },
+      "defaultCurrency": {
+        "label": "Default Currency *",
+        "description": "This currency will be used as the default across all billing — services, contracts, quotes, and invoices. You can override it per client later."
       }
     },
     "billingMethods": {

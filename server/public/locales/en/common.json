@@ -420,7 +420,13 @@
           "asc": "Show A-Z",
           "desc": "Show Z-A"
         }
-      }
+      },
+      "clientVisibility": {
+        "all": "All",
+        "visible": "Client Visible",
+        "hidden": "Internal Only"
+      },
+      "clientVisibilityLabel": "Client Visibility"
     },
     "selector": {
       "title": "Select Documents",
@@ -460,7 +466,9 @@
       "loading": "Loading folders...",
       "title": "Folders",
       "collapse": "Collapse folders",
-      "allDocuments": "All Documents"
+      "allDocuments": "All Documents",
+      "expand": "Show folders",
+      "deleteTitle": "Delete Folder"
     },
     "folderManager": {
       "title": "Create New Folder",
@@ -477,7 +485,35 @@
         "Tickets": "Tickets",
         "Time Entries": "Time Entries"
       }
-    }
+    },
+    "list": {
+      "name": "Name",
+      "folder": "Folder",
+      "size": "Size",
+      "modified": "Modified",
+      "visibility": "Visibility",
+      "actions": "Actions"
+    },
+    "hasShareLinks": "Has active share links",
+    "visibility": {
+      "clientVisible": "Client visible",
+      "internalOnly": "Internal",
+      "markedVisible": "\"{{name}}\" is now visible in client portal",
+      "markedHidden": "\"{{name}}\" is now hidden from client portal",
+      "toggleFailed": "Failed to update folder visibility",
+      "cascadeTitle": "Update document visibility",
+      "cascadeMakeVisible": "Would you also like to make all {{count}} document(s) in \"{{name}}\" visible to the client portal?",
+      "cascadeMakeHidden": "Would you also like to hide all {{count}} document(s) in \"{{name}}\" from the client portal?",
+      "cascadeYes": "Yes, update documents",
+      "cascadeNo": "No, folder only"
+    },
+    "share": "Share",
+    "videoPlaybackFailed": "Unable to play this video in the browser",
+    "videoPlaybackIssue": "Having trouble playing the video?",
+    "downloadVideo": "Download Video",
+    "downloadAsPdf": "Download as PDF",
+    "downloadAsMarkdown": "Download as Markdown",
+    "move": "Move"
   },
   "surveys": {
     "common": {
@@ -623,6 +659,18 @@
         },
         "noTemplates": "Create a survey template before adding triggers.",
         "prioritiesMixed": "Selected boards use different priority types. Showing all priorities."
+      },
+      "preview": {
+        "heading": "Response page preview",
+        "tabs": {
+          "survey": "Survey form",
+          "thankYou": "Thank you"
+        },
+        "noPrompt": "Survey prompt",
+        "commentPlaceholder": "Customer comments will appear here...",
+        "noThankYou": "Thank you message",
+        "notice": "This preview shows what customers see after clicking the survey link in their email.",
+        "editEmailTemplate": "Edit survey email template"
       }
     },
     "response": {
@@ -800,7 +848,12 @@
     "required": "Required",
     "optional": "Optional",
     "notSpecified": "Not specified",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "edited": "edited",
+    "editComment": "Edit comment",
+    "deleteCommentAriaLabel": "Delete comment",
+    "deleteComment": "Delete Comment",
+    "deleteCommentConfirmation": "Are you sure you want to delete this comment? This action cannot be undone."
   },
   "sessionManagement": {
     "title": "Active Sessions",

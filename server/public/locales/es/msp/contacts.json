@@ -156,7 +156,9 @@
       "client": "Cliente",
       "tags": "Etiquetas",
       "role": "Cargo",
-      "notes": "Notas"
+      "notes": "Notas",
+      "primaryEmailLabel": "Etiqueta del correo principal",
+      "additionalEmails": "Direcciones de correo adicionales"
     },
     "unassigned": "Seleccionar campo",
     "errors": {
@@ -207,7 +209,10 @@
       "clientFieldDescription": "client (coincide con clientes existentes por nombre)",
       "noteLabel": "Nota:",
       "noteDescription": "La importación/exportación CSV en la versión 1 maneja un número de teléfono predeterminado por contacto. Las etiquetas deben ser valores separados por comas.",
-      "downloadTemplate": "Descargar plantilla CSV"
+      "downloadTemplate": "Descargar plantilla CSV",
+      "emailFieldsLabel": "Campos de correo:",
+      "emailFieldsDescription": "primary_email_type (work/personal/billing/other o una etiqueta personalizada), additional_email_addresses (use `label:email@example.com | label:email@example.com`)",
+      "hybridEmailNote": "La importación/exportación CSV conserva `email` como el correo de contacto principal/predeterminado. Las etiquetas deben ser valores separados por comas."
     },
     "mapping": {
       "title": "Asignar campos de contacto a columnas CSV",
@@ -460,7 +465,8 @@
       "status": "Estado:",
       "notes": "Notas:",
       "notesPlaceholder": "Añada notas adicionales sobre el contacto...",
-      "tags": "Etiquetas:"
+      "tags": "Etiquetas:",
+      "emailAddresses": "Direcciones de correo:"
     },
     "loading": {
       "destinations": "Cargando destinos..."
@@ -499,7 +505,9 @@
       "createdAt": "Creado el",
       "updatedAt": "Actualizado el",
       "notes": "Notas:",
-      "tags": "Etiquetas:"
+      "tags": "Etiquetas:",
+      "emailAddresses": "Direcciones de correo:",
+      "defaultEmail": "Predeterminado"
     },
     "status": {
       "active": "Activo",

@@ -37,7 +37,9 @@
     "noSla": "No SLA",
     "onTrack": "On Track",
     "breached": "Breached",
-    "paused": "Paused"
+    "paused": "Paused",
+    "allResponseStatuses": "All Response Statuses",
+    "responseStatus": "Response Status"
   },
   "create": {
     "title": "Create Support Ticket",
@@ -189,7 +191,8 @@
     "failedToUpdateComment": "Failed to update comment",
     "failedToDeleteComment": "Failed to delete comment",
     "deleteOwnCommentError": "You can only delete your own comments",
-    "failedToUpdateTicketStatus": "Failed to update ticket status"
+    "failedToUpdateTicketStatus": "Failed to update ticket status",
+    "noTitle": "No title"
   },
   "conversation": {
     "comments": "Comments",
@@ -230,7 +233,8 @@
     "deleteCommentAriaLabel": "Delete comment",
     "inboundChildReplies": "Inbound replies on child tickets (view-only)",
     "childTicket": "Child ticket",
-    "ticketPrefix": "Ticket {{number}}"
+    "ticketPrefix": "Ticket {{number}}",
+    "clipboardDraftCancelMessage": "This draft includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?"
   },
   "responseState": {
     "awaitingYourResponse": "Awaiting Your Response",
@@ -764,7 +768,8 @@
       "columns": {
         "sla": "SLA",
         "createdBy": "Created By",
-        "actions": "Actions"
+        "actions": "Actions",
+        "tags": "Tags"
       },
       "requiredSuffix": "(required)",
       "tagsUnderTitle": "Display under Title",
@@ -1025,5 +1030,22 @@
     "minutes": "minutes",
     "invalidDateTime": "Invalid date/time",
     "declined": "Declined"
+  },
+  "categories": {
+    "itilBadge": "ITIL"
+  },
+  "tickets": {
+    "conversation": {
+      "closeStatus": "Close status",
+      "noStatusChange": "Do not change status"
+    }
+  },
+  "common": {
+    "continueEditing": "Continue Editing"
+  },
+  "details": {
+    "bundle": {
+      "childrenDescription": "Child tickets bundled in this master ticket"
+    }
   }
 }

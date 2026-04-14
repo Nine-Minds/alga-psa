@@ -33,7 +33,15 @@
     "createdAt": "55555",
     "updatedAt": "55555",
     "assignedTeam": "55555",
-    "phase": "55555"
+    "phase": "55555",
+    "priorityLevel": "55555",
+    "seeLess": "55555",
+    "seeMore": "55555",
+    "checklistItems": "55555",
+    "of": "55555",
+    "complete": "55555",
+    "additionalAgents": "55555",
+    "unassigned": "55555"
   },
   "phases": {
     "title": "55555",
@@ -96,7 +104,8 @@
       "projectManager": "55555",
       "tags": "55555",
       "actions": "55555"
-    }
+    },
+    "unknownUser": "55555"
   },
   "quickAdd": {
     "title": "55555",
@@ -204,6 +213,7 @@
     "moveTaskTitle": "55555",
     "confirmMoveTaskMessage": "55555 {{taskName}} 55555 {{sourcePhase}} 55555 {{targetPhase}} 55555",
     "moveTaskFailed": "55555",
+    "loading": "55555",
     "loadingListView": "55555",
     "importSuccess": "55555 {{phases}} 55555 {{tasks}} 55555",
     "importFailed": "55555 {{error}} 55555",
@@ -642,7 +652,8 @@
       "taskPlaceholder": "55555",
       "linkedSuccess": "55555",
       "linking": "55555",
-      "confirm": "55555"
+      "confirm": "55555",
+      "linkTicketError": "55555"
     },
     "prefillFromTicket": {
       "title": "55555",
@@ -787,7 +798,9 @@
       "order": "55555",
       "this_status": "55555",
       "last_closed_error": "55555",
-      "last_closed_delete_error": "55555"
+      "last_closed_delete_error": "55555",
+      "addStatus": "55555",
+      "add_from_library": "55555"
     }
   },
   "templates": {
@@ -1322,5 +1335,10 @@
     "duplicateName": "55555",
     "createdSuccess": "55555 {{name}} 55555",
     "createFailed": "55555"
+  },
+  "dependencies": {
+    "dependsOn": "55555",
+    "unknownTask": "55555",
+    "blocks": "55555"
   }
 }

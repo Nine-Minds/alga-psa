@@ -285,5 +285,8 @@
       "reviewOverdue": "La revisione era prevista {{date}}",
       "reviewDue": "Revisione in scadenza {{date}}"
     }
+  },
+  "common": {
+    "done": "Fatto"
   }
 }

@@ -218,5 +218,8 @@
     "cascadeMakeHidden": "¿También desea ocultar los {{count}} documento(s) en \"{{name}}\" del portal del cliente?",
     "cascadeYes": "Sí, actualizar documentos",
     "cascadeNo": "No, solo la carpeta"
+  },
+  "empty": {
+    "default": "No se encontraron documentos"
   }
 }

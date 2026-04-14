@@ -67,7 +67,8 @@
     "loadSlotsFailed": "55555",
     "createFailed": "55555",
     "updateFailed": "55555",
-    "loadFailed": "55555"
+    "loadFailed": "55555",
+    "notFound": "55555"
   },
   "messages": {
     "requestSuccess": "55555",

@@ -67,7 +67,8 @@
     "loadSlotsFailed": "Impossibile caricare le fasce orarie disponibili. Riprova.",
     "createFailed": "Impossibile creare la richiesta di appuntamento. Riprova.",
     "updateFailed": "Impossibile aggiornare la richiesta di appuntamento. Riprova.",
-    "loadFailed": "Impossibile caricare gli appuntamenti. Riprova."
+    "loadFailed": "Impossibile caricare gli appuntamenti. Riprova.",
+    "notFound": "Richiesta di appuntamento non trovata"
   },
   "messages": {
     "requestSuccess": "Richiesta di appuntamento inviata con successo!",

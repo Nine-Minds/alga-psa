@@ -14,7 +14,8 @@
     "portal": "Portal",
     "notifications": "Powiadomienia",
     "documents": "Dokumenty",
-    "knowledgeBase": "Baza wiedzy"
+    "knowledgeBase": "Baza wiedzy",
+    "requestServices": "Zamów usługi"
   },
   "dashboard": {
     "title": "Panel",
@@ -137,7 +138,9 @@
         "description": "Przeglądaj udostępnione dokumenty i zasoby"
       }
     },
-    "forgotPassword": "Nie pamiętasz hasła?"
+    "forgotPassword": "Nie pamiętasz hasła?",
+    "sessionEndedTitle": "Sesja zakończona",
+    "sessionEndedMessage": "Twoja sesja została zakończona. Zaloguj się ponownie."
   },
   "account": {
     "title": "Konto",
@@ -339,7 +342,9 @@
       "uploadError": "Nie udało się przesłać. Spróbuj ponownie.",
       "deleteSuccess": "Usunięto pomyślnie.",
       "deleteError": "Nie udało się usunąć.",
-      "deleteConfirm": "Czy na pewno chcesz to usunąć? Tej operacji nie można cofnąć."
+      "deleteConfirm": "Czy na pewno chcesz to usunąć? Tej operacji nie można cofnąć.",
+      "linking": "Łączenie...",
+      "linkDocument": "Połącz dokument"
     },
     "validation": {
       "clientNameRequired": "Nazwa klienta jest wymagana",

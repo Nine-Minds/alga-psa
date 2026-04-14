@@ -254,7 +254,11 @@
     "clientCreatedContactFailed": "Der Kunde wurde erstellt, konnte jedoch keinen Kontakt hinzufügen.",
     "usersLoadError": "Benutzer konnten nicht für die Account Manager-Auswahl geladen werden.",
     "countriesLoadError": "Länder konnten nicht geladen werden.",
-    "phoneTypeSuggestionsError": "Die Vorschläge für den Kontakttelefontyp konnten nicht geladen werden."
+    "phoneTypeSuggestionsError": "Die Vorschläge für den Kontakttelefontyp konnten nicht geladen werden.",
+    "created": "\"{{name}}\" wurde erstellt. Fügen Sie unten einen weiteren Kunden hinzu.",
+    "createAndAddAnother": "Erstellen + Weiteren hinzufügen",
+    "createAndView": "Erstellen + Kunde anzeigen",
+    "additionalDetails": "Zusätzliche Details"
   },
   "clientCreatedDialog": {
     "title": "Kunde erstellt",

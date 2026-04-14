@@ -420,7 +420,13 @@
           "asc": "A-Z",
           "desc": "Z-A"
         }
-      }
+      },
+      "clientVisibility": {
+        "all": "Wszystkie",
+        "visible": "Widoczne dla klienta",
+        "hidden": "Tylko wewnętrzne"
+      },
+      "clientVisibilityLabel": "Widoczność dla klienta"
     },
     "selector": {
       "title": "Wybierz dokumenty",
@@ -460,7 +466,9 @@
       "loading": "Ładowanie folderów...",
       "title": "Foldery",
       "collapse": "Zwiń foldery",
-      "allDocuments": "Wszystkie dokumenty"
+      "allDocuments": "Wszystkie dokumenty",
+      "expand": "Pokaż foldery",
+      "deleteTitle": "Usuń folder"
     },
     "folderManager": {
       "title": "Utwórz nowy folder",
@@ -477,7 +485,35 @@
         "Tickets": "Zgłoszenia",
         "Time Entries": "Wpisy czasu"
       }
-    }
+    },
+    "list": {
+      "name": "Nazwa",
+      "folder": "Folder",
+      "size": "Rozmiar",
+      "modified": "Zmodyfikowano",
+      "visibility": "Widoczność",
+      "actions": "Akcje"
+    },
+    "hasShareLinks": "Ma aktywne linki udostępniania",
+    "visibility": {
+      "clientVisible": "Widoczne dla klienta",
+      "internalOnly": "Wewnętrzne",
+      "markedVisible": "\"{{name}}\" jest teraz widoczne w portalu klienta",
+      "markedHidden": "\"{{name}}\" jest teraz ukryte w portalu klienta",
+      "toggleFailed": "Nie udało się zaktualizować widoczności folderu",
+      "cascadeTitle": "Aktualizuj widoczność dokumentów",
+      "cascadeMakeVisible": "Czy chcesz także udostępnić wszystkie {{count}} dokument(y) w \"{{name}}\" w portalu klienta?",
+      "cascadeMakeHidden": "Czy chcesz także ukryć wszystkie {{count}} dokument(y) w \"{{name}}\" w portalu klienta?",
+      "cascadeYes": "Tak, aktualizuj dokumenty",
+      "cascadeNo": "Nie, tylko folder"
+    },
+    "share": "Udostępnij",
+    "videoPlaybackFailed": "Nie można odtworzyć tego wideo w przeglądarce",
+    "videoPlaybackIssue": "Masz problem z odtwarzaniem wideo?",
+    "downloadVideo": "Pobierz wideo",
+    "downloadAsPdf": "Pobierz jako PDF",
+    "downloadAsMarkdown": "Pobierz jako Markdown",
+    "move": "Przenieś"
   },
   "surveys": {
     "common": {
@@ -623,6 +659,18 @@
         },
         "noTemplates": "Utwórz szablon ankiety przed dodaniem wyzwalaczy.",
         "prioritiesMixed": "Wybrane tablice używają różnych typów priorytetów. Wyświetlamy wszystkie priorytety."
+      },
+      "preview": {
+        "heading": "Podgląd strony odpowiedzi",
+        "tabs": {
+          "survey": "Formularz ankiety",
+          "thankYou": "Dziękujemy"
+        },
+        "noPrompt": "Treść ankiety",
+        "commentPlaceholder": "Tutaj pojawią się komentarze klientów...",
+        "noThankYou": "Wiadomość z podziękowaniem",
+        "notice": "Ten podgląd pokazuje, co widzą klienci po kliknięciu linku do ankiety w wiadomości e-mail.",
+        "editEmailTemplate": "Edytuj szablon wiadomości ankiety"
       }
     },
     "response": {
@@ -800,7 +848,12 @@
     "required": "Wymagane",
     "optional": "Opcjonalne",
     "notSpecified": "Nie określono",
-    "unknown": "Nieznane"
+    "unknown": "Nieznane",
+    "edited": "edytowano",
+    "editComment": "Edytuj komentarz",
+    "deleteCommentAriaLabel": "Usuń komentarz",
+    "deleteComment": "Usuń komentarz",
+    "deleteCommentConfirmation": "Czy na pewno chcesz usunąć ten komentarz? Tej operacji nie można cofnąć."
   },
   "sessionManagement": {
     "title": "Aktywne sesje",

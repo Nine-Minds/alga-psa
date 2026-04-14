@@ -189,7 +189,9 @@
     },
     "header": {
       "title": "Maak je eerste service aan",
-      "description": "Voeg een service toe en kies hoe deze gefactureerd moet worden. Het servicetype identificeert de servicecategorie, terwijl de factureringsmodus de prijslogica bepaalt."
+      "description": "Voeg een service toe en kies hoe deze gefactureerd moet worden. Het servicetype identificeert de servicecategorie, terwijl de factureringsmodus de prijslogica bepaalt.",
+      "serviceTitle": "Maak uw eerste service",
+      "serviceDescription": "Voeg een service toe en kies hoe deze moet worden gefactureerd. Het servicetype identificeert de servicecategorie, terwijl de facturatiemodus het prijsgedrag bepaalt."
     },
     "created": {
       "title": "Service succesvol aangemaakt!",
@@ -217,6 +219,10 @@
       "defaultRate": {
         "label": "Standaardtarief",
         "placeholder": "150"
+      },
+      "defaultCurrency": {
+        "label": "Standaardvaluta *",
+        "description": "Deze valuta wordt standaard gebruikt voor alle facturatie — services, contracten, offertes en facturen. U kunt deze later per klant overschrijven."
       }
     },
     "billingMethods": {

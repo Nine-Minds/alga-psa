@@ -254,7 +254,11 @@
     "clientCreatedContactFailed": "Klant gemaakt maar kon geen contactpersoon toevoegen.",
     "usersLoadError": "Kan gebruikers niet laden voor selectie Accountmanager.",
     "countriesLoadError": "Kan landen niet laden.",
-    "phoneTypeSuggestionsError": "Kan suggesties voor contacttelefoontypen niet laden."
+    "phoneTypeSuggestionsError": "Kan suggesties voor contacttelefoontypen niet laden.",
+    "created": "\"{{name}}\" aangemaakt. Voeg hieronder een andere klant toe.",
+    "createAndAddAnother": "Aanmaken + Nog een toevoegen",
+    "createAndView": "Aanmaken + Klant bekijken",
+    "additionalDetails": "Aanvullende gegevens"
   },
   "clientCreatedDialog": {
     "title": "Klant gemaakt",

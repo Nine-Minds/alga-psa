@@ -189,7 +189,9 @@
     },
     "header": {
       "title": "55555",
-      "description": "55555"
+      "description": "55555",
+      "serviceTitle": "55555",
+      "serviceDescription": "55555"
     },
     "created": {
       "title": "55555",
@@ -217,6 +219,10 @@
       "defaultRate": {
         "label": "55555",
         "placeholder": "55555"
+      },
+      "defaultCurrency": {
+        "label": "55555",
+        "description": "55555"
       }
     },
     "billingMethods": {
