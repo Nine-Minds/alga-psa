@@ -125,3 +125,5 @@
 - (2026-04-13) **F033 verification**: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/ContractLineTypeSelector.tsx` (pass, no errors).
 - (2026-04-13) **F034 complete** (`ContractLineTypeRouter.tsx`): wired `useTranslation('msp/contract-lines')`; translated loading text, not-found message with `{{id}}`, load-failed error, and unsupported-type error with `{{type}}` interpolation.
 - (2026-04-13) **F034 verification**: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/ContractLineTypeRouter.tsx` (pass, no errors).
+- (2026-04-13) **F035 complete** (`ContractLinePresetTypeRouter.tsx`): wired `useTranslation('msp/contract-lines')`; translated loading text, not-found message with `{{id}}`, load-failed error, and unsupported preset type message with `{{type}}` interpolation.
+- (2026-04-13) **F035 verification**: `npx eslint packages/billing/src/components/billing-dashboard/contract-lines/ContractLinePresetTypeRouter.tsx` (pass, no errors).

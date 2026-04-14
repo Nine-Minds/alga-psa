@@ -172,7 +172,7 @@
   {
     "id": "F035",
     "description": "ContractLinePresetTypeRouter.tsx: Wire useTranslation and translate loading text ('Loading Contract Line Preset...'), error messages ('Contract line preset with ID {id} not found', 'Failed to load contract line preset details', 'Unknown or unsupported contract line preset type: {type}')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F036",
