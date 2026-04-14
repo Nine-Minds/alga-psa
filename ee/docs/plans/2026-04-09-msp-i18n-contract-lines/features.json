@@ -117,7 +117,7 @@
   {
     "id": "F024",
     "description": "ServiceHourlyConfigForm.tsx: Wire useTranslation and translate form field labels ('Hourly Rate ($)', 'Minimum Billable Time (minutes)', 'Round Up To Nearest (minutes)'), tooltip content strings (standard rate explanation, minimum duration explanation, rounding explanation), validation error display, and placeholder text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F025",
