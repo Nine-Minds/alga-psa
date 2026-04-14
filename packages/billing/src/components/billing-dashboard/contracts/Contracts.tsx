@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -18,6 +18,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IContract, IContractWithClient } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
@@ -37,11 +38,13 @@ import { TemplateWizard } from './template-wizard/TemplateWizard';
 import { ContractDialog } from './ContractDialog';
 import { updateClientContractForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import {
+  type ContractSubTab,
   getDraftTabBadgeCount,
   normalizeContractSubtab,
 } from './contractsTabs';
 
 const Contracts: React.FC = () => {
+  const { t } = useTranslation('msp/contracts');
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -85,6 +88,15 @@ const Contracts: React.FC = () => {
   const [draftCurrentPage, setDraftCurrentPage] = useState(1);
   const [draftPageSize, setDraftPageSize] = useState(10);
 
+  const contractSubtabLabels = useMemo<Record<ContractSubTab, string>>(
+    () => ({
+      templates: t('common.tabs.templates', { defaultValue: 'Templates' }),
+      'client-contracts': t('common.tabs.clientContracts', { defaultValue: 'Client Contracts' }),
+      drafts: t('common.tabs.drafts', { defaultValue: 'Drafts' }),
+    }),
+    [t]
+  );
+
   // Handle page size change for templates - reset to page 1
   const handleTemplatePageSizeChange = (newPageSize: number) => {
     setTemplatePageSize(newPageSize);
@@ -121,7 +133,7 @@ const Contracts: React.FC = () => {
       setError(null);
     } catch (err) {
       console.error('Error fetching contracts:', err);
-      setError('Failed to fetch contracts');
+      setError(t('contractsList.errors.failedToFetch', { defaultValue: 'Failed to fetch contracts' }));
     } finally {
       setIsLoading(false);
     }
@@ -511,11 +523,11 @@ const renderStatusBadge = (status: string) => {
           />
           <Input
             type="text"
-            placeholder="Search templates..."
+            placeholder={t('contractsList.search.templatesPlaceholder', { defaultValue: 'Search templates...' })}
             value={templateSearchTerm}
             onChange={(event) => setTemplateSearchTerm(event.target.value)}
             className="pl-10"
-            aria-label="Search contract templates"
+            aria-label={t('contractsList.search.templatesAriaLabel', { defaultValue: 'Search contract templates' })}
           />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -525,7 +537,7 @@ const renderStatusBadge = (status: string) => {
             className="inline-flex items-center gap-2"
           >
             <Sparkles className="h-4 w-4" />
-            Create Template
+            {t('contractsList.actions.createTemplate', { defaultValue: 'Create Template' })}
           </Button>
         </div>
       </div>
@@ -555,11 +567,13 @@ const renderStatusBadge = (status: string) => {
           />
           <Input
             type="text"
-            placeholder="Search by client or contract..."
+            placeholder={t('contractsList.search.clientContractsPlaceholder', {
+              defaultValue: 'Search by client or contract...',
+            })}
             value={clientSearchTerm}
             onChange={(event) => setClientSearchTerm(event.target.value)}
             className="pl-10"
-            aria-label="Search client contracts"
+            aria-label={t('contractsList.search.clientContractsAriaLabel', { defaultValue: 'Search client contracts' })}
           />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -572,7 +586,7 @@ const renderStatusBadge = (status: string) => {
                 className="inline-flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
-                Quick Add
+                {t('contractsList.actions.quickAdd', { defaultValue: 'Quick Add' })}
               </Button>
             }
           />
@@ -582,7 +596,7 @@ const renderStatusBadge = (status: string) => {
             className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
           >
             <Wand2 className="h-4 w-4" />
-            Create Contract
+            {t('contractsList.actions.createContract', { defaultValue: 'Create Contract' })}
           </Button>
         </div>
       </div>
@@ -612,18 +626,20 @@ const renderStatusBadge = (status: string) => {
           />
           <Input
             type="text"
-            placeholder="Search drafts..."
+            placeholder={t('contractsList.search.draftsPlaceholder', { defaultValue: 'Search drafts...' })}
             value={draftSearchTerm}
             onChange={(event) => setDraftSearchTerm(event.target.value)}
             className="pl-10"
-            aria-label="Search draft contracts"
+            aria-label={t('contractsList.search.draftsAriaLabel', { defaultValue: 'Search draft contracts' })}
           />
         </div>
       </div>
 
       {draftContracts.length === 0 ? (
         <div className="py-8 text-center text-muted-foreground">
-          No draft contracts. Start creating a new contract to save as draft.
+          {t('contractsList.empty.noDrafts', {
+            defaultValue: 'No draft contracts. Start creating a new contract to save as draft.',
+          })}
         </div>
       ) : (
         <DataTable
@@ -736,13 +752,22 @@ const renderStatusBadge = (status: string) => {
   );
 
   const tabs = [
-    { id: 'templates', label: 'Templates', content: renderTemplateTab() },
-    { id: 'client-contracts', label: 'Client Contracts', content: renderClientContractsTab() },
+    { id: 'templates', label: contractSubtabLabels.templates, content: renderTemplateTab() },
+    { id: 'client-contracts', label: contractSubtabLabels['client-contracts'], content: renderClientContractsTab() },
     {
       id: 'drafts',
-      label: 'Drafts',
+      label: contractSubtabLabels.drafts,
       icon: draftBadgeCount != null ? (
-        <Badge variant="default-muted" className="ml-2 order-last">{draftBadgeCount}</Badge>
+        <Badge
+          variant="default-muted"
+          className="ml-2 order-last"
+          aria-label={t('contractsList.drafts.badgeCount', {
+            defaultValue: '{{count}} draft contracts',
+            count: draftBadgeCount,
+          })}
+        >
+          {draftBadgeCount}
+        </Badge>
       ) : undefined,
       content: renderDraftsTab(),
     },
@@ -774,7 +799,7 @@ const renderStatusBadge = (status: string) => {
               className="py-12 text-muted-foreground"
               layout="stacked"
               spinnerProps={{ size: 'md' }}
-              text="Loading contracts..."
+              text={t('contractsList.loading.contracts', { defaultValue: 'Loading contracts...' })}
               textClassName="text-muted-foreground"
             />
           ) : (

@@ -603,7 +603,33 @@
     }
   },
   "pricingSchedules": {},
-  "contractsList": {},
+  "contractsList": {
+    "actions": {
+      "createContract": "Create Contract",
+      "createTemplate": "Create Template",
+      "quickAdd": "Quick Add"
+    },
+    "drafts": {
+      "badgeCount": "{{count}} draft contracts"
+    },
+    "empty": {
+      "noDrafts": "No draft contracts. Start creating a new contract to save as draft."
+    },
+    "errors": {
+      "failedToFetch": "Failed to fetch contracts"
+    },
+    "loading": {
+      "contracts": "Loading contracts..."
+    },
+    "search": {
+      "clientContractsAriaLabel": "Search client contracts",
+      "clientContractsPlaceholder": "Search by client or contract...",
+      "draftsAriaLabel": "Search draft contracts",
+      "draftsPlaceholder": "Search drafts...",
+      "templatesAriaLabel": "Search contract templates",
+      "templatesPlaceholder": "Search templates..."
+    }
+  },
   "clientContracts": {},
   "templatesTab": {},
   "detailSwitcher": {},

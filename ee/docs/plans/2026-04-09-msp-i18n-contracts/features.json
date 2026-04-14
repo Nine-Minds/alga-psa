@@ -147,7 +147,7 @@
   {
     "id": "F030",
     "description": "Wire useTranslation('msp/contracts') in Contracts.tsx -- translate sub-tab labels (Templates, Client Contracts, Drafts using values from contractsTabs.ts at point of use), New Contract/New Template buttons, search placeholders, draft badge count, and error alert",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F031",
