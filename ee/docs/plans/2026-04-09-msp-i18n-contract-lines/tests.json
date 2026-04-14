@@ -74,7 +74,7 @@
   {
     "id": "T010",
     "description": "HourlyContractLineConfiguration.tsx: hourly settings accordion displays translated trigger text, overtime switch label, tooltip content, rate/threshold labels and helper text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
