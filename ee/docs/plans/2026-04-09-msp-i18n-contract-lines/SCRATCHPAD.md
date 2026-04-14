@@ -151,3 +151,4 @@
 - (2026-04-13) **T001 complete**: added `packages/billing/tests/billing-dashboard/ContractLinesSubbatch.i18n.test.ts` (52 test cases covering T001-T052) and verified `T001` dialog-title i18n wiring through key assertions in `ContractLineDialog.tsx`.
 - (2026-04-13) **Test verification run**: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractLinesSubbatch.i18n.test.ts` -> `52 passed`.
 - (2026-04-13) **T002 complete**: covered by  and verified in the passing 52-test run.
+- (2026-04-13) **T003 complete**: covered by  and verified in the passing 52-test run.

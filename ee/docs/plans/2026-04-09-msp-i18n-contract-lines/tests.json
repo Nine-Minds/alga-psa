@@ -18,7 +18,7 @@
   {
     "id": "T003",
     "description": "ContractLineDialog.tsx: billing model selector cards display translated titles and descriptions for Fixed/Hourly/Usage",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
