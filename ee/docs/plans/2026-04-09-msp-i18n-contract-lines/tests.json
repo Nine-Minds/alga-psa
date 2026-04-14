@@ -90,7 +90,7 @@
   {
     "id": "T012",
     "description": "HourlyContractLineConfiguration.tsx: service rates card title, empty state, non-hourly service message with interpolated billing method, and save button text are all translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
