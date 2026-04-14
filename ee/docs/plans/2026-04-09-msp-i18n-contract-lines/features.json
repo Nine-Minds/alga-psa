@@ -107,7 +107,7 @@
   {
     "id": "F022",
     "description": "FixedContractLinePresetConfiguration.tsx: Wire useTranslation and translate card title with interpolated preset name, preset basics section ('Contract Line Preset Basics' heading, description, name/frequency labels), billing timing label and helper text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F023",
