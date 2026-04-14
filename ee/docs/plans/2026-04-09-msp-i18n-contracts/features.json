@@ -132,7 +132,7 @@
   {
     "id": "F027",
     "description": "Wire useTranslation('msp/contracts') in ContractLines.tsx -- translate service list within expanded lines (service name, rate, quantity, configuration type labels), and replace hardcoded locale in currency formatting",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F028",

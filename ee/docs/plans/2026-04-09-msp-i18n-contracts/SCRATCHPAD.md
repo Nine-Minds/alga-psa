@@ -133,3 +133,7 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Localized error-state fallbacks for contract-lines load/refresh/remove/editability/update flows in this component.
 - **(2026-04-14)** Expanded `contractLines.errors|dialogs|configuration|services|bucket|loading.inline` keys in `server/public/locales/en/msp/contracts.json`.
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractLines.tsx` (pass; warnings only) and `jq empty server/public/locales/en/msp/contracts.json` (pass).
+- **(2026-04-14)** `F027` completed in `ContractLines.tsx`: localized expanded service-list labels (type label, quantity badge/field labels, hourly/unit/tax-allocation rate labels, unit-of-measure label/default, services section heading/count).
+- **(2026-04-14)** Replaced `new Intl.NumberFormat('en-US', ...)` in `ContractLines.tsx` with locale-aware `useFormatters().formatCurrency(...)` for all rate displays; `formatRate` now uses active locale and tenant currency code.
+- **(2026-04-14)** Removed unused `renderServiceDetails()` helper that still contained hardcoded English fragments and old locale formatting assumptions.
+- **(2026-04-14)** Verification: `rg -n "new Intl.NumberFormat|en-US" packages/billing/src/components/billing-dashboard/contracts/ContractLines.tsx` (no matches) and `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractLines.tsx` (pass; warnings only).

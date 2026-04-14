@@ -33,7 +33,7 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
 import { getCurrencySymbol } from '@alga-psa/core';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 interface ContractLinesProps {
@@ -80,6 +80,7 @@ interface ServiceConfiguration {
 
 const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLinesChanged, isReadOnly = false }) => {
   const { t } = useTranslation('msp/contracts');
+  const { formatCurrency } = useFormatters();
   const formatBillingFrequency = useFormatBillingFrequency();
   const formatContractLineType = useFormatContractLineType();
   const billingTimingOptions = [
@@ -383,59 +384,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
   };
 
   const formatRate = (rate?: number | null) => {
-    if (rate === undefined || rate === null) return 'N/A';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: contract.currency_code || 'USD',
-      minimumFractionDigits: 2
-    }).format(rate / 100);
-  };
-
-  const renderServiceDetails = (service: ServiceConfiguration) => {
-    const { configuration, typeConfig } = service;
-    const details: string[] = [];
-
-    if (configuration.configuration_type === 'Fixed') {
-      if (typeConfig?.base_rate) {
-        details.push(`Rate: ${formatRate(typeConfig.base_rate)}`);
-      }
-      if (configuration.quantity) {
-        details.push(`Qty: ${configuration.quantity}`);
-      }
-    } else if (configuration.configuration_type === 'Hourly') {
-      if (typeConfig?.hourly_rate) {
-        details.push(`${formatRate(typeConfig.hourly_rate)}/hr`);
-      }
-      if (typeConfig?.minimum_billable_time) {
-        details.push(`Min: ${typeConfig.minimum_billable_time} min`);
-      }
-      if (typeConfig?.round_up_to_nearest) {
-        details.push(`Round: ${typeConfig.round_up_to_nearest} min`);
-      }
-    } else if (configuration.configuration_type === 'Usage') {
-      if (typeConfig?.base_rate) {
-        details.push(`Rate: ${formatRate(typeConfig.base_rate)}`);
-      }
-      if (typeConfig?.unit_of_measure) {
-        details.push(`Unit: ${typeConfig.unit_of_measure}`);
-      }
-    } else if (configuration.configuration_type === 'Bucket') {
-      if (typeConfig?.total_minutes) {
-        details.push(`${typeConfig.total_minutes} min`);
-      }
-      if (typeConfig?.overage_rate) {
-        details.push(`Overage: ${formatRate(typeConfig.overage_rate)}`);
-      }
-      if (typeConfig?.billing_period) {
-        details.push(`Period: ${typeConfig.billing_period}`);
-      }
+    if (rate === undefined || rate === null) {
+      return t('common.empty.notAvailable', { defaultValue: 'N/A' });
     }
-
-    if (configuration.custom_rate) {
-      details.push(`Custom: ${formatRate(configuration.custom_rate)}`);
-    }
-
-    return details.join(' • ');
+    return formatCurrency(rate / 100, contract.currency_code || 'USD');
   };
 
   if (isLoading) {
