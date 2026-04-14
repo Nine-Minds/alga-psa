@@ -24,6 +24,7 @@ import FixedPlanServicesList from '../FixedContractLineServicesList'; // Import 
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface FixedPlanConfigurationProps {
   contractLineId: string;
@@ -35,24 +36,32 @@ type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 const BILLING_TIMING_OPTIONS = [
   {
     value: 'arrears',
-    label: 'Arrears – invoice after the period closes',
+    labelKey: 'configuration.fixed.basics.billingTiming.options.arrears',
+    defaultLabel: 'Arrears - invoice after the period closes',
   },
   {
     value: 'advance',
-    label: 'Advance – invoice at the start of the period',
+    labelKey: 'configuration.fixed.basics.billingTiming.options.advance',
+    defaultLabel: 'Advance - invoice at the start of the period',
   },
 ] as const;
 
 const CADENCE_OWNER_OPTIONS = [
   {
     value: 'client',
-    label: 'Invoice on client billing schedule',
-    description: 'Use the client billing calendar so this recurring line stays aligned with the client’s normal invoice cadence.',
+    labelKey: 'configuration.fixed.basics.cadenceOwner.options.client.label',
+    defaultLabel: 'Invoice on client billing schedule',
+    descriptionKey: 'configuration.fixed.basics.cadenceOwner.options.client.description',
+    defaultDescription:
+      "Use the client billing calendar so this recurring line stays aligned with the client's normal invoice cadence.",
   },
   {
     value: 'contract',
-    label: 'Invoice on contract anniversary',
-    description: 'Use this contract line’s own anniversary dates. Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing.',
+    labelKey: 'configuration.fixed.basics.cadenceOwner.options.contract.label',
+    defaultLabel: 'Invoice on contract anniversary',
+    descriptionKey: 'configuration.fixed.basics.cadenceOwner.options.contract.description',
+    defaultDescription:
+      "Use this contract line's own anniversary dates. Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing.",
   },
 ];
 
@@ -60,6 +69,7 @@ export function FixedPlanConfiguration({
   contractLineId,
   className = '',
 }: FixedPlanConfigurationProps) {
+  const { t } = useTranslation('msp/contract-lines');
   const [plan, setPlan] = useState<IContractLine | null>(null);
   const [services, setServices] = useState<IService[]>([]);
   const [planLoading, setPlanLoading] = useState(true);
@@ -120,15 +130,19 @@ export function FixedPlanConfiguration({
         }
         setIsDirty(false);
       } else {
-        setError('Invalid contract line type or contract line not found.');
+        setError(t('configuration.fixed.errors.invalidContractLineTypeOrNotFound', {
+          defaultValue: 'Invalid contract line type or contract line not found.',
+        }));
       }
     } catch (err) {
       console.error('Error fetching contract line data:', err);
-      setError('Failed to load contract line configuration. Please try again.');
+      setError(t('configuration.fixed.errors.failedToLoadContractLineConfiguration', {
+        defaultValue: 'Failed to load contract line configuration. Please try again.',
+      }));
     } finally {
       setPlanLoading(false);
     }
-  }, [contractLineId]);
+  }, [contractLineId, t]);
 
   useEffect(() => {
     fetchPlanData();
@@ -136,12 +150,26 @@ export function FixedPlanConfiguration({
 
   const validateForm = (): string[] => {
     const errors: string[] = [];
-    if (!planName.trim()) errors.push('Contract line name');
-    if (!billingFrequency) errors.push('Billing frequency');
-    if (!planType) errors.push('Contract line type');
+    if (!planName.trim()) {
+      errors.push(t('configuration.fixed.validation.contractLineName', {
+        defaultValue: 'Contract line name',
+      }));
+    }
+    if (!billingFrequency) {
+      errors.push(t('configuration.fixed.validation.billingFrequency', {
+        defaultValue: 'Billing frequency',
+      }));
+    }
+    if (!planType) {
+      errors.push(t('configuration.fixed.validation.contractLineType', {
+        defaultValue: 'Contract line type',
+      }));
+    }
     if (planType === 'Fixed') {
       if (baseRate === undefined || baseRate === null || Number.isNaN(baseRate) || baseRate === 0) {
-        errors.push('Base rate is required for fixed lines');
+        errors.push(t('configuration.fixed.validation.baseRateRequiredForFixedLines', {
+          defaultValue: 'Base rate is required for fixed lines',
+        }));
       }
     }
     return errors;
@@ -186,7 +214,11 @@ export function FixedPlanConfiguration({
       setIsDirty(false);
     } catch (error) {
       console.error('Error saving contract line:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save contract line';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('configuration.fixed.errors.failedToSaveContractLine', {
+            defaultValue: 'Failed to save contract line',
+          });
       setValidationErrors([errorMessage]);
     } finally {
       setIsSaving(false);
@@ -213,20 +245,35 @@ export function FixedPlanConfiguration({
   }
 
   if (!plan) {
-      return <div className="p-4">Contract line not found or invalid type.</div>; // Should not happen if error handling is correct
+      return (
+        <div className="p-4">
+          {t('configuration.fixed.errors.contractLineNotFoundOrInvalidType', {
+            defaultValue: 'Contract line not found or invalid type.',
+          })}
+        </div>
+      ); // Should not happen if error handling is correct
   }
 
   return (
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader>
-          <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Fixed)</CardTitle>
+          <CardTitle>
+            {t('configuration.fixed.cardTitle', {
+              defaultValue: 'Edit Contract Line: {{name}} (Fixed)',
+              name: plan?.contract_line_name || '...',
+            })}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {validationErrors.length > 0 && (
             <Alert variant="destructive">
               <AlertDescription>
-                <p className="font-medium mb-2">Please correct the following:</p>
+                <p className="font-medium mb-2">
+                  {t('common.validation.prefix', {
+                    defaultValue: 'Please correct the following:',
+                  })}
+                </p>
                 <ul className="list-disc list-inside space-y-1">
                   {validationErrors.map((err, idx) => (
                     <li key={idx}>{err}</li>
@@ -238,14 +285,20 @@ export function FixedPlanConfiguration({
 
           <section className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">Contract Line Basics</h3>
+              <h3 className="text-lg font-semibold">
+                {t('configuration.fixed.basics.heading', { defaultValue: 'Contract Line Basics' })}
+              </h3>
               <p className="text-sm text-muted-foreground">
-                Name the contract line and choose how it should bill by default.
+                {t('configuration.fixed.basics.description', {
+                  defaultValue: 'Name the contract line and choose how it should bill by default.',
+                })}
               </p>
             </div>
             <div className="space-y-3">
               <div>
-                <Label htmlFor="name">Contract Line Name *</Label>
+                <Label htmlFor="name">
+                  {t('configuration.fixed.basics.nameLabel', { defaultValue: 'Contract Line Name *' })}
+                </Label>
                 <Input
                   id="name"
                   value={planName}
@@ -253,12 +306,16 @@ export function FixedPlanConfiguration({
                     setPlanName(e.target.value);
                     markDirty();
                   }}
-                  placeholder="e.g. Managed Support – Gold"
+                  placeholder={t('configuration.fixed.basics.namePlaceholder', {
+                    defaultValue: 'e.g. Managed Support - Gold',
+                  })}
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="frequency">Billing Frequency *</Label>
+                <Label htmlFor="frequency">
+                  {t('configuration.fixed.basics.billingFrequencyLabel', { defaultValue: 'Billing Frequency *' })}
+                </Label>
                 <CustomSelect
                   id="frequency"
                   value={billingFrequency}
@@ -267,11 +324,15 @@ export function FixedPlanConfiguration({
                     markDirty();
                   }}
                   options={BILLING_FREQUENCY_OPTIONS}
-                  placeholder="Select billing frequency"
+                  placeholder={t('configuration.fixed.basics.billingFrequencyPlaceholder', {
+                    defaultValue: 'Select billing frequency',
+                  })}
                 />
               </div>
               <div>
-                <Label htmlFor="billing-timing">Billing Timing *</Label>
+                <Label htmlFor="billing-timing">
+                  {t('configuration.fixed.basics.billingTimingLabel', { defaultValue: 'Billing Timing *' })}
+                </Label>
                 <CustomSelect
                   id="billing-timing"
                   value={billingTiming}
@@ -281,19 +342,27 @@ export function FixedPlanConfiguration({
                   }}
                   options={BILLING_TIMING_OPTIONS.map((option) => ({
                     value: option.value,
-                    label: option.label,
+                    label: t(option.labelKey, { defaultValue: option.defaultLabel }),
                   }))}
-                  placeholder="Select billing timing"
+                  placeholder={t('configuration.fixed.basics.billingTimingPlaceholder', {
+                    defaultValue: 'Select billing timing',
+                  })}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Advance billing invoices the upcoming period at the start of each cycle.
+                  {t('configuration.fixed.basics.billingTimingHelp', {
+                    defaultValue: 'Advance billing invoices the upcoming period at the start of each cycle.',
+                  })}
                 </p>
               </div>
               <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
                 <div>
-                  <Label className="text-sm font-medium text-[rgb(var(--color-text-900))]">Cadence Owner</Label>
+                  <Label className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                    {t('configuration.fixed.basics.cadenceOwner.label', { defaultValue: 'Cadence Owner' })}
+                  </Label>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Choose which schedule defines this recurring line&apos;s service periods.
+                    {t('configuration.fixed.basics.cadenceOwner.description', {
+                      defaultValue: "Choose which schedule defines this recurring line's service periods.",
+                    })}
                   </p>
                 </div>
                 <RadioGroup
@@ -304,7 +373,11 @@ export function FixedPlanConfiguration({
                     setCadenceOwner(value as 'client' | 'contract');
                     markDirty();
                   }}
-                  options={CADENCE_OWNER_OPTIONS}
+                  options={CADENCE_OWNER_OPTIONS.map((option) => ({
+                    value: option.value,
+                    label: t(option.labelKey, { defaultValue: option.defaultLabel }),
+                    description: t(option.descriptionKey, { defaultValue: option.defaultDescription }),
+                  }))}
                 />
               </div>
             </div>
@@ -312,14 +385,21 @@ export function FixedPlanConfiguration({
 
           <section className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">Fixed Fee Settings</h3>
+              <h3 className="text-lg font-semibold">
+                {t('configuration.fixed.settings.heading', { defaultValue: 'Fixed Fee Settings' })}
+              </h3>
               <p className="text-sm text-muted-foreground">
-                Define the recurring base rate and whether partial-period coverage should adjust the charge. Service allocations can be tuned once the line is active.
+                {t('configuration.fixed.settings.description', {
+                  defaultValue:
+                    'Define the recurring base rate and whether partial-period coverage should adjust the charge. Service allocations can be tuned once the line is active.',
+                })}
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label htmlFor="base-rate">Recurring Base Rate *</Label>
+                <Label htmlFor="base-rate">
+                  {t('configuration.fixed.settings.baseRateLabel', { defaultValue: 'Recurring Base Rate *' })}
+                </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                   <Input
@@ -346,18 +426,22 @@ export function FixedPlanConfiguration({
                         setBaseRateInput((cents / 100).toFixed(2));
                       }
                     }}
-                    placeholder="0.00"
+                    placeholder={t('common.moneyPlaceholder', { defaultValue: '0.00' })}
                     className="pl-10"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  The total recurring fee for all fixed services combined
+                  {t('configuration.fixed.settings.baseRateHelp', {
+                    defaultValue: 'The total recurring fee for all fixed services combined',
+                  })}
                 </p>
               </div>
               <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="enable-proration" className="font-medium text-[rgb(var(--color-text-800))]">
-                    Adjust for Partial Periods
+                    {t('configuration.fixed.settings.adjustForPartialPeriodsLabel', {
+                      defaultValue: 'Adjust for Partial Periods',
+                    })}
                   </Label>
                   <Switch
                     id="enable-proration"
@@ -369,11 +453,18 @@ export function FixedPlanConfiguration({
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Enable this when the recurring fee should scale to the covered portion of a service period if the contract starts or ends inside that period.
+                  {t('configuration.fixed.settings.adjustForPartialPeriodsHelp', {
+                    defaultValue:
+                      'Enable this when the recurring fee should scale to the covered portion of a service period if the contract starts or ends inside that period.',
+                  })}
                 </p>
                 {enableProration && (
                   <div>
-                    <Label htmlFor="alignment">Billing Cycle Alignment</Label>
+                    <Label htmlFor="alignment">
+                      {t('configuration.fixed.settings.billingCycleAlignmentLabel', {
+                        defaultValue: 'Billing Cycle Alignment',
+                      })}
+                    </Label>
                     <CustomSelect
                       id="alignment"
                       value={billingCycleAlignment}
@@ -382,11 +473,13 @@ export function FixedPlanConfiguration({
                         markDirty();
                       }}
                       options={[
-                        { value: 'start', label: 'Start of Billing Cycle' },
-                        { value: 'end', label: 'End of Billing Cycle' },
-                        { value: 'prorated', label: 'Proportional Coverage' },
+                        { value: 'start', label: t('configuration.fixed.settings.billingCycleAlignment.options.start', { defaultValue: 'Start of Billing Cycle' }) },
+                        { value: 'end', label: t('configuration.fixed.settings.billingCycleAlignment.options.end', { defaultValue: 'End of Billing Cycle' }) },
+                        { value: 'prorated', label: t('configuration.fixed.settings.billingCycleAlignment.options.prorated', { defaultValue: 'Proportional Coverage' }) },
                       ]}
-                      placeholder="Select alignment"
+                      placeholder={t('configuration.fixed.settings.billingCycleAlignmentPlaceholder', {
+                        defaultValue: 'Select alignment',
+                      })}
                     />
                   </div>
                 )}
@@ -401,14 +494,16 @@ export function FixedPlanConfiguration({
               onClick={handleReset}
               disabled={isSaving || !isDirty}
             >
-              Reset
+              {t('common.actions.reset', { defaultValue: 'Reset' })}
             </Button>
             <Button
               id="save-plan-basics"
               onClick={handleSave}
               disabled={isSaving || !isDirty}
             >
-              {isSaving ? 'Saving…' : 'Save Changes'}
+              {isSaving
+                ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
             </Button>
           </div>
         </CardContent>
@@ -417,7 +512,9 @@ export function FixedPlanConfiguration({
       {/* Services List */}
       <Card>
           <CardHeader>
-              <CardTitle>Associated Services</CardTitle>
+              <CardTitle>
+                {t('configuration.fixed.services.associatedCardTitle', { defaultValue: 'Associated Services' })}
+              </CardTitle>
           </CardHeader>
           <CardContent>
               <FixedPlanServicesList

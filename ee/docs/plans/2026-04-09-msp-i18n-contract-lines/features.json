@@ -97,7 +97,7 @@
   {
     "id": "F020",
     "description": "FixedContractLineConfiguration.tsx: Wire useTranslation and translate card title with interpolated plan name, contract line basics section (heading, description, labels for name/frequency/billing timing/cadence owner), cadence owner radio option labels and descriptions, billing timing helper text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F021",
