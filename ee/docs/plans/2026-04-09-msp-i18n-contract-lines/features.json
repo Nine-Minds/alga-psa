@@ -197,6 +197,6 @@
   {
     "id": "F040",
     "description": "Update ROUTE_NAMESPACES to load msp/contract-lines namespace for billing-related routes",
-    "implemented": false
+    "implemented": true
   }
 ]
