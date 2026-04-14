@@ -306,7 +306,7 @@
   {
     "id": "T039",
     "description": "ServiceTierEditor.tsx: card title, 'Add Tier' button, column headers with interpolated unit, empty state, helper text, and aria-labels are all translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
