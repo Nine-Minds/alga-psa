@@ -32,7 +32,7 @@
   {
     "id": "F007",
     "description": "UsageContractLineConfiguration.tsx: Translate service pricing card (title, save error alert), accordion service summary text ('Tiered Pricing (N tiers)', 'Not Set', 'Loading...', 'Loading configuration...'), Save All Configurations button, manage services card title, empty state with helper text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F008",
