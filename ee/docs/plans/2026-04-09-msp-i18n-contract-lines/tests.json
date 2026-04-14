@@ -314,7 +314,7 @@
   {
     "id": "T040",
     "description": "ServiceTierEditor.tsx: 'Unlimited' placeholder in last tier 'To' field renders translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
