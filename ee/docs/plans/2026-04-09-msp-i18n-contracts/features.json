@@ -67,7 +67,7 @@
   {
     "id": "F014",
     "description": "Wire useTranslation('msp/contracts') in ContractDetail.tsx -- translate Client Ownership card and Client Assignment card: owner/assignment labels, status badges, date labels, PO fields, 'No client assigned' empty state, 'Ongoing' label, renewal handling section (use tenant defaults toggle, renewal mode, notice period, renewal term, ticket board/status labels)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F015",

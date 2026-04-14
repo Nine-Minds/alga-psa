@@ -38,7 +38,9 @@
       "description": "Description",
       "lastUpdated": "Last Updated",
       "name": "Name",
-      "status": "Status"
+      "no": "No",
+      "status": "Status",
+      "yes": "Yes"
     },
     "tabs": {
       "clientContracts": "Client Contracts",
@@ -110,6 +112,45 @@
       "header": "Contract Header",
       "quickActions": "Quick Actions",
       "renewalHandling": "Renewal Handling"
+    },
+    "clientAssignment": {
+      "clientContractId": "Client Contract ID: {{id}}",
+      "empty": "This contract is not assigned to a client yet.",
+      "endDate": "End Date",
+      "endDateLabel": "Assignment end date",
+      "loadingStatuses": "Loading statuses...",
+      "notRequired": "Not required",
+      "noticePeriodDays": "Notice Period (Days)",
+      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePrefix": "Notice:",
+      "renewalHandling": "Renewal Handling",
+      "renewalTermMonths": "Renewal Term (Months)",
+      "renewalTermPlaceholder": "e.g., 12",
+      "renewalTicketBoard": "Renewal Ticket Board",
+      "renewalTicketStatus": "Renewal Ticket Status",
+      "required": "Required",
+      "selectBoard": "Select board",
+      "selectBoardFirst": "Select a board first",
+      "selectRenewalMode": "Select renewal mode",
+      "selectStartDate": "Select start date",
+      "selectStatus": "Select status",
+      "startDate": "Start Date",
+      "startDateLabel": "Assignment start date",
+      "startDateLocked": "Start date cannot be changed for active contracts",
+      "title": "Client Assignment",
+      "useTenantRenewalDefaults": "Use tenant renewal defaults",
+      "usingCustomSettings": "Using custom assignment settings",
+      "usingTenantDefaults": "Using tenant defaults"
+    },
+    "clientOwnership": {
+      "assignmentStatus": "Assignment Status",
+      "clientName": "Client Name",
+      "endDate": "End Date",
+      "ownerClient": "Owner Client",
+      "required": "Required",
+      "startDate": "Start Date",
+      "systemManaged": "Ownership is system-managed for this default contract.",
+      "title": "Client Ownership"
     },
     "detailsCard": {
       "actions": {

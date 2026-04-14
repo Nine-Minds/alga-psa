@@ -84,3 +84,6 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Migrated this file’s billing-frequency select from deprecated `BILLING_FREQUENCY_OPTIONS` constant to `useBillingFrequencyOptions()` hook.
 - **(2026-04-14)** Added `contractDetail.headerCard.*` keys in `server/public/locales/en/msp/contracts.json`.
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractDetail.tsx` (pass; warnings only, no errors).
+- **(2026-04-14)** `F014` completed in `ContractDetail.tsx`: localized Client Ownership + Client Assignment sections (owner/client/status/start/end labels, empty states, `Ongoing`, PO labels + required/not-required text, and assignment action buttons). Localized renewal-handling editor labels (use-tenant-defaults toggle, renewal mode, notice period, renewal term, ticket board/status labels and placeholders) and read-only renewal summary text.
+- **(2026-04-14)** Added `contractDetail.clientOwnership.*` and `contractDetail.clientAssignment.*` key groups and `common.labels.yes|no` to `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractDetail.tsx` (pass; warnings only, no errors).
