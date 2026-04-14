@@ -282,7 +282,7 @@
   {
     "id": "T036",
     "description": "ContractLineServiceForm.tsx: dialog title and loading/error state messages render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
