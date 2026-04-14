@@ -146,7 +146,7 @@
   {
     "id": "T019",
     "description": "HourlyContractLinePresetConfiguration.tsx: error states render translated messages for not found and invalid type scenarios",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
