@@ -37,7 +37,7 @@
   {
     "id": "F008",
     "description": "UsageContractLinePresetConfiguration.tsx: Wire useTranslation and translate preset basics section (card title with interpolated preset name, 'Contract Line Preset Basics' heading, 'Contract Line Preset Name *' label, description text), Reset/Save Changes buttons",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F009",
