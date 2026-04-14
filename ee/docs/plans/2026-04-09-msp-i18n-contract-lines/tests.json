@@ -274,7 +274,7 @@
   {
     "id": "T035",
     "description": "ServiceHourlyConfigForm.tsx: user type option labels ('Technician', 'Engineer', etc.) are translated and validation errors render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
