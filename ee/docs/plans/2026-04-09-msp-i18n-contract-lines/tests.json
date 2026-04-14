@@ -258,7 +258,7 @@
   {
     "id": "T033",
     "description": "ServiceHourlyConfigForm.tsx: hourly rate, minimum billable time, and round up to nearest labels and tooltip content render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
