@@ -87,7 +87,7 @@
   {
     "id": "F018",
     "description": "ContractLines.tsx: Wire useTranslation and translate table column headers ('Contract Line Name', 'Billing Frequency', 'Contract Line Type', 'Is Custom', 'Actions'), Yes/No boolean display, action menu items ('Edit', 'Delete'), 'Contract Lines' heading, 'Add Contract Line' button text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F019",

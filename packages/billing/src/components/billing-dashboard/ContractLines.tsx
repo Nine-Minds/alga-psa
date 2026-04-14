@@ -29,12 +29,14 @@ import { ColumnDefinition } from '@alga-psa/types';
 import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from '@alga-psa/billing/constants/billing';
 import { add } from 'date-fns';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ContractLinesProps {
   initialServices: IService[];
 }
 
 const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
+  const { t } = useTranslation('msp/contract-lines');
   const router = useRouter();
   const [contractLines, setContractLines] = useState<IContractLine[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -56,7 +58,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   useEffect(() => {
     fetchContractLines();
     fetchAllServiceTypes(); // Fetch service types on mount
-  }, []);
+  }, [t]);
 
   // Effect to fetch all service types
   const fetchAllServiceTypes = async () => {
@@ -69,7 +71,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       if (fetchError instanceof Error) {
         setError(fetchError.message);
       } else {
-        setError('An unknown error occurred while fetching service types');
+        setError(t('list.errors.unknownErrorFetchingServiceTypes', {
+          defaultValue: 'An unknown error occurred while fetching service types',
+        }));
       }
     }
   };
@@ -96,7 +100,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       setError(null);
     } catch (error) {
       console.error('Error fetching contract lines:', error);
-      setError('Failed to fetch contract lines');
+      setError(t('list.errors.failedToFetchContractLines', {
+        defaultValue: 'Failed to fetch contract lines',
+      }));
     }
   };
 
@@ -115,14 +121,16 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('list.errors.failedToValidateDeletion', {
+          defaultValue: 'Failed to validate deletion. Please try again.',
+        }),
         dependencies: [],
         alternatives: []
       });
     } finally {
       setIsDeleteValidating(false);
     }
-  }, []);
+  }, [t]);
 
   const handleDeleteContractLine = (contractLine: IContractLine) => {
     setContractLineToDelete(contractLine);
@@ -142,10 +150,14 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
         return;
       }
       await fetchContractLines();
-      toast.success('Contract line deleted successfully');
+      toast.success(t('list.toast.contractLineDeletedSuccessfully', {
+        defaultValue: 'Contract line deleted successfully',
+      }));
       resetDeleteState();
     } catch (error) {
-      handleError(error, 'Failed to delete contract line');
+      handleError(error, t('list.errors.failedToDeleteContractLine', {
+        defaultValue: 'Failed to delete contract line',
+      }));
     } finally {
       setIsDeleteProcessing(false);
     }
@@ -158,7 +170,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       setError(null);
     } catch (error) {
       console.error('Error fetching contract line services:', error);
-      setError('Failed to fetch contract line services');
+      setError(t('list.errors.failedToFetchContractLineServices', {
+        defaultValue: 'Failed to fetch contract line services',
+      }));
     }
   };
 
@@ -186,7 +200,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       }
     } catch (error) {
       console.error('Error adding contract line service:', error);
-      setError('Failed to add contract line service');
+      setError(t('list.errors.failedToAddContractLineService', {
+        defaultValue: 'Failed to add contract line service',
+      }));
     }
   };
 
@@ -198,7 +214,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       setError(null);
     } catch (error) {
       console.error('Error updating contract line service:', error);
-      setError('Failed to update contract line service');
+      setError(t('list.errors.failedToUpdateContractLineService', {
+        defaultValue: 'Failed to update contract line service',
+      }));
     }
   };
 
@@ -210,32 +228,36 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       setError(null);
     } catch (error) {
       console.error('Error removing contract line service:', error);
-      setError('Failed to remove contract line service');
+      setError(t('list.errors.failedToRemoveContractLineService', {
+        defaultValue: 'Failed to remove contract line service',
+      }));
     }
   };
 
   const contractLineColumns: ColumnDefinition<IContractLine>[] = [
     {
-      title: 'Contract Line Name',
+      title: t('list.columns.contractLineName', { defaultValue: 'Contract Line Name' }),
       dataIndex: 'contract_line_name',
     },
     {
-      title: 'Billing Frequency',
+      title: t('list.columns.billingFrequency', { defaultValue: 'Billing Frequency' }),
       dataIndex: 'billing_frequency',
       render: (value) => BILLING_FREQUENCY_DISPLAY[value] || value,
     },
     {
-      title: 'Contract Line Type',
+      title: t('list.columns.contractLineType', { defaultValue: 'Contract Line Type' }),
       dataIndex: 'contract_line_type',
       render: (value) => PLAN_TYPE_DISPLAY[value] || value,
     },
     {
-      title: 'Is Custom',
+      title: t('list.columns.isCustom', { defaultValue: 'Is Custom' }),
       dataIndex: 'is_custom',
-      render: (value) => value ? 'Yes' : 'No',
+      render: (value) => value
+        ? t('common.labels.yes', { defaultValue: 'Yes' })
+        : t('common.labels.no', { defaultValue: 'No' }),
     },
     {
-      title: 'Actions',
+      title: t('list.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'contract_line_id',
       render: (value, record) => (
         <DropdownMenu>
@@ -246,7 +268,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">
+                {t('common.actions.openMenu', { defaultValue: 'Open menu' })}
+              </span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -258,7 +282,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                 setEditingPlan({...record});
               }}
             >
-              Edit
+              {t('common.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id="delete-contract-line-menu-item"
@@ -268,7 +292,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                 handleDeleteContractLine(record);
               }}
             >
-              Delete
+              {t('common.actions.delete', { defaultValue: 'Delete' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -278,7 +302,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
 
   const planServiceColumns: ColumnDefinition<IContractLineService>[] = [
     {
-      title: 'Service Name',
+      title: t('list.planServices.columns.serviceName', { defaultValue: 'Service Name' }),
       dataIndex: 'service_id',
       render: (value, record) => {
         const service = initialServices.find(s => s.service_id === value);
@@ -290,7 +314,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       },
     },
     {
-      title: 'Quantity',
+      title: t('list.planServices.columns.quantity', { defaultValue: 'Quantity' }),
       dataIndex: 'quantity',
       render: (value, record) => (
           <Input
@@ -304,7 +328,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       ),
     },
     {
-      title: 'Unit of Measure',
+      title: t('list.planServices.columns.unitOfMeasure', { defaultValue: 'Unit of Measure' }),
       dataIndex: 'service_id',
       render: (value) => {
         const service = initialServices.find(s => s.service_id === value);
@@ -324,7 +348,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       },
     },
     {
-      title: 'Custom Rate',
+      title: t('list.planServices.columns.customRate', { defaultValue: 'Custom Rate' }),
       dataIndex: 'custom_rate',
       render: (value, record) => (
         <Input
@@ -339,7 +363,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       ),
     },
     {
-      title: 'Actions',
+      title: t('list.planServices.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'service_id',
       render: (value, record) => (
         <DropdownMenu>
@@ -350,7 +374,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">
+                {t('common.actions.openMenu', { defaultValue: 'Open menu' })}
+              </span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -363,7 +389,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                 handleRemovePlanService(value);
               }}
             >
-              Remove
+              {t('common.actions.remove', { defaultValue: 'Remove' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -382,7 +408,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card size="2">
           <Box p="4">
-            <Heading as="h3" size="4" mb="4">Contract Lines</Heading>
+            <Heading as="h3" size="4" mb="4">
+              {t('list.heading', { defaultValue: 'Contract Lines' })}
+            </Heading>
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <ContractLineDialog
                 onPlanAdded={(newPlanId) => {
@@ -409,7 +437,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                 triggerButton={
                   <Button id='add-contract-line-button'>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Contract Line
+                    {t('list.actions.addContractLine', { defaultValue: 'Add Contract Line' })}
                   </Button>
                 }
               />
@@ -425,11 +453,18 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
         </Card>
         <Card size="2">
           <Box p="4">
-            <Heading as="h3" size="4" mb="4">Plan Services</Heading>
+            <Heading as="h3" size="4" mb="4">
+              {t('list.planServices.heading', { defaultValue: 'Plan Services' })}
+            </Heading>
             {selectedPlan ? (
               <>
                 <div className="flex justify-between items-center mb-4">
-                  <h4>Services for {contractLines.find(p => p.contract_line_id === selectedPlan)?.contract_line_name}</h4>
+                  <h4>
+                    {t('list.planServices.servicesFor', {
+                      defaultValue: 'Services for {{name}}',
+                      name: contractLines.find(p => p.contract_line_id === selectedPlan)?.contract_line_name,
+                    })}
+                  </h4>
                 </div>
                 <div className="overflow-x-auto">
                   <DataTable
@@ -447,7 +482,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                     }))}
                     onValueChange={setSelectedServiceToAdd}
                     value={selectedServiceToAdd || 'unassigned'}
-                    placeholder="Select service..."
+                    placeholder={t('list.planServices.selectServicePlaceholder', {
+                      defaultValue: 'Select service...',
+                    })}
                   />
                   <Button
                     id='add-button'
@@ -458,12 +495,16 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                     }}
                     disabled={!selectedServiceToAdd || selectedServiceToAdd === 'unassigned' || availableServices.length === 0}
                   >
-                    Add Service
+                    {t('list.planServices.actions.addService', { defaultValue: 'Add Service' })}
                   </Button>
                 </div>
               </>
             ) : (
-              <p>Select a contract line to manage its services</p>
+              <p>
+                {t('list.planServices.emptyStateSelectContractLine', {
+                  defaultValue: 'Select a contract line to manage its services',
+                })}
+              </p>
             )}
           </Box>
         </Card>
@@ -473,7 +514,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
         isOpen={Boolean(contractLineToDelete)}
         onClose={resetDeleteState}
         onConfirmDelete={confirmDelete}
-        entityName={contractLineToDelete?.contract_line_name || 'this contract line'}
+        entityName={contractLineToDelete?.contract_line_name || t('list.deleteDialog.defaultEntityName', {
+          defaultValue: 'this contract line',
+        })}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}
