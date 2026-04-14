@@ -126,6 +126,21 @@
       "descriptionPlaceholder": "Enter contract description",
       "title": "Contract Details"
     },
+    "headerCard": {
+      "assignmentLifecycleHint": "Live client status is controlled by the assignment lifecycle below.",
+      "assignmentStatus": "Assignment Status",
+      "billingFrequencyLabel": "Billing Frequency *",
+      "billingFrequencyPlaceholder": "Select billing frequency",
+      "customSettings": "Custom settings",
+      "expiredStatusNote": "Expired contracts cannot be changed to another status",
+      "notice": "Notice",
+      "noticeDay": "{{count}} day",
+      "noticeDays": "{{count}} days",
+      "ongoingNoEndDate": "Ongoing (no end date)",
+      "renewalHeading": "Renewal",
+      "tenantDefaults": "Tenant defaults",
+      "title": "Contract Header"
+    },
     "dialogs": {
       "delete": {
         "confirm": "Delete Contract",

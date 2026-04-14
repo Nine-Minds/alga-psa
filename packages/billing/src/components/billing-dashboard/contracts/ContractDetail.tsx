@@ -47,7 +47,7 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { fetchInvoicesByContract } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 
-import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
@@ -142,6 +142,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   renderClientDetails
 }) => {
   const { t } = useTranslation('msp/contracts');
+  const billingFrequencyOptions = useBillingFrequencyOptions();
   const searchParams = useSearchParams();
   const router = useRouter();
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
@@ -239,6 +240,18 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const isSystemManagedDefault = contract?.is_system_managed_default === true;
   const primaryAssignmentUsesTenantRenewalDefaults =
     primaryAssignment?.use_tenant_renewal_defaults !== false;
+  const formatStatusLabel = useCallback((status?: string) => {
+    if (status === 'active') return t('status.active', { defaultValue: 'Active' });
+    if (status === 'terminated') return t('status.terminated', { defaultValue: 'Terminated' });
+    if (status === 'expired') return t('status.expired', { defaultValue: 'Expired' });
+    return t('status.draft', { defaultValue: 'Draft' });
+  }, [t]);
+  const formatRenewalModeLabelInHeader = useCallback((value: unknown): string => {
+    const mode = normalizeRenewalMode(value);
+    if (mode === 'auto') return t('renewal.modes.auto', { defaultValue: 'Auto-renew' });
+    if (mode === 'none') return t('renewal.modes.none', { defaultValue: 'Non-renewing' });
+    return t('renewal.modes.manual', { defaultValue: 'Manual renewal' });
+  }, [t]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1548,14 +1561,16 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <FileText className="h-4 w-4 text-purple-600" />
-                      Contract Header
+                      {t('contractDetail.headerCard.title', { defaultValue: 'Contract Header' })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm text-[rgb(var(--color-text-700))]">
                     <div className="space-y-2">
                       <div className="space-y-1">
                         <span className="text-xs text-muted-foreground">
-                          {isLiveClientContract ? 'Assignment Status' : 'Status'}
+                          {isLiveClientContract
+                            ? t('contractDetail.headerCard.assignmentStatus', { defaultValue: 'Assignment Status' })
+                            : t('common.labels.status', { defaultValue: 'Status' })}
                         </span>
                         {isLiveClientContract ? (
                           <>
@@ -1570,16 +1585,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                       : 'default-muted'
                               }
                             >
-                              {primaryAssignmentStatus === 'active'
-                                ? 'Active'
-                                : primaryAssignmentStatus === 'terminated'
-                                  ? 'Terminated'
-                                  : primaryAssignmentStatus === 'expired'
-                                    ? 'Expired'
-                                    : 'Draft'}
+                              {formatStatusLabel(primaryAssignmentStatus)}
                             </Badge>
                             <p className="text-xs text-muted-foreground">
-                              Live client status is controlled by the assignment lifecycle below.
+                              {t('contractDetail.headerCard.assignmentLifecycleHint', {
+                                defaultValue: 'Live client status is controlled by the assignment lifecycle below.',
+                              })}
                             </p>
                           </>
                         ) : (
@@ -1589,23 +1600,31 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                               value={editStatus}
                               onValueChange={(value) => setEditStatus(value)}
                               options={[
-                                { value: 'active', label: 'Active' },
-                                { value: 'draft', label: 'Draft' },
-                                { value: 'terminated', label: 'Terminated' },
-                                ...(contract.status === 'expired' ? [{ value: 'expired', label: 'Expired' }] : [])
+                                { value: 'active', label: t('status.active', { defaultValue: 'Active' }) },
+                                { value: 'draft', label: t('status.draft', { defaultValue: 'Draft' }) },
+                                { value: 'terminated', label: t('status.terminated', { defaultValue: 'Terminated' }) },
+                                ...(contract.status === 'expired'
+                                  ? [{ value: 'expired', label: t('status.expired', { defaultValue: 'Expired' }) }]
+                                  : [])
                               ]}
                               disabled={contract.status === 'expired' || isSystemManagedDefault}
                             />
                             {contract.status === 'expired' && (
                               <p className="text-xs text-muted-foreground">
-                                Expired contracts cannot be changed to another status
+                                {t('contractDetail.headerCard.expiredStatusNote', {
+                                  defaultValue: 'Expired contracts cannot be changed to another status',
+                                })}
                               </p>
                             )}
                           </>
                         )}
                       </div>
                       <div className="space-y-1">
-                        <span className="text-xs text-muted-foreground">Billing Frequency *</span>
+                        <span className="text-xs text-muted-foreground">
+                          {t('contractDetail.headerCard.billingFrequencyLabel', {
+                            defaultValue: 'Billing Frequency *',
+                          })}
+                        </span>
                         <CustomSelect
                           id="edit-billing-frequency"
                           value={editBillingFrequency}
@@ -1613,41 +1632,49 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             setEditBillingFrequency(value);
                             clearErrorIfSubmitted();
                           }}
-                          options={BILLING_FREQUENCY_OPTIONS}
-                          placeholder="Select billing frequency"
+                          options={billingFrequencyOptions}
+                          placeholder={t('contractDetail.headerCard.billingFrequencyPlaceholder', {
+                            defaultValue: 'Select billing frequency',
+                          })}
                           className={hasAttemptedSubmit && !editBillingFrequency ? 'ring-1 ring-red-500' : ''}
                           disabled={isSystemManagedDefault}
                         />
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Currency</span>
+                      <span>{t('common.labels.currency', { defaultValue: 'Currency' })}</span>
                       <span className="font-medium">{contract.currency_code || 'USD'}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Created</span>
+                      <span>{t('common.labels.created', { defaultValue: 'Created' })}</span>
                       <span className="font-medium">{formatDate(contract.created_at)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Last Updated</span>
+                      <span>{t('common.labels.lastUpdated', { defaultValue: 'Last Updated' })}</span>
                       <span className="font-medium">{formatDate(contract.updated_at)}</span>
                     </div>
                     {primaryAssignment && (
                       <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-surface-50))] p-3 space-y-1.5">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Renewal</p>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          {t('contractDetail.headerCard.renewalHeading', { defaultValue: 'Renewal' })}
+                        </p>
                         <div className="flex items-center justify-between">
-                          <span>Mode</span>
+                          <span>{t('renewal.labels.mode', { defaultValue: 'Renewal Mode' })}</span>
                           <span className="font-medium">
                             {primaryAssignment.end_date
-                              ? formatRenewalModeLabel(primaryAssignmentRenewalMode)
-                              : 'Ongoing (no end date)'}
+                              ? formatRenewalModeLabelInHeader(primaryAssignmentRenewalMode)
+                              : t('contractDetail.headerCard.ongoingNoEndDate', {
+                                defaultValue: 'Ongoing (no end date)',
+                              })}
                           </span>
                         </div>
                         {primaryAssignment.end_date && (
                           <div className="flex items-center justify-between">
-                            <span>Source</span>
+                            <span>{t('renewal.labels.source', { defaultValue: 'Renewal Source' })}</span>
                             <span className="font-medium">
-                              {primaryAssignmentUsesTenantRenewalDefaults ? 'Tenant defaults' : 'Custom settings'}
+                              {primaryAssignmentUsesTenantRenewalDefaults
+                                ? t('contractDetail.headerCard.tenantDefaults', { defaultValue: 'Tenant defaults' })
+                                : t('contractDetail.headerCard.customSettings', { defaultValue: 'Custom settings' })}
                             </span>
                           </div>
                         )}
@@ -1655,15 +1682,23 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           primaryAssignmentRenewalMode !== 'none' &&
                           primaryAssignmentNoticePeriod !== undefined && (
                             <div className="flex items-center justify-between">
-                              <span>Notice</span>
+                              <span>{t('contractDetail.headerCard.notice', { defaultValue: 'Notice' })}</span>
                               <span className="font-medium">
-                                {primaryAssignmentNoticePeriod} day{primaryAssignmentNoticePeriod === 1 ? '' : 's'}
+                                {primaryAssignmentNoticePeriod === 1
+                                  ? t('contractDetail.headerCard.noticeDay', {
+                                    count: primaryAssignmentNoticePeriod,
+                                    defaultValue: '{{count}} day',
+                                  })
+                                  : t('contractDetail.headerCard.noticeDays', {
+                                    count: primaryAssignmentNoticePeriod,
+                                    defaultValue: '{{count}} days',
+                                  })}
                               </span>
                             </div>
                           )}
                         {primaryAssignment.end_date && primaryAssignment.decision_due_date && (
                           <div className="flex items-center justify-between">
-                            <span>Decision Due</span>
+                            <span>{t('renewal.labels.decisionDue', { defaultValue: 'Decision Due' })}</span>
                             <span className="font-medium">{formatDate(primaryAssignment.decision_due_date)}</span>
                           </div>
                         )}
@@ -1671,7 +1706,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     )}
                     {editDescription && (
                       <div>
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Description</p>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                          {t('common.labels.description', { defaultValue: 'Description' })}
+                        </p>
                         <p className="text-sm text-[rgb(var(--color-text-800))]">{editDescription}</p>
                       </div>
                     )}

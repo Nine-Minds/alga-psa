@@ -62,7 +62,7 @@
   {
     "id": "F013",
     "description": "Wire useTranslation('msp/contracts') in ContractDetail.tsx -- translate Contract Header card: status labels (Active/Draft/Terminated/Expired), billing frequency label, currency label, created/updated labels, renewal section (Mode, Source, Notice, Decision Due), expired status note",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F014",

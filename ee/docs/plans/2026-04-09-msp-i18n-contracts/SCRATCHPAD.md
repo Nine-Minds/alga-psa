@@ -80,3 +80,7 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** `F012` completed in `ContractDetail.tsx`: translated Contract Details card title, `Contract Name *` and `Description` labels, `No description` fallback, contract-name/description placeholders, and the `System-managed default` badge. Added translated aria-label/title text for edit/save/cancel icon buttons in the details card.
 - **(2026-04-14)** Added `contractDetail.detailsCard.*` keys in `server/public/locales/en/msp/contracts.json`.
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractDetail.tsx` (pass; warnings only, no errors).
+- **(2026-04-14)** `F013` completed in `ContractDetail.tsx`: localized the Contract Header card title/labels (`Status` / `Assignment Status`, billing frequency, currency, created, last updated), status badges/options (`Active`, `Draft`, `Terminated`, `Expired`), renewal summary labels (`Mode`, `Source`, `Notice`, `Decision Due`), renewal source values (`Tenant defaults`, `Custom settings`), and expired-status note.
+- **(2026-04-14)** Migrated this file’s billing-frequency select from deprecated `BILLING_FREQUENCY_OPTIONS` constant to `useBillingFrequencyOptions()` hook.
+- **(2026-04-14)** Added `contractDetail.headerCard.*` keys in `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractDetail.tsx` (pass; warnings only, no errors).
