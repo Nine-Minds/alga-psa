@@ -329,6 +329,8 @@
     "backToTemplates": "Back to Templates",
     "backToTemplatesArrow": "← Back to Templates",
     "editBasicsTitle": "Edit Template Basics",
+    "editGuidanceTitle": "Edit Template Guidance",
+    "failedToLoadTemplate": "Failed to load contract template",
     "form": {
       "currencyPlaceholder": "Select currency",
       "internalNotesLabel": "Internal Notes",
@@ -338,10 +340,28 @@
       "templateNameLabel": "Template Name *",
       "templateNamePlaceholder": "Managed Services Starter, Premium Support Bundle, etc."
     },
+    "guidance": {
+      "noCadenceProvided": "No recommended cadence provided.",
+      "recommendedCadenceLabel": "Recommended Cadence",
+      "recommendedCadencePlaceholder": "Select a cadence",
+      "tagsHint": "Tags help teams find relevant templates quickly.",
+      "tagsLabel": "Tags",
+      "tagsPlaceholder": "Comma separated (e.g., onboarding, finance)",
+      "title": "Template Guidance",
+      "usageNotesLabel": "Usage Notes",
+      "usageNotesPlaceholder": "Add guidance to help others understand how to use this template."
+    },
     "loadingTemplate": "Loading template...",
+    "servicesLabel": "Services",
     "templateBadge": "Template",
     "templateNotFound": "Contract template not found",
-    "templateSnapshotTitle": "Template Snapshot"
+    "templateSnapshotTitle": "Template Snapshot",
+    "validation": {
+      "billingFrequencyRequired": "Billing frequency is required",
+      "failedToUpdateBasics": "Failed to update template basics",
+      "failedToUpdateGuidance": "Failed to update template guidance",
+      "templateNameRequired": "Template name is required"
+    }
   },
   "quickStart": {},
   "servicePicker": {},

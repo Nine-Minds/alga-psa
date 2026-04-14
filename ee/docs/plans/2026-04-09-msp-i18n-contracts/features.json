@@ -102,7 +102,7 @@
   {
     "id": "F021",
     "description": "Wire useTranslation('msp/contracts') in ContractTemplateDetail.tsx -- translate pricing/scheduling section, billing timing options (In Arrears/In Advance), cadence owner options (Client schedule/Contract anniversary), and save/status feedback messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F022",

@@ -362,7 +362,7 @@ const ContractTemplateDetail: React.FC = () => {
           setTemplateLines([]);
           setSummary(null);
           setAssignments([]);
-          setError('Template not found');
+          setError(t('templateDetail.templateNotFound', { defaultValue: 'Contract template not found' }));
           return;
         }
 
@@ -398,13 +398,13 @@ const ContractTemplateDetail: React.FC = () => {
         setAssignments(assignmentRows);
       } catch (loadError) {
         console.error('Error loading contract template detail:', loadError);
-        setError('Failed to load contract template');
+        setError(t('templateDetail.failedToLoadTemplate', { defaultValue: 'Failed to load contract template' }));
         setAssignments([]);
       } finally {
         setIsLoading(false);
       }
     },
-    [enrichServices]
+    [enrichServices, t]
   );
 
   const resetBasicsForm = useCallback(() => {
@@ -443,12 +443,16 @@ const ContractTemplateDetail: React.FC = () => {
     }
 
     if (!basicsForm.contract_name.trim()) {
-      setBasicsError('Template name is required');
+      setBasicsError(t('templateDetail.validation.templateNameRequired', {
+        defaultValue: 'Template name is required',
+      }));
       return;
     }
 
     if (!basicsForm.billing_frequency) {
-      setBasicsError('Billing frequency is required');
+      setBasicsError(t('templateDetail.validation.billingFrequencyRequired', {
+        defaultValue: 'Billing frequency is required',
+      }));
       return;
     }
 
@@ -472,11 +476,17 @@ const ContractTemplateDetail: React.FC = () => {
       setIsEditingBasics(false);
     } catch (saveError) {
       console.error('Failed to update template basics', saveError);
-      setBasicsError(saveError instanceof Error ? saveError.message : 'Failed to update template basics');
+      setBasicsError(
+        saveError instanceof Error
+          ? saveError.message
+          : t('templateDetail.validation.failedToUpdateBasics', {
+            defaultValue: 'Failed to update template basics',
+          })
+      );
     } finally {
       setIsSavingBasics(false);
     }
-  }, [basicsForm, contract, loadTemplate]);
+  }, [basicsForm, contract, loadTemplate, t]);
 
   const handleCancelBasics = useCallback(() => {
     setBasicsError(null);
@@ -527,11 +537,17 @@ const ContractTemplateDetail: React.FC = () => {
       setIsEditingGuidance(false);
     } catch (saveError) {
       console.error('Failed to update template guidance', saveError);
-      setGuidanceError(saveError instanceof Error ? saveError.message : 'Failed to update template guidance');
+      setGuidanceError(
+        saveError instanceof Error
+          ? saveError.message
+          : t('templateDetail.validation.failedToUpdateGuidance', {
+            defaultValue: 'Failed to update template guidance',
+          })
+      );
     } finally {
       setIsSavingGuidance(false);
     }
-  }, [contract, guidanceForm, loadTemplate, templateMetadata]);
+  }, [contract, guidanceForm, loadTemplate, t, templateMetadata]);
 
   const handleCancelGuidance = useCallback(() => {
     setGuidanceError(null);
@@ -786,7 +802,9 @@ const ContractTemplateDetail: React.FC = () => {
         {isEditingGuidance && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))]">Edit Template Guidance</CardTitle>
+              <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))]">
+                {t('templateDetail.editGuidanceTitle', { defaultValue: 'Edit Template Guidance' })}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {guidanceError && (
@@ -802,20 +820,28 @@ const ContractTemplateDetail: React.FC = () => {
                 }}
               >
                 <div className="space-y-2">
-                  <Label htmlFor="template-usage-notes-inline">Usage Notes</Label>
+                  <Label htmlFor="template-usage-notes-inline">
+                    {t('templateDetail.guidance.usageNotesLabel', { defaultValue: 'Usage Notes' })}
+                  </Label>
                   <TextArea
                     id="template-usage-notes-inline"
                     value={guidanceForm.usageNotes}
                     onChange={(event) =>
                       setGuidanceForm((prev) => ({ ...prev, usageNotes: event.target.value }))
                     }
-                    placeholder="Add guidance to help others understand how to use this template."
+                    placeholder={t('templateDetail.guidance.usageNotesPlaceholder', {
+                      defaultValue: 'Add guidance to help others understand how to use this template.',
+                    })}
                     className="min-h-[96px]"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="template-recommended-cadence-inline">Recommended Cadence</Label>
+                  <Label htmlFor="template-recommended-cadence-inline">
+                    {t('templateDetail.guidance.recommendedCadenceLabel', {
+                      defaultValue: 'Recommended Cadence',
+                    })}
+                  </Label>
                     <CustomSelect
                       id="template-recommended-cadence-inline"
                       options={billingFrequencyOptions}
@@ -823,22 +849,32 @@ const ContractTemplateDetail: React.FC = () => {
                     onValueChange={(value) =>
                       setGuidanceForm((prev) => ({ ...prev, recommendedCadence: value }))
                     }
-                    placeholder="Select a cadence"
+                    placeholder={t('templateDetail.guidance.recommendedCadencePlaceholder', {
+                      defaultValue: 'Select a cadence',
+                    })}
                     allowClear
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="template-tags-inline">Tags</Label>
+                  <Label htmlFor="template-tags-inline">
+                    {t('templateDetail.guidance.tagsLabel', { defaultValue: 'Tags' })}
+                  </Label>
                   <Input
                     id="template-tags-inline"
                     value={guidanceForm.tags}
                     onChange={(event) =>
                       setGuidanceForm((prev) => ({ ...prev, tags: event.target.value }))
                     }
-                    placeholder="Comma separated (e.g., onboarding, finance)"
+                    placeholder={t('templateDetail.guidance.tagsPlaceholder', {
+                      defaultValue: 'Comma separated (e.g., onboarding, finance)',
+                    })}
                   />
-                  <p className="text-xs text-muted-foreground">Tags help teams find relevant templates quickly.</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('templateDetail.guidance.tagsHint', {
+                      defaultValue: 'Tags help teams find relevant templates quickly.',
+                    })}
+                  </p>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -849,7 +885,7 @@ const ContractTemplateDetail: React.FC = () => {
                     onClick={handleCancelGuidance}
                     disabled={isSavingGuidance}
                   >
-                    Cancel
+                    {t('common.actions.cancel', { defaultValue: 'Cancel' })}
                   </Button>
                   <Button
                     id="save-template-guidance"
@@ -857,7 +893,9 @@ const ContractTemplateDetail: React.FC = () => {
                     disabled={isSavingGuidance}
                     className="gap-2"
                   >
-                    {isSavingGuidance ? 'Saving...' : 'Save Changes'}
+                    {isSavingGuidance
+                      ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                      : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
                   </Button>
                 </div>
               </form>
@@ -886,7 +924,7 @@ const ContractTemplateDetail: React.FC = () => {
                 <span className="font-medium">{summary?.contractLineCount ?? templateLines.length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Services</span>
+                <span>{t('templateDetail.servicesLabel', { defaultValue: 'Services' })}</span>
                 <span className="font-medium">{totalServices}</span>
               </div>
               <div className="flex items-center justify-between">
@@ -940,7 +978,9 @@ const ContractTemplateDetail: React.FC = () => {
 
           <Card>
             <CardHeader className="flex items-center justify-between gap-2">
-              <CardTitle className="text-sm font-semibold text-[rgb(var(--color-text-700))]">Template Guidance</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[rgb(var(--color-text-700))]">
+                {t('templateDetail.guidance.title', { defaultValue: 'Template Guidance' })}
+              </CardTitle>
               <Button
                 id="toggle-guidance-editor"
                 size="sm"
@@ -956,25 +996,39 @@ const ContractTemplateDetail: React.FC = () => {
                 className="h-8 px-2 text-xs gap-1.5"
               >
                 <StickyNote className="h-3.5 w-3.5" />
-                {isEditingGuidance ? 'Close' : 'Edit'}
+                {isEditingGuidance
+                  ? t('common.actions.close', { defaultValue: 'Close' })
+                  : t('common.actions.edit', { defaultValue: 'Edit' })}
               </Button>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-[rgb(var(--color-text-700))]">
               <div>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">Usage Notes</span>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {t('templateDetail.guidance.usageNotesLabel', { defaultValue: 'Usage Notes' })}
+                </span>
                 <p className={usageNotes ? 'text-[rgb(var(--color-text-800))]' : 'text-muted-foreground italic'}>
-                  {usageNotes || 'Add guidance to help others understand how to use this template.'}
+                  {usageNotes || t('templateDetail.guidance.usageNotesPlaceholder', {
+                    defaultValue: 'Add guidance to help others understand how to use this template.',
+                  })}
                 </p>
               </div>
               <div>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">Recommended Cadence</span>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {t('templateDetail.guidance.recommendedCadenceLabel', {
+                    defaultValue: 'Recommended Cadence',
+                  })}
+                </span>
                 <p className={recommendedCadence ? 'text-[rgb(var(--color-text-800))]' : 'text-muted-foreground italic'}>
-                  {recommendedCadence || 'No recommended cadence provided.'}
+                  {recommendedCadence || t('templateDetail.guidance.noCadenceProvided', {
+                    defaultValue: 'No recommended cadence provided.',
+                  })}
                 </p>
               </div>
               {templateTags.length > 0 && (
                 <div>
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Tags</span>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {t('templateDetail.guidance.tagsLabel', { defaultValue: 'Tags' })}
+                  </span>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {templateTags.map((tag) => (
                       <Badge key={tag} variant="default-muted">
