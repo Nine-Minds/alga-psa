@@ -234,7 +234,7 @@
   {
     "id": "T030",
     "description": "FixedContractLineConfiguration.tsx: fixed fee settings section renders translated heading, base rate label, proration label/description, and billing cycle alignment options",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
