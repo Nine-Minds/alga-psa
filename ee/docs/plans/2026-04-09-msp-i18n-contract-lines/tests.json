@@ -34,7 +34,7 @@
   {
     "id": "T005",
     "description": "ContractLineDialog.tsx: Fixed config section renders translated alert info, 'Services & Products' label, 'Add Item' button, empty state, base rate label, and proration label",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]

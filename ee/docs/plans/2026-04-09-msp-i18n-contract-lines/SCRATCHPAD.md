@@ -153,3 +153,4 @@
 - (2026-04-13) **T002 complete**: covered by  and verified in the passing 52-test run.
 - (2026-04-13) **T003 complete**: covered by  and verified in the passing 52-test run.
 - (2026-04-13) **T004 complete**: covered by  and verified in the passing 52-test run.
+- (2026-04-13) **T005 complete**: covered by  and verified in the passing 52-test run.
