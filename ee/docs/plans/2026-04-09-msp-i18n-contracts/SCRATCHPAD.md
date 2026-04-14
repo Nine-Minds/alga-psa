@@ -91,3 +91,7 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Currency formatting cleanup: replaced all hardcoded `formatCurrencyFromMinorUnits(..., 'en-US', ...)` usages in `ContractDetail.tsx` with locale-aware `useFormatters().formatCurrency` via a `formatMinorCurrency` helper.
 - **(2026-04-14)** Added/expanded `contractDetail.quickActions.*`, `contractDetail.dialogs.*`, `contractDetail.documents.*`, and `contractDetail.invoices.*` keys in `server/public/locales/en/msp/contracts.json`.
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractDetail.tsx` (pass; warnings only, no errors).
+- **(2026-04-14)** `F016` completed in `ContractDialog.tsx`: wired `useTranslation('msp/contracts')` and localized dialog title, core form labels/placeholders (`Client`, `Contract Name`, `Billing Frequency`, `Currency`, `Start/End Date`, `Description`), renewal-settings labels/copy (`Renewal Mode`, `Use Tenant Renewal Defaults`, notice period, renewal term), and required-field validation messages.
+- **(2026-04-14)** Migrated `ContractDialog.tsx` billing-frequency select from deprecated `BILLING_FREQUENCY_OPTIONS` to `useBillingFrequencyOptions()`.
+- **(2026-04-14)** Added initial `contractDialog.title|actions|form|validation` keys to `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractDialog.tsx` (pass; warnings only, no errors).

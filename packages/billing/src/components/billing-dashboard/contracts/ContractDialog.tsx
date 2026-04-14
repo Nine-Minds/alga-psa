@@ -17,7 +17,8 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { IClient } from '@alga-psa/types';
 import { createClientContractForBilling, getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { BILLING_FREQUENCY_OPTIONS, CONTRACT_LINE_TYPE_DISPLAY } from '@alga-psa/billing/constants/billing';
+import { CONTRACT_LINE_TYPE_DISPLAY } from '@alga-psa/billing/constants/billing';
+import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { HelpCircle, Info, Plus, XCircle, ChevronDown, ChevronUp, Search, Coins } from 'lucide-react';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -26,6 +27,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { getContractLinePresetServices, getContractLinePresetFixedConfig } from '@alga-psa/billing/actions/contractLinePresetActions';
 import { IContractLinePresetService, IContractLinePresetFixedConfig } from '@alga-psa/types';
 import { getServices } from '@alga-psa/billing/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ContractLinePresetServiceWithName extends IContractLinePresetService {
   service_name?: string;
@@ -45,10 +47,12 @@ interface ContractDialogProps {
 }
 
 export function ContractDialog({ onContractSaved, editingContract, onClose, triggerButton }: ContractDialogProps) {
+  const { t } = useTranslation('msp/contracts');
+  const billingFrequencyOptions = useBillingFrequencyOptions();
   const renewalModeOptions = [
-    { value: 'manual', label: 'Manual renewal' },
-    { value: 'auto', label: 'Auto-renew' },
-    { value: 'none', label: 'Non-renewing' },
+    { value: 'manual', label: t('renewal.modes.manual', { defaultValue: 'Manual renewal' }) },
+    { value: 'auto', label: t('renewal.modes.auto', { defaultValue: 'Auto-renew' }) },
+    { value: 'none', label: t('renewal.modes.none', { defaultValue: 'Non-renewing' }) },
   ];
 
   const [open, setOpen] = useState(false);
@@ -296,19 +300,21 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
     // Validate form
     const errors: string[] = [];
     if (!clientId) {
-      errors.push('Client');
+      errors.push(t('contractDialog.validation.client', { defaultValue: 'Client' }));
     }
     if (!contractName.trim()) {
-      errors.push('Contract name');
+      errors.push(t('contractDialog.validation.contractName', { defaultValue: 'Contract name' }));
     }
     if (!billingFrequency) {
-      errors.push('Billing frequency');
+      errors.push(t('contractDialog.validation.billingFrequency', { defaultValue: 'Billing frequency' }));
     }
     if (!startDate) {
-      errors.push('Start date');
+      errors.push(t('contractDialog.validation.startDate', { defaultValue: 'Start date' }));
     }
     if (poRequired && !poNumber.trim()) {
-      errors.push('PO number (required when PO is enabled)');
+      errors.push(t('contractDialog.validation.poNumberRequired', {
+        defaultValue: 'PO number (required when PO is enabled)',
+      }));
     }
 
     const parsedNoticePeriodDays = noticePeriodDays.trim()
@@ -319,7 +325,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
       parsedNoticePeriodDays !== undefined &&
       (!Number.isFinite(parsedNoticePeriodDays) || parsedNoticePeriodDays < 0)
     ) {
-      errors.push('Notice period days must be a non-negative whole number');
+      errors.push(t('contractDialog.validation.noticePeriodInvalid', {
+        defaultValue: 'Notice period days must be a non-negative whole number',
+      }));
     }
 
     const parsedRenewalTermMonths = renewalTermMonths.trim()
@@ -331,7 +339,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
         !Number.isFinite(parsedRenewalTermMonths) ||
         parsedRenewalTermMonths <= 0
       ) {
-        errors.push('Renewal term months must be a positive whole number for auto-renew contracts');
+        errors.push(t('contractDialog.validation.renewalTermInvalid', {
+          defaultValue: 'Renewal term months must be a positive whole number for auto-renew contracts',
+        }));
       }
     }
 
@@ -438,7 +448,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
       }
     } catch (error) {
       console.error('Error saving contract:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save contract';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('contractDialog.validation.failedToSave', { defaultValue: 'Failed to save contract' });
       setValidationErrors([errorMessage]);
     }
   };
@@ -494,7 +506,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
       <Dialog
         isOpen={open || !!editingContract}
         onClose={handleClose}
-        title={editingContract ? 'Edit Contract' : 'Quick Add Contract'}
+        title={editingContract
+          ? t('contractDialog.title.edit', { defaultValue: 'Edit Contract' })
+          : t('contractDialog.title.create', { defaultValue: 'Create Contract' })}
         className="max-w-3xl max-h-[90vh]"
         disableFocusTrap
         footer={(
@@ -505,7 +519,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
               variant="outline"
               onClick={handleClose}
             >
-              Cancel
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               id="save-draft-btn"
@@ -514,7 +528,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
               onClick={(e) => void handleSubmit(e, false)}
               className={!contractName.trim() || !clientId ? 'opacity-50' : ''}
             >
-              Save as Draft
+              {t('contractDialog.actions.saveAsDraft', { defaultValue: 'Save as Draft' })}
             </Button>
             <Button
               id="save-contract-btn"
@@ -523,7 +537,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
               disabled={!contractName.trim() || !clientId}
               className={(!contractName.trim() || !clientId) ? 'opacity-50' : ''}
             >
-              {editingContract ? 'Update Contract' : 'Create Contract'}
+              {editingContract
+                ? t('contractDialog.actions.updateContract', { defaultValue: 'Update Contract' })
+                : t('contractDialog.actions.createContract', { defaultValue: 'Create Contract' })}
             </Button>
           </div>
         )}
@@ -533,7 +549,11 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>
-                  <p className="font-medium mb-2">Please fill in the required fields:</p>
+                  <p className="font-medium mb-2">
+                    {t('contractDialog.validation.requiredFields', {
+                      defaultValue: 'Please fill in the required fields:',
+                    })}
+                  </p>
                   <ul className="list-disc list-inside space-y-1">
                     {validationErrors.map((err, index) => (
                       <li key={index}>{err}</li>
@@ -545,7 +565,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
 
             {/* Client Selection */}
             <div>
-              <Label htmlFor="client">Client *</Label>
+              <Label htmlFor="client">
+                {t('contractDialog.form.clientLabel', { defaultValue: 'Client *' })}
+              </Label>
               <ClientPicker
                 id="contract-dialog-client-picker"
                 clients={clients}
@@ -558,14 +580,18 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                 onFilterStateChange={setFilterState}
                 clientTypeFilter={clientTypeFilter}
                 onClientTypeFilterChange={setClientTypeFilter}
-                placeholder="Select a client"
+                placeholder={t('contractDialog.form.clientPlaceholder', {
+                  defaultValue: 'Select a client',
+                })}
                 className="w-full"
               />
             </div>
 
             {/* Contract Name */}
             <div>
-              <Label htmlFor="contract-name">Contract Name *</Label>
+              <Label htmlFor="contract-name">
+                {t('contractDialog.form.contractNameLabel', { defaultValue: 'Contract Name *' })}
+              </Label>
               <Input
                 id="contract-name"
                 type="text"
@@ -574,7 +600,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                   setContractName(e.target.value);
                   clearErrorIfSubmitted();
                 }}
-                placeholder="e.g., Standard MSP Services"
+                placeholder={t('contractDialog.form.contractNamePlaceholder', {
+                  defaultValue: 'e.g., Standard MSP Services',
+                })}
                 required
                 className={hasAttemptedSubmit && !contractName.trim() ? 'border-red-500' : ''}
               />
@@ -582,16 +610,20 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
 
             {/* Billing Frequency */}
             <div>
-              <Label htmlFor="billing-frequency">Billing Frequency *</Label>
+              <Label htmlFor="billing-frequency">
+                {t('contractDialog.form.billingFrequencyLabel', { defaultValue: 'Billing Frequency *' })}
+              </Label>
               <CustomSelect
                 id="billing-frequency"
-                options={BILLING_FREQUENCY_OPTIONS}
+                options={billingFrequencyOptions}
                 onValueChange={(value: string) => {
                   setBillingFrequency(value);
                   clearErrorIfSubmitted();
                 }}
                 value={billingFrequency}
-                placeholder="Select billing frequency"
+                placeholder={t('contractDialog.form.billingFrequencyPlaceholder', {
+                  defaultValue: 'Select billing frequency',
+                })}
                 className="w-full"
               />
             </div>
@@ -600,7 +632,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
             <div>
               <Label htmlFor="currency" className="flex items-center gap-2">
                 <Coins className="h-4 w-4" />
-                Currency
+                {t('common.labels.currency', { defaultValue: 'Currency' })}
               </Label>
               {clientId ? (
                 <>
@@ -613,19 +645,23 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                     })()}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Currency is based on the client's default currency setting.
+                    {t('contractDialog.form.currencyHint', {
+                      defaultValue: 'Currency is based on the client\'s default currency setting.',
+                    })}
                   </p>
                 </>
               ) : (
                 <div className="flex items-center h-10 px-3 bg-muted border border-border rounded-md text-sm text-muted-foreground">
-                  Select a client first
+                  {t('contractDialog.form.selectClientFirst', { defaultValue: 'Select a client first' })}
                 </div>
               )}
             </div>
 
             {/* Start Date */}
             <div>
-              <Label htmlFor="start_date">Start Date *</Label>
+              <Label htmlFor="start_date">
+                {t('contractDialog.form.startDateLabel', { defaultValue: 'Start Date *' })}
+              </Label>
               <DatePicker
                 value={startDate ?? undefined}
                 onChange={(date) => {
@@ -639,8 +675,12 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
             {/* End Date */}
             <div>
               <div className="flex items-center gap-2">
-                <Label htmlFor="end_date">End Date (Optional)</Label>
-                <Tooltip content="Leave blank for ongoing contracts that don't have a fixed end date.">
+                <Label htmlFor="end_date">
+                  {t('contractDialog.form.endDateLabel', { defaultValue: 'End Date (Optional)' })}
+                </Label>
+                <Tooltip content={t('contractDialog.form.endDateHint', {
+                  defaultValue: 'Leave blank for ongoing contracts that don\'t have a fixed end date.',
+                })}>
                   <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
                 </Tooltip>
               </div>
@@ -653,19 +693,27 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
 
             <div className="border rounded-md p-4 space-y-3 bg-[rgb(var(--color-surface-50))]">
               <div>
-                <h4 className="text-sm font-semibold">Renewal Settings</h4>
+                <h4 className="text-sm font-semibold">
+                  {t('contractDialog.form.renewalSettingsTitle', { defaultValue: 'Renewal Settings' })}
+                </h4>
                 <p className="text-xs text-muted-foreground">
-                  Configure renewal behavior for this client contract assignment.
+                  {t('contractDialog.form.renewalSettingsDescription', {
+                    defaultValue: 'Configure renewal behavior for this client contract assignment.',
+                  })}
                 </p>
               </div>
 
               <div className="flex items-center justify-between rounded-md border border-[rgb(var(--color-border-200))] p-3">
                 <div className="space-y-1">
                   <Label htmlFor="quick-add-use-tenant-renewal-defaults" className="text-xs font-medium">
-                    Use Tenant Renewal Defaults
+                    {t('contractDialog.form.useTenantDefaultsLabel', {
+                      defaultValue: 'Use Tenant Renewal Defaults',
+                    })}
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Apply organization-level renewal mode and notice period settings.
+                    {t('contractDialog.form.useTenantDefaultsDescription', {
+                      defaultValue: 'Apply organization-level renewal mode and notice period settings.',
+                    })}
                   </p>
                 </div>
                 <Switch
@@ -677,13 +725,17 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
 
               {!useTenantRenewalDefaults && (
                 <div className="space-y-2">
-                  <Label htmlFor="quick-add-renewal-mode">Renewal Mode</Label>
+                  <Label htmlFor="quick-add-renewal-mode">
+                    {t('renewal.labels.mode', { defaultValue: 'Renewal Mode' })}
+                  </Label>
                   <CustomSelect
                     id="quick-add-renewal-mode"
                     options={renewalModeOptions}
                     value={renewalMode}
                     onValueChange={(value: string) => setRenewalMode(value as 'none' | 'manual' | 'auto')}
-                    placeholder="Select renewal mode"
+                    placeholder={t('contractDialog.form.renewalModePlaceholder', {
+                      defaultValue: 'Select renewal mode',
+                    })}
                     className="w-full"
                   />
                 </div>
@@ -691,7 +743,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
 
               {!useTenantRenewalDefaults && renewalMode !== 'none' && (
                 <div className="space-y-2">
-                  <Label htmlFor="quick-add-notice-period-days">Notice Period (Days)</Label>
+                  <Label htmlFor="quick-add-notice-period-days">
+                    {t('contractDialog.form.noticePeriodLabel', { defaultValue: 'Notice Period (Days)' })}
+                  </Label>
                   <Input
                     id="quick-add-notice-period-days"
                     type="number"
@@ -699,14 +753,18 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                     step={1}
                     value={noticePeriodDays}
                     onChange={(e) => setNoticePeriodDays(e.target.value)}
-                    placeholder="e.g., 30"
+                    placeholder={t('contractDialog.form.noticePeriodPlaceholder', {
+                      defaultValue: 'e.g., 30',
+                    })}
                   />
                 </div>
               )}
 
               {!useTenantRenewalDefaults && renewalMode === 'auto' && (
                 <div className="space-y-2">
-                  <Label htmlFor="quick-add-renewal-term-months">Renewal Term (Months)</Label>
+                  <Label htmlFor="quick-add-renewal-term-months">
+                    {t('contractDialog.form.renewalTermLabel', { defaultValue: 'Renewal Term (Months)' })}
+                  </Label>
                   <Input
                     id="quick-add-renewal-term-months"
                     type="number"
@@ -714,7 +772,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                     step={1}
                     value={renewalTermMonths}
                     onChange={(e) => setRenewalTermMonths(e.target.value)}
-                    placeholder="e.g., 12"
+                    placeholder={t('contractDialog.form.renewalTermPlaceholder', {
+                      defaultValue: 'e.g., 12',
+                    })}
                   />
                 </div>
               )}
@@ -722,12 +782,16 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
 
             {/* Description */}
             <div>
-              <Label htmlFor="contract_description">Description (Optional)</Label>
+              <Label htmlFor="contract_description">
+                {t('contractDialog.form.descriptionLabel', { defaultValue: 'Description (Optional)' })}
+              </Label>
               <TextArea
                 id="contract-description"
                 value={contractDescription}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContractDescription(e.target.value)}
-                placeholder="Add any additional notes about this contract..."
+                placeholder={t('contractDialog.form.descriptionPlaceholder', {
+                  defaultValue: 'Add any additional notes about this contract...',
+                })}
                 className="min-h-[80px]"
               />
             </div>

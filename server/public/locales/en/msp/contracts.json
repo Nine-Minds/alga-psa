@@ -268,7 +268,52 @@
   },
   "contractHeader": {},
   "contractOverview": {},
-  "contractDialog": {},
+  "contractDialog": {
+    "actions": {
+      "createContract": "Create Contract",
+      "saveAsDraft": "Save as Draft",
+      "updateContract": "Update Contract"
+    },
+    "form": {
+      "billingFrequencyLabel": "Billing Frequency *",
+      "billingFrequencyPlaceholder": "Select billing frequency",
+      "clientLabel": "Client *",
+      "clientPlaceholder": "Select a client",
+      "contractNameLabel": "Contract Name *",
+      "contractNamePlaceholder": "e.g., Standard MSP Services",
+      "currencyHint": "Currency is based on the client's default currency setting.",
+      "descriptionLabel": "Description (Optional)",
+      "descriptionPlaceholder": "Add any additional notes about this contract...",
+      "endDateHint": "Leave blank for ongoing contracts that don't have a fixed end date.",
+      "endDateLabel": "End Date (Optional)",
+      "noticePeriodLabel": "Notice Period (Days)",
+      "noticePeriodPlaceholder": "e.g., 30",
+      "renewalModePlaceholder": "Select renewal mode",
+      "renewalSettingsDescription": "Configure renewal behavior for this client contract assignment.",
+      "renewalSettingsTitle": "Renewal Settings",
+      "renewalTermLabel": "Renewal Term (Months)",
+      "renewalTermPlaceholder": "e.g., 12",
+      "selectClientFirst": "Select a client first",
+      "startDateLabel": "Start Date *",
+      "useTenantDefaultsDescription": "Apply organization-level renewal mode and notice period settings.",
+      "useTenantDefaultsLabel": "Use Tenant Renewal Defaults"
+    },
+    "title": {
+      "create": "Create Contract",
+      "edit": "Edit Contract"
+    },
+    "validation": {
+      "billingFrequency": "Billing frequency",
+      "client": "Client",
+      "contractName": "Contract name",
+      "failedToSave": "Failed to save contract",
+      "noticePeriodInvalid": "Notice period days must be a non-negative whole number",
+      "poNumberRequired": "PO number (required when PO is enabled)",
+      "renewalTermInvalid": "Renewal term months must be a positive whole number for auto-renew contracts",
+      "requiredFields": "Please fill in the required fields:",
+      "startDate": "Start date"
+    }
+  },
   "contractForm": {},
   "contractLines": {},
   "contractLineEdit": {},
