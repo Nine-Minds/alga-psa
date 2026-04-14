@@ -290,7 +290,7 @@
   {
     "id": "T037",
     "description": "ContractLinesOverview.tsx: page heading, button text, and table column headers render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
