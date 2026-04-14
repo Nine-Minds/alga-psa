@@ -98,7 +98,7 @@
   {
     "id": "T013",
     "description": "UsageContractLineConfiguration.tsx: plan basics card title includes interpolated plan name with '(Usage)' suffix, and section heading/description are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
