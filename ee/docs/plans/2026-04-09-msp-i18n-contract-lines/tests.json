@@ -202,7 +202,7 @@
   {
     "id": "T026",
     "description": "GenericContractLineServicesList.tsx: 'Add Services to Contract Line' section renders translated heading, empty state messages, service detail text, and button label with count",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
