@@ -92,7 +92,7 @@
   {
     "id": "F019",
     "description": "ContractLines.tsx: Translate plan services section ('Plan Services' heading, 'Services for {name}' subheading, 'Select a contract line to manage its services' empty state), service table column headers ('Service Name', 'Quantity', 'Unit of Measure', 'Custom Rate', 'Actions'), 'Remove' action, 'Select service...' placeholder, 'Add Service' button, toast messages, and error messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F020",
