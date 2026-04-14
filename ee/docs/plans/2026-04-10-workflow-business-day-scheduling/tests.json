@@ -1,0 +1,136 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration/integration: existing workflow schedules migrate to `day_type_filter = any` with null `business_hours_schedule_id` and continue listing/editing without regression.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F021"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Action validation: creating or updating a one-time workflow schedule with `day_type_filter` other than `any` is rejected with a clear validation error.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Action validation: a recurring workflow schedule using `business` or `non_business` filtering fails save when neither a specific override nor a tenant default business-hours schedule exists.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F020"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Action validation: a recurring workflow schedule using a specific `business_hours_schedule_id` from another tenant is rejected.",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit/integration: effective business-hours schedule resolution chooses explicit override first, then tenant default, and loads both global and schedule-specific holidays.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: workflow day classification treats holidays as non-business days even when the selected business-hours schedule is 24x7.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: workflow day classification treats a non-holiday date as a business day only when the selected schedule has an enabled entry for that local weekday.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Runtime handler: a recurring schedule filtered to business days launches normally on an eligible business day cron occurrence.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F014"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Runtime handler: a recurring schedule filtered to business days skips a holiday occurrence without launching a workflow run and records a distinct skipped state.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Runtime handler: a recurring schedule filtered to non-business days launches on a holiday occurrence and skips an ordinary business-day occurrence.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Runtime handler: a filtered recurring schedule whose explicit/default business-hours schedule can no longer be resolved records an actionable runtime error and does not launch a workflow run.",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "UI integration: the recurring workflow schedule dialog shows `Run on` controls, reveals calendar-source controls only for filtered recurring schedules, and populates specific-schedule options from tenant business-hours schedules.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F018",
+      "F019"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "UI integration: save-time validation errors for missing/invalid business-hours schedule configuration are surfaced inline in the workflow schedule dialog.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "API integration: schedule list/detail responses include the persisted day filter and business-hours schedule override fields for create/edit round-trips.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Unit/API integration: bounded next-eligible-run search returns the next qualifying occurrence for filtered recurring schedules and returns null when no eligible occurrence is found within the cap.",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F024",
+      "F025"
+    ]
+  }
+]

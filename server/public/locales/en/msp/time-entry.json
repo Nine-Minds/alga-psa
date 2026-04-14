@@ -28,7 +28,8 @@
       "copyToAnotherDay": "Copy to another day",
       "viewDetails": "View details",
       "manageTimePeriods": "Manage Time Periods",
-      "selectWorkItem": "Select Work Item"
+      "selectWorkItem": "Select Work Item",
+      "clearFilter": "Clear filter"
     },
     "states": {
       "inProgress": "In Progress",
@@ -165,7 +166,8 @@
       "next": "Next",
       "pageInfo": "Page {{current}} of {{total}} ({{records}} total records)"
     },
-    "interactionType": "{{type}} • {{client}}"
+    "interactionType": "{{type}} • {{client}}",
+    "currentSelection": "Current work item"
   },
   "timeSheetHeader": {
     "title": "Time Sheet",
@@ -329,6 +331,11 @@
     "dayGroup": {
       "entryOne": "{{count}} entry",
       "entryOther": "{{count}} entries"
+    },
+    "focusFilter": {
+      "summary": "Showing {{count}} entries for {{workItem}} on {{date}}",
+      "description": "Only entries from the selected grid cell are visible.",
+      "backToGrid": "Back to grid"
     }
   },
   "selectedWorkItem": {

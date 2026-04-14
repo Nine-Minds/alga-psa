@@ -389,6 +389,40 @@ describe('recurring billing run actions', () => {
     );
   });
 
+  it('T010: grouped recurring runs continue processing eligible windows when one target fails with an approval blocker', async () => {
+    const blockedTarget = buildContractCadenceTarget({ contractLineId: 'line-blocked' });
+    const readyTarget = buildContractCadenceTarget({ contractLineId: 'line-ready' });
+
+    mocks.generateInvoiceForSelectionInputs
+      .mockRejectedValueOnce(new Error('Blocked until approval: 2 unapproved entries.'))
+      .mockResolvedValueOnce({ invoice_id: 'invoice-ready' });
+
+    const result = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [
+        {
+          groupKey: 'child-selection:blocked',
+          selectorInputs: [blockedTarget.selectorInput],
+        },
+        {
+          groupKey: 'child-selection:ready',
+          selectorInputs: [readyTarget.selectorInput],
+        },
+      ],
+    });
+
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({
+      invoicesCreated: 1,
+      failedCount: 1,
+      failures: [
+        expect.objectContaining({
+          executionIdentityKey: blockedTarget.executionWindow.identityKey,
+          errorMessage: 'Blocked until approval: 2 unapproved entries.',
+        }),
+      ],
+    });
+  });
+
   it('skips duplicate recurring invoices without marking the canonical recurring run failed', async () => {
     const duplicateInvoiceError = Object.assign(
       new Error('Invoice already exists for this recurring execution window'),
@@ -654,8 +688,8 @@ describe('recurring billing run actions', () => {
     expect(targets[0]).toMatchObject({
       clientId: 'client-1',
       clientName: 'Acme',
-      selectorInput: groupedSelectorInput,
-      executionWindow: groupedSelectorInput.executionWindow,
+      selectorInput: firstMember.selectorInput,
+      executionWindow: firstMember.executionWindow,
     });
   });
 

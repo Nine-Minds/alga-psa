@@ -13,6 +13,7 @@ import { LayoutGrid, List, ChevronDown, ChevronUp } from 'lucide-react';
 import { ActivityFilters as ActivityFiltersType, ActivityType } from '@alga-psa/types';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { Card, CardHeader } from '@alga-psa/ui/components/Card';
+import { DEFAULT_TABLE_TYPES } from './constants';
 
 export function UserActivitiesDashboard() {
   // Define view mode type
@@ -25,7 +26,7 @@ export function UserActivitiesDashboard() {
   } = useUserPreference<UserActivitiesViewMode>(
     'activitiesDashboardViewMode',
     {
-      defaultValue: 'cards',
+      defaultValue: 'table',
       localStorageKey: 'activitiesDashboardViewMode',
       debounceMs: 300
     }
@@ -63,8 +64,8 @@ export function UserActivitiesDashboard() {
 
   // Determine the filters to apply to the table
   const currentTableFilters: ActivityFiltersType = tableInitialFilters || {
-    types: [], // Default: Load all activity types
-    isClosed: false // Default: Only show open activities
+    types: DEFAULT_TABLE_TYPES,
+    isClosed: false
   };
 
   // Table view content - Defined before use and memoized to prevent unnecessary re-renders

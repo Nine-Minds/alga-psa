@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -497,9 +497,39 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
         title={editingContract ? 'Edit Contract' : 'Quick Add Contract'}
         className="max-w-3xl max-h-[90vh]"
         disableFocusTrap
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-contract-btn"
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="save-draft-btn"
+              type="button"
+              variant="secondary"
+              onClick={(e) => void handleSubmit(e, false)}
+              className={!contractName.trim() || !clientId ? 'opacity-50' : ''}
+            >
+              Save as Draft
+            </Button>
+            <Button
+              id="save-contract-btn"
+              type="button"
+              onClick={() => (document.getElementById('contract-dialog-form') as HTMLFormElement | null)?.requestSubmit()}
+              disabled={!contractName.trim() || !clientId}
+              className={(!contractName.trim() || !clientId) ? 'opacity-50' : ''}
+            >
+              {editingContract ? 'Update Contract' : 'Create Contract'}
+            </Button>
+          </div>
+        )}
       >
-        <DialogContent className="overflow-y-auto max-h-[calc(90vh-120px)]">
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <DialogContent>
+          <form id="contract-dialog-form" onSubmit={handleSubmit} className="space-y-4" noValidate>
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>
@@ -1351,33 +1381,6 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
               )}
             </div>
 
-            <DialogFooter>
-              <Button
-                id="cancel-contract-btn"
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-              >
-                Cancel
-              </Button>
-              <Button
-                id="save-draft-btn"
-                type="button"
-                variant="secondary"
-                onClick={(e) => void handleSubmit(e, false)}
-                className={!contractName.trim() || !clientId ? 'opacity-50' : ''}
-              >
-                Save as Draft
-              </Button>
-              <Button
-                id="save-contract-btn"
-                type="submit"
-                disabled={!contractName.trim() || !clientId}
-                className={(!contractName.trim() || !clientId) ? 'opacity-50' : ''}
-              >
-                {editingContract ? 'Update Contract' : 'Create Contract'}
-              </Button>
-            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

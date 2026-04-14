@@ -189,7 +189,9 @@
     },
     "header": {
       "title": "Ihren ersten Dienst erstellen",
-      "description": "Fügen Sie einen Dienst hinzu und wählen Sie aus, wie er abgerechnet werden soll. Der Diensttyp identifiziert die Dienstkategorie, während der Abrechnungsmodus das Preisverhalten steuert."
+      "description": "Fügen Sie einen Dienst hinzu und wählen Sie aus, wie er abgerechnet werden soll. Der Diensttyp identifiziert die Dienstkategorie, während der Abrechnungsmodus das Preisverhalten steuert.",
+      "serviceTitle": "Erstellen Sie Ihre erste Leistung",
+      "serviceDescription": "Fügen Sie eine Leistung hinzu und wählen Sie, wie sie abgerechnet werden soll. Der Leistungstyp identifiziert die Leistungskategorie, während der Abrechnungsmodus das Preisverhalten steuert."
     },
     "created": {
       "title": "Dienst erfolgreich erstellt!",
@@ -217,6 +219,10 @@
       "defaultRate": {
         "label": "Standardtarif",
         "placeholder": "150"
+      },
+      "defaultCurrency": {
+        "label": "Standardwährung *",
+        "description": "Diese Währung wird als Standard für alle Abrechnungen verwendet – Leistungen, Verträge, Angebote und Rechnungen. Sie können sie später pro Kunde überschreiben."
       }
     },
     "billingMethods": {

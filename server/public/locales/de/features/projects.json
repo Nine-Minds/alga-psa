@@ -33,7 +33,15 @@
     "createdAt": "Erstellt am",
     "updatedAt": "Aktualisiert am",
     "assignedTeam": "Zugewiesenes Team",
-    "phase": "Phase"
+    "phase": "Phase",
+    "priorityLevel": "Prioritätsstufe",
+    "seeLess": "Weniger anzeigen",
+    "seeMore": "Mehr anzeigen",
+    "checklistItems": "Checklisten-Elemente",
+    "of": "von",
+    "complete": "abgeschlossen",
+    "additionalAgents": "Zusätzliche Agenten",
+    "unassigned": "Nicht zugewiesen"
   },
   "phases": {
     "title": "Projektphasen",
@@ -96,7 +104,8 @@
       "projectManager": "Project Manager",
       "tags": "Tags",
       "actions": "Actions"
-    }
+    },
+    "unknownUser": "Unbekannt"
   },
   "quickAdd": {
     "title": "Neues Projekt hinzufügen",
@@ -204,6 +213,7 @@
     "moveTaskTitle": "Aufgabe verschieben",
     "confirmMoveTaskMessage": "Are you sure you want to move task \"{{taskName}}\" from phase \"{{sourcePhase}}\" to \"{{targetPhase}}\"?",
     "moveTaskFailed": "Failed to move task. Please try again.",
+    "loading": "Wird geladen...",
     "loadingListView": "Listenansicht wird geladen...",
     "importSuccess": "{{phases}} Phasen und {{tasks}} Aufgaben importiert",
     "importFailed": "Import failed: {{error}}",
@@ -642,7 +652,8 @@
       "taskPlaceholder": "Aufgabe auswählen",
       "linkedSuccess": "Ticket erfolgreich mit Aufgabe verknüpft",
       "linking": "Linking...",
-      "confirm": "Link"
+      "confirm": "Link",
+      "linkTicketError": "Ticket konnte nicht verknüpft werden"
     },
     "prefillFromTicket": {
       "title": "Aus Ticket vorausfüllen",
@@ -787,7 +798,9 @@
       "order": "Order",
       "this_status": "this status",
       "last_closed_error": "Mindestens ein Status muss als geschlossen markiert bleiben",
-      "last_closed_delete_error": "Der letzte geschlossene Status für diesen Typ kann nicht gelöscht werden."
+      "last_closed_delete_error": "Der letzte geschlossene Status für diesen Typ kann nicht gelöscht werden.",
+      "addStatus": "Neuen Status hinzufügen",
+      "add_from_library": "Status hinzufügen"
     }
   },
   "templates": {
@@ -1322,5 +1335,10 @@
     "duplicateName": "Ein Status mit diesem Namen existiert bereits",
     "createdSuccess": "Status \"{{name}}\" erfolgreich erstellt",
     "createFailed": "Status konnte nicht erstellt werden"
+  },
+  "dependencies": {
+    "dependsOn": "Abhängig von",
+    "unknownTask": "Unbekannte Aufgabe",
+    "blocks": "Blockiert"
   }
 }

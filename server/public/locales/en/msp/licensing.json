@@ -102,6 +102,11 @@
       "totalQuantity": "This sets your total subscription quantity (not an addition to current licenses)",
       "increasingImmediate": "Increasing licenses: Immediate access with prorated charge",
       "billedMonthly": "Licenses are billed monthly and can be canceled anytime"
+    },
+    "solo": {
+      "title": "Solo includes one user",
+      "description": "The Solo plan is designed for a single user and does not support adding licenses. Upgrade to Pro to add more users to your team.",
+      "upgradeCta": "Upgrade to Pro"
     }
   },
   "removalModal": {

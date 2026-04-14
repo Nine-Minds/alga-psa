@@ -8,6 +8,7 @@ import {
   registerWorkflowScheduleJobRunner,
   resetWorkflowScheduleJobRunner
 } from '@alga-psa/workflows/lib/jobRunnerProvider';
+import { resolveWorkflowBusinessDaySettings } from '@alga-psa/workflows/lib/workflowBusinessDayScheduling';
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
 
 const require = createRequire(import.meta.url);
@@ -49,7 +50,8 @@ async function applyWorkflowScheduleMigrations(connection: Knex): Promise<void> 
   const repoRoot = path.resolve(process.cwd(), '..', '..');
   for (const migrationName of [
     '20260307200000_create_workflow_schedule_tables.cjs',
-    '20260308130000_expand_workflow_schedule_for_external_schedules.cjs'
+    '20260308130000_expand_workflow_schedule_for_external_schedules.cjs',
+    '20260410120000_add_workflow_schedule_business_day_fields.cjs'
   ]) {
     const migration = require(path.resolve(repoRoot, 'ee', 'server', 'migrations', migrationName));
     await migration.up(connection);
@@ -113,6 +115,43 @@ async function seedWorkflow(params?: {
   return { workflowId, publishedVersion };
 }
 
+async function seedBusinessHoursSchedule(params: {
+  tenant: string;
+  name: string;
+  isDefault?: boolean;
+  is24x7?: boolean;
+  enabledWeekdays?: number[];
+}): Promise<string> {
+  const scheduleId = uuidv4();
+  await db('business_hours_schedules').insert({
+    tenant: params.tenant,
+    schedule_id: scheduleId,
+    schedule_name: params.name,
+    timezone: 'UTC',
+    is_default: Boolean(params.isDefault),
+    is_24x7: Boolean(params.is24x7),
+    created_at: db.fn.now(),
+    updated_at: db.fn.now()
+  });
+
+  const weekdays = params.enabledWeekdays ?? [1, 2, 3, 4, 5];
+  if (weekdays.length > 0) {
+    await db('business_hours_entries').insert(
+      weekdays.map((day) => ({
+        tenant: params.tenant,
+        entry_id: uuidv4(),
+        schedule_id: scheduleId,
+        day_of_week: day,
+        start_time: '09:00',
+        end_time: '17:00',
+        is_enabled: true
+      }))
+    );
+  }
+
+  return scheduleId;
+}
+
 describe('Workflow external schedules actions – DB integration', () => {
   const HOOK_TIMEOUT = 180_000;
 
@@ -149,6 +188,9 @@ describe('Workflow external schedules actions – DB integration', () => {
     registerWorkflowScheduleJobRunner(async () => runner);
 
     await db('tenant_workflow_schedule').delete().catch(() => undefined);
+    await db('holidays').delete().catch(() => undefined);
+    await db('business_hours_entries').delete().catch(() => undefined);
+    await db('business_hours_schedules').delete().catch(() => undefined);
     await db('workflow_definition_versions').delete().catch(() => undefined);
     await db('workflow_definitions').delete().catch(() => undefined);
   });
@@ -256,6 +298,105 @@ describe('Workflow external schedules actions – DB integration', () => {
     expect(result.payload_json).toEqual({});
     expect(result.cron).toBe('0 2 * * *');
     expect(result.timezone).toBe('UTC');
+    expect(result.day_type_filter).toBe('any');
+    expect(result.business_hours_schedule_id).toBeNull();
+  });
+
+  it('T005: business-hours resolution prefers explicit override, otherwise tenant default, and includes global + schedule-specific holidays', async () => {
+    const defaultScheduleId = await seedBusinessHoursSchedule({
+      tenant: tenantId,
+      name: 'Default calendar',
+      isDefault: true,
+      enabledWeekdays: [1, 2, 3, 4, 5]
+    });
+    const overrideScheduleId = await seedBusinessHoursSchedule({
+      tenant: tenantId,
+      name: 'Override calendar',
+      enabledWeekdays: [1, 2, 3, 4, 5]
+    });
+
+    await db('holidays').insert([
+      {
+        tenant: tenantId,
+        holiday_id: uuidv4(),
+        schedule_id: null,
+        holiday_name: 'Global holiday',
+        holiday_date: '2026-12-25',
+        is_recurring: false,
+        created_at: db.fn.now()
+      },
+      {
+        tenant: tenantId,
+        holiday_id: uuidv4(),
+        schedule_id: overrideScheduleId,
+        holiday_name: 'Override holiday',
+        holiday_date: '2026-12-26',
+        is_recurring: false,
+        created_at: db.fn.now()
+      }
+    ]);
+
+    const overrideResolution = await resolveWorkflowBusinessDaySettings(db, {
+      tenantId,
+      dayTypeFilter: 'business',
+      businessHoursScheduleId: overrideScheduleId
+    });
+    expect(overrideResolution.ok).toBe(true);
+    if (overrideResolution.ok) {
+      expect(overrideResolution.value?.scheduleId).toBe(overrideScheduleId);
+      expect(overrideResolution.value?.source).toBe('override');
+      expect(overrideResolution.value?.holidays.map((holiday) => holiday.holiday_date).sort()).toEqual([
+        '2026-12-25',
+        '2026-12-26'
+      ]);
+    }
+
+    const defaultResolution = await resolveWorkflowBusinessDaySettings(db, {
+      tenantId,
+      dayTypeFilter: 'business',
+      businessHoursScheduleId: null
+    });
+    expect(defaultResolution.ok).toBe(true);
+    if (defaultResolution.ok) {
+      expect(defaultResolution.value?.scheduleId).toBe(defaultScheduleId);
+      expect(defaultResolution.value?.source).toBe('tenant_default');
+      expect(defaultResolution.value?.holidays.map((holiday) => holiday.holiday_date)).toEqual(['2026-12-25']);
+    }
+  });
+
+  it('T014: list/get include day-filter and business-hours override fields for schedule round-trips', async () => {
+    const overrideScheduleId = await seedBusinessHoursSchedule({
+      tenant: tenantId,
+      name: 'Roundtrip schedule',
+      enabledWeekdays: [1, 2, 3, 4, 5]
+    });
+
+    const { workflowId } = await seedWorkflow({ name: 'Business day workflow' });
+    const created = await createWorkflowScheduleAction({
+      workflowId,
+      name: 'Business day recurring',
+      triggerType: 'recurring',
+      cron: '0 9 * * *',
+      timezone: 'UTC',
+      dayTypeFilter: 'business',
+      businessHoursScheduleId: overrideScheduleId,
+      payload: {},
+      enabled: true
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const fetched = await getWorkflowScheduleAction({ scheduleId: created.schedule.id });
+    expect(fetched.day_type_filter).toBe('business');
+    expect(fetched.business_hours_schedule_id).toBe(overrideScheduleId);
+    expect(fetched.effective_business_hours_schedule_id).toBe(overrideScheduleId);
+    expect(fetched.business_hours_schedule_source).toBe('override');
+
+    const listed = await listWorkflowSchedulesAction({ workflowId });
+    expect(listed.items).toHaveLength(1);
+    expect(listed.items[0].day_type_filter).toBe('business');
+    expect(listed.items[0].business_hours_schedule_id).toBe(overrideScheduleId);
+    expect(listed.items[0].effective_business_hours_schedule_id).toBe(overrideScheduleId);
   });
 
   it('T010: create succeeds for a published workflow with pinned schema and valid recurring payload', async () => {
@@ -642,5 +783,55 @@ describe('Workflow external schedules actions – DB integration', () => {
       .where({ tenant_id: tenantId, name: 'Rollback invalid payload' })
       .select('*');
     expect(rows).toHaveLength(0);
+  });
+
+  it('T015: bounded next-eligible preview returns the next qualifying occurrence or null when none exists within the cap', async () => {
+    const eligibleScheduleId = await seedBusinessHoursSchedule({
+      tenant: tenantId,
+      name: 'Eligible weekdays',
+      isDefault: true,
+      enabledWeekdays: [1]
+    });
+    const impossibleScheduleId = await seedBusinessHoursSchedule({
+      tenant: tenantId,
+      name: 'Never eligible',
+      enabledWeekdays: []
+    });
+    const { workflowId } = await seedWorkflow({ name: 'Bounded preview workflow' });
+
+    const eligible = await createWorkflowScheduleAction({
+      workflowId,
+      name: 'Monday-only business day',
+      triggerType: 'recurring',
+      cron: '0 9 * * *',
+      timezone: 'UTC',
+      dayTypeFilter: 'business',
+      businessHoursScheduleId: eligibleScheduleId,
+      payload: {},
+      enabled: true
+    });
+    expect(eligible.ok).toBe(true);
+    if (!eligible.ok) return;
+
+    const impossible = await createWorkflowScheduleAction({
+      workflowId,
+      name: 'No enabled weekdays',
+      triggerType: 'recurring',
+      cron: '0 9 * * *',
+      timezone: 'UTC',
+      dayTypeFilter: 'business',
+      businessHoursScheduleId: impossibleScheduleId,
+      payload: {},
+      enabled: true
+    });
+    expect(impossible.ok).toBe(true);
+    if (!impossible.ok) return;
+
+    const listResult = await listWorkflowSchedulesAction({ workflowId });
+    const eligibleRow = listResult.items.find((item: any) => item.id === eligible.schedule.id);
+    const impossibleRow = listResult.items.find((item: any) => item.id === impossible.schedule.id);
+
+    expect(typeof eligibleRow?.next_eligible_fire_at).toBe('string');
+    expect(impossibleRow?.next_eligible_fire_at).toBeNull();
   });
 });

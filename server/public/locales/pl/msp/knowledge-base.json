@@ -285,5 +285,8 @@
       "reviewOverdue": "Termin przeglądu przypadał {{date}}",
       "reviewDue": "Termin przeglądu {{date}}"
     }
+  },
+  "common": {
+    "done": "Gotowe"
   }
 }

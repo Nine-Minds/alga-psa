@@ -604,11 +604,21 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       </div>
 
       {showLinkTicketDialog && (
-        <Dialog 
-          isOpen={showLinkTicketDialog} 
+        <Dialog
+          isOpen={showLinkTicketDialog}
           onClose={() => setShowLinkTicketDialog(false)}
           title={linkT('linkExistingTitle', 'Link Existing Ticket')}
           className="max-w-xl"
+          footer={
+            <div className="flex justify-end space-x-2">
+              <Button id="cancel-link-dialog-button" variant="ghost" onClick={() => setShowLinkTicketDialog(false)}>
+                {t('common:actions.cancel', 'Cancel')}
+              </Button>
+              <Button id="confirm-link-button" onClick={onLinkTicket} disabled={!selectedTicketId}>
+                {linkT('linkTicket', 'Link Ticket')}
+              </Button>
+            </div>
+          }
         >
           <DialogContent>
             <div className="relative">
@@ -783,14 +793,6 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                       />
                     </div>
 
-                    <div className="flex justify-end space-x-2 mt-6">
-                      <Button id="cancel-link-dialog-button" variant="ghost" onClick={() => setShowLinkTicketDialog(false)}>
-                        {t('common:actions.cancel', 'Cancel')}
-                      </Button>
-                      <Button id="confirm-link-button" onClick={onLinkTicket} disabled={!selectedTicketId}>
-                        {linkT('linkTicket', 'Link Ticket')}
-                      </Button>
-                  </div>
                 </div>
               </div>
             </div>

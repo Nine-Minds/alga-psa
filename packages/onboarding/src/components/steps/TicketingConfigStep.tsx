@@ -30,7 +30,7 @@ import { createBoardTicketStatus, updateBoardTicketStatus } from '@alga-psa/tick
 import { createPriority } from '@alga-psa/reference-data/actions';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -3488,6 +3488,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         title={t('ticketingConfigStep.itil.title', {
           defaultValue: 'ITIL Standards Reference'
         })}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="close-itil-info" onClick={() => setShowItilInfoModal(false)}>
+              {t('common.actions.close', {
+                defaultValue: 'Close'
+              })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent className="max-w-4xl">
           <div className="space-y-6">
@@ -3662,13 +3671,6 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button id="close-itil-info" onClick={() => setShowItilInfoModal(false)}>
-            {t('common.actions.close', {
-              defaultValue: 'Close'
-            })}
-          </Button>
-        </DialogFooter>
       </Dialog>
       <DeleteEntityDialog
         id="delete-board-dialog"

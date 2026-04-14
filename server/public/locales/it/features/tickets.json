@@ -37,7 +37,9 @@
     "noSla": "Nessun SLA",
     "onTrack": "In linea",
     "breached": "Violato",
-    "paused": "In pausa"
+    "paused": "In pausa",
+    "allResponseStatuses": "Tutti gli stati di risposta",
+    "responseStatus": "Stato risposta"
   },
   "create": {
     "title": "Crea ticket di supporto",
@@ -189,7 +191,8 @@
     "failedToUpdateComment": "Impossibile aggiornare il commento",
     "failedToDeleteComment": "Impossibile eliminare il commento",
     "deleteOwnCommentError": "Puoi eliminare solo i tuoi commenti",
-    "failedToUpdateTicketStatus": "Impossibile aggiornare lo stato del ticket"
+    "failedToUpdateTicketStatus": "Impossibile aggiornare lo stato del ticket",
+    "noTitle": "Nessun titolo"
   },
   "conversation": {
     "comments": "Commenti",
@@ -230,7 +233,8 @@
     "deleteCommentAriaLabel": "Elimina commento",
     "inboundChildReplies": "Risposte in entrata su ticket secondari (sola lettura)",
     "childTicket": "Ticket secondario",
-    "ticketPrefix": "Ticket {{number}}"
+    "ticketPrefix": "Ticket {{number}}",
+    "clipboardDraftCancelMessage": "Questa bozza include immagini incollate che sono già state caricate come documenti del ticket. Mantenerle o eliminarle definitivamente?"
   },
   "responseState": {
     "awaitingYourResponse": "In attesa della tua risposta",
@@ -434,7 +438,11 @@
       "selectMasterTicket": "Seleziona ticket master...",
       "syncUpdates": "Sincronizza gli aggiornamenti dal master ai figli (risposte pubbliche + modifiche al flusso di lavoro)",
       "syncUpdatesHelp": "I ticket figli mantengono il loro stato attuale quando vengono raggruppati. I campi del flusso di lavoro sono bloccati sui figli per impostazione predefinita. Le note interne restano sul master.",
-      "childrenDescription": "I secondari mantengono il loro stato attuale; i campi del workflow sono bloccati sui secondari. Le risposte in entrata dei secondari sono mostrate sotto in sola lettura."
+      "childrenDescription": "I secondari mantengono il loro stato attuale; i campi del workflow sono bloccati sui secondari. Le risposte in entrata dei secondari sono mostrate sotto in sola lettura.",
+      "checkingMasters": "Verifica dei raggruppamenti esistenti...",
+      "existingMasterSuffix": "(master esistente)",
+      "existingMasterLocked": "Un ticket selezionato è già un master di raggruppamento. Verrà usato come master; gli altri saranno aggiunti come figli.",
+      "multipleExistingMasters": "Più ticket selezionati sono già master di raggruppamento ({{count}}). Annulla il raggruppamento di tutti tranne uno prima di raggruppare."
     },
     "auth": {
       "moveRequired": "Devi aver effettuato l'accesso per spostare i ticket",
@@ -760,7 +768,8 @@
       "columns": {
         "sla": "SLA",
         "createdBy": "Creato da",
-        "actions": "Azioni"
+        "actions": "Azioni",
+        "tags": "Tag"
       },
       "requiredSuffix": "(obbligatorio)",
       "tagsUnderTitle": "Mostra sotto il titolo",
@@ -1021,5 +1030,22 @@
     "minutes": "minuti",
     "invalidDateTime": "Data/ora non valida",
     "declined": "Rifiutato"
+  },
+  "categories": {
+    "itilBadge": "ITIL"
+  },
+  "tickets": {
+    "conversation": {
+      "closeStatus": "Stato di chiusura",
+      "noStatusChange": "Non modificare lo stato"
+    }
+  },
+  "common": {
+    "continueEditing": "Continua modifica"
+  },
+  "details": {
+    "bundle": {
+      "childrenDescription": "Ticket figli raggruppati in questo ticket master"
+    }
   }
 }

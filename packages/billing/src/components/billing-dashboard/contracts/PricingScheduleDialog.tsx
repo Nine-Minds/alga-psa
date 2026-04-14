@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -143,9 +143,30 @@ export function PricingScheduleDialog({
       onClose={onClose}
       title={schedule ? 'Edit Pricing Schedule' : 'Add Pricing Schedule'}
       className="max-w-lg"
+      footer={(
+        <div className="flex justify-end space-x-2">
+          <Button
+            id="cancel-pricing-schedule-btn"
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isSaving}
+          >
+            Cancel
+          </Button>
+          <Button
+            id="save-pricing-schedule-btn"
+            type="button"
+            onClick={() => (document.getElementById('pricing-schedule-form') as HTMLFormElement | null)?.requestSubmit()}
+            disabled={isSaving}
+          >
+            {isSaving ? 'Saving...' : schedule ? 'Update Schedule' : 'Add Schedule'}
+          </Button>
+        </div>
+      )}
     >
       <DialogContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="pricing-schedule-form" onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -277,24 +298,6 @@ export function PricingScheduleDialog({
             />
           </div>
 
-          <DialogFooter>
-            <Button
-              id="cancel-pricing-schedule-btn"
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
-            <Button
-              id="save-pricing-schedule-btn"
-              type="submit"
-              disabled={isSaving}
-            >
-              {isSaving ? 'Saving...' : schedule ? 'Update Schedule' : 'Add Schedule'}
-            </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

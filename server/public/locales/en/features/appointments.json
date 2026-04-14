@@ -67,7 +67,8 @@
     "loadSlotsFailed": "Failed to load available time slots. Please try again.",
     "createFailed": "Failed to create appointment request. Please try again.",
     "updateFailed": "Failed to update appointment request. Please try again.",
-    "loadFailed": "Failed to load appointments. Please try again."
+    "loadFailed": "Failed to load appointments. Please try again.",
+    "notFound": "Appointment request not found"
   },
   "messages": {
     "requestSuccess": "Appointment request submitted successfully!",

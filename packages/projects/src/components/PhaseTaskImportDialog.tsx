@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -529,12 +529,117 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   const requiresConfirmation = totalTasks >= LARGE_IMPORT_THRESHOLD;
   const canProceedWithImport = !requiresConfirmation || importConfirmed;
 
+  let footer: React.ReactNode = undefined;
+  if (step === 'mapping' && previewData) {
+    footer = (
+      <div className="flex justify-end gap-2">
+        <Button
+          id="mapping-back-btn"
+          variant="outline"
+          onClick={() => setStep('upload')}
+          disabled={isProcessing}
+        >
+          {t('common:actions.back', 'Back')}
+        </Button>
+        <Button id="mapping-preview-btn" onClick={handlePreview} disabled={isProcessing}>
+          {isProcessing ? importT('processingPreview', 'Processing...') : importT('preview', 'Preview')}
+        </Button>
+      </div>
+    );
+  } else if (step === 'preview' && validationResults.length > 0) {
+    footer = (
+      <div className="flex justify-end gap-2">
+        <Button
+          id="preview-back-btn"
+          variant="outline"
+          onClick={() => setStep('mapping')}
+          disabled={isProcessing}
+        >
+          {t('common:actions.back', 'Back')}
+        </Button>
+        <Button
+          id="preview-import-btn"
+          onClick={handleProceedFromPreview}
+          disabled={
+            groupedPhases.length === 0 ||
+            isProcessing ||
+            (invalidCount > 0 && !importOptions.skipInvalidRows) ||
+            (unmatchedAgents.length === 0 && unmatchedStatuses.length === 0 && !canProceedWithImport)
+          }
+        >
+          {isProcessing
+            ? importT('processingPreview', 'Processing...')
+            : unmatchedAgents.length > 0
+              ? importT('nextMapAgents', 'Next: Map Agents')
+              : unmatchedStatuses.length > 0
+                ? importT('nextResolveStatuses', 'Next: Resolve Statuses')
+                : importT('importTasksButton', 'Import {{tasks}} Tasks', { tasks: totalTasks })}
+        </Button>
+      </div>
+    );
+  } else if (step === 'agent_resolution' && unmatchedAgentInfo.length > 0) {
+    footer = (
+      <div className="flex justify-end gap-2">
+        <Button
+          id="agent-resolution-back-btn"
+          variant="outline"
+          onClick={() => setStep('preview')}
+          disabled={isProcessing}
+        >
+          {t('common:actions.back', 'Back')}
+        </Button>
+        <Button
+          id="agent-resolution-next-btn"
+          onClick={handleProceedFromAgentResolution}
+          disabled={isProcessing || hasIncompleteAgentMappings || (unmatchedStatuses.length === 0 && !canProceedWithImport)}
+        >
+          {isProcessing
+            ? importT('processingPreview', 'Processing...')
+            : unmatchedStatuses.length > 0
+              ? importT('nextResolveStatuses', 'Next: Resolve Statuses')
+              : importT('importTasksButton', 'Import {{tasks}} Tasks', { tasks: totalTasks })}
+        </Button>
+      </div>
+    );
+  } else if (step === 'status_resolution' && unmatchedStatusInfo.length > 0) {
+    footer = (
+      <div className="flex justify-end gap-2">
+        <Button
+          id="status-resolution-back-btn"
+          variant="outline"
+          onClick={() => setStep(unmatchedAgents.length > 0 ? 'agent_resolution' : 'preview')}
+          disabled={isProcessing}
+        >
+          {t('common:actions.back', 'Back')}
+        </Button>
+        <Button
+          id="status-resolution-import-btn"
+          onClick={handleImport}
+          disabled={isProcessing || hasIncompleteStatusMappings || !canProceedWithImport}
+        >
+          {isProcessing
+            ? importT('importingButton', 'Importing...')
+            : importT('importTasksButton', 'Import {{tasks}} Tasks', { tasks: totalTasks })}
+        </Button>
+      </div>
+    );
+  } else if (step === 'complete' && importResult) {
+    footer = (
+      <div className="flex justify-end">
+        <Button id="complete-close-btn" onClick={handleClose}>
+          {t('common:actions.close', 'Close')}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <Dialog
       isOpen={isOpen}
       onClose={handleClose}
       title={importT('title', 'Import Phases & Tasks')}
       className="max-w-5xl"
+      footer={footer}
     >
       <DialogContent>
         {errors.length > 0 && (
@@ -670,21 +775,6 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 </AlertDescription>
               </Alert>
             )}
-            <div className="mt-4">
-              <DialogFooter>
-                <Button
-                  id="mapping-back-btn"
-                  variant="outline"
-                  onClick={() => setStep('upload')}
-                  disabled={isProcessing}
-                >
-                  {t('common:actions.back', 'Back')}
-                </Button>
-                <Button id="mapping-preview-btn" onClick={handlePreview} disabled={isProcessing}>
-                  {isProcessing ? importT('processingPreview', 'Processing...') : importT('preview', 'Preview')}
-                </Button>
-              </DialogFooter>
-            </div>
           </div>
         )}
 
@@ -912,36 +1002,6 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
               </Alert>
             )}
 
-            <div className="mt-4">
-              <DialogFooter>
-                <Button
-                  id="preview-back-btn"
-                  variant="outline"
-                  onClick={() => setStep('mapping')}
-                  disabled={isProcessing}
-                >
-                  {t('common:actions.back', 'Back')}
-                </Button>
-                <Button
-                  id="preview-import-btn"
-                  onClick={handleProceedFromPreview}
-                  disabled={
-                    groupedPhases.length === 0 ||
-                    isProcessing ||
-                    (invalidCount > 0 && !importOptions.skipInvalidRows) ||
-                    (unmatchedAgents.length === 0 && unmatchedStatuses.length === 0 && !canProceedWithImport)
-                  }
-                >
-                  {isProcessing
-                    ? importT('processingPreview', 'Processing...')
-                    : unmatchedAgents.length > 0
-                      ? importT('nextMapAgents', 'Next: Map Agents')
-                      : unmatchedStatuses.length > 0
-                        ? importT('nextResolveStatuses', 'Next: Resolve Statuses')
-                        : importT('importTasksButton', 'Import {{tasks}} Tasks', { tasks: totalTasks })}
-                </Button>
-              </DialogFooter>
-            </div>
           </div>
         )}
 
@@ -1081,29 +1141,6 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
               </Alert>
             )}
 
-            <div className="mt-4">
-              <DialogFooter>
-                <Button
-                  id="agent-resolution-back-btn"
-                  variant="outline"
-                  onClick={() => setStep('preview')}
-                  disabled={isProcessing}
-                >
-                  {t('common:actions.back', 'Back')}
-                </Button>
-                <Button
-                  id="agent-resolution-next-btn"
-                  onClick={handleProceedFromAgentResolution}
-                  disabled={isProcessing || hasIncompleteAgentMappings || (unmatchedStatuses.length === 0 && !canProceedWithImport)}
-                >
-                  {isProcessing
-                    ? importT('processingPreview', 'Processing...')
-                    : unmatchedStatuses.length > 0
-                      ? importT('nextResolveStatuses', 'Next: Resolve Statuses')
-                      : importT('importTasksButton', 'Import {{tasks}} Tasks', { tasks: totalTasks })}
-                </Button>
-              </DialogFooter>
-            </div>
           </div>
         )}
 
@@ -1238,27 +1275,6 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
               </Alert>
             )}
 
-            <div className="mt-4">
-              <DialogFooter>
-                <Button
-                  id="status-resolution-back-btn"
-                  variant="outline"
-                  onClick={() => setStep(unmatchedAgents.length > 0 ? 'agent_resolution' : 'preview')}
-                  disabled={isProcessing}
-                >
-                  {t('common:actions.back', 'Back')}
-                </Button>
-                <Button
-                  id="status-resolution-import-btn"
-                  onClick={handleImport}
-                  disabled={isProcessing || hasIncompleteStatusMappings || !canProceedWithImport}
-                >
-                  {isProcessing
-                    ? importT('importingButton', 'Importing...')
-                    : importT('importTasksButton', 'Import {{tasks}} Tasks', { tasks: totalTasks })}
-                </Button>
-              </DialogFooter>
-            </div>
           </div>
         )}
 
@@ -1308,11 +1324,6 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 )}
               </>
             )}
-            <DialogFooter>
-              <Button id="complete-close-btn" onClick={handleClose}>
-                {t('common:actions.close', 'Close')}
-              </Button>
-            </DialogFooter>
           </div>
         )}
       </DialogContent>

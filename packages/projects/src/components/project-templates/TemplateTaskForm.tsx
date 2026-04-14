@@ -578,6 +578,32 @@ export function TemplateTaskForm({
     setShowCancelConfirm(false);
   };
 
+  const footer = (
+    <div className="flex justify-end gap-2">
+      <Button
+        id="cancel-task-form"
+        type="button"
+        variant="outline"
+        onClick={handleClose}
+        disabled={isSubmitting}
+      >
+        {t('common:actions.cancel', 'Cancel')}
+      </Button>
+      <Button
+        id="save-task-form"
+        type="button"
+        disabled={isSubmitting || !taskName.trim()}
+        onClick={() => (document.getElementById('template-task-form') as HTMLFormElement | null)?.requestSubmit()}
+      >
+        {isSubmitting
+          ? t('templates.taskForm.saving', 'Saving...')
+          : task
+            ? t('templates.taskForm.updateAction', 'Update Task')
+            : t('templates.taskForm.addAction', 'Add Task')}
+      </Button>
+    </div>
+  );
+
   return (
     <>
     <Dialog
@@ -588,6 +614,7 @@ export function TemplateTaskForm({
         : t('templates.taskForm.addTitle', 'Add Task')}
       className="max-w-2xl"
       id="template-task-form-dialog"
+      footer={footer}
     >
       <DialogContent>
         <form onSubmit={handleSubmit} id="template-task-form">
@@ -1055,24 +1082,6 @@ export function TemplateTaskForm({
             )}
           </div>
 
-          <DialogFooter className="mt-6">
-            <Button
-              id="cancel-task-form"
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isSubmitting}
-            >
-              {t('common:actions.cancel', 'Cancel')}
-            </Button>
-            <Button id="save-task-form" type="submit" disabled={isSubmitting || !taskName.trim()}>
-              {isSubmitting
-                ? t('templates.taskForm.saving', 'Saving...')
-                : task
-                  ? t('templates.taskForm.updateAction', 'Update Task')
-                  : t('templates.taskForm.addAction', 'Add Task')}
-            </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

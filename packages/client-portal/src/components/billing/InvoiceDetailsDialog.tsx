@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import type { InvoiceViewModel, IInvoiceTemplate } from '@alga-psa/types';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -335,12 +335,39 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
     </div>
   );
   
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button id="close-invoice-dialog-button" variant="outline" onClick={onClose}>
+        <X className="mr-2 h-4 w-4" />
+        Close
+      </Button>
+      <Button
+        id="email-invoice-button"
+        variant="outline"
+        disabled={!invoice || isSendingEmail}
+        onClick={handleSendEmail}
+      >
+        <Mail className="mr-2 h-4 w-4" />
+        {isSendingEmail ? 'Sending...' : 'Send Email'}
+      </Button>
+      <Button
+        id="download-invoice-button"
+        disabled={!invoice || isDownloading}
+        onClick={handleDownloadPdf}
+      >
+        <Download className="mr-2 h-4 w-4" />
+        {isDownloading ? 'Preparing...' : 'Download'}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      title={t('invoice.details', 'Invoice Details')} 
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('invoice.details', 'Invoice Details')}
       data-automation-id="invoice-details-dialog"
+      footer={footer}
     >
       <DialogContent>
         {error && (
@@ -350,29 +377,6 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
           {isLoading ? loadingSkeleton : invoiceContent}
         </div>
       </DialogContent>
-      <DialogFooter>
-        <Button id="close-invoice-dialog-button" variant="outline" onClick={onClose}>
-          <X className="mr-2 h-4 w-4" />
-          Close
-        </Button>
-        <Button
-          id="email-invoice-button"
-          variant="outline"
-          disabled={!invoice || isSendingEmail}
-          onClick={handleSendEmail}
-        >
-          <Mail className="mr-2 h-4 w-4" />
-          {isSendingEmail ? 'Sending...' : 'Send Email'}
-        </Button>
-        <Button
-          id="download-invoice-button"
-          disabled={!invoice || isDownloading}
-          onClick={handleDownloadPdf}
-        >
-          <Download className="mr-2 h-4 w-4" />
-          {isDownloading ? 'Preparing...' : 'Download'}
-        </Button>
-      </DialogFooter>
     </Dialog>
   );
 });

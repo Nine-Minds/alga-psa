@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { X } from 'lucide-react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -429,6 +429,35 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     }
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="quick-add-contact-cancel"
+        type="button"
+        variant="outline"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setHasAttemptedSubmit(false);
+          setValidationErrors([]);
+          setFieldErrors({});
+          onClose();
+        }}
+      >
+        {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+      </Button>
+      <Button
+        id="quick-add-contact-submit"
+        type="button"
+        onClick={handleSubmit}
+        disabled={false}
+        className={!fullName.trim() || !emailState.email.trim() || Object.values(fieldErrors).some(error => error) ? 'opacity-50' : ''}
+      >
+        {t('quickAddContact.actions.submit', { defaultValue: 'Add Contact' })}
+      </Button>
+    </div>
+  );
+
   return (
     <>
     <Dialog
@@ -437,6 +466,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       onClose={onClose}
       title={t('quickAddContact.dialog.title', { defaultValue: 'Add New Contact' })}
       disableFocusTrap
+      footer={footer}
     >
       <DialogContent>
         {hasAttemptedSubmit && validationErrors.length > 0 && (
@@ -644,32 +674,6 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button
-              id="quick-add-contact-cancel"
-              type="button"
-              variant="outline"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setHasAttemptedSubmit(false);
-                setValidationErrors([]);
-                setFieldErrors({});
-                onClose();
-              }}
-            >
-              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-            </Button>
-            <Button
-              id="quick-add-contact-submit"
-              type="button"
-              onClick={handleSubmit}
-              disabled={false}
-              className={!fullName.trim() || !emailState.email.trim() || Object.values(fieldErrors).some(error => error) ? 'opacity-50' : ''}
-            >
-              {t('quickAddContact.actions.submit', { defaultValue: 'Add Contact' })}
-            </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

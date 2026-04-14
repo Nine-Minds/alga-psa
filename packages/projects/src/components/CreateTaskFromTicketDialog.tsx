@@ -205,6 +205,20 @@ export default function CreateTaskFromTicketDialog({
         onClose={() => setOpen(false)}
         title={t('dialogs.createTaskFromTicket.title', 'Create Task from Ticket')}
         className="max-w-lg"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button id="create-task-cancel" variant="ghost" onClick={() => setOpen(false)}>
+              {t('common:actions.cancel', 'Cancel')}
+            </Button>
+            <Button
+              id="create-task-confirm"
+              onClick={handleCreate}
+              disabled={!selectedProjectId || !selectedPhaseId || !selectedStatusId}
+            >
+              {t('common:actions.create', 'Create')}
+            </Button>
+          </div>
+        }
       >
         <div className="space-y-4">
           <div>
@@ -262,18 +276,6 @@ export default function CreateTaskFromTicketDialog({
             label={t('dialogs.createTaskFromTicket.linkTicketLabel', 'Link ticket to the created task')}
             containerClassName="mb-0"
           />
-        </div>
-        <div className="mt-6 flex justify-end gap-2">
-          <Button id="create-task-cancel" variant="ghost" onClick={() => setOpen(false)}>
-            {t('common:actions.cancel', 'Cancel')}
-          </Button>
-          <Button
-            id="create-task-confirm"
-            onClick={handleCreate}
-            disabled={!selectedProjectId || !selectedPhaseId || !selectedStatusId}
-          >
-            {t('common:actions.create', 'Create')}
-          </Button>
         </div>
       </Dialog>
     </>

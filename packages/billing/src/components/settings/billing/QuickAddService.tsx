@@ -374,6 +374,28 @@ if (createdService?.service_id) {
         onClose={handleDialogClose}
         title={t('quickAddService.dialog.title', { defaultValue: 'Add New Service' })}
         className="max-w-[550px]"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id='cancel-button' type="button" variant="outline" onClick={handleDialogClose}>
+              {t('quickAddService.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id='save-button'
+              type="button"
+              onClick={() => (document.getElementById('quick-add-service-form') as HTMLFormElement | null)?.requestSubmit()}
+              className={
+                !serviceData.service_name ||
+                !serviceData.custom_service_type_id ||
+                (priceInputs[0] ?? '').trim() === '' ||
+                !serviceData.billing_method
+                  ? 'opacity-50'
+                  : ''
+              }
+            >
+              {t('quickAddService.actions.save', { defaultValue: 'Save Service' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           {error && <div className="text-red-500 mb-4">{error}</div>}
@@ -392,7 +414,7 @@ if (createdService?.service_id) {
               </AlertDescription>
             </Alert>
           )}
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          <form id="quick-add-service-form" onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div>
               <Label htmlFor="serviceName" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                 {t('quickAddService.fields.serviceName.label', { defaultValue: 'Service Name *' })}
@@ -742,25 +764,6 @@ if (createdService?.service_id) {
               </>
             )}
 
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button id='cancel-button' type="button" variant="outline" onClick={handleDialogClose}>
-                {t('quickAddService.actions.cancel', { defaultValue: 'Cancel' })}
-              </Button>
-              <Button
-                id='save-button'
-                type="submit"
-                className={
-                  !serviceData.service_name ||
-                  !serviceData.custom_service_type_id ||
-                  (priceInputs[0] ?? '').trim() === '' ||
-                  !serviceData.billing_method
-                    ? 'opacity-50'
-                    : ''
-                }
-              >
-                {t('quickAddService.actions.save', { defaultValue: 'Save Service' })}
-              </Button>
-            </div>
           </form>
         </DialogContent>
       </Dialog>

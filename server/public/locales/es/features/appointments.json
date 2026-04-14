@@ -67,7 +67,8 @@
     "loadSlotsFailed": "Error al cargar las franjas horarias disponibles. Por favor, inténtelo de nuevo.",
     "createFailed": "Error al crear la solicitud de cita. Por favor, inténtelo de nuevo.",
     "updateFailed": "Error al actualizar la solicitud de cita. Por favor, inténtelo de nuevo.",
-    "loadFailed": "Error al cargar las citas. Por favor, inténtelo de nuevo."
+    "loadFailed": "Error al cargar las citas. Por favor, inténtelo de nuevo.",
+    "notFound": "Solicitud de cita no encontrada"
   },
   "messages": {
     "requestSuccess": "¡Solicitud de cita enviada con éxito!",

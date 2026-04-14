@@ -189,7 +189,9 @@
     },
     "header": {
       "title": "11111",
-      "description": "11111"
+      "description": "11111",
+      "serviceTitle": "11111",
+      "serviceDescription": "11111"
     },
     "created": {
       "title": "11111",
@@ -217,6 +219,10 @@
       "defaultRate": {
         "label": "11111",
         "placeholder": "11111"
+      },
+      "defaultCurrency": {
+        "label": "11111",
+        "description": "11111"
       }
     },
     "billingMethods": {

@@ -37,7 +37,9 @@
     "noSla": "Geen SLA",
     "onTrack": "Op schema",
     "breached": "Overtreden",
-    "paused": "Gepauzeerd"
+    "paused": "Gepauzeerd",
+    "allResponseStatuses": "Alle antwoordstatussen",
+    "responseStatus": "Antwoordstatus"
   },
   "create": {
     "title": "Supportticket aanmaken",
@@ -189,7 +191,8 @@
     "failedToUpdateComment": "Reactie bijwerken is mislukt",
     "failedToDeleteComment": "Reactie verwijderen is mislukt",
     "deleteOwnCommentError": "Je kunt alleen je eigen reacties verwijderen",
-    "failedToUpdateTicketStatus": "Ticketstatus bijwerken is mislukt"
+    "failedToUpdateTicketStatus": "Ticketstatus bijwerken is mislukt",
+    "noTitle": "Geen titel"
   },
   "conversation": {
     "comments": "Reacties",
@@ -230,7 +233,8 @@
     "deleteCommentAriaLabel": "Commentaar verwijderen",
     "inboundChildReplies": "Inkomende reacties op onderliggende tickets (alleen-lezen)",
     "childTicket": "Onderliggend ticket",
-    "ticketPrefix": "Ticket {{number}}"
+    "ticketPrefix": "Ticket {{number}}",
+    "clipboardDraftCancelMessage": "Dit concept bevat geplakte afbeeldingen die al als ticketdocumenten zijn geüpload. Behouden of permanent verwijderen?"
   },
   "responseState": {
     "awaitingYourResponse": "Wacht op uw reactie",
@@ -434,7 +438,11 @@
       "selectMasterTicket": "Hoofdticket selecteren...",
       "syncUpdates": "Wijzigingen synchroniseren van hoofd- naar onderliggende tickets (openbare reacties + workflowwijzigingen)",
       "syncUpdatesHelp": "Onderliggende tickets behouden hun huidige status wanneer ze worden gebundeld. Workflowvelden zijn standaard vergrendeld op onderliggende tickets. Interne notities blijven op het hoofdticket.",
-      "childrenDescription": "Onderliggende behouden hun huidige status; workflowvelden zijn vergrendeld op onderliggende tickets. Inkomende reacties op onderliggende tickets worden hieronder als alleen-lezen weergegeven."
+      "childrenDescription": "Onderliggende behouden hun huidige status; workflowvelden zijn vergrendeld op onderliggende tickets. Inkomende reacties op onderliggende tickets worden hieronder als alleen-lezen weergegeven.",
+      "checkingMasters": "Bestaande bundels controleren...",
+      "existingMasterSuffix": "(bestaand hoofdticket)",
+      "existingMasterLocked": "Eén geselecteerd ticket is al een hoofdticket. Dit wordt als hoofdticket gebruikt; de andere worden als onderliggende tickets toegevoegd.",
+      "multipleExistingMasters": "Meerdere geselecteerde tickets zijn al hoofdtickets ({{count}}). Ontkoppel alle op één na voordat je bundelt."
     },
     "auth": {
       "moveRequired": "Je moet zijn ingelogd om tickets te verplaatsen",
@@ -760,7 +768,8 @@
       "columns": {
         "sla": "SLA",
         "createdBy": "Aangemaakt door",
-        "actions": "Acties"
+        "actions": "Acties",
+        "tags": "Labels"
       },
       "requiredSuffix": "(verplicht)",
       "tagsUnderTitle": "Onder titel weergeven",
@@ -1021,5 +1030,22 @@
     "minutes": "minuten",
     "invalidDateTime": "Ongeldige datum/tijd",
     "declined": "Geweigerd"
+  },
+  "categories": {
+    "itilBadge": "ITIL"
+  },
+  "tickets": {
+    "conversation": {
+      "closeStatus": "Afsluitingsstatus",
+      "noStatusChange": "Status niet wijzigen"
+    }
+  },
+  "common": {
+    "continueEditing": "Doorgaan met bewerken"
+  },
+  "details": {
+    "bundle": {
+      "childrenDescription": "Onderliggende tickets gebundeld in dit hoofdticket"
+    }
   }
 }

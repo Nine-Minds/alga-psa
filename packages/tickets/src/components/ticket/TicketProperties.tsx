@@ -35,7 +35,7 @@ import TicketMaterialsCard from './TicketMaterialsCard';
 import TicketWatchListCard from './TicketWatchListCard';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useDrawer } from '@alga-psa/ui';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useQuickAddClient } from '@alga-psa/ui/context';
@@ -1143,7 +1143,42 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       {surveySummaryCard}
 
     </div>
-      {teamsV2Enabled && ticket.assigned_team_id && (
+      {teamsV2Enabled && ticket.assigned_team_id && (() => {
+        const removeTeamFooter = (
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="remove-team-cancel-btn"
+              variant="outline"
+              onClick={() => {
+                setPendingSwitchTeamId(null);
+                setIsRemoveTeamDialogOpen(false);
+              }}
+            >
+              {t('actions.cancel', 'Cancel')}
+            </Button>
+            <Button
+              id="remove-team-confirm-btn"
+              variant="default"
+              onClick={async () => {
+                if (onRemoveTeamAssignment) {
+                  await onRemoveTeamAssignment(
+                    removeTeamMode,
+                    removeTeamMode === 'selective' ? selectedTeamMemberIds : undefined
+                  );
+                }
+                // If switching to a new team, assign it after the old one is removed
+                if (pendingSwitchTeamId && onAssignTeam) {
+                  await onAssignTeam(pendingSwitchTeamId);
+                }
+                setPendingSwitchTeamId(null);
+                setIsRemoveTeamDialogOpen(false);
+              }}
+            >
+              {t('actions.confirm', 'Confirm')}
+            </Button>
+          </div>
+        );
+        return (
         <Dialog
           isOpen={isRemoveTeamDialogOpen}
           onClose={() => {
@@ -1154,6 +1189,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             ? t('properties.switchTeamAssignment', 'Switch team assignment')
             : t('properties.removeTeamAssignment', 'Remove team assignment')}
           id={`${id}-remove-team-dialog`}
+          footer={removeTeamFooter}
         >
         <DialogContent className="space-y-4">
           <div className="space-y-3">
@@ -1221,40 +1257,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             </div>
           )}
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id="remove-team-cancel-btn"
-            variant="outline"
-            onClick={() => {
-              setPendingSwitchTeamId(null);
-              setIsRemoveTeamDialogOpen(false);
-            }}
-          >
-            {t('actions.cancel', 'Cancel')}
-          </Button>
-          <Button
-            id="remove-team-confirm-btn"
-            variant="default"
-            onClick={async () => {
-              if (onRemoveTeamAssignment) {
-                await onRemoveTeamAssignment(
-                  removeTeamMode,
-                  removeTeamMode === 'selective' ? selectedTeamMemberIds : undefined
-                );
-              }
-              // If switching to a new team, assign it after the old one is removed
-              if (pendingSwitchTeamId && onAssignTeam) {
-                await onAssignTeam(pendingSwitchTeamId);
-              }
-              setPendingSwitchTeamId(null);
-              setIsRemoveTeamDialogOpen(false);
-            }}
-          >
-            {t('actions.confirm', 'Confirm')}
-          </Button>
-        </DialogFooter>
       </Dialog>
-      )}
+      );
+      })()}
     </>
   );
 };

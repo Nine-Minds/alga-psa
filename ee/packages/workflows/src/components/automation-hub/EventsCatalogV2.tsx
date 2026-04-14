@@ -9,7 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -1336,7 +1336,17 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
       </div>
 
       {/* Details Drawer */}
-      <Dialog isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} title="Event details" className="max-w-4xl">
+      <Dialog
+        isOpen={!!selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        title="Event details"
+        className="max-w-4xl"
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button id="workflow-event-details-close" variant="ghost" onClick={() => setSelectedEvent(null)}>Close</Button>
+          </div>
+        }
+      >
         <DialogContent>
           {selectedEvent && (
             <div className="space-y-4">
@@ -1467,16 +1477,23 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
                 )}
               </Card>
 
-              <div className="flex justify-end">
-                <Button id="workflow-event-details-close" variant="ghost" onClick={() => setSelectedEvent(null)}>Close</Button>
-              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
       {/* Full Schema Modal */}
-      <Dialog isOpen={schemaModalOpen} onClose={() => setSchemaModalOpen(false)} title="Schema" className="max-w-4xl">
+      <Dialog
+        isOpen={schemaModalOpen}
+        onClose={() => setSchemaModalOpen(false)}
+        title="Schema"
+        className="max-w-4xl"
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button id="workflow-event-schema-close" variant="ghost" onClick={() => setSchemaModalOpen(false)}>Close</Button>
+          </div>
+        }
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Payload schema</DialogTitle>
@@ -1509,9 +1526,6 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
               />
             </div>
           )}
-          <DialogFooter>
-            <Button id="workflow-event-schema-close" variant="ghost" onClick={() => setSchemaModalOpen(false)}>Close</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1585,7 +1599,17 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
   }, [open, eventType]);
 
   return (
-    <Dialog isOpen={open} onClose={onClose} title="Metrics" className="max-w-4xl">
+    <Dialog
+      isOpen={open}
+      onClose={onClose}
+      title="Metrics"
+      className="max-w-4xl"
+      footer={
+        <div className="flex justify-end space-x-2">
+          <Button id="workflow-event-metrics-close" variant="ghost" onClick={onClose}>Close</Button>
+        </div>
+      }
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Metrics · {eventType ?? ''}</DialogTitle>
@@ -1721,9 +1745,6 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
             <div className="text-sm text-gray-500">No data available.</div>
           )}
         </div>
-        <DialogFooter>
-          <Button id="workflow-event-metrics-close" variant="ghost" onClick={onClose}>Close</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -1874,7 +1895,20 @@ const SimulateDialog: React.FC<{
   };
 
   return (
-    <Dialog isOpen={open} onClose={onClose} title="Simulate event" className="max-w-4xl">
+    <Dialog
+      isOpen={open}
+      onClose={onClose}
+      title="Simulate event"
+      className="max-w-4xl"
+      footer={
+        <div className="flex justify-end space-x-2">
+          <Button id="workflow-event-simulate-close" variant="ghost" onClick={onClose}>Close</Button>
+          <Button id="workflow-event-simulate-submit" onClick={submit} disabled={submitting || !eventType}>
+            {submitting ? 'Submitting…' : 'Simulate'}
+          </Button>
+        </div>
+      }
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Simulate · {eventType ?? ''}</DialogTitle>
@@ -1988,12 +2022,6 @@ const SimulateDialog: React.FC<{
           )}
         </div>
 
-        <DialogFooter>
-          <Button id="workflow-event-simulate-close" variant="ghost" onClick={onClose}>Close</Button>
-          <Button id="workflow-event-simulate-submit" onClick={submit} disabled={submitting || !eventType}>
-            {submitting ? 'Submitting…' : 'Simulate'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -2059,7 +2087,20 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
   };
 
   return (
-    <Dialog isOpen={open} onClose={() => onClose(false)} title="Define custom event" className="max-w-3xl">
+    <Dialog
+      isOpen={open}
+      onClose={() => onClose(false)}
+      title="Define custom event"
+      className="max-w-3xl"
+      footer={
+        <div className="flex justify-end space-x-2">
+          <Button id="workflow-event-custom-event-cancel" variant="ghost" onClick={() => onClose(false)}>Cancel</Button>
+          <Button id="workflow-event-custom-event-submit" onClick={submit} disabled={submitting}>
+            {submitting ? 'Creating…' : 'Create event'}
+          </Button>
+        </div>
+      }
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Define Custom Event</DialogTitle>
@@ -2111,12 +2152,6 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
           </div>
         </div>
 
-        <DialogFooter>
-          <Button id="workflow-event-custom-event-cancel" variant="ghost" onClick={() => onClose(false)}>Cancel</Button>
-          <Button id="workflow-event-custom-event-submit" onClick={submit} disabled={submitting}>
-            {submitting ? 'Creating…' : 'Create event'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

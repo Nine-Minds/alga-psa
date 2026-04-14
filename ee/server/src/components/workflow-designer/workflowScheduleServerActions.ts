@@ -5,6 +5,7 @@ import {
   createWorkflowScheduleAction as createWorkflowScheduleActionBase,
   deleteWorkflowScheduleAction as deleteWorkflowScheduleActionBase,
   getWorkflowScheduleAction as getWorkflowScheduleActionBase,
+  listWorkflowScheduleBusinessHoursAction as listWorkflowScheduleBusinessHoursActionBase,
   listWorkflowSchedulesAction as listWorkflowSchedulesActionBase,
   pauseWorkflowScheduleAction as pauseWorkflowScheduleActionBase,
   resumeWorkflowScheduleAction as resumeWorkflowScheduleActionBase,
@@ -31,6 +32,12 @@ export async function getWorkflowScheduleAction(
   ...args: Parameters<typeof getWorkflowScheduleActionBase>
 ): Promise<Awaited<ReturnType<typeof getWorkflowScheduleActionBase>>> {
   return getWorkflowScheduleActionBase(...args);
+}
+
+export async function listWorkflowScheduleBusinessHoursAction(
+  ...args: Parameters<typeof listWorkflowScheduleBusinessHoursActionBase>
+): Promise<Awaited<ReturnType<typeof listWorkflowScheduleBusinessHoursActionBase>>> {
+  return listWorkflowScheduleBusinessHoursActionBase(...args);
 }
 
 export async function createWorkflowScheduleAction(

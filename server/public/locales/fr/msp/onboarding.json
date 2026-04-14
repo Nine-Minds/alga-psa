@@ -189,7 +189,9 @@
     },
     "header": {
       "title": "Créez votre premier service",
-      "description": "Ajoutez un service et choisissez comment il doit être facturé. Le type de service identifie la catégorie du service, tandis que le mode de facturation contrôle le comportement tarifaire."
+      "description": "Ajoutez un service et choisissez comment il doit être facturé. Le type de service identifie la catégorie du service, tandis que le mode de facturation contrôle le comportement tarifaire.",
+      "serviceTitle": "Créez votre premier service",
+      "serviceDescription": "Ajoutez un service et choisissez comment il doit être facturé. Le type de service identifie la catégorie de service, tandis que le mode de facturation contrôle le comportement de tarification."
     },
     "created": {
       "title": "Service créé avec succès !",
@@ -217,6 +219,10 @@
       "defaultRate": {
         "label": "Tarif par défaut",
         "placeholder": "150"
+      },
+      "defaultCurrency": {
+        "label": "Devise par défaut *",
+        "description": "Cette devise sera utilisée par défaut pour toute la facturation — services, contrats, devis et factures. Vous pourrez la remplacer par client ultérieurement."
       }
     },
     "billingMethods": {

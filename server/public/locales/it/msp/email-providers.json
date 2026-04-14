@@ -415,7 +415,9 @@
       },
       "status": {
         "label": "Stato *",
-        "placeholder": "Seleziona lo stato"
+        "placeholder": "Seleziona lo stato",
+        "selectBoardFirst": "Seleziona prima la bacheca",
+        "loading": "Caricamento stati..."
       },
       "priority": {
         "label": "Priorità *",

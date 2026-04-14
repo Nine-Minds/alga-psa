@@ -5,6 +5,7 @@
 
 import { randomUUID } from 'crypto';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import { convertMarkdownToBlocks, type BlockNoteBlock } from '@shared/lib/utils/markdownToBlocks';
 import { ListOptions } from '../controllers/types';
 import { NotFoundError } from '../middleware/apiMiddleware';
 import type { CreateKbArticleData, UpdateKbArticleData, UpdateKbArticleContentData } from '../schemas/kbArticle';
@@ -40,94 +41,6 @@ function generateSlug(title: string): string {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .substring(0, 100);
-}
-
-interface BlockNoteBlock {
-  type: string;
-  props?: Record<string, any>;
-  content?: any[];
-  children?: BlockNoteBlock[];
-}
-
-/**
- * Convert markdown text to BlockNote JSON blocks.
- * Handles headings, code blocks, lists, and paragraphs.
- */
-function markdownToBlocks(markdown: string): BlockNoteBlock[] {
-  const lines = markdown.split('\n');
-  const blocks: BlockNoteBlock[] = [];
-  let i = 0;
-
-  while (i < lines.length) {
-    const line = lines[i];
-
-    // Code blocks
-    if (line.startsWith('```')) {
-      const lang = line.slice(3).trim();
-      const codeLines: string[] = [];
-      i++;
-      while (i < lines.length && !lines[i].startsWith('```')) {
-        codeLines.push(lines[i]);
-        i++;
-      }
-      blocks.push({
-        type: 'codeBlock',
-        props: { language: lang || 'text' },
-        content: [{ type: 'text', text: codeLines.join('\n'), styles: {} }],
-      });
-      i++; // skip closing ```
-      continue;
-    }
-
-    // Headings
-    const headingMatch = line.match(/^(#{1,6})\s+(.+)/);
-    if (headingMatch) {
-      blocks.push({
-        type: 'heading',
-        props: { level: headingMatch[1].length },
-        content: [{ type: 'text', text: headingMatch[2].trim(), styles: {} }],
-      });
-      i++;
-      continue;
-    }
-
-    // Unordered list items
-    if (/^\s*[-*+]\s+/.test(line)) {
-      const text = line.replace(/^\s*[-*+]\s+/, '');
-      blocks.push({
-        type: 'bulletListItem',
-        content: [{ type: 'text', text, styles: {} }],
-      });
-      i++;
-      continue;
-    }
-
-    // Ordered list items
-    if (/^\s*\d+\.\s+/.test(line)) {
-      const text = line.replace(/^\s*\d+\.\s+/, '');
-      blocks.push({
-        type: 'numberedListItem',
-        content: [{ type: 'text', text, styles: {} }],
-      });
-      i++;
-      continue;
-    }
-
-    // Skip blank lines
-    if (line.trim() === '') {
-      i++;
-      continue;
-    }
-
-    // Paragraphs
-    blocks.push({
-      type: 'paragraph',
-      content: [{ type: 'text', text: line, styles: {} }],
-    });
-    i++;
-  }
-
-  return blocks;
 }
 
 /**
@@ -331,7 +244,7 @@ export class KbArticleService extends BaseService<any> {
       if (data.content_format === 'blocknote') {
         blocks = JSON.parse(data.content);
       } else {
-        blocks = markdownToBlocks(data.content);
+        blocks = convertMarkdownToBlocks(data.content);
       }
 
       if (blocks.length > 0) {
@@ -563,7 +476,7 @@ export class KbArticleService extends BaseService<any> {
     if (data.format === 'blocknote') {
       blocks = JSON.parse(data.content);
     } else {
-      blocks = markdownToBlocks(data.content);
+      blocks = convertMarkdownToBlocks(data.content);
     }
 
     const now = new Date();

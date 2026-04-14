@@ -156,7 +156,9 @@
       "client": "Client",
       "tags": "Tags",
       "role": "Role",
-      "notes": "Notes"
+      "notes": "Notes",
+      "primaryEmailLabel": "Primary Email Label",
+      "additionalEmails": "Additional Email Addresses"
     },
     "unassigned": "Select field",
     "errors": {
@@ -207,7 +209,10 @@
       "clientFieldDescription": "client (matches existing clients by name)",
       "noteLabel": "Note:",
       "noteDescription": "CSV import/export in v1 handles one default phone number per contact. Tags should be comma-separated values.",
-      "downloadTemplate": "Download CSV Template"
+      "downloadTemplate": "Download CSV Template",
+      "emailFieldsLabel": "Email fields:",
+      "emailFieldsDescription": "primary_email_type (work/personal/billing/other or a custom label), additional_email_addresses (use `label:email@example.com | label:email@example.com`)",
+      "hybridEmailNote": "CSV import/export keeps `email` as the primary/default contact email. Tags should be comma-separated values."
     },
     "mapping": {
       "title": "Map Contact Fields to CSV Columns",
@@ -460,7 +465,8 @@
       "status": "Status:",
       "notes": "Notes:",
       "notesPlaceholder": "Add any additional notes about the contact...",
-      "tags": "Tags:"
+      "tags": "Tags:",
+      "emailAddresses": "Email addresses:"
     },
     "loading": {
       "destinations": "Loading destinations..."
@@ -499,7 +505,9 @@
       "createdAt": "Created At",
       "updatedAt": "Updated At",
       "notes": "Notes:",
-      "tags": "Tags:"
+      "tags": "Tags:",
+      "emailAddresses": "Email addresses:",
+      "defaultEmail": "Default"
     },
     "status": {
       "active": "Active",

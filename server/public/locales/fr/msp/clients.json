@@ -254,7 +254,11 @@
     "clientCreatedContactFailed": "Client créé mais n'a pas réussi à ajouter un contact.",
     "usersLoadError": "Échec du chargement des utilisateurs pour la sélection du gestionnaire de compte.",
     "countriesLoadError": "Échec du chargement des pays.",
-    "phoneTypeSuggestionsError": "Échec du chargement des suggestions de type de téléphone de contact."
+    "phoneTypeSuggestionsError": "Échec du chargement des suggestions de type de téléphone de contact.",
+    "created": "« {{name}} » a été créé. Ajoutez un autre client ci-dessous.",
+    "createAndAddAnother": "Créer + Ajouter un autre",
+    "createAndView": "Créer + Voir le client",
+    "additionalDetails": "Informations supplémentaires"
   },
   "clientCreatedDialog": {
     "title": "Client créé",

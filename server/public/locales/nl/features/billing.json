@@ -3,7 +3,8 @@
   "overview": "Overzicht",
   "tabs": {
     "overview": "Overzicht",
-    "invoices": "Facturen"
+    "invoices": "Facturen",
+    "quotes": "Offertes"
   },
   "currentContractLine": "Huidig abonnement",
   "nextInvoice": "Volgende factuur",
@@ -49,7 +50,18 @@
     "tax": "Belasting",
     "taxBreakdown": "Belastingoverzicht",
     "manualInvoice": "Handmatige factuur",
-    "credits": "Kredieten"
+    "credits": "Kredieten",
+    "financialArtifactSummary": "Alleen financiële factuur. Terugkerende serviceperioden verschijnen alleen op terugkerende detailregels.",
+    "servicePeriod": "Serviceperiode",
+    "servicePeriods": "Serviceperioden",
+    "financialOnlyLine": "Alleen financiële regel. Geen terugkerende serviceperiode.",
+    "downloadStarted": "PDF-download wordt voorbereid...",
+    "downloadComplete": "PDF succesvol gedownload.",
+    "emailStarted": "Factuur-e-mail wordt verzonden...",
+    "emailSent": "Factuur-e-mail succesvol verzonden.",
+    "advanceTiming": "Vooraf",
+    "arrearsTiming": "Achteraf",
+    "paymentSummaryServicePeriods": "Betaling vereffent het factuursaldo voor deze terugkerende serviceperioden. Open hieronder de factuurdetails voor de volledige uitsplitsing per regel."
   },
   "frequency": {
     "monthly": "Maandelijks",
@@ -70,7 +82,15 @@
     "serviceCategory": "Dienstcategorie",
     "statusDescription": "Dit abonnement is momenteel {{status}} en zal {{expiry}}.",
     "expiresOn": "aflopen op {{date}}",
-    "noExpiry": "niet aflopen"
+    "noExpiry": "niet aflopen",
+    "cadenceOwnerContractDescription": "Terugkerende serviceperioden volgen de cadans van de contractverjaardag voor deze regel.",
+    "cadenceOwnerClientDescription": "Terugkerende serviceperioden volgen het facturatieschema van de klant voor deze regel.",
+    "cadenceOwnerContract": "Contractverjaardag",
+    "cadenceOwnerClient": "Facturatieschema klant",
+    "billingTimingAdvance": "Vooraf",
+    "billingTimingArrears": "Achteraf",
+    "cadenceOwner": "Cadenseigenaar",
+    "billingTiming": "Facturatietiming"
   },
   "payment": {
     "method": "Betaalmethode",
@@ -94,5 +114,11 @@
     "loadingInvoices": "Facturen worden geladen...",
     "paymentSuccessful": "Betaling succesvol verwerkt",
     "paymentFailed": "Betaling mislukt. Probeer het opnieuw."
+  },
+  "quotes": {
+    "pendingQuotes": "Openstaande offertes",
+    "awaitingResponse": "{{count}} offerte(s) wacht(en) op uw reactie",
+    "noPending": "Geen openstaande offertes",
+    "viewAll": "Alle offertes bekijken"
   }
 }

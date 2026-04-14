@@ -157,9 +157,20 @@ export class PgBossJobRunner implements IJobRunner {
           // Preserve the stable job service id for lifecycle updates, but also
           // pass the per-delivery pg-boss id so handlers can distinguish
           // recurring occurrences from retries of the same occurrence.
+          const rawScheduledAt = (
+            (job as unknown as { startAfter?: Date | string | null }).startAfter
+            ?? (job as unknown as { startafter?: Date | string | null }).startafter
+            ?? null
+          );
+          const parsedScheduledAt = rawScheduledAt ? new Date(rawScheduledAt) : null;
+          const jobScheduledAt = parsedScheduledAt && !Number.isNaN(parsedScheduledAt.getTime())
+            ? parsedScheduledAt.toISOString()
+            : undefined;
+
           await config.handler(jobData.jobServiceId || job.id, {
             ...jobData,
-            jobExecutionId: job.id
+            jobExecutionId: job.id,
+            jobScheduledAt
           });
 
           // Update status to completed

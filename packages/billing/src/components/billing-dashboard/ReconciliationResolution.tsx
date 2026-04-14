@@ -11,7 +11,7 @@ import { parseISO } from 'date-fns';
 import { ICreditReconciliationReport, ITransaction, ICreditTracking } from '@alga-psa/types';
 import { resolveReconciliationReport } from '@alga-psa/billing/actions/creditReconciliationActions';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTrigger } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTrigger } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle, CheckCircle, XCircle, ArrowLeft, AlertTriangle, Info } from 'lucide-react';
@@ -1180,6 +1180,13 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
         isOpen={!!isConfirmationDialogOpen}
         onClose={() => setIsConfirmationDialogOpen(false)}
         title={t('reconciliation.sections.resolutionComplete', { defaultValue: 'Resolution Complete' })}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="close-confirmation-button" onClick={handleCloseConfirmation}>
+              {t('reconciliation.confirmation.closeButton', { defaultValue: 'Close' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <DialogDescription>
@@ -1231,11 +1238,6 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
             )}
           </div>
           
-          <DialogFooter>
-            <Button id="close-confirmation-button" onClick={handleCloseConfirmation}>
-              {t('reconciliation.confirmation.closeButton', { defaultValue: 'Close' })}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

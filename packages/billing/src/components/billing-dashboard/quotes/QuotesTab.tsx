@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Input } from '@alga-psa/ui/components/Input';
 import { MoreVertical, Edit, Send, Copy, Download, Trash2, RefreshCw, Bell, FileText, XCircle } from 'lucide-react';
@@ -615,6 +615,14 @@ const QuotesTab: React.FC = () => {
         isOpen={sendDialogState.isOpen}
         onClose={() => { setSendDialogState({ isOpen: false, quoteId: null }); setSendAdditionalEmails(''); setSendMessage(''); }}
         title="Send Quote"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="send-quote-cancel" variant="outline" onClick={() => { setSendDialogState({ isOpen: false, quoteId: null }); setSendAdditionalEmails(''); setSendMessage(''); }} disabled={isSending}>Cancel</Button>
+            <Button id="send-quote-confirm" onClick={() => void handleConfirmSendQuote()} disabled={isSending}>
+              {isSending ? 'Sending...' : 'Send Quote'}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <DialogDescription>
@@ -641,12 +649,6 @@ const QuotesTab: React.FC = () => {
               />
             </label>
           </div>
-          <DialogFooter>
-            <Button id="send-quote-cancel" variant="outline" onClick={() => { setSendDialogState({ isOpen: false, quoteId: null }); setSendAdditionalEmails(''); setSendMessage(''); }} disabled={isSending}>Cancel</Button>
-            <Button id="send-quote-confirm" onClick={() => void handleConfirmSendQuote()} disabled={isSending}>
-              {isSending ? 'Sending...' : 'Send Quote'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

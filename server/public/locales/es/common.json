@@ -367,7 +367,9 @@
       "namePlaceholder": "Ingresa el nombre de la carpeta",
       "loading": "Cargando carpetas...",
       "rootOption": "Raíz (sin carpeta)",
-      "empty": "No hay carpetas disponibles. Los documentos se guardarán en la raíz."
+      "empty": "No hay carpetas disponibles. Los documentos se guardarán en la raíz.",
+      "showAllFolders": "Mostrar todas las carpetas",
+      "showEntityFolders": "Mostrar carpetas de la entidad"
     },
     "filters": {
       "searchLabel": "Buscar documentos",
@@ -418,7 +420,13 @@
           "asc": "Mostrar de A a Z",
           "desc": "Mostrar de Z a A"
         }
-      }
+      },
+      "clientVisibility": {
+        "all": "Todos",
+        "visible": "Visible para el cliente",
+        "hidden": "Solo interno"
+      },
+      "clientVisibilityLabel": "Visibilidad para el cliente"
     },
     "selector": {
       "title": "Seleccionar documentos",
@@ -458,7 +466,9 @@
       "loading": "Cargando carpetas...",
       "title": "Carpetas",
       "collapse": "Contraer carpetas",
-      "allDocuments": "Todos los documentos"
+      "allDocuments": "Todos los documentos",
+      "expand": "Mostrar carpetas",
+      "deleteTitle": "Eliminar carpeta"
     },
     "folderManager": {
       "title": "Crear nueva carpeta",
@@ -475,7 +485,35 @@
         "Tickets": "Tickets",
         "Time Entries": "Registros de tiempo"
       }
-    }
+    },
+    "list": {
+      "name": "Nombre",
+      "folder": "Carpeta",
+      "size": "Tamaño",
+      "modified": "Modificado",
+      "visibility": "Visibilidad",
+      "actions": "Acciones"
+    },
+    "hasShareLinks": "Tiene enlaces de uso compartido activos",
+    "visibility": {
+      "clientVisible": "Visible para el cliente",
+      "internalOnly": "Interno",
+      "markedVisible": "\"{{name}}\" ahora es visible en el portal del cliente",
+      "markedHidden": "\"{{name}}\" ahora está oculto en el portal del cliente",
+      "toggleFailed": "No se pudo actualizar la visibilidad de la carpeta",
+      "cascadeTitle": "Actualizar visibilidad de los documentos",
+      "cascadeMakeVisible": "¿Desea también hacer visibles los {{count}} documento(s) de \"{{name}}\" en el portal del cliente?",
+      "cascadeMakeHidden": "¿Desea también ocultar los {{count}} documento(s) de \"{{name}}\" del portal del cliente?",
+      "cascadeYes": "Sí, actualizar documentos",
+      "cascadeNo": "No, solo la carpeta"
+    },
+    "share": "Compartir",
+    "videoPlaybackFailed": "No se puede reproducir este video en el navegador",
+    "videoPlaybackIssue": "¿Tiene problemas para reproducir el video?",
+    "downloadVideo": "Descargar video",
+    "downloadAsPdf": "Descargar como PDF",
+    "downloadAsMarkdown": "Descargar como Markdown",
+    "move": "Mover"
   },
   "notifications": {},
   "surveys": {
@@ -622,6 +660,18 @@
         },
         "noTemplates": "Crea una plantilla de encuesta antes de agregar desencadenadores.",
         "prioritiesMixed": "Los tableros seleccionados usan diferentes tipos de prioridad. Se muestran todas las prioridades."
+      },
+      "preview": {
+        "heading": "Vista previa de la página de respuesta",
+        "tabs": {
+          "survey": "Formulario de encuesta",
+          "thankYou": "Gracias"
+        },
+        "noPrompt": "Texto de la encuesta",
+        "commentPlaceholder": "Los comentarios del cliente aparecerán aquí...",
+        "noThankYou": "Mensaje de agradecimiento",
+        "notice": "Esta vista previa muestra lo que ven los clientes después de hacer clic en el enlace de la encuesta en su correo.",
+        "editEmailTemplate": "Editar plantilla de correo de la encuesta"
       }
     },
     "response": {
@@ -874,6 +924,11 @@
     "notSpecified": "No especificado",
     "unknown": "Desconocido",
     "uploading": "Subiendo...",
-    "submitting": "Enviando..."
+    "submitting": "Enviando...",
+    "edited": "editado",
+    "editComment": "Editar comentario",
+    "deleteCommentAriaLabel": "Eliminar comentario",
+    "deleteComment": "Eliminar comentario",
+    "deleteCommentConfirmation": "¿Está seguro de que desea eliminar este comentario? Esta acción no se puede deshacer."
   }
 }

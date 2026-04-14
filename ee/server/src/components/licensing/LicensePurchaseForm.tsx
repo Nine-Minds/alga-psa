@@ -18,10 +18,11 @@ import {
   EmbeddedCheckoutProvider,
   EmbeddedCheckout,
 } from '@stripe/react-stripe-js';
-import { AlertCircle, ShoppingCart, CreditCard, Calendar } from 'lucide-react';
+import { AlertCircle, ShoppingCart, CreditCard, Calendar, ArrowRight } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTier } from 'server/src/context/TierContext';
 
 interface LicensePurchaseFormProps {
   className?: string;
@@ -31,6 +32,7 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
   const { t } = useTranslation('msp/licensing');
   const { t: tCommon } = useTranslation('common');
   const { formatCurrency, formatDate } = useFormatters();
+  const { isSolo, isLoading: isTierLoading } = useTier();
 
   // State
   const [quantity, setQuantity] = useState<number>(1);
@@ -295,6 +297,53 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
     );
   }
 
+  // Solo plans are single-seat by design and have no per-user pricing — buying
+  // additional licenses requires upgrading to Pro. Redirect the user to the
+  // account management screen where the upgrade flow lives.
+  if (!isTierLoading && isSolo) {
+    return (
+      <div className={className}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              {t('subscriptionForm.title', { defaultValue: 'Manage License Subscription' })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert variant="info" className="mb-4">
+              <AlertDescription>
+                <p className="text-sm font-medium mb-1">
+                  {t('subscriptionForm.solo.title', {
+                    defaultValue: 'Solo includes one user',
+                  })}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {t('subscriptionForm.solo.description', {
+                    defaultValue:
+                      'The Solo plan is designed for a single user and does not support adding licenses. Upgrade to Pro to add more users to your team.',
+                  })}
+                </p>
+              </AlertDescription>
+            </Alert>
+            <Button
+              id="upgrade-to-pro-button"
+              className="w-full"
+              onClick={() => {
+                window.location.href = '/msp/settings?tab=account';
+              }}
+            >
+              {t('subscriptionForm.solo.upgradeCta', {
+                defaultValue: 'Upgrade to Pro',
+              })}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Render confirmation modal
   const renderConfirmationModal = () => {
     console.log('[renderConfirmationModal] Called', {
@@ -319,11 +368,39 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
 
     console.log('[renderConfirmationModal] Rendering Dialog component');
 
+    const footer = (
+      <div className="flex justify-end space-x-2">
+        <Button
+          id="cancel-confirmation-button"
+          variant="outline"
+          onClick={() => {
+            setShowConfirmModal(false);
+            setLoading(false);
+          }}
+          disabled={confirmLoading}
+        >
+          {t('subscriptionForm.confirmation.cancel', { defaultValue: 'Cancel' })}
+        </Button>
+        <Button
+          id="confirm-license-update-button"
+          onClick={processLicenseUpdate}
+          disabled={confirmLoading}
+        >
+          {confirmLoading
+            ? tCommon('status.processing', { defaultValue: 'Processing...' })
+            : isIncrease
+              ? t('subscriptionForm.confirmation.confirmPayNow', { defaultValue: 'Confirm & Pay Now' })
+              : t('subscriptionForm.confirmation.confirmSchedule', { defaultValue: 'Confirm Schedule' })}
+        </Button>
+      </div>
+    );
+
     return (
       <Dialog
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
         title={t('subscriptionForm.confirmation.title', { defaultValue: 'Confirm License Update' })}
+        footer={footer}
       >
           <p className="text-sm text-gray-600 mb-4">
             {isIncrease
@@ -471,30 +548,6 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
             </div>
           </div>
 
-          <div className="mt-6 flex gap-2 justify-end">
-            <Button
-              id="cancel-confirmation-button"
-              variant="outline"
-              onClick={() => {
-                setShowConfirmModal(false);
-                setLoading(false);
-              }}
-              disabled={confirmLoading}
-            >
-              {t('subscriptionForm.confirmation.cancel', { defaultValue: 'Cancel' })}
-            </Button>
-            <Button
-              id="confirm-license-update-button"
-              onClick={processLicenseUpdate}
-              disabled={confirmLoading}
-            >
-              {confirmLoading
-                ? tCommon('status.processing', { defaultValue: 'Processing...' })
-                : isIncrease
-                  ? t('subscriptionForm.confirmation.confirmPayNow', { defaultValue: 'Confirm & Pay Now' })
-                  : t('subscriptionForm.confirmation.confirmSchedule', { defaultValue: 'Confirm Schedule' })}
-            </Button>
-          </div>
       </Dialog>
     );
   };

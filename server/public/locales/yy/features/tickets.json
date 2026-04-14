@@ -37,7 +37,9 @@
     "noSla": "55555",
     "onTrack": "55555",
     "breached": "55555",
-    "paused": "55555"
+    "paused": "55555",
+    "allResponseStatuses": "55555",
+    "responseStatus": "55555"
   },
   "create": {
     "title": "55555",
@@ -189,7 +191,8 @@
     "failedToUpdateComment": "55555",
     "failedToDeleteComment": "55555",
     "deleteOwnCommentError": "55555",
-    "failedToUpdateTicketStatus": "55555"
+    "failedToUpdateTicketStatus": "55555",
+    "noTitle": "55555"
   },
   "conversation": {
     "comments": "55555",
@@ -230,7 +233,8 @@
     "deleteCommentAriaLabel": "55555",
     "inboundChildReplies": "55555",
     "childTicket": "55555",
-    "ticketPrefix": "55555 {{number}} 55555"
+    "ticketPrefix": "55555 {{number}} 55555",
+    "clipboardDraftCancelMessage": "55555"
   },
   "responseState": {
     "awaitingYourResponse": "55555",
@@ -434,7 +438,11 @@
       "selectMasterTicket": "55555",
       "syncUpdates": "55555",
       "syncUpdatesHelp": "55555",
-      "childrenDescription": "55555"
+      "childrenDescription": "55555",
+      "checkingMasters": "55555",
+      "existingMasterSuffix": "55555",
+      "existingMasterLocked": "55555",
+      "multipleExistingMasters": "55555 {{count}} 55555"
     },
     "auth": {
       "moveRequired": "55555",
@@ -760,7 +768,8 @@
       "columns": {
         "sla": "55555",
         "createdBy": "55555",
-        "actions": "55555"
+        "actions": "55555",
+        "tags": "55555"
       },
       "requiredSuffix": "55555",
       "tagsUnderTitle": "55555",
@@ -1021,5 +1030,22 @@
     "minutes": "55555",
     "invalidDateTime": "55555",
     "declined": "55555"
+  },
+  "categories": {
+    "itilBadge": "55555"
+  },
+  "tickets": {
+    "conversation": {
+      "closeStatus": "55555",
+      "noStatusChange": "55555"
+    }
+  },
+  "common": {
+    "continueEditing": "55555"
+  },
+  "details": {
+    "bundle": {
+      "childrenDescription": "55555"
+    }
   }
 }

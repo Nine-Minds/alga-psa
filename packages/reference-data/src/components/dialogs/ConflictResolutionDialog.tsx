@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import type { ImportConflict } from '@alga-psa/reference-data/actions';
@@ -75,13 +75,33 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
     });
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="cancel-conflict-button"
+        variant="outline"
+        onClick={onCancel}
+      >
+        Cancel
+      </Button>
+      <Button
+        id="apply-resolutions-button"
+        onClick={onResolve}
+        className="bg-primary-500 text-white hover:bg-primary-600"
+      >
+        Apply Resolutions
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog 
-      isOpen={open} 
+    <Dialog
+      isOpen={open}
       onClose={() => onOpenChange(false)}
       title="Resolve Import Conflicts"
       className="max-w-3xl"
       id="conflict-resolution-dialog"
+      footer={footer}
     >
       <DialogContent>
         <div className="flex flex-col h-full">
@@ -188,22 +208,6 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
           </div>
         </div>
       </DialogContent>
-      <DialogFooter>
-            <Button
-              id="cancel-conflict-button"
-              variant="outline"
-              onClick={onCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              id="apply-resolutions-button"
-              onClick={onResolve}
-              className="bg-primary-500 text-white hover:bg-primary-600"
-            >
-              Apply Resolutions
-            </Button>
-      </DialogFooter>
     </Dialog>
   );
 };

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -145,14 +145,37 @@ export default function SecretDialog({
     return name.length > 0 && value.length > 0 && nameErrors.length === 0 && !validatingName;
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="cancel-secret-dialog"
+        type="button"
+        variant="outline"
+        onClick={() => onOpenChange(false)}
+        disabled={saving}
+      >
+        {t('secrets.dialog.actions.cancel')}
+      </Button>
+      <Button
+        id="save-secret-button"
+        type="button"
+        onClick={() => (document.getElementById('secret-dialog-form') as HTMLFormElement | null)?.requestSubmit()}
+        disabled={!canSubmit() || saving}
+      >
+        {saving ? t('secrets.dialog.actions.saving') : isEditing ? t('secrets.dialog.actions.update') : t('secrets.dialog.actions.create')}
+      </Button>
+    </div>
+  );
+
   return (
     <Dialog
       isOpen={open}
       onClose={() => !saving && onOpenChange(false)}
       title={isEditing ? t('secrets.dialog.editTitle') : t('secrets.dialog.createTitle')}
+      footer={footer}
     >
       <DialogContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="secret-dialog-form" onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="secret-name">
               {isEditing ? t('secrets.dialog.fields.name.label').replace(' *', '') : t('secrets.dialog.fields.name.label')}
@@ -224,24 +247,6 @@ export default function SecretDialog({
             />
           </div>
 
-          <DialogFooter>
-            <Button
-              id="cancel-secret-dialog"
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
-              {t('secrets.dialog.actions.cancel')}
-            </Button>
-            <Button
-              id="save-secret-button"
-              type="submit"
-              disabled={!canSubmit() || saving}
-            >
-              {saving ? t('secrets.dialog.actions.saving') : isEditing ? t('secrets.dialog.actions.update') : t('secrets.dialog.actions.create')}
-            </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

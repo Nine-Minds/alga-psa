@@ -218,5 +218,8 @@
     "cascadeMakeHidden": "Wilt u ook alle {{count}} document(en) in \"{{name}}\" verbergen in het klantenportaal?",
     "cascadeYes": "Ja, documenten bijwerken",
     "cascadeNo": "Nee, alleen map"
+  },
+  "empty": {
+    "default": "Geen documenten gevonden"
   }
 }

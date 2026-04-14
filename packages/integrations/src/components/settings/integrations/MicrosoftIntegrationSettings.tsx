@@ -11,7 +11,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@alga-psa/ui/components/Dialog';
@@ -951,6 +950,22 @@ export function MicrosoftIntegrationSettings() {
         isOpen={dialogMode !== null}
         onClose={closeDialog}
         title={dialogTitle}
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              id="microsoft-profile-cancel"
+              type="button"
+              variant="outline"
+              onClick={closeDialog}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button id="microsoft-profile-save" type="button" onClick={() => void handleSave()} disabled={saving}>
+              {saving ? 'Saving…' : dialogMode === 'create' ? 'Create Profile' : 'Save Changes'}
+            </Button>
+          </div>
+        }
       >
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
@@ -1032,20 +1047,6 @@ export function MicrosoftIntegrationSettings() {
             </Alert>
           )}
 
-          <DialogFooter className="mt-4 flex items-center justify-end gap-2">
-            <Button
-              id="microsoft-profile-cancel"
-              type="button"
-              variant="outline"
-              onClick={closeDialog}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button id="microsoft-profile-save" type="button" onClick={() => void handleSave()} disabled={saving}>
-              {saving ? 'Saving…' : dialogMode === 'create' ? 'Create Profile' : 'Save Changes'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

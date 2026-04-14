@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect';
 import {
   createService,
@@ -438,6 +438,18 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           ? t('quickAddProduct.dialog.editTitle', { defaultValue: 'Edit Product' })
           : t('quickAddProduct.dialog.addTitle', { defaultValue: 'Add Product' })
       }
+      footer={(
+        <div className="flex justify-end space-x-2">
+          <Button id="quick-add-product-cancel-button" variant="outline" onClick={handleClose}>
+            {t('quickAddProduct.actions.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button id="quick-add-product-submit-button" onClick={handleSubmit}>
+            {isEditMode
+              ? t('quickAddProduct.actions.save', { defaultValue: 'Save' })
+              : t('quickAddProduct.actions.create', { defaultValue: 'Create' })}
+          </Button>
+        </div>
+      )}
     >
       <DialogContent>
         {error && <div className="text-red-500 mb-4">{error}</div>}
@@ -691,16 +703,6 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           </div>
         </div>
       </DialogContent>
-      <DialogFooter>
-        <Button id="quick-add-product-cancel-button" variant="outline" onClick={handleClose}>
-          {t('quickAddProduct.actions.cancel', { defaultValue: 'Cancel' })}
-        </Button>
-        <Button id="quick-add-product-submit-button" onClick={handleSubmit}>
-          {isEditMode
-            ? t('quickAddProduct.actions.save', { defaultValue: 'Save' })
-            : t('quickAddProduct.actions.create', { defaultValue: 'Create' })}
-        </Button>
-      </DialogFooter>
     </Dialog>
   );
 }

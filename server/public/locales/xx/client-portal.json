@@ -14,7 +14,8 @@
     "portal": "11111",
     "notifications": "11111",
     "documents": "11111",
-    "knowledgeBase": "11111"
+    "knowledgeBase": "11111",
+    "requestServices": "11111"
   },
   "dashboard": {
     "title": "11111",
@@ -137,7 +138,9 @@
         "description": "11111"
       }
     },
-    "forgotPassword": "11111"
+    "forgotPassword": "11111",
+    "sessionEndedTitle": "11111",
+    "sessionEndedMessage": "11111"
   },
   "account": {
     "title": "11111",
@@ -339,7 +342,9 @@
       "uploadError": "11111",
       "deleteSuccess": "11111",
       "deleteError": "11111",
-      "deleteConfirm": "11111"
+      "deleteConfirm": "11111",
+      "linking": "11111",
+      "linkDocument": "11111"
     },
     "validation": {
       "clientNameRequired": "11111",

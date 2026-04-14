@@ -23,7 +23,7 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { ISlaPolicy } from '@alga-psa/sla/types';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -948,6 +948,30 @@ const BoardsSettings: React.FC = () => {
           setIsLoadingBoardStatuses(false);
         }}
         title={editingBoard ? t('ticketing.boards.dialog.editBoard') : t('ticketing.boards.dialog.addBoard')}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-board-dialog"
+              variant="outline"
+              onClick={() => {
+                setShowAddEditDialog(false);
+                setEditingBoard(null);
+                setFormData(createEmptyFormData());
+                setError(null);
+                setIsLoadingBoardStatuses(false);
+              }}
+            >
+              {t('ticketing.boards.actions.cancel')}
+            </Button>
+            <Button
+              id="save-board-button"
+              onClick={handleSaveBoard}
+              disabled={isLoadingBoardStatuses || (shouldManageTicketStatuses && Boolean(ticketStatusValidationError))}
+            >
+              {editingBoard ? t('ticketing.boards.actions.update') : t('ticketing.boards.actions.create')}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -1394,38 +1418,38 @@ const BoardsSettings: React.FC = () => {
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id="cancel-board-dialog"
-            variant="outline"
-            onClick={() => {
-              setShowAddEditDialog(false);
-              setEditingBoard(null);
-              setFormData(createEmptyFormData());
-              setError(null);
-              setIsLoadingBoardStatuses(false);
-            }}
-          >
-            {t('ticketing.boards.actions.cancel')}
-          </Button>
-          <Button
-            id="save-board-button"
-            onClick={handleSaveBoard}
-            disabled={isLoadingBoardStatuses || (shouldManageTicketStatuses && Boolean(ticketStatusValidationError))}
-          >
-            {editingBoard ? t('ticketing.boards.actions.update') : t('ticketing.boards.actions.create')}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       {/* Import Dialog */}
-      <Dialog 
-        isOpen={showImportDialog && importConflicts.length === 0} 
+      <Dialog
+        isOpen={showImportDialog && importConflicts.length === 0}
         onClose={() => {
           setShowImportDialog(false);
           setSelectedImportBoards([]);
-        }} 
+        }}
         title={t('ticketing.boards.dialog.importTitle')}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-import-dialog"
+              variant="outline"
+              onClick={() => {
+                setShowImportDialog(false);
+                setSelectedImportBoards([]);
+                setImportBoardItilSettings({});
+              }}
+            >
+              {t('ticketing.boards.actions.cancel')}
+            </Button>
+            <Button
+              id="import-selected-boards"
+              onClick={handleImport}
+              disabled={selectedImportBoards.length === 0}
+            >
+              {t('ticketing.boards.actions.importSelected')}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -1530,36 +1554,33 @@ const BoardsSettings: React.FC = () => {
             )}
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id="cancel-import-dialog"
-            variant="outline"
-            onClick={() => {
-              setShowImportDialog(false);
-              setSelectedImportBoards([]);
-              setImportBoardItilSettings({});
-            }}
-          >
-            {t('ticketing.boards.actions.cancel')}
-          </Button>
-          <Button
-            id="import-selected-boards"
-            onClick={handleImport}
-            disabled={selectedImportBoards.length === 0}
-          >
-            {t('ticketing.boards.actions.importSelected')}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       {/* Conflict Resolution Dialog */}
-      <Dialog 
-        isOpen={importConflicts.length > 0} 
+      <Dialog
+        isOpen={importConflicts.length > 0}
         onClose={() => {
           setImportConflicts([]);
           setConflictResolutions({});
-        }} 
+        }}
         title={t('ticketing.boards.dialog.conflictsTitle')}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-conflict-dialog"
+              variant="outline"
+              onClick={() => {
+                setImportConflicts([]);
+                setConflictResolutions({});
+              }}
+            >
+              {t('ticketing.boards.actions.cancel')}
+            </Button>
+            <Button id="import-with-resolutions" onClick={handleImport}>
+              {t('ticketing.boards.dialog.importWithResolutions')}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -1644,21 +1665,6 @@ const BoardsSettings: React.FC = () => {
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id="cancel-conflict-dialog"
-            variant="outline"
-            onClick={() => {
-              setImportConflicts([]);
-              setConflictResolutions({});
-            }}
-          >
-            {t('ticketing.boards.actions.cancel')}
-          </Button>
-          <Button id="import-with-resolutions" onClick={handleImport}>
-            {t('ticketing.boards.dialog.importWithResolutions')}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       {/* ITIL Information Modal */}
@@ -1666,6 +1672,13 @@ const BoardsSettings: React.FC = () => {
         isOpen={showItilInfoModal}
         onClose={() => setShowItilInfoModal(false)}
         title={t('ticketing.boards.itilInfo.title')}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="close-itil-info" onClick={() => setShowItilInfoModal(false)}>
+              {t('ticketing.boards.actions.close')}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent className="max-w-4xl">
           <div className="space-y-6">
@@ -1812,11 +1825,6 @@ const BoardsSettings: React.FC = () => {
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button id="close-itil-info" onClick={() => setShowItilInfoModal(false)}>
-            {t('ticketing.boards.actions.close')}
-          </Button>
-        </DialogFooter>
       </Dialog>
     </div>
   );

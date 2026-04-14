@@ -14,11 +14,17 @@
       }
     },
     "testflight": {
+      "env": {
+        "EXPO_PUBLIC_ALGA_ENV": "prod"
+      },
       "ios": {
         "distribution": "store"
       }
     },
     "playInternal": {
+      "env": {
+        "EXPO_PUBLIC_ALGA_ENV": "prod"
+      },
       "android": {
         "distribution": "store"
       }

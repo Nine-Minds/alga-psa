@@ -1271,7 +1271,7 @@ export default function ProjectDetail({
 
   // Second effect: Once tasks are loaded, open the specific task
   useEffect(() => {
-    if (!initialTaskId || projectTasks.length === 0 || showQuickAdd || hasOpenedInitialTask.current) return;
+    if (!initialTaskId || projectTasks.length === 0 || hasOpenedInitialTask.current) return;
 
     // Find the task in the loaded tasks
     const taskToOpen = projectTasks.find(task => task.task_id === initialTaskId);
@@ -1283,7 +1283,7 @@ export default function ProjectDetail({
       setShowQuickAdd(true);
       hasOpenedInitialTask.current = true; // Mark that we've opened the task
     }
-  }, [initialTaskId, projectTasks, showQuickAdd]);
+  }, [initialTaskId, projectTasks]);
 
   // Fetch document counts once when phase tasks load (not on filter changes)
   const phaseTaskIds = useMemo(() => projectTasks.map(t => t.task_id).sort().join(','), [projectTasks]);
