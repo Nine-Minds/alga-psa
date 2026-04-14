@@ -122,7 +122,7 @@
   {
     "id": "F025",
     "description": "ServiceHourlyConfigForm.tsx: Translate user type specific rates section ('User Type Specific Rates' label, tooltip, existing rate display with interpolated values, 'Add New Rate' label, user type select placeholder, 'Add' button), user type option labels ('Technician', 'Engineer', 'Consultant', 'Project Manager', 'Administrator'), and validation error messages ('Please select a user type...', 'This user type already has a specific rate')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F026",
