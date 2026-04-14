@@ -394,7 +394,7 @@
   {
     "id": "T050",
     "description": "Pseudo-locale files (xx, yy) exist for msp/contract-lines and cover all keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
