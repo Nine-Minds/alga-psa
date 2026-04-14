@@ -785,13 +785,19 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                 </div>
               </div>
 
-              <DataTable
-                data={filteredClientContracts}
-                columns={clientContractColumns}
-                pagination
-                onRowClick={(record) => navigateToContract(record.contract_id, record.client_contract_id)}
-                rowClassName={() => 'cursor-pointer'}
-              />
+              {filteredClientContracts.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  {t('clientContracts.empty.noMatches', { defaultValue: 'No client contracts match your search.' })}
+                </div>
+              ) : (
+                <DataTable
+                  data={filteredClientContracts}
+                  columns={clientContractColumns}
+                  pagination
+                  onRowClick={(record) => navigateToContract(record.contract_id, record.client_contract_id)}
+                  rowClassName={() => 'cursor-pointer'}
+                />
+              )}
             </TabsContent>
 
             <TabsContent value="upcoming-renewals">

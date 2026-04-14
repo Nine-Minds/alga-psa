@@ -159,3 +159,6 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Added a localized terminate confirmation dialog flow (`contractToTerminate` state + `ConfirmationDialog`) so terminate is explicitly confirmed before mutation.
 - **(2026-04-14)** Expanded `clientContracts.*` keys in `server/public/locales/en/msp/contracts.json` (columns, search, dialogs, toasts, PO labels, upcoming-renewals labels/statuses/actions/window options).
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx` (pass; warnings only) and `jq empty server/public/locales/en/msp/contracts.json` (pass).
+- **(2026-04-14)** `F034` completed in `ClientContractsTab.tsx`: localized loading/error states, added translated empty-state rendering for filtered client contracts, and localized PO indicator column values (`Required` / `Not required`).
+- **(2026-04-14)** Added `clientContracts.empty.noMatches` key in `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx` (pass; warnings only) and `jq empty server/public/locales/en/msp/contracts.json` (pass).

@@ -167,7 +167,7 @@
   {
     "id": "F034",
     "description": "Wire useTranslation('msp/contracts') in ClientContractsTab.tsx -- translate empty state, loading indicator, error alert, PO indicator column, and pagination labels",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F035",

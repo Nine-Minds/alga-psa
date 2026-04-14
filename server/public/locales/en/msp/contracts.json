@@ -712,6 +712,9 @@
         "title": "Terminate client contract?"
       }
     },
+    "empty": {
+      "noMatches": "No client contracts match your search."
+    },
     "errors": {
       "failedToFetch": "Failed to fetch client contracts"
     },
