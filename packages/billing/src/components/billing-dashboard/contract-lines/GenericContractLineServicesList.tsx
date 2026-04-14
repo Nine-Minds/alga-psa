@@ -28,12 +28,13 @@ import { AlertCircle } from 'lucide-react';
 import ContractLineServiceForm from './ContractLineServiceForm'; // Adjusted path
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { IContractLineServiceConfiguration } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Define billing method options
-const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [
-  { value: 'fixed', label: 'Fixed Price' },
-  { value: 'hourly', label: 'Hourly' },
-  { value: 'usage', label: 'Usage Based' }
+const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; labelKey: string; defaultLabel: string }> = [
+  { value: 'fixed', labelKey: 'services.generic.billingMethod.fixed', defaultLabel: 'Fixed Price' },
+  { value: 'hourly', labelKey: 'services.generic.billingMethod.hourly', defaultLabel: 'Hourly' },
+  { value: 'usage', labelKey: 'services.generic.billingMethod.usage', defaultLabel: 'Usage Based' }
 ];
 
 interface GenericPlanServicesListProps {
@@ -56,6 +57,7 @@ interface EnhancedPlanService extends IContractLineService {
 }
 
 const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contractLineId, onServicesChanged, disableEditing = false }) => {
+  const { t } = useTranslation('msp/contract-lines');
   const [planServices, setPlanServices] = useState<EnhancedPlanService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   // Removed serviceCategories state
@@ -107,7 +109,10 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
         : (servicesResponse.services || []);
 
       if (!planDetails) {
-        throw new Error(`Contract line with ID ${contractLineId} not found.`);
+        throw new Error(t('services.generic.errors.contractLineNotFound', {
+          defaultValue: 'Contract line with ID {{id}} not found.',
+          id: contractLineId,
+        }));
       }
       setPlanType(planDetails.contract_line_type); // Store the plan type
       setContractLineBillingFrequency(planDetails.billing_frequency); // Store the billing frequency
@@ -137,10 +142,10 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
           configuration: configInfo.configuration,
           configurationType: configInfo.configuration.configuration_type,
           typeConfig: configInfo.typeConfig, // Include type-specific config
-          service_name: configInfo.service.service_name || 'Unknown Service',
-          service_type_name: configInfo.service.service_type_name || 'N/A', // Use directly from joined data
+          service_name: configInfo.service.service_name || t('services.generic.unknownService', { defaultValue: 'Unknown Service' }),
+          service_type_name: configInfo.service.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' }), // Use directly from joined data
           billing_method: configInfo.service.billing_method,
-          unit_of_measure: configInfo.service.unit_of_measure || 'N/A',
+          unit_of_measure: configInfo.service.unit_of_measure || t('common.notAvailable', { defaultValue: 'N/A' }),
           default_rate: configInfo.service.default_rate
         };
       });
@@ -149,11 +154,13 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       setAvailableServices(allAvailableServices); // Keep this to know which services *can* be added
     } catch (error) {
       console.error('Error fetching data:', error);
-      setError('Failed to load services data');
+      setError(t('services.generic.errors.failedToLoadServicesData', {
+        defaultValue: 'Failed to load services data',
+      }));
     } finally {
       setIsLoading(false);
     }
-  }, [contractLineId]);
+  }, [contractLineId, t]);
 
   useEffect(() => {
     fetchData();
@@ -169,7 +176,11 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       if (service && !hasMatchingCurrencyPrice(service)) {
         const customRate = customRates[serviceId];
         if (!customRate || parseFloat(customRate) <= 0) {
-          setError(`Please enter a rate for "${service.service_name}" (no ${contractCurrency} price configured)`);
+          setError(t('services.generic.errors.enterRateForService', {
+            defaultValue: 'Please enter a rate for "{{serviceName}}" (no {{currency}} price configured)',
+            serviceName: service.service_name,
+            currency: contractCurrency,
+          }));
           return;
         }
       }
@@ -203,7 +214,9 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       onServicesChanged?.(); // Call the callback if provided
     } catch (error) {
       console.error('Error adding services:', error);
-      setError('Failed to add services');
+      setError(t('services.generic.errors.failedToAddServices', {
+        defaultValue: 'Failed to add services',
+      }));
     }
   };
 
@@ -216,7 +229,9 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       onServicesChanged?.(); // Call the callback if provided
     } catch (error) {
       console.error('Error removing service:', error);
-      setError('Failed to remove service');
+      setError(t('services.generic.errors.failedToRemoveService', {
+        defaultValue: 'Failed to remove service',
+      }));
     }
   };
 
@@ -241,7 +256,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
 
   const planServiceColumns: ColumnDefinition<EnhancedPlanService>[] = [
     {
-      title: 'Service Name',
+      title: t('services.generic.columns.serviceName', { defaultValue: 'Service Name' }),
       dataIndex: 'service_name',
       render: (value, record) => {
         // Check for bucket billing period mismatch
@@ -257,21 +272,27 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
             <span>{value}</span>
             {hasMismatch && (
               <Badge variant="warning" className="text-xs">
-                ⚠️ Billing mismatch
+                {t('services.generic.badges.billingMismatch', { defaultValue: 'Billing mismatch' })}
               </Badge>
             )}
           </div>
         );
       }
     },
-    { title: 'Service Type', dataIndex: 'service_type_name' }, // Changed title and dataIndex
+    { title: t('services.generic.columns.serviceType', { defaultValue: 'Service Type' }), dataIndex: 'service_type_name' }, // Changed title and dataIndex
     {
-      title: 'Billing Method',
+      title: t('services.generic.columns.billingMethod', { defaultValue: 'Billing Method' }),
       dataIndex: 'billing_method',
-      render: (value) => BILLING_METHOD_OPTIONS.find(opt => opt.value === value)?.label || value || 'N/A',
+      render: (value) => {
+        const option = BILLING_METHOD_OPTIONS.find(opt => opt.value === value);
+        if (option) {
+          return t(option.labelKey, { defaultValue: option.defaultLabel });
+        }
+        return value || t('common.notAvailable', { defaultValue: 'N/A' });
+      },
     },
     {
-      title: 'Derived Config Type', // Changed title slightly for clarity
+      title: t('services.generic.columns.derivedConfigType', { defaultValue: 'Derived Config Type' }), // Changed title slightly for clarity
       dataIndex: 'billing_method', // Use billing_method and unit_of_measure from record
       render: (_, record) => { // Use record instead of value
         let derivedType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' | undefined; // Allow undefined
@@ -284,7 +305,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
           derivedType = 'Usage';
         }
         // Determine display text, defaulting to 'Default' if derivedType is undefined
-        const displayText = derivedType || 'Default';
+        const displayText = derivedType || t('services.generic.badges.defaultConfigType', { defaultValue: 'Default' });
 
         return (
           // Pass potentially undefined derivedType to getConfigTypeColor
@@ -294,19 +315,19 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
         );
       },
     },
-    { title: 'Quantity', dataIndex: 'quantity', render: (value) => value ?? 1 }, // Default to 1 if null/undefined
-    { title: 'Unit of Measure', dataIndex: 'unit_of_measure' },
+    { title: t('services.generic.columns.quantity', { defaultValue: 'Quantity' }), dataIndex: 'quantity', render: (value) => value ?? 1 }, // Default to 1 if null/undefined
+    { title: t('services.generic.columns.unitOfMeasure', { defaultValue: 'Unit of Measure' }), dataIndex: 'unit_of_measure' },
     {
-      title: 'Custom Rate',
+      title: t('services.generic.columns.customRate', { defaultValue: 'Custom Rate' }),
       dataIndex: 'custom_rate',
       render: (value, record) => {
         const rate = value !== undefined ? value : record.default_rate;
         // Display rate directly as decimal
-        return rate !== undefined ? `$${parseFloat(rate).toFixed(2)}` : 'N/A';
+        return rate !== undefined ? `$${parseFloat(rate).toFixed(2)}` : t('common.notAvailable', { defaultValue: 'N/A' });
       },
     },
     {
-      title: 'Actions',
+      title: t('services.generic.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'service_id',
       render: (value, record) => (
         <DropdownMenu>
@@ -317,7 +338,9 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">
+                {t('common.actions.openMenu', { defaultValue: 'Open menu' })}
+              </span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -328,7 +351,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
                 onClick={() => handleEditService(record)}
               >
                 <Settings className="h-4 w-4 mr-2" />
-                Configure
+                {t('common.actions.configure', { defaultValue: 'Configure' })}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
@@ -336,7 +359,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
               className="text-red-600 focus:text-red-600"
               onClick={() => handleRemoveService(value)}
             >
-              Remove
+              {t('common.actions.remove', { defaultValue: 'Remove' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -392,7 +415,9 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       )}
 
       {isLoading ? (
-        <div className="text-center py-4">Loading services...</div>
+        <div className="text-center py-4">
+          {t('services.generic.loadingServices', { defaultValue: 'Loading services...' })}
+        </div>
       ) : (
         <>
           <div className="mb-4">
@@ -404,24 +429,52 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
               // Conditionally disable row click
               onRowClick={!disableEditing ? (row) => handleEditService(row) : undefined}
             />
-            {planServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this contract line.</p>}
+            {planServices.length === 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                {t('services.generic.emptyState', {
+                  defaultValue: 'No services currently associated with this contract line.',
+                })}
+              </p>
+            )}
           </div>
 
           <div className="mt-6 border-t pt-4">
-            <h4 className="text-md font-medium mb-2">Add Services to Contract Line</h4>
+            <h4 className="text-md font-medium mb-2">
+              {t('services.generic.addServicesHeading', {
+                defaultValue: 'Add Services to Contract Line',
+              })}
+            </h4>
             {servicesAvailableToAdd.length === 0 ? (
-              <p className="text-sm text-muted-foreground">All available services are already associated with this contract line.</p>
+              <p className="text-sm text-muted-foreground">
+                {t('services.generic.allServicesAssociated', {
+                  defaultValue: 'All available services are already associated with this contract line.',
+                })}
+              </p>
             ) : (
               <>
                 <div className="mb-3">
                   <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto border rounded p-2">
                     {servicesAvailableToAdd.map(service => {
                       // Use service_type_name directly from the service object (fetched via updated getServices)
-                      const serviceTypeName = service.service_type_name || 'N/A'; // No cast needed now that IService includes service_type_name
+                      const serviceTypeName = service.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' }); // No cast needed now that IService includes service_type_name
                       const currencyPrice = getServicePriceInCurrency(service, contractCurrency);
                       const hasCurrencyPrice = currencyPrice !== null;
                       const isSelected = selectedServicesToAdd.includes(service.service_id!);
                       const currencySymbol = getCurrencySymbol(contractCurrency);
+                      const billingMethodOption = BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method);
+                      const billingMethod = billingMethodOption
+                        ? t(billingMethodOption.labelKey, { defaultValue: billingMethodOption.defaultLabel })
+                        : service.billing_method;
+                      const rateDetail = hasCurrencyPrice
+                        ? t('services.generic.serviceToAdd.rateDetail', {
+                            defaultValue: 'Rate: {{symbol}}{{amount}}',
+                            symbol: currencySymbol,
+                            amount: ((currencyPrice || 0) / 100).toFixed(2),
+                          })
+                        : t('services.generic.serviceToAdd.noCurrencyPrice', {
+                            defaultValue: 'No {{currency}} price',
+                            currency: contractCurrency,
+                          });
 
                       return (
                         <div
@@ -451,11 +504,15 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
                           <div className="flex-grow flex flex-col text-sm">
                             <span>{service.service_name}</span>
                             <span className="text-xs text-muted-foreground">
-                              Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method}
+                              {t('services.generic.serviceToAdd.metadata', {
+                                defaultValue: 'Service Type: {{type}} | Method: {{method}}',
+                                type: serviceTypeName,
+                                method: billingMethod,
+                              })}
                               {hasCurrencyPrice ? (
-                                <> | Rate: {currencySymbol}{(currencyPrice / 100).toFixed(2)}</>
+                                <> | {rateDetail}</>
                               ) : (
-                                <> | <span className="text-amber-600">No {contractCurrency} price</span></>
+                                <> | <span className="text-amber-600">{rateDetail}</span></>
                               )}
                             </span>
                           </div>
@@ -466,7 +523,9 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
                               <input
                                 type="text"
                                 inputMode="decimal"
-                                placeholder="Enter rate"
+                                placeholder={t('services.generic.serviceToAdd.enterRatePlaceholder', {
+                                  defaultValue: 'Enter rate',
+                                })}
                                 value={customRates[service.service_id!] || ''}
                                 onChange={(e) => {
                                   const value = e.target.value.replace(/[^0-9.]/g, '');
@@ -489,7 +548,10 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
                   className="w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Selected {selectedServicesToAdd.length > 0 ? `(${selectedServicesToAdd.length})` : ''} Services
+                  {t('services.generic.addSelectedServices', {
+                    defaultValue: 'Add Selected ({{count}}) Services',
+                    count: selectedServicesToAdd.length,
+                  })}
                 </Button>
               </>
             )}

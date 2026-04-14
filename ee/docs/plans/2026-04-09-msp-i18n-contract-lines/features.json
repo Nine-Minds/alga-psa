@@ -77,7 +77,7 @@
   {
     "id": "F016",
     "description": "GenericContractLineServicesList.tsx: Wire useTranslation and translate table column headers ('Service Name', 'Service Type', 'Billing Method', 'Derived Config Type', 'Quantity', 'Unit of Measure', 'Custom Rate', 'Actions'), billing method display labels ('Fixed Price', 'Hourly', 'Usage Based'), config type badge text, and screen reader text ('Open menu')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F017",
