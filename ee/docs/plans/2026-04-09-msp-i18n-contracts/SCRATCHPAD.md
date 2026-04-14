@@ -50,3 +50,9 @@ A mechanical wiring pass: 37 unwired contract components (+ 1 pure-constants fil
 - **Currency symbol hardcoding**: `BucketOverlayFields.tsx` hardcodes `$` as the currency symbol prefix (line 136). This should ideally use the contract's currency symbol, but that is a functional change beyond i18n scope. Note it but do not fix.
 - **Date formatting**: Several components use `new Intl.DateTimeFormat(undefined, ...)` which already respects browser locale -- no change needed for these. Only the explicit `'en-US'` locale in `formatCurrencyFromMinorUnits` calls needs migration.
 - **Large test surface**: 67 features x ~1.5 tests = ~100 test cases. For efficiency, group small-component tests into composite test files (e.g., one test file covering F045-F051 small components).
+
+## Execution Log
+
+- **(2026-04-14)** `F001` completed: created [`server/public/locales/en/msp/contracts.json`](../../../../server/public/locales/en/msp/contracts.json) with the full top-level namespace/group scaffold from the PRD (`common`, `status`, `renewal`, `billing`, `po`, and all component/wizard group buckets). Added initial key population for the first ContractDetail tranche (tabs/cards/dialogs/invoices/common actions/status/fallback labels) so follow-on features can wire to stable keys immediately.
+- **(2026-04-14)** Runbook/verification: `jq empty server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Constraint: key count is intentionally incremental at this stage; groups are pre-created so subsequent feature commits can append keys without structural churn.

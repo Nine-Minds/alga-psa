@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Create server/public/locales/en/msp/contracts.json namespace with all keys organized into groups: common, status, renewal, billing, po, contractDetail, contractHeader, contractOverview, contractDialog, contractForm, contractLines, contractLineEdit, contractLineRate, addLines, createCustomLine, pricingSchedules, contractsList, clientContracts, templatesTab, detailSwitcher, templateDetail, quickStart, servicePicker, bucketOverlay, frequencyOverride, wizard, wizardBasics, wizardFixed, wizardProducts, wizardHourly, wizardUsage, wizardReview, templateWizard, templateBasics, templateFixed, templateProducts, templateHourly, templateUsage, templateReview, templatePreview (~800-1200 keys)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F002",

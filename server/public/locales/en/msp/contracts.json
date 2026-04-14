@@ -1,0 +1,201 @@
+{
+  "common": {
+    "actions": {
+      "back": "Back",
+      "cancel": "Cancel",
+      "close": "Close",
+      "create": "Create",
+      "delete": "Delete",
+      "discard": "Discard",
+      "edit": "Edit",
+      "refresh": "Refresh",
+      "remove": "Remove",
+      "retry": "Retry",
+      "save": "Save",
+      "saveChanges": "Save Changes",
+      "saveChangesDirty": "Save Changes *",
+      "saving": "Saving...",
+      "view": "View"
+    },
+    "alerts": {
+      "saveSuccess": "Changes saved successfully.",
+      "systemManagedDefault": "This is a system-managed default contract."
+    },
+    "empty": {
+      "none": "None",
+      "notAvailable": "N/A",
+      "notSpecified": "Not specified",
+      "ongoing": "Ongoing"
+    },
+    "errors": {
+      "failedToLoad": "Failed to load data.",
+      "failedToSave": "Failed to save changes.",
+      "validationPrefix": "Please correct the following:"
+    },
+    "labels": {
+      "created": "Created",
+      "currency": "Currency",
+      "description": "Description",
+      "lastUpdated": "Last Updated",
+      "name": "Name",
+      "status": "Status"
+    },
+    "tabs": {
+      "clientContracts": "Client Contracts",
+      "drafts": "Drafts",
+      "templates": "Templates"
+    }
+  },
+  "status": {
+    "active": "Active",
+    "draft": "Draft",
+    "expired": "Expired",
+    "terminated": "Terminated"
+  },
+  "renewal": {
+    "labels": {
+      "decisionDue": "Decision Due",
+      "mode": "Renewal Mode",
+      "noticeDays": "Notice Period",
+      "source": "Renewal Source",
+      "termMonths": "Renewal Term"
+    },
+    "modes": {
+      "auto": "Auto-renew",
+      "manual": "Manual renewal",
+      "none": "Non-renewing"
+    },
+    "source": {
+      "contract": "Contract",
+      "tenantDefault": "Tenant default"
+    }
+  },
+  "billing": {
+    "cadenceOwner": {
+      "client": "Client schedule",
+      "contract": "Contract anniversary"
+    },
+    "frequency": {
+      "annually": "Annually",
+      "biweekly": "Biweekly",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "weekly": "Weekly"
+    },
+    "labels": {
+      "billingFrequency": "Billing Frequency",
+      "timing": "Billing Timing"
+    },
+    "timing": {
+      "advance": "In Advance",
+      "arrears": "In Arrears"
+    }
+  },
+  "po": {
+    "labels": {
+      "amount": "PO Amount",
+      "number": "PO Number",
+      "required": "PO Required"
+    }
+  },
+  "contractDetail": {
+    "cards": {
+      "assignment": "Client Assignment",
+      "clientOwnership": "Client Ownership",
+      "contractDetails": "Contract Details",
+      "header": "Contract Header",
+      "quickActions": "Quick Actions",
+      "renewalHandling": "Renewal Handling"
+    },
+    "dialogs": {
+      "delete": {
+        "confirm": "Delete Contract",
+        "description": "Are you sure you want to delete this contract? This action cannot be undone.",
+        "title": "Delete Contract"
+      },
+      "discard": {
+        "confirm": "Discard Changes",
+        "description": "Discard your unsaved changes?",
+        "title": "Discard Changes"
+      },
+      "leave": {
+        "confirm": "Leave Page",
+        "description": "You have unsaved changes. Leave this page without saving?",
+        "title": "Unsaved Changes"
+      }
+    },
+    "invoices": {
+      "columns": {
+        "amount": "Amount",
+        "createdAt": "Created",
+        "dueDate": "Due Date",
+        "invoiceNumber": "Invoice #",
+        "status": "Status"
+      },
+      "empty": "No invoices found for this contract.",
+      "loading": "Loading invoices...",
+      "title": "Contract Invoices"
+    },
+    "labels": {
+      "client": "Client",
+      "contractName": "Contract Name",
+      "description": "Description",
+      "noClientAssigned": "No client assigned",
+      "noDescription": "No description",
+      "systemManagedDefault": "System-managed default",
+      "useTenantDefaults": "Use tenant defaults"
+    },
+    "quickActions": {
+      "deleteContract": "Delete Contract",
+      "manageContractLines": "Manage Contract Lines",
+      "managePricingSchedules": "Manage Pricing Schedules",
+      "viewDocuments": "View Documents",
+      "viewInvoices": "View Invoices"
+    },
+    "tabs": {
+      "documents": "Documents",
+      "invoices": "Invoices",
+      "lines": "Contract Lines",
+      "overview": "Overview",
+      "pricing": "Pricing Schedules"
+    },
+    "validation": {
+      "billingFrequencyRequired": "Billing frequency is required.",
+      "contractNameRequired": "Contract name is required."
+    }
+  },
+  "contractHeader": {},
+  "contractOverview": {},
+  "contractDialog": {},
+  "contractForm": {},
+  "contractLines": {},
+  "contractLineEdit": {},
+  "contractLineRate": {},
+  "addLines": {},
+  "createCustomLine": {},
+  "pricingSchedules": {},
+  "contractsList": {},
+  "clientContracts": {},
+  "templatesTab": {},
+  "detailSwitcher": {},
+  "templateDetail": {},
+  "quickStart": {},
+  "servicePicker": {},
+  "bucketOverlay": {},
+  "frequencyOverride": {},
+  "wizard": {},
+  "wizardBasics": {},
+  "wizardFixed": {},
+  "wizardProducts": {},
+  "wizardHourly": {},
+  "wizardUsage": {},
+  "wizardReview": {},
+  "templateWizard": {},
+  "templateBasics": {},
+  "templateFixed": {},
+  "templateProducts": {},
+  "templateHourly": {},
+  "templateUsage": {},
+  "templateReview": {},
+  "templatePreview": {}
+}
