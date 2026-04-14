@@ -354,7 +354,7 @@
   {
     "id": "T045",
     "description": "ContractLineTypeSelector.tsx: 'Contract Line Type' label, plan type descriptions, and placeholder render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
