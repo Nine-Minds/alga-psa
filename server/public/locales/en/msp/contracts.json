@@ -648,8 +648,11 @@
     },
     "empty": {
       "dash": "—",
+      "noClientContracts": "No client contracts match your search.",
       "noDescription": "No description",
+      "noDraftMatches": "No draft contracts match your search.",
       "noDrafts": "No draft contracts. Start creating a new contract to save as draft.",
+      "noTemplates": "No templates match your search.",
       "unknownClient": "Unknown client",
       "untitledContract": "Untitled contract",
       "untitledDraft": "Untitled draft",

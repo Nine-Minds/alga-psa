@@ -566,18 +566,24 @@ const Contracts: React.FC = () => {
         </div>
       </div>
 
-      <DataTable
-        id="contracts-table"
-        data={filteredTemplateContracts}
-        columns={templateColumns}
-        pagination={true}
-        currentPage={templateCurrentPage}
-        onPageChange={setTemplateCurrentPage}
-        pageSize={templatePageSize}
-        onItemsPerPageChange={handleTemplatePageSizeChange}
-        onRowClick={(record) => navigateToContract(record.contract_id)}
-        rowClassName={() => 'cursor-pointer'}
-      />
+      {filteredTemplateContracts.length === 0 ? (
+        <div className="py-8 text-center text-muted-foreground">
+          {t('contractsList.empty.noTemplates', { defaultValue: 'No templates match your search.' })}
+        </div>
+      ) : (
+        <DataTable
+          id="contracts-table"
+          data={filteredTemplateContracts}
+          columns={templateColumns}
+          pagination={true}
+          currentPage={templateCurrentPage}
+          onPageChange={setTemplateCurrentPage}
+          pageSize={templatePageSize}
+          onItemsPerPageChange={handleTemplatePageSizeChange}
+          onRowClick={(record) => navigateToContract(record.contract_id)}
+          rowClassName={() => 'cursor-pointer'}
+        />
+      )}
     </>
   );
 
@@ -625,23 +631,41 @@ const Contracts: React.FC = () => {
         </div>
       </div>
 
-      <DataTable
-        id="client-contracts-table"
-        data={filteredClientContracts}
-        columns={clientContractColumns}
-        pagination={true}
-        currentPage={clientCurrentPage}
-        onPageChange={setClientCurrentPage}
-        pageSize={clientPageSize}
-        onItemsPerPageChange={handleClientPageSizeChange}
-        onRowClick={(record) => navigateToContract(record.contract_id, record.client_contract_id)}
-        rowClassName={() => 'cursor-pointer'}
-      />
+      {filteredClientContracts.length === 0 ? (
+        <div className="py-8 text-center text-muted-foreground">
+          {t('contractsList.empty.noClientContracts', {
+            defaultValue: 'No client contracts match your search.',
+          })}
+        </div>
+      ) : (
+        <DataTable
+          id="client-contracts-table"
+          data={filteredClientContracts}
+          columns={clientContractColumns}
+          pagination={true}
+          currentPage={clientCurrentPage}
+          onPageChange={setClientCurrentPage}
+          pageSize={clientPageSize}
+          onItemsPerPageChange={handleClientPageSizeChange}
+          onRowClick={(record) => navigateToContract(record.contract_id, record.client_contract_id)}
+          rowClassName={() => 'cursor-pointer'}
+        />
+      )}
     </>
   );
 
-  const renderDraftsTab = () => (
-    <>
+  const renderDraftsTab = () => {
+    const filteredDraftContracts = draftContracts.filter((contract) => {
+      if (!draftSearchTerm) return true;
+      const search = draftSearchTerm.toLowerCase();
+      return (
+        contract.contract_name?.toLowerCase().includes(search) ||
+        contract.client_name?.toLowerCase().includes(search)
+      );
+    });
+
+    return (
+      <>
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="relative max-w-md w-full">
           <Search
@@ -665,17 +689,14 @@ const Contracts: React.FC = () => {
             defaultValue: 'No draft contracts. Start creating a new contract to save as draft.',
           })}
         </div>
+      ) : filteredDraftContracts.length === 0 ? (
+        <div className="py-8 text-center text-muted-foreground">
+          {t('contractsList.empty.noDraftMatches', { defaultValue: 'No draft contracts match your search.' })}
+        </div>
       ) : (
         <DataTable
           id="draft-contracts-table"
-          data={draftContracts.filter((contract) => {
-            if (!draftSearchTerm) return true;
-            const search = draftSearchTerm.toLowerCase();
-            return (
-              contract.contract_name?.toLowerCase().includes(search) ||
-              contract.client_name?.toLowerCase().includes(search)
-            );
-          })}
+          data={filteredDraftContracts}
           columns={[
             {
               title: t('contractsList.columns.contractName', { defaultValue: 'Contract Name' }),
@@ -780,8 +801,9 @@ const Contracts: React.FC = () => {
           initialSorting={[{ id: 'updated_at', desc: true }]}
         />
       )}
-    </>
-  );
+      </>
+    );
+  };
 
   const tabs = [
     { id: 'templates', label: contractSubtabLabels.templates, content: renderTemplateTab() },

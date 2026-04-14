@@ -157,7 +157,7 @@
   {
     "id": "F032",
     "description": "Wire useTranslation('msp/contracts') in Contracts.tsx -- translate column headers for all three sub-tabs (template: Name/Description/Status/Frequency; client: Name/Client/Status/Start/End/Frequency; drafts: Name/Client/Created), empty states, and loading indicators",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F033",
