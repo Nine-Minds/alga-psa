@@ -1,0 +1,201 @@
+{
+  "common": {
+    "actions": {
+      "back": "Atrás",
+      "cancel": "Cancelar",
+      "close": "Cerca",
+      "create": "Crear",
+      "delete": "Borrar",
+      "discard": "Desechar",
+      "edit": "Editar",
+      "refresh": "Refrescar",
+      "remove": "Eliminar",
+      "retry": "Rever",
+      "save": "Ahorrar",
+      "saveChanges": "Guardar cambios",
+      "saveChangesDirty": "Guardar cambios *",
+      "saving": "Ahorro...",
+      "view": "Vista"
+    },
+    "alerts": {
+      "saveSuccess": "Los cambios se guardaron correctamente.",
+      "systemManagedDefault": "Este es un contrato predeterminado administrado por el sistema."
+    },
+    "empty": {
+      "none": "Ninguno",
+      "notAvailable": "N / A",
+      "notSpecified": "No especificado",
+      "ongoing": "En curso"
+    },
+    "errors": {
+      "failedToLoad": "No se pudieron cargar los datos.",
+      "failedToSave": "No se pudieron guardar los cambios.",
+      "validationPrefix": "Por favor corrija lo siguiente:"
+    },
+    "labels": {
+      "created": "Creado",
+      "currency": "Divisa",
+      "description": "Descripción",
+      "lastUpdated": "Última actualización",
+      "name": "Nombre",
+      "status": "Estado"
+    },
+    "tabs": {
+      "clientContracts": "Contratos de clientes",
+      "drafts": "Damas",
+      "templates": "Plantillas"
+    }
+  },
+  "status": {
+    "active": "Activo",
+    "draft": "Borrador",
+    "expired": "Venció",
+    "terminated": "Finalizado"
+  },
+  "renewal": {
+    "labels": {
+      "decisionDue": "Decisión vencida",
+      "mode": "Modo de renovación",
+      "noticeDays": "Plazo de aviso",
+      "source": "Fuente de renovación",
+      "termMonths": "Plazo de renovación"
+    },
+    "modes": {
+      "auto": "Renovación automática",
+      "manual": "renovación manual",
+      "none": "No renovable"
+    },
+    "source": {
+      "contract": "Contrato",
+      "tenantDefault": "Inquilino predeterminado"
+    }
+  },
+  "billing": {
+    "cadenceOwner": {
+      "client": "Horario del cliente",
+      "contract": "Aniversario del contrato"
+    },
+    "frequency": {
+      "annually": "Anualmente",
+      "biweekly": "Quincenal",
+      "monthly": "Mensual",
+      "quarterly": "Trimestral",
+      "weekly": "Semanalmente"
+    },
+    "labels": {
+      "billingFrequency": "Frecuencia de facturación",
+      "timing": "Momento de facturación"
+    },
+    "timing": {
+      "advance": "Por adelantado",
+      "arrears": "En mora"
+    }
+  },
+  "po": {
+    "labels": {
+      "amount": "Importe de la orden de compra",
+      "number": "Número de orden de compra",
+      "required": "Orden de compra requerida"
+    }
+  },
+  "contractDetail": {
+    "cards": {
+      "assignment": "Asignación de Cliente",
+      "clientOwnership": "Propiedad del cliente",
+      "contractDetails": "Detalles del contrato",
+      "header": "Encabezado del contrato",
+      "quickActions": "Acciones Rápidas",
+      "renewalHandling": "Manejo de renovación"
+    },
+    "dialogs": {
+      "delete": {
+        "confirm": "Eliminar contrato",
+        "description": "¿Está seguro de que desea eliminar este contrato? Esta acción no se puede deshacer.",
+        "title": "Eliminar contrato"
+      },
+      "discard": {
+        "confirm": "Descartar cambios",
+        "description": "¿Descartar los cambios no guardados?",
+        "title": "Descartar cambios"
+      },
+      "leave": {
+        "confirm": "Salir de la página",
+        "description": "Tienes cambios sin guardar. ¿Dejar esta página sin guardar?",
+        "title": "Cambios no guardados"
+      }
+    },
+    "invoices": {
+      "columns": {
+        "amount": "Cantidad",
+        "createdAt": "Creado",
+        "dueDate": "Fecha de vencimiento",
+        "invoiceNumber": "Factura #",
+        "status": "Estado"
+      },
+      "empty": "No se encontraron facturas para este contrato.",
+      "loading": "Cargando facturas...",
+      "title": "Facturas de contrato"
+    },
+    "labels": {
+      "client": "Cliente",
+      "contractName": "Nombre del contrato",
+      "description": "Descripción",
+      "noClientAssigned": "Ningún cliente asignado",
+      "noDescription": "Sin descripción",
+      "systemManagedDefault": "Valor predeterminado administrado por el sistema",
+      "useTenantDefaults": "Usar los valores predeterminados del inquilino"
+    },
+    "quickActions": {
+      "deleteContract": "Eliminar contrato",
+      "manageContractLines": "Administrar líneas de contrato",
+      "managePricingSchedules": "Administrar programas de precios",
+      "viewDocuments": "Ver documentos",
+      "viewInvoices": "Ver facturas"
+    },
+    "tabs": {
+      "documents": "Documentos",
+      "invoices": "Facturas",
+      "lines": "Líneas de contrato",
+      "overview": "Descripción general",
+      "pricing": "Horarios de precios"
+    },
+    "validation": {
+      "billingFrequencyRequired": "Se requiere frecuencia de facturación.",
+      "contractNameRequired": "El nombre del contrato es obligatorio."
+    }
+  },
+  "contractHeader": {},
+  "contractOverview": {},
+  "contractDialog": {},
+  "contractForm": {},
+  "contractLines": {},
+  "contractLineEdit": {},
+  "contractLineRate": {},
+  "addLines": {},
+  "createCustomLine": {},
+  "pricingSchedules": {},
+  "contractsList": {},
+  "clientContracts": {},
+  "templatesTab": {},
+  "detailSwitcher": {},
+  "templateDetail": {},
+  "quickStart": {},
+  "servicePicker": {},
+  "bucketOverlay": {},
+  "frequencyOverride": {},
+  "wizard": {},
+  "wizardBasics": {},
+  "wizardFixed": {},
+  "wizardProducts": {},
+  "wizardHourly": {},
+  "wizardUsage": {},
+  "wizardReview": {},
+  "templateWizard": {},
+  "templateBasics": {},
+  "templateFixed": {},
+  "templateProducts": {},
+  "templateHourly": {},
+  "templateUsage": {},
+  "templateReview": {},
+  "templatePreview": {}
+}

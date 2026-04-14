@@ -58,3 +58,5 @@ A mechanical wiring pass: 37 unwired contract components (+ 1 pure-constants fil
 - **(2026-04-14)** Constraint: key count is intentionally incremental at this stage; groups are pre-created so subsequent feature commits can append keys without structural churn.
 - **(2026-04-14)** `F002` completed: generated [`server/public/locales/fr/msp/contracts.json`](../../../../server/public/locales/fr/msp/contracts.json) from English source using placeholder-safe machine translation (`{{...}}` tokens protected/restored).
 - **(2026-04-14)** Verification: `jq empty server/public/locales/fr/msp/contracts.json`.
+- **(2026-04-14)** `F003` completed: generated [`server/public/locales/es/msp/contracts.json`](../../../../server/public/locales/es/msp/contracts.json) from English source with placeholder-safe machine translation.
+- **(2026-04-14)** Verification: `jq empty server/public/locales/es/msp/contracts.json`.
