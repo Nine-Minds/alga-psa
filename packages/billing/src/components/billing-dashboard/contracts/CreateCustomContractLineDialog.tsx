@@ -304,16 +304,27 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
       <div className="space-y-4">
         <Alert variant="info">
           <AlertDescription className="text-sm">
-            <strong>Fixed Fee Services:</strong> The contract line's base rate (set below) is the billed amount.
-            You can also attach <strong>Products</strong> to this contract line; product quantities are billed as
-            units, while fixed-fee service quantities are used for <em>tax allocation</em> only.
+            <strong>
+              {t('createCustomLine.fixedServicesAlertHeading', {
+                defaultValue: 'Fixed Fee Services',
+              })}
+              :
+            </strong>{' '}
+            {t('createCustomLine.fixedServicesAlertBaseRate', {
+              defaultValue: "The contract line's base rate (set below) is the billed amount.",
+            })}{' '}
+            {t('createCustomLine.fixedServicesAlertProducts', {
+              defaultValue: 'You can also attach products to this contract line; product quantities are billed as units, while fixed-fee service quantities are used for tax allocation only.',
+            })}
           </AlertDescription>
         </Alert>
 
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Services & Products
+            {t('createCustomLine.servicesAndProductsLabel', {
+              defaultValue: 'Services & Products',
+            })}
           </Label>
 
           {fixedServices.map((service, index) => (
@@ -321,7 +332,10 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`fixed-service-${index}`} className="text-sm">
-                    Item {index + 1}
+                    {t('createCustomLine.itemLabel', {
+                      defaultValue: 'Item {{index}}',
+                      index: index + 1,
+                    })}
                   </Label>
                   <ServiceCatalogPicker
                     value={service.service_id}
@@ -336,14 +350,18 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       setFixedServices(next);
                     }}
                     itemKinds={['service', 'product']}
-                    placeholder="Select an item"
+                    placeholder={t('createCustomLine.selectItemPlaceholder', {
+                      defaultValue: 'Select an item',
+                    })}
                     className="w-full"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor={`quantity-${index}`} className="text-sm">
-                    Quantity
+                    {t('createCustomLine.quantityLabel', {
+                      defaultValue: 'Quantity',
+                    })}
                   </Label>
                   <Input
                     id={`quantity-${index}`}
@@ -377,14 +395,18 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
             className="w-full"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Item
+            {t('createCustomLine.addItem', {
+              defaultValue: 'Add Item',
+            })}
           </Button>
         </div>
 
         {fixedServices.length === 0 && (
           <div className="p-4 bg-muted border border-[rgb(var(--color-border-200))] rounded-md">
             <p className="text-sm text-muted-foreground text-center">
-              No fixed fee items added yet. Click "Add Item" above to get started.
+              {t('createCustomLine.noFixedItems', {
+                defaultValue: 'No fixed fee items added yet. Click "Add Item" above to get started.',
+              })}
             </p>
           </div>
         )}
@@ -415,7 +437,15 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
       <div className="space-y-4">
         <Alert variant="info">
           <AlertDescription className="text-sm">
-            <strong>Hourly Services:</strong> These services are billed based on actual time tracked.
+            <strong>
+              {t('createCustomLine.hourlyServicesAlertHeading', {
+                defaultValue: 'Hourly Services',
+              })}
+              :
+            </strong>{' '}
+            {t('createCustomLine.hourlyServicesAlertDescription', {
+              defaultValue: 'These services are billed based on actual time tracked.',
+            })}
           </AlertDescription>
         </Alert>
 
@@ -464,7 +494,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
-            Hourly Services
+            {t('createCustomLine.hourlyServicesLabel', {
+              defaultValue: 'Hourly Services',
+            })}
           </Label>
 
           {hourlyServices.map((service, index) => (
@@ -472,7 +504,10 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`hourly-service-${index}`} className="text-sm">
-                    Service {index + 1}
+                    {t('createCustomLine.serviceLabel', {
+                      defaultValue: 'Service {{index}}',
+                      index: index + 1,
+                    })}
                   </Label>
                   <ServiceCatalogPicker
                     value={service.service_id}
@@ -494,7 +529,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       }
                     }}
                     itemKinds={['service']}
-                    placeholder="Select a service"
+                    placeholder={t('createCustomLine.selectServicePlaceholder', {
+                      defaultValue: 'Select a service',
+                    })}
                     className="w-full"
                   />
                 </div>
@@ -502,7 +539,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 <div className="space-y-2">
                   <Label htmlFor={`hourly-rate-${index}`} className="text-sm flex items-center gap-2">
                     <Coins className="h-3 w-3" />
-                    Hourly Rate
+                    {t('createCustomLine.hourlyRateLabel', {
+                      defaultValue: 'Hourly Rate',
+                    })}
                   </Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
@@ -530,12 +569,19 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                           setHourlyServiceRateInputs(prev => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
                         }
                       }}
-                      placeholder="0.00"
+                      placeholder={t('createCustomLine.moneyPlaceholder', { defaultValue: '0.00' })}
                       className="pl-7"
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {service.hourly_rate ? `${formatCurrency(service.hourly_rate)}/hour` : 'Enter hourly rate'}
+                    {service.hourly_rate
+                      ? t('createCustomLine.hourlyRateDisplay', {
+                        defaultValue: '{{rate}}/hour',
+                        rate: formatCurrency(service.hourly_rate),
+                      })
+                      : t('createCustomLine.enterHourlyRate', {
+                        defaultValue: 'Enter hourly rate',
+                      })}
                   </p>
                 </div>
 
@@ -607,14 +653,18 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
             className="w-full"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Hourly Service
+            {t('createCustomLine.addHourlyService', {
+              defaultValue: 'Add Hourly Service',
+            })}
           </Button>
         </div>
 
         {hourlyServices.length === 0 && (
           <div className="p-4 bg-muted border border-[rgb(var(--color-border-200))] rounded-md">
             <p className="text-sm text-muted-foreground text-center">
-              No hourly services added yet. Click "Add Hourly Service" above to get started.
+              {t('createCustomLine.noHourlyServices', {
+                defaultValue: 'No hourly services added yet. Click "Add Hourly Service" above to get started.',
+              })}
             </p>
           </div>
         )}
@@ -651,14 +701,24 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
       <div className="space-y-4">
         <Alert variant="info">
           <AlertDescription className="text-sm">
-            <strong>Usage-Based Services:</strong> These services are billed based on actual consumption.
+            <strong>
+              {t('createCustomLine.usageServicesAlertHeading', {
+                defaultValue: 'Usage-Based Services',
+              })}
+              :
+            </strong>{' '}
+            {t('createCustomLine.usageServicesAlertDescription', {
+              defaultValue: 'These services are billed based on actual consumption.',
+            })}
           </AlertDescription>
         </Alert>
 
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
-            Usage-Based Services
+            {t('createCustomLine.usageServicesLabel', {
+              defaultValue: 'Usage-Based Services',
+            })}
           </Label>
 
           {usageServices.map((service, index) => (
@@ -666,7 +726,10 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`usage-service-${index}`} className="text-sm">
-                    Service {index + 1}
+                    {t('createCustomLine.serviceLabel', {
+                      defaultValue: 'Service {{index}}',
+                      index: index + 1,
+                    })}
                   </Label>
                   <ServiceCatalogPicker
                     value={service.service_id}
@@ -689,7 +752,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       }
                     }}
                     itemKinds={['service']}
-                    placeholder="Select a service"
+                    placeholder={t('createCustomLine.selectServicePlaceholder', {
+                      defaultValue: 'Select a service',
+                    })}
                     className="w-full"
                   />
                 </div>
@@ -698,7 +763,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   <div className="space-y-2">
                     <Label htmlFor={`unit-rate-${index}`} className="text-sm flex items-center gap-2">
                       <Coins className="h-3 w-3" />
-                      Rate per Unit
+                      {t('createCustomLine.ratePerUnitLabel', {
+                        defaultValue: 'Rate per Unit',
+                      })}
                     </Label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
@@ -726,25 +793,37 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                             setUsageServiceRateInputs(prev => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
                           }
                         }}
-                        placeholder="0.00"
+                        placeholder={t('createCustomLine.moneyPlaceholder', { defaultValue: '0.00' })}
                         className="pl-10"
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {service.unit_rate ? `${formatCurrency(service.unit_rate)}/${service.unit_of_measure || 'unit'}` : 'Enter unit rate'}
+                      {service.unit_rate
+                        ? t('createCustomLine.unitRateDisplay', {
+                          defaultValue: '{{rate}}/{{unit}}',
+                          rate: formatCurrency(service.unit_rate),
+                          unit: service.unit_of_measure || t('createCustomLine.defaultUnit', { defaultValue: 'unit' }),
+                        })
+                        : t('createCustomLine.enterUnitRate', {
+                          defaultValue: 'Enter unit rate',
+                        })}
                     </p>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor={`unit-measure-${index}`} className="text-sm">
-                      Unit of Measure
+                      {t('createCustomLine.unitOfMeasureLabel', {
+                        defaultValue: 'Unit of Measure',
+                      })}
                     </Label>
                     <Input
                       id={`unit-measure-${index}`}
                       type="text"
                       value={service.unit_of_measure || 'unit'}
                       onChange={(e) => handleUnitChange(index, e.target.value)}
-                      placeholder="e.g., GB, API call, user"
+                      placeholder={t('createCustomLine.unitOfMeasurePlaceholder', {
+                        defaultValue: 'e.g., GB, API call, user',
+                      })}
                     />
                   </div>
                 </div>
@@ -789,7 +868,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                         };
                         setUsageServices(newServices);
                       }}
-                      unitLabel={service.unit_of_measure || 'units'}
+                      unitLabel={service.unit_of_measure || t('createCustomLine.defaultUnits', { defaultValue: 'units' })}
                       automationId={`usage-bucket-${index}`}
                       billingFrequency={billingFrequency}
                     />
@@ -818,14 +897,18 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
             className="w-full"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Usage-Based Service
+            {t('createCustomLine.addUsageService', {
+              defaultValue: 'Add Usage-Based Service',
+            })}
           </Button>
         </div>
 
         {usageServices.length === 0 && (
           <div className="p-4 bg-muted border border-[rgb(var(--color-border-200))] rounded-md">
             <p className="text-sm text-muted-foreground text-center">
-              No usage-based services added yet. Click "Add Usage-Based Service" above to get started.
+              {t('createCustomLine.noUsageServices', {
+                defaultValue: 'No usage-based services added yet. Click "Add Usage-Based Service" above to get started.',
+              })}
             </p>
           </div>
         )}

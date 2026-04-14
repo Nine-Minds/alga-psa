@@ -117,7 +117,7 @@
   {
     "id": "F024",
     "description": "Wire useTranslation('msp/contracts') in CreateCustomContractLineDialog.tsx -- translate service preview section, quantity fields, rate display, and all tooltip/help text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F025",
