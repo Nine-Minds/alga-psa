@@ -71,3 +71,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Verification: `jq empty server/public/locales/pl/msp/contracts.json`.
 - **(2026-04-14)** `F008` completed: ran `node scripts/generate-pseudo-locales.cjs`, which regenerated pseudo-locales including `xx/msp/contracts.json` and `yy/msp/contracts.json`.
 - **(2026-04-14)** Verification: `jq empty server/public/locales/xx/msp/contracts.json && jq empty server/public/locales/yy/msp/contracts.json` and spot-check confirmed `xx` values are `11111` patterns.
+- **(2026-04-14)** `F009` completed: ran `node scripts/validate-translations.cjs` after adding `msp/contracts` locale files.
+- **(2026-04-14)** Validation result: `Errors: 0`, `Warnings: 0`, `PASSED`.

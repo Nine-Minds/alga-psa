@@ -42,7 +42,7 @@
   {
     "id": "F009",
     "description": "Run `node scripts/validate-translations.cjs` and confirm exit code 0 (key parity, variable preservation, pseudo-locale patterns, Italian accents) for msp/contracts across all 9 locales",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F010",
