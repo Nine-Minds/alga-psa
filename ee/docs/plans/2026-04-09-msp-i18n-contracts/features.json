@@ -282,7 +282,7 @@
   {
     "id": "F057",
     "description": "Wire useTranslation('msp/contracts') in UsageBasedServicesStep.tsx -- translate step heading, description, service picker, unit rate field, unit of measure field, bucket overlay fields, and empty state",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F058",
