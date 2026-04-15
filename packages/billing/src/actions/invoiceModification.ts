@@ -119,6 +119,118 @@ async function releaseRecurringServicePeriodInvoiceLinkageForInvoice(
     });
 }
 
+export interface DraftInvoicePropertiesUpdateInput {
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string | null;
+}
+
+export interface DraftInvoicePropertiesUpdateResult {
+  invoiceId: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string | null;
+}
+
+export const updateDraftInvoiceProperties = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string,
+  input: DraftInvoicePropertiesUpdateInput
+): Promise<DraftInvoicePropertiesUpdateResult> => {
+  const trimmedInvoiceNumber = input.invoiceNumber?.trim();
+
+  if (!trimmedInvoiceNumber) {
+    throw new Error('Invoice number is required');
+  }
+
+  if (!input.invoiceDate) {
+    throw new Error('Invoice date is required');
+  }
+
+  let normalizedInvoiceDate: string;
+  let normalizedDueDate: string | null = null;
+
+  try {
+    normalizedInvoiceDate = toISODate(Temporal.PlainDate.from(input.invoiceDate));
+  } catch {
+    throw new Error('Invoice date is invalid');
+  }
+
+  if (input.dueDate) {
+    try {
+      normalizedDueDate = toISODate(Temporal.PlainDate.from(input.dueDate));
+    } catch {
+      throw new Error('Due date is invalid');
+    }
+  }
+
+  const currentDate = Temporal.Now.plainDateISO().toString();
+  const { knex } = await createTenantKnex();
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const invoice = await trx('invoices')
+      .where({
+        invoice_id: invoiceId,
+        tenant,
+      })
+      .first();
+
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    if (invoice.finalized_at || invoice.status !== 'draft') {
+      throw new Error('Only draft invoices can be edited');
+    }
+
+    const duplicateInvoice = await trx('invoices')
+      .where({
+        tenant,
+        invoice_number: trimmedInvoiceNumber,
+      })
+      .whereNot({ invoice_id: invoiceId })
+      .first('invoice_id');
+
+    if (duplicateInvoice) {
+      throw new Error('Invoice number already exists. Choose a different number.');
+    }
+
+    try {
+      await trx('invoices')
+        .where({
+          invoice_id: invoiceId,
+          tenant,
+        })
+        .update({
+          invoice_number: trimmedInvoiceNumber,
+          invoice_date: normalizedInvoiceDate,
+          due_date: normalizedDueDate,
+          updated_at: currentDate,
+        });
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === '23505' &&
+        'constraint' in error &&
+        error.constraint === 'unique_invoice_number_per_tenant'
+      ) {
+        throw new Error('Invoice number already exists. Choose a different number.');
+      }
+
+      throw error;
+    }
+  });
+
+  return {
+    invoiceId,
+    invoiceNumber: trimmedInvoiceNumber,
+    invoiceDate: normalizedInvoiceDate,
+    dueDate: normalizedDueDate,
+  };
+});
 
 export const finalizeInvoice = withAuth(async (
   user,
