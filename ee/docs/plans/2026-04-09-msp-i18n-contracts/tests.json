@@ -214,7 +214,7 @@
   {
     "id": "T025",
     "description": "Unit: Contracts.i18n.test -- sub-tab labels, New Contract/Template buttons, search placeholders render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]

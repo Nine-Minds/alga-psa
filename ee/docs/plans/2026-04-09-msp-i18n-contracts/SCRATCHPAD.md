@@ -329,3 +329,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/AddContractLinesDialog.i18n.test.ts` (pass; 1 file, 1 test).
 - **(2026-04-15)** `T024` completed: extended `AddContractLinesDialog.i18n.test.ts` with expanded preset-detail coverage (fixed/hourly/usage configuration labels + helper copy) and dialog-level loading/empty/error states.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/AddContractLinesDialog.i18n.test.ts` (pass; 1 file, 2 tests).
+- **(2026-04-15)** `T025` completed: added `packages/billing/tests/billing-dashboard/Contracts.i18n.test.ts` covering Contracts sub-tab labels (point-of-use translation), create actions, search placeholders/aria labels, drafts badge copy, and page heading/loading/error labels.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/Contracts.i18n.test.ts` (pass; 1 file, 1 test).
