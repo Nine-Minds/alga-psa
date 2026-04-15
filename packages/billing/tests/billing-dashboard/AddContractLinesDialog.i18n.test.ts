@@ -58,4 +58,50 @@ describe('AddContractLinesDialog i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T024: expanded preset details and error/loading states use translated keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/AddContractLinesDialog.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keyChecks = [
+      'addLines.errors.failedToLoadPresets',
+      'addLines.errors.failedToLoadPresetDetails',
+      'addLines.errors.failedToAddPresets',
+      'addLines.loading',
+      'addLines.empty.noneAvailable',
+      'addLines.empty.noMatches',
+      'addLines.services.unknownService',
+      'addLines.fixedConfig.title',
+      'addLines.fixedConfig.defaultBaseRate',
+      'addLines.fixedConfig.notSet',
+      'addLines.fixedConfig.overrideBaseRate',
+      'addLines.fixedConfig.defaultRatePlaceholder',
+      'addLines.fixedConfig.enterBaseRate',
+      'addLines.fixedConfig.leaveBlankDefault',
+      'addLines.services.includedReference',
+      'addLines.services.configuration',
+      'addLines.services.empty',
+      'addLines.services.fixedReferenceHelp',
+      'addLines.services.quantityShort',
+      'addLines.hourlyConfig.title',
+      'addLines.hourlyConfig.minimumBillableMinutes',
+      'addLines.hourlyConfig.roundUpToNearest',
+      'addLines.hourlyConfig.servicesAndRates',
+      'addLines.hourlyConfig.hourlyRate',
+      'addLines.hourlyConfig.defaultRate',
+      'addLines.usageConfig.quantity',
+      'addLines.usageConfig.ratePerUnit',
+      'addLines.usageConfig.defaultRate',
+      'addLines.usageConfig.unitOfMeasure',
+      'addLines.usageConfig.unitPlaceholder',
+      'addLines.usageConfig.unitHint',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });

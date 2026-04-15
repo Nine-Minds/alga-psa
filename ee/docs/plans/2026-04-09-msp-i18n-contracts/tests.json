@@ -206,7 +206,7 @@
   {
     "id": "T024",
     "description": "Unit: AddContractLinesDialog.i18n.test -- expanded preset details and empty/loading states render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
