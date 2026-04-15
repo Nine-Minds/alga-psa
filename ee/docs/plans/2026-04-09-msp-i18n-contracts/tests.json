@@ -417,7 +417,7 @@
   {
     "id": "T050",
     "description": "Unit: ProductsStep.i18n.test -- step heading, service picker, quantity/rate labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]
