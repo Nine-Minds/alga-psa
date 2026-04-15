@@ -16,7 +16,7 @@ import { PrimaryButton } from "../ui/components/PrimaryButton";
 import type { RootStackParamList } from "../navigation/types";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { provisionFromPurchase, restorePurchase } from "../api/iap";
+import { checkEmailExists, provisionFromPurchase, restorePurchase } from "../api/iap";
 import {
   closeIapConnection,
   fetchIapProducts,
@@ -44,7 +44,13 @@ function uuidv4(): string {
   });
 }
 
-type Status = "idle" | "loading_products" | "purchasing" | "provisioning" | "restoring";
+type Status =
+  | "idle"
+  | "loading_products"
+  | "checking_email"
+  | "purchasing"
+  | "provisioning"
+  | "restoring";
 
 export function CreateWorkspaceScreen() {
   const { t } = useTranslation("iap");
@@ -254,13 +260,63 @@ export function CreateWorkspaceScreen() {
       setError(t("errors.iosOnly", "Subscriptions are only available on iOS."));
       return;
     }
-    if (!product) {
-      setError(t("errors.noProducts", "Subscription is temporarily unavailable."));
+    if (!baseUrl) {
+      setError(t("errors.noBaseUrl", "App is not configured."));
       return;
     }
     const trimmedEmail = email.trim();
     if (!/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
       setError(t("errors.invalidEmail", "Enter a valid email address."));
+      return;
+    }
+
+    // Pre-purchase email check: bail before StoreKit if a tenant already
+    // exists for this email, so the user doesn't get charged by Apple and
+    // then fail to provision into a duplicate workspace. We do this BEFORE
+    // the !product guard so user-input errors are surfaced regardless of
+    // StoreKit product fetch state.
+    setStatus("checking_email");
+    try {
+      const apiClient = createApiClient({
+        baseUrl,
+        getUserAgentTag: () => `mobile/${Platform.OS}/iap-check-email`,
+      });
+      const checkResult = await checkEmailExists(apiClient, { email: trimmedEmail });
+      if (!checkResult.ok) {
+        setError(
+          t(
+            "errors.checkEmailFailed",
+            "Unable to verify email availability. Please try again.",
+          ),
+        );
+        setStatus("idle");
+        return;
+      }
+      if (checkResult.data.exists) {
+        setError(
+          t(
+            "errors.emailAlreadyExists",
+            "An account already exists for this email. Please sign in instead, or use a different email address.",
+          ),
+        );
+        setStatus("idle");
+        return;
+      }
+    } catch (e) {
+      logger.error("Email availability check threw", { error: e });
+      setError(
+        t(
+          "errors.checkEmailFailed",
+          "Unable to verify email availability. Please try again.",
+        ),
+      );
+      setStatus("idle");
+      return;
+    }
+
+    if (!product) {
+      setError(t("errors.noProducts", "Subscription is temporarily unavailable."));
+      setStatus("idle");
       return;
     }
 
@@ -375,13 +431,15 @@ export function CreateWorkspaceScreen() {
   const busyLabel =
     status === "loading_products"
       ? t("status.loadingProducts", "Loading…")
-      : status === "purchasing"
-        ? t("status.purchasing", "Processing payment…")
-        : status === "provisioning"
-          ? t("status.provisioning", "Creating your workspace…")
-          : status === "restoring"
-            ? t("status.restoring", "Restoring…")
-            : "";
+      : status === "checking_email"
+        ? t("status.checkingEmail", "Checking email…")
+        : status === "purchasing"
+          ? t("status.purchasing", "Processing payment…")
+          : status === "provisioning"
+            ? t("status.provisioning", "Creating your workspace…")
+            : status === "restoring"
+              ? t("status.restoring", "Restoring…")
+              : "";
 
   return (
     <ScrollView
@@ -539,7 +597,7 @@ export function CreateWorkspaceScreen() {
       <View style={{ marginTop: theme.spacing.xl }}>
         <PrimaryButton
           onPress={() => void onSubscribe()}
-          disabled={busy || !product}
+          disabled={busy /* TEMP: removed `|| !product` so the email check can be tested before Apple makes the product available; revert before merging */}
           accessibilityLabel={t("subscribe", "Subscribe")}
         >
           {busy ? busyLabel : t("subscribe", "Subscribe")}

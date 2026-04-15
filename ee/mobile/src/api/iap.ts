@@ -6,6 +6,34 @@ import type { ApiResult } from "./types";
  * /api/v1/mobile/iap/* and /api/v1/mobile/account/*.
  */
 
+export type CheckEmailRequest = {
+  email: string;
+};
+
+export type CheckEmailResponse = {
+  exists: boolean;
+};
+
+/**
+ * Pre-purchase email availability check. Call this BEFORE
+ * `startSoloSubscription` — if the email is already in use, refuse the
+ * purchase immediately so the user doesn't get charged by Apple and then
+ * fail to provision.
+ */
+export function checkEmailExists(
+  client: ApiClient,
+  body: CheckEmailRequest,
+  signal?: AbortSignal,
+): Promise<ApiResult<CheckEmailResponse>> {
+  return client.request<CheckEmailResponse>({
+    method: "POST",
+    path: "/api/v1/mobile/iap/check-email",
+    body,
+    signal,
+    timeoutMs: 10_000,
+  });
+}
+
 export type ProvisionFromPurchaseRequest = {
   originalTransactionId: string;
   appAccountToken?: string;
