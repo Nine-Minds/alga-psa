@@ -560,7 +560,7 @@
   {
     "id": "T066",
     "description": "Integration: contract creation wizard renders all step labels and form fields translated in de",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F052",

@@ -157,4 +157,68 @@ describe('Contracts integration i18n coverage', () => {
       expect(getLeaf(de, key)).not.toBe(getLeaf(en, key));
     }
   });
+
+  it('T066: contract creation wizard wiring resolves all step/form translation keys in de locale', () => {
+    const wizardSource = read('../../src/components/billing-dashboard/contracts/ContractWizard.tsx');
+    const basicsSource = read(
+      '../../src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx'
+    );
+    const fixedSource = read(
+      '../../src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep.tsx'
+    );
+    const productsSource = read(
+      '../../src/components/billing-dashboard/contracts/wizard-steps/ProductsStep.tsx'
+    );
+    const hourlySource = read(
+      '../../src/components/billing-dashboard/contracts/wizard-steps/HourlyServicesStep.tsx'
+    );
+    const usageSource = read(
+      '../../src/components/billing-dashboard/contracts/wizard-steps/UsageBasedServicesStep.tsx'
+    );
+    const reviewSource = read(
+      '../../src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.tsx'
+    );
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+    const de = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/de/msp/contracts.json'
+    );
+
+    expect(wizardSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(basicsSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(fixedSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(productsSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(hourlySource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(usageSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(reviewSource).toContain("const { t } = useTranslation('msp/contracts');");
+
+    const keySet = new Set<string>([
+      ...getTranslationKeys(wizardSource),
+      ...getTranslationKeys(basicsSource),
+      ...getTranslationKeys(fixedSource),
+      ...getTranslationKeys(productsSource),
+      ...getTranslationKeys(hourlySource),
+      ...getTranslationKeys(usageSource),
+      ...getTranslationKeys(reviewSource),
+    ]);
+
+    expect(keySet.size).toBeGreaterThan(220);
+
+    for (const key of keySet) {
+      if (
+        key === 'wizardBasics.summary.values.noticePeriodDays' ||
+        key === 'wizardBasics.summary.values.renewalTermMonths'
+      ) {
+        expect(getLeaf(en, `${key}_one`)).toBeDefined();
+        expect(getLeaf(en, `${key}_other`)).toBeDefined();
+        expect(getLeaf(de, `${key}_one`)).toBeDefined();
+        expect(getLeaf(de, `${key}_other`)).toBeDefined();
+        continue;
+      }
+
+      expect(getLeaf(en, key)).toBeDefined();
+      expect(getLeaf(de, key)).toBeDefined();
+    }
+  });
 });
