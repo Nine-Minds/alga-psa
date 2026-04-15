@@ -441,7 +441,7 @@
   {
     "id": "T053",
     "description": "Unit: ReviewContractStep.i18n.test -- Contract Basics section labels and fallback values render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
