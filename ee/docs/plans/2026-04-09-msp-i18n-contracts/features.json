@@ -302,7 +302,7 @@
   {
     "id": "F061",
     "description": "Wire useTranslation('msp/contracts') in TemplateContractBasicsStep.tsx -- translate step heading ('Template Basics'), description, Template Name label/placeholder/help text, Internal Notes label/placeholder/help text, Recommended Billing Frequency label/placeholder/help text, and name validation error",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F062",
