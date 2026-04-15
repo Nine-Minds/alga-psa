@@ -58,7 +58,7 @@
   {
     "id": "T007",
     "description": "Unit: ContractDetail.i18n.test -- Quick Actions buttons, save/cancel row, and confirmation dialogs render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]

@@ -157,4 +157,41 @@ describe('Contracts i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T007: ContractDetail quick-actions, save/cancel row, and confirmation dialogs use msp/contracts keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/ContractDetail.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keyChecks = [
+      'contractDetail.quickActions.title',
+      'contractDetail.quickActions.manageContractLines',
+      'contractDetail.quickActions.managePricingSchedules',
+      'contractDetail.quickActions.viewDocuments',
+      'contractDetail.quickActions.viewInvoices',
+      'contractDetail.quickActions.deleteContract',
+      'contractDetail.dialogs.discard.title',
+      'contractDetail.dialogs.discard.message',
+      'contractDetail.dialogs.discard.confirm',
+      'contractDetail.dialogs.discard.cancel',
+      'contractDetail.dialogs.unsaved.title',
+      'contractDetail.dialogs.unsaved.message',
+      'contractDetail.dialogs.unsaved.confirm',
+      'contractDetail.dialogs.unsaved.cancel',
+      'contractDetail.dialogs.delete.title',
+      'contractDetail.dialogs.delete.message',
+      'contractDetail.dialogs.delete.confirm',
+      'contractDetail.dialogs.delete.deleting',
+      'common.actions.cancel',
+      'common.actions.saveChanges',
+      'common.actions.saveChangesDirty',
+      'common.actions.saving',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });
