@@ -47,4 +47,58 @@ describe('ContractWizard i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T032: validation, recurring-authoring errors, and draft/save failure copy use translated keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/ContractWizard.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keyChecks = [
+      'wizard.validation.clientRequired',
+      'wizard.validation.contractNameRequired',
+      'wizard.validation.billingFrequencyRequired',
+      'wizard.validation.startDateRequired',
+      'wizard.validation.renewalModeRequiredWithEndDate',
+      'wizard.validation.noticePeriodWholeNumber',
+      'wizard.validation.noticePeriodRange',
+      'wizard.validation.renewalTermPositiveWhole',
+      'wizard.validation.baseRateRequiredWhenFixedServices',
+      'wizard.validation.selectProductForEachLine',
+      'wizard.validation.addAtLeastOneService',
+      'wizard.validation.selectClientBeforeDraft',
+      'wizard.validation.unsupportedRecurringAuthoringCombination',
+      'wizard.errors.failedToLoadTemplates',
+      'wizard.errors.failedToLoadTemplateDetails',
+      'wizard.errors.failedToCreateContract',
+      'wizard.errors.failedToSaveDraft',
+      'wizard.dialogs.unsavedChanges.title',
+      'wizard.dialogs.unsavedChanges.message',
+      'wizard.dialogs.unsavedChanges.confirm',
+      'wizard.dialogs.unsavedChanges.cancel',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+
+    expect(source).toContain('t(`wizard.validation.recurring.frequency.${value}`');
+    expect(source).toContain('`wizard.validation.recurring.lineType.${RECURRING_LINE_TYPE_KEYS[unsupportedCombination.lineType]}`');
+    expect(source).toContain('`wizard.validation.recurring.frequency.${unsupportedCombination.billingFrequency}`');
+
+    const recurringLocaleKeys = [
+      'wizard.validation.recurring.frequency.monthly',
+      'wizard.validation.recurring.frequency.quarterly',
+      'wizard.validation.recurring.frequency.annually',
+      'wizard.validation.recurring.lineType.fixed',
+      'wizard.validation.recurring.lineType.product',
+      'wizard.validation.recurring.lineType.hourly',
+      'wizard.validation.recurring.lineType.usage',
+    ];
+
+    for (const key of recurringLocaleKeys) {
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });

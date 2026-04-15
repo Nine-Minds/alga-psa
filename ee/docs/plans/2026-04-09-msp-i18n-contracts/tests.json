@@ -272,7 +272,7 @@
   {
     "id": "T032",
     "description": "Unit: ContractWizard.i18n.test -- validation errors and save/draft buttons render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]

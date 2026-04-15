@@ -343,3 +343,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ClientContractsTab.i18n.test.ts` (pass; 1 file, 2 tests).
 - **(2026-04-15)** `T031` completed: added `packages/billing/tests/billing-dashboard/ContractWizard.i18n.test.ts` with ContractWizard step-label i18n checks (`wizard.steps.*`) plus translated create/edit wizard title keys.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractWizard.i18n.test.ts` (pass; 1 file, 1 test).
+- **(2026-04-15)** `T032` completed: extended `ContractWizard.i18n.test.ts` with validation/error coverage for required wizard fields, recurring-authoring unsupported-combination copy (including dynamic recurring key usage checks), save-draft/create failure messages, and unsaved-changes confirmation dialog labels.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractWizard.i18n.test.ts` (pass; 1 file, 2 tests).
