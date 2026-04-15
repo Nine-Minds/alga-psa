@@ -206,3 +206,6 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Contract-header frequency display now uses shared enum formatter `useFormatBillingFrequency()` instead of local title-casing.
 - **(2026-04-14)** Added `contractHeader.*` keys in `server/public/locales/en/msp/contracts.json`.
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractHeader.tsx` (pass) and `jq empty server/public/locales/en/msp/contracts.json` (pass).
+- **(2026-04-14)** `F048` completed in `ContractDetailSwitcher.tsx`: wired `useTranslation('msp/contracts')` and localized all loading/error states (`missing contract id`, `contract not found`, `unable/failed to load details`, `no contract selected`, `Loading contract...`).
+- **(2026-04-14)** Added `detailSwitcher.errors.*` + `detailSwitcher.loading.contract` keys in `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractDetailSwitcher.tsx` (pass) and `jq empty server/public/locales/en/msp/contracts.json` (pass).

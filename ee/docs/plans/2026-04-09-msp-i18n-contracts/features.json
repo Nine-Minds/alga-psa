@@ -237,7 +237,7 @@
   {
     "id": "F048",
     "description": "Wire useTranslation('msp/contracts') in ContractDetailSwitcher.tsx -- translate error messages ('Missing contract identifier', 'Contract not found', 'Unable to load contract details', 'No contract selected', 'Failed to load contract details'), and loading text ('Loading contract...')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F049",

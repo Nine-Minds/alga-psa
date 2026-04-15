@@ -1020,7 +1020,18 @@
       "noDescription": "No description"
     }
   },
-  "detailSwitcher": {},
+  "detailSwitcher": {
+    "errors": {
+      "contractNotFound": "Contract not found",
+      "failedToLoadContractDetails": "Failed to load contract details",
+      "missingContractIdentifier": "Missing contract identifier",
+      "noContractSelected": "No contract selected.",
+      "unableToLoadContractDetails": "Unable to load contract details"
+    },
+    "loading": {
+      "contract": "Loading contract..."
+    }
+  },
   "templateDetail": {
     "backToTemplates": "Back to Templates",
     "backToTemplatesArrow": "← Back to Templates",
