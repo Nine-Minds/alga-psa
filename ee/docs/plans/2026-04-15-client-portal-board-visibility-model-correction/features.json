@@ -1,0 +1,98 @@
+[
+  {
+    "id": "F001",
+    "description": "Remove the `boards.client_id` assumption from MSP-side visibility group board loading in the contact portal tab flow.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F002",
+    "description": "Remove the `boards.client_id` assumption from client portal admin visibility group board loading.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Users and Primary Flows"]
+  },
+  {
+    "id": "F003",
+    "description": "Validate submitted visibility-group board IDs by tenant existence and active status rather than client ownership.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F004",
+    "description": "Reject submitted visibility-group board IDs that are missing, cross-tenant, or inactive.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F005",
+    "description": "Keep visibility groups client-scoped through `client_portal_visibility_groups.client_id` for MSP and client-admin CRUD flows.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F006",
+    "description": "Keep contact assignment validation client-scoped through `group.client_id` and `contact.client_id`.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F007",
+    "description": "Correct the shared portal visibility resolver so it derives visible board IDs from group membership without requiring `boards.client_id`.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F008",
+    "description": "Preserve the resolver guard that rejects assigned groups whose `client_id` does not match the contact's `client_id`.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F009",
+    "description": "Continue enforcing ticket list visibility by combining `ticket.client_id = contact.client_id` with assigned-board filtering when a group exists.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F010",
+    "description": "Continue enforcing ticket detail and ticket-adjacent access by combining client scoping with assigned-board filtering.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F011",
+    "description": "Continue enforcing ticket creation board choices and submission validation using allowed board IDs rather than board client ownership.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F012",
+    "description": "Continue enforcing dashboard ticket-backed counts and summaries using the corrected visible board ID set.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F013",
+    "description": "Exclude inactive boards from MSP and client-admin board pickers while preserving stored group membership rows.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F014",
+    "description": "Exclude inactive boards from new ticket creation choices for restricted users while preserving historical group membership data.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F015",
+    "description": "Preserve backward compatibility for unassigned contacts, empty groups, pre-invite assignments, and assigned-group deletion guards.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F016",
+    "description": "Update plan/docs references so future work on this feature explicitly treats boards as tenant-scoped and visibility groups as client-scoped.",
+    "implemented": false,
+    "prdRefs": ["Goals", "Data / API / Integrations"]
+  }
+]
