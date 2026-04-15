@@ -197,7 +197,7 @@
   {
     "id": "F040",
     "description": "Wire useTranslation('msp/contracts') in PricingSchedules.tsx -- translate section title, column headers, actions menu, empty state, and loading indicator",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F041",

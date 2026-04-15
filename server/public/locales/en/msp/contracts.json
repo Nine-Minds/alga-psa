@@ -633,6 +633,42 @@
     }
   },
   "pricingSchedules": {
+    "list": {
+      "actions": {
+        "addSchedule": "Add Schedule",
+        "deleteSchedule": "Delete Schedule",
+        "editSchedule": "Edit Schedule"
+      },
+      "columns": {
+        "actions": "Actions",
+        "customRate": "Custom Rate",
+        "effectiveDate": "Effective Date",
+        "endDate": "End Date",
+        "notes": "Notes"
+      },
+      "dialogs": {
+        "confirmDeleteSchedule": "Are you sure you want to delete this pricing schedule?"
+      },
+      "empty": {
+        "description": "Add pricing schedules to define time-based rate changes for this contract",
+        "noPricingSchedules": "No pricing schedules yet"
+      },
+      "errors": {
+        "failedToDeletePricingSchedule": "Failed to delete pricing schedule",
+        "failedToLoadPricingSchedules": "Failed to load pricing schedules"
+      },
+      "loading": "Loading pricing schedules",
+      "readOnlyNotice": "This system-managed default contract is attribution-only. Pricing schedule authoring is disabled.",
+      "timeline": {
+        "title": "Pricing Timeline"
+      },
+      "title": "Pricing Schedules",
+      "values": {
+        "defaultRate": "Default rate",
+        "ongoing": "Ongoing",
+        "useDefaultRate": "Use default rate"
+      }
+    },
     "dialog": {
       "actions": {
         "addSchedule": "Add Schedule",
