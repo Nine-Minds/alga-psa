@@ -69,4 +69,44 @@ describe('ContractDialog i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T011: PO fields and preset-picker sections use msp/contracts translation keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/ContractDialog.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keyChecks = [
+      'contractDialog.po.requirePurchaseOrder',
+      'contractDialog.po.requirePurchaseOrderTooltip',
+      'contractDialog.po.noteLabel',
+      'contractDialog.po.comingSoon',
+      'contractDialog.po.numberLabel',
+      'contractDialog.po.numberPlaceholder',
+      'contractDialog.po.amountLabel',
+      'contractDialog.po.amountPlaceholder',
+      'contractDialog.presets.heading',
+      'contractDialog.presets.headingTooltip',
+      'contractDialog.presets.loading',
+      'contractDialog.presets.empty',
+      'contractDialog.presets.searchPlaceholder',
+      'contractDialog.presets.allTypes',
+      'contractDialog.presets.typePlaceholder',
+      'contractDialog.presets.resetFilters',
+      'contractDialog.presets.noMatches',
+      'contractDialog.presets.selectedSingle',
+      'contractDialog.presets.selectedPlural',
+      'contractDialog.presets.serviceCountSingle',
+      'contractDialog.presets.serviceCountPlural',
+      'contractDialog.presetDetails.fixedRateConfiguration',
+      'contractDialog.presetDetails.servicesConfiguration',
+      'contractDialog.presetDetails.servicesIncludedReference',
+      'contractDialog.presetDetails.noServicesConfigured',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });

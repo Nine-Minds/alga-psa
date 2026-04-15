@@ -300,3 +300,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractsSubbatch.i18n.test.ts` (pass; 1 file, 8 tests) and `node scripts/validate-translations.cjs` (pass; Errors: 0, Warnings: 0).
 - **(2026-04-15)** `T010` completed: added `packages/billing/tests/billing-dashboard/ContractDialog.i18n.test.ts` with coverage for ContractDialog title/form/renewal labels and validation keys, asserting both source `t(...)` usage and English locale-key presence.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractDialog.i18n.test.ts` (pass; 1 file, 1 test).
+- **(2026-04-15)** `T011` completed: extended `ContractDialog.i18n.test.ts` with PO section and preset-picker coverage (labels, helper copy, loading/empty/no-match states, selected-count copy, and preset detail headings), validating source key usage + English locale presence.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractDialog.i18n.test.ts` (pass; 1 file, 2 tests).

@@ -94,7 +94,7 @@
   {
     "id": "T011",
     "description": "Unit: ContractDialog.i18n.test -- PO section labels and preset picker section render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
