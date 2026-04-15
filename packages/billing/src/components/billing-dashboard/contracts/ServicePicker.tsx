@@ -3,6 +3,7 @@
 import React from 'react';
 import { cn } from '@alga-psa/ui/lib/utils';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export interface SelectOption {
   value: string;
@@ -24,22 +25,24 @@ export function ServicePicker({
   options,
   value,
   onChange,
-  placeholder = 'Select service...',
+  placeholder,
   className = '',
   disabled = false,
   label,
   id,
 }: ServicePickerProps): React.JSX.Element {
+  const { t } = useTranslation('msp/contracts');
   const autoId = React.useId();
   const pickerId = id ?? `service-picker-${autoId}`;
+  const resolvedPlaceholder = placeholder ?? t('servicePicker.placeholder', { defaultValue: 'Select service...' });
 
   return (
     <SearchableSelect
       options={options}
       value={value}
       onChange={onChange}
-      placeholder={placeholder}
-      searchPlaceholder="Search services..."
+      placeholder={resolvedPlaceholder}
+      searchPlaceholder={t('servicePicker.searchPlaceholder', { defaultValue: 'Search services...' })}
       dropdownMode="overlay"
       maxListHeight="250px"
       disabled={disabled}
@@ -50,7 +53,7 @@ export function ServicePicker({
         "hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]",
         className
       )}
-      emptyMessage="No service found."
+      emptyMessage={t('servicePicker.emptyMessage', { defaultValue: 'No service found.' })}
     />
   );
 }

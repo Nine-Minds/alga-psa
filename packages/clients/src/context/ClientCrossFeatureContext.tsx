@@ -54,6 +54,20 @@ export interface ContactTicketsRenderProps {
   initialUsers?: IUser[];
 }
 
+export interface ContractWizardRenderProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onComplete: () => void;
+  clientId: string;
+}
+
+export interface ContractQuickAddRenderProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved: () => void;
+  clientId: string;
+}
+
 export interface ClientCrossFeatureCallbacks {
   renderQuickAddTicket: (props: QuickAddTicketRenderProps) => ReactNode;
   getTicketFormOptions: () => Promise<TicketFormOptions>;
@@ -61,6 +75,8 @@ export interface ClientCrossFeatureCallbacks {
   renderClientAssets: (props: ClientAssetsRenderProps) => ReactNode;
   renderClientTickets: (props: ClientTicketsRenderProps) => ReactNode;
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
+  renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;
+  renderContractQuickAdd?: (props: ContractQuickAddRenderProps) => ReactNode;
   getSlaPolicies: () => Promise<ISlaPolicy[]>;
 }
 
