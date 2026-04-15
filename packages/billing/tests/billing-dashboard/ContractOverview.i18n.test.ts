@@ -48,4 +48,34 @@ describe('ContractOverview i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T034: line-card interpolation labels and empty states use translated keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/ContractOverview.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keyChecks = [
+      'contractOverview.lines.serviceCountOne',
+      'contractOverview.lines.serviceCountOther',
+      'contractOverview.lines.includedServices',
+      'contractOverview.lines.noServicesConfigured',
+      'contractOverview.lines.expandAll',
+      'contractOverview.lines.collapseAll',
+      'contractOverview.lines.noContractLinesYet',
+      'contractOverview.lines.noContractLinesDescription',
+      'contractOverview.lines.addContractLines',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+
+    expect(source).toContain('t(`contractOverview.frequency.${value}`');
+    expect(getLeaf(en, 'contractOverview.frequency.annually')).toBeDefined();
+    expect(getLeaf(en, 'contractOverview.frequency.biweekly')).toBeDefined();
+    expect(getLeaf(en, 'contractOverview.frequency.weekly')).toBeDefined();
+    expect(getLeaf(en, 'contractOverview.frequency.semi_annually')).toBeDefined();
+  });
 });
