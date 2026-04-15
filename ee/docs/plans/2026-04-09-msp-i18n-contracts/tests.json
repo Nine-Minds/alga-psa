@@ -222,7 +222,7 @@
   {
     "id": "T026",
     "description": "Unit: Contracts.i18n.test -- row action menus, confirmation dialogs, toast messages render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]

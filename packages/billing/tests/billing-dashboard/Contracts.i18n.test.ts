@@ -56,4 +56,43 @@ describe('Contracts list i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T026: row menus, confirmation dialogs, and toasts use translated keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/Contracts.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keyChecks = [
+      'contractsList.actions.openMenu',
+      'contractsList.actions.resume',
+      'contractsList.actions.terminate',
+      'contractsList.actions.restore',
+      'contractsList.actions.setToActive',
+      'contractsList.actions.deleting',
+      'common.actions.edit',
+      'common.actions.delete',
+      'common.actions.cancel',
+      'common.actions.discard',
+      'contractsList.dialogs.discardDraft.title',
+      'contractsList.dialogs.discardDraft.message',
+      'contractsList.dialogs.deleteClient.title',
+      'contractsList.dialogs.deleteClient.message',
+      'contractsList.dialogs.deleteClient.clientSuffix',
+      'contractsList.dialogs.deleteTemplate.title',
+      'contractsList.dialogs.deleteTemplate.message',
+      'contractsList.toasts.failedToDeleteContract',
+      'contractsList.toasts.failedToResumeDraft',
+      'contractsList.toasts.draftDiscarded',
+      'contractsList.toasts.failedToDiscardDraft',
+      'contractsList.toasts.failedToTerminateContract',
+      'contractsList.toasts.failedToRestoreContract',
+      'contractsList.toasts.failedToActivateContract',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });
