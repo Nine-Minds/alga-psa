@@ -851,7 +851,48 @@
   "servicePicker": {},
   "bucketOverlay": {},
   "frequencyOverride": {},
-  "wizard": {},
+  "wizard": {
+    "dialogs": {
+      "unsavedChanges": {
+        "cancel": "Stay",
+        "confirm": "Discard Changes",
+        "message": "You have unsaved changes. If you close this dialog now, your changes will be discarded.",
+        "title": "Discard changes?"
+      }
+    },
+    "errors": {
+      "failedToCreateContract": "Failed to create contract",
+      "failedToLoadTemplateDetails": "Failed to load template details",
+      "failedToLoadTemplates": "Failed to load templates",
+      "failedToSaveDraft": "Failed to save draft"
+    },
+    "steps": {
+      "contractBasics": "Contract Basics",
+      "fixedFeeServices": "Fixed Fee Services",
+      "hourlyServices": "Hourly Services",
+      "products": "Products",
+      "reviewCreate": "Review & Create",
+      "usageBasedServices": "Usage-Based Services"
+    },
+    "title": {
+      "createNewContract": "Create New Contract",
+      "editContract": "Edit Contract"
+    },
+    "validation": {
+      "addAtLeastOneService": "Add at least one service before creating the contract",
+      "baseRateRequiredWhenFixedServices": "Base rate is required when fixed services are included",
+      "billingFrequencyRequired": "Billing frequency is required",
+      "clientRequired": "Client is required",
+      "contractNameRequired": "Contract name is required",
+      "noticePeriodRange": "Notice period must be between {{min}} and {{max}} days",
+      "noticePeriodWholeNumber": "Notice period must be a whole number of days",
+      "renewalModeRequiredWithEndDate": "Renewal mode is required when an end date is set",
+      "renewalTermPositiveWhole": "Renewal term months must be a positive whole number",
+      "selectClientBeforeDraft": "Select a client before saving as draft",
+      "selectProductForEachLine": "Please select a product for each product line",
+      "startDateRequired": "Start date is required"
+    }
+  },
   "wizardBasics": {},
   "wizardFixed": {},
   "wizardProducts": {},

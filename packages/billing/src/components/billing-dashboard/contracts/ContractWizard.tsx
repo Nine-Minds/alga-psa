@@ -21,15 +21,7 @@ import {
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getUnsupportedRecurringAuthoringCombinationMessage } from '@shared/billingClients/recurringAuthoringValidation';
-
-const STEPS = [
-  'Contract Basics',
-  'Fixed Fee Services',
-  'Products',
-  'Hourly Services',
-  'Usage-Based Services',
-  'Review & Create',
-] as const;
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const REQUIRED_STEPS = [0, 5];
 const MIN_NOTICE_PERIOD_DAYS = 0;
@@ -231,6 +223,7 @@ export function ContractWizard({
   onComplete,
   editingContract = null,
 }: ContractWizardProps) {
+  const { t } = useTranslation('msp/contracts');
   const initialWizardDataRef = useRef<ContractWizardData | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -247,6 +240,18 @@ export function ContractWizard({
   const [wizardData, setWizardData] = useState<ContractWizardData>(() => ({
     ...buildInitialContractWizardData(editingContract),
   }));
+
+  const stepLabels = useMemo(
+    () => ([
+      t('wizard.steps.contractBasics', { defaultValue: 'Contract Basics' }),
+      t('wizard.steps.fixedFeeServices', { defaultValue: 'Fixed Fee Services' }),
+      t('wizard.steps.products', { defaultValue: 'Products' }),
+      t('wizard.steps.hourlyServices', { defaultValue: 'Hourly Services' }),
+      t('wizard.steps.usageBasedServices', { defaultValue: 'Usage-Based Services' }),
+      t('wizard.steps.reviewCreate', { defaultValue: 'Review & Create' }),
+    ]),
+    [t]
+  );
 
   useEffect(() => {
     if (!open) {
@@ -280,7 +285,9 @@ export function ContractWizard({
       .catch((error) => {
         console.error('Failed to load contract templates', error);
         setTemplateError(
-          error instanceof Error ? error.message : 'Failed to load templates'
+          error instanceof Error
+            ? error.message
+            : t('wizard.errors.failedToLoadTemplates', { defaultValue: 'Failed to load templates' })
         );
       })
       .finally(() => {
@@ -299,7 +306,7 @@ export function ContractWizard({
         })
         .catch(() => {});
     }
-  }, [open, editingContract]);
+  }, [open, editingContract, t]);
 
   const resetWizard = () => {
     setWizardData(createDefaultContractWizardData());
@@ -364,7 +371,9 @@ export function ContractWizard({
       } catch (error) {
         console.error('Failed to load template snapshot', error);
         setTemplateError(
-          error instanceof Error ? error.message : 'Failed to load template details'
+          error instanceof Error
+            ? error.message
+            : t('wizard.errors.failedToLoadTemplateDetails', { defaultValue: 'Failed to load template details' })
         );
       }
     });
@@ -472,25 +481,39 @@ export function ContractWizard({
     switch (stepIndex) {
       case 0:
         if (!wizardData.client_id) {
-          setErrors((prev) => ({ ...prev, [stepIndex]: 'Client is required' }));
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t('wizard.validation.clientRequired', { defaultValue: 'Client is required' }),
+          }));
           return false;
         }
         if (!wizardData.contract_name?.trim()) {
-          setErrors((prev) => ({ ...prev, [stepIndex]: 'Contract name is required' }));
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t('wizard.validation.contractNameRequired', { defaultValue: 'Contract name is required' }),
+          }));
           return false;
         }
         if (!wizardData.billing_frequency) {
-          setErrors((prev) => ({ ...prev, [stepIndex]: 'Billing frequency is required' }));
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t('wizard.validation.billingFrequencyRequired', { defaultValue: 'Billing frequency is required' }),
+          }));
           return false;
         }
         if (!wizardData.start_date) {
-          setErrors((prev) => ({ ...prev, [stepIndex]: 'Start date is required' }));
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t('wizard.validation.startDateRequired', { defaultValue: 'Start date is required' }),
+          }));
           return false;
         }
         if (wizardData.end_date && !wizardData.renewal_mode) {
           setErrors((prev) => ({
             ...prev,
-            [stepIndex]: 'Renewal mode is required when an end date is set',
+            [stepIndex]: t('wizard.validation.renewalModeRequiredWithEndDate', {
+              defaultValue: 'Renewal mode is required when an end date is set',
+            }),
           }));
           return false;
         }
@@ -498,7 +521,9 @@ export function ContractWizard({
           if (!Number.isInteger(wizardData.notice_period_days)) {
             setErrors((prev) => ({
               ...prev,
-              [stepIndex]: 'Notice period must be a whole number of days',
+              [stepIndex]: t('wizard.validation.noticePeriodWholeNumber', {
+                defaultValue: 'Notice period must be a whole number of days',
+              }),
             }));
             return false;
           }
@@ -507,7 +532,11 @@ export function ContractWizard({
           if (noticePeriod < MIN_NOTICE_PERIOD_DAYS || noticePeriod > MAX_NOTICE_PERIOD_DAYS) {
             setErrors((prev) => ({
               ...prev,
-              [stepIndex]: `Notice period must be between ${MIN_NOTICE_PERIOD_DAYS} and ${MAX_NOTICE_PERIOD_DAYS} days`,
+              [stepIndex]: t('wizard.validation.noticePeriodRange', {
+                defaultValue: 'Notice period must be between {{min}} and {{max}} days',
+                min: MIN_NOTICE_PERIOD_DAYS,
+                max: MAX_NOTICE_PERIOD_DAYS,
+              }),
             }));
             return false;
           }
@@ -519,7 +548,9 @@ export function ContractWizard({
           ) {
             setErrors((prev) => ({
               ...prev,
-              [stepIndex]: 'Renewal term months must be a positive whole number',
+              [stepIndex]: t('wizard.validation.renewalTermPositiveWhole', {
+                defaultValue: 'Renewal term months must be a positive whole number',
+              }),
             }));
             return false;
           }
@@ -529,7 +560,9 @@ export function ContractWizard({
         if (wizardData.fixed_services.length > 0 && !wizardData.fixed_base_rate) {
           setErrors((prev) => ({
             ...prev,
-            [stepIndex]: 'Base rate is required when fixed services are included',
+            [stepIndex]: t('wizard.validation.baseRateRequiredWhenFixedServices', {
+              defaultValue: 'Base rate is required when fixed services are included',
+            }),
           }));
           return false;
         }
@@ -539,7 +572,9 @@ export function ContractWizard({
         if (hasMissingProduct) {
           setErrors((prev) => ({
             ...prev,
-            [stepIndex]: 'Please select a product for each product line',
+            [stepIndex]: t('wizard.validation.selectProductForEachLine', {
+              defaultValue: 'Please select a product for each product line',
+            }),
           }));
           return false;
         }
@@ -554,7 +589,9 @@ export function ContractWizard({
         if (!hasServices) {
           setErrors((prev) => ({
             ...prev,
-            [stepIndex]: 'Add at least one service before creating the contract',
+            [stepIndex]: t('wizard.validation.addAtLeastOneService', {
+              defaultValue: 'Add at least one service before creating the contract',
+            }),
           }));
           return false;
         }
@@ -577,7 +614,7 @@ export function ContractWizard({
     if (!validateStep(currentStep)) {
       return;
     }
-    if (currentStep < STEPS.length - 1) {
+    if (currentStep < stepLabels.length - 1) {
       setCompletedSteps((prev) => new Set([...prev, currentStep]));
       setCurrentStep((prev) => prev + 1);
     }
@@ -590,7 +627,7 @@ export function ContractWizard({
   };
 
   const handleSkip = () => {
-    if (currentStep < STEPS.length - 1 && !REQUIRED_STEPS.includes(currentStep)) {
+    if (currentStep < stepLabels.length - 1 && !REQUIRED_STEPS.includes(currentStep)) {
       setCurrentStep((prev) => prev + 1);
     }
   };
@@ -642,7 +679,9 @@ export function ContractWizard({
       console.error('Error creating contract', error);
       setErrors((prev) => ({
         ...prev,
-        [currentStep]: error instanceof Error ? error.message : 'Failed to create contract',
+        [currentStep]: error instanceof Error
+          ? error.message
+          : t('wizard.errors.failedToCreateContract', { defaultValue: 'Failed to create contract' }),
       }));
     } finally {
       setIsLoading(false);
@@ -658,7 +697,9 @@ export function ContractWizard({
     if (!wizardData.client_id) {
       setErrors((prev) => ({
         ...prev,
-        [currentStep]: 'Select a client before saving as draft',
+        [currentStep]: t('wizard.validation.selectClientBeforeDraft', {
+          defaultValue: 'Select a client before saving as draft',
+        }),
       }));
       setCurrentStep(0);
       return;
@@ -697,7 +738,9 @@ export function ContractWizard({
       console.error('Error saving contract draft', error);
       setErrors((prev) => ({
         ...prev,
-        [currentStep]: error instanceof Error ? error.message : 'Failed to save draft',
+        [currentStep]: error instanceof Error
+          ? error.message
+          : t('wizard.errors.failedToSaveDraft', { defaultValue: 'Failed to save draft' }),
       }));
     } finally {
       setIsLoading(false);
@@ -737,7 +780,7 @@ export function ContractWizard({
   const wizardFooter = (
     <WizardNavigation
       currentStep={currentStep}
-      totalSteps={STEPS.length}
+      totalSteps={stepLabels.length}
       onBack={handleBack}
       onNext={handleNext}
       onSkip={handleSkip}
@@ -755,7 +798,9 @@ export function ContractWizard({
       <Dialog
         isOpen={open}
         onClose={handleCloseRequest}
-        title={editingContract ? 'Edit Contract' : 'Create New Contract'}
+        title={editingContract
+          ? t('wizard.title.editContract', { defaultValue: 'Edit Contract' })
+          : t('wizard.title.createNewContract', { defaultValue: 'Create New Contract' })}
         className="max-w-4xl max-h-[90vh]"
         disableFocusTrap
         footer={wizardFooter}
@@ -763,7 +808,7 @@ export function ContractWizard({
         <div className="flex flex-col h-full">
           <div className="flex-shrink-0 px-6 pt-6">
             <WizardProgress
-              steps={STEPS as unknown as string[]}
+              steps={stepLabels as unknown as string[]}
               currentStep={currentStep}
               completedSteps={completedSteps}
               onStepClick={handleStepClick}
@@ -796,10 +841,12 @@ export function ContractWizard({
           setShowUnsavedChangesDialog(false);
           onOpenChange(false);
         }}
-        title="Discard changes?"
-        message="You have unsaved changes. If you close this dialog now, your changes will be discarded."
-        confirmLabel="Discard Changes"
-        cancelLabel="Stay"
+        title={t('wizard.dialogs.unsavedChanges.title', { defaultValue: 'Discard changes?' })}
+        message={t('wizard.dialogs.unsavedChanges.message', {
+          defaultValue: 'You have unsaved changes. If you close this dialog now, your changes will be discarded.',
+        })}
+        confirmLabel={t('wizard.dialogs.unsavedChanges.confirm', { defaultValue: 'Discard Changes' })}
+        cancelLabel={t('wizard.dialogs.unsavedChanges.cancel', { defaultValue: 'Stay' })}
       />
     </>
   );

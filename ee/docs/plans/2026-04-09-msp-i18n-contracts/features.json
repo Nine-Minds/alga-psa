@@ -172,7 +172,7 @@
   {
     "id": "F035",
     "description": "Wire useTranslation('msp/contracts') in ContractWizard.tsx -- translate step labels (Contract Basics, Fixed Fee Services, Products, Hourly Services, Usage-Based Services, Review & Create), validation error messages, save/draft button labels, and unsaved changes confirmation dialog",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F036",
