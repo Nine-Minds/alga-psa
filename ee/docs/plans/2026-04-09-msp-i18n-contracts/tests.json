@@ -377,7 +377,7 @@
   {
     "id": "T045",
     "description": "Unit: BillingFrequencyOverrideSelect.i18n.test -- label, description with interpolation, placeholder with interpolation render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
