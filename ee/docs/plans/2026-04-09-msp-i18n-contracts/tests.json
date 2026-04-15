@@ -385,7 +385,7 @@
   {
     "id": "T046",
     "description": "Unit: ServicePicker.i18n.test -- placeholder and empty message render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
