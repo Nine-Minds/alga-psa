@@ -218,3 +218,6 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** `F051` completed in `ServicePicker.tsx`: wired `useTranslation('msp/contracts')` and localized default placeholder, search placeholder, and empty-message copy.
 - **(2026-04-14)** Expanded `servicePicker.*` keys in `server/public/locales/en/msp/contracts.json` with top-level picker strings while preserving `servicePicker.catalog.*` for async catalog picker.
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ServicePicker.tsx` (pass) and `jq empty server/public/locales/en/msp/contracts.json` (pass).
+- **(2026-04-14)** `F052` completed in `wizard-steps/ContractBasicsStep.tsx`: wired `useTranslation('msp/contracts')` for the step shell and first-section UX (heading/description, template picker labels + loading text + preview labels, client label/loading/select/hint, and contract-name label/placeholder/hint).
+- **(2026-04-14)** Added `wizardBasics.heading|description|template.*|client.*|contractName.*` keys in `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx` (pass; warnings only) and `jq empty server/public/locales/en/msp/contracts.json` (pass).

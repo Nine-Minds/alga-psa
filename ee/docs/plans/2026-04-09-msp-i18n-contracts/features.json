@@ -257,7 +257,7 @@
   {
     "id": "F052",
     "description": "Wire useTranslation('msp/contracts') in ContractBasicsStep.tsx -- translate step heading, description, template picker (Start From Template label, loading/error states, template details display), client picker (Client label, quick add), and contract name field",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F053",

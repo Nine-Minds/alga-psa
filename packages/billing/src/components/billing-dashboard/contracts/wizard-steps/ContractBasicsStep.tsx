@@ -30,6 +30,7 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { IClient } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type TemplateOption = {
   contract_id: string;
@@ -80,6 +81,7 @@ export function ContractBasicsStep({
   isTemplateLoading,
   templateError,
 }: ContractBasicsStepProps) {
+  const { t } = useTranslation('msp/contracts');
   const { renderQuickAddClient } = useQuickAddClient();
   const [clients, setClients] = useState<IClient[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
@@ -145,33 +147,41 @@ export function ContractBasicsStep({
   return (
     <div className="space-y-6" data-automation-id="contract-basics-step">
       <div className="mb-6 space-y-3">
-        <h3 className="text-lg font-semibold">Contract Basics</h3>
+        <h3 className="text-lg font-semibold">
+          {t('wizardBasics.heading', { defaultValue: 'Contract Basics' })}
+        </h3>
         <p className="text-sm text-[rgb(var(--color-text-500))]">
-          Choose a template (optional), select the client, and set foundational contract details.
-          Service details load in the next steps.
+          {t('wizardBasics.description', {
+            defaultValue: 'Choose a template (optional), select the client, and set foundational contract details. Service details load in the next steps.',
+          })}
         </p>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="contract-template" className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-purple-500" />
-          Start From Template
+          {t('wizardBasics.template.startFromTemplate', { defaultValue: 'Start From Template' })}
         </Label>
         <CustomSelect
           id="contract-template"
           value={selectedTemplateId ?? undefined}
           options={templateOptions}
           onValueChange={(value) => onTemplateSelect(value || null)}
-          placeholder={isLoadingTemplates ? 'Loading templates…' : 'Select a template (optional)'}
+          placeholder={isLoadingTemplates
+            ? t('wizardBasics.template.loadingTemplates', { defaultValue: 'Loading templates…' })
+            : t('wizardBasics.template.selectTemplateOptional', { defaultValue: 'Select a template (optional)' })}
           disabled={isLoadingTemplates || isTemplateLoading}
           allowClear
         />
         <p className="text-xs text-[rgb(var(--color-text-400))]">
-          Prefill services, notes, and billing cadence from an existing template. You can still
-          adjust everything before publishing.
+          {t('wizardBasics.template.prefillHint', {
+            defaultValue: 'Prefill services, notes, and billing cadence from an existing template. You can still adjust everything before publishing.',
+          })}
         </p>
         {isTemplateLoading && (
-          <p className="text-xs text-blue-600">Loading template details…</p>
+          <p className="text-xs text-blue-600">
+            {t('wizardBasics.template.loadingTemplateDetails', { defaultValue: 'Loading template details…' })}
+          </p>
         )}
         {templateError && (
           <p className="text-xs text-red-600">{templateError}</p>
@@ -179,14 +189,18 @@ export function ContractBasicsStep({
         {selectedTemplate && (
           <div className="text-xs text-[rgb(var(--color-text-500))] border border-[rgb(var(--color-primary-100))] bg-[rgb(var(--color-primary-50))] rounded-md p-3 mt-2 space-y-1">
             <p>
-              <span className="font-semibold text-[rgb(var(--color-primary-700))]">Template:</span>{' '}
+              <span className="font-semibold text-[rgb(var(--color-primary-700))]">
+                {t('wizardBasics.template.preview.templateLabel', { defaultValue: 'Template:' })}
+              </span>{' '}
               {selectedTemplate.contract_name}
             </p>
             <p>
-              <span className="font-semibold text-[rgb(var(--color-primary-700))]">Billing cadence:</span>{' '}
+              <span className="font-semibold text-[rgb(var(--color-primary-700))]">
+                {t('wizardBasics.template.preview.billingCadenceLabel', { defaultValue: 'Billing cadence:' })}
+              </span>{' '}
               {selectedTemplate.billing_frequency
                 ? selectedTemplate.billing_frequency.replace(/_/g, ' ')
-                : 'Not specified'}
+                : t('wizardBasics.template.preview.notSpecified', { defaultValue: 'Not specified' })}
             </p>
             {selectedTemplate.contract_description && (
               <p className="text-[rgb(var(--color-text-600))]">{selectedTemplate.contract_description}</p>
@@ -198,7 +212,7 @@ export function ContractBasicsStep({
       <div className="space-y-2">
         <Label htmlFor="client" className="flex items-center gap-2">
           <Building2 className="h-4 w-4" />
-          Client *
+          {t('wizardBasics.client.clientLabel', { defaultValue: 'Client' })} *
         </Label>
         <ClientPicker
           id="contract-basics-client-picker"
@@ -216,7 +230,9 @@ export function ContractBasicsStep({
           onFilterStateChange={setFilterState}
           clientTypeFilter={clientTypeFilter}
           onClientTypeFilterChange={setClientTypeFilter}
-          placeholder={isLoadingClients ? 'Loading clients…' : 'Select a client'}
+          placeholder={isLoadingClients
+            ? t('wizardBasics.client.loadingClients', { defaultValue: 'Loading clients…' })
+            : t('wizardBasics.client.selectClient', { defaultValue: 'Select a client' })}
           className="w-full"
           onAddNew={() => setIsQuickAddClientOpen(true)}
         />
@@ -230,24 +246,30 @@ export function ContractBasicsStep({
           skipSuccessDialog: true,
         })}
         {!data.client_id && (
-          <p className="text-xs text-[rgb(var(--color-text-400))]">Choose the client this contract is for.</p>
+          <p className="text-xs text-[rgb(var(--color-text-400))]">
+            {t('wizardBasics.client.chooseClientHint', { defaultValue: 'Choose the client this contract is for.' })}
+          </p>
         )}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="contract_name" className="flex items-center gap-2">
           <FileText className="h-4 w-4" />
-          Contract Name *
+          {t('wizardBasics.contractName.label', { defaultValue: 'Contract Name' })} *
         </Label>
         <Input
           id="contract_name"
           type="text"
           value={data.contract_name}
           onChange={(e) => updateData({ contract_name: e.target.value })}
-          placeholder="e.g., Standard MSP Services, Premium Support Package"
+          placeholder={t('wizardBasics.contractName.placeholder', {
+            defaultValue: 'e.g., Standard MSP Services, Premium Support Package',
+          })}
           className="w-full"
         />
-        <p className="text-xs text-[rgb(var(--color-text-400))]">Give this contract a descriptive name.</p>
+        <p className="text-xs text-[rgb(var(--color-text-400))]">
+          {t('wizardBasics.contractName.hint', { defaultValue: 'Give this contract a descriptive name.' })}
+        </p>
       </div>
 
       <div className="space-y-2">

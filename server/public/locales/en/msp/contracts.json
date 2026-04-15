@@ -1265,7 +1265,33 @@
       "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead."
     }
   },
-  "wizardBasics": {},
+  "wizardBasics": {
+    "client": {
+      "chooseClientHint": "Choose the client this contract is for.",
+      "clientLabel": "Client",
+      "loadingClients": "Loading clients…",
+      "selectClient": "Select a client"
+    },
+    "contractName": {
+      "hint": "Give this contract a descriptive name.",
+      "label": "Contract Name",
+      "placeholder": "e.g., Standard MSP Services, Premium Support Package"
+    },
+    "description": "Choose a template (optional), select the client, and set foundational contract details. Service details load in the next steps.",
+    "heading": "Contract Basics",
+    "template": {
+      "loadingTemplateDetails": "Loading template details…",
+      "loadingTemplates": "Loading templates…",
+      "prefillHint": "Prefill services, notes, and billing cadence from an existing template. You can still adjust everything before publishing.",
+      "preview": {
+        "billingCadenceLabel": "Billing cadence:",
+        "notSpecified": "Not specified",
+        "templateLabel": "Template:"
+      },
+      "selectTemplateOptional": "Select a template (optional)",
+      "startFromTemplate": "Start From Template"
+    }
+  },
   "wizardFixed": {},
   "wizardProducts": {},
   "wizardHourly": {},
