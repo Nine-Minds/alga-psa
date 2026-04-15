@@ -177,7 +177,7 @@
   {
     "id": "F036",
     "description": "Wire useTranslation('msp/contracts') in ContractWizard.tsx -- translate recurring authoring validation messages, template loading states, and draft resume/save status messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F037",

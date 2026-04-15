@@ -886,11 +886,28 @@
       "contractNameRequired": "Contract name is required",
       "noticePeriodRange": "Notice period must be between {{min}} and {{max}} days",
       "noticePeriodWholeNumber": "Notice period must be a whole number of days",
+      "recurring": {
+        "frequency": {
+          "annually": "annually",
+          "biweekly": "biweekly",
+          "monthly": "monthly",
+          "quarterly": "quarterly",
+          "semi-annually": "semi-annually",
+          "weekly": "weekly"
+        },
+        "lineType": {
+          "fixed": "Fixed",
+          "hourly": "Hourly",
+          "product": "Product",
+          "usage": "Usage"
+        }
+      },
       "renewalModeRequiredWithEndDate": "Renewal mode is required when an end date is set",
       "renewalTermPositiveWhole": "Renewal term months must be a positive whole number",
       "selectClientBeforeDraft": "Select a client before saving as draft",
       "selectProductForEachLine": "Please select a product for each product line",
-      "startDateRequired": "Start date is required"
+      "startDateRequired": "Start date is required",
+      "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead."
     }
   },
   "wizardBasics": {},

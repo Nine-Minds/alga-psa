@@ -20,7 +20,10 @@ import {
 } from '@alga-psa/billing/actions/contractWizardActions';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { getUnsupportedRecurringAuthoringCombinationMessage } from '@shared/billingClients/recurringAuthoringValidation';
+import {
+  getUnsupportedRecurringAuthoringCombination,
+  getUnsupportedRecurringAuthoringCombinationMessage,
+} from '@shared/billingClients/recurringAuthoringValidation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const REQUIRED_STEPS = [0, 5];
@@ -28,6 +31,12 @@ const MIN_NOTICE_PERIOD_DAYS = 0;
 const MAX_NOTICE_PERIOD_DAYS = 3650;
 const HARD_DEFAULT_RENEWAL_MODE: NonNullable<ContractWizardData['renewal_mode']> = 'manual';
 const HARD_DEFAULT_NOTICE_PERIOD_DAYS = 30;
+const RECURRING_LINE_TYPE_KEYS = {
+  Fixed: 'fixed',
+  Product: 'product',
+  Hourly: 'hourly',
+  Usage: 'usage',
+} as const;
 
 function isEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -240,6 +249,10 @@ export function ContractWizard({
   const [wizardData, setWizardData] = useState<ContractWizardData>(() => ({
     ...buildInitialContractWizardData(editingContract),
   }));
+  const formatList = useMemo(
+    () => new Intl.ListFormat(undefined, { style: 'long', type: 'conjunction' }),
+    []
+  );
 
   const stepLabels = useMemo(
     () => ([
@@ -285,9 +298,7 @@ export function ContractWizard({
       .catch((error) => {
         console.error('Failed to load contract templates', error);
         setTemplateError(
-          error instanceof Error
-            ? error.message
-            : t('wizard.errors.failedToLoadTemplates', { defaultValue: 'Failed to load templates' })
+          t('wizard.errors.failedToLoadTemplates', { defaultValue: 'Failed to load templates' })
         );
       })
       .finally(() => {
@@ -371,9 +382,7 @@ export function ContractWizard({
       } catch (error) {
         console.error('Failed to load template snapshot', error);
         setTemplateError(
-          error instanceof Error
-            ? error.message
-            : t('wizard.errors.failedToLoadTemplateDetails', { defaultValue: 'Failed to load template details' })
+          t('wizard.errors.failedToLoadTemplateDetails', { defaultValue: 'Failed to load template details' })
         );
       }
     });
@@ -437,9 +446,9 @@ export function ContractWizard({
   };
 
   const getRecurringAuthoringValidationError = (): string | null => {
-    const combinations = [
+    const unsupportedCombination = [
       wizardData.fixed_services.length > 0
-        ? getUnsupportedRecurringAuthoringCombinationMessage({
+        ? getUnsupportedRecurringAuthoringCombination({
             lineType: 'Fixed',
             cadenceOwner: wizardData.cadence_owner,
             billingTiming: wizardData.billing_timing,
@@ -447,7 +456,7 @@ export function ContractWizard({
           })
         : null,
       wizardData.product_services.length > 0
-        ? getUnsupportedRecurringAuthoringCombinationMessage({
+        ? getUnsupportedRecurringAuthoringCombination({
             lineType: 'Product',
             cadenceOwner: wizardData.cadence_owner,
             billingTiming: wizardData.billing_timing,
@@ -455,7 +464,7 @@ export function ContractWizard({
           })
         : null,
       wizardData.hourly_services.length > 0
-        ? getUnsupportedRecurringAuthoringCombinationMessage({
+        ? getUnsupportedRecurringAuthoringCombination({
             lineType: 'Hourly',
             cadenceOwner: wizardData.cadence_owner,
             billingTiming: wizardData.billing_timing,
@@ -463,16 +472,45 @@ export function ContractWizard({
           })
         : null,
       (wizardData.usage_services?.length ?? 0) > 0
-        ? getUnsupportedRecurringAuthoringCombinationMessage({
+        ? getUnsupportedRecurringAuthoringCombination({
             lineType: 'Usage',
             cadenceOwner: wizardData.cadence_owner,
             billingTiming: wizardData.billing_timing,
             billingFrequency: wizardData.usage_billing_frequency ?? wizardData.billing_frequency,
           })
         : null,
-    ];
+    ].find((combination) => Boolean(combination));
 
-    return combinations.find((message): message is string => Boolean(message)) ?? null;
+    if (!unsupportedCombination) {
+      return null;
+    }
+
+    const supportedFrequencies = unsupportedCombination.supportedBillingFrequencies.map((value) =>
+      t(`wizard.validation.recurring.frequency.${value}`, { defaultValue: value })
+    );
+    const recurringLineType = t(
+      `wizard.validation.recurring.lineType.${RECURRING_LINE_TYPE_KEYS[unsupportedCombination.lineType]}`,
+      { defaultValue: unsupportedCombination.lineType }
+    );
+    const unsupportedFrequency = t(
+      `wizard.validation.recurring.frequency.${unsupportedCombination.billingFrequency}`,
+      { defaultValue: unsupportedCombination.billingFrequency }
+    );
+    const defaultRecurringMessage = getUnsupportedRecurringAuthoringCombinationMessage({
+      lineType: unsupportedCombination.lineType,
+      cadenceOwner: 'contract',
+      billingTiming: wizardData.billing_timing,
+      billingFrequency: unsupportedCombination.billingFrequency,
+    });
+
+    return t('wizard.validation.unsupportedRecurringAuthoringCombination', {
+      defaultValue:
+        defaultRecurringMessage ??
+        'Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead.',
+      lineType: recurringLineType,
+      supportedFrequencies: formatList.format(supportedFrequencies),
+      billingFrequency: unsupportedFrequency,
+    });
   };
 
   const validateStep = (stepIndex: number): boolean => {
@@ -679,9 +717,7 @@ export function ContractWizard({
       console.error('Error creating contract', error);
       setErrors((prev) => ({
         ...prev,
-        [currentStep]: error instanceof Error
-          ? error.message
-          : t('wizard.errors.failedToCreateContract', { defaultValue: 'Failed to create contract' }),
+        [currentStep]: t('wizard.errors.failedToCreateContract', { defaultValue: 'Failed to create contract' }),
       }));
     } finally {
       setIsLoading(false);
@@ -738,9 +774,7 @@ export function ContractWizard({
       console.error('Error saving contract draft', error);
       setErrors((prev) => ({
         ...prev,
-        [currentStep]: error instanceof Error
-          ? error.message
-          : t('wizard.errors.failedToSaveDraft', { defaultValue: 'Failed to save draft' }),
+        [currentStep]: t('wizard.errors.failedToSaveDraft', { defaultValue: 'Failed to save draft' }),
       }));
     } finally {
       setIsLoading(false);

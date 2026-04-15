@@ -35,9 +35,8 @@ describe('recurring authoring validation boundaries', () => {
       'utf8',
     );
 
-    expect(contractWizardSource).toContain(
-      "import { getUnsupportedRecurringAuthoringCombinationMessage } from '@shared/billingClients/recurringAuthoringValidation';",
-    );
+    expect(contractWizardSource).toContain('getUnsupportedRecurringAuthoringCombinationMessage');
+    expect(contractWizardSource).toContain('getUnsupportedRecurringAuthoringCombination');
     expect(contractWizardSource).toContain('const recurringAuthoringError = getRecurringAuthoringValidationError();');
     expect(templateWizardSource).toContain(
       "import { getUnsupportedRecurringAuthoringCombinationMessage } from '@shared/billingClients/recurringAuthoringValidation';",
