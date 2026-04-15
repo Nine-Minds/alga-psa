@@ -96,7 +96,7 @@ export const PaletteItemWithTooltip: React.FC<{
       {...provided.draggableProps}
       {...(disabled ? {} : provided.dragHandleProps)}
       className={`
-        group relative flex w-full min-h-[4.5rem] flex-col items-center justify-start gap-1 rounded-lg border px-1 py-2 text-center
+        group relative flex w-full min-h-[3.25rem] flex-col items-center justify-center gap-1 rounded-lg border px-1 py-1.5 text-center
         transition-all duration-150
         ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-grab'}
         ${isDragging

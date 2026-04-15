@@ -14,7 +14,9 @@ import {
   FileText, Layers, Box, Cog, Terminal, Globe, Search, GripVertical,
   // Business operations icons
   MessageSquare, Edit, UserPlus, CheckCircle, Paperclip, Building, Users, Bot,
-  Bell, Calendar, SquareCheck, StickyNote, ClipboardList
+  Bell, Calendar, SquareCheck, StickyNote, ClipboardList, Ticket,
+  FolderKanban, Handshake, Contact, Wand2, AppWindow, Hourglass, ShieldAlert,
+  CalendarPlus, Timer, BellRing
 } from 'lucide-react';
 import {
   getStepTypeColor,
@@ -30,6 +32,7 @@ import {
 import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Input } from '@alga-psa/ui/components/Input';
+import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -274,8 +277,11 @@ const areStructurallyEqual = (left: unknown, right: unknown): boolean => stableS
 const DESIGNER_FLOAT_EDGE_GUTTER = 8;
 const DESIGNER_FLOAT_PANEL_OFFSET = 16;
 const DESIGNER_FLOAT_MIN_HEIGHT = 160;
-const DESIGNER_PALETTE_WIDTH = 224;
-const DESIGNER_CENTER_LEFT_EXTRA_PADDING = 48;
+const DESIGNER_PALETTE_WIDTH = 280;
+const DESIGNER_PALETTE_COLLAPSED_WIDTH = 32;
+// Toggle chevron pokes ~16px beyond the palette's right edge (right: -12px + half button width)
+const DESIGNER_PALETTE_TOGGLE_OVERHANG = 16;
+const DESIGNER_CENTER_LEFT_EXTRA_PADDING = 16;
 const DESIGNER_CENTER_RIGHT_EXTRA_PADDING = 24;
 
 type PipeSegment = {
@@ -1272,6 +1278,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const [triggerSourceSchemaStatus, setTriggerSourceSchemaStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [triggerSourceSchemaLoadedRef, setTriggerSourceSchemaLoadedRef] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [isPaletteCollapsed, setIsPaletteCollapsed] = useState(false);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [selectedPipePath, setSelectedPipePath] = useState<string>('root');
   // For insert-between functionality: stores where to insert the next step
@@ -1451,11 +1458,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       Math.max(DESIGNER_FLOAT_EDGE_GUTTER, designerFloatAnchorRect.top + DESIGNER_FLOAT_PANEL_OFFSET),
       window.innerHeight - DESIGNER_FLOAT_MIN_HEIGHT
     );
+    const currentPaletteWidth = isPaletteCollapsed
+      ? DESIGNER_PALETTE_COLLAPSED_WIDTH
+      : DESIGNER_PALETTE_WIDTH;
     const paletteLeft = Math.min(
       Math.max(DESIGNER_FLOAT_EDGE_GUTTER, designerFloatAnchorRect.left + DESIGNER_FLOAT_PANEL_OFFSET),
-      window.innerWidth - DESIGNER_FLOAT_EDGE_GUTTER - DESIGNER_PALETTE_WIDTH
+      window.innerWidth - DESIGNER_FLOAT_EDGE_GUTTER - currentPaletteWidth
     );
-    const paletteRight = paletteLeft + DESIGNER_PALETTE_WIDTH;
+    const paletteRight = paletteLeft + currentPaletteWidth + DESIGNER_PALETTE_TOGGLE_OVERHANG;
     const sidebarLeft = Math.min(
       Math.max(
         DESIGNER_FLOAT_EDGE_GUTTER,
@@ -1495,7 +1505,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         paddingRight: `${centerPaddingRight}px`,
       } as React.CSSProperties,
     };
-  }, [designerFloatAnchorRect, designerSidebarWidth]);
+  }, [designerFloatAnchorRect, designerSidebarWidth, isPaletteCollapsed]);
 
   const stepPathMap = useMemo(() => {
     return activeDefinition ? buildStepPathMap(activeDefinition.steps as Step[]) : {};
@@ -3255,17 +3265,17 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
     if (itemWithAction.groupKey || itemWithAction.iconToken) {
       switch (itemWithAction.iconToken ?? itemWithAction.groupKey) {
-        case 'ticket': return <ClipboardList className={iconClass} />;
-        case 'contact': return <Users className={iconClass} />;
+        case 'ticket': return <Ticket className={iconClass} />;
+        case 'contact': return <Contact className={iconClass} />;
         case 'client': return <Building className={iconClass} />;
         case 'communication': return <Mail className={iconClass} />;
         case 'scheduling': return <Calendar className={iconClass} />;
-        case 'project': return <SquareCheck className={iconClass} />;
+        case 'project': return <FolderKanban className={iconClass} />;
         case 'time': return <Clock className={iconClass} />;
-        case 'crm': return <StickyNote className={iconClass} />;
-        case 'transform': return <Settings className={iconClass} />;
+        case 'crm': return <Handshake className={iconClass} />;
+        case 'transform': return <Wand2 className={iconClass} />;
         case 'ai': return <Bot className={iconClass} />;
-        case 'app': return <Box className={iconClass} />;
+        case 'app': return <AppWindow className={iconClass} />;
         default: return <Box className={iconClass} />;
       }
     }
@@ -3275,7 +3285,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       const actionId = itemWithAction.actionId.toLowerCase();
       
       // Business Operations - Tickets
-      if (actionId === 'tickets.create') return <ClipboardList className={iconClass} />;
+      if (actionId === 'tickets.create') return <Ticket className={iconClass} />;
       if (actionId === 'tickets.add_comment') return <MessageSquare className={iconClass} />;
       if (actionId === 'tickets.update_fields') return <Edit className={iconClass} />;
       if (actionId === 'tickets.assign') return <UserPlus className={iconClass} />;
@@ -3299,13 +3309,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       if (actionId === 'notifications.send_in_app') return <Bell className={iconClass} />;
       
       // Business Operations - Scheduling
-      if (actionId === 'scheduling.assign_user') return <Calendar className={iconClass} />;
+      if (actionId === 'scheduling.assign_user') return <CalendarPlus className={iconClass} />;
       
       // Business Operations - Projects
       if (actionId === 'projects.create_task') return <SquareCheck className={iconClass} />;
       
       // Business Operations - Time
-      if (actionId === 'time.create_entry') return <Clock className={iconClass} />;
+      if (actionId === 'time.create_entry') return <Timer className={iconClass} />;
       
       // Business Operations - CRM
       if (actionId === 'crm.create_activity_note') return <StickyNote className={iconClass} />;
@@ -3324,13 +3334,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     switch (item.type) {
       case 'control.if': return <GitBranch className={iconClass} />;
       case 'control.forEach': return <Repeat className={iconClass} />;
-      case 'control.tryCatch': return <Shield className={iconClass} />;
+      case 'control.tryCatch': return <ShieldAlert className={iconClass} />;
       case 'control.return': return <CornerDownRight className={iconClass} />;
       case 'control.callWorkflow': return <Workflow className={iconClass} />;
       case 'state.set': return <Database className={iconClass} />;
       case 'transform.assign': return <Settings className={iconClass} />;
       case 'event.wait': return <Clock className={iconClass} />;
-      case 'time.wait': return <Clock className={iconClass} />;
+      case 'time.wait': return <Hourglass className={iconClass} />;
       case 'human.task': return <User className={iconClass} />;
       case 'action.call': return <Zap className={iconClass} />;
       default: return <Box className={iconClass} />;
@@ -3406,6 +3416,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                 scrollContainerRef={provided.innerRef}
                 scrollContainerProps={provided.droppableProps}
                 scrollContainerFooter={provided.placeholder}
+                isCollapsed={isPaletteCollapsed}
+                onToggleCollapse={() => setIsPaletteCollapsed((prev) => !prev)}
+                expandedWidth={DESIGNER_PALETTE_WIDTH}
+                collapsedWidth={DESIGNER_PALETTE_COLLAPSED_WIDTH}
                 renderItem={(item, _category, paletteIndex) => (
                   <Draggable
                     key={item.id}
@@ -4702,22 +4716,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button
-                        id="workflow-steps-view-list"
-                        variant={stepsViewMode === 'list' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setStepsViewMode('list')}
-                      >
-                        List
-                      </Button>
-                      <Button
-                        id="workflow-steps-view-graph"
-                        variant={stepsViewMode === 'graph' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setStepsViewMode('graph')}
-                      >
-                        Graph
-                      </Button>
+                      <ViewSwitcher
+                        aria-label="Workflow steps view"
+                        currentView={stepsViewMode}
+                        onChange={(v) => setStepsViewMode(v as 'list' | 'graph')}
+                        options={[
+                          { value: 'list', label: 'List' },
+                          { value: 'graph', label: 'Graph' }
+                        ]}
+                      />
                       {publishWarnings.length > 0 && (
                         <Badge variant="warning">{publishWarnings.length} warnings</Badge>
                       )}
