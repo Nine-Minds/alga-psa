@@ -505,7 +505,7 @@
   {
     "id": "T061",
     "description": "Unit: TemplateReviewContractStep.i18n.test -- review heading, section labels, service summaries render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]
