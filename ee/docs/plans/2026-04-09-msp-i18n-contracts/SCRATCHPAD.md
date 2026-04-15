@@ -355,3 +355,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/PricingSchedules.i18n.test.ts` (pass; 1 file, 1 test) and `node scripts/validate-translations.cjs` (pass; Errors: 0, Warnings: 0).
 - **(2026-04-15)** `T036` completed: added `packages/billing/tests/billing-dashboard/TemplatesTab.i18n.test.ts` with coverage for TemplatesTab columns/status labels, search placeholders, row actions, loading/error/empty copy, and menu accessibility label.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/TemplatesTab.i18n.test.ts` (pass; 1 file, 1 test).
+- **(2026-04-15)** `T037` completed: added `packages/billing/tests/billing-dashboard/ContractForm.i18n.test.ts` with i18n coverage for ContractForm heading/fields, status options + expired helper, validation/error copy, and save button states.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractForm.i18n.test.ts` (pass; 1 file, 1 test).

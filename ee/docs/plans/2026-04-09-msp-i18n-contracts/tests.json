@@ -313,7 +313,7 @@
   {
     "id": "T037",
     "description": "Unit: ContractForm.i18n.test -- form heading, field labels, status options, validation messages render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
