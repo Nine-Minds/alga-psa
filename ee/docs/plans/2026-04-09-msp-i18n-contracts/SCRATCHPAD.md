@@ -399,3 +399,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/TemplateFixedFeeServicesStep.i18n.test.ts` (pass; 1 file, 1 test).
 - **(2026-04-15)** `T058` completed: added `packages/billing/tests/billing-dashboard/TemplateProductsStep.i18n.test.ts` to validate translated heading/description, product picker labels/placeholders/help, add action, and unknown-product preview fallback.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/TemplateProductsStep.i18n.test.ts` (pass; 1 file, 1 test).
+- **(2026-04-15)** `T059` completed: added `packages/billing/tests/billing-dashboard/TemplateHourlyServicesStep.i18n.test.ts` with assertions for translated heading/explainer, rounding settings labels/help, service picker fields, bucket toggle label, add action, and preview fallback copy.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/TemplateHourlyServicesStep.i18n.test.ts` (pass; 1 file, 1 test).

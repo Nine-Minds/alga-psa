@@ -489,7 +489,7 @@
   {
     "id": "T059",
     "description": "Unit: TemplateHourlyServicesStep.i18n.test -- step heading, service picker, bucket/minimum/rounding labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
