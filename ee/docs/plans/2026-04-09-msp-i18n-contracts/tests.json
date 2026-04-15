@@ -102,7 +102,7 @@
   {
     "id": "T012",
     "description": "Unit: ContractDialog.i18n.test -- pseudo-locale (xx) coverage for all visible strings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F017",

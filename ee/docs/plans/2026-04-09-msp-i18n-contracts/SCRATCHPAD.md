@@ -302,3 +302,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractDialog.i18n.test.ts` (pass; 1 file, 1 test).
 - **(2026-04-15)** `T011` completed: extended `ContractDialog.i18n.test.ts` with PO section and preset-picker coverage (labels, helper copy, loading/empty/no-match states, selected-count copy, and preset detail headings), validating source key usage + English locale presence.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractDialog.i18n.test.ts` (pass; 1 file, 2 tests).
+- **(2026-04-15)** `T012` completed: added pseudo-locale coverage in `ContractDialog.i18n.test.ts` by extracting all `t('...')` keys from `ContractDialog.tsx` and asserting each resolves to `xx` pseudo-locale values (`11111`), guarding against fallback English leakage.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractDialog.i18n.test.ts` (pass; 1 file, 3 tests).
