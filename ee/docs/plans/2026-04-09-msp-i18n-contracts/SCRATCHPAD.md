@@ -278,3 +278,6 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Localized preset-remove confirmation dialog title/message/confirm/cancel labels using interpolation (`{{serviceName}}`, `{{presetName}}`).
 - **(2026-04-14)** Added `templatePreview.*` keys in `server/public/locales/en/msp/contracts.json` (`serviceType`, `selectedHeading`, `labels.qty`, `removeDialog.*`).
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/template-wizard/TemplateServicePreviewSection.tsx` (pass), `jq empty server/public/locales/en/msp/contracts.json` (pass), and key coverage audit for `templatePreview.*` usages (`missing 0`).
+- **(2026-04-14)** `T001` completed: ran `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs` after syncing missing `msp/contracts` keys from English into `de/es/fr/it/nl/pl` locale files.
+- **(2026-04-14)** Validation result: `Errors: 0`, `Warnings: 0`, `PASSED` across `de/es/fr/it/nl/pl/xx/yy`.
+- **(2026-04-14)** Locale maintenance note: this pass only backfilled missing keys for parity; existing translated values were preserved, and newly introduced keys currently default to English text until follow-up translation refresh.

@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Lang-pack validation: `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs` passes for all 9 locales after each namespace update (covers key parity, missing/extra keys, interpolation variables, pseudo-locale patterns, Italian accents). Single check, run on every commit.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",

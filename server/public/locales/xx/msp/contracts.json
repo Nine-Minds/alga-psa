@@ -38,7 +38,9 @@
       "description": "11111",
       "lastUpdated": "11111",
       "name": "11111",
-      "status": "11111"
+      "no": "11111",
+      "status": "11111",
+      "yes": "11111"
     },
     "tabs": {
       "clientContracts": "11111",
@@ -99,6 +101,10 @@
     }
   },
   "contractDetail": {
+    "alerts": {
+      "saveSuccess": "11111",
+      "unsavedChanges": "11111"
+    },
     "cards": {
       "assignment": "11111",
       "clientOwnership": "11111",
@@ -107,20 +113,100 @@
       "quickActions": "11111",
       "renewalHandling": "11111"
     },
+    "clientAssignment": {
+      "clientContractId": "11111 {{id}} 11111",
+      "empty": "11111",
+      "endDate": "11111",
+      "endDateLabel": "11111",
+      "loadingStatuses": "11111",
+      "notRequired": "11111",
+      "noticePeriodDays": "11111",
+      "noticePeriodPlaceholder": "11111",
+      "noticePrefix": "11111",
+      "renewalHandling": "11111",
+      "renewalTermMonths": "11111",
+      "renewalTermPlaceholder": "11111",
+      "renewalTicketBoard": "11111",
+      "renewalTicketStatus": "11111",
+      "required": "11111",
+      "selectBoard": "11111",
+      "selectBoardFirst": "11111",
+      "selectRenewalMode": "11111",
+      "selectStartDate": "11111",
+      "selectStatus": "11111",
+      "startDate": "11111",
+      "startDateLabel": "11111",
+      "startDateLocked": "11111",
+      "title": "11111",
+      "useTenantRenewalDefaults": "11111",
+      "usingCustomSettings": "11111",
+      "usingTenantDefaults": "11111"
+    },
+    "clientOwnership": {
+      "assignmentStatus": "11111",
+      "clientName": "11111",
+      "endDate": "11111",
+      "ownerClient": "11111",
+      "required": "11111",
+      "startDate": "11111",
+      "systemManaged": "11111",
+      "title": "11111"
+    },
+    "detailsCard": {
+      "actions": {
+        "cancelDescription": "11111",
+        "cancelName": "11111",
+        "editDescription": "11111",
+        "editName": "11111",
+        "saveDescription": "11111",
+        "saveName": "11111"
+      },
+      "contractNameLabel": "11111",
+      "contractNamePlaceholder": "11111",
+      "descriptionLabel": "11111",
+      "descriptionPlaceholder": "11111",
+      "title": "11111"
+    },
+    "headerCard": {
+      "assignmentLifecycleHint": "11111",
+      "assignmentStatus": "11111",
+      "billingFrequencyLabel": "11111",
+      "billingFrequencyPlaceholder": "11111",
+      "customSettings": "11111",
+      "expiredStatusNote": "11111",
+      "notice": "11111",
+      "noticeDay": "11111 {{count}} 11111",
+      "noticeDays": "11111 {{count}} 11111",
+      "ongoingNoEndDate": "11111",
+      "renewalHeading": "11111",
+      "tenantDefaults": "11111",
+      "title": "11111"
+    },
     "dialogs": {
       "delete": {
+        "cancel": "11111",
         "confirm": "11111",
+        "deleting": "11111",
         "description": "11111",
+        "message": "11111",
         "title": "11111"
       },
       "discard": {
+        "cancel": "11111",
         "confirm": "11111",
         "description": "11111",
+        "message": "11111",
         "title": "11111"
       },
       "leave": {
         "confirm": "11111",
         "description": "11111",
+        "title": "11111"
+      },
+      "unsaved": {
+        "cancel": "11111",
+        "confirm": "11111",
+        "message": "11111",
         "title": "11111"
       }
     },
@@ -129,11 +215,16 @@
         "amount": "11111",
         "createdAt": "11111",
         "dueDate": "11111",
+        "invoiceDate": "11111",
         "invoiceNumber": "11111",
+        "preview": "11111",
         "status": "11111"
       },
       "empty": "11111",
       "loading": "11111",
+      "noTemplatesAvailable": "11111",
+      "preview": "11111",
+      "selectForPreview": "11111",
       "title": "11111"
     },
     "labels": {
@@ -149,8 +240,15 @@
       "deleteContract": "11111",
       "manageContractLines": "11111",
       "managePricingSchedules": "11111",
+      "title": "11111",
       "viewDocuments": "11111",
       "viewInvoices": "11111"
+    },
+    "systemManaged": {
+      "attributionOnly": "11111",
+      "configureCustom": "11111",
+      "createdAutomatically": "11111",
+      "title": "11111"
     },
     "tabs": {
       "documents": "11111",
@@ -161,41 +259,1688 @@
     },
     "validation": {
       "billingFrequencyRequired": "11111",
-      "contractNameRequired": "11111"
+      "billingFrequency": "11111",
+      "contractName": "11111",
+      "contractNameRequired": "11111",
+      "failedToUpdate": "11111",
+      "fixErrors": "11111"
     }
   },
-  "contractHeader": {},
-  "contractOverview": {},
-  "contractDialog": {},
-  "contractForm": {},
-  "contractLines": {},
-  "contractLineEdit": {},
-  "contractLineRate": {},
-  "addLines": {},
-  "createCustomLine": {},
-  "pricingSchedules": {},
-  "contractsList": {},
-  "clientContracts": {},
-  "templatesTab": {},
-  "detailSwitcher": {},
-  "templateDetail": {},
-  "quickStart": {},
-  "servicePicker": {},
-  "bucketOverlay": {},
-  "frequencyOverride": {},
-  "wizard": {},
-  "wizardBasics": {},
-  "wizardFixed": {},
-  "wizardProducts": {},
-  "wizardHourly": {},
-  "wizardUsage": {},
-  "wizardReview": {},
-  "templateWizard": {},
-  "templateBasics": {},
-  "templateFixed": {},
-  "templateProducts": {},
-  "templateHourly": {},
-  "templateUsage": {},
-  "templateReview": {},
-  "templatePreview": {}
+  "contractHeader": {
+    "badges": {
+      "clientOwned": "11111",
+      "template": "11111"
+    },
+    "labels": {
+      "billingFrequency": "11111",
+      "contractLines": "11111",
+      "currency": "11111",
+      "endDate": "11111",
+      "lastUpdated": "11111",
+      "startDate": "11111"
+    },
+    "po": {
+      "prefix": "11111",
+      "requiredForContract": "11111"
+    },
+    "status": {
+      "active": "11111",
+      "draft": "11111",
+      "expired": "11111",
+      "terminated": "11111"
+    },
+    "values": {
+      "ongoing": "11111"
+    }
+  },
+  "contractOverview": {
+    "errors": {
+      "failedToLoadOverview": "11111"
+    },
+    "frequency": {
+      "annually": "11111",
+      "biweekly": "11111",
+      "semi_annually": "11111",
+      "weekly": "11111"
+    },
+    "lines": {
+      "addContractLines": "11111",
+      "collapseAll": "11111",
+      "expandAll": "11111",
+      "includedServices": "11111",
+      "noContractLinesDescription": "11111",
+      "noContractLinesYet": "11111",
+      "noServicesConfigured": "11111",
+      "serviceCountOne": "11111 {{count}} 11111",
+      "serviceCountOther": "11111 {{count}} 11111"
+    },
+    "stats": {
+      "contractLines": "11111",
+      "estimatedMonthlyValue": "11111",
+      "totalServices": "11111",
+      "variable": "11111",
+      "variableSuffix": "11111",
+      "viewDetails": "11111"
+    },
+    "title": "11111"
+  },
+  "contractDialog": {
+    "actions": {
+      "createContract": "11111",
+      "saveAsDraft": "11111",
+      "updateContract": "11111"
+    },
+    "documents": {
+      "loading": "11111"
+    },
+    "form": {
+      "billingFrequencyLabel": "11111",
+      "billingFrequencyPlaceholder": "11111",
+      "clientLabel": "11111",
+      "clientPlaceholder": "11111",
+      "contractNameLabel": "11111",
+      "contractNamePlaceholder": "11111",
+      "currencyHint": "11111",
+      "descriptionLabel": "11111",
+      "descriptionPlaceholder": "11111",
+      "endDateHint": "11111",
+      "endDateLabel": "11111",
+      "noticePeriodLabel": "11111",
+      "noticePeriodPlaceholder": "11111",
+      "renewalModePlaceholder": "11111",
+      "renewalSettingsDescription": "11111",
+      "renewalSettingsTitle": "11111",
+      "renewalTermLabel": "11111",
+      "renewalTermPlaceholder": "11111",
+      "selectClientFirst": "11111",
+      "startDateLabel": "11111",
+      "useTenantDefaultsDescription": "11111",
+      "useTenantDefaultsLabel": "11111"
+    },
+    "po": {
+      "amountLabel": "11111",
+      "amountPlaceholder": "11111",
+      "comingSoon": "11111",
+      "noteLabel": "11111",
+      "numberLabel": "11111",
+      "numberPlaceholder": "11111",
+      "requirePurchaseOrder": "11111",
+      "requirePurchaseOrderTooltip": "11111"
+    },
+    "presetDetails": {
+      "defaultBaseRate": "11111",
+      "defaultRatePlaceholder": "11111 {{rate}} 11111",
+      "defaultRateValue": "11111 {{rate}} 11111",
+      "enterBaseRate": "11111",
+      "fixedRateConfiguration": "11111",
+      "fixedServicesReferenceHelp": "11111",
+      "hourlyRate": "11111",
+      "leaveBlankDefaultRate": "11111",
+      "minimumBillableMinutes": "11111",
+      "noServicesConfigured": "11111",
+      "notSet": "11111",
+      "overrideBaseRate": "11111",
+      "quantity": "11111",
+      "quantityShort": "11111 {{quantity}} 11111",
+      "ratePerUnit": "11111",
+      "roundUpToNearestMinutes": "11111",
+      "servicesConfiguration": "11111",
+      "servicesHourlyRates": "11111",
+      "servicesIncludedReference": "11111",
+      "timeBillingConfiguration": "11111",
+      "unitOfMeasure": "11111",
+      "unitOfMeasureHint": "11111"
+    },
+    "presets": {
+      "allTypes": "11111",
+      "empty": "11111",
+      "heading": "11111",
+      "headingTooltip": "11111",
+      "loading": "11111",
+      "noMatches": "11111",
+      "resetFilters": "11111",
+      "searchPlaceholder": "11111",
+      "selectedPlural": "11111 {{count}} 11111",
+      "selectedSingle": "11111 {{count}} 11111",
+      "serviceCountPlural": "11111 {{count}} 11111",
+      "serviceCountSingle": "11111 {{count}} 11111",
+      "typePlaceholder": "11111"
+    },
+    "title": {
+      "create": "11111",
+      "edit": "11111"
+    },
+    "validation": {
+      "billingFrequency": "11111",
+      "client": "11111",
+      "contractName": "11111",
+      "failedToSave": "11111",
+      "noticePeriodInvalid": "11111",
+      "poNumberRequired": "11111",
+      "renewalTermInvalid": "11111",
+      "requiredFields": "11111",
+      "startDate": "11111"
+    }
+  },
+  "contractForm": {
+    "actions": {
+      "saveChanges": "11111",
+      "saving": "11111"
+    },
+    "errors": {
+      "failedToUpdateContract": "11111"
+    },
+    "fields": {
+      "billingFrequency": "11111",
+      "billingFrequencyPlaceholder": "11111",
+      "contractName": "11111",
+      "contractNamePlaceholder": "11111",
+      "currency": "11111",
+      "currencyPlaceholder": "11111",
+      "description": "11111",
+      "descriptionPlaceholder": "11111",
+      "status": "11111"
+    },
+    "heading": "11111",
+    "status": {
+      "active": "11111",
+      "draft": "11111",
+      "expired": "11111",
+      "expiredHelper": "11111",
+      "terminated": "11111"
+    },
+    "validation": {
+      "billingFrequency": "11111",
+      "contractName": "11111",
+      "requiredFields": "11111"
+    }
+  },
+  "contractLines": {
+    "actions": {
+      "addFromPresets": "11111",
+      "collapseLine": "11111",
+      "createCustom": "11111",
+      "expandLine": "11111"
+    },
+    "bucket": {
+      "billingPeriod": "11111 {{period}} 11111",
+      "defaultUnit": "11111",
+      "defaultUnits": "11111",
+      "enableTracking": "11111",
+      "hour": "11111",
+      "hoursValue": "11111 {{hours}} 11111",
+      "included": "11111 {{value}} 11111",
+      "overageRate": "11111 {{rate}} 11111 {{unit}} 11111",
+      "rolloverEnabled": "11111",
+      "title": "11111",
+      "unitsValue": "11111 {{count}} 11111 {{units}} 11111"
+    },
+    "columns": {
+      "actions": "11111",
+      "frequency": "11111",
+      "name": "11111",
+      "rate": "11111",
+      "services": "11111",
+      "type": "11111"
+    },
+    "configuration": {
+      "description": "11111",
+      "fixedInfo": "11111",
+      "fixedInfoDetails": "11111",
+      "fixedInfoHeading": "11111",
+      "minimumBillableTime": "11111",
+      "minutesValue": "11111 {{count}} 11111",
+      "roundUpToNearest": "11111",
+      "title": "11111",
+      "usageInfo": "11111"
+    },
+    "customRate": "11111",
+    "description": {
+      "default": "11111",
+      "readOnly": "11111"
+    },
+    "dialogs": {
+      "confirmRemove": "11111 {{name}} 11111"
+    },
+    "empty": {
+      "noneAdded": "11111",
+      "selectAbove": "11111"
+    },
+    "errors": {
+      "cannotEditWithInvoices": "11111",
+      "failedToCheckEditable": "11111",
+      "failedToLoad": "11111",
+      "failedToRefresh": "11111",
+      "failedToRemove": "11111",
+      "failedToUpdate": "11111"
+    },
+    "loading": {
+      "contractLines": "11111",
+      "inline": "11111"
+    },
+    "serviceCountPlural": "11111 {{count}} 11111",
+    "serviceCountSingle": "11111 {{count}} 11111",
+    "services": {
+      "empty": "11111",
+      "hourlyRate": "11111",
+      "quantity": "11111",
+      "quantityShort": "11111 {{quantity}} 11111",
+      "quantityTaxAllocation": "11111",
+      "rateTaxAllocation": "11111",
+      "title": "11111 {{count}} 11111",
+      "typeLabel": "11111 {{type}} 11111",
+      "unitOfMeasure": "11111",
+      "unitPlaceholder": "11111",
+      "unitRate": "11111"
+    },
+    "title": "11111"
+  },
+  "contractLineEdit": {
+    "actions": {
+      "cancel": "11111",
+      "saveChanges": "11111",
+      "saving": "11111"
+    },
+    "errors": {
+      "failedToSaveChanges": "11111"
+    },
+    "fields": {
+      "billingTimingQuestion": "11111",
+      "rate": "11111"
+    },
+    "sections": {
+      "billingTiming": "11111",
+      "pricing": "11111"
+    },
+    "timingDescriptions": {
+      "advance": "11111",
+      "arrears": "11111"
+    },
+    "timingOptions": {
+      "advance": "11111",
+      "arrears": "11111"
+    },
+    "title": "11111 {{name}} 11111",
+    "validation": {
+      "validRateRequired": "11111"
+    },
+    "values": {
+      "unnamedLine": "11111"
+    }
+  },
+  "contractLineRate": {
+    "actions": {
+      "cancel": "11111",
+      "saveRate": "11111"
+    },
+    "fields": {
+      "rate": "11111"
+    },
+    "title": "11111 {{name}} 11111",
+    "validation": {
+      "validRateRequired": "11111"
+    }
+  },
+  "addLines": {
+    "actions": {
+      "addPlural": "11111 {{count}} 11111",
+      "addSingle": "11111 {{count}} 11111",
+      "adding": "11111"
+    },
+    "empty": {
+      "noMatches": "11111",
+      "noneAvailable": "11111"
+    },
+    "errors": {
+      "failedToAddPresets": "11111",
+      "failedToLoadPresetDetails": "11111",
+      "failedToLoadPresets": "11111"
+    },
+    "filters": {
+      "allTypes": "11111",
+      "reset": "11111",
+      "searchPlaceholder": "11111",
+      "typePlaceholder": "11111"
+    },
+    "fixedConfig": {
+      "defaultBaseRate": "11111",
+      "defaultRatePlaceholder": "11111 {{rate}} 11111",
+      "enterBaseRate": "11111",
+      "leaveBlankDefault": "11111",
+      "notSet": "11111",
+      "overrideBaseRate": "11111",
+      "title": "11111"
+    },
+    "hourlyConfig": {
+      "defaultRate": "11111 {{rate}} 11111",
+      "hourlyRate": "11111",
+      "minimumBillableMinutes": "11111",
+      "roundUpToNearest": "11111",
+      "servicesAndRates": "11111",
+      "title": "11111"
+    },
+    "loading": "11111",
+    "selectPresetsTitle": "11111",
+    "selection": {
+      "deselectPreset": "11111",
+      "selectPreset": "11111",
+      "selectedPlural": "11111 {{count}} 11111",
+      "selectedSingle": "11111 {{count}} 11111"
+    },
+    "serviceCountPlural": "11111 {{count}} 11111",
+    "serviceCountSingle": "11111 {{count}} 11111",
+    "services": {
+      "configuration": "11111",
+      "empty": "11111",
+      "fixedReferenceHelp": "11111",
+      "includedReference": "11111",
+      "quantityShort": "11111 {{quantity}} 11111",
+      "unknownService": "11111"
+    },
+    "title": "11111",
+    "usageConfig": {
+      "defaultRate": "11111 {{rate}} 11111",
+      "quantity": "11111",
+      "ratePerUnit": "11111",
+      "unitHint": "11111",
+      "unitOfMeasure": "11111",
+      "unitPlaceholder": "11111"
+    }
+  },
+  "createCustomLine": {
+    "addBucketOfConsumption": "11111",
+    "addBucketOfHours": "11111",
+    "addHourlyService": "11111",
+    "addItem": "11111",
+    "addUsageService": "11111",
+    "adjustForPartialPeriods": "11111",
+    "adjustForPartialPeriodsHelp": "11111",
+    "basicsDescription": "11111",
+    "basicsTitle": "11111",
+    "billingFrequencyLabel": "11111",
+    "billingFrequencyPlaceholder": "11111",
+    "billingModel": {
+      "fixedDescription": "11111",
+      "fixedTitle": "11111",
+      "hourlyDescription": "11111",
+      "hourlyTitle": "11111",
+      "usageDescription": "11111",
+      "usageTitle": "11111"
+    },
+    "billingTiming": {
+      "advance": "11111",
+      "arrears": "11111"
+    },
+    "billingTimingHelp": "11111",
+    "chooseBillingModel": "11111",
+    "chooseBillingModelDescription": "11111",
+    "contractLineNameLabel": "11111",
+    "contractLineNamePlaceholder": "11111",
+    "create": "11111",
+    "creating": "11111",
+    "defaultUnit": "11111",
+    "defaultUnits": "11111",
+    "enterHourlyRate": "11111",
+    "enterUnitRate": "11111",
+    "fixedServicesAlertBaseRate": "11111",
+    "fixedServicesAlertHeading": "11111",
+    "fixedServicesAlertProducts": "11111",
+    "fixedServicesDescription": "11111",
+    "fixedServicesTitle": "11111",
+    "hourlyRateDisplay": "11111 {{rate}} 11111",
+    "hourlyRateLabel": "11111",
+    "hourlyServicesAlertDescription": "11111",
+    "hourlyServicesAlertHeading": "11111",
+    "hourlyServicesDescription": "11111",
+    "hourlyServicesLabel": "11111",
+    "hourlyServicesTitle": "11111",
+    "itemLabel": "11111 {{index}} 11111",
+    "moneyPlaceholder": "11111",
+    "minimumBillableTimeLabel": "11111",
+    "noFixedItems": "11111",
+    "noHourlyServices": "11111",
+    "noUsageServices": "11111",
+    "quantityLabel": "11111",
+    "ratePerUnitLabel": "11111",
+    "recurringBaseRateHelp": "11111",
+    "recurringBaseRateLabel": "11111",
+    "roundUpToNearestLabel": "11111",
+    "selectItemPlaceholder": "11111",
+    "selectServicePlaceholder": "11111",
+    "serviceLabel": "11111 {{index}} 11111",
+    "servicesAndProductsLabel": "11111",
+    "title": "11111",
+    "unitOfMeasureLabel": "11111",
+    "unitOfMeasurePlaceholder": "11111",
+    "unitRateDisplay": "11111 {{rate}} 11111 {{unit}} 11111",
+    "usageServicesAlertDescription": "11111",
+    "usageServicesAlertHeading": "11111",
+    "usageServicesDescription": "11111",
+    "usageServicesLabel": "11111",
+    "usageServicesTitle": "11111",
+    "validation": {
+      "billingFrequencyRequired": "11111",
+      "contractLineNameRequired": "11111",
+      "contractLineTypeRequired": "11111",
+      "failedToCreate": "11111",
+      "fixedServiceRequired": "11111",
+      "fixedServiceSelectRequired": "11111 {{index}} 11111",
+      "hourlyRateRequired": "11111 {{index}} 11111",
+      "hourlyServiceRequired": "11111",
+      "hourlyServiceSelectRequired": "11111 {{index}} 11111",
+      "unitOfMeasureRequired": "11111 {{index}} 11111",
+      "unitRateRequired": "11111 {{index}} 11111",
+      "usageServiceRequired": "11111",
+      "usageServiceSelectRequired": "11111 {{index}} 11111"
+    }
+  },
+  "pricingSchedules": {
+    "list": {
+      "actions": {
+        "addSchedule": "11111",
+        "deleteSchedule": "11111",
+        "editSchedule": "11111"
+      },
+      "columns": {
+        "actions": "11111",
+        "customRate": "11111",
+        "effectiveDate": "11111",
+        "endDate": "11111",
+        "notes": "11111"
+      },
+      "dialogs": {
+        "confirmDeleteSchedule": "11111"
+      },
+      "empty": {
+        "description": "11111",
+        "noPricingSchedules": "11111"
+      },
+      "errors": {
+        "failedToDeletePricingSchedule": "11111",
+        "failedToLoadPricingSchedules": "11111"
+      },
+      "loading": "11111",
+      "readOnlyNotice": "11111",
+      "timeline": {
+        "title": "11111"
+      },
+      "title": "11111",
+      "values": {
+        "defaultRate": "11111",
+        "ongoing": "11111",
+        "useDefaultRate": "11111"
+      }
+    },
+    "dialog": {
+      "actions": {
+        "addSchedule": "11111",
+        "cancel": "11111",
+        "saving": "11111",
+        "updateSchedule": "11111"
+      },
+      "durationUnits": {
+        "days": "11111",
+        "months": "11111",
+        "weeks": "11111",
+        "years": "11111"
+      },
+      "errors": {
+        "failedToSavePricingSchedule": "11111"
+      },
+      "fields": {
+        "customRate": "11111",
+        "customRatePlaceholder": "11111",
+        "duration": "11111",
+        "durationPlaceholder": "11111",
+        "effectiveDate": "11111",
+        "endDate": "11111",
+        "hasEndDate": "11111",
+        "notes": "11111",
+        "notesPlaceholder": "11111",
+        "unit": "11111",
+        "useDefaultRate": "11111",
+        "useDuration": "11111"
+      },
+      "title": {
+        "addPricingSchedule": "11111",
+        "editPricingSchedule": "11111"
+      },
+      "validation": {
+        "customRatePositive": "11111",
+        "customRateRequired": "11111",
+        "durationPositive": "11111",
+        "durationRequired": "11111",
+        "effectiveDateRequired": "11111",
+        "endDateAfterEffectiveDate": "11111",
+        "endDateRequiredWhenEnabled": "11111"
+      }
+    }
+  },
+  "contractsList": {
+    "actions": {
+      "deleting": "11111",
+      "createContract": "11111",
+      "createTemplate": "11111",
+      "openMenu": "11111",
+      "quickAdd": "11111",
+      "resume": "11111",
+      "restore": "11111",
+      "setToActive": "11111",
+      "terminate": "11111"
+    },
+    "columns": {
+      "actions": "11111",
+      "client": "11111",
+      "contractName": "11111",
+      "created": "11111",
+      "description": "11111",
+      "endDate": "11111",
+      "lastModified": "11111",
+      "sourceTemplate": "11111",
+      "startDate": "11111",
+      "status": "11111"
+    },
+    "dialogs": {
+      "deleteClient": {
+        "clientSuffix": "11111 {{clientName}} 11111",
+        "message": "11111 {{contractName}} 11111 {{clientSuffix}} 11111",
+        "title": "11111"
+      },
+      "deleteTemplate": {
+        "message": "11111 {{contractName}} 11111",
+        "title": "11111"
+      },
+      "discardDraft": {
+        "message": "11111 {{contractName}} 11111 {{clientName}} 11111",
+        "title": "11111"
+      }
+    },
+    "drafts": {
+      "badgeCount": "11111 {{count}} 11111"
+    },
+    "empty": {
+      "dash": "11111",
+      "noClientContracts": "11111",
+      "noDescription": "11111",
+      "noDraftMatches": "11111",
+      "noDrafts": "11111",
+      "noTemplates": "11111",
+      "unknownClient": "11111",
+      "untitledContract": "11111",
+      "untitledDraft": "11111",
+      "untitledTemplate": "11111"
+    },
+    "errors": {
+      "failedToFetch": "11111"
+    },
+    "heading": {
+      "description": "11111",
+      "title": "11111"
+    },
+    "loading": {
+      "contracts": "11111"
+    },
+    "search": {
+      "clientContractsAriaLabel": "11111",
+      "clientContractsPlaceholder": "11111",
+      "draftsAriaLabel": "11111",
+      "draftsPlaceholder": "11111",
+      "templatesAriaLabel": "11111",
+      "templatesPlaceholder": "11111"
+    },
+    "status": {
+      "archived": "11111",
+      "published": "11111"
+    },
+    "toasts": {
+      "draftDiscarded": "11111",
+      "failedToActivateContract": "11111",
+      "failedToDeleteContract": "11111",
+      "failedToDiscardDraft": "11111",
+      "failedToRestoreContract": "11111",
+      "failedToResumeDraft": "11111",
+      "failedToTerminateContract": "11111"
+    }
+  },
+  "clientContracts": {
+    "actions": {
+      "viewDetails": "11111"
+    },
+    "columns": {
+      "actions": "11111",
+      "billingFrequency": "11111",
+      "client": "11111",
+      "contractName": "11111",
+      "endDate": "11111",
+      "poIndicator": "11111",
+      "sourceTemplate": "11111",
+      "startDate": "11111",
+      "status": "11111"
+    },
+    "dialogs": {
+      "terminate": {
+        "clientSuffix": "11111 {{clientName}} 11111",
+        "message": "11111 {{contractName}} 11111 {{clientSuffix}} 11111",
+        "title": "11111"
+      }
+    },
+    "empty": {
+      "noMatches": "11111"
+    },
+    "errors": {
+      "failedToFetch": "11111"
+    },
+    "loading": "11111",
+    "po": {
+      "notRequired": "11111",
+      "required": "11111"
+    },
+    "search": {
+      "ariaLabel": "11111",
+      "placeholder": "11111"
+    },
+    "tabs": {
+      "contracts": "11111",
+      "upcomingRenewals": "11111 {{count}} 11111"
+    },
+    "toasts": {
+      "failedToActivate": "11111",
+      "failedToDelete": "11111",
+      "failedToMarkNonRenewing": "11111",
+      "failedToMarkRenewing": "11111",
+      "failedToRestore": "11111",
+      "failedToResumeDraft": "11111",
+      "failedToTerminate": "11111"
+    },
+    "upcoming": {
+      "actions": {
+        "markNonRenewing": "11111",
+        "markRenewing": "11111",
+        "openMenu": "11111"
+      },
+      "columns": {
+        "actions": "11111",
+        "client": "11111",
+        "contract": "11111",
+        "daysUntilDue": "11111",
+        "decisionDue": "11111",
+        "status": "11111",
+        "type": "11111"
+      },
+      "description": "11111",
+      "empty": "11111",
+      "filterAriaLabel": "11111",
+      "filterPlaceholder": "11111",
+      "status": {
+        "completed": "11111",
+        "nonRenewing": "11111",
+        "pending": "11111",
+        "renewing": "11111",
+        "snoozed": "11111"
+      },
+      "title": "11111",
+      "type": {
+        "evergreen": "11111",
+        "fixedTerm": "11111"
+      },
+      "window": {
+        "all": "11111",
+        "next30": "11111",
+        "next60": "11111",
+        "next90": "11111"
+      },
+      "windowPlaceholder": "11111"
+    }
+  },
+  "templatesTab": {
+    "actions": {
+      "createTemplate": "11111",
+      "delete": "11111",
+      "edit": "11111"
+    },
+    "columns": {
+      "actions": "11111",
+      "description": "11111",
+      "status": "11111",
+      "templateName": "11111"
+    },
+    "empty": {
+      "createFirstTemplate": "11111",
+      "noSearchMatches": "11111",
+      "noTemplates": "11111",
+      "tryDifferentSearch": "11111"
+    },
+    "errors": {
+      "failedToDeleteContract": "11111",
+      "failedToFetchTemplates": "11111"
+    },
+    "loading": "11111",
+    "search": {
+      "ariaLabel": "11111",
+      "placeholder": "11111"
+    },
+    "status": {
+      "active": "11111",
+      "archived": "11111",
+      "draft": "11111",
+      "expired": "11111",
+      "published": "11111",
+      "terminated": "11111"
+    },
+    "values": {
+      "noDescription": "11111"
+    }
+  },
+  "detailSwitcher": {
+    "errors": {
+      "contractNotFound": "11111",
+      "failedToLoadContractDetails": "11111",
+      "missingContractIdentifier": "11111",
+      "noContractSelected": "11111",
+      "unableToLoadContractDetails": "11111"
+    },
+    "loading": {
+      "contract": "11111"
+    }
+  },
+  "templateDetail": {
+    "backToTemplates": "11111",
+    "backToTemplatesArrow": "11111",
+    "composition": {
+      "addContractLinesBeforeManaging": "11111",
+      "additionalPlans": "11111",
+      "bucketSummary": "11111 {{minutes}} 11111 {{overage}} 11111",
+      "closeManager": "11111",
+      "editRate": "11111",
+      "fixedFeeBundles": "11111",
+      "fixedFeeRate": "11111",
+      "hourlyPlans": "11111",
+      "manageServices": "11111",
+      "manageTemplateServices": "11111",
+      "minimumTimeLabel": "11111",
+      "minutesValue": "11111 {{count}} 11111",
+      "noFixedFeeLines": "11111",
+      "noHourlyLines": "11111",
+      "noServicesAssigned": "11111",
+      "noUsageLines": "11111",
+      "notSet": "11111",
+      "quantityLabel": "11111",
+      "roundUpLabel": "11111",
+      "serviceCountPlural": "11111 {{count}} 11111",
+      "serviceCountSingle": "11111 {{count}} 11111",
+      "serviceFallback": "11111",
+      "title": "11111",
+      "unitLabel": "11111",
+      "usageBasedPlans": "11111"
+    },
+    "editBasicsTitle": "11111",
+    "editGuidanceTitle": "11111",
+    "failedToLoadTemplate": "11111",
+    "form": {
+      "currencyPlaceholder": "11111",
+      "internalNotesLabel": "11111",
+      "internalNotesPlaceholder": "11111",
+      "recommendedBillingFrequencyLabel": "11111",
+      "recommendedBillingFrequencyPlaceholder": "11111",
+      "templateNameLabel": "11111",
+      "templateNamePlaceholder": "11111"
+    },
+    "guidance": {
+      "noCadenceProvided": "11111",
+      "recommendedCadenceLabel": "11111",
+      "recommendedCadencePlaceholder": "11111",
+      "tagsHint": "11111",
+      "tagsLabel": "11111",
+      "tagsPlaceholder": "11111",
+      "title": "11111",
+      "usageNotesLabel": "11111",
+      "usageNotesPlaceholder": "11111"
+    },
+    "loadingTemplate": "11111",
+    "servicesLabel": "11111",
+    "templateBadge": "11111",
+    "templateNotFound": "11111",
+    "templateSnapshotTitle": "11111",
+    "validation": {
+      "billingFrequencyRequired": "11111",
+      "failedToUpdateBasics": "11111",
+      "failedToUpdateGuidance": "11111",
+      "templateNameRequired": "11111"
+    }
+  },
+  "quickStart": {
+    "actions": {
+      "createFirstContract": "11111",
+      "dismiss": "11111",
+      "minimize": "11111",
+      "showGuide": "11111"
+    },
+    "badge": {
+      "new": "11111"
+    },
+    "bestPractices": {
+      "items": {
+        "clearNames": "11111",
+        "endDates": "11111",
+        "partialPeriodAdjustment": "11111",
+        "poNumbers": "11111"
+      },
+      "title": "11111"
+    },
+    "billingModels": {
+      "bucketHours": {
+        "description": "11111",
+        "label": "11111"
+      },
+      "fixedFee": {
+        "description": "11111",
+        "label": "11111"
+      },
+      "hourly": {
+        "description": "11111",
+        "label": "11111"
+      },
+      "usageBased": {
+        "description": "11111",
+        "label": "11111"
+      }
+    },
+    "steps": {
+      "configureBilling": {
+        "description": "11111",
+        "title": "11111"
+      },
+      "createContract": {
+        "description": "11111",
+        "requiredFields": "11111",
+        "title": "11111"
+      },
+      "reviewCreate": {
+        "description": "11111",
+        "tip": "11111",
+        "title": "11111"
+      }
+    },
+    "subtitle": "11111",
+    "title": "11111"
+  },
+  "servicePicker": {
+    "emptyMessage": "11111",
+    "placeholder": "11111",
+    "searchPlaceholder": "11111",
+    "catalog": {
+      "badges": {
+        "product": "11111",
+        "service": "11111"
+      },
+      "custom": {
+        "addAsCustomItem": "11111 {{name}} 11111",
+        "badge": "11111",
+        "typeNameHint": "11111"
+      },
+      "emptyMessage": "11111",
+      "placeholder": "11111",
+      "searchPlaceholder": "11111"
+    }
+  },
+  "bucketOverlay": {
+    "includedLabel": "11111 {{units}} 11111",
+    "includedPlaceholderHours": "11111",
+    "includedPlaceholderUnits": "11111",
+    "includedTooltip": "11111 {{units}} 11111",
+    "overageRateLabel": "11111",
+    "overageRateTooltip": "11111 {{unit}} 11111",
+    "rolloverDescription": "11111",
+    "rolloverLabel": "11111 {{units}} 11111",
+    "units": {
+      "hour": "11111",
+      "hours": "11111",
+      "units": "11111"
+    }
+  },
+  "frequencyOverride": {
+    "confirmation": "11111 {{lineFrequency}} 11111 {{contractFrequency}} 11111",
+    "description": "11111 {{frequency}} 11111",
+    "label": "11111",
+    "optionAlreadySetForContract": "11111 {{label}} 11111",
+    "placeholder": "11111 {{frequency}} 11111"
+  },
+  "wizard": {
+    "dialogs": {
+      "unsavedChanges": {
+        "cancel": "11111",
+        "confirm": "11111",
+        "message": "11111",
+        "title": "11111"
+      }
+    },
+    "errors": {
+      "failedToCreateContract": "11111",
+      "failedToLoadTemplateDetails": "11111",
+      "failedToLoadTemplates": "11111",
+      "failedToSaveDraft": "11111"
+    },
+    "steps": {
+      "contractBasics": "11111",
+      "fixedFeeServices": "11111",
+      "hourlyServices": "11111",
+      "products": "11111",
+      "reviewCreate": "11111",
+      "usageBasedServices": "11111"
+    },
+    "title": {
+      "createNewContract": "11111",
+      "editContract": "11111"
+    },
+    "validation": {
+      "addAtLeastOneService": "11111",
+      "baseRateRequiredWhenFixedServices": "11111",
+      "billingFrequencyRequired": "11111",
+      "clientRequired": "11111",
+      "contractNameRequired": "11111",
+      "noticePeriodRange": "11111 {{min}} 11111 {{max}} 11111",
+      "noticePeriodWholeNumber": "11111",
+      "recurring": {
+        "frequency": {
+          "annually": "11111",
+          "biweekly": "11111",
+          "monthly": "11111",
+          "quarterly": "11111",
+          "semi-annually": "11111",
+          "weekly": "11111"
+        },
+        "lineType": {
+          "fixed": "11111",
+          "hourly": "11111",
+          "product": "11111",
+          "usage": "11111"
+        }
+      },
+      "renewalModeRequiredWithEndDate": "11111",
+      "renewalTermPositiveWhole": "11111",
+      "selectClientBeforeDraft": "11111",
+      "selectProductForEachLine": "11111",
+      "startDateRequired": "11111",
+      "unsupportedRecurringAuthoringCombination": "11111 {{lineType}} 11111 {{supportedFrequencies}} 11111 {{billingFrequency}} 11111"
+    }
+  },
+  "wizardBasics": {
+    "additionalDescription": {
+      "hint": "11111",
+      "label": "11111",
+      "placeholder": "11111"
+    },
+    "billingFrequency": {
+      "hint": "11111",
+      "label": "11111",
+      "placeholder": "11111"
+    },
+    "cadenceOwner": {
+      "description": "11111",
+      "label": "11111",
+      "options": {
+        "client": {
+          "description": "11111",
+          "label": "11111"
+        },
+        "contract": {
+          "description": "11111",
+          "label": "11111"
+        }
+      }
+    },
+    "client": {
+      "chooseClientHint": "11111",
+      "clientLabel": "11111",
+      "loadingClients": "11111",
+      "selectClient": "11111"
+    },
+    "contractName": {
+      "hint": "11111",
+      "label": "11111",
+      "placeholder": "11111"
+    },
+    "currency": {
+      "hint": "11111",
+      "label": "11111",
+      "placeholder": "11111"
+    },
+    "dates": {
+      "endDateAfterStartValidation": "11111",
+      "endDateLabel": "11111",
+      "endDateOngoingHint": "11111",
+      "endDateTooltip": "11111",
+      "startDateHint": "11111",
+      "startDateLabel": "11111"
+    },
+    "description": "11111",
+    "heading": "11111",
+    "po": {
+      "amountHint": "11111",
+      "amountLabel": "11111",
+      "noteLabel": "11111",
+      "noteText": "11111",
+      "numberHint": "11111",
+      "numberLabel": "11111",
+      "numberPlaceholder": "11111",
+      "requireForInvoicing": "11111",
+      "requireHint": "11111",
+      "requireTooltip": "11111",
+      "title": "11111"
+    },
+    "renewal": {
+      "evergreen": {
+        "description": "11111",
+        "title": "11111"
+      },
+      "fixedTerm": {
+        "description": "11111",
+        "title": "11111"
+      },
+      "modeLabel": "11111",
+      "modeOptions": {
+        "auto": "11111",
+        "manual": "11111",
+        "none": "11111"
+      },
+      "modePlaceholder": "11111",
+      "noticePeriodLabel": "11111",
+      "noticePeriodPlaceholder": "11111",
+      "termLabel": "11111",
+      "termPlaceholder": "11111",
+      "useTenantDefaultsDescription": "11111",
+      "useTenantDefaultsLabel": "11111"
+    },
+    "summary": {
+      "labels": {
+        "billingFrequency": "11111",
+        "client": "11111",
+        "contract": "11111",
+        "currency": "11111",
+        "noticePeriod": "11111",
+        "period": "11111",
+        "poAmount": "11111",
+        "poNumber": "11111",
+        "poRequired": "11111",
+        "renewalMode": "11111",
+        "renewalTerm": "11111"
+      },
+      "title": "11111",
+      "values": {
+        "notSelected": "11111",
+        "noticePeriodDays_one": "11111 {{count}} 11111",
+        "noticePeriodDays_other": "11111 {{count}} 11111",
+        "ongoing": "11111",
+        "renewalTermMonths_one": "11111 {{count}} 11111",
+        "renewalTermMonths_other": "11111 {{count}} 11111"
+      }
+    },
+    "template": {
+      "loadingTemplateDetails": "11111",
+      "loadingTemplates": "11111",
+      "prefillHint": "11111",
+      "preview": {
+        "billingCadenceLabel": "11111",
+        "notSpecified": "11111",
+        "templateLabel": "11111"
+      },
+      "selectTemplateOptional": "11111",
+      "startFromTemplate": "11111"
+    }
+  },
+  "wizardFixed": {
+    "alternateFrequencyLabel": "11111",
+    "baseRate": {
+      "hint": "11111",
+      "label": "11111",
+      "placeholder": "11111"
+    },
+    "description": "11111",
+    "emptyState": "11111",
+    "explainer": {
+      "description": "11111",
+      "title": "11111"
+    },
+    "heading": "11111",
+    "preview": {
+      "labels": {
+        "billingTiming": "11111",
+        "cadenceOwner": "11111",
+        "invoiceWindow": "11111",
+        "recurringRate": "11111",
+        "service": "11111",
+        "services": "11111"
+      },
+      "title": "11111"
+    },
+    "proration": {
+      "label": "11111",
+      "tooltip": "11111"
+    },
+    "services": {
+      "addService": "11111",
+      "label": "11111",
+      "quantityLabel": "11111",
+      "selectServicePlaceholder": "11111",
+      "serviceItemLabel": "11111 {{index}} 11111"
+    }
+  },
+  "wizardProducts": {
+    "actions": {
+      "addProduct": "11111"
+    },
+    "description": "11111",
+    "emptyState": "11111",
+    "heading": "11111",
+    "labels": {
+      "defaultCatalogPrice": "11111",
+      "overrideUnitPriceOptional": "11111",
+      "productItem": "11111 {{index}} 11111",
+      "products": "11111",
+      "quantity": "11111",
+      "selectProductPlaceholder": "11111"
+    },
+    "validation": {
+      "noDefaultPriceEnterUnitPrice": "11111",
+      "productMissingPrice": "11111"
+    }
+  },
+  "wizardHourly": {
+    "actions": {
+      "addHourlyService": "11111"
+    },
+    "alternateFrequencyLabel": "11111",
+    "description": "11111",
+    "emptyState": "11111",
+    "explainer": {
+      "description": "11111",
+      "title": "11111"
+    },
+    "heading": "11111",
+    "labels": {
+      "enterHourlyRate": "11111",
+      "hourlyRate": "11111",
+      "hourlyRatePerHour": "11111 {{rate}} 11111",
+      "hourlyRatePlaceholder": "11111",
+      "hourlyServices": "11111",
+      "selectServicePlaceholder": "11111",
+      "serviceItem": "11111 {{index}} 11111",
+      "setBucketOfHours": "11111"
+    },
+    "minimumBillableTime": {
+      "hint": "11111",
+      "label": "11111",
+      "placeholder": "11111"
+    },
+    "roundUpToNearest": {
+      "hint": "11111",
+      "label": "11111",
+      "placeholder": "11111"
+    },
+    "summary": {
+      "labels": {
+        "minimumTime": "11111",
+        "roundUp": "11111",
+        "services": "11111"
+      },
+      "title": "11111",
+      "values": {
+        "everyMinutes": "11111 {{count}} 11111",
+        "minutes": "11111 {{count}} 11111"
+      }
+    }
+  },
+  "wizardUsage": {
+    "actions": {
+      "addUsageBasedService": "11111"
+    },
+    "alternateFrequencyLabel": "11111",
+    "description": "11111",
+    "emptyState": "11111",
+    "explainer": {
+      "description": "11111",
+      "title": "11111"
+    },
+    "heading": "11111",
+    "labels": {
+      "enterUnitRate": "11111",
+      "ratePerUnit": "11111",
+      "ratePerUnitPlaceholder": "11111",
+      "ratePerUnitValue": "11111 {{rate}} 11111 {{unit}} 11111",
+      "selectServicePlaceholder": "11111",
+      "serviceItem": "11111 {{index}} 11111",
+      "services": "11111",
+      "setBucketAllocation": "11111",
+      "unitOfMeasure": "11111",
+      "unitOfMeasureHint": "11111",
+      "unitOfMeasurePlaceholder": "11111"
+    },
+    "summary": {
+      "labels": {
+        "services": "11111"
+      },
+      "title": "11111"
+    },
+    "values": {
+      "defaultUnit": "11111"
+    }
+  },
+  "wizardReview": {
+    "heading": "11111",
+    "description": "11111",
+    "sections": {
+      "contractBasics": "11111",
+      "fixedFeeServices": "11111",
+      "products": "11111",
+      "hourlyServices": "11111",
+      "usageBasedServices": "11111"
+    },
+    "fields": {
+      "client": "11111",
+      "contractName": "11111",
+      "billingFrequency": "11111",
+      "currency": "11111",
+      "startDate": "11111",
+      "endDate": "11111",
+      "renewalMode": "11111",
+      "noticePeriod": "11111",
+      "renewalTerm": "11111"
+    },
+    "fallback": {
+      "notSelected": "11111",
+      "notSpecified": "11111",
+      "ongoing": "11111",
+      "notApplicable": "11111"
+    },
+    "renewalMode": {
+      "none": "11111",
+      "manual": "11111",
+      "auto": "11111"
+    },
+    "noticePeriod": {
+      "one": "11111 {{count}} 11111",
+      "other": "11111 {{count}} 11111"
+    },
+    "renewalTerm": {
+      "one": "11111 {{count}} 11111",
+      "other": "11111 {{count}} 11111"
+    },
+    "common": {
+      "yes": "11111",
+      "no": "11111",
+      "enabled": "11111",
+      "disabled": "11111",
+      "bucketLabel": "11111",
+      "billingFrequencyOverrideLabel": "11111",
+      "serviceQuantityRow": "11111 {{serviceName}} 11111 {{quantity}} 11111",
+      "unitSingular": "11111",
+      "unitsFallback": "11111",
+      "hourSingular": "11111"
+    },
+    "po": {
+      "title": "11111",
+      "requiredLabel": "11111",
+      "numberLabel": "11111",
+      "amountLabel": "11111"
+    },
+    "bucket": {
+      "includedHours": "11111 {{formattedValue}} 11111",
+      "includedUnits": "11111 {{formattedValue}} 11111 {{unitLabel}} 11111",
+      "overageLabel": "11111 {{rate}} 11111 {{unit}} 11111",
+      "rolloverEnabled": "11111",
+      "rolloverDisabled": "11111",
+      "summaryWithOverage": "11111 {{included}} 11111 {{overage}} 11111 {{rollover}} 11111",
+      "summaryWithoutOverage": "11111 {{included}} 11111 {{rollover}} 11111"
+    },
+    "fixed": {
+      "badgeCount": {
+        "one": "11111 {{count}} 11111",
+        "other": "11111 {{count}} 11111"
+      },
+      "monthlyBaseRate": "11111",
+      "partialPeriodAdjustment": "11111"
+    },
+    "recurring": {
+      "cadenceOwner": {
+        "label": "11111",
+        "contractAnniversary": "11111",
+        "clientBillingSchedule": "11111"
+      },
+      "firstInvoice": {
+        "contract": {
+          "advance": "11111",
+          "arrears": "11111"
+        },
+        "client": {
+          "advance": "11111",
+          "arrears": "11111"
+        }
+      },
+      "partialPeriod": {
+        "enabled": "11111",
+        "disabled": "11111"
+      },
+      "materialized": {
+        "heading": "11111",
+        "serviceLabel": "11111",
+        "invoiceWindowLabel": "11111",
+        "summary": {
+          "contract": "11111",
+          "client": "11111"
+        }
+      }
+    },
+    "products": {
+      "badgeCount": {
+        "one": "11111 {{count}} 11111",
+        "other": "11111 {{count}} 11111"
+      },
+      "overrideRate": "11111 {{rate}} 11111 {{currencyCode}} 11111"
+    },
+    "hourly": {
+      "badgeCount": {
+        "one": "11111 {{count}} 11111",
+        "other": "11111 {{count}} 11111"
+      },
+      "servicesAndRates": "11111",
+      "serviceRateRow": "11111 {{serviceName}} 11111 {{rate}} 11111",
+      "minimumTimeLabel": "11111",
+      "roundUpLabel": "11111",
+      "minutesValue": "11111 {{count}} 11111"
+    },
+    "usage": {
+      "badgeCount": {
+        "one": "11111 {{count}} 11111",
+        "other": "11111 {{count}} 11111"
+      },
+      "serviceRateRow": "11111 {{serviceName}} 11111 {{rate}} 11111 {{unit}} 11111"
+    },
+    "total": {
+      "title": "11111",
+      "description": "11111",
+      "perMonth": "11111"
+    },
+    "finalChecklist": {
+      "title": "11111",
+      "itemRates": "11111",
+      "itemPo": "11111",
+      "itemDates": "11111",
+      "itemEditLater": "11111"
+    }
+  },
+  "templateWizard": {
+    "title": {
+      "createContractTemplate": "11111"
+    },
+    "steps": {
+      "templateBasics": "11111",
+      "fixedFeeBlocks": "11111",
+      "products": "11111",
+      "hourlyBlocks": "11111",
+      "usageBasedBlocks": "11111",
+      "reviewPublish": "11111"
+    },
+    "actions": {
+      "continue": "11111",
+      "publishTemplate": "11111"
+    },
+    "errors": {
+      "failedToCreateTemplate": "11111"
+    },
+    "validation": {
+      "templateNameRequired": "11111",
+      "billingFrequencyRequired": "11111",
+      "duplicateNameExists": "11111",
+      "templateNameAlreadyInUse": "11111",
+      "atLeastOneServiceRequired": "11111",
+      "unsupportedRecurringAuthoringCombination": "11111 {{lineType}} 11111 {{supportedFrequencies}} 11111 {{billingFrequency}} 11111",
+      "recurring": {
+        "frequency": {
+          "monthly": "11111",
+          "quarterly": "11111",
+          "semi-annually": "11111",
+          "annually": "11111",
+          "weekly": "11111",
+          "biweekly": "11111"
+        },
+        "lineType": {
+          "fixed": "11111",
+          "product": "11111",
+          "hourly": "11111",
+          "usage": "11111"
+        }
+      }
+    }
+  },
+  "templateBasics": {
+    "heading": "11111",
+    "description": "11111",
+    "fields": {
+      "templateName": "11111",
+      "internalNotes": "11111",
+      "recommendedBillingFrequency": "11111"
+    },
+    "placeholders": {
+      "templateName": "11111",
+      "internalNotes": "11111",
+      "billingFrequency": "11111"
+    },
+    "help": {
+      "templateName": "11111",
+      "internalNotes": "11111",
+      "billingFrequency": "11111"
+    }
+  },
+  "templateFixed": {
+    "heading": "11111",
+    "description": "11111",
+    "info": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "cadenceOwner": {
+      "label": "11111",
+      "help": "11111",
+      "client": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "contract": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "billingTiming": {
+      "arrears": "11111",
+      "advance": "11111"
+    },
+    "fields": {
+      "billingTiming": "11111",
+      "adjustPartialPeriods": "11111",
+      "services": "11111",
+      "serviceNumber": "11111 {{index}} 11111",
+      "quantityOptional": "11111"
+    },
+    "placeholders": {
+      "billingTiming": "11111",
+      "selectService": "11111"
+    },
+    "help": {
+      "adjustPartialPeriods": "11111",
+      "quantity": "11111"
+    },
+    "preview": {
+      "unknownService": "11111",
+      "cadenceOwnerLabel": "11111",
+      "billingTimingLabel": "11111",
+      "serviceLabel": "11111",
+      "invoiceWindowLabel": "11111"
+    },
+    "actions": {
+      "addService": "11111"
+    }
+  },
+  "templateProducts": {
+    "heading": "11111",
+    "description": "11111",
+    "fields": {
+      "products": "11111",
+      "productNumber": "11111 {{index}} 11111",
+      "quantityOptional": "11111"
+    },
+    "placeholders": {
+      "selectProduct": "11111"
+    },
+    "help": {
+      "quantity": "11111"
+    },
+    "actions": {
+      "addProduct": "11111"
+    },
+    "preview": {
+      "unknownProduct": "11111"
+    }
+  },
+  "templateHourly": {
+    "heading": "11111",
+    "description": "11111",
+    "info": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "rounding": {
+      "heading": "11111",
+      "minimumBillableTime": "11111",
+      "minimumBillableTimeHelp": "11111",
+      "roundUpToNearest": "11111",
+      "roundUpToNearestHelp": "11111",
+      "defaultIntervalPlaceholder": "11111"
+    },
+    "fields": {
+      "services": "11111",
+      "serviceNumber": "11111 {{index}} 11111",
+      "setBucketOfHours": "11111"
+    },
+    "placeholders": {
+      "selectService": "11111"
+    },
+    "preview": {
+      "unknownService": "11111"
+    },
+    "actions": {
+      "addService": "11111"
+    }
+  },
+  "templateUsage": {
+    "heading": "11111",
+    "description": "11111",
+    "info": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "fields": {
+      "services": "11111",
+      "serviceNumber": "11111 {{index}} 11111",
+      "unitOfMeasureOptional": "11111",
+      "setBucketAllocation": "11111"
+    },
+    "placeholders": {
+      "selectService": "11111",
+      "unitOfMeasure": "11111"
+    },
+    "help": {
+      "unitOfMeasure": "11111"
+    },
+    "preview": {
+      "unknownService": "11111"
+    },
+    "actions": {
+      "addService": "11111"
+    }
+  },
+  "templateReview": {
+    "heading": "11111",
+    "description": "11111",
+    "sections": {
+      "basics": "11111",
+      "fixedFeeServices": "11111",
+      "products": "11111",
+      "hourlyServices": "11111",
+      "usageBasedServices": "11111"
+    },
+    "fields": {
+      "templateName": "11111",
+      "billingFrequency": "11111",
+      "internalNotes": "11111"
+    },
+    "fallback": {
+      "none": "11111",
+      "noNotes": "11111",
+      "unnamedService": "11111",
+      "unnamedProduct": "11111"
+    },
+    "empty": {
+      "fixed": "11111",
+      "products": "11111",
+      "hourly": "11111",
+      "usage": "11111"
+    },
+    "common": {
+      "quantity": "11111",
+      "bucket": "11111",
+      "enabled": "11111",
+      "disabled": "11111"
+    },
+    "fixed": {
+      "cadenceOwnerLabel": "11111",
+      "cadenceOwner": {
+        "contract": "11111",
+        "client": "11111"
+      },
+      "billingTimingLabel": "11111",
+      "billingTiming": {
+        "advance": "11111",
+        "arrears": "11111"
+      },
+      "partialPeriodLabel": "11111",
+      "serviceLabel": "11111",
+      "invoiceWindowLabel": "11111"
+    },
+    "hourly": {
+      "minimumBillableTimeLabel": "11111",
+      "roundUpLabel": "11111",
+      "minutes": "11111 {{count}} 11111"
+    },
+    "usage": {
+      "unitLabel": "11111"
+    },
+    "bucket": {
+      "hoursIncluded": "11111 {{value}} 11111",
+      "unitsIncluded": "11111 {{value}} 11111 {{unit}} 11111",
+      "unitsFallback": "11111",
+      "overage": "11111 {{amount}} 11111 {{unit}} 11111",
+      "hourSingular": "11111",
+      "unitSingular": "11111",
+      "rolloverEnabled": "11111",
+      "period": "11111 {{period}} 11111"
+    }
+  },
+  "templatePreview": {
+    "serviceType": {
+      "fixedFee": "11111",
+      "products": "11111",
+      "hourly": "11111",
+      "usageBased": "11111"
+    },
+    "selectedHeading": "11111 {{type}} 11111 {{count}} 11111",
+    "labels": {
+      "qty": "11111"
+    },
+    "removeDialog": {
+      "title": "11111",
+      "message": "11111 {{serviceName}} 11111 {{presetName}} 11111",
+      "confirm": "11111",
+      "cancel": "11111"
+    }
+  }
 }
