@@ -95,4 +95,34 @@ describe('Contracts list i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T027: column headers across template/client/draft tables use translated keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/Contracts.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keyChecks = [
+      'contractsList.columns.contractName',
+      'contractsList.columns.description',
+      'contractsList.columns.status',
+      'contractsList.columns.actions',
+      'contractsList.columns.client',
+      'contractsList.columns.sourceTemplate',
+      'contractsList.columns.startDate',
+      'contractsList.columns.endDate',
+      'contractsList.columns.created',
+      'contractsList.columns.lastModified',
+      'contractsList.empty.noTemplates',
+      'contractsList.empty.noClientContracts',
+      'contractsList.empty.noDraftMatches',
+      'contractsList.empty.noDrafts',
+      'contractsList.loading.contracts',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });

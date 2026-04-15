@@ -333,3 +333,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/Contracts.i18n.test.ts` (pass; 1 file, 1 test).
 - **(2026-04-15)** `T026` completed: extended `Contracts.i18n.test.ts` with row-action menu, confirmation dialog, and toast/operation-status i18n coverage for templates/client contracts/drafts workflows.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/Contracts.i18n.test.ts` (pass; 1 file, 2 tests).
+- **(2026-04-15)** `T027` completed: extended `Contracts.i18n.test.ts` with all active table-column header key checks across template, client, and draft views, plus related per-subtab empty/loading labels.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/Contracts.i18n.test.ts` (pass; 1 file, 3 tests).

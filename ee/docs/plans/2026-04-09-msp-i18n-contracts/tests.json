@@ -230,7 +230,7 @@
   {
     "id": "T027",
     "description": "Unit: Contracts.i18n.test -- column headers for all three sub-tabs render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
