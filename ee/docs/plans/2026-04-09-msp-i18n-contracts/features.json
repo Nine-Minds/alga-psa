@@ -222,7 +222,7 @@
   {
     "id": "F045",
     "description": "Wire useTranslation('msp/contracts') in BucketOverlayFields.tsx -- translate 'Included {units}' label, tooltip text, 'Overage Rate' label with unit suffix, tooltip text, 'Allow unused {units} to roll over' checkbox label, and rollover description text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F046",

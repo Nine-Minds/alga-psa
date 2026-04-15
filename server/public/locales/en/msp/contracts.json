@@ -1100,7 +1100,21 @@
       "searchPlaceholder": "Search items..."
     }
   },
-  "bucketOverlay": {},
+  "bucketOverlay": {
+    "includedLabel": "Included {{units}}",
+    "includedPlaceholderHours": "e.g., 40",
+    "includedPlaceholderUnits": "e.g., 1000",
+    "includedTooltip": "Amount of {{units}} included each billing period before overages apply.",
+    "overageRateLabel": "Overage Rate",
+    "overageRateTooltip": "Charge applied for each {{unit}} beyond the included amount.",
+    "rolloverDescription": "If enabled, any unused balance carries into the next period.",
+    "rolloverLabel": "Allow unused {{units}} to roll over",
+    "units": {
+      "hour": "hour",
+      "hours": "hours",
+      "units": "units"
+    }
+  },
   "frequencyOverride": {},
   "wizard": {
     "dialogs": {
