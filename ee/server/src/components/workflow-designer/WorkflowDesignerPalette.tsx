@@ -86,7 +86,7 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
       <div
         className={`${styles.card} ${isCollapsed ? styles.cardHidden : styles.cardVisible} bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur`}
         style={cardSizingStyle}
-        aria-hidden={isCollapsed}
+        inert={isCollapsed}
       >
         <div className="p-3 border-b">
           <div className="relative">
