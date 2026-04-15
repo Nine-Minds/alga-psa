@@ -34,3 +34,4 @@ export {
   POST as handleTeamsQuickActionsPost,
 } from '../app/api/teams/quick-actions/route';
 export { default as TeamsTabPage } from '../app/teams/tab/page';
+export { default as TeamsTabPopupCompletePage } from '../app/teams/auth/popup-complete/page';
