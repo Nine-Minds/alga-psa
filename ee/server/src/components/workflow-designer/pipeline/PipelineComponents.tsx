@@ -32,6 +32,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import type { Step, IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@alga-psa/workflows/runtime';
+import { formatTimeWaitDuration } from '../timeWaitDuration';
 
 /**
  * Step type color configuration
@@ -349,7 +350,7 @@ export const StepCardSummary: React.FC<{
   if (step.type === 'time.wait') {
     const config = (step as NodeStep).config as { mode?: string; durationMs?: number } | undefined;
     if (config?.mode === 'duration' && typeof config.durationMs === 'number') {
-      return <span className="text-xs text-gray-500">for {config.durationMs}ms</span>;
+      return <span className="text-xs text-gray-500">for {formatTimeWaitDuration(config.durationMs)}</span>;
     }
     if (config?.mode === 'until') {
       return <span className="text-xs text-gray-500">until expression</span>;

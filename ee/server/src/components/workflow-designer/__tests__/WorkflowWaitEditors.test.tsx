@@ -356,8 +356,33 @@ describe('Workflow wait editors', () => {
       />
     );
 
-    fireEvent.change(screen.getByTestId('time-wait-duration-time-step'), { target: { value: '9000' } });
-    expect(onChangeTime).toHaveBeenCalled();
+    fireEvent.change(screen.getByTestId('time-wait-duration-minutes-time-step'), { target: { value: '2' } });
+    expect(onChangeTime).toHaveBeenCalledWith(expect.objectContaining({
+      config: expect.objectContaining({
+        mode: 'duration',
+        durationMs: 121000
+      })
+    }));
+  });
+
+  it('decomposes duration waits into day/hour/minute/second fields', () => {
+    render(
+      <StepConfigPanel
+        {...baseProps}
+        step={{
+          id: 'time-step-parts',
+          type: 'time.wait',
+          config: { mode: 'duration', durationMs: 90061000 }
+        } as any}
+        eventCatalogOptions={[]}
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('time-wait-duration-days-time-step-parts')).toHaveValue(1);
+    expect(screen.getByTestId('time-wait-duration-hours-time-step-parts')).toHaveValue(1);
+    expect(screen.getByTestId('time-wait-duration-minutes-time-step-parts')).toHaveValue(1);
+    expect(screen.getByTestId('time-wait-duration-seconds-time-step-parts')).toHaveValue(1);
   });
 
   it('renders fixed-date authoring for parseable until literals and advanced authoring for dynamic expressions', () => {
