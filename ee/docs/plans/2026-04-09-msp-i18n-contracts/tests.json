@@ -162,7 +162,7 @@
   {
     "id": "T019",
     "description": "Unit: CreateCustomContractLineDialog.i18n.test -- pseudo-locale (xx) coverage",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F023",

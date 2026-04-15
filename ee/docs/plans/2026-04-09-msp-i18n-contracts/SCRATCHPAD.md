@@ -316,3 +316,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/CreateCustomContractLineDialog.i18n.test.ts` (pass; 1 file, 1 test).
 - **(2026-04-15)** `T018` completed: extended `CreateCustomContractLineDialog.i18n.test.ts` with coverage for bucket/proration copy and validation surfaces (all `createCustomLine.validation.*` keys + validation prefix), ensuring translated labels and errors are wired.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/CreateCustomContractLineDialog.i18n.test.ts` (pass; 1 file, 2 tests).
+- **(2026-04-15)** `T019` completed: added pseudo-locale coverage in `CreateCustomContractLineDialog.i18n.test.ts` by extracting all dialog `t('...')` keys and asserting they resolve to `xx` pseudo values (`11111`).
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/CreateCustomContractLineDialog.i18n.test.ts` (pass; 1 file, 3 tests).
