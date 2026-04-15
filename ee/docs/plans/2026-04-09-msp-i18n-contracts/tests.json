@@ -329,7 +329,7 @@
   {
     "id": "T039",
     "description": "Unit: QuickStartGuide.i18n.test -- pseudo-locale (xx) covers all visible text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
