@@ -267,7 +267,17 @@
     }
   },
   "contractHeader": {},
-  "contractOverview": {},
+  "contractOverview": {
+    "stats": {
+      "contractLines": "Contract Lines",
+      "estimatedMonthlyValue": "Est. Monthly Value",
+      "totalServices": "Total Services",
+      "variable": "Variable",
+      "variableSuffix": "+ variable (hourly/usage)",
+      "viewDetails": "View details"
+    },
+    "title": "What's Included"
+  },
   "contractDialog": {
     "actions": {
       "createContract": "Create Contract",

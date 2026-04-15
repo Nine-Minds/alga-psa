@@ -182,7 +182,7 @@
   {
     "id": "F037",
     "description": "Wire useTranslation('msp/contracts') in ContractOverview.tsx -- translate card title ('What\\'s Included'), stat cards (Est. Monthly Value, Contract Lines, Total Services), service type badges (Fixed, Hourly, Usage), 'View details' link, and '+variable' note",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F038",

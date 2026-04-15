@@ -1,27 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { getContractOverview } from '@alga-psa/billing/actions/contractActions';
 import type { IContractOverview, IContractLineOverview } from '@alga-psa/billing/actions/contractActions';
 import { Package, Clock, Activity, Coins, Layers3, ChevronDown, ChevronRight } from 'lucide-react';
-import { cn } from '@alga-psa/ui/lib/utils';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 interface ContractOverviewProps {
   contractId: string;
   onNavigateToLines?: () => void;
 }
-
-const formatCurrency = (cents: number | null, currencyCode: string = 'USD'): string => {
-  if (cents === null) return '—';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currencyCode,
-    minimumFractionDigits: 2
-  }).format(cents / 100);
-};
 
 const formatFrequency = (frequency: string): string => {
   const map: Record<string, string> = {
@@ -62,7 +54,9 @@ const ContractLineCard: React.FC<{
   isExpanded: boolean;
   onToggle: () => void;
   currencyCode: string;
-}> = ({ line, isExpanded, onToggle, currencyCode }) => {
+  formatCurrencyCents: (cents: number | null, currencyCode?: string) => string;
+  formatContractLineType: (value: string) => string;
+}> = ({ line, isExpanded, onToggle, currencyCode, formatCurrencyCents, formatContractLineType }) => {
   return (
     <div className="border border-[rgb(var(--color-border-200))] rounded-lg overflow-hidden">
       <button
@@ -76,14 +70,14 @@ const ContractLineCard: React.FC<{
             <div className="font-medium text-[rgb(var(--color-text-900))]">{line.contract_line_name}</div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Badge variant={getTypeBadgeVariant(line.contract_line_type)} className="text-xs">
-                {line.contract_line_type}
+                {formatContractLineType(line.contract_line_type)}
               </Badge>
               <span>•</span>
               <span>{formatFrequency(line.billing_frequency)}</span>
               {line.base_rate !== null && line.contract_line_type === 'Fixed' && (
                 <>
                   <span>•</span>
-                  <span className="font-medium text-[rgb(var(--color-text-700))]">{formatCurrency(line.base_rate, currencyCode)}</span>
+                  <span className="font-medium text-[rgb(var(--color-text-700))]">{formatCurrencyCents(line.base_rate, currencyCode)}</span>
                 </>
               )}
             </div>
@@ -119,7 +113,7 @@ const ContractLineCard: React.FC<{
                   )}
                   {service.custom_rate !== null && (
                     <span className="font-medium text-[rgb(var(--color-text-700))]">
-                      {formatCurrency(service.custom_rate, currencyCode)}
+                      {formatCurrencyCents(service.custom_rate, currencyCode)}
                       {line.contract_line_type === 'Hourly' && '/hr'}
                       {line.contract_line_type === 'Usage' && service.unit_of_measure && `/${service.unit_of_measure}`}
                     </span>
@@ -144,6 +138,9 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
   contractId,
   onNavigateToLines
 }) => {
+  const { t } = useTranslation('msp/contracts');
+  const { formatCurrency } = useFormatters();
+  const formatContractLineType = useFormatContractLineType();
   const [overview, setOverview] = useState<IContractOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -182,6 +179,17 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
       return next;
     });
   };
+
+  const formatCurrencyCents = useCallback((cents: number | null, currencyCode: string = 'USD'): string => {
+    if (cents === null) {
+      return t('common.moneyPlaceholder', { defaultValue: '—' });
+    }
+    return formatCurrency(cents / 100, {
+      currency: currencyCode,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }, [formatCurrency, t]);
 
   if (isLoading) {
     return (
@@ -223,7 +231,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <Layers3 className="h-4 w-4 text-indigo-600" />
-          What's Included
+          {t('contractOverview.title', { defaultValue: "What's Included" })}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -233,18 +241,20 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
           <div className="bg-success/10 border border-success/30 rounded-lg p-3">
             <div className="flex items-center gap-2 text-sm text-success mb-1">
               <Coins className="h-4 w-4" />
-              <span>Est. Monthly Value</span>
+              <span>{t('contractOverview.stats.estimatedMonthlyValue', { defaultValue: 'Est. Monthly Value' })}</span>
             </div>
             <div className="text-xl font-bold text-foreground">
               {overview.totalEstimatedMonthlyValue !== null ? (
-                formatCurrency(overview.totalEstimatedMonthlyValue, overview.currencyCode)
+                formatCurrencyCents(overview.totalEstimatedMonthlyValue, overview.currencyCode)
               ) : (
-                <span className="text-base font-normal text-success">Variable</span>
+                <span className="text-base font-normal text-success">
+                  {t('contractOverview.stats.variable', { defaultValue: 'Variable' })}
+                </span>
               )}
             </div>
             {hasVariableComponents && overview.totalEstimatedMonthlyValue !== null && (
               <div className="text-xs text-success mt-1">
-                + variable (hourly/usage)
+                {t('contractOverview.stats.variableSuffix', { defaultValue: '+ variable (hourly/usage)' })}
               </div>
             )}
           </div>
@@ -253,7 +263,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
           <div className="bg-muted border border-[rgb(var(--color-border-200))] rounded-lg p-3">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <Layers3 className="h-4 w-4" />
-              <span>Contract Lines</span>
+              <span>{t('contractOverview.stats.contractLines', { defaultValue: 'Contract Lines' })}</span>
             </div>
             <div className="text-xl font-bold text-[rgb(var(--color-text-900))]">
               {overview.contractLines.length}
@@ -264,7 +274,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                 onClick={onNavigateToLines}
                 className="text-xs text-blue-600 hover:text-blue-800 mt-1"
               >
-                View details →
+                {t('contractOverview.stats.viewDetails', { defaultValue: 'View details' })} →
               </button>
             )}
           </div>
@@ -273,20 +283,20 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
           <div className="bg-muted border border-[rgb(var(--color-border-200))] rounded-lg p-3">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <Package className="h-4 w-4" />
-              <span>Total Services</span>
+              <span>{t('contractOverview.stats.totalServices', { defaultValue: 'Total Services' })}</span>
             </div>
             <div className="text-xl font-bold text-[rgb(var(--color-text-900))]">
               {overview.serviceCount}
             </div>
             <div className="flex flex-wrap gap-1 mt-1">
               {overview.hasFixedServices && (
-                <Badge variant="info" className="text-xs">Fixed</Badge>
+                <Badge variant="info" className="text-xs">{formatContractLineType('Fixed')}</Badge>
               )}
               {overview.hasHourlyServices && (
-                <Badge variant="success" className="text-xs">Hourly</Badge>
+                <Badge variant="success" className="text-xs">{formatContractLineType('Hourly')}</Badge>
               )}
               {overview.hasUsageServices && (
-                <Badge variant="warning" className="text-xs">Usage</Badge>
+                <Badge variant="warning" className="text-xs">{formatContractLineType('Usage')}</Badge>
               )}
             </div>
           </div>
@@ -321,6 +331,8 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                   isExpanded={expandedLines.has(line.contract_line_id)}
                   onToggle={() => toggleLine(line.contract_line_id)}
                   currencyCode={overview.currencyCode}
+                  formatCurrencyCents={formatCurrencyCents}
+                  formatContractLineType={formatContractLineType}
                 />
               ))}
             </div>
