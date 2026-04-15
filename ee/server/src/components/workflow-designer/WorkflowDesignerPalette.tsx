@@ -35,6 +35,8 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
   scrollContainerProps,
   scrollContainerFooter,
 }: WorkflowDesignerPaletteProps<TItem>): React.ReactElement {
+  let paletteIndex = 0;
+
   return (
     <aside
       className={`pointer-events-auto w-56 max-h-[calc(100vh-220px)] bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-hidden flex flex-col min-h-0 z-40 ${visible ? '' : 'hidden'}`}
@@ -72,7 +74,11 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
               {category}
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {items.map((item, itemIndex) => renderItem(item, category, itemIndex))}
+              {items.map((item) => {
+                const currentPaletteIndex = paletteIndex;
+                paletteIndex += 1;
+                return renderItem(item, category, currentPaletteIndex);
+              })}
             </div>
           </div>
         ))}

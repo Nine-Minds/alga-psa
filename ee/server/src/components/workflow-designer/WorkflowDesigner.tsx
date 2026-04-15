@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, Draggable, Droppable, DropResult, type DraggableProvided } from '@hello-pangea/dnd';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
@@ -3152,6 +3152,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     return groupPaletteItemsByCategory(paletteItems);
   }, [paletteItems]);
 
+  const flatPaletteItems = useMemo(() => {
+    return Object.values(groupedPaletteItems).flat();
+  }, [groupedPaletteItems]);
+
   const handlePipeSelect = (pipePath: string) => {
     setSelectedPipePath(pipePath);
   };
@@ -3284,6 +3288,46 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     }
   };
 
+  const renderPaletteItem = (
+    item: typeof paletteItems[0],
+    dragProvided: DraggableProvided,
+    isDragging: boolean
+  ) => {
+    const itemWithAction = item as typeof item & {
+      actionId?: string;
+      actionVersion?: number;
+      groupKey?: string;
+      groupLabel?: string;
+      tileKind?: 'core-object' | 'transform' | 'app' | 'ai';
+    };
+
+    return (
+      <PaletteItemWithTooltip
+        item={itemWithAction}
+        icon={getPaletteIcon(item)}
+        isDragging={isDragging}
+        provided={dragProvided}
+        disabled={!canManage || registryError}
+        onClick={() => {
+          if (itemWithAction.groupKey) {
+            handleAddStep(
+              'action.call',
+              buildGroupedActionStepConfig(itemWithAction, { generateSaveAsName }),
+              itemWithAction.label
+            );
+          } else if (itemWithAction.actionId) {
+            handleAddStep('action.call', {
+              actionId: itemWithAction.actionId,
+              version: itemWithAction.actionVersion
+            });
+          } else {
+            handleAddStep(item.type as Step['type']);
+          }
+        }}
+      />
+    );
+  };
+
   const showInitialDesignerSkeleton = isLoading && !activeDefinition;
 
   const designerContent = (
@@ -3292,7 +3336,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 	      <div ref={designerFloatAnchorRef} className="relative flex flex-col flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-[rgb(var(--color-background))]">
         <div className="sticky top-4 z-20 h-0 pointer-events-none">
           {/* Floating Icon-Grid Palette (left) */}
-          <Droppable droppableId="palette" isDropDisabled={true}>
+          <Droppable
+            droppableId="palette"
+            isDropDisabled={true}
+            renderClone={(dragProvided, snapshot, rubric) => {
+              const item = flatPaletteItems[rubric.source.index];
+              if (!item) return <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} />;
+              return renderPaletteItem(item, dragProvided, snapshot.isDragging);
+            }}
+          >
             {(provided) => (
               <WorkflowDesignerPalette
                 visible={Boolean(designerFloatAnchorRect)}
@@ -3305,47 +3357,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                 scrollContainerRef={provided.innerRef}
                 scrollContainerProps={provided.droppableProps}
                 scrollContainerFooter={provided.placeholder}
-                renderItem={(item, _category, itemIndex) => (
+                renderItem={(item, _category, paletteIndex) => (
                   <Draggable
                     key={item.id}
                     draggableId={getPaletteDraggableId(item)}
-                    index={itemIndex}
+                    index={paletteIndex}
                     isDragDisabled={!canManage || registryError}
                   >
-                    {(dragProvided, snapshot) => {
-                      const itemWithAction = item as typeof item & {
-                        actionId?: string;
-                        actionVersion?: number;
-                        groupKey?: string;
-                        groupLabel?: string;
-                        tileKind?: 'core-object' | 'transform' | 'app' | 'ai';
-                      };
-                      return (
-                        <PaletteItemWithTooltip
-                          item={itemWithAction}
-                          icon={getPaletteIcon(item)}
-                          isDragging={snapshot.isDragging}
-                          provided={dragProvided}
-                          disabled={!canManage || registryError}
-                          onClick={() => {
-                            if (itemWithAction.groupKey) {
-                              handleAddStep(
-                                'action.call',
-                                buildGroupedActionStepConfig(itemWithAction, { generateSaveAsName }),
-                                itemWithAction.label
-                              );
-                            } else if (itemWithAction.actionId) {
-                              handleAddStep('action.call', {
-                                actionId: itemWithAction.actionId,
-                                version: itemWithAction.actionVersion
-                              });
-                            } else {
-                              handleAddStep(item.type as Step['type']);
-                            }
-                          }}
-                        />
-                      );
-                    }}
+                    {(dragProvided, snapshot) => renderPaletteItem(item, dragProvided, snapshot.isDragging)}
                   </Draggable>
                 )}
               />
