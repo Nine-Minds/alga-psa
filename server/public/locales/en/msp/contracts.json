@@ -15,7 +15,8 @@
       "saveChanges": "Save Changes",
       "saveChangesDirty": "Save Changes *",
       "saving": "Saving...",
-      "view": "View"
+      "view": "View",
+      "openMenu": "Open menu"
     },
     "alerts": {
       "saveSuccess": "Changes saved successfully.",
@@ -47,7 +48,8 @@
       "drafts": "Drafts",
       "templates": "Templates"
     },
-    "moneyPlaceholder": "—"
+    "moneyPlaceholder": "—",
+    "notAvailable": "-"
   },
   "status": {
     "active": "Active",

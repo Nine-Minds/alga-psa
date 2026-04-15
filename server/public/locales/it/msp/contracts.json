@@ -15,7 +15,8 @@
       "saveChanges": "Salva modifiche",
       "saveChangesDirty": "Salva modifiche *",
       "saving": "Risparmio...",
-      "view": "Visualizzazione"
+      "view": "Visualizzazione",
+      "openMenu": "Open menu"
     },
     "alerts": {
       "saveSuccess": "Modifiche salvate con successo.",
@@ -47,7 +48,8 @@
       "drafts": "Bozze",
       "templates": "Modelli"
     },
-    "moneyPlaceholder": "—"
+    "moneyPlaceholder": "—",
+    "notAvailable": "-"
   },
   "status": {
     "active": "Attivo",

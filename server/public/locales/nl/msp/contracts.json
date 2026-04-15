@@ -15,7 +15,8 @@
       "saveChanges": "Wijzigingen opslaan",
       "saveChangesDirty": "Wijzigingen opslaan *",
       "saving": "Besparing...",
-      "view": "Weergave"
+      "view": "Weergave",
+      "openMenu": "Open menu"
     },
     "alerts": {
       "saveSuccess": "Wijzigingen zijn succesvol opgeslagen.",
@@ -47,7 +48,8 @@
       "drafts": "Concepten",
       "templates": "Sjablonen"
     },
-    "moneyPlaceholder": "—"
+    "moneyPlaceholder": "—",
+    "notAvailable": "-"
   },
   "status": {
     "active": "Actief",

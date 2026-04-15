@@ -296,7 +296,7 @@
   {
     "id": "T035",
     "description": "Unit: PricingSchedules.i18n.test -- section title, columns, actions, empty state render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039",
       "F040"

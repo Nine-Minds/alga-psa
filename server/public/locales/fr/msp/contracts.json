@@ -15,7 +15,8 @@
       "saveChanges": "Enregistrer les modifications",
       "saveChangesDirty": "Enregistrer les modifications *",
       "saving": "Économie...",
-      "view": "Voir"
+      "view": "Voir",
+      "openMenu": "Open menu"
     },
     "alerts": {
       "saveSuccess": "Modifications enregistrées avec succès.",
@@ -47,7 +48,8 @@
       "drafts": "Brouillons",
       "templates": "Modèles"
     },
-    "moneyPlaceholder": "—"
+    "moneyPlaceholder": "—",
+    "notAvailable": "-"
   },
   "status": {
     "active": "Actif",

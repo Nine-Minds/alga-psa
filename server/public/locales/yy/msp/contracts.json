@@ -15,7 +15,8 @@
       "saveChanges": "55555",
       "saveChangesDirty": "55555",
       "saving": "55555",
-      "view": "55555"
+      "view": "55555",
+      "openMenu": "55555"
     },
     "alerts": {
       "saveSuccess": "55555",
@@ -47,7 +48,8 @@
       "drafts": "55555",
       "templates": "55555"
     },
-    "moneyPlaceholder": "55555"
+    "moneyPlaceholder": "55555",
+    "notAvailable": "55555"
   },
   "status": {
     "active": "55555",

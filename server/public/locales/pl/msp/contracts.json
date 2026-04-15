@@ -15,7 +15,8 @@
       "saveChanges": "Zapisz zmiany",
       "saveChangesDirty": "Zapisz zmiany *",
       "saving": "Oszczędność...",
-      "view": "Pogląd"
+      "view": "Pogląd",
+      "openMenu": "Open menu"
     },
     "alerts": {
       "saveSuccess": "Zmiany zostały zapisane pomyślnie.",
@@ -47,7 +48,8 @@
       "drafts": "Warcaby",
       "templates": "Szablony"
     },
-    "moneyPlaceholder": "—"
+    "moneyPlaceholder": "—",
+    "notAvailable": "-"
   },
   "status": {
     "active": "Aktywny",

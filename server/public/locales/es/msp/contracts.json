@@ -15,7 +15,8 @@
       "saveChanges": "Guardar cambios",
       "saveChangesDirty": "Guardar cambios *",
       "saving": "Ahorro...",
-      "view": "Vista"
+      "view": "Vista",
+      "openMenu": "Open menu"
     },
     "alerts": {
       "saveSuccess": "Los cambios se guardaron correctamente.",
@@ -47,7 +48,8 @@
       "drafts": "Damas",
       "templates": "Plantillas"
     },
-    "moneyPlaceholder": "—"
+    "moneyPlaceholder": "—",
+    "notAvailable": "-"
   },
   "status": {
     "active": "Activo",

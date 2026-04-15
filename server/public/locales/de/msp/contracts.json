@@ -15,7 +15,8 @@
       "saveChanges": "Änderungen speichern",
       "saveChangesDirty": "Änderungen speichern *",
       "saving": "Sparen...",
-      "view": "Sicht"
+      "view": "Sicht",
+      "openMenu": "Open menu"
     },
     "alerts": {
       "saveSuccess": "Änderungen erfolgreich gespeichert.",
@@ -47,7 +48,8 @@
       "drafts": "Entwürfe",
       "templates": "Vorlagen"
     },
-    "moneyPlaceholder": "—"
+    "moneyPlaceholder": "—",
+    "notAvailable": "-"
   },
   "status": {
     "active": "Aktiv",
