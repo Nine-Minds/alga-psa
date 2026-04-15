@@ -252,7 +252,7 @@ describe('taniumActions', () => {
         },
       ],
       rmm_organization_mappings: [],
-      clients: [{ tenant: 'tenant_1', client_id: 'client_1', company_name: 'Client One' }],
+      clients: [{ tenant: 'tenant_1', client_id: 'client_1', client_name: 'Client One' }],
     };
 
     knexMock = createFakeKnex(state);

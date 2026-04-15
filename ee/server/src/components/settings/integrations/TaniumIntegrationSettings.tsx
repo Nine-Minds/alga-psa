@@ -28,7 +28,7 @@ type MappingRow = {
 
 type ClientRow = {
   client_id: string;
-  company_name: string;
+  client_name: string;
 };
 
 export default function TaniumIntegrationSettings() {
@@ -331,7 +331,7 @@ export default function TaniumIntegrationSettings() {
                         <option value="">Unmapped</option>
                         {clients.map((client) => (
                           <option key={client.client_id} value={client.client_id}>
-                            {client.company_name}
+                            {client.client_name}
                           </option>
                         ))}
                       </select>
