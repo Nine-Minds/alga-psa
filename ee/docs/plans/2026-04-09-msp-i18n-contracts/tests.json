@@ -465,7 +465,7 @@
   {
     "id": "T056",
     "description": "Unit: TemplateContractBasicsStep.i18n.test -- step heading, name/notes/frequency labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
