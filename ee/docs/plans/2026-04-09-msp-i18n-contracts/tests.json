@@ -188,7 +188,7 @@
   {
     "id": "T022",
     "description": "Unit: ContractLines.i18n.test -- pseudo-locale (xx) coverage for expanded line details",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025",
       "F026",

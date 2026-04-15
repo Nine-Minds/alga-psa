@@ -323,3 +323,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** `T021` completed: extended `ContractLines.i18n.test.ts` with inline-edit and service-detail coverage (configuration labels, timing/cadence labels, service/bucket detail labels, delete confirmation, and editability error text).
 - **(2026-04-15)** Discovery/fix: `billing.labels.cadenceOwner` was referenced in `ContractLines.tsx` but missing from locale files. Added the key across all 9 `msp/contracts` locale files (`en/de/es/fr/it/nl/pl/xx/yy`) with pseudo values for `xx`/`yy`.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractLines.i18n.test.ts` (pass; 1 file, 2 tests) and `node scripts/validate-translations.cjs` (pass; Errors: 0, Warnings: 0).
+- **(2026-04-15)** `T022` completed: added pseudo-locale coverage in `ContractLines.i18n.test.ts` by extracting all `t('...')` keys used in `ContractLines.tsx` and asserting they resolve to `xx` pseudo values (`11111`).
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractLines.i18n.test.ts` (pass; 1 file, 3 tests).
