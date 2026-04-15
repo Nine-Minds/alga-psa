@@ -107,7 +107,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
     billingTiming: data.billing_timing,
     billingFrequency: data.fixed_billing_frequency ?? data.billing_frequency,
     enableProration: data.enable_proration,
-  });
+  }, t);
 
   return (
     <ReflectionContainer id="fixed-fee-services-step">

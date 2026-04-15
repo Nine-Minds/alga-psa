@@ -64,12 +64,11 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     billingTiming: data.billing_timing,
     billingFrequency: data.fixed_billing_frequency ?? data.billing_frequency,
     enableProration: data.enable_proration,
-  });
+  }, t);
 
   const formatMinorCurrency = (minorUnits: number | null | undefined) => {
     const amount = minorUnits == null ? 0 : minorUnits;
-    return formatCurrency(amount / 100, {
-      currency: currencyCode,
+    return formatCurrency(amount / 100, currencyCode, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });

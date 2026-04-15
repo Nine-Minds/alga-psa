@@ -1113,6 +1113,36 @@
       "failedToUpdateBasics": "Failed to update template basics",
       "failedToUpdateGuidance": "Failed to update template guidance",
       "templateNameRequired": "Template name is required"
+    },
+    "clientAssignments": {
+      "title": "Affectations client",
+      "totalAssignments": "Affectations totales",
+      "activeClients": "Clients actifs",
+      "purchaseOrders": "Bons de commande",
+      "poRequiredCount": "{{count}} affectations nécessitent un BC",
+      "noPoRequirements": "Aucune exigence de BC enregistrée.",
+      "noClientContracts": "Aucun contrat client n'utilise actuellement ce modèle.",
+      "reviewBelow": "Consultez la liste complète des affectations dans la section des détails ci-dessous."
+    },
+    "assignmentDetails": {
+      "title": "Détails d'affectation",
+      "empty": "Lorsque des contrats clients adopteront ce modèle, ils seront listés ici avec leur contexte de bon de commande.",
+      "contractId": "ID du contrat : {{id}}",
+      "ongoing": "En cours",
+      "notRequired": "Non requis",
+      "columns": {
+        "client": "Client",
+        "status": "Statut",
+        "start": "Début",
+        "end": "Fin",
+        "poRequired": "BC requis",
+        "poNumber": "Numéro de BC",
+        "poAmount": "Montant du BC"
+      },
+      "status": {
+        "active": "Actif",
+        "inactive": "Inactif"
+      }
     }
   },
   "quickStart": {
@@ -1269,6 +1299,15 @@
       "selectProductForEachLine": "Please select a product for each product line",
       "startDateRequired": "Start date is required",
       "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead."
+    },
+    "nav": {
+      "back": "Retour",
+      "next": "Suivant",
+      "skip": "Passer",
+      "finish": "Terminer la configuration",
+      "saveDraft": "Enregistrer en brouillon",
+      "saving": "Enregistrement...",
+      "completing": "Finalisation..."
     }
   },
   "wizardBasics": {
@@ -1948,6 +1987,50 @@
       "message": "Are you sure you want to remove \"{{serviceName}}\" from \"{{presetName}}\"? This will remove all other services associated with this contract line preset as well.",
       "confirm": "Remove All",
       "cancel": "Cancel"
+    }
+  },
+  "recurringPreview": {
+    "rangeSeparator": "{{start}} au {{end}}",
+    "cadenceOwner": {
+      "contract": {
+        "label": "Anniversaire du contrat",
+        "summary": "Les périodes de service et fenêtres de facturation suivent les dates d'anniversaire du contrat."
+      },
+      "client": {
+        "label": "Calendrier de facturation client",
+        "summary": "Les périodes de service et fenêtres de facturation restent alignées sur le calendrier de facturation du client."
+      }
+    },
+    "billingTiming": {
+      "advance": {
+        "label": "Par avance",
+        "summary": "Les factures sont émises à l'ouverture de la période de service due."
+      },
+      "arrears": {
+        "label": "À terme échu",
+        "summary": "Les factures sont émises après la clôture de la période de service couverte."
+      }
+    },
+    "firstInvoice": {
+      "contract": {
+        "advance": "Première facture : émise lors de la fenêtre d'anniversaire du contrat qui ouvre la première période de service couverte.",
+        "arrears": "Première facture : émise lors de la prochaine fenêtre d'anniversaire du contrat après la clôture de la première période de service couverte."
+      },
+      "client": {
+        "advance": "Première facture : émise lors de la première fenêtre du calendrier de facturation client couvrant la période de service.",
+        "arrears": "Première facture : émise lors de la prochaine fenêtre du calendrier de facturation client après la clôture de la première période de service couverte."
+      }
+    },
+    "partialPeriod": {
+      "prorated": "Les périodes partielles ajustent les frais récurrents à la portion couverte de la période de service.",
+      "full": "Les périodes partielles conservent le plein tarif récurrent même lorsque les dates du contrat tombent à l'intérieur d'une période de service."
+    },
+    "materializedPeriods": {
+      "heading": "Périodes futures matérialisées illustratives",
+      "summary": {
+        "contract": "Si vous enregistrez cette ligne récurrente, les périodes futures se matérialiseraient selon un aperçu de type anniversaire ancré au 8 avant la génération des factures.",
+        "client": "Si vous enregistrez cette ligne récurrente, les périodes futures se matérialiseraient selon l'aperçu du calendrier de facturation client avant la génération des factures."
+      }
     }
   }
 }

@@ -824,6 +824,13 @@ export function ContractWizard({
       isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
       isLoading={isLoading}
       showSaveDraft
+      backLabel={t('wizard.nav.back', { defaultValue: 'Back' })}
+      nextLabel={t('wizard.nav.next', { defaultValue: 'Next' })}
+      skipLabel={t('wizard.nav.skip', { defaultValue: 'Skip' })}
+      finishLabel={t('wizard.nav.finish', { defaultValue: 'Finish Setup' })}
+      saveDraftLabel={t('wizard.nav.saveDraft', { defaultValue: 'Save as Draft' })}
+      savingLabel={t('wizard.nav.saving', { defaultValue: 'Saving...' })}
+      completingLabel={t('wizard.nav.completing', { defaultValue: 'Completing...' })}
     />
   );
 

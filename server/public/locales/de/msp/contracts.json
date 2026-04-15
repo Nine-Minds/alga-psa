@@ -1113,6 +1113,36 @@
       "failedToUpdateBasics": "Failed to update template basics",
       "failedToUpdateGuidance": "Failed to update template guidance",
       "templateNameRequired": "Template name is required"
+    },
+    "clientAssignments": {
+      "title": "Kundenzuweisungen",
+      "totalAssignments": "Zuweisungen insgesamt",
+      "activeClients": "Aktive Kunden",
+      "purchaseOrders": "Bestellungen",
+      "poRequiredCount": "{{count}} Zuweisungen erfordern eine Bestellung",
+      "noPoRequirements": "Keine Bestellanforderungen erfasst.",
+      "noClientContracts": "Derzeit verwendet kein Kundenvertrag diese Vorlage.",
+      "reviewBelow": "Die vollständige Zuweisungsliste findest du im Detailbereich unten."
+    },
+    "assignmentDetails": {
+      "title": "Zuweisungsdetails",
+      "empty": "Sobald Kundenverträge diese Vorlage übernehmen, werden sie hier mit Bestellkontext aufgeführt.",
+      "contractId": "Vertrags-ID: {{id}}",
+      "ongoing": "Laufend",
+      "notRequired": "Nicht erforderlich",
+      "columns": {
+        "client": "Kunde",
+        "status": "Status",
+        "start": "Start",
+        "end": "Ende",
+        "poRequired": "Bestellung erforderlich",
+        "poNumber": "Bestellnummer",
+        "poAmount": "Bestellbetrag"
+      },
+      "status": {
+        "active": "Aktiv",
+        "inactive": "Inaktiv"
+      }
     }
   },
   "quickStart": {
@@ -1269,6 +1299,15 @@
       "selectProductForEachLine": "Please select a product for each product line",
       "startDateRequired": "Start date is required",
       "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead."
+    },
+    "nav": {
+      "back": "Zurück",
+      "next": "Weiter",
+      "skip": "Überspringen",
+      "finish": "Einrichtung abschließen",
+      "saveDraft": "Als Entwurf speichern",
+      "saving": "Wird gespeichert...",
+      "completing": "Wird abgeschlossen..."
     }
   },
   "wizardBasics": {
@@ -1948,6 +1987,50 @@
       "message": "Are you sure you want to remove \"{{serviceName}}\" from \"{{presetName}}\"? This will remove all other services associated with this contract line preset as well.",
       "confirm": "Remove All",
       "cancel": "Cancel"
+    }
+  },
+  "recurringPreview": {
+    "rangeSeparator": "{{start}} bis {{end}}",
+    "cadenceOwner": {
+      "contract": {
+        "label": "Vertragsjubiläum",
+        "summary": "Leistungszeiträume und Rechnungsfenster folgen den Vertragsjubiläumsdaten."
+      },
+      "client": {
+        "label": "Kundenabrechnungsplan",
+        "summary": "Leistungszeiträume und Rechnungsfenster bleiben am Kundenabrechnungskalender ausgerichtet."
+      }
+    },
+    "billingTiming": {
+      "advance": {
+        "label": "Im Voraus",
+        "summary": "Rechnungen werden zu Beginn des fälligen Leistungszeitraums gestellt."
+      },
+      "arrears": {
+        "label": "Nachträglich",
+        "summary": "Rechnungen werden nach dem Ende des abgedeckten Leistungszeitraums gestellt."
+      }
+    },
+    "firstInvoice": {
+      "contract": {
+        "advance": "Erste Rechnung: Abrechnung im Vertragsjubiläumsfenster, das den ersten abgedeckten Leistungszeitraum eröffnet.",
+        "arrears": "Erste Rechnung: Abrechnung im nächsten Vertragsjubiläumsfenster nach Abschluss des ersten abgedeckten Leistungszeitraums."
+      },
+      "client": {
+        "advance": "Erste Rechnung: Abrechnung im ersten Fenster des Kundenabrechnungsplans, das den Leistungszeitraum abdeckt.",
+        "arrears": "Erste Rechnung: Abrechnung im nächsten Fenster des Kundenabrechnungsplans nach Abschluss des ersten abgedeckten Leistungszeitraums."
+      }
+    },
+    "partialPeriod": {
+      "prorated": "Teilzeiträume passen die wiederkehrende Gebühr an den abgedeckten Anteil des Leistungszeitraums an.",
+      "full": "Teilzeiträume behalten die volle wiederkehrende Gebühr bei, auch wenn Vertragsdaten innerhalb eines Leistungszeitraums liegen."
+    },
+    "materializedPeriods": {
+      "heading": "Beispielhafte zukünftig materialisierte Zeiträume",
+      "summary": {
+        "contract": "Wenn du diese wiederkehrende Zeile speicherst, würden zukünftige Zeiträume in einer jubiläumsbasierten Vorschau am 8. vor der Rechnungserstellung materialisiert.",
+        "client": "Wenn du diese wiederkehrende Zeile speicherst, würden zukünftige Zeiträume in der Vorschau des Kundenabrechnungsplans vor der Rechnungserstellung materialisiert."
+      }
     }
   }
 }

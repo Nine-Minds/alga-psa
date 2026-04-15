@@ -1113,6 +1113,36 @@
       "failedToUpdateBasics": "Failed to update template basics",
       "failedToUpdateGuidance": "Failed to update template guidance",
       "templateNameRequired": "Template name is required"
+    },
+    "clientAssignments": {
+      "title": "Client Assignments",
+      "totalAssignments": "Total Assignments",
+      "activeClients": "Active Clients",
+      "purchaseOrders": "Purchase Orders",
+      "poRequiredCount": "{{count}} assignments require PO",
+      "noPoRequirements": "No PO requirements captured.",
+      "noClientContracts": "No client contracts are currently using this template.",
+      "reviewBelow": "Review the full assignment list in the details section below."
+    },
+    "assignmentDetails": {
+      "title": "Assignment Details",
+      "empty": "When client contracts adopt this template they will be listed here with purchase order context.",
+      "contractId": "Contract ID: {{id}}",
+      "ongoing": "Ongoing",
+      "notRequired": "Not required",
+      "columns": {
+        "client": "Client",
+        "status": "Status",
+        "start": "Start",
+        "end": "End",
+        "poRequired": "PO Required",
+        "poNumber": "PO Number",
+        "poAmount": "PO Amount"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      }
     }
   },
   "quickStart": {
@@ -1269,6 +1299,15 @@
       "selectProductForEachLine": "Please select a product for each product line",
       "startDateRequired": "Start date is required",
       "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead."
+    },
+    "nav": {
+      "back": "Back",
+      "next": "Next",
+      "skip": "Skip",
+      "finish": "Finish Setup",
+      "saveDraft": "Save as Draft",
+      "saving": "Saving...",
+      "completing": "Completing..."
     }
   },
   "wizardBasics": {
@@ -1948,6 +1987,50 @@
       "message": "Are you sure you want to remove \"{{serviceName}}\" from \"{{presetName}}\"? This will remove all other services associated with this contract line preset as well.",
       "confirm": "Remove All",
       "cancel": "Cancel"
+    }
+  },
+  "recurringPreview": {
+    "rangeSeparator": "{{start}} to {{end}}",
+    "cadenceOwner": {
+      "contract": {
+        "label": "Contract anniversary",
+        "summary": "Service periods and invoice windows follow the contract anniversary dates."
+      },
+      "client": {
+        "label": "Client billing schedule",
+        "summary": "Service periods and invoice windows stay aligned to the client billing calendar."
+      }
+    },
+    "billingTiming": {
+      "advance": {
+        "label": "Advance",
+        "summary": "Invoices post at the opening of the due service period."
+      },
+      "arrears": {
+        "label": "Arrears",
+        "summary": "Invoices post after the covered service period closes."
+      }
+    },
+    "firstInvoice": {
+      "contract": {
+        "advance": "First invoice: bill on the contract anniversary window that opens the first covered service period.",
+        "arrears": "First invoice: bill on the next contract anniversary window after the first covered service period closes."
+      },
+      "client": {
+        "advance": "First invoice: bill on the first client billing schedule window covering the service period.",
+        "arrears": "First invoice: bill on the next client billing schedule window after the first covered service period closes."
+      }
+    },
+    "partialPeriod": {
+      "prorated": "Partial periods adjust the recurring fee to the covered portion of the service period.",
+      "full": "Partial periods keep the full recurring fee even when contract dates land inside a service period."
+    },
+    "materializedPeriods": {
+      "heading": "Illustrative future materialized periods",
+      "summary": {
+        "contract": "If you save this recurring line, future periods would materialize on an anniversary-style preview anchored to the 8th before invoice generation.",
+        "client": "If you save this recurring line, future periods would materialize on the client billing schedule preview before invoice generation."
+      }
     }
   }
 }

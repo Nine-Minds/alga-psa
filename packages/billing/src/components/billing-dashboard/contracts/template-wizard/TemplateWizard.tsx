@@ -394,8 +394,12 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
       isNextDisabled={isSaving}
       isSkipDisabled={REQUIRED_TEMPLATE_STEPS.includes(currentStep)}
       isLoading={isSaving}
+      backLabel={t('wizard.nav.back', { defaultValue: 'Back' })}
       nextLabel={t('templateWizard.actions.continue', { defaultValue: 'Continue' })}
+      skipLabel={t('wizard.nav.skip', { defaultValue: 'Skip' })}
       finishLabel={t('templateWizard.actions.publishTemplate', { defaultValue: 'Publish Template' })}
+      savingLabel={t('wizard.nav.saving', { defaultValue: 'Saving...' })}
+      completingLabel={t('wizard.nav.completing', { defaultValue: 'Completing...' })}
     />
   );
 

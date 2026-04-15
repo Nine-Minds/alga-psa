@@ -827,8 +827,7 @@ export function ContractBasicsStep({
                   {data.po_amount && (
                     <p>
                       <strong>{t('wizardBasics.summary.labels.poAmount', { defaultValue: 'PO Amount:' })}</strong>{' '}
-                      {formatCurrency(data.po_amount / currencyMeta.minorUnitFactor, {
-                        currency: currencyMeta.currencyCode,
+                      {formatCurrency(data.po_amount / currencyMeta.minorUnitFactor, currencyMeta.currencyCode, {
                         minimumFractionDigits: currencyMeta.fractionDigits,
                         maximumFractionDigits: currencyMeta.fractionDigits,
                       })}

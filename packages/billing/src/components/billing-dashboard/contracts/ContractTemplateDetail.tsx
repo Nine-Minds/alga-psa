@@ -940,24 +940,33 @@ const ContractTemplateDetail: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-[rgb(var(--color-text-700))]">Client Assignments</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[rgb(var(--color-text-700))]">
+                {t('templateDetail.clientAssignments.title', { defaultValue: 'Client Assignments' })}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm text-[rgb(var(--color-text-700))]">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span>Total Assignments</span>
+                  <span>{t('templateDetail.clientAssignments.totalAssignments', { defaultValue: 'Total Assignments' })}</span>
                   <span className="font-medium">{summary?.totalClientAssignments ?? assignments.length}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Active Clients</span>
+                  <span>{t('templateDetail.clientAssignments.activeClients', { defaultValue: 'Active Clients' })}</span>
                   <span className="font-medium">{summary?.activeClientCount ?? assignments.filter((assignment) => assignment.is_active).length}</span>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Purchase Orders</span>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {t('templateDetail.clientAssignments.purchaseOrders', { defaultValue: 'Purchase Orders' })}
+                  </span>
                   <p className="text-sm text-[rgb(var(--color-text-800))]">
                     {summary?.poRequiredCount || assignments.some((assignment) => assignment.po_required)
-                      ? `${summary?.poRequiredCount ?? assignments.filter((assignment) => assignment.po_required).length} assignments require PO`
-                      : 'No PO requirements captured.'}
+                      ? t('templateDetail.clientAssignments.poRequiredCount', {
+                          defaultValue: '{{count}} assignments require PO',
+                          count: summary?.poRequiredCount ?? assignments.filter((assignment) => assignment.po_required).length,
+                        })
+                      : t('templateDetail.clientAssignments.noPoRequirements', {
+                          defaultValue: 'No PO requirements captured.',
+                        })}
                   </p>
                 </div>
               </div>
@@ -965,11 +974,15 @@ const ContractTemplateDetail: React.FC = () => {
               <div className="border-t border-[rgb(var(--color-border-100))] pt-3">
                 {assignments.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No client contracts are currently using this template.
+                    {t('templateDetail.clientAssignments.noClientContracts', {
+                      defaultValue: 'No client contracts are currently using this template.',
+                    })}
                   </p>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    Review the full assignment list in the details section below.
+                    {t('templateDetail.clientAssignments.reviewBelow', {
+                      defaultValue: 'Review the full assignment list in the details section below.',
+                    })}
                   </p>
                 )}
               </div>
@@ -1045,12 +1058,16 @@ const ContractTemplateDetail: React.FC = () => {
 
       <Card className="mt-4">
         <CardHeader>
-          <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))]">Assignment Details</CardTitle>
+          <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))]">
+            {t('templateDetail.assignmentDetails.title', { defaultValue: 'Assignment Details' })}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {assignments.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              When client contracts adopt this template they will be listed here with purchase order context.
+              {t('templateDetail.assignmentDetails.empty', {
+                defaultValue: 'When client contracts adopt this template they will be listed here with purchase order context.',
+              })}
             </p>
           ) : (
             <div className="rounded-md border border-[rgb(var(--color-border-200))]">
@@ -1059,25 +1076,25 @@ const ContractTemplateDetail: React.FC = () => {
                   <thead className="bg-muted text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       <th scope="col" className="sticky top-0 z-10 bg-muted px-4 py-2 text-left font-medium">
-                        Client
+                        {t('templateDetail.assignmentDetails.columns.client', { defaultValue: 'Client' })}
                       </th>
                       <th scope="col" className="sticky top-0 z-10 bg-muted px-4 py-2 text-left font-medium">
-                        Status
+                        {t('templateDetail.assignmentDetails.columns.status', { defaultValue: 'Status' })}
                       </th>
                       <th scope="col" className="sticky top-0 z-10 bg-muted px-4 py-2 text-left font-medium">
-                        Start
+                        {t('templateDetail.assignmentDetails.columns.start', { defaultValue: 'Start' })}
                       </th>
                       <th scope="col" className="sticky top-0 z-10 bg-muted px-4 py-2 text-left font-medium">
-                        End
+                        {t('templateDetail.assignmentDetails.columns.end', { defaultValue: 'End' })}
                       </th>
                       <th scope="col" className="sticky top-0 z-10 bg-muted px-4 py-2 text-left font-medium">
-                        PO Required
+                        {t('templateDetail.assignmentDetails.columns.poRequired', { defaultValue: 'PO Required' })}
                       </th>
                       <th scope="col" className="sticky top-0 z-10 bg-muted px-4 py-2 text-left font-medium">
-                        PO Number
+                        {t('templateDetail.assignmentDetails.columns.poNumber', { defaultValue: 'PO Number' })}
                       </th>
                       <th scope="col" className="sticky top-0 z-10 bg-muted px-4 py-2 text-right font-medium">
-                        PO Amount
+                        {t('templateDetail.assignmentDetails.columns.poAmount', { defaultValue: 'PO Amount' })}
                       </th>
                     </tr>
                   </thead>
@@ -1097,7 +1114,10 @@ const ContractTemplateDetail: React.FC = () => {
                                 {assignment.client_name || assignment.client_id}
                               </span>
                               <span className="text-xs text-muted-foreground">
-                                Contract ID: {assignment.client_contract_id}
+                                {t('templateDetail.assignmentDetails.contractId', {
+                                  defaultValue: 'Contract ID: {{id}}',
+                                  id: assignment.client_contract_id,
+                                })}
                               </span>
                             </div>
                           </td>
@@ -1109,20 +1129,28 @@ const ContractTemplateDetail: React.FC = () => {
                                   : 'default-muted'
                               }
                             >
-                              {assignment.is_active ? 'Active' : 'Inactive'}
+                              {assignment.is_active
+                                ? t('templateDetail.assignmentDetails.status.active', { defaultValue: 'Active' })
+                                : t('templateDetail.assignmentDetails.status.inactive', { defaultValue: 'Inactive' })}
                             </Badge>
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-[rgb(var(--color-text-900))]">
                             {assignment.start_date ? formatDate(assignment.start_date) : '—'}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-[rgb(var(--color-text-900))]">
-                            {assignment.end_date ? formatDate(assignment.end_date) : 'Ongoing'}
+                            {assignment.end_date
+                              ? formatDate(assignment.end_date)
+                              : t('templateDetail.assignmentDetails.ongoing', { defaultValue: 'Ongoing' })}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-[rgb(var(--color-text-900))]">
-                            {assignment.po_required ? 'Yes' : 'No'}
+                            {assignment.po_required
+                              ? t('common.labels.yes', { defaultValue: 'Yes' })
+                              : t('common.labels.no', { defaultValue: 'No' })}
                           </td>
                           <td className="px-4 py-3 text-[rgb(var(--color-text-900))]">
-                            {assignment.po_required ? assignment.po_number || '—' : 'Not required'}
+                            {assignment.po_required
+                              ? assignment.po_number || '—'
+                              : t('templateDetail.assignmentDetails.notRequired', { defaultValue: 'Not required' })}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-right text-[rgb(var(--color-text-900))]">
                             {poAmount}

@@ -24,7 +24,7 @@ export function TemplateReviewContractStep({
     billingTiming: data.billing_timing,
     billingFrequency: data.billing_frequency,
     enableProration: data.enable_proration,
-  });
+  }, t);
 
   const formatBucketSummary = (
     overlay?: BucketOverlayInput | null,

@@ -1113,6 +1113,36 @@
       "failedToUpdateBasics": "Failed to update template basics",
       "failedToUpdateGuidance": "Failed to update template guidance",
       "templateNameRequired": "Template name is required"
+    },
+    "clientAssignments": {
+      "title": "Przypisania klientów",
+      "totalAssignments": "Łączna liczba przypisań",
+      "activeClients": "Aktywni klienci",
+      "purchaseOrders": "Zamówienia zakupu",
+      "poRequiredCount": "{{count}} przypisań wymaga zamówienia",
+      "noPoRequirements": "Brak zarejestrowanych wymagań zamówienia.",
+      "noClientContracts": "Żadna umowa klienta obecnie nie korzysta z tego szablonu.",
+      "reviewBelow": "Zobacz pełną listę przypisań w sekcji szczegółów poniżej."
+    },
+    "assignmentDetails": {
+      "title": "Szczegóły przypisania",
+      "empty": "Gdy umowy klientów przyjmą ten szablon, zostaną tutaj wymienione wraz z kontekstem zamówienia zakupu.",
+      "contractId": "ID umowy: {{id}}",
+      "ongoing": "W toku",
+      "notRequired": "Nie wymagane",
+      "columns": {
+        "client": "Klient",
+        "status": "Status",
+        "start": "Początek",
+        "end": "Koniec",
+        "poRequired": "Wymagane zamówienie",
+        "poNumber": "Numer zamówienia",
+        "poAmount": "Kwota zamówienia"
+      },
+      "status": {
+        "active": "Aktywne",
+        "inactive": "Nieaktywne"
+      }
     }
   },
   "quickStart": {
@@ -1269,6 +1299,15 @@
       "selectProductForEachLine": "Please select a product for each product line",
       "startDateRequired": "Start date is required",
       "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead."
+    },
+    "nav": {
+      "back": "Wstecz",
+      "next": "Dalej",
+      "skip": "Pomiń",
+      "finish": "Zakończ konfigurację",
+      "saveDraft": "Zapisz jako wersję roboczą",
+      "saving": "Zapisywanie...",
+      "completing": "Kończenie..."
     }
   },
   "wizardBasics": {
@@ -1948,6 +1987,50 @@
       "message": "Are you sure you want to remove \"{{serviceName}}\" from \"{{presetName}}\"? This will remove all other services associated with this contract line preset as well.",
       "confirm": "Remove All",
       "cancel": "Cancel"
+    }
+  },
+  "recurringPreview": {
+    "rangeSeparator": "{{start}} do {{end}}",
+    "cadenceOwner": {
+      "contract": {
+        "label": "Rocznica umowy",
+        "summary": "Okresy usług i okna fakturowania podążają za datami rocznicy umowy."
+      },
+      "client": {
+        "label": "Harmonogram rozliczeń klienta",
+        "summary": "Okresy usług i okna fakturowania pozostają zgodne z kalendarzem rozliczeń klienta."
+      }
+    },
+    "billingTiming": {
+      "advance": {
+        "label": "Z góry",
+        "summary": "Faktury są wystawiane na początku należnego okresu usługi."
+      },
+      "arrears": {
+        "label": "Z dołu",
+        "summary": "Faktury są wystawiane po zamknięciu pokrytego okresu usługi."
+      }
+    },
+    "firstInvoice": {
+      "contract": {
+        "advance": "Pierwsza faktura: wystawiana w oknie rocznicy umowy otwierającym pierwszy pokryty okres usługi.",
+        "arrears": "Pierwsza faktura: wystawiana w kolejnym oknie rocznicy umowy po zamknięciu pierwszego pokrytego okresu usługi."
+      },
+      "client": {
+        "advance": "Pierwsza faktura: wystawiana w pierwszym oknie harmonogramu rozliczeń klienta obejmującym okres usługi.",
+        "arrears": "Pierwsza faktura: wystawiana w kolejnym oknie harmonogramu rozliczeń klienta po zamknięciu pierwszego pokrytego okresu usługi."
+      }
+    },
+    "partialPeriod": {
+      "prorated": "Częściowe okresy dostosowują opłatę cykliczną do pokrytej części okresu usługi.",
+      "full": "Częściowe okresy zachowują pełną opłatę cykliczną, nawet gdy daty umowy przypadają wewnątrz okresu usługi."
+    },
+    "materializedPeriods": {
+      "heading": "Przykładowe przyszłe zmaterializowane okresy",
+      "summary": {
+        "contract": "Jeśli zapiszesz tę cykliczną linię, przyszłe okresy zostałyby zmaterializowane w podglądzie typu rocznicowego zakotwiczonym na 8. dniu przed wygenerowaniem faktur.",
+        "client": "Jeśli zapiszesz tę cykliczną linię, przyszłe okresy zostałyby zmaterializowane w podglądzie harmonogramu rozliczeń klienta przed wygenerowaniem faktur."
+      }
     }
   }
 }

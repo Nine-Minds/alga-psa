@@ -1113,6 +1113,36 @@
       "failedToUpdateBasics": "11111",
       "failedToUpdateGuidance": "11111",
       "templateNameRequired": "11111"
+    },
+    "clientAssignments": {
+      "title": "11111",
+      "totalAssignments": "11111",
+      "activeClients": "11111",
+      "purchaseOrders": "11111",
+      "poRequiredCount": "11111 {{count}} 11111",
+      "noPoRequirements": "11111",
+      "noClientContracts": "11111",
+      "reviewBelow": "11111"
+    },
+    "assignmentDetails": {
+      "title": "11111",
+      "empty": "11111",
+      "contractId": "11111 {{id}} 11111",
+      "ongoing": "11111",
+      "notRequired": "11111",
+      "columns": {
+        "client": "11111",
+        "status": "11111",
+        "start": "11111",
+        "end": "11111",
+        "poRequired": "11111",
+        "poNumber": "11111",
+        "poAmount": "11111"
+      },
+      "status": {
+        "active": "11111",
+        "inactive": "11111"
+      }
     }
   },
   "quickStart": {
@@ -1269,6 +1299,15 @@
       "selectProductForEachLine": "11111",
       "startDateRequired": "11111",
       "unsupportedRecurringAuthoringCombination": "11111 {{lineType}} 11111 {{supportedFrequencies}} 11111 {{billingFrequency}} 11111"
+    },
+    "nav": {
+      "back": "11111",
+      "next": "11111",
+      "skip": "11111",
+      "finish": "11111",
+      "saveDraft": "11111",
+      "saving": "11111",
+      "completing": "11111"
     }
   },
   "wizardBasics": {
@@ -1948,6 +1987,50 @@
       "message": "11111 {{serviceName}} 11111 {{presetName}} 11111",
       "confirm": "11111",
       "cancel": "11111"
+    }
+  },
+  "recurringPreview": {
+    "rangeSeparator": "11111 {{start}} 11111 {{end}} 11111",
+    "cadenceOwner": {
+      "contract": {
+        "label": "11111",
+        "summary": "11111"
+      },
+      "client": {
+        "label": "11111",
+        "summary": "11111"
+      }
+    },
+    "billingTiming": {
+      "advance": {
+        "label": "11111",
+        "summary": "11111"
+      },
+      "arrears": {
+        "label": "11111",
+        "summary": "11111"
+      }
+    },
+    "firstInvoice": {
+      "contract": {
+        "advance": "11111",
+        "arrears": "11111"
+      },
+      "client": {
+        "advance": "11111",
+        "arrears": "11111"
+      }
+    },
+    "partialPeriod": {
+      "prorated": "11111",
+      "full": "11111"
+    },
+    "materializedPeriods": {
+      "heading": "11111",
+      "summary": {
+        "contract": "11111",
+        "client": "11111"
+      }
     }
   }
 }

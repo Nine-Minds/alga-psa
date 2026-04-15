@@ -1113,6 +1113,36 @@
       "failedToUpdateBasics": "Failed to update template basics",
       "failedToUpdateGuidance": "Failed to update template guidance",
       "templateNameRequired": "Template name is required"
+    },
+    "clientAssignments": {
+      "title": "Klantopdrachten",
+      "totalAssignments": "Totale opdrachten",
+      "activeClients": "Actieve klanten",
+      "purchaseOrders": "Inkooporders",
+      "poRequiredCount": "{{count}} opdrachten vereisen een inkooporder",
+      "noPoRequirements": "Geen inkooporder-vereisten vastgelegd.",
+      "noClientContracts": "Er zijn momenteel geen klantcontracten die deze sjabloon gebruiken.",
+      "reviewBelow": "Bekijk de volledige opdrachtenlijst in het detailsgedeelte hieronder."
+    },
+    "assignmentDetails": {
+      "title": "Opdrachtdetails",
+      "empty": "Wanneer klantcontracten deze sjabloon adopteren, worden ze hier vermeld met inkoopordercontext.",
+      "contractId": "Contract-ID: {{id}}",
+      "ongoing": "Doorlopend",
+      "notRequired": "Niet vereist",
+      "columns": {
+        "client": "Klant",
+        "status": "Status",
+        "start": "Start",
+        "end": "Einde",
+        "poRequired": "Inkooporder vereist",
+        "poNumber": "Inkoopordernummer",
+        "poAmount": "Inkooporderbedrag"
+      },
+      "status": {
+        "active": "Actief",
+        "inactive": "Inactief"
+      }
     }
   },
   "quickStart": {
@@ -1269,6 +1299,15 @@
       "selectProductForEachLine": "Please select a product for each product line",
       "startDateRequired": "Start date is required",
       "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead."
+    },
+    "nav": {
+      "back": "Terug",
+      "next": "Volgende",
+      "skip": "Overslaan",
+      "finish": "Installatie voltooien",
+      "saveDraft": "Opslaan als concept",
+      "saving": "Opslaan...",
+      "completing": "Voltooien..."
     }
   },
   "wizardBasics": {
@@ -1948,6 +1987,50 @@
       "message": "Are you sure you want to remove \"{{serviceName}}\" from \"{{presetName}}\"? This will remove all other services associated with this contract line preset as well.",
       "confirm": "Remove All",
       "cancel": "Cancel"
+    }
+  },
+  "recurringPreview": {
+    "rangeSeparator": "{{start}} tot {{end}}",
+    "cadenceOwner": {
+      "contract": {
+        "label": "Contractverjaardag",
+        "summary": "Serviceperioden en factuurvensters volgen de contractverjaardagsdata."
+      },
+      "client": {
+        "label": "Facturatieschema klant",
+        "summary": "Serviceperioden en factuurvensters blijven afgestemd op het facturatieschema van de klant."
+      }
+    },
+    "billingTiming": {
+      "advance": {
+        "label": "Vooraf",
+        "summary": "Facturen worden uitgegeven aan het begin van de verschuldigde serviceperiode."
+      },
+      "arrears": {
+        "label": "Achteraf",
+        "summary": "Facturen worden uitgegeven na afloop van de gedekte serviceperiode."
+      }
+    },
+    "firstInvoice": {
+      "contract": {
+        "advance": "Eerste factuur: wordt uitgegeven in het contractverjaardagsvenster dat de eerste gedekte serviceperiode opent.",
+        "arrears": "Eerste factuur: wordt uitgegeven in het volgende contractverjaardagsvenster na afloop van de eerste gedekte serviceperiode."
+      },
+      "client": {
+        "advance": "Eerste factuur: wordt uitgegeven in het eerste venster van het facturatieschema van de klant dat de serviceperiode dekt.",
+        "arrears": "Eerste factuur: wordt uitgegeven in het volgende venster van het facturatieschema van de klant na afloop van de eerste gedekte serviceperiode."
+      }
+    },
+    "partialPeriod": {
+      "prorated": "Gedeeltelijke perioden passen het terugkerende tarief aan op het gedekte deel van de serviceperiode.",
+      "full": "Gedeeltelijke perioden behouden het volledige terugkerende tarief zelfs wanneer contractdata binnen een serviceperiode vallen."
+    },
+    "materializedPeriods": {
+      "heading": "Illustratieve toekomstige gematerialiseerde perioden",
+      "summary": {
+        "contract": "Als je deze terugkerende regel opslaat, zouden toekomstige perioden worden gematerialiseerd in een verjaardagsgebaseerde voorvertoning verankerd op de 8e vóór de factuurgeneratie.",
+        "client": "Als je deze terugkerende regel opslaat, zouden toekomstige perioden worden gematerialiseerd in de voorvertoning van het facturatieschema van de klant vóór de factuurgeneratie."
+      }
     }
   }
 }

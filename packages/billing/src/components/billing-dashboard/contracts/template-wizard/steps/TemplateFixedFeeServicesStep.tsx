@@ -70,7 +70,7 @@ export function TemplateFixedFeeServicesStep({
     billingTiming: data.billing_timing,
     billingFrequency: data.billing_frequency,
     enableProration: data.enable_proration,
-  });
+  }, t);
 
   const handleAddService = () => {
     updateData({

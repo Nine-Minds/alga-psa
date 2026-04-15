@@ -192,8 +192,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
     if (cents === null) {
       return t('common.moneyPlaceholder', { defaultValue: '—' });
     }
-    return formatCurrency(cents / 100, {
-      currency: currencyCode,
+    return formatCurrency(cents / 100, currencyCode, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
