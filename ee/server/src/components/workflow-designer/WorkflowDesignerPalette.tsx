@@ -63,14 +63,15 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
         id="workflow-designer-palette-scroll"
         ref={scrollContainerRef}
         {...scrollContainerProps}
-        className="flex-1 min-h-0 overflow-y-auto p-3 space-y-4"
+        className="flex-1 min-h-0 overflow-y-auto pl-3 pr-5 py-3 space-y-4"
+        style={{ scrollbarGutter: 'stable' }}
       >
         {Object.entries(groupedPaletteItems).map(([category, items]) => (
           <div key={category}>
             <div className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-2">
               {category}
             </div>
-            <div className="grid grid-cols-4 gap-1">
+            <div className="grid grid-cols-2 gap-2">
               {items.map((item, itemIndex) => renderItem(item, category, itemIndex))}
             </div>
           </div>
