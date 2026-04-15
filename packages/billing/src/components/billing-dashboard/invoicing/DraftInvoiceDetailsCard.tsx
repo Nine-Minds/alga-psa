@@ -14,16 +14,19 @@ import {
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { formatCurrencyFromMinorUnits, toPlainDate } from '@alga-psa/core';
-import type { InvoiceViewModel as DbInvoiceViewModel } from '@alga-psa/types';
+import type { DateValue, InvoiceViewModel as DbInvoiceViewModel } from '@alga-psa/types';
 import {
   updateDraftInvoiceProperties,
   type DraftInvoicePropertiesUpdateResult,
 } from '@alga-psa/billing/actions/invoiceModification';
 
-export type DraftInvoiceDetailsSummary = Pick<
+export interface DraftInvoiceDetailsSummary extends Pick<
   DbInvoiceViewModel,
-  'invoice_id' | 'invoice_number' | 'invoice_date' | 'due_date' | 'status' | 'total_amount' | 'currencyCode' | 'client'
->;
+  'invoice_id' | 'invoice_number' | 'status' | 'total_amount' | 'currencyCode' | 'client'
+> {
+  invoice_date: DateValue;
+  due_date: DateValue | null;
+}
 
 interface DraftInvoiceDetailsCardProps {
   invoice: DraftInvoiceDetailsSummary | null;

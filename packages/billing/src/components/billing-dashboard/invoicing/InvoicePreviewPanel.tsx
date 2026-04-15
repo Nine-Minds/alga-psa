@@ -25,7 +25,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
 import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
-import DraftInvoiceDetailsCard from './DraftInvoiceDetailsCard';
+import DraftInvoiceDetailsCard, { type DraftInvoiceDetailsSummary } from './DraftInvoiceDetailsCard';
 
 interface InvoicePreviewPanelProps {
   invoiceId: string | null;
@@ -71,7 +71,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [taxSource, setTaxSource] = useState<TaxSource>('internal');
   const [sourceQuote, setSourceQuote] = useState<IQuote | null>(null);
   const [previewRefreshCounter, setPreviewRefreshCounter] = useState(0);
-  const [draftInvoiceEditorSummary, setDraftInvoiceEditorSummary] = useState<DbInvoiceViewModel | null>(draftInvoiceSummary);
+  const [draftInvoiceEditorSummary, setDraftInvoiceEditorSummary] = useState<DraftInvoiceDetailsSummary | null>(draftInvoiceSummary);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   // Match invoice/PDF rendering: honor an explicit URL template selection first,
