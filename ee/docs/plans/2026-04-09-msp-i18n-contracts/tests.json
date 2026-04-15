@@ -449,7 +449,7 @@
   {
     "id": "T054",
     "description": "Unit: ReviewContractStep.i18n.test -- service summary sections with rates and bucket summaries render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]
