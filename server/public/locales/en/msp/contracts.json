@@ -268,6 +268,26 @@
   },
   "contractHeader": {},
   "contractOverview": {
+    "errors": {
+      "failedToLoadOverview": "Failed to load overview"
+    },
+    "frequency": {
+      "annually": "Annually",
+      "biweekly": "Biweekly",
+      "semi_annually": "Semi-Annually",
+      "weekly": "Weekly"
+    },
+    "lines": {
+      "addContractLines": "Add Contract Lines",
+      "collapseAll": "Collapse all",
+      "expandAll": "Expand all",
+      "includedServices": "Included Services",
+      "noContractLinesDescription": "Add contract lines to define what's included in this contract",
+      "noContractLinesYet": "No contract lines yet",
+      "noServicesConfigured": "No services configured",
+      "serviceCountOne": "{{count}} service",
+      "serviceCountOther": "{{count}} services"
+    },
     "stats": {
       "contractLines": "Contract Lines",
       "estimatedMonthlyValue": "Est. Monthly Value",

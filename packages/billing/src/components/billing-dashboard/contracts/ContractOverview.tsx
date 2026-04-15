@@ -8,24 +8,12 @@ import { getContractOverview } from '@alga-psa/billing/actions/contractActions';
 import type { IContractOverview, IContractLineOverview } from '@alga-psa/billing/actions/contractActions';
 import { Package, Clock, Activity, Coins, Layers3, ChevronDown, ChevronRight } from 'lucide-react';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 interface ContractOverviewProps {
   contractId: string;
   onNavigateToLines?: () => void;
 }
-
-const formatFrequency = (frequency: string): string => {
-  const map: Record<string, string> = {
-    'weekly': 'Weekly',
-    'monthly': 'Monthly',
-    'quarterly': 'Quarterly',
-    'semi-annually': 'Semi-Annually',
-    'semi_annually': 'Semi-Annually',
-    'annually': 'Annually'
-  };
-  return map[frequency] || frequency;
-};
 
 const getTypeIcon = (type: 'Fixed' | 'Hourly' | 'Usage') => {
   switch (type) {
@@ -55,8 +43,23 @@ const ContractLineCard: React.FC<{
   onToggle: () => void;
   currencyCode: string;
   formatCurrencyCents: (cents: number | null, currencyCode?: string) => string;
+  formatFrequencyLabel: (frequency: string) => string;
+  formatServiceCountLabel: (count: number) => string;
   formatContractLineType: (value: string) => string;
-}> = ({ line, isExpanded, onToggle, currencyCode, formatCurrencyCents, formatContractLineType }) => {
+  includedServicesLabel: string;
+  noServicesConfiguredLabel: string;
+}> = ({
+  line,
+  isExpanded,
+  onToggle,
+  currencyCode,
+  formatCurrencyCents,
+  formatFrequencyLabel,
+  formatServiceCountLabel,
+  formatContractLineType,
+  includedServicesLabel,
+  noServicesConfiguredLabel,
+}) => {
   return (
     <div className="border border-[rgb(var(--color-border-200))] rounded-lg overflow-hidden">
       <button
@@ -73,7 +76,7 @@ const ContractLineCard: React.FC<{
                 {formatContractLineType(line.contract_line_type)}
               </Badge>
               <span>•</span>
-              <span>{formatFrequency(line.billing_frequency)}</span>
+              <span>{formatFrequencyLabel(line.billing_frequency)}</span>
               {line.base_rate !== null && line.contract_line_type === 'Fixed' && (
                 <>
                   <span>•</span>
@@ -86,7 +89,7 @@ const ContractLineCard: React.FC<{
         <div className="flex items-center gap-2">
           {line.services.length > 0 && (
             <span className="text-sm text-muted-foreground">
-              {line.services.length} service{line.services.length !== 1 ? 's' : ''}
+              {formatServiceCountLabel(line.services.length)}
             </span>
           )}
           {isExpanded ? (
@@ -99,7 +102,7 @@ const ContractLineCard: React.FC<{
 
       {isExpanded && line.services.length > 0 && (
         <div className="border-t border-[rgb(var(--color-border-200))] bg-muted p-3">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Included Services</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">{includedServicesLabel}</div>
           <div className="space-y-2">
             {line.services.map((service) => (
               <div
@@ -127,7 +130,7 @@ const ContractLineCard: React.FC<{
 
       {isExpanded && line.services.length === 0 && (
         <div className="border-t border-[rgb(var(--color-border-200))] bg-muted p-3">
-          <div className="text-sm text-muted-foreground italic">No services configured</div>
+          <div className="text-sm text-muted-foreground italic">{noServicesConfiguredLabel}</div>
         </div>
       )}
     </div>
@@ -140,6 +143,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
 }) => {
   const { t } = useTranslation('msp/contracts');
   const { formatCurrency } = useFormatters();
+  const formatBillingFrequency = useFormatBillingFrequency();
   const formatContractLineType = useFormatContractLineType();
   const [overview, setOverview] = useState<IContractOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -162,7 +166,11 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
       }
     } catch (err) {
       console.error('Error loading contract overview:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load overview');
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('contractOverview.errors.failedToLoadOverview', { defaultValue: 'Failed to load overview' })
+      );
     } finally {
       setIsLoading(false);
     }
@@ -190,6 +198,22 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
       maximumFractionDigits: 2,
     });
   }, [formatCurrency, t]);
+  const formatFrequencyLabel = useCallback((value: string): string => {
+    const formatted = formatBillingFrequency(value);
+    if (formatted !== value) {
+      return formatted;
+    }
+    return t(`contractOverview.frequency.${value}`, {
+      defaultValue: value.replace(/_/g, ' '),
+    });
+  }, [formatBillingFrequency, t]);
+  const formatServiceCountLabel = useCallback((count: number): string => (
+    count === 1
+      ? t('contractOverview.lines.serviceCountOne', { count, defaultValue: '{{count}} service' })
+      : t('contractOverview.lines.serviceCountOther', { count, defaultValue: '{{count}} services' })
+  ), [t]);
+  const includedServicesLabel = t('contractOverview.lines.includedServices', { defaultValue: 'Included Services' });
+  const noServicesConfiguredLabel = t('contractOverview.lines.noServicesConfigured', { defaultValue: 'No services configured' });
 
   if (isLoading) {
     return (
@@ -306,7 +330,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
         {overview.contractLines.length > 0 ? (
           <div className="space-y-2">
             <div className="text-sm font-medium text-[rgb(var(--color-text-700))] flex items-center justify-between">
-              <span>Contract Lines</span>
+              <span>{t('contractOverview.stats.contractLines', { defaultValue: 'Contract Lines' })}</span>
               {overview.contractLines.length > 3 && (
                 <button
                   type="button"
@@ -319,7 +343,9 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                   }}
                   className="text-xs text-blue-600 hover:text-blue-800"
                 >
-                  {expandedLines.size === overview.contractLines.length ? 'Collapse all' : 'Expand all'}
+                  {expandedLines.size === overview.contractLines.length
+                    ? t('contractOverview.lines.collapseAll', { defaultValue: 'Collapse all' })
+                    : t('contractOverview.lines.expandAll', { defaultValue: 'Expand all' })}
                 </button>
               )}
             </div>
@@ -332,7 +358,11 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                   onToggle={() => toggleLine(line.contract_line_id)}
                   currencyCode={overview.currencyCode}
                   formatCurrencyCents={formatCurrencyCents}
+                  formatFrequencyLabel={formatFrequencyLabel}
+                  formatServiceCountLabel={formatServiceCountLabel}
                   formatContractLineType={formatContractLineType}
+                  includedServicesLabel={includedServicesLabel}
+                  noServicesConfiguredLabel={noServicesConfiguredLabel}
                 />
               ))}
             </div>
@@ -340,9 +370,13 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
         ) : (
           <div className="text-center py-6 bg-muted rounded-lg border border-dashed border-[rgb(var(--color-border-300))]">
             <Layers3 className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-muted-foreground font-medium">No contract lines yet</p>
+            <p className="text-muted-foreground font-medium">
+              {t('contractOverview.lines.noContractLinesYet', { defaultValue: 'No contract lines yet' })}
+            </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Add contract lines to define what's included in this contract
+              {t('contractOverview.lines.noContractLinesDescription', {
+                defaultValue: "Add contract lines to define what's included in this contract",
+              })}
             </p>
             {onNavigateToLines && (
               <button
@@ -350,7 +384,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                 onClick={onNavigateToLines}
                 className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium"
               >
-                Add Contract Lines →
+                {t('contractOverview.lines.addContractLines', { defaultValue: 'Add Contract Lines' })} →
               </button>
             )}
           </div>

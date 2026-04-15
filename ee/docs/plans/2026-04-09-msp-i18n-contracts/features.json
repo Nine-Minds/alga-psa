@@ -187,7 +187,7 @@
   {
     "id": "F038",
     "description": "Wire useTranslation('msp/contracts') in ContractOverview.tsx -- translate contract line cards (frequency display, service count with interpolation, Included Services heading, 'No services configured'), empty state ('No contract lines yet', 'Add contract lines...'), and Expand/Collapse all toggle",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F039",
