@@ -513,7 +513,7 @@
   {
     "id": "T062",
     "description": "Unit: TemplateServicePreviewSection.i18n.test -- service type labels, heading with interpolation, remove confirmation dialog render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]

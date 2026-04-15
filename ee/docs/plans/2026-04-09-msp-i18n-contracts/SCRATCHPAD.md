@@ -405,3 +405,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/TemplateUsageBasedServicesStep.i18n.test.ts` (pass; 1 file, 1 test).
 - **(2026-04-15)** `T061` completed: added `packages/billing/tests/billing-dashboard/TemplateReviewContractStep.i18n.test.ts` with key assertions for review sections, empty states, service summary labels, cadence/billing labels, and bucket interpolation strings.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/TemplateReviewContractStep.i18n.test.ts` (pass; 1 file, 1 test).
+- **(2026-04-15)** `T062` completed: added `packages/billing/tests/billing-dashboard/TemplateServicePreviewSection.i18n.test.ts` to assert service-type labels, selected-services heading interpolation, quantity label, and remove-confirmation dialog copy are translation-key backed.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/TemplateServicePreviewSection.i18n.test.ts` (pass; 1 file, 1 test).
