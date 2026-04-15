@@ -1389,7 +1389,43 @@
       "startFromTemplate": "Start From Template"
     }
   },
-  "wizardFixed": {},
+  "wizardFixed": {
+    "alternateFrequencyLabel": "Alternate Billing Frequency (Optional)",
+    "baseRate": {
+      "hint": "Total recurring fee for all fixed services combined.",
+      "label": "Recurring Base Rate",
+      "placeholder": "0.00"
+    },
+    "description": "Configure services that are billed at a fixed rate each billing cycle. You can still track time, but billing is based on this flat amount.",
+    "emptyState": "No fixed fee services added yet. Click “Add Service” above or “Skip” to move on.",
+    "explainer": {
+      "description": "These services have a set recurring price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.",
+      "title": "What are Fixed Fee Services?"
+    },
+    "heading": "Fixed Fee Services",
+    "preview": {
+      "labels": {
+        "billingTiming": "Billing Timing:",
+        "cadenceOwner": "Cadence Owner:",
+        "invoiceWindow": "Invoice window:",
+        "recurringRate": "Recurring Rate:",
+        "service": "Service:",
+        "services": "Services:"
+      },
+      "title": "Recurring Preview Before Save"
+    },
+    "proration": {
+      "label": "Adjust for Partial Periods",
+      "tooltip": "Adjust the recurring fee when contract dates cover only part of a service period."
+    },
+    "services": {
+      "addService": "Add Service",
+      "label": "Services",
+      "quantityLabel": "Quantity",
+      "selectServicePlaceholder": "Select a service",
+      "serviceItemLabel": "Service {{index}}"
+    }
+  },
   "wizardProducts": {},
   "wizardHourly": {},
   "wizardUsage": {},

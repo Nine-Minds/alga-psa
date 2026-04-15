@@ -267,7 +267,7 @@
   {
     "id": "F054",
     "description": "Wire useTranslation('msp/contracts') in FixedFeeServicesStep.tsx -- translate step heading, description, service picker label, base rate field, proration toggle, billing frequency override, and 'No fixed services added' empty state",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F055",

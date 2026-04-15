@@ -15,6 +15,7 @@ import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface FixedFeeServicesStepProps {
   data: ContractWizardData;
@@ -22,6 +23,7 @@ interface FixedFeeServicesStepProps {
 }
 
 export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepProps) {
+  const { t } = useTranslation('msp/contracts');
   const [baseRateInput, setBaseRateInput] = useState<string>('');
 
   useEffect(() => {
@@ -111,16 +113,22 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
     <ReflectionContainer id="fixed-fee-services-step">
       <div className="space-y-6">
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">Fixed Fee Services</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            {t('wizardFixed.heading', { defaultValue: 'Fixed Fee Services' })}
+          </h3>
           <p className="text-sm text-[rgb(var(--color-text-500))]">
-            Configure services that are billed at a fixed rate each billing cycle. You can still
-            track time, but billing is based on this flat amount.
+            {t('wizardFixed.description', {
+              defaultValue: 'Configure services that are billed at a fixed rate each billing cycle. You can still track time, but billing is based on this flat amount.',
+            })}
           </p>
         </div>
 
         <div className="p-4 bg-[rgb(var(--color-accent-50))] border border-[rgb(var(--color-accent-200))] rounded-md">
           <p className="text-sm text-[rgb(var(--color-accent-800))]">
-            <strong>What are Fixed Fee Services?</strong> These services have a set recurring price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.
+            <strong>{t('wizardFixed.explainer.title', { defaultValue: 'What are Fixed Fee Services?' })}</strong>{' '}
+            {t('wizardFixed.explainer.description', {
+              defaultValue: 'These services have a set recurring price. You\'ll still track time entries for these services, but billing is based on the fixed rate, not hours worked.',
+            })}
           </p>
         </div>
 
@@ -128,7 +136,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
           <div className="space-y-2">
             <Label htmlFor="fixed_base_rate" className="flex items-center gap-2">
               <Coins className="h-4 w-4" />
-              Recurring Base Rate *
+              {t('wizardFixed.baseRate.label', { defaultValue: 'Recurring Base Rate' })} *
             </Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-400))]">
@@ -157,12 +165,14 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                     setBaseRateInput((cents / 100).toFixed(2));
                   }
                 }}
-                placeholder="0.00"
+                placeholder={t('wizardFixed.baseRate.placeholder', { defaultValue: '0.00' })}
                 className="pl-10"
               />
             </div>
             <p className="text-xs text-[rgb(var(--color-text-400))]">
-              Total recurring fee for all fixed services combined.
+              {t('wizardFixed.baseRate.hint', {
+                defaultValue: 'Total recurring fee for all fixed services combined.',
+              })}
             </p>
           </div>
         )}
@@ -171,11 +181,13 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <SwitchWithLabel
-                label="Adjust for Partial Periods"
+                label={t('wizardFixed.proration.label', { defaultValue: 'Adjust for Partial Periods' })}
                 checked={data.enable_proration}
                 onCheckedChange={(checked) => updateData({ enable_proration: checked })}
               />
-              <Tooltip content="Adjust the recurring fee when contract dates cover only part of a service period.">
+              <Tooltip content={t('wizardFixed.proration.tooltip', {
+                defaultValue: 'Adjust the recurring fee when contract dates cover only part of a service period.',
+              })}>
                 <HelpCircle className="h-4 w-4 text-[rgb(var(--color-text-300))] cursor-help" />
               </Tooltip>
             </div>
@@ -188,7 +200,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Services
+            {t('wizardFixed.services.label', { defaultValue: 'Services' })}
           </Label>
 
           {data.fixed_services.map((service, index) => (
@@ -199,7 +211,10 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`service-${index}`} className="text-sm">
-                    Service {index + 1}
+                    {t('wizardFixed.services.serviceItemLabel', {
+                      defaultValue: 'Service {{index}}',
+                      index: index + 1,
+                    })}
                   </Label>
                   <ServiceCatalogPicker
                     id={`service-select-${index}`}
@@ -207,13 +222,15 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                     selectedLabel={service.service_name}
                     onSelect={(item) => handleServiceChange(index, item)}
                     itemKinds={['service']}
-                    placeholder="Select a service"
+                    placeholder={t('wizardFixed.services.selectServicePlaceholder', {
+                      defaultValue: 'Select a service',
+                    })}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor={`quantity-${index}`} className="text-sm">
-                    Quantity
+                    {t('wizardFixed.services.quantityLabel', { defaultValue: 'Quantity' })}
                   </Label>
                   <Input
                     id={`quantity-${index}`}
@@ -249,14 +266,16 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
             className="w-full"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Service
+            {t('wizardFixed.services.addService', { defaultValue: 'Add Service' })}
           </Button>
         </div>
 
         {data.fixed_services.length === 0 && (
           <div className="p-4 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-md">
             <p className="text-sm text-[rgb(var(--color-text-500))] text-center">
-              No fixed fee services added yet. Click “Add Service” above or “Skip” to move on.
+              {t('wizardFixed.emptyState', {
+                defaultValue: 'No fixed fee services added yet. Click “Add Service” above or “Skip” to move on.',
+              })}
             </p>
           </div>
         )}
@@ -264,15 +283,29 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
         {data.fixed_services.length > 0 && (
           <Alert variant="info" className="mt-6">
             <AlertDescription>
-              <h4 className="text-sm font-semibold mb-2">Recurring Preview Before Save</h4>
+              <h4 className="text-sm font-semibold mb-2">
+                {t('wizardFixed.preview.title', { defaultValue: 'Recurring Preview Before Save' })}
+              </h4>
               <div className="text-sm space-y-1">
-                <p><strong>Services:</strong> {data.fixed_services.length}</p>
+                <p>
+                  <strong>{t('wizardFixed.preview.labels.services', { defaultValue: 'Services:' })}</strong>{' '}
+                  {data.fixed_services.length}
+                </p>
                 {data.fixed_base_rate ? (
-                  <p><strong>Recurring Rate:</strong> {formatCurrency(data.fixed_base_rate)}</p>
+                  <p>
+                    <strong>{t('wizardFixed.preview.labels.recurringRate', { defaultValue: 'Recurring Rate:' })}</strong>{' '}
+                    {formatCurrency(data.fixed_base_rate)}
+                  </p>
                 ) : null}
-                <p><strong>Cadence Owner:</strong> {recurringPreview.cadenceOwnerLabel}</p>
+                <p>
+                  <strong>{t('wizardFixed.preview.labels.cadenceOwner', { defaultValue: 'Cadence Owner:' })}</strong>{' '}
+                  {recurringPreview.cadenceOwnerLabel}
+                </p>
                 <p>{recurringPreview.cadenceOwnerSummary}</p>
-                <p><strong>Billing Timing:</strong> {recurringPreview.billingTimingLabel}</p>
+                <p>
+                  <strong>{t('wizardFixed.preview.labels.billingTiming', { defaultValue: 'Billing Timing:' })}</strong>{' '}
+                  {recurringPreview.billingTimingLabel}
+                </p>
                 <p>{recurringPreview.billingTimingSummary}</p>
                 <p>{recurringPreview.firstInvoiceSummary}</p>
                 <p>{recurringPreview.partialPeriodSummary}</p>
@@ -282,8 +315,14 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                   <ul className="list-disc pl-5 space-y-1">
                     {recurringPreview.materializedPeriods.map((period) => (
                       <li key={`${period.servicePeriodLabel}:${period.invoiceWindowLabel}`}>
-                        <span><strong>Service:</strong> {period.servicePeriodLabel}</span>
-                        <span className="block"><strong>Invoice window:</strong> {period.invoiceWindowLabel}</span>
+                        <span>
+                          <strong>{t('wizardFixed.preview.labels.service', { defaultValue: 'Service:' })}</strong>{' '}
+                          {period.servicePeriodLabel}
+                        </span>
+                        <span className="block">
+                          <strong>{t('wizardFixed.preview.labels.invoiceWindow', { defaultValue: 'Invoice window:' })}</strong>{' '}
+                          {period.invoiceWindowLabel}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -298,7 +337,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
             contractBillingFrequency={data.billing_frequency}
             value={data.fixed_billing_frequency}
             onChange={(value) => updateData({ fixed_billing_frequency: value })}
-            label="Alternate Billing Frequency (Optional)"
+            label={t('wizardFixed.alternateFrequencyLabel', { defaultValue: 'Alternate Billing Frequency (Optional)' })}
           />
         )}
       </div>
