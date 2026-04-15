@@ -266,7 +266,33 @@
       "fixErrors": "Please fix the following errors:"
     }
   },
-  "contractHeader": {},
+  "contractHeader": {
+    "badges": {
+      "clientOwned": "Client-owned",
+      "template": "Template"
+    },
+    "labels": {
+      "billingFrequency": "Billing Frequency",
+      "contractLines": "Contract Lines",
+      "currency": "Currency",
+      "endDate": "End Date",
+      "lastUpdated": "Last Updated",
+      "startDate": "Start Date"
+    },
+    "po": {
+      "prefix": "PO",
+      "requiredForContract": "Purchase order required for this contract."
+    },
+    "status": {
+      "active": "Active",
+      "draft": "Draft",
+      "expired": "Expired",
+      "terminated": "Terminated"
+    },
+    "values": {
+      "ongoing": "Ongoing"
+    }
+  },
   "contractOverview": {
     "errors": {
       "failedToLoadOverview": "Failed to load overview"

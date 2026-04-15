@@ -202,3 +202,7 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** `F046` completed in `ContractLineEditDialog.tsx`: wired `useTranslation('msp/contracts')` and localized interpolated dialog title, pricing/timing section labels, timing options + contextual descriptions, validation fallback, and footer action states (`Save Changes` / `Saving...` / `Cancel`).
 - **(2026-04-14)** Added `contractLineEdit.*` keys in `server/public/locales/en/msp/contracts.json` (title, sections, fields, timing options/descriptions, validation, actions, fallback values).
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractLineEditDialog.tsx` (pass) and `jq empty server/public/locales/en/msp/contracts.json` (pass).
+- **(2026-04-14)** `F047` completed in `ContractHeader.tsx`: wired `useTranslation('msp/contracts')`, localized stat labels, status badges, template/client-owned badges, ongoing value, and PO alert copy.
+- **(2026-04-14)** Contract-header frequency display now uses shared enum formatter `useFormatBillingFrequency()` instead of local title-casing.
+- **(2026-04-14)** Added `contractHeader.*` keys in `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractHeader.tsx` (pass) and `jq empty server/public/locales/en/msp/contracts.json` (pass).

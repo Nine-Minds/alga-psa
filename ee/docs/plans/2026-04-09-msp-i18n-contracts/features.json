@@ -232,7 +232,7 @@
   {
     "id": "F047",
     "description": "Wire useTranslation('msp/contracts') in ContractHeader.tsx -- translate stat labels (Billing Frequency, Currency, Contract Lines, Start Date, End Date, Last Updated), status badges (Active/Draft/Terminated/Expired), Template badge, Client-owned badge, 'Ongoing' label, and PO required alert text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F048",
