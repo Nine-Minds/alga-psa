@@ -217,7 +217,7 @@
   {
     "id": "F044",
     "description": "Wire useTranslation('msp/contracts') in QuickStartGuide.tsx -- translate guide title, show/minimize/dismiss buttons, step headings (Create a Contract, Configure Billing, Review & Create), step descriptions, billing model labels (Fixed Fee, Hourly, Bucket Hours, Usage-Based), required fields note, best practices list, and 'Create Your First Contract' CTA button",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F045",

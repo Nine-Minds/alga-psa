@@ -1028,7 +1028,62 @@
       "templateNameRequired": "Template name is required"
     }
   },
-  "quickStart": {},
+  "quickStart": {
+    "actions": {
+      "createFirstContract": "Create Your First Contract",
+      "dismiss": "Dismiss",
+      "minimize": "Minimize",
+      "showGuide": "Show Guide"
+    },
+    "badge": {
+      "new": "New"
+    },
+    "bestPractices": {
+      "items": {
+        "clearNames": "Use clear, descriptive contract names (e.g., \"Acme Corp - MSP Services Q4 2024\")",
+        "endDates": "Set end dates for fixed-term contracts to track renewal dates",
+        "partialPeriodAdjustment": "Use partial-period adjustment when contract dates cover only part of a service period",
+        "poNumbers": "Add PO numbers when required by client procurement policies"
+      },
+      "title": "Best Practices"
+    },
+    "billingModels": {
+      "bucketHours": {
+        "description": "Prepaid hours + overage",
+        "label": "Bucket Hours:"
+      },
+      "fixedFee": {
+        "description": "Same price every month",
+        "label": "Fixed Fee:"
+      },
+      "hourly": {
+        "description": "Bill by time tracked",
+        "label": "Hourly:"
+      },
+      "usageBased": {
+        "description": "Bill by consumption/usage",
+        "label": "Usage-Based:"
+      }
+    },
+    "steps": {
+      "configureBilling": {
+        "description": "Choose your billing model(s). You can combine multiple types:",
+        "title": "Configure Billing"
+      },
+      "createContract": {
+        "description": "Click \"New Contract\" to start the wizard. Choose a client and name your contract.",
+        "requiredFields": "Required: Client, Contract Name, Start Date",
+        "title": "Create a Contract"
+      },
+      "reviewCreate": {
+        "description": "Double-check everything before creating. You can always edit later.",
+        "tip": "Tip: At least one service line is required",
+        "title": "Review & Create"
+      }
+    },
+    "subtitle": "Learn how to create and manage contracts",
+    "title": "Quick Start Guide"
+  },
   "servicePicker": {
     "catalog": {
       "badges": {
