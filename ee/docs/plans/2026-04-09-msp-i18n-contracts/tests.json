@@ -321,7 +321,7 @@
   {
     "id": "T038",
     "description": "Unit: QuickStartGuide.i18n.test -- step headings, descriptions, billing model labels, best practices render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
