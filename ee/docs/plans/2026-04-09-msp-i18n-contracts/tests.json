@@ -337,7 +337,7 @@
   {
     "id": "T040",
     "description": "Unit: BucketOverlayFields.i18n.test -- included units label, overage rate label, rollover checkbox label render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
