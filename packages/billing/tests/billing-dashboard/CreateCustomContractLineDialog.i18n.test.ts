@@ -64,4 +64,39 @@ describe('CreateCustomContractLineDialog i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T018: bucket/proration labels and validation errors use translated keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keyChecks = [
+      'createCustomLine.adjustForPartialPeriods',
+      'createCustomLine.adjustForPartialPeriodsHelp',
+      'createCustomLine.minimumBillableTimeLabel',
+      'createCustomLine.roundUpToNearestLabel',
+      'createCustomLine.addBucketOfHours',
+      'createCustomLine.addBucketOfConsumption',
+      'createCustomLine.validation.contractLineNameRequired',
+      'createCustomLine.validation.billingFrequencyRequired',
+      'createCustomLine.validation.contractLineTypeRequired',
+      'createCustomLine.validation.fixedServiceRequired',
+      'createCustomLine.validation.fixedServiceSelectRequired',
+      'createCustomLine.validation.hourlyServiceRequired',
+      'createCustomLine.validation.hourlyServiceSelectRequired',
+      'createCustomLine.validation.hourlyRateRequired',
+      'createCustomLine.validation.usageServiceRequired',
+      'createCustomLine.validation.usageServiceSelectRequired',
+      'createCustomLine.validation.unitRateRequired',
+      'createCustomLine.validation.unitOfMeasureRequired',
+      'createCustomLine.validation.failedToCreate',
+      'common.errors.validationPrefix',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });

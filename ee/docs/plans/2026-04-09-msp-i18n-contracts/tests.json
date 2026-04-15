@@ -154,7 +154,7 @@
   {
     "id": "T018",
     "description": "Unit: CreateCustomContractLineDialog.i18n.test -- bucket overlay, proration, and validation messages render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
