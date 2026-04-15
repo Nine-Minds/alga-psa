@@ -1858,6 +1858,72 @@
       "addService": "Add Service"
     }
   },
-  "templateReview": {},
+  "templateReview": {
+    "heading": "Review Template",
+    "description": "Confirm the template contents. Rates are determined by each service's pricing in the client's currency when a contract is created from this template.",
+    "sections": {
+      "basics": "Template Basics",
+      "fixedFeeServices": "Fixed Fee Services",
+      "products": "Products",
+      "hourlyServices": "Hourly Services",
+      "usageBasedServices": "Usage-Based Services"
+    },
+    "fields": {
+      "templateName": "Template Name",
+      "billingFrequency": "Billing Frequency",
+      "internalNotes": "Internal Notes"
+    },
+    "fallback": {
+      "none": "—",
+      "noNotes": "No notes added.",
+      "unnamedService": "Unnamed Service",
+      "unnamedProduct": "Unnamed Product"
+    },
+    "empty": {
+      "fixed": "No fixed fee services selected.",
+      "products": "No products selected.",
+      "hourly": "No hourly services selected.",
+      "usage": "No usage-based services selected."
+    },
+    "common": {
+      "quantity": "Quantity:",
+      "bucket": "Bucket:",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "fixed": {
+      "cadenceOwnerLabel": "Cadence owner:",
+      "cadenceOwner": {
+        "contract": "Contract anniversary",
+        "client": "Client billing schedule"
+      },
+      "billingTimingLabel": "Billing timing:",
+      "billingTiming": {
+        "advance": "Advance",
+        "arrears": "Arrears"
+      },
+      "partialPeriodLabel": "Partial-period adjustment:",
+      "serviceLabel": "Service:",
+      "invoiceWindowLabel": "Invoice window:"
+    },
+    "hourly": {
+      "minimumBillableTimeLabel": "Minimum billable time:",
+      "roundUpLabel": "Round up:",
+      "minutes": "{{count}} minutes"
+    },
+    "usage": {
+      "unitLabel": "Unit:"
+    },
+    "bucket": {
+      "hoursIncluded": "{{value}} hours included",
+      "unitsIncluded": "{{value}} {{unit}} included",
+      "unitsFallback": "units",
+      "overage": "Overage ${{amount}}/{{unit}}",
+      "hourSingular": "hour",
+      "unitSingular": "unit",
+      "rolloverEnabled": "Rollover enabled",
+      "period": "Period: {{period}}"
+    }
+  },
   "templatePreview": {}
 }

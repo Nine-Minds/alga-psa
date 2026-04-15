@@ -327,7 +327,7 @@
   {
     "id": "F066",
     "description": "Wire useTranslation('msp/contracts') in TemplateReviewContractStep.tsx -- translate review heading, description, Template Basics section labels, service sections (Fixed Fee/Products/Hourly/Usage), including column headers, quantity, bucket summary, and empty section indicators",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F067",
