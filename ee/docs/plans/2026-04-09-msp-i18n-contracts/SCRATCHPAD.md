@@ -335,3 +335,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/Contracts.i18n.test.ts` (pass; 1 file, 2 tests).
 - **(2026-04-15)** `T027` completed: extended `Contracts.i18n.test.ts` with all active table-column header key checks across template, client, and draft views, plus related per-subtab empty/loading labels.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/Contracts.i18n.test.ts` (pass; 1 file, 3 tests).
+- **(2026-04-15)** `T028` completed: added pseudo-locale coverage in `Contracts.i18n.test.ts` by extracting all `t('...')` keys from `Contracts.tsx` and asserting they resolve to `xx` pseudo values (`11111`).
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/Contracts.i18n.test.ts` (pass; 1 file, 4 tests).

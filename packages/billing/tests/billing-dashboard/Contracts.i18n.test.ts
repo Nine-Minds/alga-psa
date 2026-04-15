@@ -125,4 +125,23 @@ describe('Contracts list i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T028: Contracts translation keys resolve to pseudo-locale values in xx', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/Contracts.tsx');
+    const xx = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/xx/msp/contracts.json'
+    );
+
+    const keys = Array.from(
+      new Set(Array.from(source.matchAll(/(?:^|[^\w])t\('([^']+)'/g), (match) => match[1]))
+    );
+
+    expect(keys.length).toBeGreaterThan(60);
+
+    for (const key of keys) {
+      const value = getLeaf(xx, key);
+      expect(typeof value).toBe('string');
+      expect(value).toContain('11111');
+    }
+  });
 });
