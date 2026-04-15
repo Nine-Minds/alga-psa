@@ -59,4 +59,61 @@ describe('Contracts integration i18n coverage', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T064: /msp/billing contracts view resolves de locale sub-tab labels, column headers, and action-menu keys', () => {
+    const contractsSource = read('../../src/components/billing-dashboard/contracts/Contracts.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+    const de = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/de/msp/contracts.json'
+    );
+
+    const localeKeys = [
+      'common.tabs.templates',
+      'common.tabs.clientContracts',
+      'common.tabs.drafts',
+      'contractsList.columns.contractName',
+      'contractsList.columns.client',
+      'contractsList.columns.status',
+      'contractsList.columns.startDate',
+      'contractsList.columns.endDate',
+      'contractsList.actions.openMenu',
+      'contractsList.actions.resume',
+      'contractsList.actions.terminate',
+      'contractsList.actions.restore',
+      'contractsList.actions.createContract',
+      'contractsList.actions.createTemplate',
+    ];
+
+    for (const key of localeKeys) {
+      expect(getLeaf(en, key)).toBeDefined();
+      expect(getLeaf(de, key)).toBeDefined();
+    }
+
+    expect(getLeaf(de, 'common.tabs.templates')).not.toBe(getLeaf(en, 'common.tabs.templates'));
+    expect(getLeaf(de, 'common.tabs.clientContracts')).not.toBe(
+      getLeaf(en, 'common.tabs.clientContracts')
+    );
+    expect(getLeaf(de, 'common.tabs.drafts')).not.toBe(getLeaf(en, 'common.tabs.drafts'));
+
+    const requiredSourceKeys = [
+      'common.tabs.templates',
+      'common.tabs.clientContracts',
+      'common.tabs.drafts',
+      'contractsList.columns.contractName',
+      'contractsList.columns.client',
+      'contractsList.columns.status',
+      'contractsList.columns.startDate',
+      'contractsList.columns.endDate',
+      'contractsList.actions.openMenu',
+      'contractsList.actions.resume',
+      'contractsList.actions.terminate',
+      'contractsList.actions.restore',
+    ];
+
+    for (const key of requiredSourceKeys) {
+      expect(contractsSource).toContain(`t('${key}'`);
+    }
+  });
 });

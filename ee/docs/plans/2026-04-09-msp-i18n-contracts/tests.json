@@ -534,7 +534,7 @@
   {
     "id": "T064",
     "description": "Integration: /msp/billing?tab=contracts loads in de with translated sub-tab labels, column headers, and action menus",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F031",
