@@ -1446,7 +1446,51 @@
       "productMissingPrice": "This product has no default price and no override. It cannot be billed until you enter a unit price."
     }
   },
-  "wizardHourly": {},
+  "wizardHourly": {
+    "actions": {
+      "addHourlyService": "Add Hourly Service"
+    },
+    "alternateFrequencyLabel": "Alternate Billing Frequency (Optional)",
+    "description": "Configure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.",
+    "emptyState": "No hourly services added yet. Click “Add Hourly Service” above or “Skip” if you don’t need time & materials billing.",
+    "explainer": {
+      "description": "These services are billed based on actual time tracked. Each time entry will be multiplied by the hourly rate to calculate the invoice amount.",
+      "title": "What are Hourly Services?"
+    },
+    "heading": "Hourly Services",
+    "labels": {
+      "enterHourlyRate": "Enter the hourly rate",
+      "hourlyRate": "Hourly Rate",
+      "hourlyRatePerHour": "{{rate}}/hour",
+      "hourlyRatePlaceholder": "0.00",
+      "hourlyServices": "Hourly Services",
+      "selectServicePlaceholder": "Select a service",
+      "serviceItem": "Service {{index}}",
+      "setBucketOfHours": "Set bucket of hours"
+    },
+    "minimumBillableTime": {
+      "hint": "e.g., 15 minutes - any time entry less than this will be rounded up",
+      "label": "Minimum Billable Time (minutes)",
+      "placeholder": "15"
+    },
+    "roundUpToNearest": {
+      "hint": "e.g., 15 minutes - time entries will be rounded up to the nearest interval",
+      "label": "Round Up To Nearest (minutes)",
+      "placeholder": "15"
+    },
+    "summary": {
+      "labels": {
+        "minimumTime": "Minimum Time:",
+        "roundUp": "Round Up:",
+        "services": "Services:"
+      },
+      "title": "Hourly Services Summary",
+      "values": {
+        "everyMinutes": "Every {{count}} minutes",
+        "minutes": "{{count}} minutes"
+      }
+    }
+  },
   "wizardUsage": {},
   "wizardReview": {},
   "templateWizard": {},

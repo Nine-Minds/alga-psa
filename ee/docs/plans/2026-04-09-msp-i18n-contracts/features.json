@@ -277,7 +277,7 @@
   {
     "id": "F056",
     "description": "Wire useTranslation('msp/contracts') in HourlyServicesStep.tsx -- translate step heading, description, service picker, hourly rate field, minimum billable time, round up to nearest, bucket overlay fields, and empty state",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F057",
