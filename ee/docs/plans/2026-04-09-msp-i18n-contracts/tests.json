@@ -369,7 +369,7 @@
   {
     "id": "T044",
     "description": "Unit: ContractLineRateDialog.i18n.test -- dialog title with interpolation, rate label, validation error, buttons render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]

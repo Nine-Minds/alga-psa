@@ -369,3 +369,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractHeader.i18n.test.ts` (pass; 1 file, 1 test).
 - **(2026-04-15)** `T043` completed: added `packages/billing/tests/billing-dashboard/ContractDetailSwitcher.i18n.test.ts` to assert `ContractDetailSwitcher.tsx` wires all loading/error states through `t('detailSwitcher.*')` in `msp/contracts` and that matching English locale keys exist.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractDetailSwitcher.i18n.test.ts` (pass; 1 file, 1 test).
+- **(2026-04-15)** `T044` completed: added `packages/billing/tests/billing-dashboard/ContractLineRateDialog.i18n.test.ts` with assertions that both `ContractLineRateDialog.tsx` and `ContractPlanRateDialog.tsx` use `contractLineRate.*` translation keys for title interpolation, rate field label, validation copy, and action labels.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractLineRateDialog.i18n.test.ts` (pass; 1 file, 1 test).
