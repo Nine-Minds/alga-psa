@@ -1801,7 +1801,36 @@
       "unknownProduct": "Unknown Product"
     }
   },
-  "templateHourly": {},
+  "templateHourly": {
+    "heading": "Hourly Services",
+    "description": "Select services that are billed based on time tracked. Rates will be determined by the service's pricing in the client's currency when the contract is created.",
+    "info": {
+      "title": "What are Hourly Services?",
+      "description": "These services are billed based on actual time tracked. Each time entry is multiplied by the service's hourly rate to calculate the invoice amount."
+    },
+    "rounding": {
+      "heading": "Time Rounding Settings",
+      "minimumBillableTime": "Minimum Billable Time (minutes)",
+      "minimumBillableTimeHelp": "Example: 15 minutes. Any time entry below this threshold is rounded up.",
+      "roundUpToNearest": "Round Up To Nearest (minutes)",
+      "roundUpToNearestHelp": "Example: 15 minutes. Time entries are rounded up to the nearest interval.",
+      "defaultIntervalPlaceholder": "15"
+    },
+    "fields": {
+      "services": "Services",
+      "serviceNumber": "Service {{index}}",
+      "setBucketOfHours": "Set bucket of hours"
+    },
+    "placeholders": {
+      "selectService": "Select a service"
+    },
+    "preview": {
+      "unknownService": "Unknown Service"
+    },
+    "actions": {
+      "addService": "Add Service"
+    }
+  },
   "templateUsage": {},
   "templateReview": {},
   "templatePreview": {}
