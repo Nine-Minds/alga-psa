@@ -11,6 +11,7 @@ import { BarChart3, Plus, X } from 'lucide-react';
 import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from '../../BucketOverlayFields';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TemplateUsageBasedServicesStepProps {
   data: TemplateWizardData;
@@ -21,6 +22,8 @@ export function TemplateUsageBasedServicesStep({
   data,
   updateData,
 }: TemplateUsageBasedServicesStepProps) {
+  const { t } = useTranslation('msp/contracts');
+
   const handleAddService = () => {
     updateData({
       usage_services: [
@@ -98,14 +101,16 @@ export function TemplateUsageBasedServicesStep({
       if (service.service_id) {
         items.push({
           id: `service-${service.service_id}`,
-          name: service.service_name || 'Unknown Service',
+          name:
+            service.service_name ||
+            t('templateUsage.preview.unknownService', { defaultValue: 'Unknown Service' }),
           serviceId: service.service_id,
         });
       }
     }
 
     return items;
-  }, [data.usage_services]);
+  }, [data.usage_services, t]);
 
   const handlePreviewRemoveService = (itemId: string) => {
     if (itemId.startsWith('service-')) {
@@ -122,15 +127,26 @@ export function TemplateUsageBasedServicesStep({
     <ReflectionContainer id="template-usage-services-step">
       <div className="space-y-6">
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">Usage-Based Services</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            {t('templateUsage.heading', { defaultValue: 'Usage-Based Services' })}
+          </h3>
           <p className="text-sm text-[rgb(var(--color-text-500))]">
-            Select services that are billed based on usage or consumption. Rates will be determined by the service's pricing in the client's currency when the contract is created.
+            {t('templateUsage.description', {
+              defaultValue:
+                "Select services that are billed based on usage or consumption. Rates will be determined by the service's pricing in the client's currency when the contract is created.",
+            })}
           </p>
         </div>
 
         <div className="p-4 bg-accent-50 border border-accent-200 rounded-md mb-6">
           <p className="text-sm text-accent-900">
-            <strong>What are Usage-Based Services?</strong> These services are billed based on actual consumption or usage metrics. Each unit consumed will be multiplied by the service's unit rate to calculate the invoice amount.
+            <strong>
+              {t('templateUsage.info.title', { defaultValue: 'What are Usage-Based Services?' })}
+            </strong>{' '}
+            {t('templateUsage.info.description', {
+              defaultValue:
+                "These services are billed based on actual consumption or usage metrics. Each unit consumed is multiplied by the service's unit rate to calculate the invoice amount.",
+            })}
           </p>
         </div>
 
@@ -143,7 +159,7 @@ export function TemplateUsageBasedServicesStep({
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
-            Services
+            {t('templateUsage.fields.services', { defaultValue: 'Services' })}
           </Label>
 
           {(data.usage_services ?? []).map((service, index) => (
@@ -154,7 +170,10 @@ export function TemplateUsageBasedServicesStep({
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`template-usage-service-${index}`} className="text-sm">
-                    Service {index + 1}
+                    {t('templateUsage.fields.serviceNumber', {
+                      index: index + 1,
+                      defaultValue: 'Service {{index}}',
+                    })}
                   </Label>
                   <ServiceCatalogPicker
                     id={`template-usage-service-${index}`}
@@ -162,27 +181,39 @@ export function TemplateUsageBasedServicesStep({
                     selectedLabel={service.service_name}
                     onSelect={(item) => handleServiceChange(index, item)}
                     itemKinds={['service']}
-                    placeholder="Select a service"
+                    placeholder={t('templateUsage.placeholders.selectService', {
+                      defaultValue: 'Select a service',
+                    })}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor={`template-unit-${index}`} className="text-sm">
-                    Unit of Measure (Optional)
+                    {t('templateUsage.fields.unitOfMeasureOptional', {
+                      defaultValue: 'Unit of Measure (Optional)',
+                    })}
                   </Label>
                   <Input
                     id={`template-unit-${index}`}
                     type="text"
                     value={service.unit_of_measure ?? ''}
                     onChange={(event) => handleUnitChange(index, event.target.value)}
-                    placeholder="e.g., GB, API call, user"
+                    placeholder={t('templateUsage.placeholders.unitOfMeasure', {
+                      defaultValue: 'e.g., GB, API call, user',
+                    })}
                   />
-                  <p className="text-xs text-[rgb(var(--color-text-400))]">Override the default unit of measure for this service.</p>
+                  <p className="text-xs text-[rgb(var(--color-text-400))]">
+                    {t('templateUsage.help.unitOfMeasure', {
+                      defaultValue: 'Override the default unit of measure for this service.',
+                    })}
+                  </p>
                 </div>
 
                 <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
                   <SwitchWithLabel
-                    label="Set bucket allocation"
+                    label={t('templateUsage.fields.setBucketAllocation', {
+                      defaultValue: 'Set bucket allocation',
+                    })}
                     checked={Boolean(service.bucket_overlay)}
                     onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
                   />
@@ -220,7 +251,7 @@ export function TemplateUsageBasedServicesStep({
             className="inline-flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Add Service
+            {t('templateUsage.actions.addService', { defaultValue: 'Add Service' })}
           </Button>
         </div>
       </div>

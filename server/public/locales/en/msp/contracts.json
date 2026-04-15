@@ -1831,7 +1831,33 @@
       "addService": "Add Service"
     }
   },
-  "templateUsage": {},
+  "templateUsage": {
+    "heading": "Usage-Based Services",
+    "description": "Select services that are billed based on usage or consumption. Rates will be determined by the service's pricing in the client's currency when the contract is created.",
+    "info": {
+      "title": "What are Usage-Based Services?",
+      "description": "These services are billed based on actual consumption or usage metrics. Each unit consumed is multiplied by the service's unit rate to calculate the invoice amount."
+    },
+    "fields": {
+      "services": "Services",
+      "serviceNumber": "Service {{index}}",
+      "unitOfMeasureOptional": "Unit of Measure (Optional)",
+      "setBucketAllocation": "Set bucket allocation"
+    },
+    "placeholders": {
+      "selectService": "Select a service",
+      "unitOfMeasure": "e.g., GB, API call, user"
+    },
+    "help": {
+      "unitOfMeasure": "Override the default unit of measure for this service."
+    },
+    "preview": {
+      "unknownService": "Unknown Service"
+    },
+    "actions": {
+      "addService": "Add Service"
+    }
+  },
   "templateReview": {},
   "templatePreview": {}
 }
