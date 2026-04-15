@@ -122,4 +122,39 @@ describe('Contracts i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T006: ContractDetail ownership and assignment cards use translated labels, PO fields, and empty-state copy', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/ContractDetail.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keyChecks = [
+      'contractDetail.clientOwnership.title',
+      'contractDetail.clientOwnership.systemManaged',
+      'contractDetail.clientOwnership.ownerClient',
+      'contractDetail.clientOwnership.clientName',
+      'contractDetail.clientOwnership.assignmentStatus',
+      'contractDetail.clientOwnership.startDate',
+      'contractDetail.clientOwnership.endDate',
+      'contractDetail.labels.noClientAssigned',
+      'contractDetail.clientAssignment.title',
+      'contractDetail.clientAssignment.empty',
+      'contractDetail.clientAssignment.startDate',
+      'contractDetail.clientAssignment.endDate',
+      'contractDetail.clientAssignment.required',
+      'contractDetail.clientAssignment.notRequired',
+      'po.labels.required',
+      'po.labels.number',
+      'po.labels.amount',
+      'common.labels.yes',
+      'common.labels.no',
+      'common.empty.ongoing',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });

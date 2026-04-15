@@ -50,7 +50,7 @@
   {
     "id": "T006",
     "description": "Unit: ContractDetail.i18n.test -- Client Ownership and Assignment cards render translated labels, PO fields, empty state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
