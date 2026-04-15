@@ -395,3 +395,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/TemplateWizard.i18n.test.ts` (pass; 1 file, 1 test).
 - **(2026-04-15)** `T056` completed: added `packages/billing/tests/billing-dashboard/TemplateContractBasicsStep.i18n.test.ts` with key assertions for step heading/description plus template-name, internal-notes, and recommended-billing-frequency labels/placeholders/help text.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/TemplateContractBasicsStep.i18n.test.ts` (pass; 1 file, 1 test).
+- **(2026-04-15)** `T057` completed: added `packages/billing/tests/billing-dashboard/TemplateFixedFeeServicesStep.i18n.test.ts` verifying translated step/explainer/cadence-owner/billing-timing labels, service picker fields, add action, and preview copy.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/TemplateFixedFeeServicesStep.i18n.test.ts` (pass; 1 file, 1 test).
