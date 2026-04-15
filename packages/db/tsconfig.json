@@ -9,6 +9,13 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
+      "@alga-psa/core": [
+        "../core/src"
+      ],
+      "@alga-psa/core/*": [
+        "../core/src/*",
+        "../core/src/lib/*"
+      ],
       "@alga-psa/db/*": [
         "./src/*"
       ]

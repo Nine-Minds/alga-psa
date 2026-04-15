@@ -1,0 +1,803 @@
+{
+  "common": {
+    "actions": {
+      "add": "Agregar",
+      "cancel": "Cancelar",
+      "configure": "Configurar",
+      "delete": "Borrar",
+      "edit": "Editar",
+      "openMenu": "abrir menú",
+      "remove": "Eliminar",
+      "reset": "Reiniciar",
+      "save": "Ahorrar",
+      "saveChanges": "Guardar cambios",
+      "saveChangesDirty": "Guardar cambios *",
+      "saving": "Ahorro..."
+    },
+    "errors": {
+      "errorWithMessage": "Error: {{message}}"
+    },
+    "labels": {
+      "no": "No",
+      "yes": "Sí"
+    },
+    "moneyPlaceholder": "0.00",
+    "notAvailable": "N / A",
+    "tryAgain": "Por favor inténtalo de nuevo.",
+    "validation": {
+      "prefix": "Por favor corrija lo siguiente:"
+    }
+  },
+  "configuration": {
+    "fixed": {
+      "basics": {
+        "billingFrequencyLabel": "Frecuencia de facturación *",
+        "billingFrequencyPlaceholder": "Selecciona la frecuencia de facturación",
+        "billingTiming": {
+          "options": {
+            "advance": "Anticipo - factura al inicio del periodo",
+            "arrears": "Atrasos - factura después del cierre del período"
+          }
+        },
+        "billingTimingHelp": "La facturación anticipada factura el próximo período al inicio de cada ciclo.",
+        "billingTimingLabel": "Momento de facturación *",
+        "billingTimingPlaceholder": "Seleccione el momento de facturación",
+        "cadenceOwner": {
+          "description": "Elija qué horario define los períodos de servicio de esta línea recurrente.",
+          "label": "Propietario de cadencia",
+          "options": {
+            "client": {
+              "description": "Utilice el calendario de facturación del cliente para que esta línea recurrente permanezca alineada con la cadencia de facturación normal del cliente.",
+              "label": "Facturar según el cronograma de facturación del cliente"
+            },
+            "contract": {
+              "description": "Utilice las fechas de aniversario propias de esta línea de contrato. Actualmente, la cadencia de contrato admite facturación recurrente mensual, trimestral, semestral y anual.",
+              "label": "Factura en aniversario de contrato."
+            }
+          }
+        },
+        "description": "Asigne un nombre a la línea del contrato y elija cómo se debe facturar de forma predeterminada.",
+        "heading": "Conceptos básicos de la línea de contrato",
+        "nameLabel": "Nombre de la línea de contrato *",
+        "namePlaceholder": "p.ej. Soporte gestionado - Oro"
+      },
+      "cardTitle": "Editar línea de contrato: {{name}} (fijo)",
+      "errors": {
+        "contractLineNotFoundOrInvalidType": "Línea de contrato no encontrada o tipo no válido.",
+        "failedToLoadContractLineConfiguration": "No se pudo cargar la configuración de la línea de contrato. Por favor inténtalo de nuevo.",
+        "failedToSaveContractLine": "No se pudo guardar la línea del contrato",
+        "invalidContractLineTypeOrNotFound": "Tipo de línea de contrato no válido o línea de contrato no encontrada."
+      },
+      "services": {
+        "associatedCardTitle": "Servicios asociados"
+      },
+      "settings": {
+        "adjustForPartialPeriodsHelp": "Habilite esto cuando la tarifa recurrente deba escalar a la parte cubierta de un período de servicio si el contrato comienza o finaliza dentro de ese período.",
+        "adjustForPartialPeriodsLabel": "Ajuste por períodos parciales",
+        "baseRateHelp": "La tarifa recurrente total para todos los servicios fijos combinados",
+        "baseRateLabel": "Tarifa base recurrente *",
+        "billingCycleAlignment": {
+          "options": {
+            "end": "Fin del ciclo de facturación",
+            "prorated": "Cobertura proporcional",
+            "start": "Inicio del ciclo de facturación"
+          }
+        },
+        "billingCycleAlignmentLabel": "Alineación del ciclo de facturación",
+        "billingCycleAlignmentPlaceholder": "Seleccionar alineación",
+        "description": "Defina la tarifa base recurrente y si la cobertura de período parcial debe ajustar el cargo. Las asignaciones de servicios se pueden ajustar una vez que la línea esté activa.",
+        "heading": "Configuración de tarifa fija"
+      },
+      "validation": {
+        "baseRateRequiredForFixedLines": "Se requiere tarifa base para líneas fijas",
+        "billingFrequency": "Frecuencia de facturación",
+        "contractLineName": "Nombre de la línea de contrato",
+        "contractLineType": "Tipo de línea de contrato"
+      }
+    },
+    "hourly": {
+      "actions": {
+        "saveConfiguration": "Guardar configuración"
+      },
+      "basics": {
+        "billingFrequencyLabel": "Frecuencia de facturación *",
+        "billingFrequencyPlaceholder": "Selecciona la frecuencia de facturación",
+        "cardTitle": "Editar línea de contrato: {{name}} (por hora)",
+        "description": "Asigne un nombre a la línea del contrato y elija cómo se debe facturar de forma predeterminada.",
+        "heading": "Conceptos básicos de la línea de contrato",
+        "nameLabel": "Nombre de la línea de contrato *",
+        "namePlaceholder": "p.ej. Soporte de tiempo y materiales",
+        "validation": {
+          "billingFrequency": "Frecuencia de facturación",
+          "contractLineName": "Nombre de la línea de contrato"
+        }
+      },
+      "errors": {
+        "cannotSaveValidationErrors": "No se puede guardar, existen errores de validación en toda la línea del contrato.",
+        "contractLineNotFoundOrInvalidType": "Línea de contrato no encontrada o tipo no válido.",
+        "failedToLoadPlanConfiguration": "No se pudo cargar la configuración del plan. Por favor inténtalo de nuevo.",
+        "failedToSaveContractLine": "No se pudo guardar la línea del contrato",
+        "failedToSavePlanWideConfiguration": "No se pudo guardar la configuración de todo el plan: {{message}}",
+        "failedToSaveServiceConfiguration": "No se pudo guardar la configuración del servicio: {{message}}",
+        "invalidPlanTypeOrNotFound": "Tipo de plan no válido o plan no encontrado."
+      },
+      "planWideSettings": {
+        "afterHours": {
+          "enableLabel": "Habilitar multiplicador de tarifas fuera de horario",
+          "multiplierHelp": "Multiplicador para horarios no comerciales (por ejemplo, 1,5x).",
+          "multiplierLabel": "Multiplicador fuera de horario",
+          "multiplierPlaceholder": "1.5",
+          "tooltip": "Aplique un multiplicador a la tarifa por hora estándar para el trabajo realizado fuera del horario comercial definido (requiere configuración de Horario comercial)."
+        },
+        "overtime": {
+          "enableLabel": "Habilitar tarifas de horas extras",
+          "rateHelp": "Tarifa aplicada después del umbral.",
+          "rateLabel": "Tarifa de horas extras ($/hora)",
+          "thresholdHelp": "Horas antes de que aplique OT.",
+          "thresholdLabel": "Umbral de horas extras (horas/período)",
+          "thresholdPlaceholder": "40",
+          "tooltip": "Aplique una tarifa diferente cuando el total de horas trabajadas dentro del período de facturación de la línea de contrato exceda un umbral específico."
+        },
+        "trigger": "Configuración horaria de línea de contrato (horas extras, fuera de horario)"
+      },
+      "services": {
+        "cardTitle": "Tarifas y configuraciones de servicio",
+        "emptyState": "Actualmente no hay servicios asociados con esta línea de contrato.",
+        "fallbackServiceName": "ID de servicio: {{id}}",
+        "manageCardTitle": "Administrar servicios de línea de contrato",
+        "nonHourlyServiceMessage": "Este servicio (Método de facturación: {{method}}) no se puede configurar con tarifas por hora específicas en este plan."
+      },
+      "validation": {
+        "afterHoursMultiplierMinOne": "El multiplicador fuera de horario debe ser al menos 1",
+        "overtimeRateNonNegative": "La tasa de horas extras no puede ser negativa.",
+        "overtimeThresholdNonNegative": "El umbral de horas extras no puede ser negativo"
+      }
+    },
+    "usage": {
+      "actions": {
+        "saveAllConfigurations": "Guardar todas las configuraciones"
+      },
+      "basics": {
+        "billingFrequencyLabel": "Frecuencia de facturación *",
+        "billingFrequencyPlaceholder": "Selecciona la frecuencia de facturación",
+        "cardTitle": "Editar línea de contrato: {{name}} (Uso)",
+        "description": "Asigne un nombre a la línea del contrato y elija cómo se debe facturar de forma predeterminada.",
+        "heading": "Conceptos básicos de la línea de contrato",
+        "nameLabel": "Nombre de la línea de contrato *",
+        "namePlaceholder": "p.ej. Servicios basados ​​en el uso",
+        "validation": {
+          "billingFrequency": "Frecuencia de facturación",
+          "contractLineName": "Nombre de la línea de contrato"
+        }
+      },
+      "errors": {
+        "failedToLoadPlanServicesOrConfigurations": "No se pudieron cargar los servicios o configuraciones del plan. Por favor inténtalo de nuevo.",
+        "failedToSaveContractLine": "No se pudo guardar la línea del contrato",
+        "failedToSaveOneOrMoreServiceConfigurations": "No se pudieron guardar una o más configuraciones de servicio. Por favor verifique los detalles e inténtelo nuevamente.",
+        "invalidPlanTypeOrNotFound": "Tipo de plan no válido o plan no encontrado.",
+        "noChangesDetected": "No se detectaron cambios para guardar.",
+        "validationErrorDetails": "Error de validación: {{details}}",
+        "validationErrorsInModifiedServices": "No se puede guardar, existen errores de validación en los servicios modificados."
+      },
+      "services": {
+        "emptyStateWithHelper": "Actualmente no hay servicios asociados con esta línea de contrato. Agregue los servicios a continuación para configurar sus precios.",
+        "fallbackServiceName": "ID de servicio: {{id}}",
+        "loadingConfiguration": "Cargando configuración...",
+        "manageCardTitle": "Administrar servicios de línea de contrato",
+        "pricingCardTitle": "Precio del servicio",
+        "summary": {
+          "defaultUnit": "Unidad",
+          "loading": "Cargando...",
+          "notSet": "No establecido",
+          "ratePerUnit": "{{rate}} / {{unit}}",
+          "tieredPricing": "Precios escalonados (niveles {{count}})"
+        }
+      },
+      "validation": {
+        "baseRateNonNegative": "La tasa base no puede ser negativa.",
+        "baseRateRequiredWhenTieredOff": "Se requiere una tarifa base cuando el precio escalonado está desactivado.",
+        "firstTierStartsAtZero": "El primer nivel debe comenzar desde 0.",
+        "minimumUsageNonNegative": "El uso mínimo no puede ser negativo.",
+        "onlyLastTierUnlimited": "Sólo el último nivel puede tener un límite superior ilimitado.",
+        "tierGap": "Se detectó una brecha entre el nivel {{tier1}} y el nivel {{tier2}}.",
+        "tierOverlap": "El nivel {{tier1}} se superpone con el nivel {{tier2}}.",
+        "tierRatesNonNegative": "Las tasas de nivel no pueden ser negativas.",
+        "tiersRequiredWhenTieredOn": "Se requiere al menos un nivel cuando el precio por niveles está habilitado.",
+        "tierUpperBound": "Nivel {{tier}}: el límite superior debe ser >= límite inferior.",
+        "unitOfMeasureRequired": "Se requiere unidad de medida."
+      }
+    }
+  },
+  "dialog": {
+    "actions": {
+      "cancel": "Cancelar",
+      "createPreset": "Crear línea de contrato preestablecida",
+      "saving": "Ahorro...",
+      "updatePreset": "Actualizar valor preestablecido de línea de contrato"
+    },
+    "basics": {
+      "billingFrequencyLabel": "Frecuencia de facturación *",
+      "billingFrequencyPlaceholder": "Selecciona la frecuencia de facturación",
+      "billingTiming": {
+        "options": {
+          "advance": "Anticipo - factura al inicio del periodo",
+          "arrears": "Atrasos - factura después del cierre del período"
+        }
+      },
+      "billingTimingLabel": "Momento de facturación *",
+      "billingTimingPlaceholder": "Seleccione el momento de facturación",
+      "description": "Cree una plantilla reutilizable que se pueda agregar rápidamente a contratos o plantillas de contrato. Defina el modelo de facturación, los servicios y las tarifas predeterminadas que se copiarán cuando se utilice este ajuste preestablecido.",
+      "heading": "Conceptos básicos de la línea de contrato preestablecida",
+      "nameLabel": "Nombre preestablecido de línea de contrato *",
+      "namePlaceholder": "p.ej. Soporte gestionado - Oro"
+    },
+    "billingModel": {
+      "cards": {
+        "fixed": {
+          "description": "Cobra una cantidad fija en cada período de facturación.",
+          "title": "Tarifa fija"
+        },
+        "hourly": {
+          "description": "Facture según las entradas de tiempo aprobadas y las superposiciones horarias.",
+          "title": "Cada hora"
+        },
+        "usage": {
+          "description": "Factura por unidades consumidas como dispositivos o licencias.",
+          "title": "Basado en el uso"
+        }
+      },
+      "description": "Seleccione el comportamiento de facturación que se ajuste a esta oferta. Los servicios y superposiciones se pueden adjuntar una vez que existe la línea.",
+      "heading": "Elija un modelo de facturación *",
+      "timingHelp": {
+        "fixed": "La facturación anticipada factura el próximo período al inicio del ciclo.",
+        "nonFixed": "Las líneas por horas y basadas en el uso siempre facturan a plazos vencidos."
+      }
+    },
+    "common": {
+      "moneyPlaceholder": "0.00",
+      "quantity": "Cantidad"
+    },
+    "errors": {
+      "saveFailed": "No se pudo guardar la línea de contrato preestablecida"
+    },
+    "fixed": {
+      "addItem": "Agregar artículo",
+      "adjustForPartialPeriodsHelp": "Cuando está habilitada, la tarifa recurrente aumenta a la parte cubierta de un período de servicio cuando el contrato comienza o finaliza dentro de ese período.",
+      "adjustForPartialPeriodsLabel": "Ajuste por períodos parciales",
+      "alertBody": "La tarifa base de la línea de contrato es el monto facturado. También puedes adjuntar productos aquí; las cantidades de productos se facturan como unidades, mientras que las cantidades de servicios con tarifa fija se utilizan únicamente para la asignación de impuestos.",
+      "alertTitle": "Servicios de tarifa fija:",
+      "baseRateHelp": "Tarifa recurrente sugerida para todos los servicios fijos. Se puede anular al agregar este ajuste preestablecido a un contrato.",
+      "baseRateLabel": "Tarifa base recurrente (opcional)",
+      "description": "Configure servicios que se facturen a una tarifa fija recurrente, independientemente del uso.",
+      "emptyState": "Aún no se han agregado elementos de tarifa fija. Haga clic en \"Agregar elemento\" arriba para comenzar.",
+      "heading": "Servicios de tarifa fija",
+      "itemLabel": "Artículo {{index}}",
+      "selectItemPlaceholder": "Seleccione un artículo",
+      "servicesAndProducts": "Servicios y productos"
+    },
+    "hourly": {
+      "addHourlyService": "Agregar servicio por horas",
+      "alertBody": "Estos servicios se facturan en función del tiempo real registrado. Cada entrada de tiempo se multiplicará por la tarifa por hora para calcular el monto de la factura.",
+      "alertTitle": "¿Qué son los servicios por horas?",
+      "description": "Configure los servicios que se facturan según el tiempo registrado. Perfecto para trabajos T&M (Tiempo y Materiales).",
+      "emptyState": "Aún no se han agregado servicios por horas. Haga clic en \"Agregar servicio por horas\" arriba para comenzar.",
+      "enterHourlyRate": "Introduzca la tarifa por hora",
+      "heading": "Servicios por horas",
+      "hourlyRateLabel": "Tarifa por hora",
+      "hourlyRateSummary": "{{rate}}/hora",
+      "minimumBillableTimeHelp": "por ejemplo, 15 minutos: cualquier entrada de tiempo inferior a este se redondeará hacia arriba.",
+      "minimumBillableTimeLabel": "Tiempo mínimo facturable (minutos)",
+      "minutesPlaceholder": "15",
+      "recommendBucketLabel": "Recomendar cubo de horas",
+      "roundUpToNearestHelp": "por ejemplo, 15 minutos: las entradas de tiempo se redondearán al intervalo más cercano",
+      "roundUpToNearestLabel": "Redondear al más cercano (minutos)",
+      "selectServicePlaceholder": "Seleccione un servicio",
+      "serviceLabel": "Servicio {{index}}",
+      "servicesHeading": "Servicios por horas"
+    },
+    "title": {
+      "add": "Agregar línea de contrato preestablecida",
+      "edit": "Editar valor preestablecido de línea de contrato"
+    },
+    "usage": {
+      "addUsageService": "Agregar servicio basado en el uso",
+      "alertBody": "Estos servicios se facturan en función del consumo real o de las métricas de uso. Cada unidad consumida se multiplicará por la tarifa unitaria para calcular el importe de la factura.",
+      "alertTitle": "¿Qué son los servicios basados ​​en el uso?",
+      "defaultUnit": "unidad",
+      "defaultUnits": "unidades",
+      "description": "Configurar servicios que se facturan en función del uso o consumo.",
+      "emptyState": "Aún no se han agregado servicios basados ​​en el uso. Haga clic en \"Agregar servicio basado en uso\" arriba para comenzar.",
+      "enterUnitRate": "Introduzca la tarifa unitaria",
+      "heading": "Servicios basados ​​en el uso",
+      "ratePerUnitLabel": "Tarifa por unidad",
+      "rateSummary": "{{rate}}/{{unit}}",
+      "recommendBucketLabel": "Recomendar cubo de consumo.",
+      "searchServicesPlaceholder": "Servicios de búsqueda...",
+      "serviceLabel": "Servicio {{index}}",
+      "servicesHeading": "Servicios basados ​​en el uso",
+      "unitOfMeasureHelp": "por ejemplo, GB, llamada API, transacción",
+      "unitOfMeasureLabel": "Unidad de medida",
+      "unitOfMeasurePlaceholder": "por ejemplo, GB, llamada API, usuario"
+    },
+    "validation": {
+      "billingFrequencyRequired": "Se requiere frecuencia de facturación",
+      "contractLineTypeRequired": "Se requiere el tipo de línea de contrato",
+      "fixedServiceRequired": "Se requiere al menos un servicio o producto fijo",
+      "hourlyRateRequired": "Servicio {{index}}: Se requiere tarifa por hora",
+      "hourlyServiceRequired": "Se requiere al menos un servicio cada hora.",
+      "nameRequired": "Se requiere el nombre preestablecido de la línea de contrato",
+      "prefix": "Por favor corrija lo siguiente:",
+      "serviceSelectRequired": "Servicio {{index}}: Por favor seleccione un servicio",
+      "unitOfMeasureRequired": "Servicio {{index}}: Se requiere unidad de medida",
+      "unitRateRequired": "Servicio {{index}}: Se requiere tarifa unitaria",
+      "usageServiceRequired": "Se requiere al menos un servicio basado en el uso"
+    }
+  },
+  "forms": {
+    "bucketConfig": {
+      "labels": {
+        "allowRollover": "Permitir que el {{units}} no utilizado se reinvierta",
+        "overageRatePerUnit": "Tarifa excedente por {{unit}}",
+        "totalInBucket": "Total {{units}} en el depósito"
+      },
+      "placeholders": {
+        "overageRate": "Introduzca la tasa de excedente",
+        "totalHours": "Ingrese el total de horas"
+      },
+      "tooltips": {
+        "allowRollover": "Si está marcado, el {{units}} no utilizado de un período se puede utilizar en el siguiente.",
+        "overageRatePerUnit": "La tarifa cobrada por cada {{unit}} utilizado más allá del monto incluido. (por ejemplo, $)",
+        "totalInBucket": "La cantidad total de {{units}} incluidos en este depósito por período de facturación."
+      },
+      "units": {
+        "defaultPlural": "Unidades",
+        "defaultSingular": "Unidad"
+      }
+    },
+    "editQuantity": {
+      "dialogTitle": "Editar cantidad de servicio",
+      "errors": {
+        "quantityGreaterThanZero": "La cantidad debe ser mayor que cero.",
+        "updateFailed": "No se pudo actualizar la cantidad"
+      },
+      "heading": "Ajustar cantidad",
+      "helperText": "Déjelo en blanco para utilizar el precio del catálogo de productos para la moneda de este contrato.",
+      "labels": {
+        "quantity": "Cantidad",
+        "unitPriceOverrideOptional": "Anulación del precio unitario (opcional)"
+      }
+    },
+    "hourlyConfig": {
+      "labels": {
+        "hourlyRate": "Tarifa por hora ($)",
+        "minimumBillableTime": "Tiempo mínimo facturable (minutos)",
+        "roundUpToNearest": "Redondear al más cercano (minutos)"
+      },
+      "placeholders": {
+        "minutes": "por ejemplo, 15"
+      },
+      "tooltips": {
+        "hourlyRate": "La tarifa estándar cobrada por hora por este servicio.",
+        "minimumBillableTime": "La duración mínima (en minutos) que se facturará por cualquier entrada de tiempo, independientemente de la duración real.",
+        "roundUpToNearest": "Las entradas de tiempo se redondearán al intervalo de minutos especificado más cercano (por ejemplo, 15 minutos). Establezca en 1 o 0 para desactivar el redondeo."
+      },
+      "userTypeRates": {
+        "addNewRateLabel": "Agregar nueva tarifa",
+        "heading": "Tarifas específicas por tipo de usuario",
+        "options": {
+          "administrator": "Administrador",
+          "consultant": "Consultor",
+          "engineer": "Ingeniero",
+          "projectManager": "Gerente de proyecto",
+          "technician": "Técnico"
+        },
+        "perHourSuffix": "/hora",
+        "rateSrLabel": "Tarifa ($/hora)",
+        "selectTypePlaceholder": "Seleccionar tipo",
+        "tooltip": "Defina diferentes tarifas por hora para tipos de usuarios específicos que trabajan en este servicio. Estos anulan la tarifa por hora predeterminada del servicio.",
+        "userTypeSrLabel": "Tipo de usuario",
+        "validation": {
+          "duplicateType": "Este tipo de usuario ya tiene una tarifa específica.",
+          "selectTypeAndRate": "Seleccione un tipo de usuario e ingrese una tarifa válida no negativa."
+        }
+      }
+    },
+    "serviceForm": {
+      "errors": {
+        "failedToLoadServiceConfiguration": "No se pudo cargar la configuración del servicio",
+        "failedToUpdateService": "No se pudo actualizar el servicio",
+        "missingPlanOrServiceInformation": "Falta información del plan o servicio"
+      },
+      "loading": "Cargando configuración del servicio...",
+      "title": "Editar configuración del servicio"
+    },
+    "tierEditor": {
+      "actions": {
+        "addTier": "Agregar nivel"
+      },
+      "aria": {
+        "fromAmount": "Nivel {{tier}} desde monto",
+        "rate": "Tarifa de nivel {{tier}}",
+        "removeTier": "Eliminar nivel {{tier}}",
+        "toAmount": "Nivel {{tier}} hasta el importe"
+      },
+      "cardTitle": "Niveles de precios",
+      "columns": {
+        "from": "De ({{unit}})",
+        "ratePerUnit": "Tarifa por {{unit}}",
+        "to": "Para ({{unit}})"
+      },
+      "emptyState": "No hay niveles definidos. Haga clic en \"Agregar nivel\".",
+      "helperText": "Definir rangos de uso y sus correspondientes tarifas. Deje \"Para\" en blanco para que el último nivel represente un uso ilimitado. El primer nivel debe comenzar desde 0. Los niveles deben ser contiguos.",
+      "units": {
+        "defaultPlural": "Unidades",
+        "defaultSingular": "Unidad"
+      },
+      "unlimitedPlaceholder": "Ilimitado"
+    },
+    "usageConfig": {
+      "labels": {
+        "defaultRatePerUnit": "Tasa predeterminada por unidad",
+        "enableTieredPricing": "Habilitar precios escalonados para {{serviceName}}",
+        "minimumUsage": "Uso mínimo",
+        "unitOfMeasure": "Unidad de medida"
+      },
+      "placeholders": {
+        "minimumUsage": "0",
+        "selectUnit": "Seleccionar unidad"
+      },
+      "requiredFieldHint": "Indica un campo obligatorio.",
+      "tooltips": {
+        "defaultRatePerUnit": "Tarifa por unidad (se utiliza si el precio escalonado está desactivado).",
+        "minimumUsage": "Unidades mínimas facturables por período.",
+        "unitOfMeasure": "por ejemplo, GB, Usuario, Dispositivo."
+      }
+    }
+  },
+  "list": {
+    "actions": {
+      "addContractLine": "Agregar línea de contrato"
+    },
+    "columns": {
+      "actions": "Comportamiento",
+      "billingFrequency": "Frecuencia de facturación",
+      "contractLineName": "Nombre de la línea de contrato",
+      "contractLineType": "Tipo de línea de contrato",
+      "isCustom": "es personalizado"
+    },
+    "deleteDialog": {
+      "defaultEntityName": "esta línea de contrato"
+    },
+    "errors": {
+      "failedToAddContractLineService": "No se pudo agregar el servicio de línea de contrato",
+      "failedToDeleteContractLine": "No se pudo eliminar la línea del contrato",
+      "failedToFetchContractLines": "No se pudieron recuperar las líneas de contrato",
+      "failedToFetchContractLineServices": "No se pudieron recuperar los servicios de línea de contrato",
+      "failedToRemoveContractLineService": "No se pudo eliminar el servicio de línea de contrato",
+      "failedToUpdateContractLineService": "No se pudo actualizar el servicio de línea de contrato",
+      "failedToValidateDeletion": "No se pudo validar la eliminación. Por favor inténtalo de nuevo.",
+      "unknownErrorFetchingServiceTypes": "Se produjo un error desconocido al obtener tipos de servicios"
+    },
+    "heading": "Líneas de contrato",
+    "planServices": {
+      "actions": {
+        "addService": "Agregar servicio"
+      },
+      "columns": {
+        "actions": "Comportamiento",
+        "customRate": "Tarifa personalizada",
+        "quantity": "Cantidad",
+        "serviceName": "Nombre del servicio",
+        "unitOfMeasure": "Unidad de medida"
+      },
+      "emptyStateSelectContractLine": "Seleccione una línea de contrato para gestionar sus servicios",
+      "heading": "Planificar servicios",
+      "selectServicePlaceholder": "Seleccionar servicio...",
+      "servicesFor": "Servicios para {{name}}"
+    },
+    "toast": {
+      "contractLineDeletedSuccessfully": "Línea de contrato eliminada exitosamente"
+    }
+  },
+  "overview": {
+    "actions": {
+      "addContractLinePreset": "Agregar línea de contrato preestablecida"
+    },
+    "columns": {
+      "actions": "Comportamiento",
+      "billingFrequency": "Frecuencia de facturación",
+      "contractLineName": "Nombre de la línea de contrato",
+      "contractLineType": "Tipo de línea de contrato"
+    },
+    "errors": {
+      "failedToFetchContractLinePresets": "No se pudieron recuperar los ajustes preestablecidos de la línea de contrato",
+      "unexpectedDeleteError": "Se produjo un error inesperado al eliminar la línea de contrato preestablecida."
+    },
+    "filters": {
+      "searchPlaceholder": "Buscar ajustes preestablecidos de línea de contrato",
+      "type": {
+        "allTypes": "Todos los tipos",
+        "selectTypePlaceholder": "Seleccionar tipo"
+      }
+    },
+    "heading": "Preajustes de línea de contrato",
+    "loading": "Cargando ajustes preestablecidos de línea de contrato",
+    "toast": {
+      "contractLinePresetDeletedSuccessfully": "La línea de contrato preestablecida se eliminó correctamente"
+    }
+  },
+  "preset": {
+    "fixed": {
+      "basics": {
+        "billingFrequencyLabel": "Frecuencia de facturación *",
+        "billingFrequencyPlaceholder": "Selecciona la frecuencia de facturación",
+        "description": "Asigne un nombre a la línea de contrato preestablecida y elija cómo se debe facturar de forma predeterminada.",
+        "heading": "Conceptos básicos de la línea de contrato preestablecida",
+        "nameLabel": "Nombre preestablecido de línea de contrato *",
+        "namePlaceholder": "p.ej. Soporte gestionado - Oro"
+      },
+      "cardTitle": "Editar valor preestablecido de línea de contrato: {{name}} (fijo)",
+      "errors": {
+        "contractLineNotFoundOrInvalidType": "Línea de contrato no encontrada o tipo no válido.",
+        "failedToLoadContractLinePresetConfiguration": "No se pudo cargar la configuración preestablecida de la línea de contrato. Por favor inténtalo de nuevo.",
+        "failedToSaveContractLinePreset": "No se pudo guardar la línea de contrato preestablecida",
+        "invalidContractLinePresetTypeOrNotFound": "Tipo de preajuste de línea de contrato no válido o no se encontró un preajuste de línea de contrato."
+      },
+      "services": {
+        "associatedCardTitle": "Servicios asociados"
+      },
+      "settings": {
+        "adjustForPartialPeriodsHelp": "Habilite esto cuando la tarifa recurrente deba escalar a la parte cubierta de un período de servicio si el contrato comienza o finaliza dentro de ese período.",
+        "adjustForPartialPeriodsLabel": "Ajuste por períodos parciales",
+        "baseRateHelp": "Tarifa recurrente sugerida para todos los servicios fijos. Se puede anular al agregar este ajuste preestablecido a un contrato.",
+        "baseRateLabel": "Tarifa base recurrente (opcional)",
+        "billingCycleAlignment": {
+          "options": {
+            "end": "Fin del ciclo de facturación",
+            "prorated": "Cobertura proporcional",
+            "start": "Inicio del ciclo de facturación"
+          }
+        },
+        "billingCycleAlignmentLabel": "Alineación del ciclo de facturación",
+        "billingCycleAlignmentPlaceholder": "Seleccionar alineación",
+        "billingTiming": {
+          "options": {
+            "advance": "Anticipo - factura al inicio del periodo",
+            "arrears": "Atrasos - factura después del cierre del período"
+          }
+        },
+        "billingTimingHelp": "Este ajuste preestablecido mantiene explícito su propietario de cadencia cuando se copia en una línea recurrente. El tiempo de facturación aún controla si la línea recurrente copiada se factura al inicio o al final de cada período cubierto.",
+        "billingTimingLabel": "Momento de facturación",
+        "billingTimingPlaceholder": "Seleccione el momento de facturación",
+        "description": "Defina la tarifa base recurrente y si la cobertura de período parcial debe ajustar el cargo. Las asignaciones de servicios se pueden ajustar una vez que la línea esté activa.",
+        "heading": "Configuración de tarifa fija"
+      },
+      "validation": {
+        "billingFrequency": "Frecuencia de facturación",
+        "contractLinePresetName": "Nombre preestablecido de línea de contrato",
+        "contractLineType": "Tipo de línea de contrato"
+      }
+    },
+    "hourly": {
+      "basics": {
+        "billingFrequencyLabel": "Frecuencia de facturación *",
+        "billingFrequencyPlaceholder": "Selecciona la frecuencia de facturación",
+        "cardTitle": "Editar valor preestablecido de línea de contrato: {{name}} (por hora)",
+        "description": "Asigne un nombre a la línea de contrato preestablecida y elija cómo se debe facturar de forma predeterminada.",
+        "heading": "Conceptos básicos de la línea de contrato preestablecida",
+        "minimumBillableTimeHelp": "por ejemplo, 15 minutos: cualquier entrada de tiempo inferior a este se redondeará hacia arriba.",
+        "minimumBillableTimeLabel": "Tiempo mínimo facturable (minutos)",
+        "minutesPlaceholder": "por ejemplo, 15",
+        "nameLabel": "Nombre preestablecido de línea de contrato *",
+        "namePlaceholder": "p.ej. Soporte de tiempo y materiales",
+        "roundUpToNearestHelp": "por ejemplo, 15 minutos: las entradas de tiempo se redondearán al intervalo más cercano",
+        "roundUpToNearestLabel": "Redondear al más cercano (minutos)",
+        "validation": {
+          "billingFrequency": "Frecuencia de facturación",
+          "contractLinePresetName": "Nombre preestablecido de línea de contrato"
+        }
+      },
+      "errors": {
+        "cannotSaveValidationErrors": "No se puede guardar, existen errores de validación de toda la línea de contrato preestablecida.",
+        "contractLineNotFoundOrInvalidType": "Línea de contrato no encontrada o tipo no válido.",
+        "failedToLoadPlanConfiguration": "No se pudo cargar la configuración del plan. Por favor inténtalo de nuevo.",
+        "failedToSaveContractLinePreset": "No se pudo guardar la línea de contrato preestablecida",
+        "failedToSavePlanWideConfiguration": "No se pudo guardar la configuración de todo el plan: {{message}}",
+        "failedToSaveServiceConfiguration": "No se pudo guardar la configuración del servicio: {{message}}",
+        "invalidPlanTypeOrNotFound": "Tipo de plan no válido o plan no encontrado."
+      },
+      "services": {
+        "manageCardTitle": "Administrar servicios preestablecidos de línea de contrato"
+      },
+      "validation": {
+        "afterHoursMultiplierMinOne": "El multiplicador fuera de horario debe ser al menos 1",
+        "overtimeRateNonNegative": "La tasa de horas extras no puede ser negativa.",
+        "overtimeThresholdNonNegative": "El umbral de horas extras no puede ser negativo"
+      }
+    },
+    "usage": {
+      "actions": {
+        "saveAllConfigurations": "Guardar todas las configuraciones"
+      },
+      "basics": {
+        "billingFrequencyLabel": "Frecuencia de facturación *",
+        "billingFrequencyPlaceholder": "Selecciona la frecuencia de facturación",
+        "cardTitle": "Editar valor preestablecido de línea de contrato: {{name}} (Uso)",
+        "description": "Asigne un nombre a la línea de contrato preestablecida y elija cómo se debe facturar de forma predeterminada.",
+        "heading": "Conceptos básicos de la línea de contrato preestablecida",
+        "nameLabel": "Nombre preestablecido de línea de contrato *",
+        "namePlaceholder": "p.ej. Servicios basados ​​en el uso",
+        "validation": {
+          "billingFrequency": "Frecuencia de facturación",
+          "contractLinePresetName": "Nombre preestablecido de línea de contrato"
+        }
+      },
+      "errors": {
+        "failedToLoadPlanServicesOrConfigurations": "No se pudieron cargar los servicios o configuraciones del plan. Por favor inténtalo de nuevo.",
+        "failedToSaveContractLinePreset": "No se pudo guardar la línea de contrato preestablecida",
+        "failedToSaveOneOrMoreServiceConfigurations": "No se pudieron guardar una o más configuraciones de servicio. Por favor verifique los detalles e inténtelo nuevamente.",
+        "invalidPlanTypeOrNotFound": "Tipo de plan no válido o plan no encontrado.",
+        "noChangesDetected": "No se detectaron cambios para guardar.",
+        "validationErrorDetails": "Error de validación: {{details}}",
+        "validationErrorsInModifiedServices": "No se puede guardar, existen errores de validación en los servicios modificados."
+      },
+      "services": {
+        "fallbackServiceName": "ID de servicio: {{id}}",
+        "loadingConfiguration": "Cargando configuración...",
+        "manageCardTitle": "Administrar servicios preestablecidos de línea de contrato",
+        "pricingCardTitle": "Precio del servicio",
+        "summary": {
+          "defaultUnit": "Unidad",
+          "loading": "Cargando...",
+          "notSet": "No establecido",
+          "ratePerUnit": "{{rate}} / {{unit}}",
+          "tieredPricing": "Precios escalonados (niveles {{count}})"
+        }
+      },
+      "validation": {
+        "baseRateNonNegative": "La tasa base no puede ser negativa.",
+        "baseRateRequiredWhenTieredOff": "Se requiere una tarifa base cuando el precio escalonado está desactivado.",
+        "firstTierStartsAtZero": "El primer nivel debe comenzar desde 0.",
+        "minimumUsageNonNegative": "El uso mínimo no puede ser negativo.",
+        "onlyLastTierUnlimited": "Sólo el último nivel puede tener un límite superior ilimitado.",
+        "tierGap": "Se detectó una brecha entre el nivel {{tier1}} y el nivel {{tier2}}.",
+        "tierOverlap": "El nivel {{tier1}} se superpone con el nivel {{tier2}}.",
+        "tierRatesNonNegative": "Las tasas de nivel no pueden ser negativas.",
+        "tiersRequiredWhenTieredOn": "Se requiere al menos un nivel cuando el precio por niveles está habilitado.",
+        "tierUpperBound": "Nivel {{tier}}: el límite superior debe ser >= límite inferior.",
+        "unitOfMeasureRequired": "Se requiere unidad de medida."
+      }
+    }
+  },
+  "router": {
+    "contractLine": {
+      "loadFailed": "No se pudieron cargar los detalles de la línea del contrato.",
+      "loading": "Cargando línea de contrato...",
+      "notFound": "No se encontró la línea de contrato con ID {{id}}.",
+      "unsupportedType": "Tipo de línea de contrato desconocido o no admitido: {{type}}"
+    },
+    "preset": {
+      "loadFailed": "No se pudieron cargar los detalles preestablecidos de la línea de contrato.",
+      "loading": "Cargando línea de contrato preestablecida...",
+      "notFound": "No se encontró la línea de contrato preestablecida con ID {{id}}.",
+      "unsupportedType": "Tipo preestablecido de línea de contrato desconocido o no admitido: {{type}}"
+    }
+  },
+  "services": {
+    "generic": {
+      "addSelectedServices": "Agregar servicios seleccionados ({{count}})",
+      "addServicesHeading": "Agregar servicios a la línea de contrato",
+      "allServicesAssociated": "Todos los servicios disponibles ya están asociados con esta línea de contrato.",
+      "badges": {
+        "billingMismatch": "Falta de coincidencia de facturación",
+        "defaultConfigType": "Por defecto"
+      },
+      "billingMethod": {
+        "fixed": "Precio fijo",
+        "hourly": "Cada hora",
+        "usage": "Basado en el uso"
+      },
+      "columns": {
+        "actions": "Comportamiento",
+        "billingMethod": "Método de facturación",
+        "customRate": "Tarifa personalizada",
+        "derivedConfigType": "Tipo de configuración derivada",
+        "quantity": "Cantidad",
+        "serviceName": "Nombre del servicio",
+        "serviceType": "Tipo de servicio",
+        "unitOfMeasure": "Unidad de medida"
+      },
+      "emptyState": "Actualmente no hay servicios asociados con esta línea de contrato.",
+      "errors": {
+        "contractLineNotFound": "No se encontró la línea de contrato con ID {{id}}.",
+        "enterRateForService": "Ingrese una tarifa para \"{{serviceName}}\" (no hay precio {{currency}} configurado)",
+        "failedToAddServices": "No se pudieron agregar servicios",
+        "failedToLoadServicesData": "No se pudieron cargar los datos de los servicios",
+        "failedToRemoveService": "No se pudo eliminar el servicio"
+      },
+      "loadingServices": "Cargando servicios...",
+      "serviceToAdd": {
+        "enterRatePlaceholder": "Introducir tarifa",
+        "metadata": "Tipo de servicio: {{type}} | Método: {{method}}",
+        "noCurrencyPrice": "Sin precio {{currency}}",
+        "rateDetail": "Tarifa: {{symbol}}{{amount}}"
+      },
+      "unknownService": "Servicio desconocido"
+    },
+    "hourlyPreset": {
+      "addSelectedServices": "Agregar servicios seleccionados ({{count}})",
+      "addServicesHeading": "Agregar servicios a la línea de contrato preestablecida",
+      "allServicesAssociated": "Todos los servicios horarios disponibles ya están asociados con este ajuste preestablecido.",
+      "billingMethod": {
+        "fixed": "Precio fijo",
+        "hourly": "Cada hora",
+        "usage": "Basado en el uso"
+      },
+      "emptyState": "Actualmente no hay servicios asociados con esta línea de contrato preestablecida.",
+      "errors": {
+        "failedToLoadServicesData": "No se pudieron cargar los datos de los servicios",
+        "failedToSaveServices": "No se pudieron guardar los servicios"
+      },
+      "hourlyRateLabel": "Tarifa por hora:",
+      "loadingServices": "Cargando servicios...",
+      "recommendBucketLabel": "Recomendar cubo de horas",
+      "serviceMetadata": "Tipo de servicio: {{type}} | Método: {{method}}",
+      "serviceToAddMetadata": "Tipo de servicio: {{type}} | Método: {{method}} | Tasa predeterminada: {{rate}}",
+      "toast": {
+        "savedSuccessfully": "Servicios preestablecidos de línea de contrato guardados correctamente"
+      },
+      "unknownService": "Servicio desconocido",
+      "unsavedChanges": {
+        "banner": "Tienes cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos.",
+        "cancelLabel": "Permanecer en la página",
+        "confirmLabel": "Salir de la página",
+        "dialogMessage": "Tienes cambios sin guardar. ¿Estás seguro de que quieres abandonar esta página? Todos los cambios se perderán.",
+        "dialogTitle": "Cambios no guardados"
+      }
+    },
+    "usagePreset": {
+      "addSelectedServices": "Agregar servicios seleccionados ({{count}})",
+      "addServicesHeading": "Agregar servicios a la línea de contrato preestablecida",
+      "allServicesAssociated": "Todos los servicios disponibles basados ​​en el uso ya están asociados con este ajuste preestablecido.",
+      "billingMethod": {
+        "fixed": "Precio fijo",
+        "hourly": "Cada hora",
+        "usage": "Basado en el uso"
+      },
+      "defaultUnit": "unidad",
+      "defaultUnits": "unidades",
+      "emptyState": "Actualmente no hay servicios asociados con esta línea de contrato preestablecida.",
+      "errors": {
+        "failedToLoadServicesData": "No se pudieron cargar los datos de los servicios",
+        "failedToSaveServices": "No se pudieron guardar los servicios"
+      },
+      "loadingServices": "Cargando servicios...",
+      "ratePerUnitLabel": "Tarifa por unidad:",
+      "recommendBucketLabel": "Recomendar cubo de consumo.",
+      "serviceMetadata": "Tipo de servicio: {{type}} | Método: {{method}}",
+      "serviceToAddMetadata": "Tipo de servicio: {{type}} | Método: {{method}} | Tasa predeterminada: {{rate}} | Unidad: {{unit}}",
+      "toast": {
+        "savedSuccessfully": "Servicios preestablecidos de línea de contrato guardados correctamente"
+      },
+      "unitLabel": "Unidad:",
+      "unitPlaceholder": "por ejemplo, GB, usuario, dispositivo",
+      "unknownService": "Servicio desconocido",
+      "unsavedChanges": {
+        "banner": "Tienes cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos.",
+        "cancelLabel": "Permanecer en la página",
+        "confirmLabel": "Salir de la página",
+        "dialogMessage": "Tienes cambios sin guardar. ¿Estás seguro de que quieres abandonar esta página? Todos los cambios se perderán.",
+        "dialogTitle": "Cambios no guardados"
+      }
+    }
+  },
+  "typeSelector": {
+    "descriptions": {
+      "fixed": "Una línea de contrato de precio fijo con facturación constante independientemente del uso. Ideal para servicios predecibles.",
+      "hourly": "Facturación basada en tiempo con tarifas configurables. Lo mejor para cargas de trabajo variables facturadas según el tiempo invertido.",
+      "usage": "Facturación basada en el uso con opciones de precios escalonados. Perfecto para servicios medidos por consumo."
+    },
+    "label": "Tipo de línea de contrato",
+    "placeholder": "Seleccionar tipo de línea de contrato"
+  }
+}

@@ -6,15 +6,11 @@
   "tags": ["scope:auth", "type:horizontal"],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "executor": "nx:run-script",
       "options": {
-        "outputPath": "dist/packages/auth",
-        "tsConfig": "packages/auth/tsconfig.json",
-        "packageJson": "packages/auth/package.json",
-        "main": "packages/auth/src/index.ts",
-        "assets": []
-      }
+        "script": "build"
+      },
+      "dependsOn": ["^build"]
     },
     "test": {
       "executor": "@nx/vite:test",

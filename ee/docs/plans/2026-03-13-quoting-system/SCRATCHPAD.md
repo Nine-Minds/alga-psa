@@ -1,0 +1,385 @@
+# Scratchpad — Quoting System
+
+- Plan slug: `quoting-system`
+- Created: `2026-03-13`
+
+## What This Is
+
+Keep a lightweight, continuously-updated log of discoveries and decisions made while implementing the quoting system.
+
+## Decisions
+
+- (2026-03-13) Place quotes in `packages/billing/src/` — cross-package imports aren't supported by the layer architecture, and quotes share tax, PDF, template, discount, and service catalog infrastructure with billing.
+- (2026-03-13) Separate `quote_templates` table from `invoice_templates` — shared AST engine but different content needs (optional items, validity dates, scope of work, accept CTA, T&C section).
+- (2026-03-13) Use `superseded` status distinct from `cancelled` — when a quote is revised, the old version is superseded (system action), not cancelled (user action). Preserves intent.
+- (2026-03-13) `quantity` field as BIGINT (integer units) matching `invoice_charges` — not decimal. The migration `20250225165701` changed invoice_charges from decimal to integer.
+- (2026-03-13) Auto-expiration via on-access check in model layer for Phase 1 — simpler than cron. Background job deferred to Phase 6.
+- (2026-03-13) Reuse `billing:*` permissions for most operations. Only add `quotes:approve` for the approval workflow in Phase 6.
+- (2026-03-13) `is_optional` line items in Phase 1 — key differentiator from invoices, core to MSP quoting workflow.
+- (2026-03-13) Simple accept/reject with comment for client portal — no e-signatures in any phase.
+- (2026-03-13) `contract_line_id` removed from quote_items — quotes are pre-sale, contract lines don't exist yet. Mapping happens during conversion.
+- (2026-03-13) Match `service_item_kind` column name from invoice_charges (not `item_kind`) for consistency.
+- (2026-03-13) Quote business templates via `is_template` boolean on quotes table — following contract template pattern. Separate from PDF document templates.
+- (2026-03-13) Naming: "quote templates" = reusable business configurations (is_template on quotes). "Quote document templates" = PDF rendering templates (quote_document_templates table).
+- (2026-03-13) Deletion uses `deleteEntityWithValidation()` with `supportsArchive: true`. Hard delete only for drafts with no business history.
+- (2026-03-13) Client portal access: all client users with billing permissions can see quotes, not just the primary contact.
+- (2026-03-13) Email: supports multiple addresses (array). Contact_id remains as primary/default recipient, but MSP can add additional recipients.
+- (2026-03-13) Optional item selections: client toggles persisted server-side via `is_selected` on quote_items. On accept, selections sent to MSP for review before conversion. MSP detail view highlights client's choices.
+- (2026-03-13) "Save as Template" action on existing quotes (Phase 6) — creates a business template from a quote, stripping client-specific data.
+- (2026-03-13) `tax_source` lives on `quotes` (not `quote_items`) to mirror the invoice model: internal quotes calculate tax locally, while external/pending-external quotes keep item tax amounts at zero until a later integration supplies them.
+
+## Parallel Work
+
+- (2026-03-13) Billing cutover DONE (commit 28ced3ad9 on cleanup/billing branch). `server/src/lib/billing/` fully removed (-5,695 lines). All billing code now canonical in `packages/billing/src/`. Circular billingEngine↔invoiceService dependency eliminated. NumberingService at `@shared/services/numberingService`. All server callers updated to package imports.
+
+## Discoveries / Constraints
+
+- (2026-03-13) Client portal optional-item toggles can reuse the quote financial recalculation service on the server, but the portal still needs a mirrored lightweight totals calculation client-side for immediate feedback before the persisted response returns.
+- (2026-03-13) Billing package Vitest config needed additional aliases for `@alga-psa/auth`, `@alga-psa/core`, `@alga-psa/db`, and `@alga-psa/ui` so quote action tests can import package-local server-action dependencies.
+
+- (2026-03-13) `invoice_charges.quantity` is BIGINT (integer), not decimal — changed in migration `20250225165701`.
+- (2026-03-13) All billing server actions use `withAuth()` wrapper from `packages/auth/src/lib/withAuth.ts`.
+- (2026-03-13) Invoice template AST system is data-agnostic — evaluator takes bindings + data, not invoice-specific. Reusable for quotes by defining new bindings and QuoteViewModel.
+- (2026-03-13) Template tables: `invoice_templates` (tenant-scoped custom), `standard_invoice_templates` (system-wide), `invoice_template_assignments` (selection mapping). Quote templates need parallel structure.
+- (2026-03-13) PDF pipeline: fetch data → map to ViewModel → evaluate AST → render to HTML → Puppeteer to PDF. Need `QuoteViewModel` + `mapDbQuoteToViewModel()`.
+- (2026-03-13) Contract system has templates vs active contracts with snapshot mechanism (`ensureTemplateLineSnapshot`). Quote→Contract conversion creates a direct contract (not template).
+- (2026-03-13) Contract line service configurations: `_fixed_config`, `_hourly_config`, `_usage_config`, `_rate_tiers`. Conversion must create the right config type per billing method.
+- (2026-03-13) `client_contracts` is an M:N assignment table between contracts and clients.
+- (2026-03-13) Billing dashboard tabs defined in `billingTabsConfig.ts` — add "Quotes" tab here.
+- (2026-03-13) Client portal billing: `BillingOverview.tsx` with lazy-loaded tabs. Add QuotesTab following InvoicesTab pattern.
+- (2026-03-13) Email logged in `email_sending_logs` with `entity_type` field.
+- (2026-03-13) Discount model: `is_discount`, `discount_type` ('percentage'/'fixed'), `discount_percentage`, `applies_to_item_id`, `applies_to_service_id`. Same on quote_items.
+- (2026-03-13) Standard invoice templates: 'standard-default' (simple) and 'standard-detailed' (full branding). Need equivalent standard quote templates.
+- (2026-03-13) Migration naming: `YYYYMMDDHHmmss_description.cjs` in `server/migrations/`.
+
+## Commands / Runbooks
+
+- (2026-03-13) **Feature branch**: `feature/quoting_the_beginnig` (branched off `cleanup/billing` at `28ced3ad9`)
+- (2026-03-13) **Parent branch**: `cleanup/billing` (billing cutover, not yet merged to main)
+- (2026-03-13) Run migrations: `cd server && npx knex migrate:latest`
+- (2026-03-13) Migration files: `server/migrations/YYYYMMDDHHmmss_description.cjs`
+- (2026-03-13) Billing package typecheck: `npm --prefix packages/billing run typecheck`
+
+## Testing References
+
+- Test framework: Vitest v4.0.18, sequential execution (`maxConcurrency: 1`, `singleFork: true`)
+- TestContext: `server/test-utils/testContext.ts` — transaction-based rollback, `setupContext/resetContext/rollbackContext/cleanupContext`
+- Data factories: `server/test-utils/testDataFactory.ts` — `createTenant()`, `createClient()`, `createUser()`
+- DB config: `.env.localtest`, direct PostgreSQL port 5432 (not pgbouncer)
+- Billing unit tests: `packages/billing/tests/` (own vitest.config.ts, 10s timeout)
+- Billing infra tests: `server/src/test/infrastructure/billing/` (invoices: 17+ files, credits: 7, tax: 3)
+- Billing integration tests: `server/src/test/integration/billing/`
+- Playwright config: `server/playwright.config.ts`, pattern `**/*.playwright.test.ts`
+- No existing Playwright e2e tests for billing — quoting will be first
+- Run infra tests: `cd server && dotenv -e ../.env.localtest -- vitest src/test/infrastructure/billing/`
+- Example billing test: `server/src/test/infrastructure/billing/invoices/invoiceGeneration.test.ts`
+
+## Links / References
+
+- Billing package: `packages/billing/src/`
+- Invoice model: `packages/billing/src/models/invoice.ts`
+- Contract model: `packages/billing/src/models/contract.ts`
+- Service catalog model: `packages/billing/src/models/service.ts`
+- Tax service: `packages/billing/src/services/taxService.ts`
+- PDF generation: `packages/billing/src/services/pdfGenerationService.ts`
+- Template AST schema: `packages/billing/src/lib/invoice-template-ast/schema.ts`
+- Template evaluator: `packages/billing/src/lib/invoice-template-ast/evaluator.ts`
+- Template renderer: `packages/billing/src/lib/invoice-template-ast/react-renderer.tsx`
+- Standard templates: `packages/billing/src/lib/invoice-template-ast/standardTemplates.ts`
+- Invoice adapters: `packages/billing/src/lib/adapters/invoiceAdapters.ts`
+- Billing tabs config: `packages/billing/src/components/billing-dashboard/billingTabsConfig.ts`
+- Invoice interfaces: `packages/types/src/interfaces/invoice.interfaces.ts`
+- Client portal billing: `packages/client-portal/src/components/billing/`
+- Client portal InvoicesTab: `packages/client-portal/src/components/billing/InvoicesTab.tsx`
+- Email actions: `packages/email/src/actions/emailLogActions.ts`
+- Contract actions: `packages/billing/src/actions/contractActions.ts`
+- Contract line mapping: `packages/billing/src/actions/contractLineMappingActions.ts`
+- Auth wrapper: `packages/auth/src/lib/withAuth.ts`
+- Numbering service: `shared/services/numberingService.ts` (EntityType: 'TICKET' | 'INVOICE' | 'PROJECT' — add 'QUOTE')
+- Invoice service (package): `packages/billing/src/services/invoiceService.ts` (canonical, server copy deleted)
+- Billing engine (package): `packages/billing/src/lib/billing/billingEngine.ts` (canonical, server copy deleted)
+
+## Open Questions
+
+- ~~How does invoice numbering work?~~ RESOLVED: Uses `SharedNumberingService.getNextNumber()` with `generate_next_number` DB function. Add 'QUOTE' entity type, seed with prefix='Q-', padding=4.
+- ~~Is `contact_id` a single recipient?~~ RESOLVED: Single primary contact. Email can go to any address. Portal access via billing permissions.
+- ~~For conversion: template or direct?~~ RESOLVED: Direct draft contract + client assignment.
+- Deletion validation config: `packages/core/src/config/deletion/index.ts` — need to add quote entity with dependency checks (activities, emails, converted entities).
+- Contract template system: `packages/billing/src/models/contractTemplate.ts` — reference for quote business template implementation.
+- ~~Quote business template wizard~~ RESOLVED: Both wizard + quick create (matching contract pattern). "Save as Template" for existing quotes in Phase 6.
+- (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
+
+## Delivery Log
+- (2026-03-13) F097 complete — P4: Added `resendQuote` and `sendQuoteReminder` billing actions that reuse the quote PDF/email pipeline for already-sent quotes, log `resent`/`reminder_sent` activities, and exposed both actions in the MSP quote detail view for sent quotes.
+- (2026-03-13) F096 complete — P4: `getClientQuoteById` now stamps `viewed_at` only on first portal open and records a dedicated `viewed` quote activity, while leaving subsequent views untouched.
+- (2026-03-13) F094 complete — P4: Added `rejectClientQuote` with required rejection comments, persisted `rejected_at`/`rejection_reason`, logged a client rejection activity, and extended the portal quote detail with a reject form and post-rejection summary banner.
+- (2026-03-13) F093a complete — P4: Updated `QuoteDetail.tsx` so accepted quotes surface a review banner plus per-item highlighting for optional items the client selected vs. declined, giving the MSP a clear pre-conversion review state.
+- (2026-03-13) F093 complete — P4: Added `acceptClientQuote` in the client portal actions to persist optional selections, move quotes from `sent` to `accepted`, stamp `accepted_at`/`accepted_by`, and log the selected vs. deselected optional items for MSP review; `QuotesTab.tsx` now exposes an Accept Quote action for sent quotes.
+- (2026-03-13) F092 complete — P4: Added client-portal optional-item toggles in `QuotesTab.tsx` with optimistic client-side total recalculation, persisted `is_selected` updates through `updateClientQuoteSelections`, and quote-list/detail total refresh after each selection change.
+- (2026-03-13) F068 complete — P2: Added `calculateDraftQuoteTotals()` to derive subtotal/discount/tax/total from the in-memory line-item draft state, so the quote form totals refresh immediately as rows are added or edited.
+- (2026-03-13) F067 complete — P2: Added dedicated totals sections to both `QuoteForm.tsx` and `QuoteDetail.tsx`, surfacing subtotal, discounts, tax, and grand total with consistent currency formatting.
+- (2026-03-13) F066 complete — P2: `QuoteDetail.tsx` now loads `listQuoteVersions()` and renders version buttons for the whole revision chain, letting users hop between quote versions directly from the detail screen.
+- (2026-03-13) F065 complete — P2: Added `Quote.listVersions()` and `listQuoteVersions()` to resolve every quote revision in a root-based version chain ordered by `version`, ready for upcoming history UI work.
+- (2026-03-13) F064 complete — P2: Quote revisions now retain the original `quote_number`, while `listByTenant()` and `QuoteDetail.tsx` format versioned displays as `Q-XXXX vN` when `version > 1`.
+- (2026-03-13) F063 complete — P2: Revising a quote now marks the source version as `superseded` and logs the handoff in quote activities, preserving a clear system-generated revision trail.
+- (2026-03-13) F062 complete — P2: `Quote.createRevision()` now clones every existing `quote_item` into the new revision before recalculating totals, so revised quotes start from the full prior configuration.
+- (2026-03-13) F061 complete — P2: Added `Quote.createRevision()` plus `createQuoteRevision()` action support, creating a new draft quote revision with `version + 1` and a stable root `parent_quote_id` when revising sent or rejected quotes.
+- (2026-03-13) F091 complete — P4: Added `getClientQuoteById` and expanded `QuotesTab.tsx` with an inline quote-detail panel that shows quote metadata, full line items, totals, and terms/conditions when a portal user selects a quote row.
+- (2026-03-13) F090 complete — P4: Added `getClientQuotes` to the client-portal billing actions and turned `QuotesTab.tsx` into a `DataTable` view showing the authenticated client’s non-draft quotes with amount/date/status columns for any portal user holding `billing:read`.
+- (2026-03-13) F089 complete — P4: Added a lazily loaded `QuotesTab` to `packages/client-portal/src/components/billing/BillingOverview.tsx`, including URL tab handling and the new client-portal billing tab entry for quote access.
+- (2026-03-13) F088 complete — P4: `sendQuote` now passes `entityType='quote'`/`entityId=quoteId` into `TenantEmailService`, which writes the outbound audit record to `email_sending_logs` for quote email tracking.
+- (2026-03-13) F087 complete — P4: Added an MSP-facing “Quote Accepted Confirmation” template to `packages/billing/src/lib/quote-email-templates.ts`, covering accepted amount/date plus a deep link back to the quote for conversion review.
+- (2026-03-13) F086 complete — P4: Extended `packages/billing/src/lib/quote-email-templates.ts` with a reusable “Quote Reminder” template, including amount, expiration date, and portal-link messaging for the later reminder flow.
+- (2026-03-13) F085 complete — P4: Added `packages/billing/src/lib/quote-email-templates.ts` and switched `sendQuote` to use a dedicated “Quote Sent” template with quote summary details, the PDF attachment context, and a client-portal review link.
+- (2026-03-13) F084 complete — P4: Added `sendQuote` to `packages/billing/src/actions/quoteActions.ts`; it validates sendable quotes, generates a PDF, emails one or more recipients through `TenantEmailService`, stamps `sent_at`/`status='sent'`, and records an explicit `sent` activity.
+- (2026-03-13) F083 complete — P3: Added `QuoteDocumentTemplate` model methods for custom/standard/all-template reads plus upsert saves, and introduced a shared `IQuoteDocumentTemplate` type so quote document template storage mirrors the invoice template API surface.
+- (2026-03-13) F082 complete — P3: Added `packages/billing/src/lib/quote-template-ast/templateSelection.ts` and wired it into quote rendering so document templates resolve in the planned order: explicit per-quote override, tenant default assignment, then the standard default fallback.
+- (2026-03-13) F081 complete — P3: Extended `QuotePDFGenerationService` with `renderPreview()`, exposing the same AST evaluator + React-renderer output used for PDF generation so the quote document can be previewed in-browser without Puppeteer.
+- (2026-03-13) F080 complete — P3: Extended `QuotePDFGenerationService` with `generateAndStore()`, uploading rendered quote PDFs through the shared storage provider/file-store path so quote documents can be persisted like invoices.
+- (2026-03-13) F079 complete — P3: Added `packages/billing/src/services/quotePdfGenerationService.ts`, reusing the AST evaluator, React renderer, browser pool, and Puppeteer pipeline to turn a mapped quote into a PDF buffer with the standard quote template fallback.
+- (2026-03-13) F078 complete — P3: Added `packages/billing/src/lib/adapters/quoteAdapters.ts` with `mapDbQuoteToViewModel()` and `mapLoadedQuoteToViewModel()`, which hydrate quote items plus client/contact/default-tenant-company context into the shared `QuoteViewModel` shape, including grouped phases.
+- (2026-03-13) F077 complete — P3: Extended `packages/billing/src/lib/quote-template-ast/standardTemplates.ts` with `standard-quote-detailed`, adding a branded header plus dedicated phase, optional, and recurring markers in the detailed quote line-item layout.
+- (2026-03-13) F076 complete — P3: Added `packages/billing/src/lib/quote-template-ast/standardTemplates.ts` with the first standard quote AST (`standard-quote-default`), covering quote metadata, scope, a line-item table, totals, a validity notice, and terms/conditions via the shared quote bindings.
+- (2026-03-13) F075 complete — P3: Extended the shared quote binding catalog with `lineItems` and `phases` collection bindings, pointing at the new `QuoteViewModel` item/phase arrays so optional, recurring, and phase metadata can flow into dynamic quote template sections.
+- (2026-03-13) F074 complete — P3: Added `packages/billing/src/lib/quote-template-ast/bindings.ts` with shared quote value bindings for quote number/date/validity, scope, totals, terms, notes, and party labels so quote templates can target stable binding IDs separate from invoice templates.
+- (2026-03-13) F073 complete — P3: Added `QuoteViewModel`, `QuoteViewModelLineItem`, `QuoteViewModelPhase`, and supporting party types to `packages/types/src/interfaces/quote.interfaces.ts`, giving the quote PDF/template pipeline a shared, strongly-typed rendering contract.
+- (2026-03-13) F072 complete — P3: Added `server/migrations/20260313132000_create_quote_document_template_assignments.cjs`, mirroring the invoice-template assignment pattern so tenants can map quote document defaults to either standard codes or tenant-scoped custom templates.
+- (2026-03-13) F071 complete — P3: Added `server/migrations/20260313131000_create_standard_quote_document_templates.cjs`, creating `standard_quote_document_templates` plus seeded `standard-quote-default` and `standard-quote-detailed` rows with future-friendly AST payloads and stable template codes.
+- (2026-03-13) F070 complete — P3: Added `server/migrations/20260313130000_create_quote_document_templates.cjs`, creating the tenant-scoped `quote_document_templates` table with composite `(tenant, template_id)` identity, JSONB `templateAst`, default timestamps, and `is_default` parity with invoice templates.
+- (2026-03-13) F069 complete — P2: Added a discount-line composer to `QuoteLineItemsEditor` with percentage/fixed inputs plus quote/item/service targeting; `QuoteForm.tsx` now saves discount metadata and resolves local item targets to persisted quote-item IDs before creating discount rows.
+- (2026-03-13) F060 complete — P2: Quote recalculation now treats `is_selected=false` optional items as excluded from subtotal/discount/tax/total calculations, giving Phase 4’s client selections a backend-ready totals model.
+- (2026-03-13) F059 complete — P2: `QuoteItem.create()`, `update()`, `delete()`, `reorder()`, and `Quote.update()` now all invoke `recalculateQuoteFinancials`, so quote totals and tax stay synchronized whenever items or key quote metadata change.
+- (2026-03-13) F058 complete — P2: Quote recalculation now writes `subtotal`, `discount_total`, `tax`, and `total_amount` back to the parent quote using the planned formula: subtotal of non-discount lines, minus discount lines, plus accumulated tax.
+- (2026-03-13) F057 complete — P2: Unscoped discount lines now fall back to the quote subtotal in recalculation, which makes quote-level fixed and percentage discounts work without any item/service target.
+- (2026-03-13) F056 complete — P2: Discount recalculation now aggregates base totals by `service_id`, enabling `applies_to_service_id` discounts to price against every matching service line on the quote.
+- (2026-03-13) F055 complete — P2: Discount recalculation now honors `applies_to_item_id`, pricing percentage discounts against the targeted quote line instead of the full quote subtotal.
+- (2026-03-13) F054 complete — P2: Quote recalculation now treats `is_discount` rows specially, deriving percentage discounts from their scoped base amount and fixed discounts from the stored quantity/unit price so discount lines carry meaningful totals.
+- (2026-03-13) F053 complete — P2: Added quote-level `tax_source` support (`internal` / `external` / `pending_external`) via a new migration, shared quote typing/schema updates, and recalculation logic that skips internal tax computation when the quote delegates tax externally.
+- (2026-03-13) F052 complete — P2: The quote recalculation path now persists `tax_region` (item override or client region fallback) and rounded `tax_rate` back onto each quote item, and the quote-item Zod schemas now accept those fields.
+- (2026-03-13) F051 complete — P2: Quote tax recalculation now honors `is_taxable` directly and inherits client tax-exempt / reverse-charge behavior from `TaxService`, yielding zero tax when those client conditions apply.
+- (2026-03-13) F050 complete — P2: Added `quoteCalculationService.ts`, which runs `TaxService.calculateTax()` for each included, non-discount quote item and is now invoked from quote-item mutations so quote tax fields are recomputed automatically.
+- (2026-03-13) F049 complete — P1: Added reusable `QuoteStatusBadge.tsx` backed by `QUOTE_STATUS_METADATA`, and replaced raw status text in both the quote list and quote detail header with consistent colored badges.
+- (2026-03-13) F048 complete — P1: `Quote.getById()` now hydrates `quote_activities`, and `QuoteDetail.tsx` renders those entries in a dedicated activity log section for quote-history auditing.
+- (2026-03-13) F047 complete — P1: `QuoteDetail.tsx` now renders status-aware action groups: drafts show Edit/Send/Delete, sent quotes show Revise/Cancel, accepted quotes show the three conversion buttons, and Delete/Cancel are backed by the existing `deleteQuote` and `updateQuote` actions while later-phase actions remain visibly disabled.
+- (2026-03-13) F046 complete — P1: Added `QuoteDetail.tsx` as the default existing-quote view, showing summary metadata, scope, line items, notes, and terms; `QuotesTab.tsx` now routes existing quote selections into this read-only detail screen while reserving `mode=edit` for `QuoteForm`.
+- (2026-03-13) F045 complete — P1: Quote lines can now be removed locally and reordered by drag in `QuoteLineItemsEditor`; `QuoteForm.tsx` tracks persisted item IDs, deletes removed rows through `removeQuoteItem`, and writes display order back via `reorderQuoteItems` after each save.
+- (2026-03-13) F044 complete — P1: Added per-row `Optional` and `Recurring` toggles plus billing-frequency selection in `QuoteLineItemsEditor`, with `QuoteForm.tsx` already persisting those flags through the existing quote-item save path.
+- (2026-03-13) F043 complete — P1: Quote line rows now edit description, quantity, and unit price inline in `QuoteLineItemsEditor`, and `QuoteForm.tsx` persists edits for existing rows via `updateQuoteItem` during draft saves.
+- (2026-03-13) F042 complete — P1: Expanded `QuoteLineItemsEditor` with a small manual-entry composer (description, quantity, unit price) backed by `createCustomDraftQuoteItem`, so sales users can add custom quote lines without relying on the service catalog.
+- (2026-03-13) F041 complete — P1: Added a `QuoteLineItemsEditor` to `QuoteForm.tsx` with `ServiceCatalogPicker` search across services/products, local draft line-item state, and save-time persistence through `addQuoteItem`, so quote drafts can now pick catalog items before saving.
+- (2026-03-13) T050d complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a `listQuotes` filtering assertion that distinguishes template views (`is_template=true`) from the standard quote list (`is_template=false` by default).
+- (2026-03-13) F040 complete — P1: The same `QuoteForm.tsx` now supports edit mode by loading an existing quote via `getQuote`, pre-filling quote metadata, and saving changes back through `updateQuote`.
+- (2026-03-13) F039 complete — P1: Added `QuoteForm.tsx` and wired `QuotesTab.tsx` to open it in create mode with client and contact pickers, a template selector backed by `listQuotes({ is_template: true })`, and draft-save flows for both blank and template-based quote creation.
+- (2026-03-13) F038a complete — P1: Added in-tab quote list filters in `QuotesTab.tsx`: a status dropdown with the planned lifecycle states plus archived, and a client filter built from the loaded quote list.
+- (2026-03-13) F038 complete — P1: Replaced the quotes dashboard placeholder with a `DataTable`-backed `QuotesTab` that loads non-template quotes via `listQuotes`, shows the required core columns, supports built-in table pagination, and routes row clicks toward upcoming quote detail handling.
+- (2026-03-13) F037 complete — P1: Added a `quotes` billing tab definition in `billingTabsConfig.ts` and wired a `QuotesTab` content pane into `BillingDashboard.tsx`, making `/msp/billing?tab=quotes` a valid dashboard destination.
+- (2026-03-13) F036b complete — P1: The quote list action/model pair already supports separate template-vs-standard views through the `is_template` filter on `listQuotes`, giving the UI a clean query surface for dedicated template listings.
+- (2026-03-13) T050e complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a template lifecycle guard that rejects status transitions on template quotes, proving templates stay outside the sent/accepted/etc. state machine.
+- (2026-03-13) T050c complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a `createQuoteFromTemplate` assertion that the returned draft has a fresh `quote_number`, proving template instantiation yields a normal numbered quote rather than another template shell.
+- (2026-03-13) T050b complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a `createQuoteFromTemplate` case asserting every template line item is recreated on the new draft quote with the expected recurrence and optional-item metadata.
+- (2026-03-13) T050a complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a template-creation case proving `createQuote` preserves `is_template=true` and returns a template without a generated quote number.
+- (2026-03-13) F036a complete — P1: Added `createQuoteFromTemplate` in `packages/billing/src/actions/quoteActions.ts`; it validates `billing:create`, loads a template quote, creates a new draft quote from template defaults, clones all template items in a transaction, and returns the populated draft quote with a fresh quote number.
+- (2026-03-13) F036 complete — P1: Quote business-template backend now rides on the generic quote actions and model behavior: `is_template=true` quotes are created without numbering, excluded from the normal status lifecycle, and can be read/updated/deleted through the same tenant-scoped CRUD surface.
+- (2026-03-13) T050 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a recurring-item case proving `addQuoteItem` preserves `is_recurring` and `billing_frequency` through the action layer.
+- (2026-03-13) T049 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with an optional-item case proving `addQuoteItem` preserves `is_optional=true` through the server-action boundary.
+- (2026-03-13) T048 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a rate-override case proving `addQuoteItem` forwards an explicit `unit_price` that differs from the service catalog default.
+- (2026-03-13) T047 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a billing-method matrix proving `addQuoteItem` accepts `fixed`, `hourly`, `usage`, and `per_unit` without schema rejection.
+- (2026-03-13) T046 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with an `addQuoteItem` service-backed case asserting the action returns service-derived defaults (name, SKU, billing method, unit metadata) from the quote item creation path.
+- (2026-03-13) T045 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a `deleteQuote` case that propagates the model-layer archive-required error for quotes with business history, covering the action boundary for protected quote deletion.
+- (2026-03-13) T044 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with an `updateQuote` case that surfaces the model-layer invalid status transition error, proving the action path preserves quote lifecycle enforcement.
+- (2026-03-13) T043 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a `createQuote` success-path assertion that the action returns the persisted quote including its generated `quote_number` and stamps `created_by` from the authenticated user context.
+- (2026-03-13) T042 complete — Added `packages/billing/tests/quote/quoteActions.test.ts` coverage proving `createQuote` returns a permission error when `billing:create` is denied; updated `packages/billing/vitest.config.ts` alias resolution so the billing package test runner can load quote server-action dependencies.
+- (2026-03-13) F035 complete — P1: Quote item create/update actions preserve `is_recurring` and `billing_frequency`, and schema validation requires a billing frequency for recurring items so conversion-ready recurrence metadata is stored end-to-end.
+- (2026-03-13) F034 complete — P1: Quote item create/update actions preserve `is_optional`, and the quote item model persists/returns that flag so optional line items are available to downstream UI and portal flows.
+- (2026-03-13) F033 complete — P1: Quote item actions now accept the full billing method enum (`fixed`, `hourly`, `usage`, `per_unit`) through the quote item schema and preserve service-derived billing methods from the catalog.
+- (2026-03-13) F032 complete — P1: `addQuoteItem` and `updateQuoteItem` preserve explicit `unit_price` values, so quote items can override service catalog default pricing without losing the service metadata linkage.
+- (2026-03-13) F031 complete — P1: The `addQuoteItem` action now exposes service catalog-backed quote item creation end-to-end: callers provide `service_id`, and the quote item model denormalizes service name/SKU/rate/unit defaults before persisting.
+- (2026-03-13) F030 complete — P1: Added `updateQuoteItem`, `removeQuoteItem`, and `reorderQuoteItems` server actions in `packages/billing/src/actions/quoteActions.ts`, all wrapped with `withAuth()`, enforcing `billing:update`, validating item updates with `updateQuoteItemSchema`, and delegating mutation/reorder behavior to the tenant-scoped quote item model.
+- (2026-03-13) F029 complete — P1: Added `addQuoteItem` server action in `packages/billing/src/actions/quoteActions.ts`, wrapped with `withAuth()`, enforcing `billing:update`, validating with `createQuoteItemSchema`, and delegating service catalog denormalization/default pricing to the quote item model.
+- (2026-03-13) F028 complete — P1: Added `deleteQuote` server action in `packages/billing/src/actions/quoteActions.ts`, wrapped with `withAuth()`, enforcing `billing:delete`, and delegating deletion/archive behavior to the existing quote deletion validation in the model layer.
+- (2026-03-13) F027 complete — P1: Added `getQuote` and `listQuotes` server actions in `packages/billing/src/actions/quoteActions.ts`, both wrapped with `withAuth()`, enforcing `billing:read`, and delegating to the tenant-scoped quote model for single-record and paginated list retrieval.
+- (2026-03-13) F026 complete — P1: Added `updateQuote` server action in `packages/billing/src/actions/quoteActions.ts`, wrapped with `withAuth()`, enforcing `billing:update`, validating input with `updateQuoteSchema`, defaulting `updated_by` from the authenticated user, and relying on the quote model for status-transition enforcement.
+- (2026-03-13) F025 complete — P1: Added `createQuote` server action in `packages/billing/src/actions/quoteActions.ts`, wrapped with `withAuth()`, enforcing `billing:create`, validating input with `createQuoteSchema`, defaulting `created_by` from the authenticated user, and returning the created quote with generated `quote_number`.
+- (2026-03-13) F001 complete — P1: Database migration — create `quotes` table with all fields including is_template boolean, indexes, and Citus-compatible composite keys. Implemented via the quote foundation migration.
+- (2026-03-13) F002 complete — P1: Database migration — create `quote_items` table modeled on invoice_charges with is_optional, is_selected, is_recurring, phase fields. Implemented via the same quote foundation migration for consistent rollout.
+- (2026-03-13) F003 complete — P1: Database migration — create `quote_activities` table for audit trail. Implemented via the same quote foundation migration so audit storage ships together.
+- (2026-03-13) F004 complete — P1: Add 'QUOTE' entity type to SharedNumberingService and seed next_number table with prefix='Q-', padding_length=4. Added QUOTE numbering support in the migration seed and shared numbering service.
+- (2026-03-13) F005 complete — P1: TypeScript interfaces — IQuote, IQuoteItem, IQuoteActivity, QuoteStatus in packages/types/src/interfaces/quote.interfaces.ts. Added shared quote interfaces in packages/types for billing-side reuse.
+- (2026-03-13) F006 complete — P1: TypeScript view models — IQuoteWithClient, IQuoteListItem for list/detail views. Added list/detail quote view types alongside the core quote interfaces.
+- (2026-03-13) F007 complete — P1: Zod schemas — createQuoteSchema and updateQuoteSchema with field validation. Added quote create/update validation schemas in the billing package.
+- (2026-03-13) F008 complete — P1: Zod schemas — createQuoteItemSchema and updateQuoteItemSchema. Added quote item create/update validation schemas in the billing package.
+- (2026-03-13) F009 complete — P1: Zod schema — status transition validation (only allow valid next statuses). Added reusable quote status transition validation helpers for model enforcement.
+- (2026-03-13) F010 complete — P1: Quote model — getById with tenant isolation and auto-expiration check. Implemented the quote model getById path with tenant isolation and item hydration.
+- (2026-03-13) F011 complete — P1: Quote model — getByNumber (for human-readable lookup). Implemented quote lookup by human-readable number in the model layer.
+- (2026-03-13) F012 complete — P1: Quote model — listByTenant with pagination, sorting, and status/client filtering. Implemented paginated tenant quote listing with status/client filters and sorting.
+- (2026-03-13) F013 complete — P1: Quote model — listByClient for client-specific quote listing. Implemented client-scoped quote listing in the model layer.
+- (2026-03-13) F014 complete — P1: Quote model — create (inserts quote row, generates quote_number, logs activity). Implemented quote creation with QUOTE numbering and created-activity logging.
+- (2026-03-13) F015 complete — P1: Quote model — update (validates status transition, updates fields, logs activity). Implemented quote updates with status validation and activity logging.
+- (2026-03-13) F016 complete — P1: Quote model — delete via deleteEntityWithValidation: hard delete drafts with no business history, archive for others. Implemented quote deletion through deletion validation with draft hard-delete behavior.
+- (2026-03-13) F017 complete — P1: Quote model — auto-expiration: if valid_until < today and status is 'sent', set to 'expired' on read. Implemented on-access quote auto-expiration for sent quotes.
+- (2026-03-13) F018 complete — P1: Quote item model — listByQuoteId ordered by display_order. Implemented ordered quote-item listing by quote.
+- (2026-03-13) F019 complete — P1: Quote item model — create with service catalog lookup (denormalize name, SKU, default rate, unit_of_measure). Implemented quote-item creation with service catalog denormalization.
+- (2026-03-13) F020 complete — P1: Quote item model — update (rate override, quantity, description, flags). Implemented quote-item updates including quantity and rate overrides.
+- (2026-03-13) F021 complete — P1: Quote item model — delete item and recalculate display_order. Implemented quote-item deletion with display-order compaction.
+- (2026-03-13) F022 complete — P1: Quote item model — reorder items (update display_order batch). Implemented batch quote-item reorder support.
+- (2026-03-13) F023 complete — P1: Quote activity model — create activity entry with type, description, performed_by, metadata. Implemented quote activity creation with metadata support.
+- (2026-03-13) F024 complete — P1: Quote activity model — listByQuoteId for audit trail display. Implemented chronological quote activity listing.
+- (2026-03-13) F049a complete — P1: Register quote entity in deleteEntityWithValidation config with supportsArchive: true and dependency checks. Registered quote deletion rules with archive alternatives and business-history checks.
+- (2026-03-13) T001 complete — Migration: quotes table created with correct columns including is_template boolean, types, and constraints. Added DB-backed quote infrastructure coverage.
+- (2026-03-13) T002 complete — Migration: quotes table has indexes on (tenant, client_id), (tenant, status), (tenant, quote_number), (tenant, parent_quote_id). Covered quote index creation in the infrastructure suite.
+- (2026-03-13) T003 complete — Migration: quote_items table created with correct columns including is_selected, matching invoice_charges pattern plus quote-specific fields. Covered quote_items schema shape in the infrastructure suite.
+- (2026-03-13) T004 complete — Migration: quote_items FK to quotes cascades on delete. Covered quote_items cascade behavior in the infrastructure suite.
+- (2026-03-13) T005 complete — Migration: quote_activities table created with correct columns and FK to quotes. Covered quote_activities schema and FK wiring in the infrastructure suite.
+- (2026-03-13) T006 complete — Numbering: 'QUOTE' entity type generates Q-0001 on first call. Covered first QUOTE numbering generation.
+- (2026-03-13) T007 complete — Numbering: sequential calls generate Q-0001, Q-0002, Q-0003. Covered sequential QUOTE numbering generation.
+- (2026-03-13) T008 complete — Numbering: different tenants have independent sequences. Covered QUOTE numbering isolation across tenants.
+- (2026-03-13) T009 complete — Types: IQuote interface includes all required fields with correct types. Added package-level quote type coverage.
+- (2026-03-13) T010 complete — Types: QuoteStatus includes draft, sent, accepted, rejected, expired, converted, cancelled, superseded. Added package-level QuoteStatus coverage.
+- (2026-03-13) T011 complete — Types: IQuoteListItem includes joined client name and computed display fields. Added package-level quote list item type coverage.
+- (2026-03-13) T012 complete — Schema: createQuoteSchema requires client_id, title, quote_date, valid_until. Added createQuoteSchema required-field coverage.
+- (2026-03-13) T013 complete — Schema: createQuoteSchema rejects invalid dates (valid_until before quote_date). Added createQuoteSchema date ordering coverage.
+- (2026-03-13) T014 complete — Schema: createQuoteItemSchema requires description and validates quantity > 0. Added createQuoteItemSchema validation coverage.
+- (2026-03-13) T015 complete — Schema: status transition validation allows draft→sent but rejects draft→accepted. Added draft transition validation coverage.
+- (2026-03-13) T016 complete — Schema: status transition validation allows sent→accepted, sent→rejected, sent→expired, sent→cancelled. Added sent transition validation coverage.
+- (2026-03-13) T017 complete — Schema: status transition validation allows accepted→converted but rejects converted→draft. Added accepted/converted transition validation coverage.
+- (2026-03-13) T018 complete — Model: getById returns quote with items for correct tenant. Added getById tenant read coverage.
+- (2026-03-13) T019 complete — Model: getById returns null for wrong tenant (isolation). Added getById tenant isolation coverage.
+- (2026-03-13) T020 complete — Model: getById auto-expires quote if valid_until < today and status is 'sent'. Added sent quote auto-expiration coverage.
+- (2026-03-13) T021 complete — Model: getById does not auto-expire drafts or accepted quotes. Added non-sent auto-expiration guard coverage.
+- (2026-03-13) T022 complete — Model: getByNumber returns correct quote by human-readable number within tenant. Added getByNumber coverage.
+- (2026-03-13) T023 complete — Model: listByTenant returns paginated results with correct total count. Added listByTenant pagination coverage.
+- (2026-03-13) T024 complete — Model: listByTenant filters by status correctly. Added listByTenant status filter coverage.
+- (2026-03-13) T025 complete — Model: listByTenant filters by client_id correctly. Added listByTenant client filter coverage.
+- (2026-03-13) T026 complete — Model: listByTenant sorts by quote_date descending by default. Added listByTenant default sort coverage.
+- (2026-03-13) T027 complete — Model: listByClient returns only quotes for specified client. Added listByClient coverage.
+- (2026-03-13) T028 complete — Model: create inserts quote with generated quote_number and logs 'created' activity. Added quote create numbering/activity coverage.
+- (2026-03-13) T029 complete — Model: create sets default status to 'draft'. Added quote create default status coverage.
+- (2026-03-13) T030 complete — Model: update changes fields and logs 'updated' activity. Added quote update activity coverage.
+- (2026-03-13) T031 complete — Model: update rejects invalid status transitions. Added invalid quote transition rejection coverage.
+- (2026-03-13) T032 complete — Model: delete removes draft quotes with no business history via deleteEntityWithValidation. Added draft quote delete coverage.
+- (2026-03-13) T033 complete — Model: delete blocks non-draft quotes and offers archive alternative. Added non-draft quote delete blocking coverage.
+- (2026-03-13) T033a complete — Model: delete blocks drafts that have business history (emails sent, etc.) and offers archive. Added draft-with-history delete blocking coverage.
+- (2026-03-13) T034 complete — Item model: listByQuoteId returns items ordered by display_order. Added ordered quote-item listing coverage.
+- (2026-03-13) T035 complete — Item model: create with service_id populates service_name, service_sku, unit_price from catalog. Added service-backed quote-item creation coverage.
+- (2026-03-13) T036 complete — Item model: create without service_id allows custom item entry. Added manual quote-item creation coverage.
+- (2026-03-13) T037 complete — Item model: update allows rate override (different unit_price than catalog default). Added quote-item rate override coverage.
+- (2026-03-13) T038 complete — Item model: delete removes item and adjusts display_order of remaining items. Added quote-item delete reorder coverage.
+- (2026-03-13) T039 complete — Item model: reorder updates display_order for all items in batch. Added quote-item batch reorder coverage.
+- (2026-03-13) T040 complete — Activity model: create stores activity with all fields and auto-timestamps. Added quote activity creation coverage.
+- (2026-03-13) T041 complete — Activity model: listByQuoteId returns activities in chronological order. Added quote activity ordering coverage.
+- (2026-03-16) F098 complete — P5: Added `convertQuoteToDraftContract()` plus the `convertQuoteToContract` action so accepted quotes with selected recurring items can now create a draft contract shell seeded from the quote title/description/currency and recurring billing cadence.
+- (2026-03-16) F098 complete — P5: Added `convertQuoteToDraftContract()` plus the `convertQuoteToContract` action so accepted quotes with selected recurring items can now create a draft contract shell seeded from the quote title/description/currency and recurring billing cadence.
+- (2026-03-16) F099 complete — P5: `convertQuoteToDraftContract()` now creates one custom `contract_lines` row per selected recurring quote item, mapping quote billing methods into contract line types (`Fixed`/`Hourly`/`Usage`) with sensible billing-timing defaults and stable display order.
+- (2026-03-16) F100 complete — P5: Quote→contract conversion now creates `contract_line_services`, base `contract_line_service_configuration` rows, and type-specific fixed/hourly/usage config records for each recurring service-backed quote item, with `per_unit` items mapped onto fixed-style contract configuration.
+- (2026-03-16) F101 complete — P5: Contract conversion now creates a draft `client_contracts` assignment for the accepted quote client, using the quote acceptance date (or quote date fallback) as the contract start and leaving the assignment inactive until the draft is finalized.
+- (2026-03-16) F102 complete — P5: Quote→contract conversion now writes `converted_contract_id` back to the source quote and records a dedicated `converted_to_contract` activity inside the same transaction used by the action wrapper, so the quote and draft contract stay linked atomically.
+- (2026-03-16) F103 complete — P5: Added `convertQuoteToDraftInvoice()` and the `convertQuoteToInvoice` action so accepted quotes with selected one-time items now generate a draft manual invoice shell with a real invoice number, draft dates, copied currency/PO metadata, and tenant tax-source parity.
+- (2026-03-16) F104 complete — P5: Quote→invoice conversion now copies selected one-time quote items into `invoice_charges`, remaps discount targets onto the new invoice item IDs, preserves tax-region/rate metadata, and stores discount lines as negative net amounts so invoice totals reconcile correctly.
+- (2026-03-16) F105 complete — P5: Invoice conversion now writes `converted_invoice_id` back onto the quote and records a `converted_to_invoice` activity within the same transaction used by the action wrapper, keeping the draft invoice and source quote linked atomically.
+- (2026-03-16) F106 complete — P5: Added an atomic `convertQuoteToDraftContractAndInvoice()` flow plus `convertQuoteToBoth`, reusing the contract and invoice converters inside one transaction and marking the quote `converted` with a shared activity once both records are created successfully.
+- (2026-03-16) F107 complete — P5: Added typed quote-conversion preview data plus `getQuoteConversionPreview`, categorizing each quote line as contract-bound, invoice-bound, or excluded so the UI can show exactly what each conversion action will create before confirmation.
+- (2026-03-16) F108 complete — P5: `QuoteDetail.tsx` now opens a conversion-preview dialog for accepted quotes, loads the backend mapping preview, enables contract/invoice/both conversion buttons only when relevant items exist, and confirms the chosen conversion path inline.
+- (2026-03-16) F109 complete — P5: Added post-conversion navigation both ways: quotes now link directly to their converted contract/invoice, contract detail can look up and open its source quote via `converted_contract_id`, and invoice preview can do the same through `converted_invoice_id` lookups.
+- (2026-03-16) F110 complete — P6: Extended `QuoteStatus` and the shared quote status schema/metadata with `pending_approval` and `approved`, and updated the allowed transition graph plus badge variants so approval-stage quotes can exist cleanly across validation and UI surfaces.
+- (2026-03-16) F111 complete — P6: Added a dedicated `submitQuoteForApproval` billing action and surfaced it in `QuoteDetail.tsx`, letting draft quotes move into `pending_approval` with the existing billing-update permission path and an explicit internal-approval notice in the UI.
+- (2026-03-16) F112 complete — P6: Added a dedicated `/msp/quote-approvals` route with `QuoteApprovalDashboard.tsx`, giving approvers a focused queue for `pending_approval` and `approved` quotes, row-level drill-in to `QuoteDetail`, and a direct entry point from the main quotes tab.
+- (2026-03-16) F113 complete — P6: Added tenant-scoped quote-approval workflow settings (`tenant_settings.settings.billing.quotes.approvalRequired`), made `sendQuote` honor that toggle, and added approve/request-changes actions plus review/comment dialogs so pending quotes can move to `approved` or back to `draft` with audit comments.
+- (2026-03-16) F114 complete — P6: Added `server/migrations/20260316120000_add_quote_approval_permission.cjs` to backfill a dedicated `quotes:approve` permission for MSP admins, and switched quote approval / request-changes actions to require that permission instead of generic `billing:update`.
+- (2026-03-16) F115 complete — P6: Exposed `opportunity_id` in the quote create/edit schema and form, and surfaced it in the quote detail metadata so MSPs can carry a CRM opportunity reference through the quote lifecycle even before a dedicated CRM module is present.
+- (2026-03-16) F116 complete — P6: Reworked `QuoteLineItemsEditor.tsx` to group rows by `phase`, render visual section headers, let editors collapse/expand each section, and carry phase membership during drag-and-drop so items can be reorganized between sections directly in the quote builder.
+- (2026-03-16) F117 complete — P6: Added quote document-template actions plus a dedicated `/msp/quote-document-templates` screen with a code-first editor, standard-template bootstrap, and quote-binding reference data, giving quote PDFs a tenant-editable document-template workflow parallel to the invoice designer stack.
+- (2026-03-16) Discovery: the original `quotes_status_check` database constraint still rejected `pending_approval` and `approved`, so I added a follow-up plan item (`F110a` / `T119a`) to keep the approval workflow shippable end-to-end at the DB layer.
+- (2026-03-16) F110a complete — P6: Added `server/migrations/20260316121500_expand_quote_status_check_for_approval.cjs` so the database status constraint now accepts `pending_approval` and `approved`, matching the Phase 6 approval workflow introduced in the app layer.
+- (2026-03-16) Runbook: server typecheck currently needs a larger heap on this branch; use `NODE_OPTIONS=--max-old-space-size=8192 npm --prefix server run typecheck` for scheduler-related validation.
+- (2026-03-16) F118 complete — P6: Added the scheduled `expire-quotes` background job (handler, registration, scheduler bootstrap) to bulk-expire sent quotes past `valid_until` each day and send a best-effort notification email to each quote creator after the status/activity update commits.
+- (2026-03-16) F119 complete — P6: Added `duplicateQuote` to clone any non-template quote into a fresh draft with a new quote number and copied line items, and surfaced a Duplicate action in `QuoteDetail.tsx` that opens the cloned draft directly in edit mode.
+- (2026-03-16) F120 complete — P6: Added `saveQuoteAsTemplate` to strip client-specific fields from an existing quote while cloning its reusable line-item configuration into an `is_template=true` quote, and exposed a Save as Template action from `QuoteDetail.tsx`.
+- (2026-03-16) Discovery: `20260313131000_create_standard_quote_document_templates.cjs` used an unquoted `EXCLUDED.templateAst` reference in its upsert, which breaks repeated test migrations because the quoted camel-case column must be referenced as `EXCLUDED."templateAst"`.
+- (2026-03-16) F071a complete — P3: Fixed the standard quote-document-template seed migration so repeated runs/upserts now reference `EXCLUDED."templateAst"` correctly, unblocking infra tests and tenant bootstrap flows.
+- (2026-03-16) T051 complete — Added quote infrastructure tax coverage that spies on `TaxService.calculateTax()` during quote-item creation to verify taxable lines call the tax service with the item net amount and resolved region.
+- (2026-03-16) T052 complete — Added quote-item infrastructure coverage proving `is_taxable=false` short-circuits the tax service result to zero tax on the persisted line item.
+- (2026-03-16) T053 complete — Added tax-exempt client coverage in the quote infrastructure suite, verifying quote-item tax stays at zero when the client is marked tax exempt.
+- (2026-03-16) T054 complete — Added reverse-charge quote tax coverage so client tax settings that enable reverse charge persist zero tax on quote items.
+- (2026-03-16) T055 complete — Added quote-item persistence coverage for tax recomputation, verifying recalculation writes the resolved `tax_region` and rounded `tax_rate` back onto the stored quote line.
+- (2026-03-16) T056 complete — Added quote infrastructure coverage for percentage discount lines targeted at a single quote item, asserting the recalculated discount total uses that item's net amount.
+- (2026-03-16) T057 complete — Added fixed-discount infrastructure coverage proving discount rows persist their exact amount into `total_price` during recalculation.
+- (2026-03-16) T058 complete — Added scoped item-discount coverage verifying `applies_to_item_id` discounts only price against the targeted quote line and not the full quote subtotal.
+- (2026-03-16) T059 complete — Added service-scoped discount coverage verifying `applies_to_service_id` aggregates all matching service lines and excludes other services from the discount base.
+- (2026-03-16) T060 complete — Added quote-level discount coverage proving unscoped discount lines fall back to the full non-discount subtotal.
+- (2026-03-16) T061 complete — Added quote totals coverage verifying `subtotal` is the sum of non-discount line totals even when discount rows are present.
+- (2026-03-16) T062 complete — Added quote totals coverage verifying `discount_total` is the sum of all recalculated discount-line amounts.
+- (2026-03-16) T063 complete — Added quote totals coverage with live tax + discount data, asserting `total_amount` persists as subtotal minus discounts plus tax.
+- (2026-03-16) T064 complete — Added quote-item infrastructure coverage proving a second line-item insert immediately recalculates persisted quote subtotal and total_amount.
+- (2026-03-16) T065 complete — Added quote-item deletion coverage proving removing a line forces persisted quote totals to recalculate against the remaining items.
+- (2026-03-16) T066 complete — Added optional-item selection coverage proving `is_selected=false` removes an optional line from persisted quote totals.
+- (2026-03-16) T067 complete — Added optional-item reselection coverage proving toggling `is_selected` back to true restores the optional line into persisted quote totals.
+- (2026-03-16) Discovery — quote revisions were still blocked by the original unique `(tenant, quote_number)` index, so Phase 2 versioning needed a follow-up migration to make quote-number uniqueness version-aware while preserving base-number lookups.
+- (2026-03-16) F064a complete — Added a follow-up migration that replaces the unique base-number index with a version-aware uniqueness constraint and updated `Quote.getByNumber()` to resolve the latest version for a shared quote number.
+- (2026-03-16) T068 complete — Added infrastructure coverage proving `Quote.createRevision()` creates a new draft row with `version + 1` and a stable `parent_quote_id` root link.
+- (2026-03-16) T069 complete — Added revision-copy coverage proving every source quote line is cloned onto the new revision with fresh `quote_item_id` values.
+- (2026-03-16) T070 complete — Added revision lifecycle coverage proving the source quote is marked `superseded` when a new revision is created.
+- (2026-03-16) T071 complete — Added revision numbering coverage proving new versions retain the original base `quote_number`.
+- (2026-03-16) T072 complete — Added rejected-quote revision coverage proving `Quote.createRevision()` accepts rejected quotes as valid revision sources.
+- (2026-03-16) T073 complete — Added version-history coverage proving `Quote.listVersions()` returns a full revision chain ordered by ascending `version`.
+- (2026-03-16) T074 complete — Added 3-version history coverage proving `Quote.listVersions()` resolves the full chain even when queried from the latest revision.
+- (2026-03-16) T075 complete — Added infrastructure coverage proving the tenant-scoped quote document template table stores `templateAst` as JSONB.
+- (2026-03-16) T076 complete — Added seed coverage proving the standard quote document template table contains both the default and detailed seeded template codes.
+- (2026-03-16) T076a complete — Added repeatability coverage that reruns the standard quote template migration twice against an existing table and confirms the upsert path stays deduplicated.
+- (2026-03-16) Discovery — `mapDbQuoteToViewModel()` still selected legacy `contacts.phone_number` even though the March 9 contact-phone migration moved phone data into `contact_phone_numbers`, so quote previews/details could not safely hydrate contact phone info.
+- (2026-03-16) F078a complete — Updated quote contact-party mapping to read phone data from `contact_phone_numbers` with default/display-order fallback, restoring QuoteViewModel compatibility with the current contact schema.
+- (2026-03-16) T077 complete — Added QuoteViewModel mapping coverage proving quote metadata, optional/recurring line-item flags, and phase grouping are preserved in the mapped rendering contract.
+- (2026-03-16) T078 complete — Added binding-evaluation coverage proving the shared quote AST bindings resolve quote number and date fields from the mapped view model.
+- (2026-03-16) T079 complete — Added collection-binding coverage proving `lineItems` exposes optional and recurring flags for template rendering.
+- (2026-03-16) T080 complete — Added default quote template preview coverage proving the rendered HTML includes the expected core sections and line-item content.
+- (2026-03-16) T081 complete — Added detailed quote template preview coverage proving the rendered HTML surfaces phase, optional, and recurring markers in the detailed layout.
+- (2026-03-16) T082 complete — Added adapter integration coverage proving quote view-model hydration joins client, contact, and tenant-company records from the database.
+- (2026-03-16) T085 complete — Added preview-service coverage proving `renderPreview()` returns HTML/CSS without touching the Puppeteer browser pool.
+- (2026-03-16) T086 complete — Added template-selection coverage proving a quote-specific `template_id` overrides tenant defaults and standard fallback resolution.
+- (2026-03-16) T087 complete — Added template-selection coverage proving tenant-level document template assignments are used when a quote has no explicit override.
+- (2026-03-16) T088 complete — Added template-selection fallback coverage proving quote rendering falls back to `standard-quote-default` when no assignment exists.
+- (2026-03-16) T083 complete — Added unit coverage for `QuotePDFGenerationService.generatePDF()`, mocking the browser pool and AST pipeline to verify it returns a PDF buffer from quote data.
+- (2026-03-16) T084 complete — Added unit coverage for `QuotePDFGenerationService.generateAndStore()`, mocking storage/file-store integrations to verify generated quote PDFs are uploaded and persisted with a returned `file_id`.
+- (2026-03-16) Discovery — billing package tests now exercise `@alga-psa/email` via `sendQuote`, so the package Vitest config needed an `@alga-psa/email` alias alongside the existing auth/core/db aliases.
+- (2026-03-16) T089 complete — Extended the quote action unit suite to cover `sendQuote()` state validation, with billing-package Vitest aliases updated to resolve the email package during send-email action tests.
+- (2026-03-16) T090 complete — Added `sendQuote()` success-path coverage proving it generates a PDF, sends email, and persists the quote status as `sent`.
+- (2026-03-16) T090a complete — Added multi-recipient send coverage proving `sendQuote()` forwards every provided email address to the outbound message.
+- (2026-03-16) T091 complete — Added activity-log coverage proving `sendQuote()` records a `sent` quote activity with recipients and email message metadata.
+- (2026-03-16) T092 complete — Added email-payload coverage proving the quote-sent email includes summary details and a PDF attachment named for the quote number.
+- (2026-03-16) T093 complete — Added email-logging coverage proving quote sends pass `entityType=quote` and `entityId` into the email service for downstream audit logging.
+- (2026-03-16) T094 complete — Added `packages/client-portal/src/actions/client-portal-actions/client-billing.quote.test.ts`, proving `getClientQuotes()` returns the authenticated client's non-draft quote list for the Quotes tab, and added the missing `@alga-psa/jobs` Vitest alias in `server/vitest.config.ts` so the portal action test imports resolve under the shared server runner.
+- (2026-03-16) T095 complete — The same `client-billing.quote.test.ts` suite now asserts `getClientQuotes()` calls `Quote.listByClient()` with the portal user's resolved `client_id`, locking the quote list to the authenticated client's scope.
+- (2026-03-16) T096 complete — Added portal quote-detail coverage showing `getClientQuoteById()` returns full quote items, including `is_optional` metadata needed for the client-side optional item indicators.
+- (2026-03-16) T097 complete — Added a portal selection-update test that flips an optional quote item off, verifies `quote_items.is_selected` persistence through the transaction layer, and confirms `recalculateQuoteFinancials()` drives the refreshed total back to the client.
+- (2026-03-16) T097a complete — The portal quote test suite now reloads the same quote after `updateClientQuoteSelections()` and proves the stored optional-item choice survives a follow-up `getClientQuoteById()` fetch.
+- (2026-03-16) T098 complete — Added portal acceptance coverage proving `acceptClientQuote()` persists optional selections, stamps `accepted_at`/`accepted_by`, moves the quote to `accepted`, and records the MSP-review metadata for selected vs. deselected optional items.
+- (2026-03-16) T100 complete — Added rejection-flow coverage that rejects blank comments, trims valid comments, persists `rejected_at` and `rejection_reason`, and logs the client rejection activity payload.
+- (2026-03-16) T101 complete — Added first-view coverage for `getClientQuoteById()`, asserting the portal stamps `viewed_at` once via the quotes table update path and records a dedicated `viewed` activity entry.
+- (2026-03-16) T102 complete — The portal quote action tests now cover repeat views, proving an existing `viewed_at` timestamp is left unchanged and no duplicate `viewed` activity is emitted.
+- (2026-03-16) T103 complete — Added an expired-quote guard test showing both portal accept and reject flows fail once a quote leaves the `sent` state, protecting expired proposals from further client action.
+- (2026-03-16) T098a complete — Added `packages/billing/tests/quote/quoteDetail.test.tsx` to render `QuoteDetail` in `jsdom` and verify accepted quotes show both the review banner and per-item selected/declined optional-item highlights for MSP conversion review; widened `packages/billing/vitest.config.ts` to include `tsx` tests and the `@alga-psa/clients`/`@alga-psa/shared` aliases required by the component graph.
+- (2026-03-16) T104 complete — Added `server/src/test/infrastructure/billing/quotes/quoteConversion.test.ts` and hardened `packages/billing/src/services/quoteConversionService.ts` to respect real contract/invoice table shapes; the first conversion case now proves an accepted quote becomes a draft contract with the quote title and accepted-date client assignment.
+- (2026-03-16) T105 complete — Added fixed-price contract conversion coverage that asserts the generated contract line uses `contract_line_type=Fixed` and persists a matching `contract_line_service_fixed_config` base rate.
+- (2026-03-16) T106 complete — Added hourly conversion coverage proving recurring hourly quote items create a contract line plus the hourly configuration records used for time-based billing.
+- (2026-03-16) T107 complete — Added usage conversion coverage proving recurring usage quote items create usage contract lines and seed `contract_line_service_usage_config` with the mapped unit metadata.
+- (2026-03-16) T108 complete — The conversion infra suite now verifies `client_contracts` assignments are created for the accepted quote client with the expected start date and inactive draft state.
+- (2026-03-16) T109 complete — Added a source-quote persistence assertion showing contract conversion writes `converted_contract_id` back onto the originating quote row.
+- (2026-03-16) T110 complete — Added draft-invoice conversion coverage proving one-time quote items create a draft invoice flagged `is_manual=true`.
+- (2026-03-16) T111 complete — Added invoice-charge mapping coverage for one-time quote conversion, including preserved tax fields, negative discount rows, and discount targeting remapped onto the created invoice charge IDs.
+- (2026-03-16) T112 complete — Added a source-quote persistence assertion showing invoice conversion writes `converted_invoice_id` back onto the originating quote row.
+- (2026-03-16) T113 complete — The combined conversion path is now covered end-to-end, proving a single accepted quote can create both a draft contract and a draft invoice inside one transaction.
+- (2026-03-16) T114 complete — Added an injected invoice-numbering failure case around `convertQuoteToDraftContractAndInvoice()`, proving the surrounding transaction rolls back the earlier contract work when the invoice half fails.
+- (2026-03-16) T115 complete — Added a combined-conversion status assertion that confirms successful dual conversion stamps the quote as `converted` with a `converted_at` timestamp.
+- (2026-03-16) T116 complete — Added preview coverage for `buildQuoteConversionPreview()`, proving recurring items route to contracts, one-time items route to invoices, and deselected/recurring-discount rows land in the excluded bucket.
+- (2026-03-16) T117 complete — Added optional-selection conversion coverage showing deselected optional recurring and one-time items are excluded from both the created contract lines and invoice charges.
+- (2026-03-16) T118 complete — Extended `packages/billing/tests/quote/quoteDetail.test.tsx` so converted quotes render the post-conversion buttons for opening the created contract and invoice directly from quote detail.
+- (2026-03-16) T119 complete — Added `submitQuoteForApproval` coverage in `packages/billing/tests/quote/quoteActions.test.ts`, asserting draft quotes transition to `pending_approval` through the action layer with the authenticated updater recorded.
+- (2026-03-16) T119a complete — Added an infrastructure assertion in `server/src/test/infrastructure/billing/quotes/quoteInfrastructure.test.ts` that inspects `quotes_status_check`, proving the DB now accepts `pending_approval` and `approved` statuses from the approval migration.
+- (2026-03-16) T120 complete — Added `approveQuote` action coverage to confirm `pending_approval` quotes move to `approved` and emit an explicit approval activity/comment for the audit trail.
+- (2026-03-16) T121 complete — Added `requestQuoteApprovalChanges` coverage in `packages/billing/tests/quote/quoteActions.test.ts`, verifying the approval-review path returns the quote to draft and records the reviewer’s requested-change comment.
+- (2026-03-16) T122 complete — Added an approval-permission denial case in `packages/billing/tests/quote/quoteActions.test.ts`, proving `approveQuote` is blocked without `quotes:approve` and does not mutate quote state or activity history.
+- (2026-03-16) T123 complete — Added `sendQuote` coverage showing that tenants with quote approval disabled can send draft quotes directly, while still running through the normal PDF/email/send-state pipeline.
+- (2026-03-16) T124 complete — Added `duplicateQuote` action coverage in `packages/billing/tests/quote/quoteActions.test.ts`, confirming a new numbered draft quote is created and repopulated with cloned line items from the source quote.
+- (2026-03-16) T125 complete — Extended duplication coverage to assert duplicated quote items come back with brand-new `quote_item_id` values instead of reusing the source quote’s row identifiers.
+- (2026-03-16) T127 complete — Added `saveQuoteAsTemplate` action coverage confirming the action creates an `is_template=true` quote shell and clones the source quote’s line items into that new business template.
+- (2026-03-16) T128 complete — Added a `saveQuoteAsTemplate` assertion proving business templates intentionally null out client/contact/date fields so no quote-specific sales context leaks into reusable template records.
+- (2026-03-16) T126 complete — Added `server/src/test/infrastructure/billing/quotes/expireQuotesHandler.test.ts`, which uses real quote rows plus mocked tenant-wrapper/email edges to verify the scheduled job bulk-expires every overdue sent quote, logs `expired` activities, and leaves non-eligible quotes untouched.

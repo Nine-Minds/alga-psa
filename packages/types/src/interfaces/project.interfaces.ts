@@ -34,9 +34,37 @@ export const CONFIGURABLE_TASK_FIELDS = [
   { key: 'document_uploads', label: 'Document Uploads', required: false }
 ];
 
+/**
+ * Lightweight status shape used by filter pickers / tree-selects that only
+ * need mapping id, resolved display name, and closed flag.
+ */
+export interface ProjectPhaseStatus {
+  mapping_id: string;
+  name: string;
+  is_closed: boolean;
+}
+
+/**
+ * Lightweight project shape with phases + statuses attached, used by filter
+ * pickers that display projects + phases as a tree without needing the full
+ * project detail (statuses, users, etc.).
+ */
+export interface ProjectWithPhases {
+  project_id: string;
+  project_name: string;
+  is_inactive: boolean;
+  phases: Array<{
+    phase_id: string;
+    phase_name: string;
+    wbs_code: string;
+    statuses: ProjectPhaseStatus[];
+  }>;
+}
+
 export interface IProjectStatusMapping extends TenantEntity {
   project_status_mapping_id: string;
   project_id: string;
+  phase_id?: string;
   status_id?: string;
   standard_status_id?: string;
   is_standard: boolean;
@@ -94,6 +122,7 @@ export interface IProjectTask extends TenantEntity, ITaggable {
   phase_id: string;
   task_name: string;
   description: string | null;
+  description_rich_text?: string | null;
   assigned_to: string | null;
   assigned_team_id?: string | null;
   estimated_hours: number | null;
@@ -135,6 +164,18 @@ export interface IProjectTicketLinkWithDetails extends IProjectTicketLink {
   is_closed: boolean;
 }
 
+export interface ITicketLinkedTask {
+  link_id: string;
+  task_id: string;
+  task_name: string;
+  project_id: string;
+  project_name: string;
+  phase_id: string;
+  phase_name: string;
+  status_name: string | null;
+  is_closed: boolean;
+}
+
 export interface ITaskChecklistItem extends TenantEntity {
   checklist_item_id: string;
   task_id: string;
@@ -151,6 +192,7 @@ export interface ITaskChecklistItem extends TenantEntity {
 export type ProjectStatus = {
   project_status_mapping_id: string;
   status_id: string;
+  phase_id?: string;
   name: string;
   custom_name: string | null;
   is_visible: boolean;

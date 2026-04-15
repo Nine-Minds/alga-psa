@@ -162,10 +162,25 @@ function toggleValue(values: string[], value: string, checked: boolean): string[
   return [...next];
 }
 
+async function getDownloadErrorMessage(response: Response): Promise<string> {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    const payload = await response.json().catch(() => null) as { error?: unknown } | null;
+    if (typeof payload?.error === 'string' && payload.error.trim().length > 0) {
+      return payload.error;
+    }
+  }
+
+  const text = await response.text().catch(() => '');
+  return text.trim() || 'Failed to download Teams app package';
+}
+
 export function TeamsIntegrationSettings() {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [packageLoading, setPackageLoading] = React.useState(false);
+  const [downloadLoading, setDownloadLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [packageError, setPackageError] = React.useState<string | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
@@ -218,6 +233,8 @@ export function TeamsIntegrationSettings() {
   const selectedProfileRecord = profiles.find((profile) => profile.profileId === formState.selectedProfileId) ?? null;
   const selectedProfileInvalid = Boolean(formState.selectedProfileId) && (!selectedProfileRecord || !isTeamsEligible(selectedProfileRecord));
   const canPersist = Boolean(selectedProfile);
+  const isActive = installStatus === 'active';
+  const canActivate = canPersist && !isActive;
   const canDeactivate = installStatus !== 'not_configured';
   const hasSavedPackageContext = Boolean(currentIntegration?.selectedProfileId)
     && installStatus !== 'not_configured'
@@ -269,10 +286,15 @@ export function TeamsIntegrationSettings() {
     setError(null);
     setStatusMessage(null);
 
+    const fallbackStatus: TeamsIntegration['installStatus'] = canPersist
+      ? (isActive ? 'active' : 'install_pending')
+      : 'not_configured';
+    const resolvedStatus = nextInstallStatus ?? fallbackStatus;
+
     try {
       const result = await saveTeamsIntegrationSettings({
         selectedProfileId: formState.selectedProfileId || null,
-        installStatus: nextInstallStatus ?? (canPersist ? 'install_pending' : 'not_configured'),
+        installStatus: resolvedStatus,
         enabledCapabilities: formState.enabledCapabilities as any,
         notificationCategories: formState.notificationCategories as any,
         allowedActions: formState.allowedActions as any,
@@ -284,13 +306,19 @@ export function TeamsIntegrationSettings() {
 
       setTeamsStatus(result);
       setFormState(mapIntegrationToForm(result.integration));
-      setStatusMessage(nextInstallStatus === 'active' ? 'Teams setup activated.' : 'Teams setup saved.');
+      setStatusMessage(
+        resolvedStatus === 'active' && !isActive
+          ? 'Teams setup activated.'
+          : resolvedStatus === 'not_configured'
+            ? 'Teams setup deactivated.'
+            : 'Teams setup saved.'
+      );
     } catch (err: any) {
       setError(err?.message || 'Failed to save Teams settings');
     } finally {
       setSaving(false);
     }
-  }, [canPersist, formState]);
+  }, [canPersist, formState, isActive]);
 
   const handlePackageRefresh = React.useCallback(async () => {
     setPackageLoading(true);
@@ -311,6 +339,42 @@ export function TeamsIntegrationSettings() {
       setPackageLoading(false);
     }
   }, []);
+
+  const handleZipDownload = React.useCallback(async () => {
+    if (!packageStatus) {
+      return;
+    }
+
+    setDownloadLoading(true);
+    setPackageError(null);
+    setStatusMessage(null);
+
+    try {
+      const response = await fetch('/api/teams/package/download', {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await getDownloadErrorMessage(response));
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = packageStatus.fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+      setStatusMessage('Teams app package downloaded.');
+    } catch (err: any) {
+      setPackageError(err?.message || 'Failed to download Teams app package');
+    } finally {
+      setDownloadLoading(false);
+    }
+  }, [packageStatus]);
 
   if (loading) {
     return (
@@ -476,16 +540,16 @@ export function TeamsIntegrationSettings() {
           <div className="flex flex-wrap gap-3">
             <Button id="teams-save-draft" onClick={() => void handleSave()} disabled={saving || !canPersist}>
               <Save className="mr-2 h-4 w-4" />
-              {saving ? 'Saving...' : 'Save draft'}
+              {saving ? 'Saving...' : isActive ? 'Save changes' : 'Save draft'}
             </Button>
             <Button
               id="teams-activate"
               variant="secondary"
               onClick={() => void handleSave('active')}
-              disabled={saving || !canPersist}
+              disabled={saving || !canActivate}
             >
               <CheckCircle2 className="mr-2 h-4 w-4" />
-              Activate Teams
+              {isActive ? 'Teams active' : 'Activate Teams'}
             </Button>
             <Button
               id="teams-deactivate"
@@ -566,6 +630,15 @@ export function TeamsIntegrationSettings() {
               </div>
 
               <div className="flex flex-wrap gap-3">
+                <Button
+                  id="teams-download-zip"
+                  variant="default"
+                  onClick={() => void handleZipDownload()}
+                  disabled={downloadLoading}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  {downloadLoading ? 'Downloading...' : 'Download app package (.zip)'}
+                </Button>
                 <Button id="teams-download-manifest" asChild variant="secondary">
                   <a href={`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(packageStatus.manifest, null, 2))}`} download={`${packageStatus.fileName.replace(/\.zip$/, '')}.json`}>
                     <Download className="mr-2 h-4 w-4" />

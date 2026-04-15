@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft, File, Upload, Trash2, Eye } from 'lucide-react';
@@ -24,7 +23,9 @@ import type {
   IContract,
   IContractAssignmentSummary,
   IDocument,
+  IStatus,
   IInvoiceTemplate,
+  IQuote,
   InvoiceViewModel as BillingInvoiceViewModel
 } from '@alga-psa/types';
 import {
@@ -34,9 +35,15 @@ import {
   updateContract,
   deleteContract,
 } from '@alga-psa/billing/actions/contractActions';
+import { getQuoteByConvertedContractId } from '@alga-psa/billing/actions/quoteActions';
 import type { IContractSummary } from '@alga-psa/billing/actions/contractActions';
-import { updateClientContractForBilling, getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
+import {
+  getClientContractByIdForBilling,
+  updateClientContractForBilling,
+  getClientByIdForBilling,
+} from '@alga-psa/billing/actions/billingClientsActions';
+import { getAllBoards, getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { fetchInvoicesByContract } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 
@@ -51,11 +58,6 @@ import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
-// Dynamic import to avoid circular dependency (billing -> documents -> ui -> analytics -> ... -> billing)
-const Documents = dynamic(
-  () => import('@alga-psa/documents/components/Documents').then(mod => mod.default),
-  { ssr: false, loading: () => <LoadingIndicator /> }
-);
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
@@ -94,6 +96,8 @@ function getCurrencyMeta(currencyCode: string): { fractionDigits: number; symbol
 }
 
 interface ContractDetailProps {
+  resolvedContractId?: string | null;
+  resolvedClientContractId?: string | null;
   /** Documents fetched server-side when viewing documents tab */
   serverDocuments?: IDocument[] | null;
   /** Current user ID fetched server-side */
@@ -130,14 +134,18 @@ const ContractInvoicePreviewDrawerContent: React.FC<ContractInvoicePreviewDrawer
 };
 
 const ContractDetail: React.FC<ContractDetailProps> = ({
+  resolvedContractId,
+  resolvedClientContractId,
   serverDocuments,
   serverUserId,
   renderClientDetails
 }) => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const contractId = searchParams?.get('contractId') as string;
+  const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
+  const clientContractId = searchParams?.get('clientContractId') ?? resolvedClientContractId ?? null;
   const tenant = useTenant()!;
+  const { getDocumentsByContractId, renderDocuments } = useDocumentsCrossFeature();
 
   const [contract, setContract] = useState<IContract | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -158,6 +166,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const [invoiceTemplates, setInvoiceTemplates] = useState<IInvoiceTemplate[]>([]);
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
+  const [sourceQuote, setSourceQuote] = useState<IQuote | null>(null);
   // Use server-provided userId if available
   const [currentUserId, setCurrentUserId] = useState<string>(serverUserId || '');
 
@@ -184,6 +193,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const [editAssignments, setEditAssignments] = useState<Record<string, IContractAssignmentSummary>>({});
   const [preEditSnapshot, setPreEditSnapshot] = useState<IContractAssignmentSummary | null>(null);
+  const [renewalTicketBoards, setRenewalTicketBoards] = useState<Array<{ value: string; label: string }>>([]);
+  const [renewalTicketStatuses, setRenewalTicketStatuses] = useState<Array<{ value: string; label: string }>>([]);
+  const [loadingRenewalTicketStatuses, setLoadingRenewalTicketStatuses] = useState(false);
 
   // Contract fields editing state
   const [isEditingName, setIsEditingName] = useState(false);
@@ -215,14 +227,61 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     ],
     []
   );
-  const primaryAssignment = assignments[0] ?? null;
+  const primaryAssignment =
+    assignments.find((assignment) => assignment.client_contract_id === clientContractId) ??
+    assignments[0] ??
+    null;
+  const primaryAssignmentStatus = primaryAssignment?.assignment_status ?? 'draft';
+  const isLiveClientContract =
+    contract?.is_template === false && primaryAssignment !== null;
+  const isSystemManagedDefault = contract?.is_system_managed_default === true;
   const primaryAssignmentUsesTenantRenewalDefaults =
     primaryAssignment?.use_tenant_renewal_defaults !== false;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSourceQuote = async () => {
+      if (!contractId) {
+        if (isMounted) {
+          setSourceQuote(null);
+        }
+        return;
+      }
+
+      try {
+        const result = await getQuoteByConvertedContractId(contractId);
+        if (!isMounted) {
+          return;
+        }
+
+        if (result && !('permissionError' in result)) {
+          setSourceQuote(result);
+          return;
+        }
+
+        setSourceQuote(null);
+      } catch (sourceQuoteError) {
+        console.error('Failed to load source quote for contract detail:', sourceQuoteError);
+        if (isMounted) {
+          setSourceQuote(null);
+        }
+      }
+    };
+
+    void loadSourceQuote();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [contractId]);
   const primaryAssignmentRenewalMode = normalizeRenewalMode(
     primaryAssignment?.effective_renewal_mode ?? primaryAssignment?.renewal_mode
   );
   const primaryAssignmentNoticePeriod =
     primaryAssignment?.effective_notice_period_days ?? primaryAssignment?.notice_period_days;
+  const editingAssignment = editingAssignmentId ? editAssignments[editingAssignmentId] : null;
+  const editingRenewalTicketBoardId = editingAssignment?.renewal_ticket_board_id ?? null;
 
   // Sync tab state FROM URL changes (e.g., browser back/forward)
   // Don't include activeTab in deps - handleTabChange handles state → URL direction
@@ -249,6 +308,106 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     }
   }, [serverUserId]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadRenewalTicketBoards = async () => {
+      try {
+        const boards = await getAllBoards(true);
+        if (!active) {
+          return;
+        }
+
+        setRenewalTicketBoards(
+          boards.map((board) => ({
+            value: board.board_id ?? '',
+            label: board.board_name ?? 'Unnamed board',
+          }))
+        );
+      } catch (loadError) {
+        if (active) {
+          console.error('Failed to load renewal ticket boards:', loadError);
+          setRenewalTicketBoards([]);
+        }
+      }
+    };
+
+    loadRenewalTicketBoards();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadRenewalTicketStatuses = async () => {
+      if (!editingRenewalTicketBoardId) {
+        setRenewalTicketStatuses([]);
+        return;
+      }
+
+      try {
+        setLoadingRenewalTicketStatuses(true);
+        const statuses: IStatus[] = await getTicketStatuses(editingRenewalTicketBoardId);
+        if (!active) {
+          return;
+        }
+
+        setRenewalTicketStatuses(
+          statuses.map((status: IStatus) => ({
+            value: status.status_id,
+            label: status.name,
+          }))
+        );
+
+        setEditAssignments((current) => {
+          if (!editingAssignmentId) {
+            return current;
+          }
+
+          const currentAssignment = current[editingAssignmentId];
+          if (!currentAssignment?.renewal_ticket_status_id) {
+            return current;
+          }
+
+          const hasSelectedStatus = statuses.some(
+            (status: IStatus) => status.status_id === currentAssignment.renewal_ticket_status_id
+          );
+          if (hasSelectedStatus) {
+            return current;
+          }
+
+          return {
+            ...current,
+            [editingAssignmentId]: {
+              ...currentAssignment,
+              renewal_ticket_status_id: null,
+            },
+          };
+        });
+      } catch (loadError) {
+        if (!active) {
+          return;
+        }
+
+        console.error('Failed to load renewal ticket statuses:', loadError);
+        setRenewalTicketStatuses([]);
+      } finally {
+        if (active) {
+          setLoadingRenewalTicketStatuses(false);
+        }
+      }
+    };
+
+    loadRenewalTicketStatuses();
+
+    return () => {
+      active = false;
+    };
+  }, [editingAssignmentId, editingRenewalTicketBoardId]);
+
   const updateContractViewParam = useCallback((tabValue: string) => {
     const params = new URLSearchParams(searchParams?.toString() ?? '');
     if (tabValue === 'edit') {
@@ -265,7 +424,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   }, [updateContractViewParam]);
 
   const contractsListUrl = useMemo(() => {
-    const targetSubtab = contract?.is_template ? 'templates' : 'clients';
+    const targetSubtab = contract?.is_template ? 'templates' : 'client-contracts';
     return `/msp/billing?tab=contracts&subtab=${targetSubtab}`;
   }, [contract?.is_template]);
 
@@ -279,20 +438,20 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     const contractChanged =
       editContractName !== contract.contract_name ||
       editDescription !== (contract.contract_description ?? '') ||
-      editStatus !== contract.status ||
+      (!isLiveClientContract && editStatus !== contract.status) ||
       editBillingFrequency !== contract.billing_frequency;
 
     // Check assignment changes
     const assignmentsChanged = Object.keys(editAssignments).length > 0;
 
     return contractChanged || assignmentsChanged;
-  }, [contract, editContractName, editDescription, editStatus, editBillingFrequency, editAssignments, isFormInitialized]);
+  }, [contract, editContractName, editDescription, editStatus, editBillingFrequency, editAssignments, isFormInitialized, isLiveClientContract]);
 
   useEffect(() => {
-    if (contractId) {
+    if (contractId || clientContractId) {
       loadContractData();
     }
-  }, [contractId]);
+  }, [contractId, clientContractId]);
 
   // Warn before leaving page with unsaved changes (browser navigation)
   useEffect(() => {
@@ -357,16 +516,30 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setPoAmountInputs({});
 
     try {
+      const selectedClientContract = clientContractId
+        ? await getClientContractByIdForBilling(clientContractId)
+        : null;
+      const detailContractId = selectedClientContract?.contract_id ?? contractId;
+
+      if (!detailContractId) {
+        setError('Contract not found');
+        setContract(null);
+        setSummary(null);
+        setAssignments([]);
+        setDocuments([]);
+        return;
+      }
+
       const [contractData, summaryData, assignmentData] = await Promise.all([
-        getContractById(contractId),
-        getContractSummary(contractId),
-        getContractAssignments(contractId),
+        getContractById(detailContractId),
+        getContractSummary(detailContractId),
+        getContractAssignments(detailContractId),
       ]);
 
       // Load documents separately - permission errors should not prevent contract viewing
       let documentsData: any[] = [];
       try {
-        const docsResult = await getDocumentsByContractId(contractId);
+        const docsResult = await getDocumentsByContractId(detailContractId);
         if (docsResult && !('permissionError' in docsResult)) {
           documentsData = docsResult;
         }
@@ -396,7 +569,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   };
 
   const loadContractInvoices = useCallback(async () => {
-    if (!contractId) {
+    const invoiceScopeClientContractId = clientContractId ?? assignments[0]?.client_contract_id ?? null;
+    if (!invoiceScopeClientContractId) {
       setContractInvoices([]);
       setInvoiceTemplates([]);
       setInvoiceError(null);
@@ -408,7 +582,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
     try {
       const [invoices, templates] = await Promise.all([
-        fetchInvoicesByContract(contractId),
+        fetchInvoicesByContract(invoiceScopeClientContractId),
         getInvoiceTemplates()
       ]);
 
@@ -416,11 +590,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setInvoiceTemplates(templates);
     } catch (err) {
       console.error('Error loading contract invoices:', err);
-      setInvoiceError('Failed to load invoices for this contract.');
+      setInvoiceError('Failed to load invoices for this contract assignment.');
     } finally {
       setIsLoadingInvoices(false);
     }
-  }, [contractId]);
+  }, [assignments, clientContractId]);
 
   useEffect(() => {
     if (activeTab === 'invoices') {
@@ -429,13 +603,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   }, [activeTab, loadContractInvoices]);
 
   const handleDeleteContract = async () => {
-    if (!contractId) return;
+    const detailContractId = contract?.contract_id ?? contractId;
+    if (!detailContractId) return;
     setIsDeleting(true);
     try {
-      await deleteContract(contractId);
+      await deleteContract(detailContractId);
       const params = new URLSearchParams();
       params.set('tab', 'contracts');
-      params.set('subtab', 'clients');
+      params.set('subtab', 'client-contracts');
       router.push(`/msp/billing?${params.toString()}`);
     } catch (err) {
       console.error('Error deleting contract:', err);
@@ -447,14 +622,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   };
 
   const refreshSummary = async () => {
-    if (!contractId) {
+    const detailContractId = contract?.contract_id ?? contractId;
+    if (!detailContractId) {
       return;
     }
 
     try {
       const [summaryData, assignmentData] = await Promise.all([
-        getContractSummary(contractId),
-        getContractAssignments(contractId)
+        getContractSummary(detailContractId),
+        getContractAssignments(detailContractId)
       ]);
       setSummary(summaryData);
       setAssignments(assignmentData);
@@ -582,7 +758,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setIsSaving(true);
 
     try {
-      if (!contract) {
+      if (!contract || !contractId) {
         setIsSaving(false);
         return;
       }
@@ -596,7 +772,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
       // Only include status if the contract is not expired
       // Expired contracts cannot have their status changed manually
-      if (contract.status !== 'expired') {
+      if (!isLiveClientContract && contract.status !== 'expired') {
         contractUpdatePayload.status = editStatus;
       }
 
@@ -648,6 +824,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         if (editedAssignment.renewal_term_months !== originalAssignment.renewal_term_months) {
           updatePayload.renewal_term_months = editedAssignment.renewal_term_months;
         }
+        if (editedAssignment.renewal_ticket_board_id !== originalAssignment.renewal_ticket_board_id) {
+          updatePayload.renewal_ticket_board_id = editedAssignment.renewal_ticket_board_id ?? null;
+        }
+        if (editedAssignment.renewal_ticket_status_id !== originalAssignment.renewal_ticket_status_id) {
+          updatePayload.renewal_ticket_status_id = editedAssignment.renewal_ticket_status_id ?? null;
+        }
 
         // Only update if there are changes
         if (Object.keys(updatePayload).length > 1) { // More than just tenant
@@ -692,6 +874,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         Number.isInteger(dataToEdit.renewal_term_months) && Number(dataToEdit.renewal_term_months) > 0
           ? Number(dataToEdit.renewal_term_months)
           : undefined,
+      renewal_ticket_board_id: dataToEdit.renewal_ticket_board_id ?? null,
+      renewal_ticket_status_id: dataToEdit.renewal_ticket_status_id ?? null,
     };
 
     // Save a snapshot of the data at the start of this edit session
@@ -754,13 +938,21 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     field: keyof IContractAssignmentSummary,
     value: any
   ) => {
-    setEditAssignments(prev => ({
-      ...prev,
-      [assignmentId]: {
+    setEditAssignments(prev => {
+      const nextAssignment = {
         ...prev[assignmentId],
         [field]: value
+      } as IContractAssignmentSummary;
+
+      if (field === 'renewal_ticket_board_id') {
+        nextAssignment.renewal_ticket_status_id = null;
       }
-    }));
+
+      return {
+        ...prev,
+        [assignmentId]: nextAssignment
+      };
+    });
   };
 
   const convertToDatePickerValue = (value: string | null | undefined): Date | undefined => {
@@ -1014,7 +1206,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           id="back-to-contracts-error"
           variant="soft"
           size="sm"
-          onClick={() => router.push('/msp/billing?tab=client-contracts')}
+          onClick={() => router.push(contractsListUrl)}
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -1037,20 +1229,32 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           id="back-to-contracts"
           variant="soft"
           size="sm"
-          onClick={() => router.push('/msp/billing?tab=client-contracts')}
+          onClick={() => router.push(contractsListUrl)}
           className="gap-2 self-start"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Contracts
         </Button>
-        <ContractHeader contract={contract} summary={summary} />
+        <ContractHeader contract={contract} summary={summary} liveStatus={primaryAssignmentStatus} />
+        {sourceQuote ? (
+          <div>
+            <Button
+              id="contract-detail-open-source-quote"
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/msp/billing?tab=quotes&quoteId=${sourceQuote.quote_id}`)}
+            >
+              View Source Quote {sourceQuote.quote_number ? `(${sourceQuote.quote_number})` : ''}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-4 flex flex-wrap gap-2">
           <TabsTrigger value="edit">Overview</TabsTrigger>
-          <TabsTrigger value="lines">Contract Lines</TabsTrigger>
-          <TabsTrigger value="pricing">Pricing Schedules</TabsTrigger>
+          <TabsTrigger value="lines" disabled={isSystemManagedDefault}>Contract Lines</TabsTrigger>
+          <TabsTrigger value="pricing" disabled={isSystemManagedDefault}>Pricing Schedules</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
         </TabsList>
@@ -1072,6 +1276,19 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                 </AlertDescription>
               </Alert>
             )}
+
+            {isSystemManagedDefault ? (
+              <Alert variant="info" data-testid="system-managed-default-contract-alert">
+                <AlertDescription>
+                  <div className="space-y-1">
+                    <div className="font-medium">System-managed default contract</div>
+                    <div>Created automatically for uncontracted work.</div>
+                    <div>This contract is attribution-only and does not control recurring billing behavior.</div>
+                    <div>To configure custom billing behavior, create or edit a normal user-authored contract.</div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            ) : null}
 
             <form onSubmit={handleEditSubmit} className="space-y-6" noValidate>
               {hasAttemptedSubmit && validationErrors.length > 0 && (
@@ -1107,6 +1324,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <Label htmlFor="edit-contract-name">Contract Name *</Label>
+                        {isSystemManagedDefault ? (
+                          <Badge variant="info">System-managed default</Badge>
+                        ) : null}
                         {!isEditingName && (
                           <Button
                             id="edit-contract-name-btn"
@@ -1115,11 +1335,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             variant="ghost"
                             onClick={() => setIsEditingName(true)}
                             className="h-5 w-5 p-0"
+                            disabled={isSystemManagedDefault}
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
                         )}
                       </div>
+                      {isSystemManagedDefault ? (
+                        <p className="text-xs text-muted-foreground">Created automatically for uncontracted work</p>
+                      ) : null}
                       {isEditingName ? (
                         <div className="flex items-center gap-2">
                           <Input
@@ -1169,6 +1393,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             variant="ghost"
                             onClick={() => setIsEditingDescription(true)}
                             className="h-5 w-5 p-0"
+                            disabled={isSystemManagedDefault}
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
@@ -1217,29 +1442,60 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <FileText className="h-4 w-4 text-purple-600" />
-                      Contract Snapshot
+                      Contract Header
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm text-[rgb(var(--color-text-700))]">
                     <div className="space-y-2">
                       <div className="space-y-1">
-                        <span className="text-xs text-muted-foreground">Status</span>
-                        <CustomSelect
-                          id="edit-status"
-                          value={editStatus}
-                          onValueChange={(value) => setEditStatus(value)}
-                          options={[
-                            { value: 'active', label: 'Active' },
-                            { value: 'draft', label: 'Draft' },
-                            { value: 'terminated', label: 'Terminated' },
-                            ...(contract.status === 'expired' ? [{ value: 'expired', label: 'Expired' }] : [])
-                          ]}
-                          disabled={contract.status === 'expired'}
-                        />
-                        {contract.status === 'expired' && (
-                          <p className="text-xs text-muted-foreground">
-                            Expired contracts cannot be changed to another status
-                          </p>
+                        <span className="text-xs text-muted-foreground">
+                          {isLiveClientContract ? 'Assignment Status' : 'Status'}
+                        </span>
+                        {isLiveClientContract ? (
+                          <>
+                            <Badge
+                              variant={
+                                primaryAssignmentStatus === 'active'
+                                  ? 'success'
+                                  : primaryAssignmentStatus === 'terminated'
+                                    ? 'warning'
+                                    : primaryAssignmentStatus === 'expired'
+                                      ? 'error'
+                                      : 'default-muted'
+                              }
+                            >
+                              {primaryAssignmentStatus === 'active'
+                                ? 'Active'
+                                : primaryAssignmentStatus === 'terminated'
+                                  ? 'Terminated'
+                                  : primaryAssignmentStatus === 'expired'
+                                    ? 'Expired'
+                                    : 'Draft'}
+                            </Badge>
+                            <p className="text-xs text-muted-foreground">
+                              Live client status is controlled by the assignment lifecycle below.
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <CustomSelect
+                              id="edit-status"
+                              value={editStatus}
+                              onValueChange={(value) => setEditStatus(value)}
+                              options={[
+                                { value: 'active', label: 'Active' },
+                                { value: 'draft', label: 'Draft' },
+                                { value: 'terminated', label: 'Terminated' },
+                                ...(contract.status === 'expired' ? [{ value: 'expired', label: 'Expired' }] : [])
+                              ]}
+                              disabled={contract.status === 'expired' || isSystemManagedDefault}
+                            />
+                            {contract.status === 'expired' && (
+                              <p className="text-xs text-muted-foreground">
+                                Expired contracts cannot be changed to another status
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
                       <div className="space-y-1">
@@ -1254,6 +1510,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           options={BILLING_FREQUENCY_OPTIONS}
                           placeholder="Select billing frequency"
                           className={hasAttemptedSubmit && !editBillingFrequency ? 'ring-1 ring-red-500' : ''}
+                          disabled={isSystemManagedDefault}
                         />
                       </div>
                     </div>
@@ -1319,14 +1576,25 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <Users className="h-4 w-4 text-emerald-600" />
-                      Client Details
+                      Client Ownership
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm text-[rgb(var(--color-text-700))]">
+                    {isSystemManagedDefault ? (
+                      <p className="text-xs text-muted-foreground">
+                        Ownership is system-managed for this default contract.
+                      </p>
+                    ) : null}
                     {assignments.length === 0 ? (
                       <p className="text-muted-foreground">No client assigned to this contract yet.</p>
                     ) : (
                       <>
+                        <div className="flex items-center justify-between">
+                          <span>Owner Client</span>
+                          <span className="font-medium">
+                            {primaryAssignment?.client_name || primaryAssignment?.client_id || contract.owner_client_id || '—'}
+                          </span>
+                        </div>
                         <div className="flex items-center justify-between">
                           <span>Client Name</span>
                           <button
@@ -1340,14 +1608,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                         <div className="flex items-center justify-between">
                           <span>Assignment Status</span>
                           <Badge variant={
-                            contract.status === 'active' ? 'success' :
-                            contract.status === 'terminated' ? 'warning' :
-                            contract.status === 'expired' ? 'error' :
+                            primaryAssignmentStatus === 'active' ? 'success' :
+                            primaryAssignmentStatus === 'terminated' ? 'warning' :
+                            primaryAssignmentStatus === 'expired' ? 'error' :
                             'default-muted'
                           }>
-                            {contract.status === 'active' ? 'Active' :
-                             contract.status === 'terminated' ? 'Terminated' :
-                             contract.status === 'expired' ? 'Expired' :
+                            {primaryAssignmentStatus === 'active' ? 'Active' :
+                             primaryAssignmentStatus === 'terminated' ? 'Terminated' :
+                             primaryAssignmentStatus === 'expired' ? 'Expired' :
                              'Draft'}
                           </Badge>
                         </div>
@@ -1390,10 +1658,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
               </div>
 
               {/* Contract Overview - What's included at a glance */}
-              <ContractOverview
-                contractId={contractId}
-                onNavigateToLines={() => handleTabChange('lines')}
-              />
+              {contractId ? (
+                <ContractOverview
+                  contractId={contractId}
+                  onNavigateToLines={() => handleTabChange('lines')}
+                />
+              ) : null}
 
               <Card>
                 <CardHeader className="pb-3">
@@ -1459,6 +1729,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 variant="ghost"
                                 onClick={() => handleStartEditAssignment(assignment)}
                                 className="gap-2"
+                                disabled={isSystemManagedDefault}
                               >
                                 <Pencil className="h-4 w-4" />
                                 Edit
@@ -1648,6 +1919,55 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                         />
                                       </div>
                                     )}
+
+                                  {editData.use_tenant_renewal_defaults === false && (
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`assignment-renewal-ticket-board-${assignment.client_contract_id}`} className="text-sm">
+                                        Renewal Ticket Board
+                                      </Label>
+                                      <CustomSelect
+                                        id={`assignment-renewal-ticket-board-${assignment.client_contract_id}`}
+                                        options={renewalTicketBoards}
+                                        value={editData.renewal_ticket_board_id ?? ''}
+                                        onValueChange={(value) =>
+                                          handleAssignmentFieldChange(
+                                            assignment.client_contract_id,
+                                            'renewal_ticket_board_id',
+                                            value || null
+                                          )
+                                        }
+                                        className="w-full"
+                                        placeholder="Select board"
+                                      />
+                                    </div>
+                                  )}
+
+                                  {editData.use_tenant_renewal_defaults === false && (
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`assignment-renewal-ticket-status-${assignment.client_contract_id}`} className="text-sm">
+                                        Renewal Ticket Status
+                                      </Label>
+                                      <CustomSelect
+                                        id={`assignment-renewal-ticket-status-${assignment.client_contract_id}`}
+                                        options={renewalTicketStatuses}
+                                        value={editData.renewal_ticket_status_id ?? ''}
+                                        onValueChange={(value) =>
+                                          handleAssignmentFieldChange(
+                                            assignment.client_contract_id,
+                                            'renewal_ticket_status_id',
+                                            value || null
+                                          )
+                                        }
+                                        className="w-full"
+                                        placeholder={
+                                          editData.renewal_ticket_board_id
+                                            ? (loadingRenewalTicketStatuses ? 'Loading statuses...' : 'Select status')
+                                            : 'Select a board first'
+                                        }
+                                        disabled={!editData.renewal_ticket_board_id || loadingRenewalTicketStatuses}
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               ) : (
                                 <div className="space-y-1">
@@ -1828,11 +2148,21 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-3">
-                  <Button id="edit-manage-lines" variant="outline" onClick={() => handleTabChange('lines')}>
+                  <Button
+                    id="edit-manage-lines"
+                    variant="outline"
+                    onClick={() => handleTabChange('lines')}
+                    disabled={isSystemManagedDefault}
+                  >
                     <Layers3 className="mr-2 h-4 w-4" />
                     Manage Contract Lines
                   </Button>
-                  <Button id="edit-manage-pricing" variant="outline" onClick={() => handleTabChange('pricing')}>
+                  <Button
+                    id="edit-manage-pricing"
+                    variant="outline"
+                    onClick={() => handleTabChange('pricing')}
+                    disabled={isSystemManagedDefault}
+                  >
                     <CalendarClock className="mr-2 h-4 w-4" />
                     Manage Pricing Schedules
                   </Button>
@@ -1844,14 +2174,16 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     <FileText className="mr-2 h-4 w-4" />
                     View Invoices
                   </Button>
-                  <Button
-                    id="delete-contract-btn"
-                    variant="destructive"
-                    onClick={() => setShowDeleteConfirm(true)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Contract
-                  </Button>
+                  {!isSystemManagedDefault ? (
+                    <Button
+                      id="delete-contract-btn"
+                      variant="destructive"
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Contract
+                    </Button>
+                  ) : null}
                 </CardContent>
               </Card>
 
@@ -1867,7 +2199,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                 <Button
                   id="save-edit-contract-btn"
                   type="submit"
-                  disabled={isSaving}
+                  disabled={isSaving || isSystemManagedDefault}
                   className={!editContractName.trim() || !editBillingFrequency ? 'opacity-50' : ''}
                 >
                   <span className={hasUnsavedChanges ? 'font-bold' : ''}>
@@ -1881,24 +2213,26 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         </TabsContent>
 
         <TabsContent value="lines">
-          <ContractLines contract={contract} onContractLinesChanged={handleContractLinesChanged} />
+          <ContractLines
+            contract={contract}
+            onContractLinesChanged={handleContractLinesChanged}
+            isReadOnly={isSystemManagedDefault}
+          />
         </TabsContent>
 
         <TabsContent value="pricing">
-          <PricingSchedules contractId={contract.contract_id} />
+          <PricingSchedules contractId={contract.contract_id} isReadOnly={isSystemManagedDefault} />
         </TabsContent>
 
         <TabsContent value="documents">
-          {currentUserId ? (
-            <Documents
-              id="contract-documents"
-              documents={documents}
-              userId={currentUserId}
-              entityId={contractId}
-              entityType="contract"
-              onDocumentCreated={handleDocumentCreated}
-            />
-          ) : (
+          {currentUserId ? renderDocuments({
+              id: "contract-documents",
+              documents,
+              userId: currentUserId,
+              entityId: contractId,
+              entityType: "contract",
+              onDocumentCreated: handleDocumentCreated,
+          }) : (
             <Card>
               <CardContent className="py-6 text-center text-muted-foreground">
                 Loading documents...

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -29,6 +29,7 @@ import {
   upsertBucketOverlay,
   deleteBucketOverlay
 } from '../../../actions/bucketOverlayActions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ContractLineServiceFormProps {
   planService: IContractLineService;
@@ -47,27 +48,22 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
   onClose,
   onServiceUpdated
 }) => {
+  const { t } = useTranslation('msp/contract-lines');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [contractLineBillingFrequency, setContractLineBillingFrequency] = useState<string | undefined>(undefined);
+  const [contractLineMode, setContractLineMode] = useState<'Fixed' | 'Hourly' | 'Usage' | 'Bucket'>('Fixed');
   const tenant = useTenant()!;
 
   const service = services.find(s => s.service_id === planService.service_id);
-
-  // Helper function to derive config type from service properties
-  const getDerivedConfigType = (svc: IService | undefined): 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' | undefined => {
-    if (!svc) return undefined;
-
-    if (svc.billing_method === 'fixed') {
-      return 'Fixed';
-    } else if (svc.billing_method === 'hourly') {
-      return 'Hourly';
-    } else if (svc.billing_method === 'usage') {
-      return 'Usage';
-    }
-    // Add logic for 'Bucket' if applicable based on service properties
-    return undefined; // Default if no match
+  const mapContractLineTypeToMode = (
+    lineType: string | null | undefined
+  ): 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' => {
+    if (lineType === 'Hourly') return 'Hourly';
+    if (lineType === 'Usage') return 'Usage';
+    if (lineType === 'Bucket') return 'Bucket';
+    return 'Fixed';
   };
 
   // State for configuration
@@ -102,6 +98,7 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
         const contractLine = await getContractLineById(planService.contract_line_id);
         if (contractLine) {
           setContractLineBillingFrequency(contractLine.billing_frequency);
+          setContractLineMode(mapContractLineTypeToMode(contractLine.contract_line_type));
         }
 
         // Check if configuration exists
@@ -134,32 +131,14 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
           }
         } else {
           // No configuration exists, use defaults
+          const defaultMode = mapContractLineTypeToMode(contractLine?.contract_line_type);
           setBaseConfig({
             contract_line_id: planService.contract_line_id,
             service_id: planService.service_id,
-            configuration_type: 'Fixed',
+            configuration_type: defaultMode,
             quantity: planService.quantity || 1,
             custom_rate: planService.custom_rate
           });
-
-          // Set default type config based on service billing_method and category (service_type)
-          if (service) {
-            let configType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' = 'Fixed'; // Default to Fixed
-
-            if (service.billing_method === 'fixed') {
-              configType = 'Fixed';
-            } else if (service.billing_method === 'hourly') {
-              configType = 'Hourly';
-            } else if (service.billing_method === 'usage') {
-              configType = 'Usage';
-            }
-            // Note: 'Bucket' type is not set as a default here, it must be explicitly chosen.
-
-            setBaseConfig(prev => ({
-              ...prev,
-              configuration_type: configType
-            }));
-          }
         }
 
         // Load bucket overlay if this is an Hourly or Usage service
@@ -177,18 +156,34 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
         }
       } catch (error) {
         console.error('Error loading service configuration:', error);
-        setError('Failed to load service configuration');
+        setError(t('forms.serviceForm.errors.failedToLoadServiceConfiguration', {
+          defaultValue: 'Failed to load service configuration',
+        }));
       } finally {
         setIsLoading(false);
       }
     };
 
     loadConfiguration();
-  }, [planService, service]);
+  }, [planService, service, t]);
 
   const handleConfigurationChange = (updates: Partial<IContractLineServiceConfiguration>) => {
     setBaseConfig(prev => ({ ...prev, ...updates }));
   };
+
+  const defaultSource = useMemo<'catalog default' | 'contract override' | 'none'>(() => {
+    const configuredCustomRate = baseConfig.custom_rate;
+    if (configuredCustomRate !== undefined && configuredCustomRate !== null) {
+      return 'contract override';
+    }
+
+    const catalogDefaultRate = service?.default_rate;
+    if (catalogDefaultRate !== undefined && catalogDefaultRate !== null) {
+      return 'catalog default';
+    }
+
+    return 'none';
+  }, [baseConfig.custom_rate, service?.default_rate]);
 
   const handleTypeConfigChange = (
     type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket',
@@ -211,7 +206,9 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
 
   const handleSubmit = async () => {
     if (!planService.contract_line_id || !planService.service_id) {
-      setError('Missing plan or service information');
+      setError(t('forms.serviceForm.errors.missingPlanOrServiceInformation', {
+        defaultValue: 'Missing plan or service information',
+      }));
       return;
     }
 
@@ -265,7 +262,9 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
       onServiceUpdated();
     } catch (error) {
       console.error('Error updating service:', error);
-      setError('Failed to update service');
+      setError(t('forms.serviceForm.errors.failedToUpdateService', {
+        defaultValue: 'Failed to update service',
+      }));
       setIsSubmitting(false);
     }
   };
@@ -274,21 +273,24 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
     <Dialog
       isOpen={true}
       onClose={onClose}
-      title="Edit Service Configuration"
+      title={t('forms.serviceForm.title', { defaultValue: 'Edit Service Configuration' })}
       className="max-w-4xl"
     >
       <DialogContent>
 
           {isLoading ? (
-            <div className="py-8 text-center">Loading service configuration...</div>
+            <div className="py-8 text-center">
+              {t('forms.serviceForm.loading', { defaultValue: 'Loading service configuration...' })}
+            </div>
           ) : (
             <ServiceConfigurationPanel
-              // Pass a configuration object with the DERIVED type
               configuration={{
                 ...baseConfig,
-                configuration_type: getDerivedConfigType(service) || baseConfig.configuration_type // Fallback to original if derivation fails
+                configuration_type: baseConfig.configuration_type || contractLineMode
               }}
               service={service}
+              effectiveMode={baseConfig.configuration_type || contractLineMode}
+              defaultSource={defaultSource}
               typeConfig={typeConfig}
               planFixedConfig={planFixedConfig}
               rateTiers={rateTiers}

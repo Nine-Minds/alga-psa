@@ -1,6 +1,11 @@
 import { registerBaseComponents } from './components';
+import { registerBoardRoutes } from './routes/boards';
+import { registerStatusRoutes } from './routes/statuses';
 import { registerProjectRoutes } from './routes/projects';
 import { registerServiceCategoryRoutes } from './routes/serviceCategories';
+import { registerServiceRoutes } from './routes/services';
+import { registerProductRoutes } from './routes/products';
+import { registerServiceTypeRoutes } from './routes/serviceTypes';
 import { registerStorageRoutes } from './routes/extensionStorage';
 import { registerInventoryBackfillRoutes } from './backfill';
 import { ApiOpenApiRegistry, RegistryInitOptions, buildDocument, createRegistry } from './registry';
@@ -10,7 +15,12 @@ export function buildBaseRegistry(options: RegistryInitOptions = {}): ApiOpenApi
   const registry = createRegistry([], options);
   const components = registerBaseComponents(registry);
 
+  registerBoardRoutes(registry, components);
+  registerStatusRoutes(registry, components);
   registerServiceCategoryRoutes(registry, components);
+  registerServiceRoutes(registry, components);
+  registerProductRoutes(registry, components);
+  registerServiceTypeRoutes(registry, components);
   registerProjectRoutes(registry, components);
   registerInventoryBackfillRoutes(registry, components);
   registerStorageRoutes(registry, components);

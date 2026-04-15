@@ -1,35 +1,222 @@
-{{- if and (not .Values.devEnv.enabled) .Values.setup.runMigrations }}
+{{- if and (not .Values.devEnv.enabled) (or .Values.setup.runMigrations .Values.setup.runSeeds) }}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: job-initial-setup
+  name: {{ include "sebastian.fullname" . }}-bootstrap-r{{ .Release.Revision }}
   namespace: {{ include "sebastian.namespace" . }}
 spec:
-  ttlSecondsAfterFinished: 60
+  ttlSecondsAfterFinished: 300
   template:
     metadata:
-      name: job-initial-setup
+      name: {{ include "sebastian.fullname" . }}-bootstrap-r{{ .Release.Revision }}
     spec:
       {{- if .Values.setup.image.is_private }}
       imagePullSecrets:
         - name: "{{ .Values.setup.image.credentials }}"
       {{- end }}
       containers:
-        - name: job-initial-setup
+        - name: bootstrap
           image: "{{ .Values.setup.image.name }}:{{ .Values.setup.image.tag }}"
           imagePullPolicy: {{ .Values.setup.pullPolicy }}
-          command: ["/bin/sh", "-c"]
+          {{- if .Values.setup.applianceBootstrap.enabled }}
+          command: ["/bin/sh", "/bootstrap/appliance-bootstrap.sh"]
+          {{- else }}
+          command: ["/bin/sh", "-ec"]
           args:
             - |
-              echo "Waiting for 30 seconds before starting..."
-              sleep 30
-              echo "Starting entrypoint script..."
-              ./entrypoint.sh
+              log() {
+                echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+              }
+
+              is_enabled() {
+                case "${1:-true}" in
+                  [Ff][Aa][Ll][Ss][Ee]|0|[Nn][Oo]|[Oo][Ff][Ff])
+                    return 1
+                    ;;
+                  *)
+                    return 0
+                    ;;
+                esac
+              }
+
+              get_admin_password() {
+                local password=""
+
+                if [ -f /run/secrets/postgres_password ]; then
+                  password="$(cat /run/secrets/postgres_password 2>/dev/null)"
+                fi
+
+                if [ -z "$password" ] && [ -n "${DB_PASSWORD_ADMIN:-}" ]; then
+                  password="${DB_PASSWORD_ADMIN}"
+                fi
+
+                if [ -z "$password" ] && [ -n "${DB_PASSWORD_SUPERUSER:-}" ]; then
+                  password="${DB_PASSWORD_SUPERUSER}"
+                fi
+
+                echo "$password" | tr -d '[:space:]'
+              }
+
+              psql_quiet() {
+                local database="$1"
+                shift
+                local pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+                local pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+                local pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+                local pg_password
+
+                pg_password="$(get_admin_password)"
+                PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${database}" "$@" 2>&1
+              }
+
+              wait_for_postgres() {
+                local pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+                local pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+                local pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+                local pg_password
+                local output
+
+                pg_password="$(get_admin_password)"
+                if [ -z "$pg_password" ]; then
+                  log "ERROR: No admin database password available"
+                  exit 1
+                fi
+
+                while true; do
+                  output="$(PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d postgres -c '\q' 2>&1)" && break
+
+                  case "$output" in
+                    *"password authentication failed"*|*"no password supplied"*|*"SASL authentication failed"*|*"role \""* )
+                      log "ERROR: PostgreSQL authentication failed for ${pg_admin_user} at ${pg_admin_host}:${pg_admin_port}"
+                      log "ERROR: Existing appliance data may not match the current db-credentials secret. Reuse the original credentials in recover mode or wipe appliance data before a fresh install."
+                      exit 1
+                      ;;
+                    *"could not translate host name"*|*"Name or service not known"*|*"Temporary failure in name resolution"* )
+                      log "ERROR: PostgreSQL DNS resolution failed for ${pg_admin_host}"
+                      log "ERROR: ${output}"
+                      exit 1
+                      ;;
+                    *)
+                      log "PostgreSQL is unavailable at ${pg_admin_host}:${pg_admin_port} - sleeping"
+                      ;;
+                  esac
+                  sleep 1
+                done
+
+                log "PostgreSQL is up and running"
+              }
+
+              database_exists() {
+                local database_name="$1"
+                psql_quiet postgres -Atqc "SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname='${database_name}');" | grep -q '^t$'
+              }
+
+              users_table_exists() {
+                psql_quiet "${DB_NAME_SERVER:-server}" -Atqc "SELECT to_regclass('public.users') IS NOT NULL;" | grep -q '^t$'
+              }
+
+              seed_row_count() {
+                psql_quiet "${DB_NAME_SERVER:-server}" -Atqc "SELECT COUNT(*) FROM users;" | tr -d '[:space:]'
+              }
+
+              preflight_database_state() {
+                local server_db=false
+                local hocuspocus_db=false
+                local users_table=false
+                local user_count=0
+
+                if database_exists "${DB_NAME_SERVER:-server}"; then
+                  server_db=true
+                  if users_table_exists; then
+                    users_table=true
+                    user_count="$(seed_row_count)"
+                  fi
+                fi
+
+                if database_exists "${DB_NAME_HOCUSPOCUS:-hocuspocus}"; then
+                  hocuspocus_db=true
+                fi
+
+                log "Database preflight: bootstrap_mode=${BOOTSTRAP_MODE:-recover} server_db=${server_db} hocuspocus_db=${hocuspocus_db} users_table=${users_table} user_count=${user_count}"
+
+                if [ "${BOOTSTRAP_MODE:-recover}" = "fresh" ] && { [ "$server_db" = "true" ] || [ "$hocuspocus_db" = "true" ] || [ "$user_count" -gt 0 ]; }; then
+                  log "ERROR: Existing application database state detected while bootstrap.mode=fresh."
+                  log "ERROR: Wipe persisted appliance data before a fresh install or rerun in recover mode."
+                  exit 1
+                fi
+              }
+
+              check_seeds_status() {
+                local pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+                local pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+                local pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+                local pg_password
+
+                pg_password="$(get_admin_password)"
+                PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);" 2>/dev/null | grep -q '^t$'
+              }
+
+              wait_for_postgres
+              preflight_database_state
+
+              log "Creating databases and roles"
+              timeout 120 node /app/server/setup/create_database.js
+
+              if is_enabled "${SETUP_RUN_MIGRATIONS:-true}"; then
+                pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+                pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+                pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+
+                pg_password="$(get_admin_password)"
+
+                log "Creating pgboss schema"
+                PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" -c 'CREATE SCHEMA IF NOT EXISTS pgboss;'
+
+                log "Granting necessary permissions"
+                PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" -c 'GRANT ALL ON SCHEMA public TO postgres;'
+
+                log "Running migrations"
+                NODE_ENV=migration timeout 300 npx knex migrate:latest --knexfile /app/server/knexfile.cjs --verbose
+              else
+                log "SETUP_RUN_MIGRATIONS is disabled; skipping migrations"
+              fi
+
+              if is_enabled "${SETUP_RUN_SEEDS:-true}"; then
+                if check_seeds_status; then
+                  log "Seeds already exist; skipping"
+                else
+                  log "Running seeds"
+                  NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose
+                fi
+              else
+                log "SETUP_RUN_SEEDS is disabled; skipping seeds"
+              fi
+
+              log "Setup completed"
+          {{- end }}
           env:
             - name: APP_NAME
               value: "{{ .Values.nameOverride }}"
             - name: APP_ENV
-              value: "{{ .Values.env }}"
+              value: "{{ .Values.env | default "production" }}"
+            - name: NODE_ENV
+              value: "{{ .Values.env | default "production" }}"
+            - name: EDITION
+              value: "{{ .Values.edition | default "community" }}"
+            - name: SETUP_RUN_MIGRATIONS
+              value: {{ ternary "true" "false" .Values.setup.runMigrations | quote }}
+            - name: SETUP_RUN_SEEDS
+              value: {{ ternary "true" "false" .Values.setup.runSeeds | quote }}
+            - name: BOOTSTRAP_MODE
+              value: {{ .Values.bootstrap.mode | default "recover" | quote }}
+            - name: BOOTSTRAP_WAIT_TIMEOUT_SECONDS
+              value: {{ .Values.setup.applianceBootstrap.waitTimeoutSeconds | default 300 | quote }}
+            - name: BOOTSTRAP_WAIT_RETRY_SECONDS
+              value: {{ .Values.setup.applianceBootstrap.retryIntervalSeconds | default 2 | quote }}
+            {{- if .Values.setup.applianceBootstrap.enabled }}
+            - name: SEEDS_DIR
+              value: "/app/ee/server/seeds/onboarding"
+            {{- end }}
 
             # Secret provider configuration for setup jobs
             - name: SECRET_READ_CHAIN
@@ -68,9 +255,20 @@ spec:
               value: "postgres"
             - name: DB_HOST
               value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+            - name: DB_HOST_ADMIN
+              value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
             - name: DB_PORT
               value: "5432"
+            - name: DB_PORT_ADMIN
+              value: "5432"
             - name: DB_USER
+              value: "postgres"
+            - name: DB_PASSWORD_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_PASSWORD_SUPERUSER
+            - name: DB_USER_ADMIN
               value: "postgres"
             - name: DB_PASSWORD_SUPERUSER
               valueFrom:
@@ -88,6 +286,8 @@ spec:
                   key: DB_PASSWORD_HOCUSPOCUS
             - name: DB_USER_SERVER
               value: "app_user"
+            - name: DB_USER_PGBOUNCER
+              value: "app_user_pgbouncer"
             - name: DB_NAME_SERVER
               value: "server"
             - name: DB_PASSWORD_SERVER
@@ -95,30 +295,98 @@ spec:
                 secretKeyRef:
                   name: db-credentials
                   key: DB_PASSWORD_SERVER
+            - name: DB_PASSWORD_PGBOUNCER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_PASSWORD_PGBOUNCER
             {{- else }}
             - name: DB_TYPE
               value: "{{ .Values.config.db.type }}"
             - name: DB_HOST
               value: "{{ .Values.config.db.host }}"
+            - name: DB_HOST_ADMIN
+              value: "{{ .Values.config.db.adminHost | default .Values.config.db.host }}"
             - name: DB_PORT
               value: "{{ .Values.config.db.port }}"
+            - name: DB_PORT_ADMIN
+              value: "{{ .Values.config.db.adminPort | default .Values.config.db.port }}"
             - name: DB_USER
               value: "{{ .Values.config.db.user }}"
+            - name: DB_PASSWORD_ADMIN
+              {{- if and .Values.config.db.server_password_admin_secret.name .Values.config.db.server_password_admin_secret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_admin_secret.name | quote }}
+                  key: {{ .Values.config.db.server_password_admin_secret.key | quote }}
+              {{- else }}
+              value: {{ .Values.config.db.server_admin_password | quote }}
+              {{- end }}
+            - name: DB_USER_ADMIN
+              value: "{{ .Values.config.db.adminUser | default .Values.config.db.user }}"
             - name: DB_PASSWORD_SUPERUSER
-              value: "{{ .Values.config.db.password }}"
+              {{- if and .Values.config.db.server_password_admin_secret.name .Values.config.db.server_password_admin_secret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_admin_secret.name | quote }}
+                  key: {{ .Values.config.db.server_password_admin_secret.key | quote }}
+              {{- else }}
+              value: {{ .Values.config.db.server_admin_password | quote }}
+              {{- end }}
             - name: DB_USER_HOCUSPOCUS
-              value: "{{ .Values.config.db.user }}"
+              value: "{{ .Values.config.db.hocuspocus_user | default "hocuspocus_user" }}"
             - name: DB_NAME_HOCUSPOCUS
               value: "{{ .Values.config.db.hocuspocus_database }}"
             - name: DB_PASSWORD_HOCUSPOCUS
-              value: "{{ .Values.config.db.password }}"
+              {{- if .Values.config.db.hocuspocus_password_secret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.hocuspocus_password_secret.name | quote }}
+                  key: {{ .Values.config.db.hocuspocus_password_secret.key | quote }}
+              {{- else }}
+              value: {{ .Values.config.db.password | quote }}
+              {{- end }}
             - name: DB_USER_SERVER
               value: "{{ .Values.config.db.user }}"
+            {{- if .Values.config.db.pgbouncer_user }}
+            - name: DB_USER_PGBOUNCER
+              value: "{{ .Values.config.db.pgbouncer_user }}"
+            {{- end }}
             - name: DB_NAME_SERVER
               value: "{{ .Values.config.db.server_database }}"
             - name: DB_PASSWORD_SERVER
-              value: "{{ .Values.config.db.password }}"
+              {{- if and .Values.config.db.server_password_secret.name .Values.config.db.server_password_secret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_secret.name | quote }}
+                  key: {{ .Values.config.db.server_password_secret.key | quote }}
+              {{- else }}
+              value: {{ .Values.config.db.server_password | quote }}
+              {{- end }}
+            {{- if .Values.config.db.pgbouncer_password_secret }}
+            - name: DB_PASSWORD_PGBOUNCER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.pgbouncer_password_secret.name | quote }}
+                  key: {{ .Values.config.db.pgbouncer_password_secret.key | quote }}
+            {{- else if .Values.config.db.pgbouncer_password }}
+            - name: DB_PASSWORD_PGBOUNCER
+              value: {{ .Values.config.db.pgbouncer_password | quote }}
             {{- end }}
+            {{- end }}
+          {{- if .Values.setup.applianceBootstrap.enabled }}
+          volumeMounts:
+            - name: appliance-bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+          {{- end }}
       restartPolicy: Never
-  backoffLimit: 4
+      {{- if .Values.setup.applianceBootstrap.enabled }}
+      volumes:
+        - name: appliance-bootstrap
+          configMap:
+            name: {{ include "sebastian.fullname" . }}-appliance-bootstrap
+            defaultMode: 0755
+      {{- end }}
+  backoffLimit: 2
 {{- end }}

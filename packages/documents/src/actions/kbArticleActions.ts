@@ -6,65 +6,29 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { IDocument, ITag } from '@alga-psa/types';
+import type {
+  ArticleAudience,
+  ArticleStatus,
+  ArticleType,
+  IDocument,
+  IKBArticle,
+  IKBArticleReviewer,
+  IKBArticleTemplate,
+  IKBArticleWithDocument,
+  ITag,
+  ReviewStatus,
+} from '@alga-psa/types';
 
-export type ArticleType = 'how_to' | 'faq' | 'troubleshooting' | 'reference';
-export type ArticleAudience = 'internal' | 'client' | 'public';
-export type ArticleStatus = 'draft' | 'review' | 'published' | 'archived';
-export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'changes_requested';
-
-export interface IKBArticle {
-  article_id: string;
-  tenant: string;
-  document_id: string;
-  slug: string;
-  article_type: ArticleType;
-  audience: ArticleAudience;
-  status: ArticleStatus;
-  next_review_due: Date | null;
-  review_cycle_days: number | null;
-  last_reviewed_at: Date | null;
-  last_reviewed_by: string | null;
-  view_count: number;
-  helpful_count: number;
-  not_helpful_count: number;
-  category_id: string | null;
-  created_at: Date;
-  updated_at: Date;
-  created_by: string | null;
-  updated_by: string | null;
-  published_at: Date | null;
-  published_by: string | null;
-}
-
-export interface IKBArticleWithDocument extends IKBArticle {
-  document?: IDocument;
-  document_name?: string;
-}
-
-export interface IKBArticleReviewer {
-  reviewer_id: string;
-  tenant: string;
-  article_id: string;
-  user_id: string;
-  review_status: ReviewStatus;
-  review_notes: string | null;
-  assigned_at: Date;
-  reviewed_at: Date | null;
-  assigned_by: string | null;
-}
-
-export interface IKBArticleTemplate {
-  template_id: string;
-  tenant: string;
-  name: string;
-  description: string | null;
-  article_type: ArticleType;
-  content_template: any; // BlockNote JSON
-  is_default: boolean;
-  created_at: Date;
-  updated_at: Date;
-}
+export type {
+  ArticleAudience,
+  ArticleStatus,
+  ArticleType,
+  IKBArticle,
+  IKBArticleReviewer,
+  IKBArticleTemplate,
+  IKBArticleWithDocument,
+  ReviewStatus,
+} from '@alga-psa/types';
 
 export interface ICreateArticleInput {
   title: string;
@@ -1077,7 +1041,7 @@ export const getArticleTemplates = withAuth(
 interface BlockNoteBlock {
   type: string;
   props?: Record<string, any>;
-  content?: Array<{ type: string; text: string; styles?: Record<string, boolean> }>;
+  content?: Array<{ type: string; text: string; styles?: Record<string, boolean | Record<string, string>> }>;
   children?: BlockNoteBlock[];
 }
 
@@ -1088,6 +1052,29 @@ function markdownToBlocks(markdown: string): BlockNoteBlock[] {
 
   while (i < lines.length) {
     const line = lines[i];
+
+    // Horizontal rule
+    if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+      blocks.push({ type: 'horizontalRule' });
+      i++;
+      continue;
+    }
+
+    // Blockquote
+    if (line.startsWith('> ') || line === '>') {
+      const quoteLines: string[] = [];
+      while (i < lines.length && (lines[i].startsWith('> ') || lines[i] === '>')) {
+        quoteLines.push(lines[i].replace(/^>\s?/, ''));
+        i++;
+      }
+      // Parse blockquote content as inline markdown
+      const quoteText = quoteLines.join(' ');
+      blocks.push({
+        type: 'blockquote',
+        content: parseInlineMarkdown(quoteText),
+      });
+      continue;
+    }
 
     // Fenced code block
     if (line.startsWith('```')) {
@@ -1179,10 +1166,10 @@ function markdownToBlocks(markdown: string): BlockNoteBlock[] {
 
 function parseInlineMarkdown(
   text: string
-): Array<{ type: string; text: string; styles?: Record<string, boolean> }> {
-  const segments: Array<{ type: string; text: string; styles?: Record<string, boolean> }> = [];
-  // Very simple: handle **bold**, *italic*, `code`
-  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)/g;
+): Array<{ type: string; text: string; styles?: Record<string, boolean | Record<string, string>> }> {
+  const segments: Array<{ type: string; text: string; styles?: Record<string, boolean | Record<string, string>> }> = [];
+  // Handle **bold**, *italic*, `code`, and [text](url)
+  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -1196,6 +1183,8 @@ function parseInlineMarkdown(
       segments.push({ type: 'text', text: match[3], styles: { italic: true } });
     } else if (match[4]) {
       segments.push({ type: 'text', text: match[4], styles: { code: true } });
+    } else if (match[5] && match[6]) {
+      segments.push({ type: 'text', text: match[5], styles: { link: { href: match[6] } } });
     }
     lastIndex = match.index + match[0].length;
   }

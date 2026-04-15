@@ -25,7 +25,6 @@ import { validateData } from '@alga-psa/validation';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getEventBus } from '@alga-psa/event-bus';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
-import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
 import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch, getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import {
   ticketFormSchema,
@@ -39,9 +38,16 @@ import { Temporal } from '@js-temporal/polyfill';
 import { resolveUserTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
+import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
+import {
+  parseTicketStatusFilterValue,
+  shouldApplyOpenOnlyStatusFilter,
+  TICKET_STATUS_FILTER_ALL,
+  TICKET_STATUS_FILTER_OPEN,
+} from '../lib/ticketStatusFilter';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -388,6 +394,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           tenant: tenant
         })
         .first() : null;
+    if (board && (board.enable_live_ticket_timer === null || board.enable_live_ticket_timer === undefined)) {
+      board.enable_live_ticket_timer = true;
+    }
 
     // Process user data for userMap, including avatar URLs
     const usersWithAvatars = await Promise.all(users.map(async (user: any) => {
@@ -448,6 +457,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       value: status.status_id,
       label: status.name || "",
       is_closed: !!status.is_closed,
+      board_id: status.board_id ?? null,
     }));
 
     const agentOptions = users.map((agent) => ({
@@ -709,6 +719,7 @@ async function buildTicketListBaseQuery(
   user: { user_id: string },
   validatedFilters: ITicketListFilters
 ): Promise<{ builder: Knex.QueryBuilder }> {
+    const parsedStatusFilter = parseTicketStatusFilterValue(validatedFilters.statusId);
     let baseQuery = trx('tickets as t')
       .leftJoin('tickets as mt', function() {
         this.on('t.master_ticket_id', 'mt.ticket_id')
@@ -768,7 +779,7 @@ async function buildTicketListBaseQuery(
       baseQuery = baseQuery.whereIn('t.board_id', boardSubquery);
     }
 
-    if (validatedFilters.showOpenOnly) {
+    if (shouldApplyOpenOnlyStatusFilter(validatedFilters.statusId, validatedFilters.showOpenOnly)) {
       baseQuery = baseQuery.whereExists(function() {
         this.select('*')
             .from('statuses')
@@ -776,8 +787,10 @@ async function buildTicketListBaseQuery(
             .andWhere('statuses.is_closed', false)
             .andWhere('statuses.tenant', tenant);
       });
-    } else if (validatedFilters.statusId && validatedFilters.statusId !== 'all') {
-      baseQuery = baseQuery.where('t.status_id', validatedFilters.statusId);
+    } else if (parsedStatusFilter.kind === 'name') {
+      baseQuery = baseQuery.where('s.name', parsedStatusFilter.statusName);
+    } else if (parsedStatusFilter.kind === 'id') {
+      baseQuery = baseQuery.where('t.status_id', parsedStatusFilter.statusId);
     }
 
     if (validatedFilters.priorityId && validatedFilters.priorityId !== 'all') {
@@ -1372,6 +1385,33 @@ export const getTicketsForList = withAuth(async (
 });
 
 /**
+ * Get all ticket IDs matching the current filters (no pagination).
+ * Used for "select all matching" functionality.
+ */
+export const getAllMatchingTicketIds = withAuth(async (
+  user,
+  { tenant },
+  filters: ITicketListFilters
+): Promise<string[]> => {
+  const {knex: db} = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    const validatedFilters = cleanFilterValues(
+      validateData(ticketListFiltersSchema, filters) as ITicketListFilters
+    );
+
+    const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+
+    const rows = await baseQuery.clone().clearSelect().clearOrder().select('t.ticket_id');
+    return rows.map((row: { ticket_id: string }) => row.ticket_id);
+  });
+});
+
+/**
  * Get all options needed for ticket forms and filters
  * This consolidates multiple API calls into a single request
  */
@@ -1445,12 +1485,15 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
 
     // Format options for dropdowns
     const statusOptions = [
-      { value: 'open', label: 'All open statuses' },
-      { value: 'all', label: 'All Statuses' },
+      { value: TICKET_STATUS_FILTER_OPEN, label: 'All open statuses' },
+      { value: TICKET_STATUS_FILTER_ALL, label: 'All Statuses' },
       ...statuses.map((status: any) => ({
         value: status.status_id,
         label: status.name || "",
-        className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined
+        className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined,
+        statusName: status.name || "",
+        boardId: status.board_id || null,
+        isClosed: Boolean(status.is_closed),
       }))
     ];
 
@@ -1590,6 +1633,14 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
     // Check if we're updating the assigned_to field
     const isChangingAssignment = 'assigned_to' in updateData &&
                                 updateData.assigned_to !== currentTicket.assigned_to;
+    const isBoardChange =
+      'board_id' in updateData &&
+      !!updateData.board_id &&
+      updateData.board_id !== currentTicket.board_id;
+
+    if (isBoardChange && !updateData.status_id) {
+      throw new Error('Changing the board requires selecting a status for the destination board');
+    }
 
     // If updating category or subcategory, ensure they are compatible
     if ('subcategory_id' in updateData || 'category_id' in updateData) {
@@ -1605,6 +1656,25 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
         if (subcategory && subcategory.parent_category !== newCategoryId) {
           throw new Error('Invalid category combination: subcategory must belong to the selected parent category');
         }
+      }
+    }
+
+    if ('status_id' in updateData && updateData.status_id && updateData.status_id !== currentTicket.status_id) {
+      const effectiveBoardId = updateData.board_id || currentTicket.board_id;
+      const statusResult = effectiveBoardId
+        ? await TicketModel.validateStatusBelongsToBoard(
+          updateData.status_id,
+          effectiveBoardId,
+          tenant,
+          trx
+        )
+        : {
+          valid: false,
+          error: 'Invalid status: board_id is required when selecting a ticket status'
+        };
+
+      if (!statusResult.valid && statusResult.error) {
+        throw new Error(statusResult.error);
       }
     }
 
@@ -1788,6 +1858,15 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       };
     }
 
+    // Keep the ticket row's denormalized close flag aligned with the selected status.
+    if (updateData.status_id !== undefined && updateData.status_id !== currentTicket.status_id) {
+      const nextIsClosed = !!newStatus?.is_closed;
+      await trx('tickets')
+        .where({ ticket_id: id, tenant: tenant })
+        .update({ is_closed: nextIsClosed });
+      updatedTicket.is_closed = nextIsClosed;
+    }
+
     // Record closed_at / closed_by when transitioning to/from closed status
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
       await trx('tickets')
@@ -1917,6 +1996,9 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
     return 'success';
     } catch (error) {
       console.error(error);
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('Failed to update ticket');
     }
   });

@@ -48,6 +48,8 @@ interface DialogProps {
   allowOverflow?: boolean;
   /** Disable focus trapping to allow interaction with portaled elements outside the dialog */
   disableFocusTrap?: boolean;
+  /** Content rendered in a sticky footer below the scrollable body */
+  footer?: ReactNode;
 }
 
 export function Dialog({
@@ -65,7 +67,8 @@ export function Dialog({
   initialPosition,
   constrainToViewport = false,
   allowOverflow = false,
-  disableFocusTrap = false
+  disableFocusTrap = false,
+  footer
 }: DialogProps & AutomationProps): React.ReactElement {
   // Auto-detect when this Dialog is nested inside a Drawer or another Dialog.
   const isInsideDialog = useInsideDialog();
@@ -367,6 +370,12 @@ export function Dialog({
               </InsideDialogContext.Provider>
             </ReflectionParentContext.Provider>
           </div>
+          {/* Sticky footer — rendered outside the scrollable body */}
+          {footer && (
+            <div className="flex-shrink-0 border-t border-[rgb(var(--color-border-100))] px-6 py-4 bg-[rgb(var(--color-card))] rounded-b-lg">
+              {footer}
+            </div>
+          )}
           {/* Close button */}
           {!hideCloseButton && (
             <button
@@ -478,6 +487,12 @@ export function Dialog({
               </InsideDialogContext.Provider>
             </ReflectionParentContext.Provider>
           </div>
+          {/* Sticky footer — rendered outside the scrollable body */}
+          {footer && (
+            <div className="flex-shrink-0 border-t border-[rgb(var(--color-border-100))] px-6 py-4 bg-[rgb(var(--color-card))] rounded-b-lg">
+              {footer}
+            </div>
+          )}
           {!hideCloseButton && (
             disableFocusTrap ? (
               <button

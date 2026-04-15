@@ -10,19 +10,46 @@
     "clients": "55555",
     "contacts": "55555",
     "documents": "55555",
+    "documentsAll": "55555",
+    "knowledgeBase": "55555",
     "assets": "55555",
     "timeManagement": "55555",
     "timeEntry": "55555",
     "approvals": "55555",
-    "billing": "55555",
+    "billing": {
+      "label": "55555",
+      "sections": {
+        "contracts": "55555",
+        "invoicing": "55555",
+        "pricing": "55555",
+        "trackingReports": "55555"
+      },
+      "contractTemplates": "55555",
+      "clientContracts": "55555",
+      "contractLinePresets": "55555",
+      "invoicing": "55555",
+      "invoiceLayouts": "55555",
+      "billingCycles": "55555",
+      "servicePeriods": "55555",
+      "serviceCatalog": "55555",
+      "products": "55555",
+      "taxRates": "55555",
+      "usageTracking": "55555",
+      "reports": "55555",
+      "accountingExports": "55555"
+    },
     "schedule": "55555",
     "technicianDispatch": "55555",
     "automationHub": "55555",
     "workflows": "55555",
+    "controlPanel": "55555",
+    "workflowEditor": "55555",
     "runs": "55555",
     "events": "55555",
     "deadLetter": "55555",
     "systemMonitor": "55555",
+    "systemMonitoring": "55555",
+    "jobMonitoring": "55555",
     "jobs": "55555",
     "emailLogs": "55555",
     "extensions": "55555"
@@ -31,7 +58,11 @@
     "backToMain": "55555",
     "searchPlaceholder": "55555",
     "settings": "55555",
-    "support": "55555"
+    "support": "55555",
+    "goToDashboard": "55555",
+    "logoAlt": "55555",
+    "expandSidebar": "55555",
+    "collapseSidebar": "55555"
   },
   "settings": {
     "sections": {
@@ -46,8 +77,10 @@
       "general": "55555",
       "users": "55555",
       "teams": "55555",
+      "language": "55555",
       "clientPortal": "55555",
       "ticketing": "55555",
+      "sla": "55555",
       "projects": "55555",
       "interactions": "55555",
       "notifications": "55555",
@@ -63,11 +96,129 @@
       "security": "55555"
     }
   },
+  "dashboard": {
+    "onboardingWizard": "55555"
+  },
   "header": {
     "userFallback": "55555",
     "quickAccess": "55555",
     "profile": "55555",
     "account": "55555",
-    "signOut": "55555"
+    "signOut": "55555",
+    "quickCreate": {
+      "ariaLabel": "55555",
+      "title": "55555",
+      "heading": "55555",
+      "options": {
+        "ticket": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "client": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "contact": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "project": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "asset": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "service": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "product": {
+          "label": "55555",
+          "description": "55555"
+        }
+      }
+    },
+    "jobs": {
+      "ariaLabel": "55555",
+      "title": "55555",
+      "description": "55555",
+      "active": "55555",
+      "queued": "55555",
+      "failedLast24h": "55555",
+      "openJobCenter": "55555"
+    },
+    "breadcrumb": {
+      "home": "55555",
+      "dashboard": "55555"
+    },
+    "tenantBadge": {
+      "ariaLabel": "55555 {{tenant}} 55555"
+    },
+    "themeToggle": {
+      "ariaLabel": "55555",
+      "light": "55555",
+      "dark": "55555",
+      "system": "55555",
+      "selected": "55555"
+    }
+  },
+  "dialogs": {
+    "aiInterrupt": {
+      "navigate": {
+        "title": "55555",
+        "message": "55555",
+        "confirm": "55555",
+        "cancel": "55555"
+      },
+      "closeChat": {
+        "title": "55555",
+        "message": "55555",
+        "confirm": "55555",
+        "cancel": "55555"
+      }
+    }
+  },
+  "banners": {
+    "trial": {
+      "premiumConfirmed": "55555",
+      "dayLeft": "55555",
+      "daysLeft": "55555 {{count}} 55555",
+      "premiumTrial": "55555 {{daysLabel}} 55555",
+      "stripeTrial": "55555 {{tier}} 55555 {{daysLabel}} 55555"
+    },
+    "paymentFailed": {
+      "message": "55555",
+      "portalError": "55555"
+    },
+    "platformNotification": {
+      "learnMore": "55555",
+      "dismiss": "55555"
+    }
+  },
+  "quickCreate": {
+    "success": {
+      "asset": "55555",
+      "ticket": "55555 {{number}} 55555",
+      "client": "55555 {{name}} 55555",
+      "contact": "55555 {{name}} 55555",
+      "project": "55555 {{name}} 55555",
+      "service": "55555",
+      "product": "55555"
+    },
+    "errors": {
+      "loadClients": "55555",
+      "loadServiceTypes": "55555"
+    },
+    "dialogTitles": {
+      "contact": "55555",
+      "project": "55555",
+      "service": "55555"
+    }
+  },
+  "rightSidebar": {
+    "title": "55555",
+    "enterpriseOnly": "55555"
   }
 }

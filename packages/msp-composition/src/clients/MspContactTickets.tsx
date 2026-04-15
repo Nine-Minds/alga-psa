@@ -31,6 +31,10 @@ import { getClientById } from '@alga-psa/clients/actions';
 import { TagFilter } from '@alga-psa/ui/components';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import { MspClientCrossFeatureProvider } from './MspClientCrossFeatureProvider';
+import {
+  isTicketStatusOpenFilter,
+  TICKET_STATUS_FILTER_OPEN,
+} from '@alga-psa/tickets/lib';
 
 interface ContactTicketsProps {
   contactId: string;
@@ -84,7 +88,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
 
   // Filter states
   const [selectedBoard, setSelectedBoard] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string>('open');
+  const [selectedStatus, setSelectedStatus] = useState<string>(TICKET_STATUS_FILTER_OPEN);
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
@@ -147,7 +151,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
         categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
         searchQuery: debouncedSearchQuery,
         boardFilterState: boardFilterState,
-        showOpenOnly: selectedStatus === 'open',
+        showOpenOnly: isTicketStatusOpenFilter(selectedStatus),
         tags: selectedTags.length > 0 ? selectedTags : undefined,
         assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
         includeUnassigned: includeUnassigned,
@@ -325,7 +329,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
 
   const isFiltered = useMemo(() => {
     return selectedBoard !== null ||
-      selectedStatus !== 'open' ||
+      selectedStatus !== TICKET_STATUS_FILTER_OPEN ||
       selectedPriority !== 'all' ||
       selectedCategories.length > 0 ||
       excludedCategories.length > 0 ||
@@ -337,7 +341,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
 
   const resetFilters = () => {
     setSelectedBoard(null);
-    setSelectedStatus('open');
+    setSelectedStatus(TICKET_STATUS_FILTER_OPEN);
     setSelectedPriority('all');
     setSelectedCategories([]);
     setExcludedCategories([]);

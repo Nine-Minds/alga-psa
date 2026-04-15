@@ -29,6 +29,6 @@ describe('invoice template AST persistence wiring', () => {
 
     expect(modelSource).toContain("'templateAst'");
     expect(modelSource).toContain('Standard invoice template rows missing templateAst');
-    expect(modelSource).not.toContain('getStandardInvoiceTemplateAstByCode');
+    expect(modelSource).not.toContain('getStandardTemplateAstByCode');
   });
 });

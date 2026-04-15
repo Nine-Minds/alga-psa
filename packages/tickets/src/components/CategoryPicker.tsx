@@ -6,6 +6,7 @@ import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/compo
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { AutomationProps, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface CategoryPickerProps {
   id?: string; // Made required since it's needed for reflection registration
@@ -33,7 +34,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
   selectedCategories = [],
   excludedCategories = [],
   onSelect,
-  placeholder = 'Select categories...',
+  placeholder,
   multiSelect = false,
   className = '',
   showExclude = false,
@@ -44,6 +45,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
   onAddNew,
   "data-automation-type": dataAutomationType = 'custom',
 }) => {
+  const { t } = useTranslation('features/tickets');
   // Register components with UI reflection system
   const { automationIdProps: containerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     id,
@@ -69,7 +71,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
         console.error('CategoryPicker: categories prop is not an array:', categories);
       }
       return [{
-        label: 'No Category',
+        label: t('categoryPicker.noCategory', 'No Category'),
         value: 'no-category',
         type: 'parent' as CategoryType,
         selected: Array.isArray(selectedCategories) ? selectedCategories.includes('no-category') : false,
@@ -97,7 +99,9 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
       label: parent.is_from_itil_standard ? (
         <span className="flex items-center gap-1">
           {parent.category_name}
-          <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded">ITIL</span>
+          <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded">
+            {t('categoryPicker.itilBadge', 'ITIL')}
+          </span>
         </span>
       ) : parent.category_name,
       value: parent.category_id,
@@ -108,7 +112,9 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
         label: child.is_from_itil_standard ? (
           <span className="flex items-center gap-1">
             {child.category_name}
-            <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded">ITIL</span>
+            <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded">
+              {t('categoryPicker.itilBadge', 'ITIL')}
+            </span>
           </span>
         ) : child.category_name,
         value: child.category_id,
@@ -121,7 +127,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
     // Add "No Category" option at the beginning
     return [
       {
-        label: 'No Category',
+        label: t('categoryPicker.noCategory', 'No Category'),
         value: 'no-category',
         type: 'parent' as CategoryType,
         selected: selectedCategories.includes('no-category'),
@@ -129,7 +135,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
       },
       ...categoryOptions
     ];
-  }, [categories, selectedCategories, excludedCategories]);
+  }, [categories, excludedCategories, selectedCategories, t]);
 
   // Handle selection changes
   const handleValueChange = (value: string, type: CategoryType, excluded: boolean, path?: TreeSelectPath) => {
@@ -192,7 +198,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
       if (selectedCategories.length === 1) {
         const selectedId = selectedCategories[0];
         if (selectedId === 'no-category') {
-          parts.push('No Category');
+          parts.push(t('categoryPicker.noCategory', 'No Category'));
         } else {
           const selectedCategory = categories.find(c => c.category_id === selectedId);
           if (selectedCategory) {
@@ -210,7 +216,10 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
           }
         }
       } else {
-        parts.push(`${selectedCategories.length} categories`);
+        parts.push(t('categoryPicker.selectedCount', {
+          count: selectedCategories.length,
+          defaultValue: selectedCategories.length === 1 ? '{{count}} category' : '{{count}} categories',
+        }));
       }
     }
     
@@ -218,7 +227,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
       if (excludedCategories.length === 1) {
         const excludedId = excludedCategories[0];
         if (excludedId === 'no-category') {
-          parts.push('excluding No Category');
+          parts.push(t('categoryPicker.excludingNoCategory', 'excluding No Category'));
         } else {
           const excludedCategory = categories.find(c => c.category_id === excludedId);
           if (excludedCategory) {
@@ -226,32 +235,45 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
               // If it's a subcategory, show parent → child format
               const parentCategory = categories.find(c => c.category_id === excludedCategory.parent_category);
               if (parentCategory) {
-                parts.push(`excluding ${parentCategory.category_name} → ${excludedCategory.category_name}`);
+                parts.push(t('categoryPicker.excludingPrefix', {
+                  name: `${parentCategory.category_name} → ${excludedCategory.category_name}`,
+                  defaultValue: 'excluding {{name}}',
+                }));
               } else {
-                parts.push(`excluding ${excludedCategory.category_name}`);
+                parts.push(t('categoryPicker.excludingPrefix', {
+                  name: excludedCategory.category_name,
+                  defaultValue: 'excluding {{name}}',
+                }));
               }
             } else {
-              parts.push(`excluding ${excludedCategory.category_name}`);
+              parts.push(t('categoryPicker.excludingPrefix', {
+                name: excludedCategory.category_name,
+                defaultValue: 'excluding {{name}}',
+              }));
             }
           }
         }
       } else {
-        parts.push(`excluding ${excludedCategories.length} categories`);
+        parts.push(t('categoryPicker.excludingCount', {
+          count: excludedCategories.length,
+          defaultValue: excludedCategories.length === 1 ? 'excluding {{count}} category' : 'excluding {{count}} categories',
+        }));
       }
     }
-    
+
     return parts.join(', ') || '';
-  }, [selectedCategories, excludedCategories, categories]);
+  }, [categories, excludedCategories, selectedCategories, t]);
+  const resolvedPlaceholder = placeholder || t('categoryPicker.placeholder', 'Select categories...');
 
   return (
-    <ReflectionContainer id={id} label="Category Picker">
+    <ReflectionContainer id={id} label={t('categoryPicker.title', 'Category Picker')}>
       <div {...containerProps}>
         <TreeSelect
           // {...selectProps}
           options={treeOptions}
           value={currentValue}
           onValueChange={handleValueChange}
-          placeholder={displayLabel || placeholder}
+          placeholder={displayLabel || resolvedPlaceholder}
           className={className}
           selectedClassName="bg-gray-50"
           hoverClassName="hover:bg-gray-50"
@@ -264,7 +286,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
           disabled={disabled}
           modal={modal}
           onAddNew={onAddNew}
-          addNewLabel="Add new category"
+          addNewLabel={t('categoryPicker.addNew', 'Add new category')}
         />
       </div>
     </ReflectionContainer>

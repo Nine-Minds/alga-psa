@@ -1,4 +1,4 @@
-import { DEFAULT_INVOICE_PRINT_SETTINGS, resolveInvoiceTemplatePrintSettings } from '@alga-psa/types';
+import { DEFAULT_INVOICE_PRINT_SETTINGS, resolveTemplatePrintSettings } from '@alga-psa/types';
 import type {
   DesignerComponentType,
   DesignerContainerLayout,
@@ -22,7 +22,7 @@ export type DesignerComponentHierarchy = {
   allowedParents: DesignerComponentType[];
 };
 
-const DEFAULT_RESOLVED_PRINT_SETTINGS = resolveInvoiceTemplatePrintSettings({
+const DEFAULT_RESOLVED_PRINT_SETTINGS = resolveTemplatePrintSettings({
   printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
 });
 
@@ -73,18 +73,20 @@ const COMMON_INSPECTOR: DesignerInspectorSchema = {
           ],
         },
         {
-          kind: 'css-length',
+          kind: 'css-length-stepper',
           id: 'gap',
           label: 'Gap',
           path: 'layout.gap',
-          placeholder: '0px',
+          allowedUnits: ['px', '%', 'rem'],
+          defaultUnit: 'px',
         },
         {
-          kind: 'css-length',
+          kind: 'css-length-stepper',
           id: 'padding',
           label: 'Padding',
           path: 'layout.padding',
-          placeholder: '0px',
+          allowedUnits: ['px', '%', 'rem'],
+          defaultUnit: 'px',
         },
         {
           kind: 'enum',
@@ -238,39 +240,12 @@ const COMMON_INSPECTOR: DesignerInspectorSchema = {
           placeholder: '8px',
         },
         {
-          kind: 'css-length',
+          kind: 'css-length-box',
           id: 'margin',
           label: 'Margin',
           path: 'style.margin',
-          placeholder: '0 | 0 0 12px 0',
-        },
-      ],
-    },
-    {
-      id: 'flex-item',
-      title: 'Flex Item',
-      visibleWhen: { kind: 'parentPathEquals', path: 'layout.display', value: 'flex' },
-      fields: [
-        {
-          kind: 'number',
-          id: 'flexGrow',
-          label: 'flex-grow',
-          path: 'style.flexGrow',
-          placeholder: '0',
-        },
-        {
-          kind: 'number',
-          id: 'flexShrink',
-          label: 'flex-shrink',
-          path: 'style.flexShrink',
-          placeholder: '1',
-        },
-        {
-          kind: 'css-length',
-          id: 'flexBasis',
-          label: 'flex-basis',
-          path: 'style.flexBasis',
-          placeholder: 'auto | 240px | 50%',
+          allowedUnits: ['px', '%', 'rem'],
+          defaultUnit: 'px',
         },
       ],
     },
@@ -317,12 +292,12 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
           placeholder: 'Invoice #',
         },
         {
-          kind: 'string',
+          kind: 'widget',
           id: 'bindingKey',
+          widget: 'field-binding-picker',
           domId: 'designer-field-binding',
           label: 'Binding key',
           path: 'metadata.bindingKey',
-          enableExpressionInsert: true,
         },
         {
           kind: 'enum',
@@ -559,6 +534,26 @@ const TABLE_INSPECTOR: DesignerInspectorSchema = {
         },
       ],
     },
+    {
+      id: 'table-header-style',
+      title: 'Header Style',
+      fields: [
+        {
+          kind: 'css-color',
+          id: 'headerBackgroundColor',
+          label: 'Background',
+          path: 'metadata.headerBackgroundColor',
+          placeholder: '#1f2937',
+        },
+        {
+          kind: 'css-color',
+          id: 'headerColor',
+          label: 'Text color',
+          path: 'metadata.headerColor',
+          placeholder: '#ffffff',
+        },
+      ],
+    },
   ],
 };
 
@@ -611,7 +606,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       metadata: {},
     },
     hierarchy: {
-      allowedChildren: ['section'],
+      allowedChildren: ['section', 'totals', 'table', 'dynamic-table', 'image', 'logo', 'qr', 'signature', 'attachment-list', 'action-button'],
       allowedParents: ['document'],
     },
     inspector: COMMON_INSPECTOR,
@@ -720,11 +715,15 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Content',
     defaults: {
       size: { width: 360, height: 140 },
+      style: {
+        width: '100%',
+        height: 'auto',
+      },
       metadata: {},
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
     inspector: COMMON_INSPECTOR,
   },
@@ -735,6 +734,10 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Dynamic',
     defaults: {
       size: { width: 520, height: 220 },
+      style: {
+        width: '100%',
+        height: 'auto',
+      },
       metadata: {
         columns: [
           { id: 'col-desc', header: 'Description', key: 'item.description', type: 'text', width: 220 },
@@ -751,7 +754,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
     inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TABLE_INSPECTOR),
   },
@@ -762,6 +765,10 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Dynamic',
     defaults: {
       size: { width: 520, height: 240 },
+      style: {
+        width: '100%',
+        height: 'auto',
+      },
       metadata: {
         tableBorderPreset: 'boxed',
         tableOuterBorder: true,
@@ -772,7 +779,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
     inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TABLE_INSPECTOR),
   },
@@ -783,11 +790,15 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Content',
     defaults: {
       size: { width: 200, height: 48 },
+      style: {
+        width: 'auto',
+        height: 'auto',
+      },
       metadata: {
         bindingKey: 'invoice.number',
         format: 'text',
         placeholder: 'Invoice Number',
-        fieldBorderStyle: 'underline',
+        fieldBorderStyle: 'none',
       },
     },
     hierarchy: {

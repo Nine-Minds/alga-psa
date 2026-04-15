@@ -2,9 +2,8 @@
   "name": "@alga-psa/notifications",
   "version": "0.1.0",
   "private": true,
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/index.mjs",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
       "import": "./src/index.ts",
@@ -36,7 +35,9 @@
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/user-composition": "*",
-    "@alga-psa/validation": "*"
+    "@alga-psa/validation": "*",
+    "@alga-psa/workflow-streams": "*",
+    "@alga-psa/workflows": "*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

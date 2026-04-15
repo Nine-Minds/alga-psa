@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { createHash } from 'node:crypto';
 import {
   IEmailProvider,
   EmailMessage as ProviderEmailMessage,
@@ -16,9 +17,14 @@ export interface EmailAddress {
 export interface EmailSendResult {
   success: boolean;
   messageId?: string;
+  providerMessageId?: string;
+  rfcMessageId?: string;
   error?: string;
   queued?: boolean;      // true if queued for later delivery due to rate limiting
   retryCount?: number;   // current retry attempt (0 = first attempt)
+  providerId?: string;
+  providerType?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface ITemplateProcessor {
@@ -56,8 +62,79 @@ export interface BaseEmailParams {
   entityId?: string;
   contactId?: string;
   notificationSubtypeId?: number;
+  replyContext?: {
+    ticketId?: string;
+    projectId?: string;
+    commentId?: string;
+    threadId?: string;
+    conversationToken?: string;
+  };
   // Allow subclasses to add their own parameters
   [key: string]: any;
+}
+
+const REPLY_TOKEN_SUFFIX_LENGTH = 8;
+
+function getReplyTokenFingerprint(token?: string): {
+  replyTokenHash: string | null;
+  replyTokenSuffix: string | null;
+} {
+  const trimmedToken = typeof token === 'string' ? token.trim() : '';
+  if (!trimmedToken) {
+    return {
+      replyTokenHash: null,
+      replyTokenSuffix: null,
+    };
+  }
+
+  return {
+    replyTokenHash: createHash('sha256').update(trimmedToken).digest('hex'),
+    replyTokenSuffix: trimmedToken.slice(-REPLY_TOKEN_SUFFIX_LENGTH),
+  };
+}
+
+function getMetadataString(
+  metadata: Record<string, any> | undefined,
+  keys: string[]
+): string | null {
+  if (!metadata || typeof metadata !== 'object') {
+    return null;
+  }
+
+  for (const key of keys) {
+    const value = metadata[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}
+
+function deriveOutboundMessageIds(result: ProviderEmailSendResult): {
+  providerMessageId: string | null;
+  rfcMessageId: string | null;
+} {
+  const providerMessageId =
+    result.providerMessageId ??
+    getMetadataString(result.metadata, ['providerMessageId', 'provider_message_id']) ??
+    result.messageId ??
+    null;
+
+  const rfcMessageId =
+    result.rfcMessageId ??
+    getMetadataString(result.metadata, [
+      'rfcMessageId',
+      'rfc_message_id',
+      'messageIdHeader',
+      'message_id_header',
+    ]) ??
+    (result.messageId && /@/.test(result.messageId) ? result.messageId : null);
+
+  return {
+    providerMessageId,
+    rfcMessageId,
+  };
 }
 
 /**
@@ -189,6 +266,7 @@ export abstract class BaseEmailService {
         entityId: params.entityId,
         contactId: params.contactId,
         notificationSubtypeId: params.notificationSubtypeId,
+        replyContext: params.replyContext,
       });
 
       if (result.success) {
@@ -203,7 +281,10 @@ export abstract class BaseEmailService {
       return {
         success: result.success,
         messageId: result.messageId,
-        error: result.error
+        error: result.error,
+        providerId: result.providerId,
+        providerType: result.providerType,
+        metadata: result.metadata
       };
     } catch (error) {
       // Best-effort: log provider failure if we made it to message construction.
@@ -228,13 +309,16 @@ export abstract class BaseEmailService {
           entityId: params.entityId,
           contactId: params.contactId,
           notificationSubtypeId: params.notificationSubtypeId,
+          replyContext: params.replyContext,
         });
       }
 
       logger.error(`[${this.getServiceName()}] Failed to send email:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
+        providerId: this.emailProvider?.providerId,
+        providerType: this.emailProvider?.providerType
       };
     }
   }
@@ -247,6 +331,7 @@ export abstract class BaseEmailService {
     entityId?: string;
     contactId?: string;
     notificationSubtypeId?: number;
+    replyContext?: BaseEmailParams['replyContext'];
   }): Promise<void> {
     if (!params.tenantId) return;
 
@@ -256,10 +341,41 @@ export abstract class BaseEmailService {
       const toAddresses = params.message.to.map((addr) => addr.email);
       const ccAddresses = params.message.cc?.map((addr) => addr.email) ?? null;
       const bccAddresses = params.message.bcc?.map((addr) => addr.email) ?? null;
+      const { providerMessageId, rfcMessageId } = deriveOutboundMessageIds(params.providerResult);
+      const { replyTokenHash, replyTokenSuffix } = getReplyTokenFingerprint(
+        params.replyContext?.conversationToken
+      );
+      const baseMetadata =
+        params.providerResult.metadata && typeof params.providerResult.metadata === 'object'
+          ? { ...params.providerResult.metadata }
+          : {};
+      const existingDiagnostics =
+        baseMetadata.algaDiagnostics && typeof baseMetadata.algaDiagnostics === 'object'
+          ? baseMetadata.algaDiagnostics
+          : {};
+      const metadata = {
+        ...baseMetadata,
+        algaDiagnostics: {
+          ...existingDiagnostics,
+          outbound: {
+            providerMessageId,
+            rfcMessageId,
+            threadId: params.replyContext?.threadId ?? null,
+            ticketId: params.replyContext?.ticketId ?? null,
+            projectId: params.replyContext?.projectId ?? null,
+            commentId: params.replyContext?.commentId ?? null,
+            replyTokenPresent: Boolean(params.replyContext?.conversationToken),
+            replyTokenHash,
+            replyTokenSuffix,
+          },
+        },
+      };
 
       await knex(BaseEmailService.EMAIL_LOG_TABLE).insert({
         tenant: params.tenantId,
         message_id: params.providerResult.messageId ?? null,
+        provider_message_id: providerMessageId,
+        rfc_message_id: rfcMessageId,
         provider_id: params.providerResult.providerId,
         provider_type: params.providerResult.providerType,
         from_address: params.message.from.email,
@@ -269,12 +385,16 @@ export abstract class BaseEmailService {
         subject: params.message.subject,
         status: params.providerResult.success ? 'sent' : 'failed',
         error_message: params.providerResult.error ?? null,
-        metadata: params.providerResult.metadata ?? null,
+        metadata,
         sent_at: params.providerResult.sentAt ?? new Date(),
         entity_type: params.entityType ?? null,
         entity_id: params.entityId ?? null,
         contact_id: params.contactId ?? null,
         notification_subtype_id: params.notificationSubtypeId ?? null,
+        thread_id: params.replyContext?.threadId ?? null,
+        comment_id: params.replyContext?.commentId ?? null,
+        reply_token_hash: replyTokenHash,
+        reply_token_suffix: replyTokenSuffix,
       });
     } catch (error) {
       logger.warn(`[${this.getServiceName()}] Failed to write email_sending_logs record`, {

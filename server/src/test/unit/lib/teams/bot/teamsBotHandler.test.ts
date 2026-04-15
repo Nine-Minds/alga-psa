@@ -1115,30 +1115,4 @@ describe('teamsBotHandler', () => {
       error: 'invalid_json',
     });
   });
-
-  it('T123/T124: request handling returns a stable disabled response when Teams runtime availability is off', async () => {
-    getTeamsRuntimeAvailabilityMock.mockResolvedValue({
-      enabled: false,
-      reason: 'flag_disabled',
-      flagKey: 'teams-integration-ui',
-      message: 'Microsoft Teams integration is disabled for this tenant.',
-    });
-
-    const response = await handleTeamsBotActivityRequest(
-      new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(buildPersonalMessageActivity('help')),
-      })
-    );
-
-    expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toEqual({
-      success: false,
-      error: 'Microsoft Teams integration is disabled for this tenant.',
-      reason: 'flag_disabled',
-    });
-  });
 });

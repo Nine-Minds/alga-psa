@@ -1,0 +1,37 @@
+{
+  "releaseVersion": "1.0-rc5",
+  "generatedAt": "2026-03-25T00:00:00Z",
+  "talos": {
+    "version": "v1.12.0",
+    "schematicId": "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba",
+    "schematicPath": "ee/appliance/schematics/metal-amd64.yaml"
+  },
+  "kubernetes": {
+    "version": "v1.31.4"
+  },
+  "os": {
+    "platform": "metal",
+    "architecture": "amd64",
+    "iso": {
+      "url": "https://factory.talos.dev/image/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba/v1.12.0/metal-amd64.iso",
+      "localPath": "dist/appliance/1.0-rc5/metal-amd64.iso",
+      "sha256": "d4379a948d8edc545bba99989204d8639b258fe0c82bccaf7495c1af706524b1"
+    },
+    "installer": {
+      "image": "factory.talos.dev/metal-installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba:v1.12.0",
+      "digest": "sha256:ca9e5f28c3bfefafd882c3b869166b8d2037b115f931c84ed621a99c9fd27f64"
+    }
+  },
+  "app": {
+    "version": "1.0-rc5",
+    "releaseBranch": "release/1.0-rc5",
+    "valuesProfile": "talos-single-node",
+    "images": {
+      "algaCore": "94446747",
+      "workflowWorker": "61e4a00e",
+      "emailService": "61e4a00e",
+      "temporalWorker": "61e4a00e"
+    }
+  },
+  "channel": "candidate"
+}

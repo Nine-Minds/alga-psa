@@ -34,6 +34,15 @@ export const resolveClientBillingCurrency = withAuth(async (_user, { tenant }, c
     throw new Error(`Client has active contracts in multiple currencies (${unique.join(', ')}).`);
   }
 
-  return unique[0] || client?.default_currency_code || 'USD';
+  if (unique[0]) return unique[0];
+  if (client?.default_currency_code) return client.default_currency_code;
+
+  // Fall back to tenant-level billing settings default currency
+  const billingSettings = await knex('default_billing_settings')
+    .where({ tenant })
+    .select('default_currency_code')
+    .first();
+
+  return billingSettings?.default_currency_code || 'USD';
 });
 

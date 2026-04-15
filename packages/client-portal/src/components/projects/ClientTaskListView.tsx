@@ -36,10 +36,13 @@ interface Phase {
 interface Task {
   task_id: string;
   phase_id: string;
+  project_status_mapping_id: string;
   task_name?: string;
   description?: string;
   due_date?: Date | null;
   status_name?: string;
+  custom_name?: string;
+  display_order?: number;
   status_color?: string | null;
   assigned_to_id?: string;
   assigned_to_name?: string;
@@ -59,8 +62,10 @@ interface Task {
 }
 
 interface StatusGroup {
+  project_status_mapping_id: string;
   status_name: string;
   status_color: string | null;
+  display_order: number;
   tasks: Task[];
 }
 
@@ -198,15 +203,17 @@ export default function ClientTaskListView({
     return phases.map(phase => {
       const phaseTasks = tasks.filter(task => task.phase_id === phase.phase_id);
 
-      // Group by status_name
+      // Group by effective status label for the task's phase
       const statusMap = new Map<string, StatusGroup>();
 
       phaseTasks.forEach(task => {
-        const statusName = task.status_name || 'Unknown';
+        const statusName = task.custom_name || task.status_name || 'Unknown';
         if (!statusMap.has(statusName)) {
           statusMap.set(statusName, {
+            project_status_mapping_id: task.project_status_mapping_id,
             status_name: statusName,
             status_color: task.status_color || null,
+            display_order: task.display_order ?? Number.MAX_SAFE_INTEGER,
             tasks: []
           });
         }
@@ -215,7 +222,7 @@ export default function ClientTaskListView({
 
       return {
         phase,
-        statusGroups: Array.from(statusMap.values()),
+        statusGroups: Array.from(statusMap.values()).sort((a, b) => a.display_order - b.display_order),
         totalTasks: phaseTasks.length
       };
     });

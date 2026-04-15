@@ -33,8 +33,10 @@ import { IService, IServicePrice } from '@alga-psa/types';
 import { getCurrencySymbol } from '@alga-psa/core';
 import { getServiceCategories } from '@alga-psa/billing/actions';
 import { IServiceCategory } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const ProductsManager: React.FC = () => {
+  const { t } = useTranslation('msp/billing-settings');
   const [products, setProducts] = useState<IService[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
@@ -54,7 +56,7 @@ const ProductsManager: React.FC = () => {
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
   const [allServiceTypes, setAllServiceTypes] = useState<
-    { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }[]
+    { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]
   >([]);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -80,16 +82,16 @@ const ProductsManager: React.FC = () => {
   }, [categories]);
 
   const productServiceTypes = useMemo(() => {
-    const perUnitTypes = allServiceTypes.filter((t) => t.billing_method === 'per_unit');
+    const usageTypes = allServiceTypes.filter((t) => t.billing_method === 'usage');
 
     const selectedTypeId = editingProduct?.custom_service_type_id || null;
 
-    if (selectedTypeId && !perUnitTypes.some((t) => t.id === selectedTypeId)) {
+    if (selectedTypeId && !usageTypes.some((t) => t.id === selectedTypeId)) {
       const selected = allServiceTypes.find((t) => t.id === selectedTypeId);
-      if (selected) return [...perUnitTypes, selected];
+      if (selected) return [...usageTypes, selected];
     }
 
-    return perUnitTypes;
+    return usageTypes;
   }, [allServiceTypes, editingProduct?.custom_service_type_id]);
 
   const fetchServiceTypes = async () => {
@@ -143,7 +145,7 @@ const ProductsManager: React.FC = () => {
       setError(null);
     } catch (e) {
       console.error('[ProductsManager] Failed to fetch products:', e);
-      setError('Failed to fetch products');
+      setError(t('products.errors.fetch', { defaultValue: 'Failed to fetch products' }));
     } finally {
       setIsLoading(false);
     }
@@ -176,21 +178,21 @@ const ProductsManager: React.FC = () => {
   };
 
   const formatTaxRateLabel = (rate: ITaxRate) => {
-    const descriptionPart = rate.description || rate.region_code || 'N/A';
+    const descriptionPart = rate.description || rate.region_code || t('common.notAvailable', { defaultValue: 'N/A' });
     const percentageValue = typeof rate.tax_percentage === 'string' ? parseFloat(rate.tax_percentage) : Number(rate.tax_percentage);
     const percentagePart = !Number.isNaN(percentageValue) ? percentageValue.toFixed(2) : '0.00';
     return `${descriptionPart} - ${percentagePart}%`;
   };
 
   const columns: ColumnDefinition<IService>[] = [
-    { title: 'Product', dataIndex: 'service_name' },
+    { title: t('products.table.product', { defaultValue: 'Product' }), dataIndex: 'service_name' },
     {
-      title: 'SKU',
+      title: t('products.table.sku', { defaultValue: 'SKU' }),
       dataIndex: 'sku',
       render: (value) => value || '—'
     },
     {
-      title: 'Type',
+      title: t('products.table.type', { defaultValue: 'Type' }),
       dataIndex: 'service_type_name',
       render: (value, record) => {
         const type = allServiceTypes.find((t) => t.id === record.custom_service_type_id);
@@ -198,17 +200,17 @@ const ProductsManager: React.FC = () => {
       }
     },
     {
-      title: 'Category',
+      title: t('products.table.category', { defaultValue: 'Category' }),
       dataIndex: 'category_id',
       render: (value) => (value ? categoryNameById[value] || '—' : '—')
     },
     {
-      title: 'Label',
+      title: t('products.table.label', { defaultValue: 'Label' }),
       dataIndex: 'product_category',
       render: (value) => value || '—'
     },
     {
-      title: 'Pricing',
+      title: t('products.table.pricing', { defaultValue: 'Pricing' }),
       dataIndex: 'prices',
       render: (prices: IServicePrice[] | undefined, record) => {
         if (!prices || prices.length === 0) {
@@ -231,21 +233,24 @@ const ProductsManager: React.FC = () => {
       }
     },
     {
-      title: 'Tax Rate',
+      title: t('products.table.taxRate', { defaultValue: 'Tax Rate' }),
       dataIndex: 'tax_rate_id',
       render: (taxRateId) => {
-        if (!taxRateId) return 'Non-Taxable';
+        if (!taxRateId) return t('products.table.nonTaxable', { defaultValue: 'Non-Taxable' });
         const rate = taxRates.find((r) => r.tax_rate_id === taxRateId);
         return rate ? formatTaxRateLabel(rate) : taxRateId;
       }
     },
     {
-      title: 'Active',
+      title: t('products.table.active', { defaultValue: 'Active' }),
       dataIndex: 'is_active',
-      render: (value) => (value === false ? 'No' : 'Yes')
+      render: (value) =>
+        value === false
+          ? t('common.statuses.no', { defaultValue: 'No' })
+          : t('common.statuses.yes', { defaultValue: 'Yes' })
     },
     {
-      title: 'Actions',
+      title: t('common.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'service_id',
       width: '5%',
       render: (_, record) => (
@@ -257,7 +262,7 @@ const ProductsManager: React.FC = () => {
               id={`products-actions-menu-${record.service_id}`}
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('common.a11y.openMenu', { defaultValue: 'Open menu' })}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -271,7 +276,7 @@ const ProductsManager: React.FC = () => {
               className="flex items-center"
             >
               <Pen size={14} className="mr-2" />
-              Edit
+              {t('products.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`products-archive-${record.service_id}`}
@@ -283,7 +288,7 @@ const ProductsManager: React.FC = () => {
                     .then(() => fetchProducts())
                     .catch((err) => {
                       console.error('[ProductsManager] Failed to restore product:', err);
-                      setError('Failed to restore product');
+                      setError(t('products.errors.restore', { defaultValue: 'Failed to restore product' }));
                     });
                   return;
                 }
@@ -294,12 +299,12 @@ const ProductsManager: React.FC = () => {
               {record.is_active === false ? (
                 <>
                   <RotateCcw size={14} className="mr-2" />
-                  Restore
+                  {t('products.actions.restore', { defaultValue: 'Restore' })}
                 </>
               ) : (
                 <>
                   <Archive size={14} className="mr-2" />
-                  Archive
+                  {t('products.actions.archive', { defaultValue: 'Archive' })}
                 </>
               )}
             </DropdownMenuItem>
@@ -312,7 +317,7 @@ const ProductsManager: React.FC = () => {
               }}
             >
               <Trash2 size={14} className="mr-2" />
-              Delete
+              {t('products.actions.delete', { defaultValue: 'Delete' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -334,7 +339,7 @@ const ProductsManager: React.FC = () => {
       await fetchProducts();
     } catch (e) {
       console.error('[ProductsManager] Failed to archive product:', e);
-      setError('Failed to archive product');
+      setError(t('products.errors.archive', { defaultValue: 'Failed to archive product' }));
       setIsDeleteOpen(false);
       setProductToDelete(null);
     }
@@ -353,7 +358,13 @@ const ProductsManager: React.FC = () => {
       console.error('[ProductsManager] Failed to check product associations:', e);
       setPermanentDeleteCheck({
         canDelete: false,
-        associations: [{ type: 'error', count: 0, description: 'Failed to check associations' }]
+        associations: [{
+          type: 'error',
+          count: 0,
+          description: t('products.errors.checkAssociations', {
+            defaultValue: 'Failed to check associations'
+          })
+        }]
       });
     } finally {
       setIsCheckingDelete(false);
@@ -371,7 +382,11 @@ const ProductsManager: React.FC = () => {
       await fetchProducts();
     } catch (e) {
       console.error('[ProductsManager] Failed to permanently delete product:', e);
-      setError(e instanceof Error ? e.message : 'Failed to delete product');
+      setError(
+        e instanceof Error
+          ? e.message
+          : t('products.errors.delete', { defaultValue: 'Failed to delete product' })
+      );
       setIsPermanentDeleteOpen(false);
       setProductToPermanentDelete(null);
       setPermanentDeleteCheck(null);
@@ -389,10 +404,12 @@ const ProductsManager: React.FC = () => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Products</h3>
+            <h3 className="text-lg font-semibold">
+              {t('products.title', { defaultValue: 'Products' })}
+            </h3>
             <div className="flex items-center gap-2">
               <Button id="products-add-button" onClick={() => setIsCreateOpen(true)}>
-                Add Product
+                {t('products.actions.add', { defaultValue: 'Add Product' })}
               </Button>
             </div>
           </div>
@@ -404,7 +421,9 @@ const ProductsManager: React.FC = () => {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name, SKU, description..."
+                placeholder={t('products.filters.searchPlaceholder', {
+                  defaultValue: 'Search by name, SKU, description...'
+                })}
                 className="w-[280px]"
               />
               <Button
@@ -415,13 +434,13 @@ const ProductsManager: React.FC = () => {
                   fetchProducts();
                 }}
               >
-                Search
+                {t('products.actions.search', { defaultValue: 'Search' })}
               </Button>
               <CustomSelect
                 options={[
-                  { value: 'all', label: 'All Statuses' },
-                  { value: 'active', label: 'Active' },
-                  { value: 'inactive', label: 'Inactive' }
+                  { value: 'all', label: t('products.filters.allStatuses', { defaultValue: 'All Statuses' }) },
+                  { value: 'active', label: t('products.filters.active', { defaultValue: 'Active' }) },
+                  { value: 'inactive', label: t('products.filters.inactive', { defaultValue: 'Inactive' }) }
                 ]}
                 value={activeFilter}
                 onValueChange={(v) => setActiveFilter(v as any)}
@@ -429,7 +448,7 @@ const ProductsManager: React.FC = () => {
               />
               <CustomSelect
                 options={[
-                  { value: 'all', label: 'All Categories' },
+                  { value: 'all', label: t('products.filters.allCategories', { defaultValue: 'All Categories' }) },
                   ...categories
                     .filter((c) => Boolean(c.category_id))
                     .map((c) => ({ value: c.category_id as string, label: c.category_name }))
@@ -437,17 +456,22 @@ const ProductsManager: React.FC = () => {
                 value={selectedCategoryId}
                 onValueChange={(v) => setSelectedCategoryId(v)}
                 className="w-[220px]"
-                placeholder={isLoadingCategories ? 'Loading…' : 'All Categories'}
+                placeholder={
+                  isLoadingCategories
+                    ? t('products.filters.loading', { defaultValue: 'Loading...' })
+                    : t('products.filters.allCategories', { defaultValue: 'All Categories' })
+                }
                 disabled={isLoadingCategories}
               />
               <CustomSelect
                 options={[
-                  { value: 'all', label: 'All Types' },
+                  { value: 'all', label: t('products.filters.allTypes', { defaultValue: 'All Types' }) },
                   ...productServiceTypes.map((t) => ({ value: t.id, label: t.name }))
                 ]}
                 value={selectedServiceType}
                 onValueChange={(v) => setSelectedServiceType(v)}
                 className="w-[220px]"
+                placeholder={t('products.filters.allTypes', { defaultValue: 'All Types' })}
               />
             </div>
 
@@ -456,7 +480,7 @@ const ProductsManager: React.FC = () => {
                 layout="stacked"
                 className="py-10 text-muted-foreground"
                 spinnerProps={{ size: 'md' }}
-                text="Loading products"
+                text={t('products.loading', { defaultValue: 'Loading products' })}
               />
             ) : (
               <DataTable
@@ -504,35 +528,61 @@ const ProductsManager: React.FC = () => {
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         onConfirm={confirmArchive}
-        title="Archive Product"
-        message={`Archive ${productToDelete?.service_name || 'this product'}? It will be hidden from pickers by default and cannot be attached to new contracts/invoices until restored.`}
+        title={t('products.archive.title', { defaultValue: 'Archive Product' })}
+        message={t('products.archive.message', {
+          name: productToDelete?.service_name || t('products.thisProduct', { defaultValue: 'this product' }),
+          defaultValue:
+            'Archive {{name}}? It will be hidden from pickers by default and cannot be attached to new contracts/invoices until restored.'
+        })}
       />
 
       <ConfirmationDialog
         isOpen={isPermanentDeleteOpen}
         onClose={closePermanentDeleteDialog}
         onConfirm={confirmPermanentDelete}
-        title="Delete Product Permanently"
-        confirmLabel="Delete"
+        title={t('products.permanentDelete.title', { defaultValue: 'Delete Product Permanently' })}
+        confirmLabel={t('products.actions.delete', { defaultValue: 'Delete' })}
         isConfirming={!permanentDeleteCheck?.canDelete || isCheckingDelete}
-        cancelLabel="Cancel"
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
         message={
           isCheckingDelete ? (
-            <span>Checking if product can be deleted...</span>
+            <span>
+              {t('products.permanentDelete.checking', {
+                defaultValue: 'Checking if product can be deleted...'
+              })}
+            </span>
           ) : permanentDeleteCheck?.canDelete ? (
             <span>
-              Are you sure you want to permanently delete &quot;{productToPermanentDelete?.service_name}&quot;?
-              This action cannot be undone.
+              {t('products.permanentDelete.confirm', {
+                name:
+                  productToPermanentDelete?.service_name ||
+                  t('products.thisProduct', { defaultValue: 'this product' }),
+                defaultValue:
+                  'Are you sure you want to permanently delete "{{name}}"? This action cannot be undone.'
+              })}
             </span>
           ) : (
             <div className="space-y-2">
-              <p>Cannot delete &quot;{productToPermanentDelete?.service_name}&quot; because it is associated with existing data:</p>
+              <p>
+                {t('products.permanentDelete.blocked', {
+                  name:
+                    productToPermanentDelete?.service_name ||
+                    t('products.thisProduct', { defaultValue: 'this product' }),
+                  defaultValue:
+                    'Cannot delete "{{name}}" because it is associated with existing data:'
+                })}
+              </p>
               <ul className="list-disc list-inside text-sm">
                 {permanentDeleteCheck?.associations.map((a, i) => (
                   <li key={i}>{a.description}</li>
                 ))}
               </ul>
-              <p className="text-sm mt-2">To remove this product, first remove it from all associated records, or use Archive instead.</p>
+              <p className="text-sm mt-2">
+                {t('products.permanentDelete.archiveInstead', {
+                  defaultValue:
+                    'To remove this product, first remove it from all associated records, or use Archive instead.'
+                })}
+              </p>
             </div>
           )
         }

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { workflowDefinitionSchema } from '@shared/workflow/runtime';
+import { workflowDefinitionSchema } from '@alga-psa/workflows/runtime';
 
 const versionNumber = z.preprocess(
   (val) => (typeof val === 'string' ? Number(val) : val),
@@ -189,7 +189,8 @@ export const SchemaRefInput = z.object({
 
 export const SubmitWorkflowEventInput = z.object({
   eventName: z.string().min(1),
-  correlationKey: z.string().min(1),
+  workflowCorrelationKey: z.string().min(1).optional(),
+  correlationKey: z.string().min(1).optional(),
   payloadSchemaRef: z.string().min(1).optional(),
   payload: z.record(z.any()).default({})
 });

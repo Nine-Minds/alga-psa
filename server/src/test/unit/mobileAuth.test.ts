@@ -1,6 +1,31 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import crypto from 'crypto';
 
+const assertTenantTierAccessMock = vi.hoisted(() => vi.fn<(tenantId: string, feature: string) => Promise<void>>());
+const MockTierAccessError = vi.hoisted(
+  () =>
+    class TierAccessError extends Error {
+      statusCode = 403;
+    },
+);
+
+vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
+  TierAccessError: MockTierAccessError,
+  assertTenantTierAccess: assertTenantTierAccessMock,
+}));
+
+vi.mock('@alga-psa/auth', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@alga-psa/auth')>();
+  return {
+    ...mod,
+    ApiKeyService: {
+      ...mod.ApiKeyService,
+      createApiKey: vi.fn(),
+      deactivateApiKey: vi.fn(),
+    },
+  };
+});
+
 import {
   __resetMobileAuthTestState,
   __setMobileAuthConnectionFactoryForTests,
@@ -8,7 +33,7 @@ import {
   issueMobileOtt,
   refreshMobileSession,
 } from 'server/src/lib/mobileAuth/mobileAuthService';
-import { ApiKeyService } from 'server/src/lib/services/apiKeyService';
+import { ApiKeyService } from '@alga-psa/auth';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 
 vi.mock('server/src/lib/logging/auditLog', () => ({
@@ -175,6 +200,9 @@ describe('mobile auth (OTT + refresh rotation)', () => {
     process.env.ALGA_MOBILE_ACCESS_TTL_SEC = '900';
     process.env.ALGA_MOBILE_REFRESH_TTL_SEC = '3600';
 
+    assertTenantTierAccessMock.mockReset();
+    assertTenantTierAccessMock.mockResolvedValue(undefined);
+
     __setMobileAuthConnectionFactoryForTests(async (tenant: string | null) => {
       return adminKnex;
     });
@@ -263,6 +291,72 @@ describe('mobile auth (OTT + refresh rotation)', () => {
         device: { deviceId: 'device-1' },
       }),
     ).rejects.toThrow(/expired one-time token|one-time token/i);
+  });
+
+  it('rejects Solo tenants before issuing mobile credentials', async () => {
+    assertTenantTierAccessMock.mockRejectedValue(new MockTierAccessError('plan denied'));
+
+    const { ott } = await issueMobileOtt({
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      sessionId: 'session-1',
+      state: 'state-solo',
+    });
+
+    await expect(
+      exchangeOttForSession({
+        ott,
+        state: 'state-solo',
+        device: { deviceId: 'device-1' },
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 403,
+    });
+
+    expect(ApiKeyService.createApiKey).not.toHaveBeenCalled();
+  });
+
+  it('allows Pro and Premium tenants to exchange OTTs', async () => {
+    const proOtt = await issueMobileOtt({
+      tenantId: 'tenant-pro',
+      userId: 'user-1',
+      sessionId: 'session-1',
+      state: 'state-pro',
+    });
+    const premiumOtt = await issueMobileOtt({
+      tenantId: 'tenant-premium',
+      userId: 'user-1',
+      sessionId: 'session-1',
+      state: 'state-premium',
+    });
+
+    state.sessions.push({
+      tenant: 'tenant-pro',
+      session_id: 'session-1',
+      revoked_at: null,
+      expires_at: new Date(Date.now() + 60_000),
+    });
+    state.sessions.push({
+      tenant: 'tenant-premium',
+      session_id: 'session-1',
+      revoked_at: null,
+      expires_at: new Date(Date.now() + 60_000),
+    });
+
+    const proResult = await exchangeOttForSession({
+      ott: proOtt.ott,
+      state: 'state-pro',
+      device: { deviceId: 'device-pro' },
+    });
+    const premiumResult = await exchangeOttForSession({
+      ott: premiumOtt.ott,
+      state: 'state-premium',
+      device: { deviceId: 'device-premium' },
+    });
+
+    expect(proResult.accessToken).toMatch(/^access-/);
+    expect(premiumResult.accessToken).toMatch(/^access-/);
+    expect(ApiKeyService.createApiKey).toHaveBeenCalledTimes(2);
   });
 
   it('rotates refresh tokens and invalidates prior credentials', async () => {

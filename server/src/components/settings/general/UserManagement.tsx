@@ -33,6 +33,7 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import OrgChart from './org-chart/OrgChart';
 import { QuickAddContact } from '@alga-psa/clients/components';
+import { useTier } from '@/context/TierContext';
 
 const UserManagement = (): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
@@ -77,6 +78,9 @@ const UserManagement = (): React.JSX.Element => {
   const [isCopyingPortalLink, setIsCopyingPortalLink] = useState(false);
   const [userView, setUserView] = useState<'list' | 'org'>('list');
   const { enabled: isTeamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
+  const { isSolo } = useTier();
+  const soloMspUserLimitReached = portalType === 'msp' && isSolo && (licenseUsage?.used ?? 0) >= 1;
+  const soloMspLimitMessage = 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.';
 
   const extractErrorMessage = (error: unknown): string => {
     if (typeof error === 'string') {
@@ -398,12 +402,20 @@ const fetchContacts = async (): Promise<void> => {
             }
           } else {
             try {
-              const contact = await addContact({
+              const contactResult = await addContact({
                 full_name: `${newUser.firstName} ${newUser.lastName}`,
                 email: newUser.email,
                 client_id: newUser.clientId || undefined,
                 is_inactive: false
               });
+              if (!contactResult.success) {
+                const errorMsg = normalizeCreateUserError(contactResult.error);
+                handleError(new Error(contactResult.error), errorMsg);
+                setError(errorMsg);
+                return;
+              }
+
+              const contact = contactResult.contact;
               try {
                 const invitationResult = await sendPortalInvitation(contact.contact_name_id);
                 if (invitationResult.success) {
@@ -452,7 +464,7 @@ const fetchContacts = async (): Promise<void> => {
         }
       } else {
         // Create MSP user
-        const createdUser = await addUser({
+        const result = await addUser({
           firstName: newUser.firstName,
           lastName: newUser.lastName,
           email: newUser.email,
@@ -461,8 +473,13 @@ const fetchContacts = async (): Promise<void> => {
           reportsTo: newUser.reportsTo || undefined
         });
 
+        if (!result.success) {
+          reportCreateUserError(result.error);
+          return;
+        }
+
         // Fetch the updated user with roles
-        const updatedUser = await getUserWithRoles(createdUser.user_id);
+        const updatedUser = await getUserWithRoles(result.user.user_id);
         if (updatedUser) {
           setUsers([...users, updatedUser]);
         }
@@ -829,6 +846,37 @@ const fetchContacts = async (): Promise<void> => {
     </div>
   );
 
+  const renderCreateUserActions = () => (
+    <div className="flex items-center gap-3">
+      {portalType === 'client' && (
+        <Button
+          id="copy-client-portal-link-button"
+          variant="outline"
+          onClick={handleCopyPortalLink}
+          disabled={isCopyingPortalLink}
+        >
+          {isCopyingPortalLink ? t('users.actions.copying') : t('users.actions.copyPortalLink')}
+        </Button>
+      )}
+      {!showNewUserForm && (
+        <div className="flex flex-col items-end gap-1">
+          <Button
+            id={`create-new-${portalType}-user-btn`}
+            onClick={() => setShowNewUserForm(true)}
+            disabled={portalType === 'msp' && soloMspUserLimitReached}
+          >
+            {portalType === 'msp' ? t('users.actions.createNewUser') : t('users.actions.createNewClientUser')}
+          </Button>
+          {portalType === 'msp' && soloMspUserLimitReached && (
+            <span className="text-sm text-muted-foreground">
+              {soloMspLimitMessage}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -894,16 +942,7 @@ const fetchContacts = async (): Promise<void> => {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                {!showNewUserForm && (
-                  <Button
-                    id={`create-new-${portalType}-user-btn`}
-                    onClick={() => setShowNewUserForm(true)}
-                  >
-                    {t('users.actions.createNewUser')}
-                  </Button>
-                )}
-              </div>
+              {renderCreateUserActions()}
             </div>
             {showNewUserForm && renderNewUserForm()}
             <Tabs value={userView} onValueChange={(v) => setUserView(v as 'list' | 'org')}>
@@ -993,26 +1032,7 @@ const fetchContacts = async (): Promise<void> => {
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-3">
-                {portalType === 'client' && (
-                  <Button
-                    id="copy-client-portal-link-button"
-                    variant="outline"
-                    onClick={handleCopyPortalLink}
-                    disabled={isCopyingPortalLink}
-                  >
-                    {isCopyingPortalLink ? t('users.actions.copying') : t('users.actions.copyPortalLink')}
-                  </Button>
-                )}
-                {!showNewUserForm && (
-                  <Button
-                    id={`create-new-${portalType}-user-btn`}
-                    onClick={() => setShowNewUserForm(true)}
-                  >
-                    {portalType === 'msp' ? t('users.actions.createNewUser') : t('users.actions.createNewClientUser')}
-                  </Button>
-                )}
-              </div>
+              {renderCreateUserActions()}
             </div>
             {showNewUserForm && renderNewUserForm()}
             {loading ? (

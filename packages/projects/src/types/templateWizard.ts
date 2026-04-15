@@ -2,6 +2,7 @@ import type { IClientPortalConfig } from '@alga-psa/types';
 
 export interface TemplateStatusMapping {
   temp_id: string;
+  template_phase_id?: string;
   status_id?: string;
   custom_status_name?: string;
   custom_status_color?: string;
@@ -22,6 +23,7 @@ export interface TemplateTask {
   phase_temp_id: string;
   task_name: string;
   description?: string;
+  description_rich_text?: string;
   estimated_hours?: number;
   duration_days?: number;
   task_type_key?: string;
@@ -53,4 +55,3 @@ export interface TemplateWizardData {
   checklist_items: TemplateChecklistItem[];
   client_portal_config?: IClientPortalConfig;
 }
-

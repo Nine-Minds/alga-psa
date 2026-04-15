@@ -3,6 +3,7 @@
 import React from 'react';
 import { Building2, Code2, Mail, Monitor } from 'lucide-react';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import {
   TICKET_ORIGIN_OTHER,
@@ -23,14 +24,6 @@ interface TicketOriginBadgeProps {
   size?: 'sm' | 'md';
   className?: string;
 }
-
-const DEFAULT_LABELS: TicketOriginLabels = {
-  internal: 'Created Internally',
-  clientPortal: 'Created via Client Portal',
-  inboundEmail: 'Created via Inbound Email',
-  api: 'Created via API',
-  other: 'Created via Other',
-};
 
 function normalizeOrigin(origin: TicketOriginBadgeProps['origin']): ResolvedTicketOrigin {
   if (typeof origin !== 'string') {
@@ -83,25 +76,25 @@ function TicketOriginIcon({ origin }: { origin: ResolvedTicketOrigin }) {
 
 function getLabel(
   origin: ResolvedTicketOrigin,
-  labels: Partial<TicketOriginLabels>
+  labels: TicketOriginLabels
 ): string {
   if (origin === TICKET_ORIGINS.CLIENT_PORTAL) {
-    return labels.clientPortal ?? DEFAULT_LABELS.clientPortal;
+    return labels.clientPortal;
   }
 
   if (origin === TICKET_ORIGINS.INBOUND_EMAIL) {
-    return labels.inboundEmail ?? DEFAULT_LABELS.inboundEmail;
+    return labels.inboundEmail;
   }
 
   if (origin === TICKET_ORIGINS.API) {
-    return labels.api ?? DEFAULT_LABELS.api;
+    return labels.api;
   }
 
   if (origin === TICKET_ORIGIN_OTHER) {
-    return labels.other ?? DEFAULT_LABELS.other;
+    return labels.other;
   }
 
-  return labels.internal ?? DEFAULT_LABELS.internal;
+  return labels.internal;
 }
 
 function getOriginVariant(origin: ResolvedTicketOrigin): BadgeVariant {
@@ -126,7 +119,15 @@ export default function TicketOriginBadge({
   size = 'sm',
   className,
 }: TicketOriginBadgeProps) {
+  const { t } = useTranslation('features/tickets');
   const normalizedOrigin = normalizeOrigin(origin);
+  const resolvedLabels: TicketOriginLabels = {
+    internal: labels.internal ?? t('origin.internal', 'Created Internally'),
+    clientPortal: labels.clientPortal ?? t('origin.clientPortal', 'Created via Client Portal'),
+    inboundEmail: labels.inboundEmail ?? t('origin.inboundEmail', 'Created via Inbound Email'),
+    api: labels.api ?? t('origin.api', 'Created via API'),
+    other: labels.other ?? t('origin.other', 'Created via Other'),
+  };
 
   return (
     <Badge
@@ -137,7 +138,7 @@ export default function TicketOriginBadge({
       data-ticket-origin={normalizedOrigin}
     >
       <TicketOriginIcon origin={normalizedOrigin} />
-      <span className="ml-1">{getLabel(normalizedOrigin, labels)}</span>
+      <span className="ml-1">{getLabel(normalizedOrigin, resolvedLabels)}</span>
     </Badge>
   );
 }

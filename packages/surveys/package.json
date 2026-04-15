@@ -32,6 +32,8 @@
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/validation": "*",
+    "@alga-psa/workflow-streams": "*",
+    "@alga-psa/workflows": "*",
     "lucide-react": "^0.428.0",
     "zod": "^3.22.4"
   },

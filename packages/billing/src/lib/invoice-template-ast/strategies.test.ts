@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
-  InvoiceTemplateStrategyResolutionError,
-  executeInvoiceTemplateStrategy,
-  isAllowlistedInvoiceTemplateStrategy,
-  listAllowlistedInvoiceTemplateStrategyIds,
-  resolveInvoiceTemplateStrategy,
+  TemplateStrategyResolutionError,
+  executeTemplateStrategy,
+  isAllowlistedTemplateStrategy,
+  listAllowlistedTemplateStrategyIds,
+  resolveTemplateStrategy,
 } from './strategies';
 
 describe('invoice template strategy registry', () => {
   it('resolves and executes known strategy IDs', () => {
-    expect(isAllowlistedInvoiceTemplateStrategy('custom-group-key')).toBe(true);
-    expect(isAllowlistedInvoiceTemplateStrategy('custom-aggregate')).toBe(true);
+    expect(isAllowlistedTemplateStrategy('custom-group-key')).toBe(true);
+    expect(isAllowlistedTemplateStrategy('custom-aggregate')).toBe(true);
 
-    const groupKeyStrategy = resolveInvoiceTemplateStrategy('custom-group-key');
+    const groupKeyStrategy = resolveTemplateStrategy('custom-group-key');
     expect(groupKeyStrategy({ item: { category: '  Consulting  ' } })).toBe('consulting');
 
-    const total = executeInvoiceTemplateStrategy('custom-aggregate', {
+    const total = executeTemplateStrategy('custom-aggregate', {
       items: [{ total: 10 }, { total: '5.5' }, { total: null }],
       path: 'total',
     });
@@ -23,13 +23,13 @@ describe('invoice template strategy registry', () => {
   });
 
   it('rejects unknown strategy IDs', () => {
-    expect(isAllowlistedInvoiceTemplateStrategy('unknown-strategy')).toBe(false);
-    expect(listAllowlistedInvoiceTemplateStrategyIds()).toEqual(
+    expect(isAllowlistedTemplateStrategy('unknown-strategy')).toBe(false);
+    expect(listAllowlistedTemplateStrategyIds()).toEqual(
       expect.arrayContaining(['custom-group-key', 'custom-aggregate'])
     );
 
-    expect(() => resolveInvoiceTemplateStrategy('unknown-strategy')).toThrow(InvoiceTemplateStrategyResolutionError);
-    expect(() => executeInvoiceTemplateStrategy('unknown-strategy', {})).toThrow(
+    expect(() => resolveTemplateStrategy('unknown-strategy')).toThrow(TemplateStrategyResolutionError);
+    expect(() => executeTemplateStrategy('unknown-strategy', {})).toThrow(
       /not allowlisted/i
     );
   });

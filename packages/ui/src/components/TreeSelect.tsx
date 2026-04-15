@@ -209,8 +209,9 @@ function TreeSelect<T extends string>({
     const pathObj = buildPathObject(option, ancestors);
     onValueChange(option.value, option.type, false, pathObj);
 
-    // For single-select without children/exclude options, close the dropdown
-    const shouldClose = !multiSelect || (!option.children?.length && !showExclude);
+    // In multi-select mode, keep the dropdown open so the user can continue selecting.
+    // In single-select mode, close unless the item has children or exclude is shown.
+    const shouldClose = !multiSelect && (!option.children?.length && !showExclude);
 
     // Reset the flag after a microtask, then close if needed
     Promise.resolve().then(() => {

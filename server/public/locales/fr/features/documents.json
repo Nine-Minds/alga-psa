@@ -211,5 +211,15 @@
     "feedbackThanks": "Merci pour votre retour !",
     "feedbackError": "Échec de l'envoi du retour",
     "filterByTags": "Filtrer par tags..."
+  },
+  "visibility": {
+    "cascadeTitle": "Mettre à jour la visibilité des documents",
+    "cascadeMakeVisible": "Souhaitez-vous également rendre les {{count}} document(s) dans \"{{name}}\" visibles sur le portail client ?",
+    "cascadeMakeHidden": "Souhaitez-vous également masquer les {{count}} document(s) dans \"{{name}}\" du portail client ?",
+    "cascadeYes": "Oui, mettre à jour les documents",
+    "cascadeNo": "Non, dossier uniquement"
+  },
+  "empty": {
+    "default": "Aucun document trouvé"
   }
 }

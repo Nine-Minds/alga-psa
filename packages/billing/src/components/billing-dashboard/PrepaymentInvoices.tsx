@@ -79,6 +79,11 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
         <h2 className="text-lg font-semibold mb-4">
           {type === 'prepayment' ? 'Generate Prepayment Invoice' : 'Generate Credit Memo'}
         </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          {type === 'prepayment'
+            ? 'Prepayment invoices create client credit for future value. They do not create recurring service periods; later recurring invoices keep their own service-period coverage.'
+            : 'Credit memos adjust financial balances without redefining recurring service-period coverage on the source invoice.'}
+        </p>
 
         {error && (
           <Alert variant="destructive" className="mb-4">

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { getFolders, createFolder } from '../actions/documentActions';
+import { getDefaultFolders } from '../actions/defaultFolderActions';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Folder, Home, ChevronRight, FolderPlus, X, FolderOpen } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -78,6 +79,16 @@ export default function FolderSelectorModal({
       let folderList: string[] = [];
       if (getFoldersFn) {
         folderList = await getFoldersFn();
+      } else if (!entityId && entityType && !allFolders) {
+        // No entity yet (e.g. creating a new task) — show default folder
+        // templates for the entity type so the user can still pick a folder.
+        const defaults = await getDefaultFolders(entityType);
+        if (isActionPermissionError(defaults)) {
+          handleError(defaults.permissionError);
+          setFolders([]);
+          return;
+        }
+        folderList = defaults.map(d => d.folder_path);
       } else {
         // When showAll is true, fetch without entity scope to get all folders
         const scopedEntityId = allFolders ? undefined : entityId;
@@ -91,8 +102,8 @@ export default function FolderSelectorModal({
         folderList = result;
       }
       setFolders(folderList);
-      // In entity mode (not showing all), auto-select the first folder
-      if (entityId && !allFolders && folderList.length > 0) {
+      // Auto-select the first folder when in entity/template context
+      if ((entityId || entityType) && !allFolders && folderList.length > 0) {
         setSelectedFolder(folderList[0]);
       }
     } catch (error) {
@@ -135,8 +146,12 @@ export default function FolderSelectorModal({
         ? `${newFolderParent}/${newFolderName.trim()}`
         : `/${newFolderName.trim()}`;
 
-      const scopedEntityId = showAllFolders ? undefined : entityId;
-      const scopedEntityType = showAllFolders ? undefined : entityType;
+      // createFolder requires both entityId and entityType or neither.
+      // When we only have entityType (template mode for new entities), create
+      // the folder without entity scoping.
+      const hasFullEntityScope = Boolean(entityId && entityType) && !showAllFolders;
+      const scopedEntityId = hasFullEntityScope ? entityId : undefined;
+      const scopedEntityType = hasFullEntityScope ? entityType : undefined;
       const createResult = await createFolder(folderPath, scopedEntityId, scopedEntityType);
       if (isActionPermissionError(createResult)) {
         handleError(createResult.permissionError);
@@ -205,8 +220,26 @@ export default function FolderSelectorModal({
     });
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="folder-selector-cancel-btn"
+        variant="outline"
+        onClick={onClose}
+      >
+        {tCommon('actions.cancel', 'Cancel')}
+      </Button>
+      <Button
+        id="folder-selector-confirm-btn"
+        onClick={handleConfirm}
+      >
+        {tCommon('actions.confirm', 'Confirm')}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog isOpen={isOpen} onClose={onClose}>
+    <Dialog isOpen={isOpen} onClose={onClose} footer={footer}>
       <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -290,7 +323,7 @@ export default function FolderSelectorModal({
           </div>
         ) : (
           <div className="flex justify-between items-center">
-            {entityId && !getFoldersFn ? (
+            {(entityId || entityType) && !getFoldersFn ? (
               <button
                 type="button"
                 onClick={handleToggleShowAll}
@@ -362,21 +395,6 @@ export default function FolderSelectorModal({
           )}
         </div>
 
-        <DialogFooter>
-          <Button
-            id="folder-selector-cancel-btn"
-            variant="outline"
-            onClick={onClose}
-          >
-            {tCommon('cancel', 'Cancel')}
-          </Button>
-          <Button
-            id="folder-selector-confirm-btn"
-            onClick={handleConfirm}
-          >
-            {tCommon('confirm', 'Confirm')}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

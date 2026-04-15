@@ -16,6 +16,7 @@ import {
   MentionNode,
   MentionSuggestionExtension,
   MentionSuggestionPopup,
+  AiResponseBlock,
 } from '@alga-psa/ui/editor';
 import type { EmojiSuggestionState, MentionSuggestionState, MentionSuggestionUser } from '@alga-psa/ui/editor';
 import AvatarIcon from '@alga-psa/ui/components/AvatarIcon';
@@ -28,6 +29,9 @@ import {
   blockNoteJsonToProsemirrorJson,
   detectBlockContentFormat,
   parseBlockContent,
+  normalizeProsemirrorJson,
+  isRawMarkdownInProsemirror,
+  convertRawMarkdownProsemirror,
 } from '../lib/blockContentFormat';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
@@ -53,6 +57,10 @@ interface CollaborativeEditorProps {
   onConnectionStatusChange?: (status: ConnectionStatus) => void;
   onSyncStateChange?: (synced: boolean) => void;
   onUsersChange?: (users: PresenceUser[]) => void;
+  /** Pre-loaded block_data to seed Y.js fragment instead of fetching from DB. */
+  initialContent?: unknown;
+  /** Whether the AI assistant experimental feature is enabled. */
+  aiAssistantEnabled?: boolean;
 }
 
 const USER_COLORS = [
@@ -125,6 +133,8 @@ export function CollaborativeEditor({
   onConnectionStatusChange,
   onSyncStateChange,
   onUsersChange,
+  initialContent,
+  aiAssistantEnabled = false,
 }: CollaborativeEditorProps) {
   const roomName = useMemo(() => `document:${tenantId}:${documentId}`, [tenantId, documentId]);
   const { provider, ydoc } = useMemo(
@@ -147,6 +157,7 @@ export function CollaborativeEditor({
   const [emojiState, setEmojiState] = useState<EmojiSuggestionState>(null);
   const [mentionState, setMentionState] = useState<MentionSuggestionState>(null);
   const hasInitializedContent = useRef(false);
+  const initialContentRef = useRef(initialContent);
 
   const handleEmojiStateChange = useCallback((state: EmojiSuggestionState) => {
     setEmojiState(state);
@@ -174,6 +185,7 @@ export function CollaborativeEditor({
       Underline,
       Emoticon,
       MentionNode,
+      AiResponseBlock,
       EmojiSuggestionExtension.configure({
         onStateChange: handleEmojiStateChange,
       }),
@@ -309,16 +321,31 @@ export function CollaborativeEditor({
 
       const fragment = ydoc.getXmlFragment('prosemirror');
       if (fragment.length > 0) {
+        // Check if existing Y.js content is raw markdown in paragraphs
+        const json = editor.getJSON();
+        if (isRawMarkdownInProsemirror(json)) {
+          const converted = convertRawMarkdownProsemirror(json);
+          // Update Y.js fragment directly — editor.commands.setContent
+          // doesn't persist when the Collaboration extension manages content.
+          ydoc.transact(() => {
+            fragment.delete(0, fragment.length);
+            prosemirrorJSONToYXmlFragment(editor.schema, converted, fragment);
+          });
+        }
         hasInitializedContent.current = true;
         return;
       }
 
       try {
-        const existing = await getBlockContent(documentId);
-        if (existing?.block_data) {
-          const format = detectBlockContentFormat(existing.block_data);
+        // Use pre-loaded content when available; otherwise fetch from DB
+        const blockData = initialContentRef.current !== undefined
+          ? initialContentRef.current
+          : (await getBlockContent(documentId))?.block_data ?? null;
+
+        if (blockData) {
+          const format = detectBlockContentFormat(blockData);
           if (format === 'blocknote') {
-            const converted = blockNoteJsonToProsemirrorJson(existing.block_data);
+            const converted = blockNoteJsonToProsemirrorJson(blockData);
             prosemirrorJSONToYXmlFragment(editor.schema, converted, fragment);
             try {
               await updateBlockContent(documentId, {
@@ -329,8 +356,19 @@ export function CollaborativeEditor({
               console.error('[CollaborativeEditor] Failed to persist converted block content:', persistError);
             }
           } else if (format === 'prosemirror') {
-            const parsed = parseBlockContent(existing.block_data);
-            prosemirrorJSONToYXmlFragment(editor.schema, parsed, fragment);
+            let parsed = normalizeProsemirrorJson(parseBlockContent(blockData));
+            if (isRawMarkdownInProsemirror(parsed)) {
+              parsed = convertRawMarkdownProsemirror(parsed);
+              try {
+                await updateBlockContent(documentId, {
+                  block_data: JSON.stringify(parsed),
+                  user_id: userId,
+                });
+              } catch (persistError) {
+                console.error('[CollaborativeEditor] Failed to persist markdown conversion:', persistError);
+              }
+            }
+            prosemirrorJSONToYXmlFragment(editor.schema, parsed as any, fragment);
           }
         }
       } catch (error) {
@@ -399,6 +437,7 @@ export function CollaborativeEditor({
               editor={editor}
               suggestionState={mentionState}
               searchMentions={searchMentions}
+              aiAssistantEnabled={aiAssistantEnabled}
             />
           )}
         </div>

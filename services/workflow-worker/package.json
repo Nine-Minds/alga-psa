@@ -7,9 +7,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json -f --resolve-full-paths && node scripts/fix-relative-import-extensions.mjs && node scripts/validate-runtime-imports.mjs",
     "start": "node .",
-    "dev": "tsx watch src/index.ts /app/shared",
-    "test": "vitest --config vitest.config.ts",
-    "test:watch": "vitest --config vitest.config.ts --watch"
+    "dev": "WORKFLOW_RUNTIME_V2_TEMPORAL_USE_SOURCE_PATHS=true tsx watch src/index.ts ../../shared ../../ee/temporal-workflows/src ../../ee/packages/workflows/src",
+    "test": "vitest",
+    "test:watch": "vitest --watch"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -17,12 +17,15 @@
   "dependencies": {
     "@alga-psa/shared": "^1.0.0",
     "@alga-psa/storage": "*",
+    "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "@eslint/plugin-kit": "0.3.5",
     "@js-temporal/polyfill": "^0.4.4",
+    "@temporalio/worker": "~1.14.1",
+    "@temporalio/workflow": "~1.14.1",
     "ajv": "^8.12.0",
     "ajv-formats": "^2.1.1",
-    "axios": "^1.13.6",
+    "axios": "^1.15.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.3",
     "knex": "^3.1.0",

@@ -168,7 +168,8 @@ export const getAvailableBoards = withAuth(async (
 
 export const getAvailableStatuses = withAuth(async (
   user,
-  { tenant }
+  { tenant },
+  boardId: string | null
 ): Promise<{ statuses: TicketFieldOptions['statuses'] }> => {
   const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
@@ -177,8 +178,12 @@ export const getAvailableStatuses = withAuth(async (
   }
   
   try {
+    if (!boardId) {
+      return { statuses: [] };
+    }
+
     const statuses = await knex('statuses')
-      .where({ tenant, status_type: 'ticket' })
+      .where({ tenant, status_type: 'ticket', board_id: boardId })
       .orderBy('order_number', 'asc')
       .orderBy('name', 'asc')
       .select('status_id as id', 'name', 'is_default')

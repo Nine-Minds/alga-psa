@@ -11,6 +11,7 @@ import { TemplateHourlyServicesStep } from './steps/TemplateHourlyServicesStep';
 import { TemplateUsageBasedServicesStep } from './steps/TemplateUsageBasedServicesStep';
 import { TemplateReviewContractStep } from './steps/TemplateReviewContractStep';
 import { createContractTemplateFromWizard, ContractTemplateWizardSubmission, checkTemplateNameExists } from '@alga-psa/billing/actions/contractWizardActions';
+import { getUnsupportedRecurringAuthoringCombinationMessage } from '@shared/billingClients/recurringAuthoringValidation';
 
 const TEMPLATE_STEPS = [
   'Template Basics',
@@ -34,6 +35,8 @@ export interface TemplateWizardData {
   contract_name: string;
   description?: string;
   billing_frequency: string;
+  cadence_owner?: 'client' | 'contract';
+  billing_timing?: 'arrears' | 'advance';
   // Templates are currency-neutral. Currency and rates are determined when a contract
   // is created from this template - rates come from the service's prices in the client's currency.
   enable_proration?: boolean;
@@ -79,6 +82,9 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     contract_name: '',
     description: '',
     billing_frequency: 'monthly',
+    cadence_owner: 'client',
+    billing_timing: 'arrears',
+    enable_proration: false,
     // currency_code removed - templates are now currency-neutral
     fixed_services: [],
     product_services: [],
@@ -92,6 +98,9 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         contract_name: '',
         description: '',
         billing_frequency: 'monthly',
+        cadence_owner: 'client',
+        billing_timing: 'arrears',
+        enable_proration: false,
         // currency_code removed - templates are now currency-neutral
         fixed_services: [],
         product_services: [],
@@ -108,6 +117,9 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
   const buildSubmissionData = (): ContractTemplateWizardSubmission => ({
     contract_name: wizardData.contract_name.trim(),
     description: wizardData.description?.trim() || undefined,
+    cadence_owner: wizardData.cadence_owner ?? 'client',
+    billing_timing: wizardData.billing_timing ?? 'arrears',
+    enable_proration: wizardData.enable_proration ?? false,
     fixed_services: wizardData.fixed_services ?? [],
     product_services: wizardData.product_services ?? [],
     hourly_services: wizardData.hourly_services ?? [],
@@ -124,6 +136,45 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     if (data.contract_name !== undefined) {
       setTemplateNameError('');
     }
+  };
+
+  const getRecurringAuthoringValidationError = (): string | null => {
+    const combinations = [
+      wizardData.fixed_services.length > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Fixed',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.billing_frequency,
+          })
+        : null,
+      wizardData.product_services.length > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Product',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.billing_frequency,
+          })
+        : null,
+      wizardData.hourly_services.length > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Hourly',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.billing_frequency,
+          })
+        : null,
+      (wizardData.usage_services?.length ?? 0) > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Usage',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.billing_frequency,
+          })
+        : null,
+    ];
+
+    return combinations.find((message): message is string => Boolean(message)) ?? null;
   };
 
   const checkDuplicateTemplateName = async (name: string): Promise<boolean> => {
@@ -169,6 +220,11 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
 
         if (!hasServices) {
           setErrors((prev) => ({ ...prev, [stepIndex]: 'At least one service is required' }));
+          return false;
+        }
+        const recurringAuthoringError = getRecurringAuthoringValidationError();
+        if (recurringAuthoringError) {
+          setErrors((prev) => ({ ...prev, [stepIndex]: recurringAuthoringError }));
           return false;
         }
         return true;
@@ -232,6 +288,9 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         contract_name: '',
         description: '',
         billing_frequency: 'monthly',
+        cadence_owner: 'client',
+        billing_timing: 'arrears',
+        enable_proration: false,
         // currency_code removed - templates are now currency-neutral
         fixed_services: [],
         product_services: [],
@@ -249,12 +308,29 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     }
   };
 
+  const wizardFooter = (
+    <WizardNavigation
+      currentStep={currentStep}
+      totalSteps={TEMPLATE_STEPS.length}
+      onBack={handleBack}
+      onNext={handleNext}
+      onSkip={handleSkip}
+      onFinish={handleFinish}
+      isNextDisabled={isSaving}
+      isSkipDisabled={REQUIRED_TEMPLATE_STEPS.includes(currentStep)}
+      isLoading={isSaving}
+      nextLabel="Continue"
+      finishLabel="Publish Template"
+    />
+  );
+
   return (
     <Dialog
       isOpen={open}
       onClose={() => onOpenChange(false)}
       title="Create Contract Template"
       className="max-w-4xl max-h-[90vh]"
+      footer={wizardFooter}
     >
       <div className="flex flex-col h-full bg-[rgb(var(--color-card))] rounded-lg">
         <div className="flex-shrink-0 px-6 pt-6">
@@ -301,22 +377,6 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
               {errors[currentStep]}
             </div>
           )}
-        </div>
-
-        <div className="flex-shrink-0 px-6 pb-6 bg-[rgb(var(--color-card))]">
-          <WizardNavigation
-            currentStep={currentStep}
-            totalSteps={TEMPLATE_STEPS.length}
-            onBack={handleBack}
-            onNext={handleNext}
-            onSkip={handleSkip}
-            onFinish={handleFinish}
-            isNextDisabled={isSaving}
-            isSkipDisabled={REQUIRED_TEMPLATE_STEPS.includes(currentStep)}
-            isLoading={isSaving}
-            nextLabel="Continue"
-            finishLabel="Publish Template"
-          />
         </div>
       </div>
     </Dialog>

@@ -7,6 +7,7 @@ export type StatusItemType = ItemType;
 
 export interface IStatus extends TenantEntity {
   status_id: string;
+  board_id?: string | null;
   name: string;
   status_type: ItemType;
   item_type?: ItemType;

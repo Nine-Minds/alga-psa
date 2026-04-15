@@ -205,7 +205,7 @@ export const fetchDefaultClientTaxRateInfoForWorkItem = withAuth(async (
 export const fetchServicesForTimeEntry = withAuth(async (
   user,
   { tenant },
-  workItemType?: string
+  _workItemType?: string
 ): Promise<{ id: string; name: string; type: string; tax_rate_id: string | null; tax_percentage: number | null }[]> => {
   const {knex: db} = await createTenantKnex();
 
@@ -214,16 +214,16 @@ export const fetchServicesForTimeEntry = withAuth(async (
     throw new Error('Permission denied: Cannot read services for time entries');
   }
 
-  let query = db('service_catalog as sc')
-    .leftJoin('service_types as st', function() {
-      this.on('sc.custom_service_type_id', '=', 'st.id')
-          .andOn('sc.tenant', '=', 'st.tenant');
-    })
+  const services = await db('service_catalog as sc')
     .leftJoin('tax_rates as tr', function() {
       this.on('sc.tax_rate_id', '=', 'tr.tax_rate_id')
           .andOn('sc.tenant', '=', 'tr.tenant');
     })
-    .where({ 'sc.tenant': tenant })
+    .where({
+      'sc.tenant': tenant,
+      'sc.item_kind': 'service',
+      'sc.billing_method': 'hourly'
+    })
     .select(
       'sc.service_id as id',
       'sc.service_name as name',
@@ -232,13 +232,6 @@ export const fetchServicesForTimeEntry = withAuth(async (
       'tr.tax_percentage'
     );
 
-  // For ad_hoc entries, only show Time-based services
-  if (workItemType === 'ad_hoc') {
-    // Assuming 'Time' service type maps to 'usage' billing method based on migrations
-    query = query.where('sc.billing_method', 'usage');
-  }
-
-  const services = await query;
   return services;
 });
 

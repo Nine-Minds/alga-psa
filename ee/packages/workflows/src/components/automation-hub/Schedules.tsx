@@ -13,15 +13,19 @@ import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import type { ColumnDefinition, DeletionValidationResult } from '@alga-psa/types';
-import type { WorkflowScheduleStateRecord } from '@shared/workflow/persistence/workflowScheduleStateModel';
+import type { WorkflowScheduleStateRecord } from '@alga-psa/workflows/persistence';
 import {
-  deleteWorkflowScheduleAction,
+  createWorkflowScheduleAction as createWorkflowScheduleActionDefault,
+  deleteWorkflowScheduleAction as deleteWorkflowScheduleActionDefault,
+  getWorkflowScheduleAction as getWorkflowScheduleActionDefault,
+  listWorkflowScheduleBusinessHoursAction as listWorkflowScheduleBusinessHoursActionDefault,
   listWorkflowDefinitionsPagedAction,
-  listWorkflowSchedulesAction,
-  pauseWorkflowScheduleAction,
-  resumeWorkflowScheduleAction
+  listWorkflowSchedulesAction as listWorkflowSchedulesActionDefault,
+  pauseWorkflowScheduleAction as pauseWorkflowScheduleActionDefault,
+  resumeWorkflowScheduleAction as resumeWorkflowScheduleActionDefault,
+  updateWorkflowScheduleAction as updateWorkflowScheduleActionDefault
 } from '@alga-psa/workflows/actions';
-import WorkflowScheduleDialog from './WorkflowScheduleDialog';
+import WorkflowScheduleDialog, { type WorkflowScheduleDialogActions } from './WorkflowScheduleDialog';
 
 type WorkflowOption = {
   workflow_id: string;
@@ -30,10 +34,25 @@ type WorkflowOption = {
 
 type WorkflowScheduleListItem = WorkflowScheduleStateRecord & {
   workflow_name?: string | null;
+  next_eligible_fire_at?: string | null;
+  effective_business_hours_schedule_id?: string | null;
+  effective_business_hours_schedule_name?: string | null;
+  business_hours_schedule_source?: 'override' | 'tenant_default' | null;
+  calendar_resolution_error?: string | null;
 };
 
 type StatusFilter = 'all' | 'enabled' | 'paused' | 'failed' | 'completed' | 'disabled';
 type TriggerFilter = 'all' | 'schedule' | 'recurring';
+export type WorkflowSchedulesActions = WorkflowScheduleDialogActions & {
+  deleteWorkflowScheduleAction: typeof deleteWorkflowScheduleActionDefault;
+  listWorkflowSchedulesAction: typeof listWorkflowSchedulesActionDefault;
+  pauseWorkflowScheduleAction: typeof pauseWorkflowScheduleActionDefault;
+  resumeWorkflowScheduleAction: typeof resumeWorkflowScheduleActionDefault;
+};
+
+type SchedulesProps = {
+  scheduleActions?: WorkflowSchedulesActions;
+};
 
 const SCHEDULE_SEARCH_PARAM = 'scheduleSearch';
 const SCHEDULE_STATUS_PARAM = 'scheduleStatus';
@@ -59,7 +78,7 @@ const formatTimestamp = (value?: string | null): string => {
   if (!value) return '—';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleString();
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 };
 
 const formatRelativeTimestamp = (value?: string | null): string => {
@@ -69,7 +88,40 @@ const formatRelativeTimestamp = (value?: string | null): string => {
   return formatDistanceToNow(date, { addSuffix: true });
 };
 
-export default function Schedules() {
+const toDayFilterLabel = (value?: string | null): string => {
+  if (value === 'business') return 'Business days';
+  if (value === 'non_business') return 'Non-business days';
+  return 'Any day';
+};
+
+const getNextFireDisplayText = (schedule: WorkflowScheduleListItem): string => {
+  if (schedule.trigger_type === 'recurring' && schedule.day_type_filter !== 'any') {
+    if (schedule.next_eligible_fire_at) {
+      return formatTimestamp(schedule.next_eligible_fire_at);
+    }
+    if (schedule.calendar_resolution_error) {
+      return 'Calendar misconfigured';
+    }
+    return 'No eligible upcoming run';
+  }
+
+  return formatTimestamp(schedule.next_fire_at ?? schedule.run_at);
+};
+
+const defaultScheduleActions: WorkflowSchedulesActions = {
+  createWorkflowScheduleAction: createWorkflowScheduleActionDefault,
+  deleteWorkflowScheduleAction: deleteWorkflowScheduleActionDefault,
+  getWorkflowScheduleAction: getWorkflowScheduleActionDefault,
+  listWorkflowScheduleBusinessHoursAction: listWorkflowScheduleBusinessHoursActionDefault,
+  listWorkflowSchedulesAction: listWorkflowSchedulesActionDefault,
+  pauseWorkflowScheduleAction: pauseWorkflowScheduleActionDefault,
+  resumeWorkflowScheduleAction: resumeWorkflowScheduleActionDefault,
+  updateWorkflowScheduleAction: updateWorkflowScheduleActionDefault,
+};
+
+export default function Schedules({
+  scheduleActions = defaultScheduleActions
+}: SchedulesProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const didUnmount = useRef(false);
@@ -86,6 +138,8 @@ export default function Schedules() {
     (searchParams.get(SCHEDULE_TRIGGER_PARAM) as TriggerFilter) || 'all'
   );
   const [workflowFilter, setWorkflowFilter] = useState(searchParams.get(SCHEDULE_WORKFLOW_PARAM) || '');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
   const [activeScheduleId, setActiveScheduleId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -138,7 +192,7 @@ export default function Schedules() {
       setIsLoading(true);
       setError(null);
       try {
-        const result = await listWorkflowSchedulesAction({
+        const result = await scheduleActions.listWorkflowSchedulesAction({
           workflowId: workflowFilter || undefined,
           status: statusFilter,
           triggerType: triggerFilter,
@@ -163,14 +217,14 @@ export default function Schedules() {
     return () => {
       didUnmount.current = true;
     };
-  }, [refreshKey, searchTerm, statusFilter, triggerFilter, workflowFilter]);
+  }, [refreshKey, scheduleActions, searchTerm, statusFilter, triggerFilter, workflowFilter]);
 
   const handlePauseResume = async (schedule: WorkflowScheduleListItem) => {
     try {
       if (schedule.enabled && schedule.status !== 'paused') {
-        await pauseWorkflowScheduleAction({ scheduleId: schedule.id });
+        await scheduleActions.pauseWorkflowScheduleAction({ scheduleId: schedule.id });
       } else {
-        await resumeWorkflowScheduleAction({ scheduleId: schedule.id });
+        await scheduleActions.resumeWorkflowScheduleAction({ scheduleId: schedule.id });
       }
       setRefreshKey((value) => value + 1);
     } catch (actionError) {
@@ -178,6 +232,15 @@ export default function Schedules() {
       setError(actionError instanceof Error ? actionError.message : 'Failed to update schedule.');
     }
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, triggerFilter, workflowFilter]);
+
+  const pagedSchedules = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return schedules.slice(start, start + pageSize);
+  }, [currentPage, schedules]);
 
   const workflowFilterOptions = useMemo<SelectOption[]>(
     () => [
@@ -242,10 +305,15 @@ export default function Schedules() {
       dataIndex: 'next_fire_at',
       render: (_value, record) => (
         <div className="flex flex-col gap-1 text-sm text-[rgb(var(--color-text-700))]">
-          <span>{formatTimestamp(record.next_fire_at ?? record.run_at)}</span>
+          <span>{getNextFireDisplayText(record)}</span>
           {record.trigger_type === 'recurring' && record.cron ? (
             <span className="text-xs text-[rgb(var(--color-text-500))]">
               {record.cron}{record.timezone ? ` · ${record.timezone}` : ''}
+            </span>
+          ) : null}
+          {record.trigger_type === 'recurring' ? (
+            <span className="text-xs text-[rgb(var(--color-text-500))]">
+              {toDayFilterLabel(record.day_type_filter)}
             </span>
           ) : null}
         </div>
@@ -302,9 +370,7 @@ export default function Schedules() {
                 <DropdownMenu.Item
                   className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-text-700))] outline-none hover:bg-[rgb(var(--color-border-50))]"
                   onSelect={() => {
-                    setDialogMode('edit');
-                    setActiveScheduleId(record.id);
-                    setIsDialogOpen(true);
+                    openEditDialog(record.id);
                   }}
                 >
                   <Pencil className="h-4 w-4" />
@@ -361,11 +427,17 @@ export default function Schedules() {
     setIsDialogOpen(true);
   };
 
+  const openEditDialog = (scheduleId: string) => {
+    setDialogMode('edit');
+    setActiveScheduleId(scheduleId);
+    setIsDialogOpen(true);
+  };
+
   const handleDeleteConfirm = async () => {
     if (!scheduleToDelete) return;
     setIsDeleting(true);
     try {
-      await deleteWorkflowScheduleAction({ scheduleId: scheduleToDelete.id });
+      await scheduleActions.deleteWorkflowScheduleAction({ scheduleId: scheduleToDelete.id });
       setIsDeleteDialogOpen(false);
       setScheduleToDelete(null);
       setRefreshKey((value) => value + 1);
@@ -457,12 +529,21 @@ export default function Schedules() {
             </div>
           </div>
         ) : (
-          <DataTable
-            id="workflow-schedules-table"
-            data={schedules}
-            columns={columns}
-            pagination={false}
-          />
+          <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-[rgb(var(--color-border-200))] bg-white">
+            <div className="h-full min-h-0 overflow-y-auto">
+              <DataTable
+                id="workflow-schedules-table"
+                data={pagedSchedules}
+                columns={columns}
+                pagination={true}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                totalItems={schedules.length}
+                onRowClick={(record) => openEditDialog(record.id)}
+              />
+            </div>
+          </div>
         )}
       </div>
 
@@ -471,6 +552,7 @@ export default function Schedules() {
         mode={dialogMode}
         scheduleId={activeScheduleId}
         initialWorkflowId={workflowFilter || undefined}
+        scheduleActions={scheduleActions}
         onClose={() => setIsDialogOpen(false)}
         onSaved={() => setRefreshKey((value) => value + 1)}
       />

@@ -13,6 +13,8 @@ import { ConfigurationTypeSelector } from './ConfigurationTypeSelector';
 interface BaseServiceConfigPanelProps {
   configuration: Partial<IContractLineServiceConfiguration>;
   service?: IService;
+  effectiveMode?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+  defaultSource?: 'catalog default' | 'contract override' | 'none';
   onConfigurationChange: (updates: Partial<IContractLineServiceConfiguration>) => void;
   onTypeChange?: (type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket') => void;
   showTypeSelector?: boolean;
@@ -24,6 +26,8 @@ interface BaseServiceConfigPanelProps {
 export function BaseServiceConfigPanel({
   configuration,
   service,
+  effectiveMode,
+  defaultSource,
   onConfigurationChange,
   onTypeChange,
   showTypeSelector = true,
@@ -80,6 +84,21 @@ export function BaseServiceConfigPanel({
               Service: <span className="font-medium">{service.service_name}</span>
             </div>
           )}
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2 text-sm text-muted-foreground">
+          <p>
+            Effective mode:{' '}
+            <span className="font-medium text-foreground">
+              {effectiveMode || configuration.configuration_type || 'Fixed'}
+            </span>
+          </p>
+          <p>
+            Default source:{' '}
+            <span className="font-medium text-foreground">
+              {defaultSource || 'none'}
+            </span>
+          </p>
         </div>
         
         {error && (

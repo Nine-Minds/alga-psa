@@ -4,7 +4,7 @@ import { withTransaction } from '@alga-psa/db';
 import { auditLog } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import ClientContractLine from '../models/clientContractLine';
-import { IInvoice } from '@alga-psa/types';
+import { IInvoice, IInvoiceCharge } from '@alga-psa/types';
 import { ITransaction, ICreditTracking } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
@@ -14,10 +14,225 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import Invoice from '../models/invoice';
 import {
     buildCreditNoteAppliedPayload,
     buildCreditNoteCreatedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders';
+} from '@alga-psa/workflow-streams';
+
+type CreditInvoicePeriodSummary = {
+    service_period_start: string | null;
+    service_period_end: string | null;
+    invoice_date_basis: 'financial_document_date' | 'canonical_recurring_service_period';
+    invoice_context_status: 'canonical_recurring' | 'financial_document_fallback' | 'missing_source_context';
+};
+
+type CreditLineageInvoiceContext = {
+    invoice: IInvoice | null;
+    summary: CreditInvoicePeriodSummary;
+    sourceCreditId: string | null;
+    sourceInvoiceId: string | null;
+    lineageOrigin: 'source_invoice' | 'transferred_credit';
+};
+
+function summarizeCanonicalInvoiceServicePeriods(
+    invoiceCharges: IInvoiceCharge[] | undefined
+): CreditInvoicePeriodSummary {
+    const starts = (invoiceCharges ?? [])
+        .map((charge) => charge.service_period_start)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .sort();
+    const ends = (invoiceCharges ?? [])
+        .map((charge) => charge.service_period_end)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .sort();
+
+    return {
+        service_period_start: starts[0] ?? null,
+        service_period_end: ends[ends.length - 1] ?? null,
+        invoice_date_basis:
+            starts.length > 0 || ends.length > 0
+                ? 'canonical_recurring_service_period'
+                : 'financial_document_date',
+        invoice_context_status:
+            starts.length > 0 || ends.length > 0
+                ? 'canonical_recurring'
+                : 'financial_document_fallback',
+    };
+}
+
+async function loadCreditSourceInvoice(
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    invoiceId: string
+): Promise<{ invoice: IInvoice | null; summary: CreditInvoicePeriodSummary }> {
+    // Negative-invoice and prepayment credits keep their recurring timing
+    // context on the source invoice. Later credit-application transactions are
+    // financial offsets only; they do not redefine the source recurring period.
+    const invoice = await Invoice.getById(knexOrTrx, tenant, invoiceId);
+
+    if (!invoice) {
+        return {
+            invoice: null,
+            summary: {
+                service_period_start: null,
+                service_period_end: null,
+                invoice_date_basis: 'financial_document_date',
+                invoice_context_status: 'missing_source_context',
+            },
+        };
+    }
+
+    return {
+        invoice,
+        summary: summarizeCanonicalInvoiceServicePeriods(invoice.invoice_charges),
+    };
+}
+
+function emptyCreditLineageInvoiceContext(
+    invoiceContextStatus: CreditInvoicePeriodSummary['invoice_context_status'] = 'financial_document_fallback'
+): CreditLineageInvoiceContext {
+    return {
+        invoice: null,
+        summary: {
+            service_period_start: null,
+            service_period_end: null,
+            invoice_date_basis: 'financial_document_date',
+            invoice_context_status: invoiceContextStatus,
+        },
+        sourceCreditId: null,
+        sourceInvoiceId: null,
+        lineageOrigin: 'source_invoice',
+    };
+}
+
+async function loadCreditLineageInvoice(
+    trx: Knex | Knex.Transaction,
+    tenant: string,
+    invoiceId?: string | null,
+    transactionMetadata?: Record<string, any>,
+    visitedCreditIds: Set<string> = new Set()
+): Promise<CreditLineageInvoiceContext> {
+    if (invoiceId) {
+        const sourceInvoice = await loadCreditSourceInvoice(trx, tenant, invoiceId);
+        return {
+            ...sourceInvoice,
+            sourceCreditId: null,
+            sourceInvoiceId: invoiceId,
+            lineageOrigin: 'source_invoice',
+        };
+    }
+
+    const metadataSourceInvoiceId =
+        typeof transactionMetadata?.source_invoice_id === 'string' && transactionMetadata.source_invoice_id.length > 0
+            ? transactionMetadata.source_invoice_id
+            : null;
+    const metadataSourceCreditId =
+        typeof transactionMetadata?.source_credit_id === 'string' && transactionMetadata.source_credit_id.length > 0
+            ? transactionMetadata.source_credit_id
+            : null;
+
+    if (metadataSourceInvoiceId) {
+        const sourceInvoice = await loadCreditSourceInvoice(trx, tenant, metadataSourceInvoiceId);
+        return {
+            ...sourceInvoice,
+            sourceCreditId: metadataSourceCreditId,
+            sourceInvoiceId: metadataSourceInvoiceId,
+            lineageOrigin: 'transferred_credit',
+        };
+    }
+
+    if (metadataSourceCreditId && !visitedCreditIds.has(metadataSourceCreditId)) {
+        visitedCreditIds.add(metadataSourceCreditId);
+
+        const sourceCredit = await trx('credit_tracking')
+            .where({
+                credit_id: metadataSourceCreditId,
+                tenant,
+            })
+            .first();
+
+        if (sourceCredit) {
+            const sourceTransaction = await trx('transactions')
+                .where({
+                    transaction_id: sourceCredit.transaction_id,
+                    tenant,
+                })
+                .first();
+
+            if (sourceTransaction) {
+                const lineage = await loadCreditLineageInvoice(
+                    trx,
+                    tenant,
+                    sourceTransaction.invoice_id,
+                    sourceTransaction.metadata,
+                    visitedCreditIds
+                );
+
+                return {
+                    ...lineage,
+                    sourceCreditId: metadataSourceCreditId,
+                    lineageOrigin: 'transferred_credit',
+                };
+            }
+        }
+
+        return {
+            ...emptyCreditLineageInvoiceContext('missing_source_context'),
+            sourceCreditId: metadataSourceCreditId,
+            lineageOrigin: 'transferred_credit',
+        };
+    }
+
+    return emptyCreditLineageInvoiceContext();
+}
+
+async function attachInvoiceContextToTransaction(
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    transaction: ITransaction,
+    invoiceCache: Map<string, Promise<CreditLineageInvoiceContext>>
+): Promise<ITransaction> {
+    const cacheKey = JSON.stringify({
+        invoiceId: transaction.invoice_id ?? null,
+        sourceInvoiceId:
+            typeof transaction.metadata?.source_invoice_id === 'string'
+                ? transaction.metadata.source_invoice_id
+                : null,
+        sourceCreditId:
+            typeof transaction.metadata?.source_credit_id === 'string'
+                ? transaction.metadata.source_credit_id
+                : null,
+    });
+
+    let invoiceLoad = invoiceCache.get(cacheKey);
+    if (!invoiceLoad) {
+        invoiceLoad = loadCreditLineageInvoice(
+            knexOrTrx,
+            tenant,
+            transaction.invoice_id,
+            transaction.metadata,
+        );
+        invoiceCache.set(cacheKey, invoiceLoad);
+    }
+
+    const { invoice, summary, sourceCreditId, sourceInvoiceId, lineageOrigin } = await invoiceLoad;
+
+    return {
+        ...transaction,
+        invoice_id: transaction.invoice_id ?? sourceInvoiceId ?? undefined,
+        invoice_number: invoice?.invoice_number,
+        invoice_status: invoice?.status,
+        invoice_service_period_start: summary.service_period_start,
+        invoice_service_period_end: summary.service_period_end,
+        invoice_date_basis: summary.invoice_date_basis,
+        invoice_context_status: summary.invoice_context_status,
+        metadata: transaction.metadata,
+        source_credit_id: sourceCreditId ?? undefined,
+        source_invoice_id: sourceInvoiceId ?? undefined,
+        lineage_origin: lineageOrigin,
+    };
+}
 
 
 
@@ -285,10 +500,14 @@ export const createPrepaymentInvoice = withAuth(async (
                 total_amount: amount,
                 status: 'draft',
                 invoice_number: await generateInvoiceNumber(),
+                // Prepayments remain non-service financial artifacts. These
+                // header dates track the immediate financial issuance window;
+                // canonical recurring service periods stay null/absent.
                 billing_period_start: new Date().toISOString(),
                 billing_period_end: new Date().toISOString(),
                 credit_applied: 0,
-                currency_code: clientCurrency
+                currency_code: clientCurrency,
+                is_prepayment: true,
             })
             .returning('*');
 
@@ -454,6 +673,13 @@ export const createPrepaymentInvoice = withAuth(async (
                 amount: wfData.amount,
                 currency: wfData.currency,
                 status: 'issued',
+                sourceDocumentKind: 'prepayment_invoice',
+                sourceInvoiceId: createdInvoice.invoice_id,
+                sourceInvoiceNumber: createdInvoice.invoice_number ?? null,
+                sourceInvoiceStatus: createdInvoice.status ?? null,
+                sourceInvoiceDateBasis: 'financial_document_date',
+                sourceServicePeriodStart: null,
+                sourceServicePeriodEnd: null,
             }),
             ctx: {
                 tenantId: tenant,
@@ -489,6 +715,11 @@ export const applyCreditToInvoice = withAuth(async (
         appliedAt: string;
         appliedByUserId: string;
         idempotencyKey: string;
+        appliedInvoiceNumber: string | null;
+        appliedInvoiceStatus: string | null;
+        appliedInvoiceDateBasis: CreditInvoicePeriodSummary['invoice_date_basis'];
+        appliedServicePeriodStart: string | null;
+        appliedServicePeriodEnd: string | null;
     }> = [];
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -669,15 +900,6 @@ export const applyCreditToInvoice = withAuth(async (
             tenant
         });
 
-        // Verify client contract line exists before update
-        const contractLine = await trx('client_contract_lines')
-            .where({ client_id: clientId, tenant })
-            .first();
-        
-        if (!contractLine) {
-            throw new Error(`No contract line found for client ${clientId}`);
-        }
-
         // Update invoice and client credit balance
         await Promise.all([
             trx('invoices')
@@ -711,6 +933,8 @@ export const applyCreditToInvoice = withAuth(async (
         console.log(`Applied ${totalAppliedAmount} credit to invoice ${invoiceId} for client ${clientId}. Remaining credit: ${newBalance}`);
         console.log(`Applied from ${appliedCredits.length} different credit sources, prioritized by expiration date.`);
 
+        const appliedInvoice = await loadCreditSourceInvoice(trx, tenant, invoiceId);
+
         creditNoteAppliedEvents = appliedCredits.map((appliedCredit) => ({
             creditNoteId: appliedCredit.creditId,
             invoiceId,
@@ -719,6 +943,11 @@ export const applyCreditToInvoice = withAuth(async (
             appliedAt: now,
             appliedByUserId: user.user_id,
             idempotencyKey: `credit_note_applied:${creditTransaction.transaction_id}:${appliedCredit.creditId}`,
+            appliedInvoiceNumber: appliedInvoice.invoice?.invoice_number ?? null,
+            appliedInvoiceStatus: appliedInvoice.invoice?.status ?? null,
+            appliedInvoiceDateBasis: appliedInvoice.summary.invoice_date_basis,
+            appliedServicePeriodStart: appliedInvoice.summary.service_period_start,
+            appliedServicePeriodEnd: appliedInvoice.summary.service_period_end,
         }));
     });
 
@@ -732,6 +961,11 @@ export const applyCreditToInvoice = withAuth(async (
                 appliedAt: event.appliedAt,
                 amountApplied: event.amountApplied,
                 currency: event.currency,
+                appliedInvoiceNumber: event.appliedInvoiceNumber,
+                appliedInvoiceStatus: event.appliedInvoiceStatus,
+                appliedInvoiceDateBasis: event.appliedInvoiceDateBasis,
+                appliedServicePeriodStart: event.appliedServicePeriodStart,
+                appliedServicePeriodEnd: event.appliedServicePeriodEnd,
             }),
             ctx: {
                 tenantId: tenant,
@@ -838,7 +1072,8 @@ export const listClientCredits = withAuth(async (
                 'transactions.description as transaction_description',
                 'transactions.type as transaction_type',
                 'transactions.invoice_id',
-                'transactions.created_at as transaction_date'
+                'transactions.created_at as transaction_date',
+                'transactions.metadata as transaction_metadata'
             )
             .orderBy([
                 { column: 'is_expired', order: 'asc' },
@@ -848,25 +1083,29 @@ export const listClientCredits = withAuth(async (
             .limit(pageSize)
             .offset(offset);
 
-        // Add invoice details if available
+        // Add direct or inherited source-invoice details if available.
+        const invoiceCache = new Map<string, Promise<CreditLineageInvoiceContext>>();
         const creditsWithInvoices = await Promise.all(
             credits.map(async (credit) => {
-                if (credit.invoice_id) {
-                    const invoice = await trx('invoices')
-                        .where({
-                            invoice_id: credit.invoice_id,
-                            tenant
-                        })
-                        .select('invoice_number', 'status')
-                        .first();
-                    
-                    return {
-                        ...credit,
-                        invoice_number: invoice?.invoice_number,
-                        invoice_status: invoice?.status
-                    };
-                }
-                return credit;
+                const lineage = await loadCreditLineageInvoice(
+                    trx,
+                    tenant,
+                    credit.invoice_id,
+                    credit.transaction_metadata,
+                );
+
+                return {
+                    ...credit,
+                    source_credit_id: lineage.sourceCreditId ?? undefined,
+                    source_invoice_id: lineage.sourceInvoiceId ?? undefined,
+                    lineage_origin: lineage.lineageOrigin,
+                    invoice_number: lineage.invoice?.invoice_number,
+                    invoice_status: lineage.invoice?.status,
+                    invoice_service_period_start: lineage.summary.service_period_start,
+                    invoice_service_period_end: lineage.summary.service_period_end,
+                    invoice_date_basis: lineage.summary.invoice_date_basis,
+                    invoice_context_status: lineage.summary.invoice_context_status,
+                };
             })
         );
 
@@ -892,7 +1131,11 @@ export const getCreditDetails = withAuth(async (
 ): Promise<{
     credit: ICreditTracking,
     transactions: ITransaction[],
-    invoice?: any
+    invoice?: any,
+    invoice_date_basis?: CreditInvoicePeriodSummary['invoice_date_basis'],
+    invoice_context_status?: CreditInvoicePeriodSummary['invoice_context_status'],
+    invoice_service_period_start?: string | null,
+    invoice_service_period_end?: string | null,
 }> => {
     // Check permission for credit reading
     if (!hasPermission(user, 'credit', 'read')) {
@@ -930,24 +1173,54 @@ export const getCreditDetails = withAuth(async (
             })
             .orderBy('created_at', 'desc');
 
-        // Combine all transactions
-        const transactions = [originalTransaction, ...relatedTransactions].filter(Boolean);
+        const invoiceCache = new Map<string, Promise<CreditLineageInvoiceContext>>();
+
+        // The credit keeps its own source-invoice timing context at the top level.
+        // Related credit-application transactions separately carry the target
+        // invoice's recurring period summary when that invoice is detail-backed.
+        const transactions = await Promise.all(
+            [originalTransaction, ...relatedTransactions]
+                .filter((transaction): transaction is ITransaction => Boolean(transaction))
+                .map((transaction) => attachInvoiceContextToTransaction(trx, tenant, transaction, invoiceCache))
+        );
 
         // Get invoice details if available
-        let invoice = null;
-        if (originalTransaction.invoice_id) {
-            invoice = await trx('invoices')
-                .where({
-                    invoice_id: originalTransaction.invoice_id,
-                    tenant
-                })
-                .first();
+        let invoice: IInvoice | null = null;
+        let invoiceSummary: CreditInvoicePeriodSummary | null = null;
+        let sourceCreditId: string | null = null;
+        let sourceInvoiceId: string | null = null;
+        let lineageOrigin: 'source_invoice' | 'transferred_credit' | null = null;
+        if (originalTransaction) {
+            const lineage = await loadCreditLineageInvoice(
+                trx,
+                tenant,
+                originalTransaction.invoice_id,
+                originalTransaction.metadata,
+            );
+            invoice = lineage.invoice;
+            invoiceSummary = lineage.summary;
+            sourceCreditId = lineage.sourceCreditId;
+            sourceInvoiceId = lineage.sourceInvoiceId;
+            lineageOrigin = lineage.lineageOrigin;
         }
 
         return {
-            credit,
+            credit: {
+                ...credit,
+                invoice_date_basis: invoiceSummary?.invoice_date_basis,
+                invoice_service_period_start: invoiceSummary?.service_period_start ?? null,
+                invoice_service_period_end: invoiceSummary?.service_period_end ?? null,
+                invoice_context_status: invoiceSummary?.invoice_context_status,
+                source_credit_id: sourceCreditId ?? undefined,
+                source_invoice_id: sourceInvoiceId ?? undefined,
+                lineage_origin: lineageOrigin ?? undefined,
+            },
             transactions,
-            invoice
+            invoice,
+            invoice_date_basis: invoiceSummary?.invoice_date_basis,
+            invoice_context_status: invoiceSummary?.invoice_context_status,
+            invoice_service_period_start: invoiceSummary?.service_period_start ?? null,
+            invoice_service_period_end: invoiceSummary?.service_period_end ?? null,
         };
     });
 });
@@ -1234,6 +1507,18 @@ export const transferCredit = withAuth(async (
         }
 
         const now = new Date().toISOString();
+        const sourceCreditTransaction = await trx('transactions')
+            .where({
+                transaction_id: sourceCredit.transaction_id,
+                tenant,
+            })
+            .first();
+        const sourceLineage = await loadCreditLineageInvoice(
+            trx,
+            tenant,
+            sourceCreditTransaction?.invoice_id,
+            sourceCreditTransaction?.metadata,
+        );
 
         // 1. Reduce source credit remaining amount
         const newSourceRemainingAmount = Number(sourceCredit.remaining_amount) - amount;
@@ -1261,7 +1546,12 @@ export const transferCredit = withAuth(async (
             related_transaction_id: sourceCredit.transaction_id,
             metadata: {
                 transfer_to: targetClientId,
-                transfer_reason: reason || 'Administrative transfer'
+                transfer_reason: reason || 'Administrative transfer',
+                source_credit_id: sourceCreditId,
+                source_invoice_id: sourceLineage.sourceInvoiceId,
+                source_invoice_date_basis: sourceLineage.summary.invoice_date_basis,
+                source_invoice_service_period_start: sourceLineage.summary.service_period_start,
+                source_invoice_service_period_end: sourceLineage.summary.service_period_end,
             }
         });
 
@@ -1298,7 +1588,11 @@ export const transferCredit = withAuth(async (
             metadata: {
                 transfer_from: sourceCredit.client_id,
                 transfer_reason: reason || 'Administrative transfer',
-                source_credit_id: sourceCreditId
+                source_credit_id: sourceCreditId,
+                source_invoice_id: sourceLineage.sourceInvoiceId,
+                source_invoice_date_basis: sourceLineage.summary.invoice_date_basis,
+                source_invoice_service_period_start: sourceLineage.summary.service_period_start,
+                source_invoice_service_period_end: sourceLineage.summary.service_period_end,
             }
         });
 
@@ -1358,7 +1652,11 @@ export const transferCredit = withAuth(async (
                     source_client_id: sourceCredit.client_id,
                     target_client_id: targetClientId,
                     amount: amount,
-                    reason: reason || 'Administrative transfer'
+                    reason: reason || 'Administrative transfer',
+                    source_invoice_id: sourceLineage.sourceInvoiceId,
+                    source_invoice_date_basis: sourceLineage.summary.invoice_date_basis,
+                    source_invoice_service_period_start: sourceLineage.summary.service_period_start,
+                    source_invoice_service_period_end: sourceLineage.summary.service_period_end,
                 }
             }
         );

@@ -16,9 +16,14 @@ export type NodeHandlerContext = {
   nowIso: () => string;
   logger?: { info: (msg: string, meta?: unknown) => void; warn: (msg: string, meta?: unknown) => void; error: (msg: string, meta?: unknown) => void };
   actions: {
-    call: (actionId: string, version: number, args: any, options?: { idempotencyKey?: string }) => Promise<any>;
+    call: (
+      actionId: string,
+      version: number,
+      args: any,
+      options?: { idempotencyKey?: string; stepConfig?: unknown }
+    ) => Promise<any>;
   };
-  publishWait: (wait: { type: 'event' | 'human'; key?: string; eventName?: string; timeoutAt?: string; payload?: unknown }) => Promise<void>;
+  publishWait: (wait: { type: 'event' | 'human' | 'time'; key?: string; eventName?: string; timeoutAt?: string; payload?: Record<string, unknown> | null }) => Promise<void>;
   resumeEvent?: { name: string; payload: unknown } | null;
   resumeError?: { category?: string; message?: string } | null;
   knex?: any;

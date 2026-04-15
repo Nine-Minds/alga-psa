@@ -52,6 +52,7 @@ export interface ITimeEntry extends TenantEntity  {
   time_sheet_id?: string;
   approval_status: TimeSheetStatus;
   service_id?: string;
+  service_name?: string | null;
   tax_region?: string;
   contract_line_id?: string | null;
   tax_rate_id?: string | null; // ID of the applied tax rate

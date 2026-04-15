@@ -164,7 +164,7 @@ export class IframeBridge {
     options: ProxyRequestOptions = {},
   ): Promise<Uint8Array> {
     return new Promise((resolve, reject) => {
-      const requestId = typeof crypto !== 'undefined' ? crypto.randomUUID() : String(Math.random());
+      const requestId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : String(Math.random());
       console.log(`[SDK] Starting callProxy for route: ${route}, requestId: ${requestId}`);
       const method = this.resolveProxyMethod(options.method);
 

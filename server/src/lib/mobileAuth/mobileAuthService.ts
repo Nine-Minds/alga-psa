@@ -1,13 +1,16 @@
 import crypto from 'crypto';
 import { z } from 'zod';
+import type { Knex } from 'knex';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { getConnection } from '../db/db';
-import { ApiKeyService } from '../services/apiKeyService';
+import { ApiKeyService } from '@alga-psa/auth';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from '../db';
-import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
-import { UnauthorizedError } from '../api/middleware/apiMiddleware';
+
+import { ForbiddenError, UnauthorizedError } from '../api/middleware/apiMiddleware';
 import { auditLog } from '../logging/auditLog';
 import { enforceMobileOttExchangeLimit, enforceMobileRefreshLimit } from '../security/mobileAuthRateLimiting';
+import { TierAccessError, assertTenantTierAccess } from '../tier-gating/assertTierAccess';
 
 let connectionFactory = getConnection;
 
@@ -65,7 +68,7 @@ export function getMobileAuthConfig(): MobileAuthConfig {
   return {
     hostedDomainAllowlist: allowlist,
     ottTtlSec: parseNumber('ALGA_MOBILE_OTT_TTL_SEC', 60),
-    accessTtlSec: parseNumber('ALGA_MOBILE_ACCESS_TTL_SEC', 15 * 60),
+    accessTtlSec: parseNumber('ALGA_MOBILE_ACCESS_TTL_SEC', 8 * 60 * 60),
     refreshTtlSec: parseNumber('ALGA_MOBILE_REFRESH_TTL_SEC', 30 * 24 * 60 * 60),
   };
 }
@@ -166,13 +169,18 @@ type RefreshTokenRow = {
   replaced_by_id: string | null;
 };
 
-async function getActiveRefreshTokenByHash(hash: string): Promise<RefreshTokenRow | null> {
-  const knex = await connectionFactory(null);
-  const row = await knex('mobile_refresh_tokens')
+async function getActiveRefreshTokenByHash(hash: string, trx?: Knex | Knex.Transaction): Promise<RefreshTokenRow | null> {
+  const db = trx ?? await connectionFactory(null);
+  let query = db('mobile_refresh_tokens')
     .where({ token_hash: hash })
     .whereNull('revoked_at')
-    .where('expires_at', '>', knex.fn.now())
-    .first();
+    .where('expires_at', '>', db.fn.now());
+
+  if (trx) {
+    query = query.forUpdate();
+  }
+
+  const row = await query.first();
   return (row as RefreshTokenRow) ?? null;
 }
 
@@ -183,12 +191,12 @@ async function insertRefreshToken(input: {
   expiresAt: Date;
   deviceId?: string;
   device?: Record<string, unknown>;
-}): Promise<{ token: string; id: string }> {
+}, trx?: Knex | Knex.Transaction): Promise<{ token: string; id: string }> {
   const token = generateOpaqueToken(32);
   const tokenHash = sha256(token);
-  const knex = await connectionFactory(null);
+  const db = trx ?? await connectionFactory(null);
 
-  const [row] = await knex('mobile_refresh_tokens')
+  const [row] = await db('mobile_refresh_tokens')
     .insert({
       tenant: input.tenantId,
       user_id: input.userId,
@@ -209,14 +217,14 @@ async function insertRefreshToken(input: {
   return { token, id };
 }
 
-async function revokeRefreshToken(input: { id: string; replacedById?: string | null }): Promise<void> {
-  const knex = await connectionFactory(null);
-  await knex('mobile_refresh_tokens')
+async function revokeRefreshToken(input: { id: string; replacedById?: string | null }, trx?: Knex | Knex.Transaction): Promise<void> {
+  const db = trx ?? await connectionFactory(null);
+  await db('mobile_refresh_tokens')
     .where({ mobile_refresh_token_id: input.id })
     .update({
-      revoked_at: knex.fn.now(),
+      revoked_at: db.fn.now(),
       replaced_by_id: input.replacedById ?? null,
-      last_used_at: knex.fn.now(),
+      last_used_at: db.fn.now(),
     });
 }
 
@@ -258,6 +266,8 @@ export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSch
       throw new UnauthorizedError('Login session is no longer valid');
     }
   }
+
+  await assertMobileAccess(tenantId);
 
   const accessExpiresAt = new Date(Date.now() + config.accessTtlSec * 1000);
   const refreshExpiresAt = new Date(Date.now() + config.refreshTtlSec * 1000);
@@ -304,25 +314,29 @@ export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSch
         ? [user.first_name, user.last_name].filter(Boolean).join(' ')
         : undefined;
 
-    let avatarUrl: string | undefined;
-    try {
-      const url = await getUserAvatarUrl(userId, tenantId);
-      if (url) avatarUrl = url;
-    } catch {
-      // Non-critical; proceed without avatar
-    }
-
     return {
       accessToken: apiKeyRecord.api_key,
       refreshToken,
       expiresInSec: config.accessTtlSec,
       tenantId,
-      user: user ? { id: userId, email: user.email ?? undefined, name, avatarUrl } : { id: userId },
+      user: user ? { id: userId, email: user.email ?? undefined, name, avatarUrl: user.avatarUrl ?? undefined } : { id: userId },
     };
   } catch (e) {
     // Best-effort cleanup: don't leave an active API key if refresh token creation fails.
     await ApiKeyService.deactivateApiKey(apiKeyRecord.api_key_id, tenantId).catch(() => {});
     throw e;
+  }
+}
+
+async function assertMobileAccess(tenantId: string): Promise<void> {
+  try {
+    await assertTenantTierAccess(tenantId, TIER_FEATURES.MOBILE_ACCESS);
+  } catch (error) {
+    if (error instanceof TierAccessError) {
+      throw new ForbiddenError('Mobile app access requires Pro or higher');
+    }
+
+    throw error;
   }
 }
 
@@ -334,63 +348,94 @@ export type RefreshSessionResult = {
 
 export async function refreshMobileSession(input: z.infer<typeof refreshSessionSchema>): Promise<RefreshSessionResult> {
   const config = getMobileAuthConfig();
+  const knex = await connectionFactory(null);
 
-  const hash = sha256(input.refreshToken);
-  const existing = await getActiveRefreshTokenByHash(hash);
-  if (!existing) {
-    throw new UnauthorizedError('Invalid or expired refresh token');
-  }
+  // Use a transaction with FOR UPDATE to prevent concurrent refresh of the same token.
+  // The second concurrent request will block on the row lock until the first commits,
+  // then find the token already revoked and fail with UnauthorizedError.
+  const result = await knex.transaction(async (trx) => {
+    const hash = sha256(input.refreshToken);
+    const existing = await getActiveRefreshTokenByHash(hash, trx);
+    if (!existing) {
+      throw new UnauthorizedError('Invalid or expired refresh token');
+    }
 
-  await enforceMobileRefreshLimit(`${existing.tenant}:${existing.user_id}`);
+    await enforceMobileRefreshLimit(`${existing.tenant}:${existing.user_id}`);
 
-  const accessExpiresAt = new Date(Date.now() + config.accessTtlSec * 1000);
-  const refreshExpiresAt = new Date(Date.now() + config.refreshTtlSec * 1000);
+    const accessExpiresAt = new Date(Date.now() + config.accessTtlSec * 1000);
+    const refreshExpiresAt = new Date(Date.now() + config.refreshTtlSec * 1000);
 
-  const apiKeyRecord = await ApiKeyService.createApiKey(
-    existing.user_id,
-    'Mobile session (refresh)',
-    accessExpiresAt,
-    {
-      tenantId: existing.tenant,
-      purpose: 'mobile_session',
-      metadata: {
-        device: input.device ?? null,
-        rotatedFrom: existing.mobile_refresh_token_id,
+    // API key creation uses its own tenant connection, not the transaction.
+    const apiKeyRecord = await ApiKeyService.createApiKey(
+      existing.user_id,
+      'Mobile session (refresh)',
+      accessExpiresAt,
+      {
+        tenantId: existing.tenant,
+        purpose: 'mobile_session',
+        metadata: {
+          device: input.device ?? null,
+          rotatedFrom: existing.mobile_refresh_token_id,
+        },
       },
-    },
-  );
+    );
 
-  const { token: newRefreshToken, id: newRefreshId } = await insertRefreshToken({
-    tenantId: existing.tenant,
-    userId: existing.user_id,
-    apiKeyId: apiKeyRecord.api_key_id,
-    expiresAt: refreshExpiresAt,
-    deviceId: input.device?.deviceId,
-    device: input.device ? { ...input.device } : undefined,
+    const { token: newRefreshToken, id: newRefreshId } = await insertRefreshToken({
+      tenantId: existing.tenant,
+      userId: existing.user_id,
+      apiKeyId: apiKeyRecord.api_key_id,
+      expiresAt: refreshExpiresAt,
+      deviceId: input.device?.deviceId,
+      device: input.device ? { ...input.device } : undefined,
+    }, trx);
+
+    await revokeRefreshToken({ id: existing.mobile_refresh_token_id, replacedById: newRefreshId }, trx);
+
+    return { existing, apiKeyRecord, newRefreshToken, newRefreshId, accessExpiresAt, refreshExpiresAt };
   });
 
-  await revokeRefreshToken({ id: existing.mobile_refresh_token_id, replacedById: newRefreshId });
-  if (existing.api_key_id) {
-    await ApiKeyService.deactivateApiKey(existing.api_key_id, existing.tenant).catch(() => {});
+  // Best-effort cleanup and audit logging outside the transaction to minimize lock duration.
+  // Run deactivation + audit in parallel since they're independent.
+  const [deactivateResult, auditResult] = await Promise.allSettled([
+    result.existing.api_key_id
+      ? ApiKeyService.deactivateApiKey(result.existing.api_key_id, result.existing.tenant)
+      : Promise.resolve(),
+    safeAuditLog({
+      tenantId: result.existing.tenant,
+      userId: result.existing.user_id,
+      operation: 'MOBILE_AUTH_REFRESH',
+      recordId: result.apiKeyRecord.api_key_id,
+      details: {
+        oldRefreshId: result.existing.mobile_refresh_token_id,
+        newRefreshId: result.newRefreshId,
+        accessExpiresAt: result.accessExpiresAt.toISOString(),
+        refreshExpiresAt: result.refreshExpiresAt.toISOString(),
+        deviceId: input.device?.deviceId ?? null,
+      },
+    }),
+  ]);
+
+  if (deactivateResult.status === 'rejected') {
+    console.warn('[mobileAuth] failed to deactivate old API key', {
+      apiKeyId: result.existing.api_key_id,
+      error: deactivateResult.reason,
+    });
+  }
+  if (auditResult.status === 'rejected') {
+    console.warn('[mobileAuth] post-refresh audit log failed', { error: auditResult.reason });
   }
 
-  await safeAuditLog({
-    tenantId: existing.tenant,
-    userId: existing.user_id,
-    operation: 'MOBILE_AUTH_REFRESH',
-    recordId: apiKeyRecord.api_key_id,
-    details: {
-      oldRefreshId: existing.mobile_refresh_token_id,
-      newRefreshId,
-      accessExpiresAt: accessExpiresAt.toISOString(),
-      refreshExpiresAt: refreshExpiresAt.toISOString(),
-      deviceId: input.device?.deviceId ?? null,
-    },
-  });
+  // Probabilistic stale-key cleanup: run on ~5% of refreshes to avoid
+  // unnecessary DB work on every token rotation.
+  if (Math.random() < 0.05) {
+    ApiKeyService.cleanupStaleKeys(result.existing.user_id, result.existing.tenant).catch((err) => {
+      console.warn('[mobileAuth] stale key cleanup failed', { error: err });
+    });
+  }
 
   return {
-    accessToken: apiKeyRecord.api_key,
-    refreshToken: newRefreshToken,
+    accessToken: result.apiKeyRecord.api_key,
+    refreshToken: result.newRefreshToken,
     expiresInSec: config.accessTtlSec,
   };
 }

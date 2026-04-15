@@ -62,7 +62,7 @@ export const mapTicketToTaskFields = (ticket: TicketLike | null | undefined): Ta
   const dueDate = ticket?.due_date ? new Date(ticket.due_date) : null;
   const rawDescription = ticket?.description ??
     (typeof ticket?.attributes?.description === 'string' ? ticket.attributes.description : '');
-  const description = rawDescription ? extractPlainText(rawDescription) : '';
+  const description = rawDescription || '';
   return {
     task_name: ticket?.title ?? '',
     description,

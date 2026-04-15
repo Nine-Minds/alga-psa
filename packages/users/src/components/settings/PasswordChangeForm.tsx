@@ -17,7 +17,7 @@ interface PasswordChangeFormProps {
 }
 
 export default function PasswordChangeForm({ onSuccess, className }: PasswordChangeFormProps) {
-  const { t } = useTranslation('client-portal');
+  const { t } = useTranslation('msp/profile');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -76,41 +76,55 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
     setPasswordSuccess(null);
 
     if (!isPasswordValid()) {
-      setPasswordError('Password does not meet all requirements');
+      setPasswordError(t('profile.changePassword.validationFailed', {
+        defaultValue: 'Password does not meet all requirements',
+      }));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordError(t('profile.changePassword.passwordMismatch', 'New passwords do not match'));
+      setPasswordError(t('profile.changePassword.passwordMismatch', {
+        defaultValue: 'New passwords do not match',
+      }));
       return;
     }
 
     if (newPassword.length < 8) {
-      setPasswordError(t('profile.changePassword.requirements', 'Password must be at least 8 characters'));
+      setPasswordError(t('profile.changePassword.requirements', {
+        defaultValue: 'Password must be at least 8 characters',
+      }));
       return;
     }
 
     try {
       const result = await changeOwnPassword(currentPassword, newPassword);
       if (result.success) {
-        setPasswordSuccess(t('profile.changePassword.success', 'Password changed successfully'));
+        setPasswordSuccess(t('profile.changePassword.success', {
+          defaultValue: 'Password changed successfully',
+        }));
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
         setNeedsPasswordReset(false);
         onSuccess?.();
       } else {
-        setPasswordError(result.error || t('profile.changePassword.error', 'Failed to change password'));
+        setPasswordError(result.error || t('profile.changePassword.error', {
+          defaultValue: 'Failed to change password',
+        }));
       }
     } catch (err) {
-      setPasswordError(t('profile.changePassword.error', 'Failed to change password'));
+      setPasswordError(t('profile.changePassword.error', {
+        defaultValue: 'Failed to change password',
+      }));
     }
   };
 
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle>{t('profile.changePassword.title', 'Change Password')}</CardTitle>
+        <CardTitle>{t('profile.changePassword.title', {
+          defaultValue: 'Change Password',
+        })}</CardTitle>
       </CardHeader>
       <CardContent>
         {needsPasswordReset && (
@@ -118,7 +132,9 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
         )}
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
-            <Label htmlFor="currentPassword">{t('profile.changePassword.current', 'Current Password')}</Label>
+            <Label htmlFor="currentPassword">{t('profile.changePassword.current', {
+              defaultValue: 'Current Password',
+            })}</Label>
             <div className="relative">
               <Input
                 id="currentPassword"
@@ -143,7 +159,9 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
             </div>
           </div>
           <div>
-            <Label htmlFor="newPassword">{t('profile.changePassword.new', 'New Password')}</Label>
+            <Label htmlFor="newPassword">{t('profile.changePassword.new', {
+              defaultValue: 'New Password',
+            })}</Label>
             <div className="relative">
               <Input
                 id="newPassword"
@@ -168,7 +186,9 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
             </div>
           </div>
           <div>
-            <Label htmlFor="confirmPassword">{t('profile.changePassword.confirm', 'Confirm New Password')}</Label>
+            <Label htmlFor="confirmPassword">{t('profile.changePassword.confirm', {
+              defaultValue: 'Confirm New Password',
+            })}</Label>
             <div className="relative">
               <Input
                 id="confirmPassword"
@@ -199,7 +219,9 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
             <div className="text-green-500 text-sm">{passwordSuccess}</div>
           )}
           <Button id="change-password-button" type="submit" variant="default">
-            {t('profile.changePassword.submit', 'Change Password')}
+            {t('profile.changePassword.submit', {
+              defaultValue: 'Change Password',
+            })}
           </Button>
         </form>
       </CardContent>

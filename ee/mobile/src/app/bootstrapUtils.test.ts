@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { isSessionUsable, msUntilExpiry, msUntilRefresh, shouldRefreshOnResume, shouldRunRevocationCheck } from "./bootstrapUtils";
 
 describe("bootstrapUtils", () => {
-  it("treats sessions as usable only before expiry", () => {
-    expect(isSessionUsable({ accessToken: "", refreshToken: "", expiresAtMs: 1000 }, 999)).toBe(true);
-    expect(isSessionUsable({ accessToken: "", refreshToken: "", expiresAtMs: 1000 }, 1000)).toBe(false);
+  it("treats sessions as usable when refresh token exists", () => {
+    expect(isSessionUsable({ accessToken: "", refreshToken: "tok", expiresAtMs: 1000 })).toBe(true);
+    expect(isSessionUsable({ accessToken: "", refreshToken: "", expiresAtMs: 1000 })).toBe(false);
   });
 
   it("computes refresh and expiry delays with non-negative clamp", () => {

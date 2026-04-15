@@ -297,8 +297,74 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
         }
     }
 
+    const mainFooter = settings ? (
+        <div className="flex justify-between w-full">
+            {mode === 'edit' && selectedPeriod ? (
+                <Button
+                    id='delete-period-button'
+                    variant="destructive"
+                    onClick={() => setShowDeleteConfirm(true)}
+                >
+                    Delete Period
+                </Button>
+            ) : <div />}
+            <div className="flex ml-auto space-x-2">
+                <Button id="close-button" variant="outline" onClick={onClose}>
+                    Cancel
+                </Button>
+                <Button id="submit-button" onClick={handleSubmit}>
+                    {mode === 'create' ? 'Create' : 'Save'}
+                </Button>
+            </div>
+        </div>
+    ) : (
+        <div className="flex justify-end">
+            <Button id="settings-close-button" variant="outline" onClick={onClose}>
+                Close
+            </Button>
+        </div>
+    );
+
+    const deleteFooter = (
+        <div className="flex justify-end space-x-2">
+            <Button
+                id="cancel-delete-button"
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(false)}
+            >
+                Cancel
+            </Button>
+            <Button
+                id="confirm-delete-button"
+                variant="destructive"
+                onClick={async () => {
+                    try {
+                        if (selectedPeriod?.period_id) {
+                            await deleteTimePeriod(selectedPeriod.period_id);
+                            setShowDeleteConfirm(false);
+                            onTimePeriodDeleted?.();
+                            onClose();
+                        }
+                    } catch (err) {
+                        dispatch({
+                            type: 'SET_ERROR',
+                            payload: err instanceof Error ? err.message : 'Failed to delete time period'
+                        });
+                    }
+                }}
+            >
+                Delete
+            </Button>
+        </div>
+    );
+
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title={mode === 'create' ? "Create New Time Period" : "Edit Time Period"}>
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            title={mode === 'create' ? "Create New Time Period" : "Edit Time Period"}
+            footer={mainFooter}
+        >
             <div className="p-4">
                 {error && (
                     <div className="text-red-600 mb-2">
@@ -369,75 +435,20 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                                 </>
                             )}
                         </div>
-                        <div className="flex justify-between">
-                            {mode === 'edit' && selectedPeriod && (
-                                <Button
-                                    id='delete-period-button'
-                                    variant="destructive"
-                                    onClick={() => setShowDeleteConfirm(true)}
-                                >
-                                    Delete Period
-                                </Button>
-                            )}
-                            <div className="flex ml-auto">
-                                <Button id="close-button" variant="outline" onClick={onClose} className="mr-2">
-                                    Cancel
-                                </Button>
-                                <Button id="submit-button" onClick={handleSubmit}>
-                                    {mode === 'create' ? 'Create' : 'Save'}
-                                </Button>
-                            </div>
-                        </div>
 
                         {/* Delete Confirmation Dialog */}
                         <Dialog
                             isOpen={showDeleteConfirm}
                             onClose={() => setShowDeleteConfirm(false)}
                             title="Confirm Delete"
+                            footer={deleteFooter}
                         >
                             <div className="p-4">
                                 <p className="mb-4">Are you sure you want to delete this time period? This action cannot be undone.</p>
-                                <div className="flex justify-end">
-                                    <Button
-                                        id="cancel-delete-button"
-                                        variant="outline"
-                                        onClick={() => setShowDeleteConfirm(false)}
-                                        className="mr-2"
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        id="confirm-delete-button"
-                                        variant="destructive"
-                                        onClick={async () => {
-                                            try {
-                                                if (selectedPeriod?.period_id) {
-                                                    await deleteTimePeriod(selectedPeriod.period_id);
-                                                    setShowDeleteConfirm(false);
-                                                    onTimePeriodDeleted?.();
-                                                    onClose();
-                                                }
-                                            } catch (err) {
-                                                dispatch({
-                                                    type: 'SET_ERROR',
-                                                    payload: err instanceof Error ? err.message : 'Failed to delete time period'
-                                                });
-                                            }
-                                        }}
-                                    >
-                                        Delete
-                                    </Button>
-                                </div>
                             </div>
                         </Dialog>
                     </>
-                ) : (
-                    <div className="text-center">
-                        <Button id="settings-close-button" variant="outline" onClick={onClose} className="mt-4">
-                            Close
-                        </Button>
-                    </div>
-                )}
+                ) : null}
             </div>
         </Dialog>
     );

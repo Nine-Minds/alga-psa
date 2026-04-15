@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { InvoiceTemplateAst } from '@alga-psa/types';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
-import type { InvoiceTemplateEvaluationResult } from './evaluator';
-import { evaluateInvoiceTemplateAst } from './evaluator';
-import { renderEvaluatedInvoiceTemplateAst } from './react-renderer';
+import type { TemplateAst } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import type { TemplateEvaluationResult } from './evaluator';
+import { evaluateTemplateAst } from './evaluator';
+import { renderEvaluatedTemplateAst } from './react-renderer';
 
 const invoiceFixture = {
   invoiceNumber: 'INV-1001',
@@ -16,11 +16,11 @@ const invoiceFixture = {
   ],
 };
 
-describe('renderEvaluatedInvoiceTemplateAst', () => {
+describe('renderEvaluatedTemplateAst', () => {
   it('renders HTML for text/field/table/totals node combinations', async () => {
-    const ast: InvoiceTemplateAst = {
+    const ast: TemplateAst = {
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       bindings: {
         values: {
           invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
@@ -101,8 +101,8 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
       },
     };
 
-    const evaluation = evaluateInvoiceTemplateAst(ast, invoiceFixture);
-    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+    const evaluation = evaluateTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
 
     expect(rendered.html).toContain('Invoice INV-1001');
     expect(rendered.html).toContain('Invoice #');
@@ -112,10 +112,191 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
     expect(rendered.html).toContain('300');
   });
 
-  it('renders grouped dynamic-table rows from a transformed output binding', async () => {
-    const ast: InvoiceTemplateAst = {
+  it('renders multiline address fields with preserved line breaks', async () => {
+    const ast: TemplateAst = {
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          tenantAddress: { id: 'tenantAddress', kind: 'value', path: 'tenantClient.address' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'issuer-address',
+            type: 'field',
+            binding: { bindingId: 'tenantAddress' },
+            displayFormat: 'multiline',
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, {
+      ...invoiceFixture,
+      tenantClient: { address: '400 SW Main St, Portland, OR 97204' },
+    });
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('400 SW Main St');
+    expect(rendered.html).toContain('Portland');
+    expect(rendered.html).toContain('white-space:pre-line');
+  });
+
+  it('renders field border styles in preview output', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'invoice-number-boxed',
+            type: 'field',
+            binding: { bindingId: 'invoiceNumber' },
+            borderStyle: 'box',
+          },
+          {
+            id: 'invoice-number-underlined',
+            type: 'field',
+            binding: { bindingId: 'invoiceNumber' },
+            borderStyle: 'underline',
+          },
+          {
+            id: 'invoice-number-plain',
+            type: 'field',
+            binding: { bindingId: 'invoiceNumber' },
+            borderStyle: 'none',
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('border:1px solid #cbd5e1');
+    expect(rendered.html).toContain('border-bottom:1px solid #cbd5e1');
+    expect(rendered.html).toContain('padding:0');
+    expect(rendered.html).toContain('border:0');
+  });
+
+  it('renders multiline plain fields without single-line inset chrome', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          customerAddress: { id: 'customerAddress', kind: 'value', path: 'customer.address' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'customer-address',
+            type: 'field',
+            binding: { bindingId: 'customerAddress' },
+            borderStyle: 'none',
+            displayFormat: 'multiline',
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, {
+      ...invoiceFixture,
+      customer: { address: '901 Harbor Ave, Seattle, WA 98104' },
+    });
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('padding:0');
+    expect(rendered.html).toContain('align-items:flex-start');
+    expect(rendered.html).toContain('white-space:pre-line');
+    expect(rendered.html).toContain('901 Harbor Ave');
+  });
+
+  it('does not render an underline when the field border style is none', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'invoice-number-plain',
+            type: 'field',
+            binding: { bindingId: 'invoiceNumber' },
+            borderStyle: 'none',
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('padding:0');
+    expect(rendered.html).toContain('border:0');
+    expect(rendered.html).not.toContain('border-bottom:1px solid #cbd5e1');
+  });
+
+  it('removes single-line inset padding for multiline underlined fields', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          customerAddress: { id: 'customerAddress', kind: 'value', path: 'customer.address' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'customer-address',
+            type: 'field',
+            binding: { bindingId: 'customerAddress' },
+            borderStyle: 'underline',
+            displayFormat: 'multiline',
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, {
+      ...invoiceFixture,
+      customer: { address: '901 Harbor Ave, Seattle, WA 98104' },
+    });
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('padding:0');
+    expect(rendered.html).toContain('border-bottom:1px solid #cbd5e1');
+    expect(rendered.html).toContain('align-items:flex-start');
+    expect(rendered.html).toContain('white-space:pre-line');
+  });
+
+  it('renders grouped dynamic-table rows from a transformed output binding', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
       bindings: {
         collections: {
           lineItems: { id: 'lineItems', kind: 'collection', path: 'items' },
@@ -157,7 +338,7 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
       },
     };
 
-    const evaluation = evaluateInvoiceTemplateAst(ast, {
+    const evaluation = evaluateTemplateAst(ast, {
       ...invoiceFixture,
       items: [
         { id: 'a', description: 'Consulting', category: 'Services', quantity: 2, unitPrice: 100, total: 200 },
@@ -165,7 +346,7 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
         { id: 'c', description: 'Equipment', category: 'Products', quantity: 1, unitPrice: 30, total: 30 },
       ],
     });
-    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
 
     expect(rendered.html).toContain('Group');
     expect(rendered.html).toContain('Rolled Up Total');
@@ -176,9 +357,9 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
   });
 
   it('formats template path expressions using currency filter syntax', async () => {
-    const ast: InvoiceTemplateAst = {
+    const ast: TemplateAst = {
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       bindings: {
         values: {
           total: { id: 'total', kind: 'value', path: 'total' },
@@ -204,8 +385,8 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
       },
     };
 
-    const evaluation = evaluateInvoiceTemplateAst(ast, invoiceFixture);
-    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+    const evaluation = evaluateTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
 
     expect(rendered.html).toContain('Amount due $3.30');
     expect(rendered.html).not.toContain('Amount due 330');
@@ -220,9 +401,9 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
         { id: 'c', description: 'Hardware', quantity: 1, unitPrice: 30, total: 30, category: 'Products' },
       ],
     };
-    const ast: InvoiceTemplateAst = {
+    const ast: TemplateAst = {
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       bindings: {
         values: {},
         collections: {
@@ -266,8 +447,8 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
       },
     };
 
-    const evaluation = evaluateInvoiceTemplateAst(ast, groupedInvoiceFixture);
-    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+    const evaluation = evaluateTemplateAst(ast, groupedInvoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
 
     expect(rendered.html).toContain('Services');
     expect(rendered.html).toContain('Products');
@@ -277,10 +458,81 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
     expect(rendered.html).toContain('1');
   });
 
-  it('applies class tokens and style declarations consistently', async () => {
-    const ast: InvoiceTemplateAst = {
+  it('renders grouped dynamic-table rows when aggregate ids are produced across multiple aggregate steps', async () => {
+    const groupedInvoiceFixture = {
+      ...invoiceFixture,
+      items: [
+        { id: 'a', description: 'Consulting', quantity: 2, unitPrice: 100, total: 200, category: 'Services' },
+        { id: 'b', description: 'Support', quantity: 1, unitPrice: 100, total: 100, category: 'Services' },
+        { id: 'c', description: 'Hardware', quantity: 1, unitPrice: 30, total: 30, category: 'Products' },
+      ],
+    };
+    const ast: TemplateAst = {
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {},
+        collections: {
+          lineItems: { id: 'lineItems', kind: 'collection', path: 'items' },
+        },
+      },
+      transforms: {
+        sourceBindingId: 'lineItems',
+        outputBindingId: 'lineItems.grouped',
+        operations: [
+          {
+            id: 'group-category',
+            type: 'group',
+            key: 'category',
+          },
+          {
+            id: 'aggregate-qty',
+            type: 'aggregate',
+            aggregations: [{ id: 'sumQty', op: 'sum', path: 'quantity' }],
+          },
+          {
+            id: 'aggregate-total',
+            type: 'aggregate',
+            aggregations: [{ id: 'sumTotal', op: 'sum', path: 'total' }],
+          },
+        ],
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'grouped-line-items',
+            type: 'dynamic-table',
+            repeat: {
+              sourceBinding: { bindingId: 'lineItems.grouped' },
+              itemBinding: 'item',
+            },
+            columns: [
+              { id: 'group-key', header: 'Category', value: { type: 'path', path: 'key' } },
+              { id: 'group-qty', header: 'Qty', value: { type: 'path', path: 'aggregates.sumQty' }, format: 'number' },
+              { id: 'group-total', header: 'Total', value: { type: 'path', path: 'aggregates.sumTotal' } },
+            ],
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, groupedInvoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('Services');
+    expect(rendered.html).toContain('Products');
+    expect(rendered.html).toContain('3');
+    expect(rendered.html).toContain('1');
+    expect(rendered.html).toContain('300');
+    expect(rendered.html).toContain('30');
+  });
+
+  it('applies class tokens and style declarations consistently', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
       styles: {
         tokens: {
           brandColor: { id: 'brand-color', value: '#0044aa' },
@@ -311,8 +563,8 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
       },
     };
 
-    const evaluation = evaluateInvoiceTemplateAst(ast, invoiceFixture);
-    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+    const evaluation = evaluateTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
 
     expect(rendered.css).toContain('.ast-heading');
     expect(rendered.css).toContain('--brand-color');
@@ -321,9 +573,9 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
   });
 
   it('synthesizes printable inset padding for explicit print settings when the AST lacks a padded page wrapper', async () => {
-    const ast: InvoiceTemplateAst = {
+    const ast: TemplateAst = {
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       metadata: {
         printSettings: {
           paperPreset: 'Letter',
@@ -349,8 +601,8 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
       },
     };
 
-    const evaluation = evaluateInvoiceTemplateAst(ast, invoiceFixture);
-    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+    const evaluation = evaluateTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
 
     expect(rendered.html).toContain('padding:45px');
     expect(rendered.html).toContain('box-sizing:border-box');
@@ -358,9 +610,9 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
   });
 
   it('does not synthesize printable inset padding when the AST already has a padded page wrapper', async () => {
-    const ast: InvoiceTemplateAst = {
+    const ast: TemplateAst = {
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       metadata: {
         printSettings: {
           paperPreset: 'Letter',
@@ -399,8 +651,8 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
       },
     };
 
-    const evaluation = evaluateInvoiceTemplateAst(ast, invoiceFixture);
-    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+    const evaluation = evaluateTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
 
     expect(rendered.html).not.toContain('box-sizing:border-box');
     expect(rendered.html).toContain('padding:45px');
@@ -408,9 +660,9 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
   });
 
   it('escapes unsafe text content in rendered HTML', async () => {
-    const ast: InvoiceTemplateAst = {
+    const ast: TemplateAst = {
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       layout: {
         id: 'root',
         type: 'document',
@@ -424,8 +676,8 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
       },
     };
 
-    const evaluation = evaluateInvoiceTemplateAst(ast, invoiceFixture);
-    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+    const evaluation = evaluateTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
 
     expect(rendered.html).toContain('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
     expect(rendered.html).not.toContain('<script>alert("xss")</script>');
@@ -434,7 +686,7 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
   it('sanitizes unexpected style identifiers (defense-in-depth) to avoid malformed CSS output', async () => {
     const ast = {
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       styles: {
         tokens: {
           // Both the record key and token.id are "unexpected" identifiers; renderer must still emit safe CSS.
@@ -462,7 +714,7 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
       },
     } as any;
 
-    const evaluation: InvoiceTemplateEvaluationResult = {
+    const evaluation: TemplateEvaluationResult = {
       sourceCollection: [],
       output: [],
       groups: null,
@@ -471,7 +723,7 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
       bindings: {},
     };
 
-    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
 
     expect(rendered.css).toContain('.ast-bad-class');
     expect(rendered.css).not.toContain('.ast-bad.class');
@@ -481,9 +733,9 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
   });
 
   it('omits image nodes when source resolves to null or empty-like values', async () => {
-    const ast: InvoiceTemplateAst = {
+    const ast: TemplateAst = {
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       bindings: {
         values: {
           logo: {
@@ -507,25 +759,25 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
       },
     };
 
-    const nullLogoEvaluation = evaluateInvoiceTemplateAst(ast, {
+    const nullLogoEvaluation = evaluateTemplateAst(ast, {
       ...invoiceFixture,
       tenantClient: { logoUrl: null },
     });
-    const nullLogoRendered = await renderEvaluatedInvoiceTemplateAst(ast, nullLogoEvaluation);
+    const nullLogoRendered = await renderEvaluatedTemplateAst(ast, nullLogoEvaluation);
     expect(nullLogoRendered.html).not.toContain('<img');
 
-    const stringNullEvaluation = evaluateInvoiceTemplateAst(ast, {
+    const stringNullEvaluation = evaluateTemplateAst(ast, {
       ...invoiceFixture,
       tenantClient: { logoUrl: 'null' },
     });
-    const stringNullRendered = await renderEvaluatedInvoiceTemplateAst(ast, stringNullEvaluation);
+    const stringNullRendered = await renderEvaluatedTemplateAst(ast, stringNullEvaluation);
     expect(stringNullRendered.html).not.toContain('<img');
 
-    const emptyEvaluation = evaluateInvoiceTemplateAst(ast, {
+    const emptyEvaluation = evaluateTemplateAst(ast, {
       ...invoiceFixture,
       tenantClient: { logoUrl: '   ' },
     });
-    const emptyRendered = await renderEvaluatedInvoiceTemplateAst(ast, emptyEvaluation);
+    const emptyRendered = await renderEvaluatedTemplateAst(ast, emptyEvaluation);
     expect(emptyRendered.html).not.toContain('<img');
   });
 });

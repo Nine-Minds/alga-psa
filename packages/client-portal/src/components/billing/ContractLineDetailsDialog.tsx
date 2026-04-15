@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import type { IClientContractLine } from '@alga-psa/types';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -34,6 +34,24 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
   // Loading state when contract line is null but dialog is open
   const isLoading = isOpen && !contractLine;
 
+  const cadenceOwnerLabel = contractLine?.cadence_owner === 'contract'
+    ? t('contractLine.cadenceOwnerContract', 'Contract anniversary')
+    : t('contractLine.cadenceOwnerClient', 'Client billing schedule');
+  const billingTimingLabel = contractLine?.billing_timing === 'advance'
+    ? t('contractLine.billingTimingAdvance', 'Advance')
+    : contractLine?.billing_timing === 'arrears'
+      ? t('contractLine.billingTimingArrears', 'Arrears')
+      : null;
+  const cadenceOwnerDescription = contractLine?.cadence_owner === 'contract'
+    ? t(
+      'contractLine.cadenceOwnerContractDescription',
+      'Recurring service periods follow the contract anniversary cadence for this line.'
+    )
+    : t(
+      'contractLine.cadenceOwnerClientDescription',
+      'Recurring service periods follow the client billing schedule for this line.'
+    );
+
   // Memoize the contract line details content to prevent unnecessary re-renders
   const contractLineContent = useMemo(() => {
     if (!contractLine) return null;
@@ -63,6 +81,16 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
               {contractLine.is_active ? tCommon('common.active') : tCommon('common.inactive')}
             </Badge>
           </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">{t('contractLine.cadenceOwner', 'Cadence Owner')}</p>
+            <p className="mt-1">{cadenceOwnerLabel}</p>
+          </div>
+          {billingTimingLabel ? (
+            <div>
+              <p className="text-sm font-medium text-gray-500">{t('contractLine.billingTiming', 'Billing Timing')}</p>
+              <p className="mt-1">{billingTimingLabel}</p>
+            </div>
+          ) : null}
           {contractLine.custom_rate !== undefined && (
             <div>
               <p className="text-sm font-medium text-gray-500">{t('contractLine.customRate')}</p>
@@ -84,10 +112,11 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
               expiry: contractLine.end_date ? t('contractLine.expiresOn', { date: formatDate(contractLine.end_date) }) : t('contractLine.noExpiry')
             })}
           </p>
+          <p className="mt-2 text-sm text-gray-500">{cadenceOwnerDescription}</p>
         </div>
       </div>
     );
-  }, [contractLine, formatCurrency, formatDate]);
+  }, [billingTimingLabel, cadenceOwnerDescription, cadenceOwnerLabel, contractLine, formatCurrency, formatDate]);
 
   // Loading skeleton for when contract line is being fetched
   const loadingSkeleton = (
@@ -113,18 +142,20 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
       onClose={onClose}
       title={t('contractLine.detailsTitle')}
       data-automation-id="contract-line-details-dialog"
+      footer={
+        <div className="flex justify-end space-x-2">
+          <Button id="close-contract-line-dialog-button" variant="outline" onClick={onClose}>
+            <X className="mr-2 h-4 w-4" />
+            {tCommon('common.close')}
+          </Button>
+        </div>
+      }
     >
       <DialogContent>
         <div data-automation-id="contract-line-details-content">
           {isLoading ? loadingSkeleton : contractLineContent}
         </div>
       </DialogContent>
-      <DialogFooter>
-        <Button id="close-contract-line-dialog-button" variant="outline" onClick={onClose}>
-          <X className="mr-2 h-4 w-4" />
-          {tCommon('common.close')}
-        </Button>
-      </DialogFooter>
     </Dialog>
   );
 });

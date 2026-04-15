@@ -1,15 +1,18 @@
 import React from 'react';
 import type {
-  InvoiceTemplateAst,
-  InvoiceTemplateNode,
-  InvoiceTemplateNodeStyleRef,
-  InvoiceTemplateStyleDeclaration,
-  InvoiceTemplateValueExpression,
-  InvoiceTemplateValueFormat,
+  TemplateAst,
+  TemplateFieldBorderStyle,
+  TemplateNode,
+  TemplateNodeStyleRef,
+  TemplateStyleDeclaration,
+  TemplateValueExpression,
+  TemplateValueFormat,
 } from '@alga-psa/types';
-import type { InvoiceTemplateEvaluationResult } from './evaluator';
-import { decodeInvoiceTemplatePathExpression } from './templateInterpolationFilters';
-import { resolveInvoiceTemplatePrintSettingsFromAst } from './printSettings';
+import { formatTemplateFieldValue } from './fieldFormatting';
+import type { TemplateEvaluationResult } from './evaluator';
+import { decodeTemplatePathExpression } from './templateInterpolationFilters';
+import { normalizeTemplateAstFieldBorderDefaults } from './normalize';
+import { resolveTemplatePrintSettingsFromAst } from './printSettings';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -85,7 +88,7 @@ const getPathValue = (target: unknown, path: string): unknown => {
 
 const toCssValue = (value: string | number): string => (typeof value === 'number' ? String(value) : value);
 
-const styleDeclarationToCss = (declaration: InvoiceTemplateStyleDeclaration): string =>
+const styleDeclarationToCss = (declaration: TemplateStyleDeclaration): string =>
   Object.entries(declaration)
     .map(([key, value]) => {
       const cssKey = key.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
@@ -94,7 +97,7 @@ const styleDeclarationToCss = (declaration: InvoiceTemplateStyleDeclaration): st
     .join(' ');
 
 const styleDeclarationToReactStyle = (
-  declaration?: InvoiceTemplateStyleDeclaration
+  declaration?: TemplateStyleDeclaration
 ): React.CSSProperties | undefined => {
   if (!declaration) {
     return undefined;
@@ -103,7 +106,7 @@ const styleDeclarationToReactStyle = (
 };
 
 const resolveStyleRef = (
-  styleRef?: InvoiceTemplateNodeStyleRef
+  styleRef?: TemplateNodeStyleRef
 ): { className: string | null; style?: React.CSSProperties } => {
   if (!styleRef) {
     return { className: null, style: undefined };
@@ -119,7 +122,40 @@ const resolveStyleRef = (
   return { className, style: styleDeclarationToReactStyle(styleRef.inline) };
 };
 
-const resolveSyntheticRootDocumentStyle = (ast: InvoiceTemplateAst): React.CSSProperties | undefined => {
+const resolveFieldBorderStyle = (
+  borderStyle: TemplateFieldBorderStyle | undefined
+): React.CSSProperties => {
+  if (borderStyle === 'none') {
+    return {
+      padding: '0',
+      border: '0',
+      backgroundColor: 'transparent',
+      display: 'flex',
+      alignItems: 'flex-start',
+    };
+  }
+  if (borderStyle === 'box') {
+    return {
+      padding: '6px 8px',
+      border: '1px solid #cbd5e1',
+      borderRadius: '4px',
+      backgroundColor: 'transparent',
+      display: 'flex',
+      alignItems: 'center',
+    };
+  }
+  return {
+    padding: '2px 4px',
+    border: '0',
+    borderBottom: '1px solid #cbd5e1',
+    borderRadius: '0',
+    backgroundColor: 'transparent',
+    display: 'flex',
+    alignItems: 'center',
+  };
+};
+
+const resolveSyntheticRootDocumentStyle = (ast: TemplateAst): React.CSSProperties | undefined => {
   if (ast.layout.type !== 'document' || !isRecord(ast.metadata?.printSettings)) {
     return undefined;
   }
@@ -140,7 +176,7 @@ const resolveSyntheticRootDocumentStyle = (ast: InvoiceTemplateAst): React.CSSPr
     return undefined;
   }
 
-  const resolvedPrintSettings = resolveInvoiceTemplatePrintSettingsFromAst(ast);
+  const resolvedPrintSettings = resolveTemplatePrintSettingsFromAst(ast);
   if (resolvedPrintSettings.marginPx <= 0) {
     return undefined;
   }
@@ -151,12 +187,12 @@ const resolveSyntheticRootDocumentStyle = (ast: InvoiceTemplateAst): React.CSSPr
   };
 };
 
-const formatValue = (value: unknown, format: InvoiceTemplateValueFormat | undefined, ctx: RenderContext): string => {
+const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ctx: RenderContext): string => {
   if (value === null || value === undefined) {
     return '';
   }
 
-  const normalizedFormat: InvoiceTemplateValueFormat = format ?? 'text';
+  const normalizedFormat: TemplateValueFormat = format ?? 'text';
 
   if (normalizedFormat === 'date') {
     const parsed = new Date(String(value));
@@ -189,7 +225,7 @@ const formatValue = (value: unknown, format: InvoiceTemplateValueFormat | undefi
   return String(value);
 };
 
-const buildAstCss = (ast: InvoiceTemplateAst): string => {
+const buildAstCss = (ast: TemplateAst): string => {
   const baseCss = `
 .invoice-template-root {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -259,8 +295,8 @@ const buildAstCss = (ast: InvoiceTemplateAst): string => {
 };
 
 const resolveExpressionValue = (
-  expression: InvoiceTemplateValueExpression,
-  evaluation: InvoiceTemplateEvaluationResult,
+  expression: TemplateValueExpression,
+  evaluation: TemplateEvaluationResult,
   scope: RenderScope,
   ctx: RenderContext
 ): unknown => {
@@ -270,7 +306,7 @@ const resolveExpressionValue = (
     case 'binding':
       return evaluation.bindings[expression.bindingId];
     case 'path': {
-      const parsedPath = decodeInvoiceTemplatePathExpression(expression.path);
+      const parsedPath = decodeTemplatePathExpression(expression.path);
       const rowValue = scope.row ? getPathValue(scope.row, parsedPath.path) : undefined;
       const resolvedValue =
         rowValue !== undefined
@@ -310,7 +346,7 @@ const resolveExpressionValue = (
   }
 };
 
-const resolveCollection = (bindingId: string, evaluation: InvoiceTemplateEvaluationResult): UnknownRecord[] => {
+const resolveCollection = (bindingId: string, evaluation: TemplateEvaluationResult): UnknownRecord[] => {
   const value = evaluation.bindings[bindingId];
   if (!Array.isArray(value)) {
     return [];
@@ -319,8 +355,8 @@ const resolveCollection = (bindingId: string, evaluation: InvoiceTemplateEvaluat
 };
 
 const renderNode = (
-  node: InvoiceTemplateNode,
-  evaluation: InvoiceTemplateEvaluationResult,
+  node: TemplateNode,
+  evaluation: TemplateEvaluationResult,
   scope: RenderScope,
   ctx: RenderContext,
   rootDocumentStyleOverride?: React.CSSProperties
@@ -371,10 +407,33 @@ const renderNode = (
     }
     case 'field': {
       const value = evaluation.bindings[node.binding.bindingId];
+      const formattedValue = formatTemplateFieldValue({
+        value: value ?? node.emptyValue ?? '',
+        format: node.format,
+        currencyCode: ctx.currencyCode,
+        displayFormat: node.displayFormat,
+      });
+      const multilineFieldAdjustments: React.CSSProperties | null = formattedValue.multiline
+        ? {
+            alignItems: 'flex-start',
+            ...(node.borderStyle === 'none' || node.borderStyle === 'underline'
+              ? {
+                  padding: '0',
+                }
+              : null),
+          }
+        : null;
+      const fieldStyle = {
+        ...resolveFieldBorderStyle(node.borderStyle),
+        ...(multilineFieldAdjustments ?? null),
+        ...(style ?? {}),
+      };
       return (
-        <div key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
+        <div key={node.id} id={node.id} className={elementClassName || undefined} style={fieldStyle}>
           {node.label ? <span>{node.label}: </span> : null}
-          <span>{formatValue(value ?? node.emptyValue ?? '', node.format, ctx)}</span>
+          <span style={formattedValue.multiline ? { whiteSpace: 'pre-line' } : undefined}>
+            {formattedValue.text ?? ''}
+          </span>
         </div>
       );
     }
@@ -399,10 +458,11 @@ const renderNode = (
       return <hr key={node.id} id={node.id} className={elementClassName || undefined} style={style} />;
     case 'table': {
       const rows = resolveCollection(node.sourceBinding.bindingId, evaluation);
+      const { style: headerStyle } = resolveStyleRef(node.headerStyle);
       return (
         <table key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           <thead>
-            <tr>
+            <tr style={headerStyle}>
               {node.columns.map((column) => {
                 const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                 const alignRight = column.format === 'currency' || column.format === 'number';
@@ -449,10 +509,11 @@ const renderNode = (
     }
     case 'dynamic-table': {
       const rows = resolveCollection(node.repeat.sourceBinding.bindingId, evaluation);
+      const { style: dynamicHeaderStyle } = resolveStyleRef(node.headerStyle);
       return (
         <table key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           <thead>
-            <tr>
+            <tr style={dynamicHeaderStyle}>
               {node.columns.map((column) => {
                 const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                 const alignRight = column.format === 'currency' || column.format === 'number';
@@ -504,8 +565,13 @@ const renderNode = (
         <div key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           {node.rows.map((row) => {
             const raw = totals[row.id] ?? resolveExpressionValue(row.value, evaluation, scope, ctx) ?? '';
+            const { style: rowStyle } = resolveStyleRef(row.style);
+            const emphasizeStyle = row.emphasize ? { fontWeight: 700 } : undefined;
+            const mergedRowStyle = rowStyle || emphasizeStyle
+              ? { ...(emphasizeStyle ?? {}), ...(rowStyle ?? {}) }
+              : undefined;
             return (
-              <div key={row.id} className="ast-totals-row" style={row.emphasize ? { fontWeight: 700 } : undefined}>
+              <div key={row.id} className="ast-totals-row" style={mergedRowStyle}>
                 <span className="ast-totals-label">{row.label}</span>
                 <span className="ast-totals-value">{formatValue(raw, row.format, ctx)}</span>
               </div>
@@ -519,15 +585,16 @@ const renderNode = (
   }
 };
 
-export interface InvoiceTemplateReactRendererProps {
-  ast: InvoiceTemplateAst;
-  evaluation: InvoiceTemplateEvaluationResult;
+export interface TemplateReactRendererProps {
+  ast: TemplateAst;
+  evaluation: TemplateEvaluationResult;
 }
 
-export const InvoiceTemplateAstRenderer: React.FC<InvoiceTemplateReactRendererProps> = ({ ast, evaluation }) => {
+export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({ ast, evaluation }) => {
   const invoiceRecord = isRecord(evaluation.bindings.invoice) ? evaluation.bindings.invoice : {};
+  const invoiceRecordUntyped = invoiceRecord as Record<string, unknown>;
   const currencyCode = String(
-    (invoiceRecord as Record<string, unknown>).currencyCode ?? ast.metadata?.currencyCode ?? 'USD'
+    invoiceRecordUntyped.currencyCode ?? invoiceRecordUntyped.currency_code ?? ast.metadata?.currencyCode ?? 'USD'
   );
   const locale = String(ast.metadata?.locale ?? 'en-US');
   const rootDocumentStyleOverride = resolveSyntheticRootDocumentStyle(ast);
@@ -539,20 +606,21 @@ export const InvoiceTemplateAstRenderer: React.FC<InvoiceTemplateReactRendererPr
   );
 };
 
-export interface InvoiceTemplateRenderOutput {
+export interface TemplateRenderOutput {
   html: string;
   css: string;
 }
 
-export const renderEvaluatedInvoiceTemplateAst = async (
-  ast: InvoiceTemplateAst,
-  evaluation: InvoiceTemplateEvaluationResult
-): Promise<InvoiceTemplateRenderOutput> => {
+export const renderEvaluatedTemplateAst = async (
+  ast: TemplateAst,
+  evaluation: TemplateEvaluationResult
+): Promise<TemplateRenderOutput> => {
   // Next.js app router disallows static imports from react-dom/server in shared modules.
   // Use a dynamic import so this renderer remains server-only at call sites.
   const { renderToStaticMarkup } = await import('react-dom/server');
+  const normalizedAst = normalizeTemplateAstFieldBorderDefaults(ast);
   return {
-    html: renderToStaticMarkup(<InvoiceTemplateAstRenderer ast={ast} evaluation={evaluation} />),
-    css: buildAstCss(ast),
+    html: renderToStaticMarkup(<TemplateAstRenderer ast={normalizedAst} evaluation={evaluation} />),
+    css: buildAstCss(normalizedAst),
   };
 };

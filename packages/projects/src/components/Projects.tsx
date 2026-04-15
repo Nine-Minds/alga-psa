@@ -36,19 +36,123 @@ import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-c
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { ApplyTemplateDialog } from './project-templates/ApplyTemplateDialog';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
+import { useTranslation } from 'react-i18next';
+
+export interface ProjectListFilters {
+  searchQuery?: string;
+  status?: 'all' | 'active' | 'inactive';
+  clientId?: string;
+  contactId?: string;
+  managerId?: string;
+  tags?: string[];
+  deadlineType?: 'before' | 'after' | 'on' | 'between';
+  deadlineDate?: string; // ISO date string
+  deadlineEndDate?: string; // ISO date string for 'between'
+  page?: number;
+  pageSize?: number;
+}
+
+function buildURLFromFilters(filters: ProjectListFilters): string {
+  const params = new URLSearchParams();
+
+  if (filters.searchQuery) params.set('searchQuery', filters.searchQuery);
+  if (filters.status && filters.status !== 'active') params.set('status', filters.status);
+  if (filters.clientId) params.set('clientId', filters.clientId);
+  if (filters.contactId) params.set('contactId', filters.contactId);
+  if (filters.managerId) params.set('managerId', filters.managerId);
+  if (filters.tags && filters.tags.length > 0) {
+    const encodedTags = filters.tags.map(tag => encodeURIComponent(String(tag)));
+    params.set('tags', encodedTags.join(','));
+  }
+  if (filters.deadlineType) {
+    params.set('deadlineType', filters.deadlineType);
+    if (filters.deadlineDate) params.set('deadlineDate', filters.deadlineDate);
+    if (filters.deadlineEndDate) params.set('deadlineEndDate', filters.deadlineEndDate);
+  }
+  if (filters.page && filters.page !== 1) params.set('page', String(filters.page));
+  if (filters.pageSize && filters.pageSize !== 10) params.set('pageSize', String(filters.pageSize));
+
+  return params.toString() ? `/msp/projects?${params.toString()}` : '/msp/projects';
+}
+
+function parseFiltersFromSearch(search: string): ProjectListFilters {
+  const params = new URLSearchParams(search);
+  const filters: ProjectListFilters = {};
+
+  const searchQuery = params.get('searchQuery');
+  if (searchQuery) filters.searchQuery = searchQuery;
+
+  const status = params.get('status');
+  if (status === 'all' || status === 'active' || status === 'inactive') {
+    filters.status = status;
+  }
+
+  const clientId = params.get('clientId');
+  if (clientId) filters.clientId = clientId;
+
+  const contactId = params.get('contactId');
+  if (contactId) filters.contactId = contactId;
+
+  const managerId = params.get('managerId');
+  if (managerId) filters.managerId = managerId;
+
+  const tagsRaw = params.get('tags');
+  if (tagsRaw) {
+    const decoded = tagsRaw
+      .split(',')
+      .map(tag => decodeURIComponent(tag).trim())
+      .filter(tag => tag.length > 0);
+    if (decoded.length > 0) filters.tags = decoded;
+  }
+
+  const deadlineType = params.get('deadlineType');
+  if (deadlineType === 'before' || deadlineType === 'after' || deadlineType === 'on' || deadlineType === 'between') {
+    filters.deadlineType = deadlineType;
+    const deadlineDate = params.get('deadlineDate');
+    if (deadlineDate) filters.deadlineDate = deadlineDate;
+    const deadlineEndDate = params.get('deadlineEndDate');
+    if (deadlineEndDate) filters.deadlineEndDate = deadlineEndDate;
+  }
+
+  const page = Number.parseInt(params.get('page') || '', 10);
+  if (Number.isFinite(page) && page > 0) filters.page = page;
+
+  const pageSize = Number.parseInt(params.get('pageSize') || '', 10);
+  if (Number.isFinite(pageSize) && pageSize > 0) filters.pageSize = pageSize;
+
+  return filters;
+}
 
 interface ProjectsProps {
   initialProjects: IProject[];
   clients: IClient[];
+  initialFilters?: Partial<ProjectListFilters>;
+  initialProjectTags?: Record<string, ITag[]>;
+  initialAllUniqueTags?: ITag[];
 }
 
-export default function Projects({ initialProjects, clients }: ProjectsProps) {
+export const DEFAULT_PROJECT_FILTERS: ProjectListFilters = {
+  status: 'active',
+  page: 1,
+  pageSize: 10,
+};
+
+export default function Projects({ initialProjects, clients, initialFilters, initialProjectTags, initialAllUniqueTags }: ProjectsProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
+  const projectListT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
+    t(`projectList.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
   const { getAllContacts, getContactByContactNameId, renderQuickAddContact, renderClientDetails } = useClientIntegration();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['project']);
-  
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
+
+  // Unified filter state
+  const [activeFilters, setActiveFilters] = useState<ProjectListFilters>(() => ({
+    ...DEFAULT_PROJECT_FILTERS,
+    ...initialFilters,
+  }));
+  const activeFiltersRef = useRef(activeFilters);
+  activeFiltersRef.current = activeFilters;
+
   const [projects, setProjects] = useState<IProject[]>(initialProjects);
 
   // Sync state when initialProjects changes (e.g., from router.refresh())
@@ -64,39 +168,140 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const { openDrawer, closeDrawer } = useDrawer();
   const clientDrawer = useClientDrawer();
-  
-  // Tag-related state
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const projectTagsRef = useRef<Record<string, ITag[]>>({});
-  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
+
+  // Tag-related state. Seeded from server-fetched tags so URL-based tag filters
+  // work on the very first render (bookmarked/pasted URLs).
+  const projectTagsRef = useRef<Record<string, ITag[]>>(initialProjectTags ?? {});
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(initialAllUniqueTags ?? []);
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
-  
-  // New filter states
-  const [filterClientId, setFilterClientId] = useState<string | null>(null);
-  const [filterContactId, setFilterContactId] = useState<string | null>(null);
+
+  // Picker-internal UI state (not URL-persisted)
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
-  const [filterManagerId, setFilterManagerId] = useState<string | null>(null);
-  const [filterDeadline, setFilterDeadline] = useState<DeadlineFilterValue | undefined>(undefined);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientClientTypeFilter, setClientClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
-  
+
   // Data for pickers
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
-  
+
   // Quick View state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  // Ref to track last applied URL search string (prevents duplicate updates)
+  const lastAppliedSearchRef = useRef<string>('');
+  const isSyncingFromHistoryRef = useRef(false);
+  const filterUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Handle page size change - reset to page 1
-  const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize);
-    setCurrentPage(1);
-  };
+  // Derive DeadlineFilterValue from activeFilters for the DeadlineFilter component
+  const deadlineFilterValue = useMemo((): DeadlineFilterValue | undefined => {
+    if (!activeFilters.deadlineType) return undefined;
+    const result: DeadlineFilterValue = { type: activeFilters.deadlineType };
+    if (activeFilters.deadlineDate) result.date = new Date(activeFilters.deadlineDate);
+    if (activeFilters.deadlineEndDate) result.endDate = new Date(activeFilters.deadlineEndDate);
+    return result;
+  }, [activeFilters.deadlineType, activeFilters.deadlineDate, activeFilters.deadlineEndDate]);
+
+  // Sync filter state to URL
+  const updateURLWithFilters = useCallback((filters: ProjectListFilters) => {
+    const newURL = buildURLFromFilters(filters);
+    const newSearch = newURL.includes('?') ? newURL.slice(newURL.indexOf('?')) : '';
+    window.history.replaceState(null, '', newURL);
+    lastAppliedSearchRef.current = newSearch;
+  }, []);
+
+  // Unified filter change handler — accepts partial updates, merges with current state
+  const handleFilterChange = useCallback((update: Partial<ProjectListFilters>) => {
+    // Skip no-op updates
+    const updateKeys = Object.keys(update) as (keyof ProjectListFilters)[];
+    const hasRealChange = updateKeys.some((key) => {
+      const newVal = update[key];
+      const oldVal = activeFiltersRef.current[key];
+      if (Array.isArray(newVal) && Array.isArray(oldVal)) {
+        return newVal.length !== oldVal.length || newVal.some((v, i) => v !== (oldVal as unknown[])[i]);
+      }
+      return newVal !== oldVal;
+    });
+    if (!hasRealChange) return;
+
+    // Reset page to 1 when any non-pagination filter changes
+    const isPaginationOnly = updateKeys.every(k => k === 'page' || k === 'pageSize');
+
+    const mergedFilters: ProjectListFilters = {
+      ...activeFiltersRef.current,
+      ...update,
+      ...(isPaginationOnly ? {} : { page: 1 }),
+    };
+
+    setActiveFilters(mergedFilters);
+    activeFiltersRef.current = mergedFilters;
+
+    // Debounce URL update (handles rapid typing in search)
+    if (filterUpdateTimeoutRef.current) {
+      clearTimeout(filterUpdateTimeoutRef.current);
+    }
+    filterUpdateTimeoutRef.current = setTimeout(() => {
+      filterUpdateTimeoutRef.current = null;
+      updateURLWithFilters(mergedFilters);
+    }, 300);
+  }, [updateURLWithFilters]);
+
+  // Sync from URL on browser back/forward navigation
+  const syncFromUrl = useCallback((search: string) => {
+    const normalizedSearch = search || '';
+    if (normalizedSearch === lastAppliedSearchRef.current || isSyncingFromHistoryRef.current) {
+      return;
+    }
+
+    isSyncingFromHistoryRef.current = true;
+    try {
+      const parsed = parseFiltersFromSearch(normalizedSearch);
+      const restoredFilters: ProjectListFilters = {
+        ...DEFAULT_PROJECT_FILTERS,
+        ...parsed,
+      };
+      setActiveFilters(restoredFilters);
+      activeFiltersRef.current = restoredFilters;
+      lastAppliedSearchRef.current = normalizedSearch;
+    } finally {
+      isSyncingFromHistoryRef.current = false;
+    }
+  }, []);
+
+  // Listen for popstate (back/forward) and pageshow (bfcache restore) events
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // On mount, sync from URL if it has search params.
+    // This handles the case where Next.js restores a cached page on back navigation
+    // but the URL still has filter params from replaceState.
+    const currentSearch = window.location.search;
+    if (currentSearch) {
+      syncFromUrl(currentSearch);
+    } else {
+      lastAppliedSearchRef.current = currentSearch;
+    }
+
+    const handlePopState = () => {
+      syncFromUrl(window.location.search);
+    };
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        lastAppliedSearchRef.current = '__pageshow__';
+        syncFromUrl(window.location.search);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('pageshow', handlePageShow);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('pageshow', handlePageShow);
+      if (filterUpdateTimeoutRef.current) {
+        clearTimeout(filterUpdateTimeoutRef.current);
+      }
+    };
+  }, [syncFromUrl]);
 
   const handleTagsChange = (projectId: string, tags: ITag[]) => {
     projectTagsRef.current[projectId] = tags;
@@ -169,48 +374,49 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
   }, []);
 
   const filteredProjects = useMemo(() => {
+    const { searchQuery, status, tags, clientId, contactId, managerId } = activeFilters;
+    const search = (searchQuery || '').toLowerCase();
+
     let filtered = projects.filter(project =>
-      (project.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       project.project_number?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (filterStatus === 'all' ||
-       (filterStatus === 'active' && !project.is_inactive) ||
-       (filterStatus === 'inactive' && project.is_inactive))
+      (project.project_name.toLowerCase().includes(search) ||
+       project.project_number?.toLowerCase().includes(search)) &&
+      (status === 'all' ||
+       (status === 'active' && !project.is_inactive) ||
+       (status === 'inactive' && project.is_inactive))
     );
 
     // Apply tag filter if tags are selected
-    if (selectedTags.length > 0) {
+    if (tags && tags.length > 0) {
       filtered = filtered.filter(project => {
         const projectTags = projectTagsRef.current[project.project_id || ''] || [];
         const projectTagTexts = projectTags.map(tag => tag.tag_text);
-        
-        // Check if project has any of the selected tags
-        return selectedTags.some(selectedTag => projectTagTexts.includes(selectedTag));
+        return tags.some(selectedTag => projectTagTexts.includes(selectedTag));
       });
     }
 
     // Apply client filter
-    if (filterClientId) {
-      filtered = filtered.filter(project => project.client_id === filterClientId);
+    if (clientId) {
+      filtered = filtered.filter(project => project.client_id === clientId);
     }
 
     // Apply contact filter
-    if (filterContactId) {
-      filtered = filtered.filter(project => project.contact_name_id === filterContactId);
+    if (contactId) {
+      filtered = filtered.filter(project => project.contact_name_id === contactId);
     }
 
     // Apply project manager filter
-    if (filterManagerId) {
-      filtered = filtered.filter(project => project.assigned_to === filterManagerId);
+    if (managerId) {
+      filtered = filtered.filter(project => project.assigned_to === managerId);
     }
 
     // Apply deadline filter
-    if (filterDeadline && filterDeadline.date) {
+    if (deadlineFilterValue?.date) {
       filtered = filtered.filter(project => {
         if (!project.end_date) return false;
         const projectDeadline = new Date(project.end_date);
-        const filterDate = filterDeadline.date!;
-        
-        switch (filterDeadline.type) {
+        const filterDate = deadlineFilterValue.date!;
+
+        switch (deadlineFilterValue.type) {
           case 'before':
             return projectDeadline < filterDate;
           case 'after':
@@ -220,8 +426,8 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
             const filterDay = filterDate.toISOString().split('T')[0];
             return projectDay === filterDay;
           case 'between':
-            if (!filterDeadline.endDate) return false;
-            return projectDeadline >= filterDate && projectDeadline <= filterDeadline.endDate;
+            if (!deadlineFilterValue.endDate) return false;
+            return projectDeadline >= filterDate && projectDeadline <= deadlineFilterValue.endDate;
           default:
             return true;
         }
@@ -234,7 +440,8 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     });
 
     return filtered;
-  }, [projects, searchTerm, filterStatus, selectedTags, filterClientId, filterContactId, filterManagerId, filterDeadline]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tagsVersion tracks projectTagsRef mutations
+  }, [projects, activeFilters, deadlineFilterValue, tagsVersion]);
 
   const handleEditProject = (project: IProject) => {
     openDrawer(
@@ -273,14 +480,14 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: projectListT('deleteValidationFailed', 'Failed to validate deletion. Please try again.'),
         dependencies: [],
         alternatives: []
       });
     } finally {
       setIsDeleteValidating(false);
     }
-  }, []);
+  }, [projectListT]);
 
   const handleDelete = async (project: IProject) => {
     setProjectToDelete(project);
@@ -305,14 +512,14 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
       }
 
       setProjects(projects.filter(p => p.project_id !== projectToDelete.project_id));
-      toast.success('Project deleted successfully');
+      toast.success(projectListT('deletedSuccess', 'Project deleted successfully'));
       resetDeleteState();
     } catch (error) {
       console.error('Error deleting project:', error);
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to delete project.',
+        message: projectListT('deleteFailed', 'Failed to delete project.'),
         dependencies: [],
         alternatives: []
       });
@@ -334,7 +541,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
   };
 
   const formatDisplayDate = (value: unknown): string => {
-    if (value == null) return 'N/A';
+    if (value == null) return projectListT('notAvailable', 'N/A');
 
     const resolveDatePart = (): string | null => {
       if (typeof value === 'string') {
@@ -350,16 +557,16 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     };
 
     const datePart = resolveDatePart();
-    if (!datePart) return 'N/A';
+    if (!datePart) return projectListT('notAvailable', 'N/A');
 
     // Use a date-only value to keep SSR and client rendering consistent regardless of timezone.
     const date = parse(datePart, 'yyyy-MM-dd', new Date());
-    return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString();
+    return isNaN(date.getTime()) ? projectListT('notAvailable', 'N/A') : date.toLocaleDateString();
   };
 
   const columns: ColumnDefinition<IProject>[] = [
     {
-      title: 'Number',
+      title: projectListT('columns.number', 'Number'),
       dataIndex: 'project_number',
       width: '8%',
       render: (text: string, record: IProject) => {
@@ -371,7 +578,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
       },
     },
     {
-      title: 'Project Name',
+      title: projectListT('columns.projectName', 'Project Name'),
       dataIndex: 'project_name',
       width: '15%',
       render: (text: string, record: IProject) => (
@@ -381,12 +588,12 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
       ),
     },
     {
-      title: 'Client',
+      title: projectListT('columns.client', 'Client'),
       dataIndex: 'client_id',
       width: '12%',
       render: (value, record) => {
         const client = clients.find(c => c.client_id === value);
-        if (!client) return 'No Client';
+        if (!client) return projectListT('noClient', 'No Client');
 
         return (
           <button
@@ -402,45 +609,45 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
       }
     },
     {
-      title: 'Contact',
+      title: projectListT('columns.contact', 'Contact'),
       dataIndex: 'contact_name',
       width: '10%',
-      render: (name: string | null) => name || 'No Contact',
+      render: (name: string | null) => name || projectListT('noContact', 'No Contact'),
     },
     {
-      title: 'Status',
+      title: projectListT('columns.status', 'Status'),
       dataIndex: 'status_name',
       width: '8%',
       render: (_: string | null, record: IProject) => (
         <div className="inline-flex items-center px-2.5 py-0.5 text-sm text-gray-800">
-          {record.status_name || 'Unknown'}
+          {record.status_name || projectListT('statusUnknown', 'Unknown')}
         </div>
       ),
     },
     {
-      title: 'Deadline',
+      title: projectListT('columns.deadline', 'Deadline'),
       dataIndex: 'end_date',
       width: '8%',
       render: (value: unknown) => formatDisplayDate(value),
     },
     {
-      title: 'Created',
+      title: projectListT('columns.created', 'Created'),
       dataIndex: 'created_at',
       width: '8%',
       render: (value: unknown) => formatDisplayDate(value),
     },
     {
-      title: 'Project Manager',
+      title: projectListT('columns.projectManager', 'Project Manager'),
       dataIndex: 'assigned_to',
       width: '12%',
       render: (userId: string | null, record: IProject) => {
-        if (!userId) return 'Unassigned';
+        if (!userId) return projectListT('unassigned', 'Unassigned');
         const user = record.assigned_user;
-        return user ? `${user.first_name} ${user.last_name}` : 'Unassigned';
+        return user ? `${user.first_name} ${user.last_name}` : projectListT('unassigned', 'Unassigned');
       }
     },
     {
-      title: 'Tags',
+      title: projectListT('columns.tags', 'Tags'),
       dataIndex: 'tags',
       width: '14%',
       render: (value: string, record: IProject) => {
@@ -457,7 +664,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
       },
     },
     {
-      title: 'Actions',
+      title: projectListT('columns.actions', 'Actions'),
       dataIndex: 'actions',
       width: '5%',
       render: (_: unknown, record: IProject) => (
@@ -470,7 +677,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{projectListT('openMenu', 'Open menu')}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenu.Trigger>
@@ -483,7 +690,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
               }}
             >
               <Pen size={14} className="mr-2" />
-              Edit
+              {t('common:actions.edit', 'Edit')}
             </DropdownMenu.Item>
             <DropdownMenu.Item
               className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center text-destructive"
@@ -493,7 +700,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
               }}
             >
               <Trash2 size={14} className="mr-2" />
-              Delete
+              {t('common:actions.delete', 'Delete')}
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Root>
@@ -546,16 +753,16 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     }
   };
 
-  const statusOptions = [
-    { value: 'all', label: 'All projects' },
-    { value: 'active', label: 'Active projects' },
-    { value: 'inactive', label: 'Inactive projects' }
-  ];
+  const statusOptions = useMemo(() => [
+    { value: 'all', label: projectListT('statusOptions.all', 'All projects') },
+    { value: 'active', label: projectListT('statusOptions.active', 'Active projects') },
+    { value: 'inactive', label: projectListT('statusOptions.inactive', 'Inactive projects') }
+  ], [projectListT]);
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Projects</h1>
+        <h1 className="text-2xl font-bold">{t('title', 'Projects')}</h1>
         <div className="flex items-center gap-3">
           <Button
             id='create-from-template-button'
@@ -563,10 +770,10 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
             variant="outline"
           >
             <FileText className="h-4 w-4 mr-2" />
-            Create from Template
+            {projectListT('createFromTemplate', 'Create from Template')}
           </Button>
           <Button id='add-project-button' onClick={() => setShowQuickAdd(true)}>
-            Add Project
+            {projectListT('addProject', 'Add Project')}
           </Button>
         </div>
       </div>
@@ -577,10 +784,10 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
           <div className="relative p-0.5 shrink-0">
             <Input
               type="text"
-              placeholder="Search projects"
+              placeholder={projectListT('searchPlaceholder', 'Search projects')}
               className="pl-10 pr-4 py-2 w-64"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={activeFilters.searchQuery || ''}
+              onChange={(e) => handleFilterChange({ searchQuery: e.target.value || undefined })}
             />
             <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
@@ -589,9 +796,9 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
           <div className="relative z-10 shrink-0">
             <CustomSelect
               options={statusOptions}
-              value={filterStatus}
-              onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
-              placeholder="Select status"
+              value={activeFilters.status || 'active'}
+              onValueChange={(value) => handleFilterChange({ status: value as 'all' | 'active' | 'inactive' })}
+              placeholder={projectListT('statusPlaceholder', 'Select status')}
               customStyles={{
                 content: 'mt-1'
               }}
@@ -602,8 +809,8 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
           <ClientPicker
             id="project-client-filter"
             clients={clients}
-            onSelect={(clientId) => setFilterClientId(clientId)}
-            selectedClientId={filterClientId}
+            onSelect={(clientId) => handleFilterChange({ clientId: clientId || undefined })}
+            selectedClientId={activeFilters.clientId || null}
             filterState={clientFilterState}
             onFilterStateChange={setClientFilterState}
             clientTypeFilter={clientClientTypeFilter}
@@ -615,10 +822,10 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
           <ContactPicker
             id="project-contact-filter"
             contacts={contacts}
-            value={filterContactId || ''}
-            onValueChange={(value) => setFilterContactId(value || null)}
-            clientId={filterClientId || undefined}
-            placeholder="Filter by contact"
+            value={activeFilters.contactId || ''}
+            onValueChange={(value) => handleFilterChange({ contactId: value || undefined })}
+            clientId={activeFilters.clientId || undefined}
+            placeholder={projectListT('contactPlaceholder', 'Filter by contact')}
             buttonWidth="fit"
             onAddNew={() => setIsQuickAddContactOpen(true)}
           />
@@ -635,20 +842,20 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
                 }
                 return [...prevContacts, newContact];
               });
-              setFilterContactId(newContact.contact_name_id);
+              handleFilterChange({ contactId: newContact.contact_name_id });
               setIsQuickAddContactOpen(false);
             },
             clients,
-            selectedClientId: filterClientId || undefined,
+            selectedClientId: activeFilters.clientId || undefined,
           })}
 
           {/* Project Manager filter */}
           <UserPicker
-            value={filterManagerId || ''}
-            onValueChange={(value) => setFilterManagerId(value || null)}
+            value={activeFilters.managerId || ''}
+            onValueChange={(value) => handleFilterChange({ managerId: value || undefined })}
             users={users}
             getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-            placeholder="All managers"
+            placeholder={projectListT('managerPlaceholder', 'All managers')}
             buttonWidth="fit"
             labelStyle="none"
           />
@@ -656,23 +863,37 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
           {/* Deadline filter */}
           <DeadlineFilter
             id="project-deadline-filter"
-            value={filterDeadline}
-            onChange={setFilterDeadline}
-            placeholder="Filter by deadline"
+            value={deadlineFilterValue}
+            onChange={(value) => {
+              if (value) {
+                handleFilterChange({
+                  deadlineType: value.type,
+                  deadlineDate: value.date ? value.date.toISOString().split('T')[0] : undefined,
+                  deadlineEndDate: value.endDate ? value.endDate.toISOString().split('T')[0] : undefined,
+                });
+              } else {
+                handleFilterChange({
+                  deadlineType: undefined,
+                  deadlineDate: undefined,
+                  deadlineEndDate: undefined,
+                });
+              }
+            }}
+            placeholder={projectListT('deadlinePlaceholder', 'Filter by deadline')}
           />
 
           {/* Tag filter */}
           <TagFilter
             tags={allUniqueTags}
-            selectedTags={selectedTags}
+            selectedTags={activeFilters.tags || []}
             onToggleTag={(tag) => {
-              setSelectedTags(prev =>
-                prev.includes(tag)
-                  ? prev.filter(t => t !== tag)
-                  : [...prev, tag]
-              );
+              const currentTags = activeFilters.tags || [];
+              const newTags = currentTags.includes(tag)
+                ? currentTags.filter(t => t !== tag)
+                : [...currentTags, tag];
+              handleFilterChange({ tags: newTags.length > 0 ? newTags : undefined });
             }}
-            onClearTags={() => setSelectedTags([])}
+            onClearTags={() => handleFilterChange({ tags: undefined })}
           />
 
           <Button
@@ -680,35 +901,39 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
             variant="ghost"
             size="sm"
             onClick={() => {
-              setSearchTerm('');
-              setFilterStatus('active');
-              setSelectedTags([]);
-              setFilterClientId(null);
-              setFilterContactId(null);
-              setFilterManagerId(null);
-              setFilterDeadline(undefined);
+              handleFilterChange({
+                searchQuery: undefined,
+                status: 'active',
+                clientId: undefined,
+                contactId: undefined,
+                managerId: undefined,
+                tags: undefined,
+                deadlineType: undefined,
+                deadlineDate: undefined,
+                deadlineEndDate: undefined,
+              });
               setClientFilterState('all');
               setClientClientTypeFilter('all');
             }}
-            className={`shrink-0 flex items-center gap-1 ${(searchTerm || filterStatus !== 'active' || selectedTags.length > 0 || filterClientId || filterContactId || filterManagerId || filterDeadline) ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
-            disabled={!(searchTerm || filterStatus !== 'active' || selectedTags.length > 0 || filterClientId || filterContactId || filterManagerId || filterDeadline)}
+            className={`shrink-0 flex items-center gap-1 ${(activeFilters.searchQuery || activeFilters.status !== 'active' || (activeFilters.tags && activeFilters.tags.length > 0) || activeFilters.clientId || activeFilters.contactId || activeFilters.managerId || activeFilters.deadlineType) ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+            disabled={!(activeFilters.searchQuery || activeFilters.status !== 'active' || (activeFilters.tags && activeFilters.tags.length > 0) || activeFilters.clientId || activeFilters.contactId || activeFilters.managerId || activeFilters.deadlineType)}
           >
             <XCircle className="h-4 w-4" />
-            Reset
+            {t('resetFilters', 'Reset')}
           </Button>
       </div>
 
       <div className="bg-white shadow rounded-lg p-4">
         <DataTable
-          key={`${currentPage}-${pageSize}`}
+          key={`${activeFilters.page}-${activeFilters.pageSize}`}
           id="projects-table"
           data={filteredProjects}
           columns={columns}
           pagination={true}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          pageSize={pageSize}
-          onItemsPerPageChange={handlePageSizeChange}
+          currentPage={activeFilters.page || 1}
+          onPageChange={(page) => handleFilterChange({ page })}
+          pageSize={activeFilters.pageSize || 10}
+          onItemsPerPageChange={(pageSize) => handleFilterChange({ pageSize, page: 1 })}
           initialSorting={[{ id: 'created_at', desc: true }]}
         />
       </div>
@@ -738,7 +963,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
         isOpen={!!projectToDelete}
         onClose={resetDeleteState}
         onConfirmDelete={confirmDelete}
-        entityName={projectToDelete?.project_name || 'this project'}
+        entityName={projectToDelete?.project_name || projectListT('thisProject', 'this project')}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}

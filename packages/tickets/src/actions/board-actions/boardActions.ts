@@ -6,8 +6,10 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { ItilStandardsService } from '../../services/itilStandardsService';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
+import { v4 as uuidv4 } from 'uuid';
+import { BoardTicketStatusInput, saveBoardTicketStatusesForBoard } from './boardTicketStatusActions';
 
 export interface FindBoardByNameOutput {
   id: string;
@@ -17,12 +19,84 @@ export interface FindBoardByNameOutput {
   is_inactive: boolean;
 }
 
+export interface CreateBoardInput extends Omit<IBoard, 'board_id' | 'tenant'> {
+  copy_ticket_statuses_from_board_id?: string | null;
+  ticket_statuses?: BoardTicketStatusInput[];
+}
+
+export interface UpdateBoardInput extends Partial<Omit<IBoard, 'tenant'>> {
+  ticket_statuses?: BoardTicketStatusInput[];
+}
+
+function normalizeBoardLiveTimerSetting<T extends Record<string, any>>(board: T): T {
+  if (!board || board.enable_live_ticket_timer !== null && board.enable_live_ticket_timer !== undefined) {
+    return board;
+  }
+
+  return {
+    ...board,
+    enable_live_ticket_timer: true,
+  };
+}
+
+function stripStatusIdsForNewBoard(
+  statuses: BoardTicketStatusInput[]
+): BoardTicketStatusInput[] {
+  return statuses.map(({ status_id: _ignoredStatusId, ...status }) => status);
+}
+
+export async function copyBoardTicketStatuses(
+  trx: Knex.Transaction,
+  tenant: string,
+  sourceBoardId: string,
+  targetBoardId: string,
+  userId: string
+): Promise<number> {
+  const statusColumns = await trx('statuses').columnInfo();
+  const hasStatusColumn = (columnName: string) => Object.prototype.hasOwnProperty.call(statusColumns, columnName);
+  const sourceStatuses = await trx('statuses')
+    .where({
+      tenant,
+      board_id: sourceBoardId,
+      status_type: 'ticket'
+    })
+    .orderBy('order_number', 'asc')
+    .orderBy('name', 'asc');
+
+  if (sourceStatuses.length === 0) {
+    throw new Error('Select a source board that has ticket statuses to copy');
+  }
+
+  const now = new Date().toISOString();
+  const clonedStatuses = sourceStatuses.map((status) => ({
+    status_id: uuidv4(),
+    tenant,
+    board_id: targetBoardId,
+    name: status.name,
+    status_type: status.status_type,
+    ...(hasStatusColumn('item_type') ? { item_type: status.item_type || 'ticket' } : {}),
+    is_closed: status.is_closed,
+    is_default: status.is_default,
+    order_number: status.order_number,
+    created_by: userId,
+    ...(hasStatusColumn('standard_status_id') ? { standard_status_id: status.standard_status_id || null } : {}),
+    ...(hasStatusColumn('is_custom') ? { is_custom: status.is_custom } : {}),
+    ...(hasStatusColumn('color') ? { color: status.color || null } : {}),
+    ...(hasStatusColumn('icon') ? { icon: status.icon || null } : {}),
+    ...(hasStatusColumn('created_at') ? { created_at: status.created_at || now } : {}),
+    ...(hasStatusColumn('updated_at') ? { updated_at: now } : {}),
+  }));
+
+  await trx('statuses').insert(clonedStatuses);
+  return clonedStatuses.length;
+}
+
 export const findBoardById = withAuth(async (_user, { tenant }, id: string): Promise<IBoard | undefined> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const board = await Board.get(trx, tenant, id);
-      return board;
+      return board ? normalizeBoardLiveTimerSetting(board) : board;
     });
   } catch (error) {
     console.error(error);
@@ -39,7 +113,7 @@ export const getAllBoards = withAuth(async (_user, { tenant }, includeAll: boole
         .where(includeAll ? {} : { is_inactive: false })
         .orderBy('display_order', 'asc')
         .orderBy('board_name', 'asc');
-      return boards;
+      return boards.map(normalizeBoardLiveTimerSetting);
     });
   } catch (error) {
     console.error('Failed to fetch boards:', error);
@@ -47,7 +121,7 @@ export const getAllBoards = withAuth(async (_user, { tenant }, includeAll: boole
   }
 });
 
-export const createBoard = withAuth(async (user, { tenant }, boardData: Omit<IBoard, 'board_id' | 'tenant'>): Promise<IBoard> => {
+export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBoardInput): Promise<IBoard> => {
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -128,6 +202,11 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: Omit<IBo
           default_priority_id: defaultPriorityId,
           manager_user_id: boardData.manager_user_id || null,
           sla_policy_id: boardData.sla_policy_id || null,
+          inbound_reply_reopen_enabled: boardData.inbound_reply_reopen_enabled ?? false,
+          inbound_reply_reopen_cutoff_hours: boardData.inbound_reply_reopen_cutoff_hours ?? 168,
+          inbound_reply_reopen_status_id: boardData.inbound_reply_reopen_status_id || null,
+          inbound_reply_ai_ack_suppression_enabled: boardData.inbound_reply_ai_ack_suppression_enabled ?? false,
+          enable_live_ticket_timer: boardData.enable_live_ticket_timer ?? true,
           tenant
         })
         .returning('*');
@@ -142,13 +221,71 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: Omit<IBo
         boardData.priority_type
       );
 
-      return newBoard;
+      if (boardData.ticket_statuses && boardData.ticket_statuses.length > 0) {
+        await saveBoardTicketStatusesForBoard(
+          trx,
+          tenant,
+          newBoard.board_id,
+          user.user_id,
+          stripStatusIdsForNewBoard(boardData.ticket_statuses)
+        );
+      } else if (boardData.copy_ticket_statuses_from_board_id) {
+        await copyBoardTicketStatuses(
+          trx,
+          tenant,
+          boardData.copy_ticket_statuses_from_board_id,
+          newBoard.board_id,
+          user.user_id
+        );
+      }
+
+      return normalizeBoardLiveTimerSetting(newBoard);
     });
   } catch (error) {
     console.error('Error creating new board:', error);
     throw new Error('Failed to create new board');
   }
 });
+
+/**
+ * Remove all ticket statuses owned by a board, plus their child rows in
+ * other tables that hold FK references back to `statuses`.
+ *
+ * This bypasses the normal "at least one default status per board"
+ * enforcement because the entire board is going away.
+ *
+ * MUST be called inside the same transaction that verified zero tickets
+ * reference these statuses — otherwise there is a race where a ticket
+ * could be created between the check and the delete.
+ */
+async function cleanupBoardStatuses(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  boardId: string
+): Promise<void> {
+  const statusIds = await trx('statuses')
+    .where({ tenant, board_id: boardId, status_type: 'ticket' })
+    .pluck('status_id');
+
+  if (statusIds.length === 0) return;
+
+  // 1. Clear the board's own FK back to statuses (circular ref)
+  await trx('boards')
+    .where({ tenant, board_id: boardId })
+    .whereIn('inbound_reply_reopen_status_id', statusIds)
+    .update({ inbound_reply_reopen_status_id: null });
+
+  // 2. Remove SLA pause config rows that reference these statuses
+  await trx('status_sla_pause_config')
+    .where({ tenant })
+    .whereIn('status_id', statusIds)
+    .delete();
+
+  // 3. Delete the statuses themselves
+  await trx('statuses')
+    .where({ tenant, board_id: boardId, status_type: 'ticket' })
+    .delete();
+}
 
 /**
  * Delete a board with hasDependencies pattern (like deleteClient).
@@ -172,12 +309,16 @@ interface DeleteBoardResult {
 }
 
 export const deleteBoard = withAuth(async (
-  _user,
+  user,
   { tenant },
   boardId: string,
   force = false,
   cleanupItil = false
 ): Promise<DeleteBoardResult> => {
+  if (!await hasPermission(user, 'ticket', 'delete')) {
+    throw new Error('Permission denied: Cannot delete boards');
+  }
+
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction): Promise<DeleteBoardResult> => {
@@ -257,15 +398,38 @@ export const deleteBoard = withAuth(async (
       };
     }
 
+    // 6b. Count board ticket statuses (informational — these are always
+    // auto-cleaned because the "at least one default" rule makes manual
+    // deletion impossible)
+    const statusCountResult = await trx('statuses')
+      .where({ tenant, board_id: boardId, status_type: 'ticket' })
+      .count('status_id as count')
+      .first();
+    const statusCount = Number(statusCountResult?.count || 0);
+
     // 7. If custom board has categories and force=false, prompt for confirmation
     // ITIL categories are shared and handled separately via ITIL cleanup
     if (!isItilCategoryBoard && allCategoryIds.length > 0 && !force) {
+      const statusInfo = statusCount > 0
+        ? ` and ${statusCount} ticket status${statusCount === 1 ? '' : 'es'}`
+        : '';
       return {
         success: false,
         code: 'BOARD_HAS_CATEGORIES',
-        message: `Board has ${allCategoryIds.length} categor${allCategoryIds.length === 1 ? 'y' : 'ies'}. Delete them too?`,
-        dependencies: ['categories'],
-        counts: { categories: allCategoryIds.length }
+        message: `Board has ${allCategoryIds.length} categor${allCategoryIds.length === 1 ? 'y' : 'ies'}${statusInfo}. Delete them too?`,
+        dependencies: ['categories', ...(statusCount > 0 ? ['statuses'] : [])],
+        counts: { categories: allCategoryIds.length, ...(statusCount > 0 ? { statuses: statusCount } : {}) }
+      };
+    }
+
+    // 7b. If board has statuses and user hasn't confirmed, inform them
+    if (!force && statusCount > 0 && allCategoryIds.length === 0) {
+      return {
+        success: false,
+        code: 'BOARD_HAS_STATUSES',
+        message: `Board has ${statusCount} ticket status${statusCount === 1 ? '' : 'es'} that will also be removed.`,
+        dependencies: ['statuses'],
+        counts: { statuses: statusCount }
       };
     }
 
@@ -298,6 +462,11 @@ export const deleteBoard = withAuth(async (
 
     if (!force && !isLastItilBoard && allCategoryIds.length === 0) {
       const result = await deleteEntityWithValidation('board', boardId, db, tenant, async (boardTrx, tenantId) => {
+        // Clean up board statuses (can't be deleted manually due to
+        // "at least one default status" enforcement, safe because
+        // we already confirmed zero tickets above)
+        await cleanupBoardStatuses(boardTrx, tenantId, boardId);
+
         const deletedCount = await boardTrx('boards')
           .where({ tenant: tenantId, board_id: boardId })
           .delete();
@@ -329,12 +498,17 @@ export const deleteBoard = withAuth(async (
         .delete();
     }
 
-    // 10. Delete the board
+    // 10. Clean up board statuses (can't be deleted manually due to
+    // "at least one default status" enforcement, safe because
+    // we already confirmed zero tickets above)
+    await cleanupBoardStatuses(trx, tenant, boardId);
+
+    // 11. Delete the board
     await trx('boards')
       .where({ tenant, board_id: boardId })
       .delete();
 
-    // 11. If last ITIL board and cleanup confirmed, remove unused ITIL data
+    // 12. If last ITIL board and cleanup confirmed, remove unused ITIL data
     let itilCleanupMessage = '';
     if (isLastItilBoard && cleanupItil) {
       const cleanupResult = await ItilStandardsService.cleanupUnusedItilStandards(trx, tenant);
@@ -385,7 +559,7 @@ export async function deleteBoardLegacy(boardId: string): Promise<boolean> {
   return true;
 }
 
-export const updateBoard = withAuth(async (user, { tenant }, boardId: string, boardData: Partial<Omit<IBoard, 'tenant'>>): Promise<IBoard> => {
+export const updateBoard = withAuth(async (user, { tenant }, boardId: string, boardData: UpdateBoardInput): Promise<IBoard> => {
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -422,10 +596,33 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
       if ('sla_policy_id' in sanitizedData) {
         sanitizedData.sla_policy_id = sanitizedData.sla_policy_id || null;
       }
+      if ('inbound_reply_reopen_status_id' in sanitizedData) {
+        const v = sanitizedData.inbound_reply_reopen_status_id as unknown;
+        sanitizedData.inbound_reply_reopen_status_id = (typeof v === 'string' && v.length > 0) ? v : null;
+      }
+      if ('inbound_reply_reopen_cutoff_hours' in sanitizedData) {
+        const cutoff = Number(sanitizedData.inbound_reply_reopen_cutoff_hours);
+        sanitizedData.inbound_reply_reopen_cutoff_hours = Number.isFinite(cutoff) && cutoff > 0
+          ? Math.max(1, Math.floor(cutoff))
+          : 168;
+      }
+      if ('inbound_reply_reopen_enabled' in sanitizedData) {
+        sanitizedData.inbound_reply_reopen_enabled = Boolean(sanitizedData.inbound_reply_reopen_enabled);
+      }
+      if ('inbound_reply_ai_ack_suppression_enabled' in sanitizedData) {
+        sanitizedData.inbound_reply_ai_ack_suppression_enabled = Boolean(
+          sanitizedData.inbound_reply_ai_ack_suppression_enabled
+        );
+      }
+      if ('enable_live_ticket_timer' in sanitizedData) {
+        sanitizedData.enable_live_ticket_timer = sanitizedData.enable_live_ticket_timer ?? true;
+      }
+
+      const { ticket_statuses: ticketStatuses, ...boardUpdateData } = sanitizedData;
 
       const [updatedBoard] = await trx('boards')
         .where({ board_id: boardId, tenant })
-        .update(sanitizedData)
+        .update(boardUpdateData)
         .returning('*');
 
       // Handle ITIL type changes
@@ -450,7 +647,17 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
         }
       }
 
-      return updatedBoard;
+      if (ticketStatuses) {
+        await saveBoardTicketStatusesForBoard(
+          trx,
+          tenant,
+          boardId,
+          user.user_id,
+          ticketStatuses
+        );
+      }
+
+      return normalizeBoardLiveTimerSetting(updatedBoard);
     });
   } catch (error) {
     console.error('Error updating board:', error);

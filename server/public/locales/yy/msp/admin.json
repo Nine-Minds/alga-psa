@@ -1,0 +1,259 @@
+{
+  "common": {
+    "actions": {
+      "save": "55555",
+      "saving": "55555",
+      "reset": "55555",
+      "refresh": "55555",
+      "close": "55555",
+      "edit": "55555",
+      "delete": "55555",
+      "deleting": "55555",
+      "verify": "55555"
+    },
+    "states": {
+      "active": "55555",
+      "inactive": "55555",
+      "loading": "55555"
+    }
+  },
+  "telemetry": {
+    "loading": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "empty": {
+      "title": "55555",
+      "description": "55555",
+      "body": "55555"
+    },
+    "page": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "toggles": {
+      "enableTelemetry": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "allowUserOptOut": {
+        "title": "55555",
+        "description": "55555"
+      }
+    },
+    "alerts": {
+      "enabled": "55555",
+      "centralizedControl": "55555"
+    },
+    "anonymization": {
+      "title": "55555",
+      "description": "55555",
+      "options": {
+        "none": {
+          "title": "55555",
+          "description": "55555"
+        },
+        "partial": {
+          "title": "55555",
+          "description": "55555"
+        },
+        "full": {
+          "title": "55555",
+          "description": "55555"
+        }
+      }
+    },
+    "compliance": {
+      "title": "55555"
+    },
+    "privacy": {
+      "collectTitle": "55555",
+      "collectItems": {
+        "errors": "55555",
+        "performance": "55555",
+        "usage": "55555",
+        "system": "55555"
+      },
+      "excludeTitle": "55555",
+      "excludeItems": {
+        "personalInfo": "55555",
+        "clientData": "55555",
+        "passwords": "55555",
+        "files": "55555"
+      }
+    },
+    "footer": {
+      "lastUpdated": "55555 {{value}} 55555",
+      "updatedBy": "55555 {{user}} 55555"
+    },
+    "errors": {
+      "loadTenantTelemetrySettings": "55555",
+      "loadSettings": "55555",
+      "saveTelemetrySettings": "55555",
+      "saveSettings": "55555"
+    }
+  },
+  "email": {
+    "loading": "55555",
+    "error": "55555 {{error}} 55555",
+    "tabs": {
+      "inbound": "55555",
+      "outbound": "55555"
+    },
+    "descriptions": {
+      "outbound": "55555",
+      "inbound": "55555"
+    },
+    "providerConfig": {
+      "title": "55555",
+      "providerLabel": "55555",
+      "options": {
+        "smtp": "55555",
+        "resend": "55555"
+      },
+      "placeholder": "55555",
+      "descriptions": {
+        "smtp": "55555",
+        "resend": "55555"
+      },
+      "status": {
+        "provider": "55555 {{provider}} 55555"
+      }
+    },
+    "smtp": {
+      "host": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "port": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "username": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "password": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "fromAddress": {
+        "label": "55555",
+        "placeholder": "55555"
+      }
+    },
+    "resend": {
+      "apiKey": {
+        "label": "55555",
+        "placeholder": "55555",
+        "helpPrefix": "55555"
+      },
+      "fromAddress": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555"
+      }
+    },
+    "domains": {
+      "verified": "55555",
+      "failed": "55555",
+      "pending": "55555",
+      "requiredDnsRecords": "55555"
+    },
+    "general": {
+      "title": "55555",
+      "trackingEnabled": "55555",
+      "dailyLimit": "55555"
+    },
+    "errors": {
+      "loadEmailSettings": "55555",
+      "saveSettings": "55555",
+      "addDomain": "55555",
+      "verifyDomain": "55555"
+    }
+  },
+  "microsoft365": {
+    "title": {
+      "microsoft": "55555",
+      "default": "55555"
+    },
+    "description": "55555",
+    "note": {
+      "label": "55555",
+      "body": "55555"
+    },
+    "labels": {
+      "provider": "55555",
+      "mailbox": "55555",
+      "overall": "55555",
+      "resource": "55555 {{resource}} 55555",
+      "recommendations": "55555",
+      "error": "55555"
+    },
+    "actions": {
+      "copySupportBundle": "55555",
+      "copied": "55555"
+    },
+    "states": {
+      "running": "55555",
+      "diagnosticsFailed": "55555"
+    },
+    "statuses": {
+      "pass": "55555",
+      "warn": "55555",
+      "fail": "55555",
+      "skip": "55555"
+    }
+  },
+  "inboundDefaults": {
+    "loading": "55555",
+    "header": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "actions": {
+      "addDefaults": "55555"
+    },
+    "form": {
+      "editTitle": "55555",
+      "createTitle": "55555",
+      "description": "55555"
+    },
+    "empty": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "badges": {
+      "active": "55555",
+      "inactive": "55555"
+    },
+    "fields": {
+      "board": "55555",
+      "status": "55555",
+      "priority": "55555",
+      "enteredBy": "55555"
+    },
+    "fallbacks": {
+      "notSet": "55555",
+      "system": "55555"
+    },
+    "menu": {
+      "edit": "55555",
+      "delete": "55555",
+      "deleting": "55555"
+    },
+    "help": {
+      "title": "55555",
+      "items": {
+        "providerReference": "55555",
+        "requiredValues": "55555",
+        "systemCreator": "55555",
+        "scenarios": "55555"
+      }
+    },
+    "errors": {
+      "load": "55555",
+      "delete": "55555"
+    }
+  }
+}

@@ -9,6 +9,43 @@ import {
   SlaPauseReason
 } from '../types';
 
+export interface ISlaPauseConfigStatusOption {
+  status_id: string;
+  board_id: string;
+  board_name: string;
+  name: string;
+  is_closed: boolean;
+  order_number: number | null;
+}
+
+async function getBoardOwnedTicketStatus(
+  trx: Knex.Transaction,
+  tenant: string,
+  statusId: string
+) {
+  return trx('statuses')
+    .select('status_id')
+    .where({
+      tenant,
+      status_id: statusId,
+      status_type: 'ticket'
+    })
+    .whereNotNull('board_id')
+    .first();
+}
+
+async function assertBoardOwnedTicketStatus(
+  trx: Knex.Transaction,
+  tenant: string,
+  statusId: string
+): Promise<void> {
+  const status = await getBoardOwnedTicketStatus(trx, tenant, statusId);
+
+  if (!status) {
+    throw new Error('SLA pause configuration requires a board-owned ticket status');
+  }
+}
+
 // ============================================================================
 // SLA Settings (global per tenant)
 // ============================================================================
@@ -118,9 +155,17 @@ export const getStatusSlaPauseConfigs = withAuth(async (_user, { tenant }): Prom
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const configs = await trx('status_sla_pause_config')
-        .where({ tenant })
-        .select('*');
+      const configs = await trx('status_sla_pause_config as config')
+        .join('statuses as status', function () {
+          this.on('config.tenant', '=', 'status.tenant')
+            .andOn('config.status_id', '=', 'status.status_id');
+        })
+        .where({
+          'config.tenant': tenant,
+          'status.status_type': 'ticket',
+        })
+        .whereNotNull('status.board_id')
+        .select('config.*');
 
       return configs.map((config): IStatusSlaPauseConfig => ({
         tenant: config.tenant,
@@ -144,8 +189,18 @@ export const getSlaPauseConfigForStatus = withAuth(async (_user, { tenant }, sta
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const config = await trx('status_sla_pause_config')
-        .where({ tenant, status_id: statusId })
+      const config = await trx('status_sla_pause_config as config')
+        .join('statuses as status', function () {
+          this.on('config.tenant', '=', 'status.tenant')
+            .andOn('config.status_id', '=', 'status.status_id');
+        })
+        .where({
+          'config.tenant': tenant,
+          'config.status_id': statusId,
+          'status.status_type': 'ticket',
+        })
+        .whereNotNull('status.board_id')
+        .select('config.*')
         .first();
 
       if (!config) {
@@ -180,6 +235,8 @@ export const setStatusSlaPauseConfig = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      await assertBoardOwnedTicketStatus(trx, tenant, statusId);
+
       // Check if config exists for this status
       const existingConfig = await trx('status_sla_pause_config')
         .where({ tenant, status_id: statusId })
@@ -241,6 +298,10 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      for (const config of configs) {
+        await assertBoardOwnedTicketStatus(trx, tenant, config.statusId);
+      }
+
       const results: IStatusSlaPauseConfig[] = [];
 
       for (const config of configs) {
@@ -287,6 +348,56 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
     } catch (error) {
       console.error(`Error bulk updating SLA pause configs for tenant ${tenant}:`, error);
       throw new Error(`Failed to bulk update SLA pause configs for tenant ${tenant}`);
+    }
+  });
+});
+
+/**
+ * Get board-owned ticket statuses for SLA pause configuration.
+ * Duplicate names remain distinguishable by including board context.
+ */
+export const getBoardOwnedTicketStatusesForSlaPauseConfig = withAuth(async (
+  _user,
+  { tenant }
+): Promise<ISlaPauseConfigStatusOption[]> => {
+  const { knex: db } = await createTenantKnex();
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      const rows = await trx('statuses as status')
+        .join('boards as board', function () {
+          this.on('status.tenant', '=', 'board.tenant')
+            .andOn('status.board_id', '=', 'board.board_id');
+        })
+        .where({
+          'status.tenant': tenant,
+          'status.status_type': 'ticket',
+        })
+        .whereNotNull('status.board_id')
+        .select(
+          'status.status_id',
+          'status.board_id',
+          'status.name',
+          'status.is_closed',
+          'status.order_number',
+          'board.board_name'
+        )
+        .orderBy('board.display_order', 'asc')
+        .orderBy('board.board_name', 'asc')
+        .orderBy('status.order_number', 'asc')
+        .orderBy('status.name', 'asc');
+
+      return rows.map((row) => ({
+        status_id: row.status_id,
+        board_id: row.board_id,
+        board_name: row.board_name,
+        name: row.name,
+        is_closed: row.is_closed,
+        order_number: row.order_number ?? null,
+      }));
+    } catch (error) {
+      console.error(`Error fetching board-owned ticket statuses for tenant ${tenant}:`, error);
+      throw new Error(`Failed to fetch board-owned ticket statuses for tenant ${tenant}`);
     }
   });
 });

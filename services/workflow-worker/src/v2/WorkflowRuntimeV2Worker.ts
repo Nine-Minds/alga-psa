@@ -1,9 +1,11 @@
 import { getAdminConnection } from '@shared/db/admin';
 import logger from '@shared/core/logger';
-import { WorkflowRuntimeV2 } from '@shared/workflow/runtime';
-import WorkflowRunWaitModelV2 from '@shared/workflow/persistence/workflowRunWaitModelV2';
-import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
-import WorkflowRunLogModelV2 from '@shared/workflow/persistence/workflowRunLogModelV2';
+import { WorkflowRuntimeV2 } from '@alga-psa/workflows/runtime/core';
+import {
+  WorkflowRunLogModelV2,
+  WorkflowRunModelV2,
+  WorkflowRunWaitModelV2,
+} from '@alga-psa/workflows/persistence';
 
 export class WorkflowRuntimeV2Worker {
   private intervalId: NodeJS.Timeout | null = null;
@@ -59,6 +61,14 @@ export class WorkflowRuntimeV2Worker {
         await WorkflowRunWaitModelV2.update(knex, wait.wait_id, { status: 'CANCELED', resolved_at: new Date().toISOString() });
         continue;
       }
+      if (run.engine === 'temporal') {
+        logger.debug('[WorkflowRuntimeV2Worker] Skipping retry wait for Temporal run', {
+          workerId: this.workerId,
+          waitId: wait.wait_id,
+          runId: wait.run_id,
+        });
+        continue;
+      }
       logger.debug('[WorkflowRuntimeV2Worker] Resolving retry wait', {
         workerId: this.workerId,
         waitId: wait.wait_id,
@@ -95,6 +105,15 @@ export class WorkflowRuntimeV2Worker {
       }
       if (run.status === 'CANCELED') {
         await WorkflowRunWaitModelV2.update(knex, wait.wait_id, { status: 'CANCELED', resolved_at: new Date().toISOString() });
+        continue;
+      }
+      if (run.engine === 'temporal') {
+        logger.debug('[WorkflowRuntimeV2Worker] Skipping timeout wait for Temporal run', {
+          workerId: this.workerId,
+          waitId: wait.wait_id,
+          runId: wait.run_id,
+          eventName: wait.event_name ?? null,
+        });
         continue;
       }
       logger.debug('[WorkflowRuntimeV2Worker] Resolving timeout wait', {

@@ -3,10 +3,11 @@ import { createTenantKnex } from 'server/src/lib/db';
 import DocumentBlockContent from 'server/src/lib/models/documentBlockContent';
 import Document from '@alga-psa/documents/models/document';
 import { marked } from 'marked';
+import { convertBlockContentToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 
 import logger from '@alga-psa/core/logger';
 import { downloadDocument } from '@alga-psa/documents/actions/documentActions';
-import { createPDFGenerationService } from 'server/src/services/pdf-generation.service';
+import { createPDFGenerationService } from '@alga-psa/billing/services';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { withTransaction, runWithTenant } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -32,6 +33,102 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
 
   // Wrap in runWithTenant to ensure tenant context persists across async boundaries
   return await runWithTenant(session.user.tenant, async () => {
+    // --- Markdown Export Logic ---
+    if (format === 'markdown' || format === 'md') {
+      logger.info(`Markdown export requested for document ID: ${lookupId}`);
+
+      try {
+        const { knex } = await createTenantKnex();
+        const { document, blockRow, textRow } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          const doc =
+            (await Document.get(trx, lookupId)) ||
+            (await trx('documents')
+              .where({ file_id: lookupId, tenant: session.user.tenant })
+              .first());
+
+          if (!doc || doc.tenant !== session.user.tenant) {
+            return { document: null, blockRow: null, textRow: null };
+          }
+
+          const [block, text] = await Promise.all([
+            trx('document_block_content')
+              .where({ document_id: doc.document_id, tenant: session.user.tenant })
+              .select('block_data')
+              .first<{ block_data: unknown }>(),
+            trx('document_content')
+              .where({ document_id: doc.document_id, tenant: session.user.tenant })
+              .select('content')
+              .first<{ content: string | null }>(),
+          ]);
+
+          return { document: doc, blockRow: block, textRow: text };
+        });
+
+        if (!document) {
+          logger.warn(`Document not found or tenant mismatch for markdown export. ID: ${lookupId}, Tenant: ${session.user.tenant}`);
+          return NextResponse.json({ error: 'Document not found.' }, { status: 404 });
+        }
+
+        let markdown: string | null = null;
+
+        if (blockRow?.block_data !== undefined && blockRow?.block_data !== null) {
+          const converted = convertBlockContentToMarkdown(blockRow.block_data);
+          if (typeof converted === 'string' && converted.trim().length > 0) {
+            markdown = converted;
+          }
+        }
+
+        if (!markdown && typeof textRow?.content === 'string' && textRow.content.trim().length > 0) {
+          markdown = textRow.content;
+        }
+
+        // Fall back to the stored file for file-backed text documents (e.g. uploaded .txt/.md).
+        if (!markdown && document.file_id) {
+          const mime = (document.mime_type || document.type_name || '').toLowerCase();
+          const looksTextual = mime.startsWith('text/') || mime === 'application/json' || mime === 'application/xml';
+          if (looksTextual) {
+            try {
+              const fileResult = await StorageService.downloadFile(document.file_id);
+              if (fileResult?.buffer) {
+                markdown = fileResult.buffer.toString('utf-8');
+              }
+            } catch (fileError) {
+              logger.warn(`Failed to read file content for markdown export. Document ID: ${lookupId}`, fileError);
+            }
+          }
+        }
+
+        if (!markdown) {
+          logger.warn(`Document has no exportable content for markdown. Document ID: ${lookupId}`);
+          return NextResponse.json({ error: 'Document has no content to export.' }, { status: 404 });
+        }
+
+        // Collapse whitespace-only lines and runs of blank lines left over by the
+        // BlockNote → markdown converter (empty paragraphs → " \n\n").
+        markdown = markdown
+          .replace(/\r\n/g, '\n')
+          .split('\n')
+          .map((line) => (line.trim().length === 0 ? '' : line.replace(/[ \t]+$/, '')))
+          .join('\n')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim() + '\n';
+
+        const safeName = (document.document_name || 'document').replace(/[\r\n"]/g, '_');
+        const headers = new Headers();
+        headers.set('Content-Type', 'text/markdown; charset=utf-8');
+        headers.set(
+          'Content-Disposition',
+          `attachment; filename="${safeName}.md"; filename*=UTF-8''${encodeURIComponent(safeName)}.md`,
+        );
+        headers.set('Cache-Control', 'no-store');
+
+        return new Response(markdown, { status: 200, headers });
+      } catch (error) {
+        logger.error(`Error exporting markdown for document ${lookupId}:`, error);
+        return NextResponse.json({ error: 'Failed to export markdown.' }, { status: 500 });
+      }
+    }
+
     // --- PDF Generation Logic ---
     if (format === 'pdf') {
       logger.info(`PDF generation requested for document ID: ${lookupId}`);

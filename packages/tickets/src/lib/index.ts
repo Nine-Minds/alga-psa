@@ -24,12 +24,24 @@ export {
   VISIBILITY_GROUP_MISMATCH_ERROR,
   VISIBILITY_GROUP_MISSING_ERROR,
 } from './clientPortalVisibility';
+export {
+  buildTicketStatusFilterOptions,
+  createTicketStatusNameFilterValue,
+  isTicketStatusClosedFilter,
+  isTicketStatusOpenFilter,
+  parseTicketStatusFilterValue,
+  shouldApplyOpenOnlyStatusFilter,
+  TICKET_STATUS_FILTER_ALL,
+  TICKET_STATUS_FILTER_CLOSED,
+  TICKET_STATUS_FILTER_OPEN,
+} from './ticketStatusFilter';
 export type {
   CommentContactAuthor,
   CommentUserAuthor,
   ResolvedCommentAuthor,
 } from './commentAuthorResolution';
 export type { ContactVisibilityContext } from './clientPortalVisibility';
+export type { TicketStatusFilterOption } from './ticketStatusFilter';
 export type { TicketMobileEditorBridgeClientOptions } from './ticketMobileEditorBridge';
 export type {
   TicketMobileEditorCommand,

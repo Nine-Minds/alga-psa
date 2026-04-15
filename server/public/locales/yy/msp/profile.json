@@ -1,0 +1,199 @@
+{
+  "profile": {
+    "pageTitle": "55555",
+    "tabs": {
+      "profile": "55555",
+      "security": "55555",
+      "sso": "55555",
+      "apiKeys": "55555",
+      "notifications": "55555",
+      "calendar": "55555"
+    },
+    "basicInfo": {
+      "title": "55555"
+    },
+    "fields": {
+      "firstName": {
+        "label": "55555"
+      },
+      "lastName": {
+        "label": "55555"
+      },
+      "email": {
+        "label": "55555"
+      },
+      "phoneNumber": {
+        "label": "55555"
+      },
+      "timeZone": {
+        "label": "55555"
+      }
+    },
+    "actions": {
+      "saveChanges": "55555"
+    },
+    "notifications": {
+      "title": "55555",
+      "viewSwitcher": {
+        "email": "55555",
+        "internal": "55555"
+      }
+    },
+    "loading": "55555",
+    "messages": {
+      "success": {
+        "profileUpdated": "55555"
+      },
+      "error": {
+        "userNotFound": "55555",
+        "fillRequiredFields": "55555",
+        "loadFailed": "55555",
+        "saveFailed": "55555",
+        "errorPrefix": "55555 {{error}} 55555"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "55555",
+      "lastNameRequired": "55555"
+    },
+    "changePassword": {
+      "title": "55555",
+      "current": "55555",
+      "new": "55555",
+      "confirm": "55555",
+      "validationFailed": "55555",
+      "requirements": "55555",
+      "submit": "55555",
+      "success": "55555",
+      "error": "55555",
+      "passwordMismatch": "55555",
+      "unknownError": "55555"
+    },
+    "loadingStates": {
+      "sso": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "calendar": {
+        "title": "55555",
+        "description": "55555"
+      }
+    }
+  },
+  "security": {
+    "title": "55555",
+    "tabs": {
+      "roles": "55555",
+      "sessions": "55555",
+      "sso": "55555",
+      "permissions": "55555",
+      "userRoles": "55555",
+      "policies": "55555",
+      "apiKeys": "55555"
+    },
+    "loading": {
+      "roles": "55555",
+      "permissions": "55555",
+      "userRoles": "55555",
+      "policies": "55555",
+      "apiKeys": "55555",
+      "sso": "55555",
+      "sessions": "55555"
+    },
+    "userRoles": {
+      "title": "55555",
+      "description": {
+        "msp": "55555",
+        "client": "55555"
+      },
+      "viewSwitcher": {
+        "msp": "55555",
+        "clientPortal": "55555"
+      },
+      "showInactive": "55555",
+      "fields": {
+        "selectUser": "55555",
+        "selectRole": "55555"
+      },
+      "actions": {
+        "assignRole": "55555"
+      },
+      "table": {
+        "user": "55555",
+        "email": "55555",
+        "roles": "55555",
+        "actions": "55555"
+      },
+      "unnamedUser": "55555",
+      "noRolesAssigned": "55555",
+      "removeRole": "55555 {{role}} 55555",
+      "emptyState": {
+        "noUsers": "55555 {{type}} 55555",
+        "inactiveHidden": "55555"
+      },
+      "inactiveTag": "55555"
+    },
+    "sessions": {
+      "title": "55555",
+      "subtitle": "55555 {{sessionCount}} 55555 {{userCount}} 55555",
+      "subtitle_plural": "55555 {{sessionCount}} 55555 {{userCount}} 55555",
+      "filters": {
+        "search": "55555",
+        "searchPlaceholder": "55555",
+        "user": "55555",
+        "allUsers": "55555",
+        "loginMethod": "55555",
+        "allMethods": "55555",
+        "userType": "55555",
+        "allTypes": "55555",
+        "from": "55555",
+        "to": "55555",
+        "selectDate": "55555",
+        "reset": "55555"
+      },
+      "loginMethods": {
+        "password": "55555",
+        "google": "55555",
+        "microsoft": "55555",
+        "keycloak": "55555"
+      },
+      "userTypes": {
+        "internal": "55555",
+        "client": "55555"
+      },
+      "session": {
+        "yourSession": "55555",
+        "unknownDevice": "55555",
+        "lastActive": "55555 {{time}} 55555",
+        "logout": "55555",
+        "revoke": "55555",
+        "revoking": "55555"
+      },
+      "oauthWarning": "55555 {{provider}} 55555 {{provider}} 55555",
+      "confirmLogout": "55555",
+      "messages": {
+        "loadFailed": "55555",
+        "loggingOut": "55555",
+        "revoked": "55555",
+        "revokeFailed": "55555"
+      },
+      "emptyState": {
+        "loading": "55555",
+        "noMatch": "55555",
+        "noSessions": "55555"
+      }
+    }
+  },
+  "platformUpdates": {
+    "detail": {
+      "back": "55555",
+      "labels": {
+        "info": "55555",
+        "warning": "55555",
+        "destructive": "55555",
+        "success": "55555",
+        "default": "55555"
+      }
+    }
+  }
+}

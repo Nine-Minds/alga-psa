@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } 
 import '../../../../../test-utils/nextApiMock';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
+import { getCreditDetails, listClientCredits } from '@alga-psa/billing/actions/creditActions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { Temporal } from '@js-temporal/polyfill';
@@ -19,13 +20,24 @@ import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billi
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
 // This is critical for tests that use advisory locks or other features not supported by pgbouncer
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT || '5432';
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
 
 vi.mock('@alga-psa/auth', () => ({
+  withAuth: (action: (...args: any[]) => Promise<unknown>) =>
+    (...args: any[]) =>
+      action(
+        {
+          user_id: mockedUserId,
+          id: mockedUserId,
+          tenant: mockedTenantId
+        },
+        { tenant: mockedTenantId },
+        ...args,
+      ),
   getSession: vi.fn(async () => ({
     user: {
       id: mockedUserId,
@@ -58,6 +70,7 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
+  getSecret: async () => undefined,
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -68,6 +81,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 }));
 
 vi.mock('@alga-psa/core', () => ({
+  getSecret: async () => undefined,
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -77,13 +91,13 @@ vi.mock('@alga-psa/core', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+vi.mock('@alga-psa/workflows/persistence', () => ({
   WorkflowEventModel: {
     create: vi.fn(),
   },
 }));
 
-vi.mock('@alga-psa/shared/workflow/streams', () => ({
+vi.mock('@alga-psa/workflow-streams', () => ({
   getRedisStreamClient: () => ({
     publishEvent: vi.fn(),
   }),
@@ -156,6 +170,10 @@ async function generateInvoiceFromCharges(
 }
 
 async function ensureClientContractLine(context: TestContext, startDate: string): Promise<void> {
+  if (!(await context.db.schema.hasTable('client_contract_lines'))) {
+    return;
+  }
+
   const existingLine = await context.db('client_contract_lines')
     .where({ client_id: context.clientId, tenant: context.tenantId })
     .first();
@@ -393,6 +411,101 @@ describe('Negative Invoice Credit Tests', () => {
 
       expect(finalizedInvoice.status).toBe('sent');
       expect(finalizedInvoice.finalized_at).toBeTruthy();
+    });
+
+    it('T216: negative-invoice credit details preserve source recurring lineage and date basis', async () => {
+      const clientId = context.clientId;
+      const now = createTestDate();
+      const startDate = dateHelpers.startOf(dateHelpers.subtractDuration(now, { months: 1 }), 'month').toInstant().toString();
+      const endDate = dateHelpers.startOf(now, 'month').toInstant().toString();
+
+      const serviceId = await createTestService(context, {
+        service_name: 'Recurring Credit Service',
+        billing_method: 'fixed',
+        default_rate: -4200,
+        tax_region: 'US-NY',
+      });
+
+      const billingCycleId = await context.createEntity('client_billing_cycles', {
+        client_id: clientId,
+        billing_cycle: 'monthly',
+        period_start_date: startDate,
+        period_end_date: endDate,
+        effective_date: startDate,
+      }, 'billing_cycle_id');
+
+      const createdInvoice = await createInvoiceFromBillingResult(
+        {
+          tenant: context.tenantId,
+          charges: [
+            {
+              tenant: context.tenantId,
+              type: 'usage',
+              serviceId,
+              serviceName: 'Recurring Credit Service',
+              quantity: 1,
+              rate: -4200,
+              total: -4200,
+              tax_amount: 0,
+              tax_rate: 0,
+              tax_region: 'US-NY',
+              is_taxable: false,
+              usageId: uuidv4(),
+              servicePeriodStart: startDate,
+              servicePeriodEnd: endDate,
+              billingTiming: 'arrears',
+            },
+          ],
+          discounts: [],
+          adjustments: [],
+          totalAmount: -4200,
+          finalAmount: -4200,
+        },
+        clientId,
+        startDate,
+        endDate,
+        billingCycleId,
+        context.userId
+      );
+
+      await finalizeInvoice(createdInvoice.invoice_id);
+
+      const creditRow = await context.db('credit_tracking')
+        .where({ tenant: context.tenantId, client_id: clientId })
+        .orderBy('created_at', 'desc')
+        .first();
+
+      expect(creditRow).toBeTruthy();
+
+      const credits = await listClientCredits(clientId, false, 1, 20);
+      const creditDetails = await getCreditDetails(creditRow.credit_id);
+
+      expect(credits.credits).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            credit_id: creditRow.credit_id,
+            invoice_id: createdInvoice.invoice_id,
+            invoice_date_basis: 'canonical_recurring_service_period',
+            invoice_service_period_start: startDate,
+            invoice_service_period_end: endDate,
+          }),
+        ])
+      );
+      expect(creditDetails).toMatchObject({
+        invoice_date_basis: 'canonical_recurring_service_period',
+        invoice_service_period_start: startDate,
+        invoice_service_period_end: endDate,
+      });
+      expect(creditDetails.invoice).toMatchObject({
+        invoice_id: createdInvoice.invoice_id,
+        invoice_charges: [
+          expect.objectContaining({
+            service_period_start: startDate,
+            service_period_end: endDate,
+            billing_timing: 'arrears',
+          }),
+        ],
+      });
     });
   });
 

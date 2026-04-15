@@ -7,8 +7,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { formatDate } from '@alga-psa/core/formatters';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   Clock,
   AlertCircle,
@@ -32,7 +31,8 @@ export default function KBReviewDashboard({
   onEditArticle,
   onReviewArticle,
 }: KBReviewDashboardProps) {
-  const { t } = useTranslation('features/documents');
+  const { t } = useTranslation('msp/knowledge-base');
+  const { formatDate } = useFormatters();
   const tRef = useRef(t);
   tRef.current = t;
 
@@ -55,7 +55,7 @@ export default function KBReviewDashboard({
         setStaleArticles(staleResult as IKBArticleWithDocument[]);
       }
     } catch (error) {
-      handleError(error, tRef.current('kb.loadError', 'Failed to load review data'));
+      handleError(error, tRef.current('reviewDashboard.feedback.loadError', { defaultValue: 'Failed to load review data' }));
     } finally {
       setIsLoading(false);
     }
@@ -88,7 +88,7 @@ export default function KBReviewDashboard({
               <div>
                 <p className="text-2xl font-bold">{articlesInReview.length}</p>
                 <p className="text-sm text-muted-foreground">
-                  {t('kb.awaitingReview', 'Awaiting Review')}
+                  {t('reviewDashboard.summary.awaitingReview', { defaultValue: 'Awaiting Review' })}
                 </p>
               </div>
             </div>
@@ -104,7 +104,7 @@ export default function KBReviewDashboard({
               <div>
                 <p className="text-2xl font-bold">{staleArticles.length}</p>
                 <p className="text-sm text-muted-foreground">
-                  {t('kb.overdueReviews', 'Overdue Reviews')}
+                  {t('reviewDashboard.summary.overdueReviews', { defaultValue: 'Overdue Reviews' })}
                 </p>
               </div>
             </div>
@@ -117,7 +117,7 @@ export default function KBReviewDashboard({
           <CardContent className="py-12 text-center">
             <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500 opacity-75" />
             <p className="text-muted-foreground">
-              {t('kb.noReviewWork', 'All caught up! No articles need review.')}
+              {t('reviewDashboard.empty', { defaultValue: 'All caught up! No articles need review.' })}
             </p>
           </CardContent>
         </Card>
@@ -129,7 +129,7 @@ export default function KBReviewDashboard({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5 text-yellow-500" />
-              {t('kb.awaitingReviewTitle', 'Articles Awaiting Review')}
+              {t('reviewDashboard.sections.awaitingReview', { defaultValue: 'Articles Awaiting Review' })}
               <Badge variant="secondary">{articlesInReview.length}</Badge>
             </CardTitle>
           </CardHeader>
@@ -145,7 +145,7 @@ export default function KBReviewDashboard({
                     <div>
                       <p className="font-medium">{article.document_name || article.slug}</p>
                       <p className="text-xs text-muted-foreground">
-                        {t('kb.submittedOn', 'Submitted')}: {formatDate(article.updated_at)}
+                        {t('reviewDashboard.labels.submitted', { defaultValue: 'Submitted' })}: {formatDate(article.updated_at)}
                       </p>
                     </div>
                   </div>
@@ -153,13 +153,13 @@ export default function KBReviewDashboard({
                     {onEditArticle && (
                       <Button id={`kb-review-edit-${article.article_id}`} variant="ghost" size="sm" onClick={() => onEditArticle(article)}>
                         <Eye className="w-4 h-4 mr-1" />
-                        {t('kb.view', 'View')}
+                        {t('reviewDashboard.actions.view', { defaultValue: 'View' })}
                       </Button>
                     )}
                     {onReviewArticle && (
                       <Button id={`kb-review-review-${article.article_id}`} variant="default" size="sm" onClick={() => onReviewArticle(article)}>
                         <CheckCircle className="w-4 h-4 mr-1" />
-                        {t('kb.review', 'Review')}
+                        {t('reviewDashboard.actions.review', { defaultValue: 'Review' })}
                       </Button>
                     )}
                   </div>
@@ -176,7 +176,7 @@ export default function KBReviewDashboard({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-orange-500" />
-              {t('kb.overdueReviewsTitle', 'Overdue for Review')}
+              {t('reviewDashboard.sections.overdue', { defaultValue: 'Overdue for Review' })}
               <Badge variant="error">{staleArticles.length}</Badge>
             </CardTitle>
           </CardHeader>
@@ -192,9 +192,9 @@ export default function KBReviewDashboard({
                     <div>
                       <p className="font-medium">{article.document_name || article.slug}</p>
                       <p className="text-xs text-orange-600 dark:text-orange-400">
-                        {t('kb.dueOn', 'Due')}: {article.next_review_due ? formatDate(article.next_review_due) : '-'}
+                        {t('reviewDashboard.labels.due', { defaultValue: 'Due' })}: {article.next_review_due ? formatDate(article.next_review_due) : t('shared.fallbacks.emptyDate', { defaultValue: '-' })}
                         {' '}&bull;{' '}
-                        {t('kb.lastReviewed', 'Last reviewed')}: {article.last_reviewed_at ? formatDate(article.last_reviewed_at) : t('kb.never', 'Never')}
+                        {t('reviewDashboard.labels.lastReviewed', { defaultValue: 'Last reviewed' })}: {article.last_reviewed_at ? formatDate(article.last_reviewed_at) : t('reviewDashboard.labels.never', { defaultValue: 'Never' })}
                       </p>
                     </div>
                   </div>
@@ -202,7 +202,7 @@ export default function KBReviewDashboard({
                     {onEditArticle && (
                       <Button id={`kb-stale-edit-${article.article_id}`} variant="outline" size="sm" onClick={() => onEditArticle(article)}>
                         <Eye className="w-4 h-4 mr-1" />
-                        {t('kb.reviewNow', 'Review Now')}
+                        {t('reviewDashboard.actions.reviewNow', { defaultValue: 'Review Now' })}
                       </Button>
                     )}
                   </div>

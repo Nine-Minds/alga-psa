@@ -1,0 +1,164 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a migration that creates `chats.title_index` as a stored generated `tsvector` from `coalesce(title_text, '')`.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-12"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add a GIN index on `chats.title_index` for indexed title search.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-12"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Add a migration that creates `messages.content_index` as a stored generated `tsvector` from `process_large_lexemes(coalesce(content, ''))`.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-12",
+      "FR-13"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Add a GIN index on `messages.content_index` for indexed message-body search.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-12",
+      "FR-13"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Add a chat model search query that returns `ChatHistoryItem[]` scoped to the current user and current tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-05",
+      "FR-06",
+      "FR-08"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "The chat model search query matches chats by either `chats.title_index` or any related `messages.content_index` hit.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-05"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "The chat model search query deduplicates to one row per chat and orders results by relevance first, then recency.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-07",
+      "FR-14",
+      "FR-15"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "The chat model search query preserves existing `preview_text` behavior by returning the latest persisted message preview rather than a matched snippet.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-08"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Add `searchCurrentUserChatsAction(query, limit)` that trims input, enforces the minimum query length, and returns chat-level search results for the current user.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-03",
+      "FR-04",
+      "FR-15"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Search-related chat actions fail closed when chat persistence is unavailable or when the search columns are not present yet during rollout.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-16"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Add a search input and local search state to the AI history card in `RightSidebarContent.tsx`.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-01"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "When the search query is empty, the history card continues to load and display the recent-chat dataset through `listCurrentUserChatsAction` with the existing 'Recent Chats' behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-02"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "When the trimmed query length is at least 2 characters, the history card runs a debounced search request and labels the dataset as 'Search Results'.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-04"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "When the trimmed query length is 1 character, the history card shows a helper state instead of issuing a search request.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-03"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Search-mode rows reuse the existing history-row UI, including title, timestamp, latest preview text, and rename/delete actions.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-08",
+      "FR-10"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Selecting a search result loads the full conversation through `getChatMessagesAction(chatId)` with the same behavior as selecting a recent chat.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-09"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "The history card renders explicit loading, no-results, and query-too-short states while searching.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-03",
+      "FR-04"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Rename and delete actions refresh whichever dataset is active after the mutation: recent chats when browsing or the current search query when searching.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-10"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Clearing the search query restores the recent-chat dataset immediately without closing and reopening the sidebar.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-11"
+    ]
+  }
+]

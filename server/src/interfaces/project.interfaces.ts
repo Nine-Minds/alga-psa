@@ -37,6 +37,7 @@ export const CONFIGURABLE_TASK_FIELDS = [
 export interface IProjectStatusMapping extends TenantEntity {
   project_status_mapping_id: string;
   project_id: string;
+  phase_id?: string;
   status_id?: string;
   standard_status_id?: string;
   is_standard: boolean;
@@ -94,6 +95,7 @@ export interface IProjectTask extends TenantEntity, ITaggable {
   phase_id: string;
   task_name: string;
   description: string | null;
+  description_rich_text?: string | null;
   assigned_to: string | null;
   estimated_hours: number | null;
   actual_hours: number | null;
@@ -150,6 +152,7 @@ export interface ITaskChecklistItem extends TenantEntity {
 export type ProjectStatus = {
   project_status_mapping_id: string;
   status_id: string;
+  phase_id?: string;
   name: string;
   custom_name: string | null;
   is_visible: boolean;

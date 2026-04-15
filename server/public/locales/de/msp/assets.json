@@ -1,0 +1,1192 @@
+{
+  "common": {
+    "actions": {
+      "add": "Hinzufügen",
+      "back": "Zurück",
+      "cancel": "Abbrechen",
+      "close": "Schließen",
+      "copy": "Kopieren",
+      "create": "Erstellen",
+      "delete": "Löschen",
+      "download": "Herunterladen",
+      "edit": "Bearbeiten",
+      "refresh": "Aktualisieren",
+      "remove": "Entfernen",
+      "retry": "Wiederholen",
+      "save": "Speichern",
+      "saving": "Speichern...",
+      "search": "Suchen",
+      "select": "Auswählen",
+      "update": "Aktualisieren",
+      "view": "Anzeigen"
+    },
+    "states": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "loading": "Laden...",
+      "na": "N/A",
+      "none": "Keine"
+    },
+    "no": "Nein",
+    "yes": "Ja"
+  },
+  "assetAlertsSection": {
+    "title": "Abschnitt „Asset-Warnungen“.",
+    "description": "Wrapper für Enterprise-Warnungsabschnitte für anlagenspezifische RMM-Warnungen und Abhilfemaßnahmen"
+  },
+  "assetCommandPalette": {
+    "title": "Befehlspalette",
+    "description": "Befehlspalette zum Suchen von Assets und Starten von Asset-Aktionen",
+    "register": {
+      "label": "Asset-Befehlspalette",
+      "title": "Asset-Befehlspalette"
+    },
+    "actions": {
+      "createAsset": {
+        "label": "Asset erstellen",
+        "description": "Öffnen Sie „Schnell hinzufügen“, um ein neues Asset zu registrieren"
+      },
+      "refreshData": {
+        "label": "Daten aktualisieren",
+        "description": "Assets erneut vom Server abrufen"
+      },
+      "reset": {
+        "label": "Zurücksetzen",
+        "description": "Entfernen Sie alle aktiven Filter und Suchbegriffe"
+      }
+    },
+    "searchPlaceholder": "Suchen Sie nach Assets, Kunden, Tickets ...",
+    "empty": "Noch keine Übereinstimmungen. Versuchen Sie es mit einem anderen Schlüsselwort.",
+    "groups": {
+      "quickActions": "Schnelle Aktionen",
+      "assets": "Vermögenswerte",
+      "hints": "Hinweise"
+    },
+    "hint": {
+      "body": "Geben Sie weiter ein, um die gesamte Asset-Liste zu durchsuchen. Tickets und Kundensuche werden zu einem späteren Zeitpunkt verfügbar sein.",
+      "badge": "Bald verfügbar"
+    },
+    "values": {
+      "unassigned": "Nicht zugewiesen"
+    }
+  },
+  "assetDashboard": {
+    "title": "Asset-Dashboard",
+    "description": "Asset-Dashboard-Wrapper der obersten Ebene, der das Client-Asset-Erlebnis wiedergibt"
+  },
+  "assetDashboardClient": {
+    "title": "Asset Dashboard-Client",
+    "description": "Hauptseite der Asset-Liste mit Filtern, Tabellen- und Rasteransichten, Massenaktionen und Schubladenabläufen",
+    "reflection": {
+      "label": "Asset-Dashboard"
+    },
+    "errors": {
+      "loadDrawerFailed": "Asset-Details können derzeit nicht geladen werden. Bitte versuchen Sie es erneut."
+    },
+    "details": {
+      "noIp": "Keine IP",
+      "network": "Netzwerk",
+      "local": "Lokal",
+      "noDetails": "Keine Details verfügbar",
+      "unassigned": "Nicht zugewiesen"
+    },
+    "selection": {
+      "selectAllVisibleAssets": "Wählen Sie alle sichtbaren Assets aus",
+      "selectAsset": "Asset {{name}} auswählen",
+      "selectedAssets": "{{count}} Asset{{suffix}} ausgewählt",
+      "clearSelection": "Auswahl aufheben",
+      "bulkActionsComingSoon": "Massenaktionen folgen bald"
+    },
+    "actions": {
+      "openActionsForAsset": "Aktionen für Asset {{name}} öffnen",
+      "viewDetails": "Details anzeigen",
+      "editAsset": "Asset bearbeiten",
+      "createTicket": "Ticket erstellen",
+      "refreshData": "Daten aktualisieren"
+    },
+    "table": {
+      "name": "Name",
+      "tag": "Tag",
+      "type": "Typ",
+      "details": "Details",
+      "status": "Status",
+      "agent": "Agent",
+      "client": "Kunde",
+      "location": "Standort",
+      "actions": "Aktionen"
+    },
+    "metrics": {
+      "totalAssets": {
+        "title": "Gesamtvermögen",
+        "helper": "Über alle Kunden hinweg"
+      },
+      "filteredView": {
+        "title": "Gefilterte Ansicht",
+        "helper": "Passende aktive Filter"
+      },
+      "automationReady": {
+        "title": "Bereit für die Automatisierung",
+        "helper": "Aktive Wartungspläne",
+        "upcoming": "Demnächst: {{count}}",
+        "overdue": "Überfällig: {{count}}"
+      },
+      "activeSchedules": {
+        "title": "Aktive Zeitpläne",
+        "helper": "Lebenszyklusautomatisierung"
+      },
+      "overdueMaintenance": {
+        "title": "Wartung überfällig",
+        "helper": "Braucht Aufmerksamkeit"
+      },
+      "upcomingMaintenance": {
+        "title": "Bevorstehende Wartung",
+        "helper": "Nächste 30 Tage"
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "Suchen Sie nach Name, Tag oder Seriennummer",
+      "reset": "Zurücksetzen",
+      "status": "Status",
+      "type": "Typ",
+      "agent": "Agent",
+      "columns": "Spalten",
+      "client": {
+        "loading": "Kunden werden geladen…",
+        "placeholder": "Kunde",
+        "clear": "Kundenfilter löschen"
+      },
+      "rmmManaged": {
+        "managed": "RMM Verwaltet",
+        "unmanaged": "Nicht verwaltet"
+      },
+      "agentStatuses": {
+        "online": "Online",
+        "offline": "Offline",
+        "overdue": "Überfällig",
+        "unknown": "Unbekannt"
+      }
+    },
+    "activeFilters": {
+      "status": "Status: {{value}}",
+      "type": "Typ: {{value}}",
+      "client": "Kunde: {{value}}",
+      "agent": "Agent: {{value}}"
+    },
+    "statuses": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "maintenance": "Wartung"
+    },
+    "types": {
+      "workstation": "Arbeitsplatz",
+      "server": "Server",
+      "network_device": "Netzwerkgerät",
+      "mobile_device": "Mobilgerät",
+      "printer": "Drucker"
+    },
+    "columns": {
+      "select": "wählen",
+      "name": "Name",
+      "asset_tag": "Asset-Tag",
+      "asset_type": "Vermögenswerttyp",
+      "details": "Details",
+      "status": "Status",
+      "agent_status": "Agentenstatus",
+      "client_name": "Kundenname",
+      "location": "Standort",
+      "actions": "Aktionen"
+    }
+  },
+  "assetDashboardGrid": {
+    "title": "Asset-Dashboard-Raster",
+    "description": "Zusammengesetztes Rasterlayout für Asset-Detailkarten, RMM-Panels und zugehörige Status-Widgets"
+  },
+  "assetDetailDrawer": {
+    "title": "Asset-Detail-Schublade",
+    "description": "Schubladenbasierte Asset-Schnellansicht mit Aktionen, zusammenfassenden Daten und Navigation in den gesamten Datensatz",
+    "label": "Asset-Detail-Schublade",
+    "header": {
+      "title": "Asset-Details",
+      "subtitle": "Bleiben Sie im Kontext, während Sie Lebenszyklus und Konfiguration überprüfen"
+    },
+    "tabs": {
+      "overview": "Überblick",
+      "maintenance": "Wartung",
+      "tickets": "Tickets",
+      "configuration": "Konfiguration",
+      "documents": "Dokumente"
+    },
+    "helper": {
+      "awaitingSelection": "Warten auf Asset-Auswahl",
+      "selectedAsset": "{{name}} • {{tab}}"
+    },
+    "statuses": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "maintenance": "Wartung"
+    },
+    "empty": {
+      "selectAsset": "Wählen Sie ein Asset aus, um Details anzuzeigen",
+      "nothingToDisplay": "Nichts anzuzeigen"
+    },
+    "actions": {
+      "openAssetRecord": "Anlagendatensatz öffnen",
+      "delete": "Löschen"
+    },
+    "overview": {
+      "assetTag": "Asset-Tag {{tag}} • {{type}}",
+      "client": "Kunde: {{name}}",
+      "activeSchedules": "Aktive Zeitpläne",
+      "upcomingMaintenance": "Bevorstehende Wartung",
+      "nextOn": "Weiter am {{date}}",
+      "completedMaintenance": "Wartung abgeschlossen",
+      "compliance": "Compliance {{percent}}%",
+      "lastMaintenance": "Letzte Wartung",
+      "noHistory": "Keine Historie",
+      "maintenanceDataPending": "Wartungsdaten werden angezeigt, sobald die Zeitpläne konfiguriert sind.",
+      "assetSummary": "Zusammenfassung der Vermögenswerte",
+      "recentLifecycleEvents": "Aktuelle Lebenszyklusereignisse"
+    },
+    "maintenance": {
+      "noSchedules": "Für dieses Asset wurden noch keine Wartungspläne gefunden.",
+      "totalSchedules": "Gesamtzeitpläne",
+      "active": "Aktiv",
+      "complianceRate": "Compliance-Rate",
+      "history": "Wartungshistorie",
+      "loggedBy": "Geloggt von {{name}}",
+      "system": "System",
+      "noLogs": "Nach dem ersten Serviceeintrag erscheinen hier Wartungsprotokolle."
+    },
+    "tickets": {
+      "empty": "Mit diesem Asset sind noch keine Tickets verknüpft. Verwenden Sie die Schnellaktion, um eine zu erstellen.",
+      "linked": "Verlinkt {{date}}",
+      "client": "Kunde: {{name}}",
+      "assignee": "Zuständig: {{name}}",
+      "openTicket": "Ticket öffnen"
+    },
+    "configuration": {
+      "coreAttributes": "Kernattribute",
+      "serialNumber": "Seriennummer",
+      "location": "Standort",
+      "purchaseDate": "Kaufdatum",
+      "warrantyEnd": "Garantieende",
+      "notProvided": "Nicht bereitgestellt"
+    },
+    "info": {
+      "client": "Kunde",
+      "unassigned": "Nicht zugewiesen",
+      "assetTag": "Asset-Tag",
+      "status": "Status",
+      "created": "Erstellt",
+      "updated": "Aktualisiert",
+      "tenant": "Mandant"
+    },
+    "typeDetails": {
+      "workstation": "Details zur Workstation",
+      "networkDevice": "Details zum Netzwerkgerät",
+      "server": "Serverdetails",
+      "mobileDevice": "Details zum Mobilgerät",
+      "printer": "Druckerdetails",
+      "operatingSystem": "Betriebssystem",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Speicher",
+      "gpu": "GPU",
+      "notProvided": "Nicht bereitgestellt",
+      "never": "Nie",
+      "deviceType": "Gerätetyp",
+      "managementIp": "Management-IP",
+      "portCount": "Anzahl der Ports",
+      "firmwareVersion": "Firmware-Version",
+      "poeSupport": "PoE Unterstützung",
+      "powerDraw": "Stromaufnahme",
+      "virtualized": "Virtualisiert",
+      "primaryIp": "Primäre IP",
+      "hypervisor": "Hypervisor",
+      "os": "OS",
+      "model": "Modell",
+      "imei": "IMEI",
+      "phoneNumber": "Telefonnummer",
+      "carrier": "Mobilfunkanbieter",
+      "lastLogin": "Letzter Login",
+      "lastCheckIn": "Letzter Check-in",
+      "notReported": "Nicht gemeldet",
+      "networkPrinter": "Netzwerkdrucker",
+      "ipAddress": "IP-Adresse",
+      "supportsColor": "Unterstützt Farbe",
+      "supportsDuplex": "Unterstützt Duplex",
+      "monthlyDutyCycle": "Monatlicher Arbeitszyklus",
+      "monthlyDutyCycleValue": "{{count}} Seiten"
+    },
+    "relative": {
+      "momentsAgo": "vor wenigen Augenblicken",
+      "minutesAgo": "Vor {{count}} Minute{{suffix}}",
+      "hoursAgo": "Vor {{count}} Stunde{{suffix}}",
+      "daysAgo": "Vor {{count}} Tag{{suffix}}"
+    }
+  },
+  "assetDetailHeader": {
+    "title": "Kopfzeile der Asset-Details",
+    "description": "Header-Chrom für die Asset-Detailerfahrung, einschließlich Identität, Abzeichen und Aktualisierungsaktionen",
+    "backToAssets": "Zurück zu den Vermögenswerten",
+    "assetTag": "Asset-Tag: {{tag}}",
+    "actions": {
+      "createTicket": "Ticket erstellen",
+      "menu": "Aktionen",
+      "refreshing": "Wird aktualisiert...",
+      "refreshData": "Daten aktualisieren",
+      "rebootDevice": "Gerät neu starten",
+      "editAsset": "Asset bearbeiten",
+      "deleteAsset": "Asset löschen"
+    },
+    "values": {
+      "unknownClient": "Unbekannter Kunde"
+    }
+  },
+  "assetDetailTabs": {
+    "title": "Registerkarten für Asset-Details",
+    "description": "Mit Registerkarten versehene Asset-Detailnavigation für Übersicht, Wartung, Dokumente, Verlauf und zugehörige Datensätze",
+    "tabs": {
+      "serviceHistory": "Serviceverlauf",
+      "software": "Software",
+      "maintenance": "Wartung",
+      "relatedAssets": "Zugehörige Vermögenswerte",
+      "documentsPasswords": "Dokumente und Passwörter",
+      "auditLog": "Audit-Protokoll"
+    }
+  },
+  "assetDetailView": {
+    "title": "Asset-Detailansicht",
+    "description": "Zusammenstellung der Asset-Details mit Belastung, Fehler, Metriken, Rasterfeldern und Detailregisterkarten",
+    "loading": "Asset-Details werden geladen...",
+    "errors": {
+      "title": "Fehler",
+      "notFound": "Das Asset wurde nicht gefunden oder Sie haben keine Berechtigung, es anzuzeigen."
+    }
+  },
+  "assetDetails": {
+    "title": "Asset-Details",
+    "description": "Vollständige Asset-Detailseite mit Übersichtskarten, Zuordnungen, Dokumenten und Betriebsmaßnahmen",
+    "assetTag": "Asset-Tag: {{tag}}",
+    "loading": {
+      "details": "Details werden geladen..."
+    },
+    "fields": {
+      "status": "Status",
+      "serialNumber": "Seriennummer",
+      "location": "Standort",
+      "client": "Kunde",
+      "purchaseDate": "Kaufdatum",
+      "warrantyEnd": "Garantieende",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Speicher",
+      "gpu": "GPU",
+      "lastLogin": "Letzte Anmeldung",
+      "managementIp": "Management-IP",
+      "portCount": "Portanzahl",
+      "powerDraw": "Stromaufnahme",
+      "firmwareVersion": "Firmware-Version",
+      "poeSupport": "PoE Unterstützung",
+      "type": "Typ",
+      "hypervisor": "Hypervisor",
+      "primaryIp": "Primäre IP",
+      "operatingSystem": "Betriebssystem",
+      "imei": "IMEI",
+      "phoneNumber": "Telefonnummer",
+      "carrier": "Mobilfunkanbieter",
+      "supervisionStatus": "Überwachungsstatus",
+      "ipAddress": "IP-Adresse",
+      "networkPrinter": "Netzwerkdrucker",
+      "colorSupport": "Farbunterstützung",
+      "duplexSupport": "Duplex-Unterstützung",
+      "monthlyDutyCycle": "Monatlicher Arbeitszyklus"
+    },
+    "sections": {
+      "basicInformation": "Grundlegende Informationen",
+      "workstation": "Details zur Workstation",
+      "networkDevice": "Details zum Netzwerkgerät",
+      "server": "Serverdetails",
+      "mobileDevice": "Details zu Mobilgeräten",
+      "printer": "Druckerdetails",
+      "relatedAssets": "Zugehörige Vermögenswerte"
+    },
+    "maintenance": {
+      "activeSchedules": "Aktive Zeitpläne",
+      "overdue": "Überfällig",
+      "upcoming": "Demnächst"
+    },
+    "tabs": {
+      "details": "Details",
+      "relatedAssets": "Zugehörige Assets",
+      "documents": "Dokumente"
+    },
+    "relationships": {
+      "parentOf": "Elternteil von",
+      "childOf": "Kind von"
+    },
+    "empty": {
+      "notSpecified": "Nicht angegeben",
+      "unassigned": "Nicht zugewiesen",
+      "never": "Nie",
+      "noAdditionalDetails": "Keine weiteren Details verfügbar",
+      "noRelatedAssets": "Keine zugehörigen Vermögenswerte gefunden"
+    },
+    "values": {
+      "virtual": "Virtuell",
+      "physical": "Physisch",
+      "supervised": "Beaufsichtigt",
+      "unsupervised": "Unbeaufsichtigt",
+      "pagesUnit": "Seiten"
+    },
+    "statuses": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "maintenance": "Wartung"
+    },
+    "deviceTypes": {
+      "switch": "Switch",
+      "router": "Router",
+      "firewall": "Firewall",
+      "access_point": "Zugangspunkt",
+      "load_balancer": "Load Balancer"
+    },
+    "relationshipTypes": {
+      "affected": "Betroffen",
+      "related": "Verwandt"
+    }
+  },
+  "assetDocuments": {
+    "title": "Vermögensdokumente",
+    "description": "Auflistung der Asset-Dokumente und Anhangoberfläche für mit einem Asset verknüpfte Dateien"
+  },
+  "assetForm": {
+    "title": "Vermögensformular",
+    "description": "Formular zum Erstellen und Bearbeiten primärer Assets mit Feldern für Identität, Lebenszyklus, Vertrag und Metadaten",
+    "heading": "Asset bearbeiten",
+    "loading": {
+      "assetDetails": "Asset-Details werden geladen..."
+    },
+    "errors": {
+      "assetNotFound": "Asset nicht gefunden",
+      "loadFailed": "Asset-Details konnten nicht geladen werden",
+      "clientsLoadFailed": "Clients können nicht geladen werden",
+      "locationsLoadFailed": "Standorte für diesen Client können nicht geladen werden",
+      "updateFailed": "Das Asset konnte nicht aktualisiert werden"
+    },
+    "actions": {
+      "viewClient": "Kunden ansehen",
+      "manageClientLocations": "Kundenstandorte verwalten",
+      "saveChanges": "Änderungen speichern"
+    },
+    "alerts": {
+      "noLocationsSaved": "Dieser Kunde hat noch keine gespeicherten Standorte. Verwenden Sie einen benutzerdefinierten Eintrag oder erstellen Sie einen aus dem Kundendatensatz."
+    },
+    "sections": {
+      "basicInformation": "Grundlegende Informationen",
+      "clientAndLocation": "Kunde und Standort",
+      "assetBasics": "Asset-Grundlagen"
+    },
+    "fields": {
+      "customLocationOption": "Benutzerdefinierter Standort",
+      "osType": "OS Typ",
+      "osVersion": "OS Version",
+      "cpuModel": "CPU Modell",
+      "cpuCores": "CPU Kerne",
+      "ramGb": "RAM (GB)",
+      "storageType": "Speichertyp",
+      "storageCapacityGb": "Speicherkapazität (GB)",
+      "gpuModel": "GPU Modell",
+      "deviceType": "Gerätetyp",
+      "managementIp": "Management-IP",
+      "portCount": "Portanzahl",
+      "firmwareVersion": "Firmware-Version",
+      "powerDrawWatts": "Leistungsaufnahme (Watt)",
+      "supportsPoe": "Unterstützt PoE",
+      "primaryIp": "Primäre IP",
+      "raidConfig": "RAID-Konfiguration",
+      "virtualMachine": "Virtuelle Maschine",
+      "hypervisor": "Hypervisor",
+      "model": "Modell",
+      "imei": "IMEI",
+      "phoneNumber": "Telefonnummer",
+      "carrier": "Mobilfunkanbieter",
+      "supervisedDevice": "Überwachtes Gerät",
+      "ipAddress": "IP-Adresse",
+      "monthlyDutyCycle": "Monatlicher Arbeitszyklus",
+      "networkPrinter": "Netzwerkdrucker",
+      "colorSupport": "Farbunterstützung",
+      "duplexSupport": "Duplex-Unterstützung",
+      "client": "Kunde",
+      "primaryLocation": "Primärer Standort",
+      "name": "Name",
+      "assetTag": "Asset-Tag",
+      "serialNumber": "Seriennummer",
+      "status": "Status",
+      "purchaseDate": "Kaufdatum",
+      "warrantyEndDate": "Enddatum der Garantie"
+    },
+    "placeholders": {
+      "loadingClients": "Kunden werden geladen…",
+      "selectClient": "Wählen Sie den Kunden aus",
+      "loadingLocations": "Standorte werden geladen…",
+      "selectLocation": "Wählen Sie einen Standort aus",
+      "selectClientFirst": "Wählen Sie zunächst einen Kunden aus",
+      "customLocation": "Geben Sie einen benutzerdefinierten Ort oder Bereich ein",
+      "selectPurchaseDate": "Kaufdatum auswählen",
+      "selectWarrantyEndDate": "Wählen Sie das Enddatum der Garantie aus"
+    },
+    "statusOptions": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "maintenance": "Wartung"
+    },
+    "networkDeviceTypes": {
+      "switch": "Switch",
+      "router": "Router",
+      "firewall": "Firewall",
+      "access_point": "Zugangspunkt",
+      "load_balancer": "Load Balancer"
+    },
+    "storageTypes": {
+      "ssd": "SSD",
+      "hdd": "HDD",
+      "nvme": "NVMe"
+    },
+    "osTypes": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Android"
+    },
+    "typeDetails": {
+      "workstation": "Details zur Workstation",
+      "networkDevice": "Details zum Netzwerkgerät",
+      "server": "Serverdetails",
+      "mobileDevice": "Details zu Mobilgeräten",
+      "printer": "Druckerdetails"
+    }
+  },
+  "assetFormClient": {
+    "title": "Asset-Formular-Client",
+    "description": "Dynamischer Wrapper nur für den Client für das Asset-Formular und die Bearbeitungsskelett-Erfahrung",
+    "loadingTitle": "Asset bearbeiten"
+  },
+  "assetMetricsBanner": {
+    "title": "Banner für Asset-Metriken",
+    "description": "Metrikkarten und Rollups für Tickets, Wartung, Betriebszeit und Indikatoren für den Anlagenzustand",
+    "labels": {
+      "healthStatus": "Gesundheitszustand",
+      "openTickets": "Offene Tickets",
+      "securityStatus": "Sicherheitsstatus",
+      "warranty": "Garantie"
+    },
+    "healthStatuses": {
+      "healthy": "Gesund",
+      "warning": "Warnung",
+      "critical": "Kritisch",
+      "unknown": "Unbekannt"
+    },
+    "securityStatuses": {
+      "secure": "Sicher",
+      "missingPatches": "{{count}} Fehlende Patches",
+      "critical": "Kritisch",
+      "unknown": "Unbekannt"
+    },
+    "openTickets": {
+      "active": "[{{count}} Aktiv]"
+    },
+    "warrantyStatuses": {
+      "expiresIn": "Läuft in {{count}} Tagen ab",
+      "expired": "Abgelaufen",
+      "unknown": "Unbekannt"
+    }
+  },
+  "assetPatchStatusSection": {
+    "title": "Abschnitt „Asset-Patch-Status“.",
+    "description": "Enterprise-Patch- und Antivirus-Status-Wrapper, der in der Asset-Detailansicht angezeigt wird"
+  },
+  "assetSoftwareInventory": {
+    "title": "Asset-Software-Inventar",
+    "description": "Enterprise-Software-Inventar-Wrapper für installierte Software und Versionsdaten"
+  },
+  "associatedAssets": {
+    "title": "Zugehörige Vermögenswerte",
+    "description": "Verwaltung der Beziehungen zwischen übergeordneten und untergeordneten Assets mit verknüpften Asset-Aktionen",
+    "loading": {
+      "assets": "Assets werden geladen..."
+    },
+    "actions": {
+      "addAsset": "Asset hinzufügen",
+      "showLess": "Weniger anzeigen",
+      "moreAssets": "{{count}} mehr Asset{{suffix}}"
+    },
+    "errors": {
+      "loadAvailableAssets": "Die verfügbaren Assets konnten nicht geladen werden",
+      "loadDrawerFailed": "Asset-Details können derzeit nicht geladen werden. Bitte versuchen Sie es erneut.",
+      "loadAssociatedAssets": "Zugehörige Assets konnten nicht geladen werden",
+      "selectAtLeastOneAsset": "Bitte wählen Sie mindestens ein Asset aus",
+      "associateFailed": "Assets konnten nicht verknüpft werden. Möglicherweise sind sie bereits verknüpft",
+      "associationFailed": "Assets konnten nicht zugeordnet werden",
+      "removeFailed": "Die Asset-Verknüpfung konnte nicht entfernt werden"
+    },
+    "success": {
+      "associated": "{{count}} Asset{{suffix}} erfolgreich verknüpft",
+      "associatedPartial": "{{count}} Asset{{suffix}} erfolgreich verknüpft, {{failed}} fehlgeschlagen (möglicherweise bereits verknüpft)",
+      "removed": "Asset-Zuordnung entfernt"
+    },
+    "empty": {
+      "noneAssociated": "Mit diesem Ticket sind keine Vermögenswerte verknüpft.",
+      "unknownAsset": "Unbekannter Vermögenswert"
+    },
+    "dialog": {
+      "title": "Asset hinzufügen",
+      "loadingAssets": "Assets werden geladen...",
+      "selectedAssetsLabel": "Ausgewählt:",
+      "search": {
+        "label": "Suchen Sie nach Assets",
+        "placeholder": "Suche nach Name, Tag oder Seriennummer..."
+      },
+      "empty": {
+        "search": "Es wurden keine Assets gefunden, die Ihrer Suche entsprechen",
+        "available": "Für diesen Kunden sind keine Vermögenswerte verfügbar"
+      },
+      "relationship": {
+        "placeholder": "Typ..."
+      },
+      "actions": {
+        "addAssets": "Asset{{suffix}} hinzufügen"
+      }
+    },
+    "table": {
+      "name": "Name",
+      "assetTag": "Asset-Tag",
+      "type": "Typ",
+      "status": "Status"
+    },
+    "assetStatuses": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "maintenance": "Wartung"
+    },
+    "assetTypes": {
+      "workstation": "Arbeitsplatz",
+      "server": "Server",
+      "network_device": "Netzwerkgerät",
+      "mobile_device": "Mobilgerät",
+      "printer": "Drucker"
+    },
+    "relationshipTypes": {
+      "affected": "Betroffen",
+      "related": "Verwandt"
+    }
+  },
+  "createTicketFromAssetButton": {
+    "title": "Ticket aus Asset erstellen",
+    "description": "Ticketerstellungsablauf, der von einem Asset aus mit Board-, Status- und Kategorieauswahl gestartet wird",
+    "register": {
+      "label": "Ticket aus Asset erstellen",
+      "title": "Ticket aus Asset erstellen"
+    },
+    "defaultTitle": "Problem mit {{name}}",
+    "actions": {
+      "open": "Ticket erstellen",
+      "create": "Ticket erstellen",
+      "creating": "Wird erstellt..."
+    },
+    "fields": {
+      "title": "Titel",
+      "description": "Beschreibung",
+      "board": "Board",
+      "status": "Status",
+      "priority": "Priorität"
+    },
+    "placeholders": {
+      "title": "Geben Sie den Tickettitel ein",
+      "description": "Beschreiben Sie das Problem...",
+      "loadingBoards": "Boards werden geladen...",
+      "selectBoard": "Board auswählen...",
+      "selectBoardFirst": "Zuerst Board auswählen...",
+      "loadingStatuses": "Status wird geladen...",
+      "selectStatus": "Status auswählen...",
+      "loadingPriorities": "Prioritäten werden geladen...",
+      "selectPriority": "Priorität auswählen..."
+    },
+    "errors": {
+      "loadPriorities": "Die Prioritäten konnten nicht geladen werden",
+      "loadBoards": "Die Boards konnten nicht geladen werden",
+      "loadStatuses": "Status konnten nicht geladen werden",
+      "requiredFields": "Bitte geben Sie Titel, Board, Status und Priorität ein",
+      "createFailed": "Ticket konnte nicht erstellt werden"
+    },
+    "success": {
+      "created": "Ticket erfolgreich erstellt"
+    }
+  },
+  "deleteAssetButton": {
+    "title": "Schaltfläche „Asset löschen“.",
+    "description": "Löschbestätigungsfluss zum Entfernen eines Asset-Datensatzes",
+    "actions": {
+      "removing": "Entfernen…"
+    },
+    "entityNameFallback": "dieser Vermögenswert",
+    "errors": {
+      "validationFailed": "Der Löschvorgang konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
+      "deleteFailed": "Asset konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "quickAddAsset": {
+    "title": "Asset schnell hinzufügen",
+    "description": "Erstellen Sie schnell einen Asset-Flow mit wichtigen Feldern zum Hinzufügen eines neuen Asset-Datensatzes",
+    "actions": {
+      "addAsset": "Asset hinzufügen",
+      "creating": "Wird erstellt...",
+      "createAsset": "Asset erstellen"
+    },
+    "errors": {
+      "fetchClientsFailed": "Clients konnten nicht abgerufen werden",
+      "createFailed": "Asset konnte nicht erstellt werden"
+    },
+    "validation": {
+      "client": "Kunde",
+      "assetName": "Asset-Name",
+      "assetTag": "Asset-Tag",
+      "assetType": "Asset-Typ",
+      "requiredFields": "Bitte füllen Sie die erforderlichen Felder aus:"
+    },
+    "fields": {
+      "osType": "OS Typ",
+      "osVersion": "OS Version",
+      "deviceType": "Gerätetyp",
+      "managementIp": "Management-IP",
+      "model": "Modell",
+      "clientRequired": "Kunde *",
+      "assetNameRequired": "Asset-Name *",
+      "assetTagRequired": "Asset-Tag *",
+      "typeRequired": "Typ *",
+      "status": "Status",
+      "serialNumber": "Seriennummer"
+    },
+    "placeholders": {
+      "workstationOsType": "z. B. Windows, macOS, Linux",
+      "workstationOsVersion": "z. B. 11, Monterey, Ubuntu 22.04",
+      "selectDeviceType": "Gerätetyp auswählen",
+      "managementIp": "z. B. 192.168.1.1",
+      "serverOsType": "z. B. Windows Server, Ubuntu Server",
+      "serverOsVersion": "z. B. 2022, 22.04 LTS",
+      "selectOsType": "OS-Typ auswählen",
+      "mobileModel": "z. B. iPhone 14 Pro, Galaxy S23",
+      "printerModel": "z. B. HP LaserJet Pro M404n",
+      "assetName": "Geben Sie den Asset-Namen ein",
+      "assetTag": "Geben Sie das Asset-Tag ein",
+      "selectType": "Typ auswählen",
+      "selectStatus": "Status auswählen",
+      "serialNumber": "Geben Sie die Seriennummer ein"
+    },
+    "sections": {
+      "typeSpecificDetails": "Typspezifische Details"
+    },
+    "statusOptions": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "maintenance": "Wartung"
+    },
+    "assetTypes": {
+      "workstation": "Arbeitsplatz",
+      "network_device": "Netzwerkgerät",
+      "server": "Server",
+      "mobile_device": "Mobilgerät",
+      "printer": "Drucker"
+    },
+    "networkDeviceTypes": {
+      "switch": "Switch",
+      "router": "Router",
+      "firewall": "Firewall",
+      "accessPoint": "Zugangspunkt",
+      "loadBalancer": "Load Balancer"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Android"
+    }
+  },
+  "remoteAccessButton": {
+    "title": "Fernzugriffstaste",
+    "description": "Fernzugriffs-Launcher für Assets mit unterstützten Verbindungsintegrationen"
+  },
+  "rmmStatusIndicator": {
+    "title": "RMM Statusanzeige",
+    "description": "Verbunden/getrennt RMM Status-Chip und unterstützende Statusbezeichnungen",
+    "titles": {
+      "unknown": "Agentenstatus unbekannt",
+      "status": "{{status}}{{suffix}}",
+      "lastSeen": "- Zuletzt gesehen: {{value}}"
+    },
+    "statuses": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Überfällig",
+      "unknown": "Unbekannt"
+    },
+    "relative": {
+      "justNow": "Soeben",
+      "minutesAgo": "Vor {{count}}m",
+      "hoursAgo": "Vor {{count}}h",
+      "daysAgo": "Vor {{count}}d"
+    }
+  },
+  "assetInfoPanel": {
+    "title": "Asset-Informationen und Lebenszyklus",
+    "description": "Allgemeines Asset-Informationsfeld für Identifikations-, Eigentümer- und Lebenszyklusdetails",
+    "actions": {
+      "copy": "Kopieren",
+      "copied": "Kopiert"
+    },
+    "fields": {
+      "client": "Kunde",
+      "location": "Standort",
+      "model": "Modell",
+      "serialNumber": "Seriennummer",
+      "purchaseDate": "Kaufdatum",
+      "warrantyEnd": "Garantieende"
+    },
+    "values": {
+      "unknownClient": "Unbekannter Kunde",
+      "unassigned": "Nicht zugewiesen",
+      "unknownModel": "Unbekanntes Modell"
+    }
+  },
+  "assetNotesPanel": {
+    "title": "Notizen und Kurzinformationen",
+    "description": "Rich-Text-Notizbereich für anlagenspezifische Notizen und schnellen betrieblichen Kontext",
+    "errors": {
+      "loadTitle": "Notizen konnten nicht geladen werden",
+      "unknown": "Unbekannter Fehler"
+    },
+    "lastUpdated": "Letzte Aktualisierung: {{value}}"
+  },
+  "hardwareSpecsPanel": {
+    "title": "Hardware-Spezifikationen",
+    "description": "Hardware-Spezifikationsfenster mit Informationen zu CPU, Arbeitsspeicher, Speicher und Gerätemetadaten",
+    "fields": {
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Speicher",
+      "utilization": "Verwendung"
+    },
+    "values": {
+      "unknownCpu": "Unbekannt CPU",
+      "unknown": "Unbekannt",
+      "unifiedMemory": "{{size}}GB Einheitlicher Speicher",
+      "memoryUsed": "({{size}}GB verwendet)",
+      "freeStorage": "{{size}} GB frei"
+    },
+    "empty": "Keine Hardwaredaten verfügbar",
+    "emptyStorage": "Keine Speicherlaufwerke erkannt"
+  },
+  "rmmVitalsPanel": {
+    "title": "RMM Vitalwerte und Konnektivität",
+    "description": "RMM Vitalwerte-Panel für Herzschlag-, Überwachungs- und Endpunkt-Gesundheitsdetails",
+    "actions": {
+      "refresh": "Aktualisieren"
+    },
+    "fields": {
+      "agentStatus": "Agentenstatus",
+      "currentUser": "Aktueller Benutzer",
+      "lastCheckIn": "(Letzter Check-in: {{value}})",
+      "uptime": "Betriebszeit",
+      "lastSync": "Letzte RMM Synchronisierung",
+      "network": "Netzwerk",
+      "networkValue": "LAN IP: {{lan}} | WAN IP: {{wan}}"
+    },
+    "values": {
+      "never": "Nie"
+    },
+    "empty": {
+      "title": "RMM Vitalwerte",
+      "notConnected": "Nicht verbunden mit RMM"
+    },
+    "uptime": "{{days}} Tage, {{hours}} Stunden, {{minutes}} Minuten"
+  },
+  "securityPatchingPanel": {
+    "title": "Sicherheit und Patching",
+    "description": "Sicherheits- und Patchstatus-Panel für Schwachstellen- und Update-Statusanzeigen",
+    "fields": {
+      "osVersion": "OS Version",
+      "antivirus": "Antivirus",
+      "patchStatus": "Patch-Status",
+      "firewall": "Firewall"
+    },
+    "values": {
+      "unknown": "Unbekannt"
+    },
+    "antivirus": {
+      "running": "✔ Installiert und läuft",
+      "inactive": "Inaktiv",
+      "lastScan": "| Letzter Scan: Heute, 3:00 Uhr"
+    },
+    "patchStatus": {
+      "critical": "Kritisch",
+      "atRisk": "Gefährdet",
+      "missingPatches": "- {{count}} Kritisch OS Patches fehlen.",
+      "upToDate": "✔ Auf dem neuesten Stand"
+    },
+    "firewall": {
+      "on": "✔ Ein"
+    }
+  },
+  "copyableField": {
+    "title": "Kopierbares Feld",
+    "description": "Gemeinsames Feld zum Kopieren in die Zwischenablage, das in allen Asset-Formularen und Detailbereichen verwendet wird",
+    "actions": {
+      "copy": "Kopieren",
+      "copied": "Kopiert"
+    }
+  },
+  "statusBadge": {
+    "title": "Statusabzeichen",
+    "description": "Gemeinsamer Badge-Renderer für Asset-Lebenszyklus und Überwachungsstatus",
+    "statuses": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Überfällig",
+      "healthy": "Gesund",
+      "warning": "Warnung",
+      "critical": "Kritisch",
+      "unknown": "Unbekannt",
+      "secure": "Sicher",
+      "at_risk": "Gefährdet",
+      "active": "Aktiv",
+      "expiring_soon": "Läuft bald ab",
+      "expired": "Abgelaufen"
+    }
+  },
+  "utilizationBar": {
+    "title": "Nutzungsleiste",
+    "description": "Gemeinsame Fortschrittsbalkenkomponente für Auslastung und prozentuale Asset-Metriken"
+  },
+  "auditLogTab": {
+    "title": "Audit-Protokoll",
+    "description": "Registerkarte „Asset-Audit-Verlauf“ für Zeitleistenereignisse und Datensatzänderungen",
+    "changedBy": "Geändert von {{name}}",
+    "userFallback": "Benutzer {{id}}",
+    "empty": "Keine Prüfhistorie verfügbar.",
+    "changeTypes": {
+      "created": "Erstellt",
+      "updated": "Aktualisiert"
+    }
+  },
+  "createMaintenanceScheduleDialog": {
+    "title": "Wartungsplan erstellen",
+    "description": "Dialog zum Definieren von Wartungsplänen und Wiederholungsregeln für eine Anlage",
+    "titles": {
+      "create": "Wartung planen",
+      "edit": "Wartungsplan bearbeiten"
+    },
+    "actions": {
+      "create": "Zeitplan erstellen",
+      "creating": "Wird erstellt...",
+      "update": "Zeitplan aktualisieren",
+      "updating": "Wird aktualisiert..."
+    },
+    "fields": {
+      "scheduleName": "Zeitplanname *",
+      "description": "Beschreibung",
+      "maintenanceType": "Wartungstyp *",
+      "frequency": "Häufigkeit *",
+      "interval": "Intervall *",
+      "nextMaintenanceDate": "Nächster Wartungstermin *",
+      "active": "Aktiv"
+    },
+    "placeholders": {
+      "scheduleName": "z. B. monatliche Serverwartung",
+      "description": "Optionale Beschreibung...",
+      "maintenanceType": "Wählen Sie den Wartungstyp aus",
+      "frequency": "Frequenz auswählen",
+      "interval": "1",
+      "nextMaintenanceDate": "Datum auswählen"
+    },
+    "frequencyOptions": {
+      "daily": "Täglich",
+      "weekly": "Wöchentlich",
+      "monthly": "Monatlich",
+      "quarterly": "Vierteljährlich",
+      "yearly": "Jährlich"
+    },
+    "errors": {
+      "scheduleNameRequired": "Zeitplanname ist erforderlich",
+      "maintenanceTypeRequired": "Wartungstyp ist erforderlich",
+      "frequencyRequired": "Häufigkeit ist erforderlich",
+      "nextMaintenanceRequired": "Der nächste Wartungstermin ist erforderlich",
+      "frequencyIntervalMin": "Das Frequenzintervall muss mindestens 1 betragen",
+      "saveFailed": "Fehler beim Erstellen des Wartungsplans"
+    }
+  },
+  "documentsPasswordsTab": {
+    "title": "Dokumente und Passwörter",
+    "description": "Kombinierte Registerkarte für Asset-Dokumente, Anmeldeinformationen und zugehörige sichere Datensätze",
+    "passwords": {
+      "title": "Passwörter und Geheimnisse",
+      "comingSoon": "Sichere Passwortverwaltung bald verfügbar."
+    }
+  },
+  "maintenanceSchedulesTab": {
+    "title": "Wartungspläne",
+    "description": "Registerkarte „Wartungsplanverwaltung“ für geplante Wartungsarbeiten und wiederkehrende Arbeiten",
+    "summary": {
+      "complianceRate": "Compliance-Rate",
+      "nextMaintenance": "Nächste Wartung",
+      "noneScheduled": "Keine geplant"
+    },
+    "actions": {
+      "scheduleMaintenance": "Wartung planen"
+    },
+    "errors": {
+      "deleteFailed": "Der Wartungsplan konnte nicht gelöscht werden"
+    },
+    "table": {
+      "scheduleName": "Zeitplanname",
+      "type": "Typ",
+      "frequency": "Frequenz",
+      "nextMaintenance": "Nächste Wartung",
+      "lastMaintenance": "Letzte Wartung",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "frequency": {
+      "every": "Alle {{count}} {{frequency}}{{suffix}}",
+      "units": {
+        "daily": "Tag",
+        "weekly": "Woche",
+        "monthly": "Monat",
+        "quarterly": "Quartal",
+        "yearly": "Jahr"
+      }
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "types": {
+      "preventive": "Vorbeugend",
+      "inspection": "Inspektion",
+      "calibration": "Kalibrierung",
+      "replacement": "Austausch"
+    },
+    "empty": {
+      "schedules": "Keine Wartungspläne gefunden. Klicken Sie auf „Wartung planen“, um eine zu erstellen."
+    },
+    "history": {
+      "title": "Wartungsverlauf",
+      "performedAt": "Durchgeführt am",
+      "performedBy": "Durchgeführt von",
+      "notes": "Notizen",
+      "empty": "Keine Wartungshistorie aufgezeichnet."
+    },
+    "dialog": {
+      "delete": {
+        "title": "Wartungsplan löschen",
+        "message": "Sind Sie sicher, dass Sie „{{name}}“ löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+      }
+    }
+  },
+  "relatedAssetsTab": {
+    "title": "Zugehörige Vermögenswerte ({{count}})",
+    "description": "Registerkarte zum Durchsuchen und Verwalten verwandter Asset-Beziehungen",
+    "loading": "Zugehörige Assets werden geladen...",
+    "actions": {
+      "linkAsset": "Asset verknüpfen",
+      "unlink": "Verknüpfung aufheben",
+      "linkEmptyState": "Verknüpfen Sie ein Asset"
+    },
+    "success": {
+      "linked": "Asset verknüpft",
+      "unlinked": "Asset nicht verknüpft"
+    },
+    "errors": {
+      "selectAsset": "Wählen Sie ein Asset zum Verknüpfen aus",
+      "linkFailed": "Das Asset konnte nicht verknüpft werden",
+      "unlinkFailed": "Die Verknüpfung des Assets konnte nicht aufgehoben werden"
+    },
+    "table": {
+      "assetName": "Asset-Name",
+      "relationship": "Beziehung",
+      "linkedDate": "Verknüpftes Datum",
+      "actions": "Aktionen"
+    },
+    "empty": {
+      "linked": "Keine zugehörigen Vermögenswerte verknüpft."
+    },
+    "dialog": {
+      "title": "Asset verknüpfen",
+      "loadingAssets": "Assets werden geladen...",
+      "empty": "Keine verfügbaren Assets gefunden.",
+      "search": {
+        "label": "Suchen Sie nach Assets",
+        "placeholder": "Suche nach Name, Tag, Seriennummer..."
+      },
+      "relationshipType": {
+        "label": "Beziehungstyp",
+        "placeholder": "verwandt"
+      },
+      "table": {
+        "asset": "Vermögenswert",
+        "select": "Wählen"
+      },
+      "actions": {
+        "selected": "Ausgewählt",
+        "linking": "Wird verknüpft...",
+        "confirm": "Asset verknüpfen"
+      }
+    },
+    "relationshipTypes": {
+      "related": "Verwandt",
+      "affected": "Betroffen"
+    }
+  },
+  "serviceHistoryTab": {
+    "title": "Serviceverlauf",
+    "description": "Registerkarte „Serviceverlauf“, die die Wartungs- und Ticketaktivitäten für das Asset zusammenfasst",
+    "actions": {
+      "createTicket": "Ticket erstellen"
+    },
+    "table": {
+      "ticketId": "Ticket-ID",
+      "subject": "Thema",
+      "status": "Status",
+      "priority": "Priorität",
+      "dateLinked": "Datum der Verknüpfung"
+    },
+    "empty": "Mit diesem Asset sind keine Tickets verknüpft.",
+    "clientFallback": "Unbekannter Kunde"
+  },
+  "softwareInventoryTab": {
+    "title": "Software-Inventar",
+    "description": "Registerkarte „Softwareinventur“ für installierte Software, Versionen und Erkennungsmetadaten",
+    "searchPlaceholder": "Software suchen...",
+    "category": {
+      "placeholder": "Kategorie",
+      "options": {
+        "all": "Alle",
+        "browser": "Browser",
+        "security": "Sicherheit",
+        "productivity": "Produktivität",
+        "development": "Entwicklung"
+      }
+    },
+    "table": {
+      "name": "Name",
+      "version": "Version",
+      "publisher": "Herausgeber",
+      "installDate": "Installationsdatum"
+    },
+    "empty": "Es wurde keine Software gefunden, die Ihrer Suche entspricht.",
+    "totalItems": "Gesamtzahl der Artikel: {{count}}",
+    "values": {
+      "unknown": "Unbekannt"
+    }
+  }
+}

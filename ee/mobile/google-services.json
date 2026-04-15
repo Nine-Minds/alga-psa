@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "738959377677",
+    "project_id": "alga-psa-mobile",
+    "storage_bucket": "alga-psa-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:738959377677:android:550779e973855e20751c44",
+        "android_client_info": {
+          "package_name": "com.alga.psa.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBaO3Ly8irgFYv1ptvITPYpS2b8k5i5plI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

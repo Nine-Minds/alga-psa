@@ -1,0 +1,533 @@
+{
+  "page": {
+    "title": "11111",
+    "actions": {
+      "configureAvailability": "11111",
+      "appointmentRequests": "11111"
+    }
+  },
+  "sidebar": {
+    "actions": {
+      "compareAll": "11111",
+      "clearAll": "11111",
+      "viewWeek": "11111",
+      "compare": "11111",
+      "stopComparing": "11111"
+    },
+    "labels": {
+      "inactive": "11111"
+    },
+    "aria": {
+      "viewWeek": "11111 {{name}} 11111",
+      "compare": "11111 {{name}} 11111"
+    }
+  },
+  "agentView": {
+    "loading": "11111",
+    "errors": {
+      "loadPermissions": "11111",
+      "forbidden": "11111"
+    }
+  },
+  "calendar": {
+    "legend": {
+      "types": {
+        "ticket": "11111",
+        "projectTask": "11111",
+        "nonBillableCategory": "11111",
+        "adHoc": "11111",
+        "interaction": "11111",
+        "appointmentRequest": "11111"
+      },
+      "showInactiveUsers": "11111"
+    },
+    "loading": {
+      "initial": "11111",
+      "overlay": "11111"
+    },
+    "errors": {
+      "validateDeletion": "11111",
+      "loadPermissions": "11111",
+      "loadCurrentUser": "11111",
+      "unknown": "11111",
+      "deleteFailed": "11111",
+      "deleteUnexpected": "11111",
+      "updateFailed": "11111 {{error}} 11111",
+      "createFailed": "11111 {{error}} 11111",
+      "saveUnexpected": "11111"
+    },
+    "toolbar": {
+      "previousAria": "11111 {{view}} 11111",
+      "previous": "11111",
+      "today": "11111",
+      "nextAria": "11111 {{view}} 11111",
+      "next": "11111",
+      "views": {
+        "month": "11111",
+        "week": "11111",
+        "day": "11111"
+      }
+    },
+    "event": {
+      "fallbacks": {
+        "unknownTechnician": "11111",
+        "unassigned": "11111",
+        "untitled": "11111"
+      },
+      "tooltip": {
+        "scheduledFor": "11111 {{technicians}} 11111",
+        "start": "11111 {{dateTime}} 11111",
+        "end": "11111 {{dateTime}} 11111",
+        "multiDay": "11111"
+      }
+    },
+    "deleteDialog": {
+      "title": "11111",
+      "messageRecurring": "11111",
+      "messageSingle": "11111",
+      "confirm": "11111",
+      "entityFallback": "11111",
+      "options": {
+        "single": "11111",
+        "future": "11111",
+        "all": "11111"
+      }
+    }
+  },
+  "weeklyEvent": {
+    "actions": {
+      "delete": "11111"
+    },
+    "continuation": {
+      "previousWeek": "11111"
+    }
+  },
+  "requests": {
+    "errors": {
+      "load": "11111",
+      "ticketNotFound": "11111",
+      "loadTicket": "11111",
+      "assignTechnicianRequired": "11111",
+      "approve": "11111",
+      "declineReasonRequired": "11111",
+      "decline": "11111"
+    },
+    "feedback": {
+      "approved": "11111",
+      "declined": "11111"
+    },
+    "filters": {
+      "statusLabel": "11111",
+      "statusOptions": {
+        "all": "11111",
+        "pending": "11111",
+        "approved": "11111",
+        "declined": "11111",
+        "cancelled": "11111"
+      }
+    },
+    "fallbacks": {
+      "invalidDateTime": "11111"
+    },
+    "list": {
+      "title": "11111",
+      "badgeTotal": "11111",
+      "loading": "11111",
+      "empty": "11111 {{status}} 11111",
+      "duration": "11111 {{count}} 11111",
+      "ticketFallback": "11111 {{ticket}} 11111",
+      "fallbacks": {
+        "publicRequest": "11111"
+      }
+    },
+    "detail": {
+      "back": "11111",
+      "title": "11111",
+      "section": {
+        "requestInformation": "11111"
+      },
+      "labels": {
+        "reference": "11111",
+        "client": "11111",
+        "contact": "11111",
+        "email": "11111",
+        "phone": "11111",
+        "service": "11111",
+        "requestedTime": "11111",
+        "duration": "11111",
+        "status": "11111",
+        "linkedTicket": "11111",
+        "description": "11111"
+      }
+    },
+    "approval": {
+      "title": "11111",
+      "fields": {
+        "assignedTechnician": "11111",
+        "finalDateTime": "11111",
+        "internalNotes": "11111",
+        "linkedTicket": "11111"
+      },
+      "placeholders": {
+        "assignedTechnician": "11111",
+        "internalNotes": "11111",
+        "linkedTicket": "11111"
+      },
+      "actions": {
+        "approve": "11111",
+        "decline": "11111"
+      }
+    },
+    "decline": {
+      "title": "11111",
+      "fields": {
+        "reason": "11111"
+      },
+      "placeholders": {
+        "reason": "11111"
+      },
+      "actions": {
+        "confirm": "11111",
+        "cancel": "11111"
+      }
+    }
+  },
+  "availabilitySettings": {
+    "dialog": {
+      "title": "11111"
+    },
+    "loading": "11111",
+    "tabs": {
+      "general": "11111",
+      "userHours": "11111",
+      "serviceRules": "11111",
+      "exceptions": "11111"
+    },
+    "days": {
+      "sunday": "11111",
+      "monday": "11111",
+      "tuesday": "11111",
+      "wednesday": "11111",
+      "thursday": "11111",
+      "friday": "11111",
+      "saturday": "11111"
+    },
+    "common": {
+      "yes": "11111",
+      "no": "11111",
+      "columns": {
+        "action": "11111"
+      },
+      "actions": {
+        "edit": "11111"
+      },
+      "defaultApprover": {
+        "placeholder": "11111"
+      },
+      "teamSelect": {
+        "label": "11111",
+        "placeholder": "11111"
+      }
+    },
+    "feedback": {
+      "loadError": "11111"
+    },
+    "general": {
+      "autoApproval": {
+        "title": "11111",
+        "description": "11111",
+        "criteriaTitle": "11111",
+        "criteria": {
+          "requireAvailability": "11111",
+          "requireContract": "11111",
+          "checkConflicts": "11111",
+          "respectBuffers": "11111"
+        }
+      },
+      "defaultApprover": {
+        "label": "11111",
+        "help": "11111"
+      },
+      "advanceBookingDays": {
+        "label": "11111"
+      },
+      "minimumNoticeHours": {
+        "label": "11111"
+      },
+      "actions": {
+        "save": "11111"
+      },
+      "feedback": {
+        "saveSuccess": "11111",
+        "saveError": "11111"
+      }
+    },
+    "userHours": {
+      "roleManager": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "roleAdmin": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "userSelect": {
+        "label": "11111",
+        "placeholderSelectTeamFirst": "11111",
+        "placeholder": "11111"
+      },
+      "appointmentSettings": {
+        "title": "11111",
+        "defaultDuration": {
+          "label": "11111",
+          "help": "11111",
+          "placeholder": "11111"
+        },
+        "bufferAfter": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "defaultApprover": {
+          "label": "11111",
+          "help": "11111"
+        },
+        "allowClientPreference": {
+          "label": "11111",
+          "help": "11111"
+        }
+      },
+      "schedule": {
+        "timezoneNotice": "11111 {{timeZone}} 11111",
+        "columns": {
+          "day": "11111",
+          "available": "11111",
+          "startTime": "11111",
+          "endTime": "11111"
+        }
+      },
+      "configuredUsers": {
+        "title": "11111",
+        "description": "11111",
+        "empty": "11111",
+        "columns": {
+          "userName": "11111",
+          "status": "11111"
+        },
+        "status": {
+          "configured": "11111"
+        }
+      },
+      "actions": {
+        "save": "11111"
+      },
+      "feedback": {
+        "selectUserError": "11111",
+        "saveSuccess": "11111",
+        "saveError": "11111"
+      }
+    },
+    "serviceRules": {
+      "serviceSelect": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "editor": {
+        "title": "11111 {{serviceName}} 11111",
+        "allowWithoutContract": {
+          "label": "11111"
+        },
+        "maxAppointmentsPerDay": {
+          "label": "11111"
+        },
+        "defaultDuration": {
+          "label": "11111",
+          "help": "11111",
+          "placeholder": "11111"
+        }
+      },
+      "configuredServices": {
+        "title": "11111",
+        "description": "11111",
+        "empty": "11111",
+        "columns": {
+          "serviceName": "11111",
+          "duration": "11111",
+          "withoutContract": "11111",
+          "maxPerDay": "11111"
+        }
+      },
+      "common": {
+        "noLimit": "11111"
+      },
+      "actions": {
+        "save": "11111"
+      },
+      "feedback": {
+        "selectServiceError": "11111",
+        "saveSuccess": "11111",
+        "saveError": "11111"
+      }
+    },
+    "exceptions": {
+      "form": {
+        "title": "11111",
+        "date": {
+          "label": "11111"
+        },
+        "user": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "isAvailable": {
+          "label": "11111"
+        },
+        "reason": {
+          "label": "11111",
+          "placeholder": "11111"
+        }
+      },
+      "common": {
+        "companyWide": "11111"
+      },
+      "actions": {
+        "add": "11111"
+      },
+      "list": {
+        "title": "11111",
+        "empty": "11111",
+        "status": {
+          "available": "11111",
+          "unavailable": "11111"
+        }
+      },
+      "feedback": {
+        "selectDateError": "11111",
+        "addSuccess": "11111",
+        "addError": "11111",
+        "deleteSuccess": "11111",
+        "deleteError": "11111"
+      }
+    }
+  },
+  "entryPopup": {
+    "title": {
+      "appointmentRequest": "11111",
+      "view": "11111",
+      "edit": "11111",
+      "new": "11111"
+    },
+    "alerts": {
+      "privateEntryOnlyCreator": "11111"
+    },
+    "validation": {
+      "summaryTitle": "11111",
+      "titleRequiredForAdHoc": "11111",
+      "startRequired": "11111",
+      "endRequired": "11111",
+      "assigneeRequired": "11111",
+      "startInvalid": "11111",
+      "endInvalid": "11111",
+      "endAfterStart": "11111",
+      "recurrenceIntervalPositive": "11111",
+      "recurrenceCountPositive": "11111",
+      "recurrenceEndInvalid": "11111",
+      "recurrenceEndAfterStart": "11111"
+    },
+    "fields": {
+      "title": "11111",
+      "assignedUsers": "11111",
+      "privateEntry": "11111",
+      "start": "11111",
+      "end": "11111",
+      "notes": "11111"
+    },
+    "actions": {
+      "cancel": "11111",
+      "close": "11111",
+      "save": "11111",
+      "delete": "11111"
+    },
+    "workItem": {
+      "adHocFallback": "11111",
+      "openDetails": "11111"
+    },
+    "appointmentRequest": {
+      "approved": {
+        "title": "11111",
+        "descriptionWithDate": "11111 {{date}} 11111",
+        "description": "11111"
+      },
+      "pending": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "declined": {
+        "title": "11111",
+        "descriptionWithReason": "11111 {{reason}} 11111",
+        "description": "11111"
+      },
+      "cancelled": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "requestedDateTimeLabel": "11111",
+      "assignTechnicianLabel": "11111",
+      "assignTechnicianPlaceholder": "11111",
+      "scheduledDateTimeLabel": "11111",
+      "noNotes": "11111",
+      "declineReasonLabel": "11111",
+      "declineReasonPlaceholder": "11111",
+      "actions": {
+        "approve": "11111",
+        "decline": "11111",
+        "confirmDecline": "11111"
+      },
+      "toasts": {
+        "assignTechnicianRequired": "11111",
+        "approved": "11111",
+        "approveFailed": "11111",
+        "declineReasonRequired": "11111",
+        "declined": "11111",
+        "declineFailed": "11111"
+      }
+    },
+    "recurrence": {
+      "label": "11111",
+      "intervalLabel": "11111",
+      "endLabel": "11111",
+      "endDateLabel": "11111",
+      "occurrencesLabel": "11111",
+      "workdaysOnly": "11111",
+      "options": {
+        "none": "11111",
+        "daily": "11111",
+        "weekly": "11111",
+        "monthly": "11111",
+        "yearly": "11111"
+      },
+      "endOptions": {
+        "never": "11111",
+        "date": "11111",
+        "count": "11111"
+      },
+      "applyDialog": {
+        "title": "11111",
+        "message": "11111"
+      }
+    },
+    "delete": {
+      "validationFailed": "11111",
+      "entityFallback": "11111",
+      "scopeDialog": {
+        "title": "11111",
+        "message": "11111",
+        "confirm": "11111"
+      }
+    },
+    "scopeOptions": {
+      "single": "11111",
+      "future": "11111",
+      "all": "11111"
+    }
+  }
+}

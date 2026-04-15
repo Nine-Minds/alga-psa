@@ -1,0 +1,164 @@
+[
+  {
+    "id": "F001",
+    "description": "Unified PDFGenerationService class handles invoices, quotes, and documents",
+    "implemented": true,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F002",
+    "description": "Single generatePDFBuffer() using browser pool (no duplication)",
+    "implemented": true,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F003",
+    "description": "Single generateAndStore() with discriminated options for invoice/quote/document",
+    "implemented": true,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F004",
+    "description": "generatePDF() dispatches to getInvoiceHtml, getQuoteHtml, or getDocumentHtml",
+    "implemented": true,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F005",
+    "description": "Invoice HTML generation: template resolution (client → tenant default → first), adapter, evaluate, render",
+    "implemented": true,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F006",
+    "description": "Quote HTML generation: template resolution (explicit → standard code → DB resolve), adapter, evaluate, render",
+    "implemented": true,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F007",
+    "description": "Document HTML generation: block content or markdown/plain text with minimal CSS wrapping",
+    "implemented": true,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F008",
+    "description": "renderQuotePreview() returns HTML+CSS for live preview panel",
+    "implemented": true,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F009",
+    "description": "Workflow event DOCUMENT_GENERATED published in generateAndStore for all source types",
+    "implemented": true,
+    "prdRefs": ["Architecture", "Risks"]
+  },
+  {
+    "id": "F010",
+    "description": "Tenant client enrichment (logo, address) for invoice rendering",
+    "implemented": true,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F011",
+    "description": "Image inlining (base64 data URIs) for Puppeteer rendering via knex option",
+    "implemented": true,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F012",
+    "description": "Base href tag in server-render for relative URL resolution in Puppeteer",
+    "implemented": true,
+    "prdRefs": ["Architecture"]
+  },
+  {
+    "id": "F013",
+    "description": "Old server/src/services/pdf-generation.service.ts deleted",
+    "implemented": true,
+    "prdRefs": ["Acceptance Criteria"]
+  },
+  {
+    "id": "F014",
+    "description": "Old quotePdfGenerationService.ts deleted",
+    "implemented": true,
+    "prdRefs": ["Acceptance Criteria"]
+  },
+  {
+    "id": "F015",
+    "description": "All callers switched from createQuotePDFGenerationService to createPDFGenerationService (no aliases)",
+    "implemented": true,
+    "prdRefs": ["Caller Migration"]
+  },
+  {
+    "id": "F016",
+    "description": "services/index.ts exports only consolidated service (no deprecated aliases)",
+    "implemented": true,
+    "prdRefs": ["Caller Migration"]
+  },
+  {
+    "id": "F017",
+    "description": "InvoiceService.ts caller compiles with consolidated import",
+    "implemented": true,
+    "prdRefs": ["Caller Migration"]
+  },
+  {
+    "id": "F018",
+    "description": "invoiceEmailHandler.ts caller compiles with consolidated import",
+    "implemented": true,
+    "prdRefs": ["Caller Migration"]
+  },
+  {
+    "id": "F019",
+    "description": "invoiceZipHandler.ts caller compiles with consolidated import",
+    "implemented": true,
+    "prdRefs": ["Caller Migration"]
+  },
+  {
+    "id": "F020",
+    "description": "quoteActions.ts caller compiles with consolidated import",
+    "implemented": true,
+    "prdRefs": ["Caller Migration"]
+  },
+  {
+    "id": "F021",
+    "description": "invoiceJobActions.ts caller compiles with consolidated import",
+    "implemented": true,
+    "prdRefs": ["Caller Migration"]
+  },
+  {
+    "id": "F022",
+    "description": "client-portal client-billing.ts caller compiles with consolidated import",
+    "implemented": true,
+    "prdRefs": ["Caller Migration"]
+  },
+  {
+    "id": "F023",
+    "description": "documents download route compiles with consolidated import",
+    "implemented": false,
+    "prdRefs": ["Caller Migration"]
+  },
+  {
+    "id": "F024",
+    "description": "invoicePdfGenerationAstWiring.test.ts updated for consolidated service",
+    "implemented": true,
+    "prdRefs": ["Test Migration"]
+  },
+  {
+    "id": "F025",
+    "description": "pdf-generation.service.printSettings.test.ts mocks re-pointed to @alga-psa/billing",
+    "implemented": true,
+    "prdRefs": ["Test Migration"]
+  },
+  {
+    "id": "F026",
+    "description": "quotePdfGenerationService.test.ts updated to import from consolidated service",
+    "implemented": false,
+    "prdRefs": ["Test Migration"]
+  },
+  {
+    "id": "F027",
+    "description": "Build passes with no TypeScript errors from PDF generation changes",
+    "implemented": false,
+    "prdRefs": ["Acceptance Criteria"]
+  }
+]

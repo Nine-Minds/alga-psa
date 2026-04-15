@@ -41,6 +41,8 @@ export class ServiceCatalogService extends BaseService<IService> {
     // Default to 'service' to match legacy behavior
     const itemKind = filters.item_kind ?? 'service';
 
+    const supportsServiceBillingMetadata = itemKind === 'service';
+
     const applyFilters = (query: any) => {
       if (itemKind && itemKind !== 'any') {
         query.where('sc.item_kind', itemKind);
@@ -48,7 +50,7 @@ export class ServiceCatalogService extends BaseService<IService> {
       if (filters.is_active !== undefined) {
         query.where('sc.is_active', filters.is_active);
       }
-      if (filters.billing_method) {
+      if (filters.billing_method && supportsServiceBillingMetadata) {
         query.where('sc.billing_method', filters.billing_method);
       }
       if (filters.custom_service_type_id) {
@@ -78,6 +80,10 @@ export class ServiceCatalogService extends BaseService<IService> {
       billing_method: 'sc.billing_method',
       default_rate: 'sc.default_rate'
     };
+    const effectiveSortField: SortField =
+      sortField === 'billing_method' && !supportsServiceBillingMetadata
+        ? 'service_name'
+        : sortField;
 
     const baseQuery = knex('service_catalog as sc').where({ 'sc.tenant': tenant });
 
@@ -120,9 +126,9 @@ export class ServiceCatalogService extends BaseService<IService> {
           'st.name as service_type_name'
         )
     )
-      .orderBy(sortColumnMap[sortField], sortOrder)
+      .orderBy(sortColumnMap[effectiveSortField], sortOrder)
       .modify((qb: any) => {
-        if (sortField !== 'service_name') {
+        if (effectiveSortField !== 'service_name') {
           qb.orderBy('sc.service_name', 'asc');
         }
         qb.orderBy('sc.service_id', 'asc');
@@ -199,15 +205,20 @@ export class ServiceCatalogService extends BaseService<IService> {
     }
 
     const rawData = data as any;
+    const {
+      currency_code: _currency_code,
+      prices: _prices,
+      ...serviceInput
+    } = rawData;
+
     const serviceData = {
-      category_id: data.category_id ?? null,
-      currency_code: rawData.currency_code ?? 'USD',
-      ...data,
+      category_id: serviceInput.category_id ?? null,
+      ...serviceInput,
       tenant,
-      default_rate: typeof data.default_rate === 'string'
-        ? parseFloat(data.default_rate) || 0
-        : data.default_rate,
-      tax_rate_id: data.tax_rate_id || null,
+      default_rate: typeof serviceInput.default_rate === 'string'
+        ? parseFloat(serviceInput.default_rate) || 0
+        : serviceInput.default_rate,
+      tax_rate_id: serviceInput.tax_rate_id || null,
     };
 
     const [created] = await knex('service_catalog')
@@ -222,7 +233,12 @@ export class ServiceCatalogService extends BaseService<IService> {
     const tenant = context.tenant;
 
     // Strip fields that shouldn't be updated
-    const { service_type_name: _, prices: _prices, ...updateData } = data as any;
+    const {
+      service_type_name: _,
+      prices: _prices,
+      currency_code: _currency_code,
+      ...updateData
+    } = data as any;
 
     const [updated] = await knex('service_catalog')
       .where({ service_id: id, tenant })

@@ -1,5 +1,7 @@
 'use server';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal billing actions intentionally compose billing feature APIs for end-user self-service flows. */
+
 import { getConnection } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
@@ -8,7 +10,10 @@ import {
   IClientContractLine,
   IBillingResult,
   IBucketUsage,
+  IQuote,
+  IQuoteItem,
   IService,
+  IQuoteWithClient,
   IUserWithRoles
 } from '@alga-psa/types';
 import {
@@ -20,10 +25,14 @@ import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates'
 import { finalizeInvoice, unfinalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { InvoiceViewModel, IInvoiceTemplate } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
+import Quote from '@alga-psa/billing/models/quote';
+import QuoteActivity from '@alga-psa/billing/models/quoteActivity';
+import { recalculateQuoteFinancials } from '@alga-psa/billing/services';
 import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobService } from '@alga-psa/jobs';
 import { JobStatus } from '@alga-psa/jobs';
+import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 
 /**
  * Get clientId from user's contact - avoids nested withAuth calls
@@ -71,6 +80,66 @@ async function hasBillingPermission(
   return !!permissions;
 }
 
+async function getAuthorizedClientQuote(
+  trx: Knex.Transaction,
+  user: IUserWithRoles,
+  tenant: string,
+  quoteId: string,
+  allowedStatuses?: string[]
+): Promise<IQuote> {
+  const clientId = await getClientIdFromUser(trx, user, tenant);
+  if (!clientId) {
+    throw new Error('Unauthorized');
+  }
+
+  const hasAccess = await hasBillingPermission(trx, user, tenant);
+  if (!hasAccess) {
+    throw new Error('Unauthorized to access quote data');
+  }
+
+  const quote = await Quote.getById(trx, tenant, quoteId);
+  if (!quote || quote.client_id !== clientId || quote.is_template || quote.status === 'draft') {
+    throw new Error('Quote not found or access denied');
+  }
+
+  if (allowedStatuses?.length && (!quote.status || !allowedStatuses.includes(quote.status))) {
+    throw new Error('Quote is not in a valid state for this action');
+  }
+
+  return quote;
+}
+
+async function persistOptionalQuoteSelections(
+  trx: Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  quoteItems: IQuoteItem[],
+  selectedOptionalQuoteItemIds: string[]
+): Promise<{ selectedIds: string[]; deselectedIds: string[] }> {
+  const optionalItems = quoteItems.filter((item) => item.is_optional);
+  const optionalItemIds = new Set(optionalItems.map((item) => item.quote_item_id));
+  const selectedIds = selectedOptionalQuoteItemIds.filter((itemId) => optionalItemIds.has(itemId));
+  const selectedSet = new Set(selectedIds);
+
+  for (const item of optionalItems) {
+    await trx('quote_items')
+      .where({ tenant, quote_item_id: item.quote_item_id })
+      .update({
+        is_selected: selectedSet.has(item.quote_item_id),
+        updated_at: trx.fn.now(),
+      });
+  }
+
+  await recalculateQuoteFinancials(trx, tenant, quoteId);
+
+  return {
+    selectedIds,
+    deselectedIds: optionalItems
+      .map((item) => item.quote_item_id)
+      .filter((itemId) => !selectedSet.has(itemId)),
+  };
+}
+
 export const getClientContractLine = withAuth(async (user, { tenant }): Promise<IClientContractLine | null> => {
   const knex = await getConnection(tenant);
 
@@ -104,6 +173,8 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
           'cl.contract_line_id',
           'cl.contract_line_name',
           'cl.billing_frequency',
+          'cl.billing_timing',
+          'cl.cadence_owner',
           'cl.service_category',
           'cl.custom_rate',
           'cl.contract_id',
@@ -116,7 +187,7 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
         .first();
     });
 
-    return plan || null;
+    return plan ? normalizeLiveRecurringStorage(plan) : null;
   } catch (error) {
     console.error('Error fetching client contract line:', error);
     throw new Error('Failed to fetch contract line');
@@ -153,6 +224,210 @@ export const getClientInvoices = withAuth(async (user, { tenant }): Promise<Invo
   } catch (error) {
     console.error('Error fetching client invoices:', error);
     throw new Error('Failed to fetch invoices');
+  }
+});
+
+export const getClientQuotes = withAuth(async (user, { tenant }): Promise<IQuoteWithClient[]> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const id = await getClientIdFromUser(trx, user, tenant);
+      if (!id) {
+        throw new Error('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        throw new Error('Unauthorized to access quote data');
+      }
+
+      return id;
+    });
+
+    const quotes = await Quote.listByClient(knex, tenant, clientId);
+    return quotes.filter((quote) => quote.status && quote.status !== 'draft');
+  } catch (error) {
+    console.error('Error fetching client quotes:', error);
+    throw new Error('Failed to fetch quotes');
+  }
+});
+
+export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: string): Promise<IQuote> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId);
+
+      if (!quote.viewed_at) {
+        const viewedAt = new Date().toISOString();
+
+        const markedViewed = await trx('quotes')
+          .where({ tenant, quote_id: quoteId })
+          .whereNull('viewed_at')
+          .update({
+            viewed_at: viewedAt,
+            updated_at: trx.fn.now(),
+            updated_by: user.user_id,
+          });
+
+        if (markedViewed) {
+          await QuoteActivity.create(trx, tenant, {
+            quote_id: quoteId,
+            activity_type: 'viewed',
+            description: 'Quote viewed by client in portal',
+            performed_by: user.user_id,
+            metadata: {
+              viewed_at: viewedAt,
+            },
+          });
+        }
+      }
+
+      const updatedQuote = await Quote.getById(trx, tenant, quoteId);
+      if (!updatedQuote) {
+        throw new Error('Quote not found');
+      }
+
+      return updatedQuote;
+    });
+  } catch (error) {
+    console.error('Error fetching client quote details:', error);
+    throw new Error('Failed to fetch quote details');
+  }
+});
+
+export const updateClientQuoteSelections = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+  selectedOptionalQuoteItemIds: string[]
+): Promise<IQuote> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
+
+      await persistOptionalQuoteSelections(
+        trx,
+        tenant,
+        quoteId,
+        quote.quote_items || [],
+        selectedOptionalQuoteItemIds
+      );
+
+      const updatedQuote = await Quote.getById(trx, tenant, quoteId);
+      if (!updatedQuote) {
+        throw new Error('Quote not found after updating selections');
+      }
+
+      return updatedQuote;
+    });
+  } catch (error) {
+    console.error('Error updating client quote selections:', error);
+    throw new Error('Failed to update quote selections');
+  }
+});
+
+export const acceptClientQuote = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+  selectedOptionalQuoteItemIds: string[] = []
+): Promise<IQuote> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
+
+      const { selectedIds, deselectedIds } = await persistOptionalQuoteSelections(
+        trx,
+        tenant,
+        quoteId,
+        quote.quote_items || [],
+        selectedOptionalQuoteItemIds
+      );
+
+      const acceptedAt = new Date().toISOString();
+      await Quote.update(trx, tenant, quoteId, {
+        status: 'accepted',
+        accepted_at: acceptedAt,
+        accepted_by: user.user_id,
+        updated_by: user.user_id,
+      });
+
+      await QuoteActivity.create(trx, tenant, {
+        quote_id: quoteId,
+        activity_type: 'accepted',
+        description: 'Quote accepted by client for MSP review',
+        performed_by: user.user_id,
+        metadata: {
+          selected_optional_quote_item_ids: selectedIds,
+          deselected_optional_quote_item_ids: deselectedIds,
+        },
+      });
+
+      const acceptedQuote = await Quote.getById(trx, tenant, quoteId);
+      if (!acceptedQuote) {
+        throw new Error('Quote not found after acceptance');
+      }
+
+      return acceptedQuote;
+    });
+  } catch (error) {
+    console.error('Error accepting client quote:', error);
+    throw new Error('Failed to accept quote');
+  }
+});
+
+export const rejectClientQuote = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+  rejectionReason: string
+): Promise<IQuote> => {
+  const knex = await getConnection(tenant);
+  const trimmedReason = rejectionReason.trim();
+
+  if (!trimmedReason) {
+    throw new Error('A rejection comment is required');
+  }
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
+
+      const rejectedAt = new Date().toISOString();
+      await Quote.update(trx, tenant, quoteId, {
+        status: 'rejected',
+        rejected_at: rejectedAt,
+        rejection_reason: trimmedReason,
+        updated_by: user.user_id,
+      });
+
+      await QuoteActivity.create(trx, tenant, {
+        quote_id: quoteId,
+        activity_type: 'rejected',
+        description: 'Quote rejected by client',
+        performed_by: user.user_id,
+        metadata: {
+          rejection_reason: trimmedReason,
+        },
+      });
+
+      const rejectedQuote = await Quote.getById(trx, tenant, quoteId);
+      if (!rejectedQuote) {
+        throw new Error('Quote not found after rejection');
+      }
+
+      return rejectedQuote;
+    });
+  } catch (error) {
+    console.error('Error rejecting client quote:', error);
+    throw new Error('Failed to reject quote');
   }
 });
 
@@ -491,6 +766,8 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
         throw new Error('Unauthorized');
       }
 
+      const currentDate = new Date().toISOString().slice(0, 10);
+
       // Get current bucket usage if any
       const bucketUsage = await trx('bucket_usage')
         .select('*')
@@ -498,7 +775,9 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
           client_id: clientId,
           tenant
         })
-        .whereRaw('? BETWEEN period_start AND period_end', [new Date()])
+        .andWhere('period_start', '<=', currentDate)
+        .andWhere('period_end', '>', currentDate)
+        .orderBy('period_start', 'desc')
         .first();
 
       // Get all services associated with the client's plan
@@ -508,16 +787,21 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
           this.on('service_catalog.service_id', '=', 'contract_line_services.service_id')
             .andOn('service_catalog.tenant', '=', 'contract_line_services.tenant')
         })
-        .join('client_contract_lines', function() {
-          this.on('contract_line_services.contract_line_id', '=', 'client_contract_lines.contract_line_id')
-            .andOn('contract_line_services.tenant', '=', 'client_contract_lines.tenant')
+        .join('contract_lines as cl', function() {
+          this.on('contract_line_services.contract_line_id', '=', 'cl.contract_line_id')
+            .andOn('contract_line_services.tenant', '=', 'cl.tenant')
+        })
+        .join('client_contracts as cc', function() {
+          this.on('cl.contract_id', '=', 'cc.contract_id')
+            .andOn('cl.tenant', '=', 'cc.tenant')
         })
         .where({
-          'client_contract_lines.client_id': clientId,
-          'client_contract_lines.is_active': true,
+          'cc.client_id': clientId,
+          'cc.is_active': true,
           'service_catalog.tenant': tenant,
           'contract_line_services.tenant': tenant,
-          'client_contract_lines.tenant': tenant
+          'cl.tenant': tenant,
+          'cc.tenant': tenant
         });
 
       return {
@@ -530,5 +814,58 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
   } catch (error) {
     console.error('Error fetching current usage:', error);
     throw new Error('Failed to fetch current usage');
+  }
+});
+
+/**
+ * Download quote PDF - looks up the stored PDF file_id for the quote.
+ * If no PDF exists yet (quote was created before PDF storage was added),
+ * generates and stores one on the fly.
+ */
+export const downloadClientQuotePdf = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string
+): Promise<DownloadPdfResult> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    const quote = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return getAuthorizedClientQuote(trx, user, tenant, quoteId);
+    });
+
+    // Look for an existing stored PDF document
+    const doc = await knex('document_associations as da')
+      .join('documents as d', function () {
+        this.on('da.document_id', 'd.document_id')
+          .andOn('da.tenant', 'd.tenant');
+      })
+      .where({
+        'da.entity_id': quoteId,
+        'da.entity_type': 'quote',
+        'da.tenant': tenant,
+      })
+      .whereNotNull('d.file_id')
+      .orderBy('da.created_at', 'desc')
+      .select('d.file_id')
+      .first<{ file_id: string } | undefined>();
+
+    if (doc?.file_id) {
+      return { success: true, fileId: doc.file_id };
+    }
+
+    // No stored PDF yet — generate one on the fly
+    const { createPDFGenerationService } = await import('@alga-psa/billing/services');
+    const pdfService = createPDFGenerationService(tenant);
+    const fileRecord = await pdfService.generateAndStore({
+      quoteId: quote.quote_id,
+      quoteNumber: quote.quote_number ?? undefined,
+      userId: user.user_id,
+    });
+
+    return { success: true, fileId: fileRecord.file_id };
+  } catch (error) {
+    console.error('Error downloading quote PDF:', error);
+    return { success: false, error: 'Failed to download quote PDF' };
   }
 });

@@ -37,6 +37,7 @@ export * from './invoiceTemplates';
 export * from './manualInvoiceActions';
 export * from './materialActions';
 export * from './paymentActions';
+export * from './quoteActions';
 export * from './renewalsQueueActions';
 export * from './serviceActions';
 export * from './serviceRateTierActions';
@@ -57,7 +58,6 @@ export {
   checkContractHasInvoices,
   getContractLinesForContract,
   getContractSummary,
-  checkClientHasActiveContract,
   getContractAssignments,
   getContractOverview,
   // These are duplicated with contractLineMappingActions - export from contractActions

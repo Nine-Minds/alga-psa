@@ -1,0 +1,18 @@
+namespace: msp
+
+service:
+  name: temporal-frontend
+  port: 7233
+
+db:
+  host: db.msp.svc.cluster.local
+  port: 5432
+  adminUser: postgres
+  adminPasswordSecret:
+    name: db-credentials
+    key: DB_PASSWORD_SUPERUSER
+
+temporal:
+  db: postgres12
+  namespace: default
+  postgresSeeds: db.msp.svc.cluster.local

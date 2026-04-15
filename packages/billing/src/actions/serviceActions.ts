@@ -10,8 +10,8 @@ import { validateArray } from '@alga-psa/validation';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { permissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 
 
@@ -34,7 +34,7 @@ export interface ServiceListOptions {
    */
   item_kind?: 'service' | 'product' | 'any';
   is_active?: boolean;
-  billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit';
+  billing_method?: 'fixed' | 'hourly' | 'usage';
   category_id?: string | null;
   custom_service_type_id?: string;
   sort?: 'service_name' | 'billing_method' | 'default_rate';
@@ -47,7 +47,9 @@ export interface CatalogPickerSearchOptions {
   limit?: number;
   is_active?: boolean;
   item_kinds?: Array<'service' | 'product'>;
-  billing_methods?: Array<'fixed' | 'hourly' | 'usage' | 'per_unit'>;
+  billing_methods?: Array<'fixed' | 'hourly' | 'usage'>;
+  /** When provided, includes the currency-specific rate from service_prices (if available). */
+  currency_code?: string;
 }
 
 export type CatalogPickerItem = Pick<
@@ -55,6 +57,14 @@ export type CatalogPickerItem = Pick<
   'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'item_kind' | 'sku'
 > & {
   default_rate: number;
+  /** Rate from service_prices for the requested currency (null when no currency-specific price exists). */
+  currency_rate?: number | null;
+  /** True when the service has at least one row in service_prices (i.e. uses multi-currency pricing). */
+  has_currency_prices?: boolean;
+  /** Product cost in minor currency units (from service_catalog.cost). */
+  cost?: number | null;
+  /** ISO 4217 currency code for the cost field. */
+  cost_currency?: string | null;
 };
 
 export const searchServiceCatalogForPicker = withAuth(async (
@@ -100,7 +110,7 @@ export const searchServiceCatalogForPicker = withAuth(async (
 
     const totalCount = parseInt(countResult?.count as string) || 0;
 
-    const rows = await base
+    const query = base
       .clone()
       .select(
         'sc.service_id',
@@ -109,8 +119,25 @@ export const searchServiceCatalogForPicker = withAuth(async (
         'sc.unit_of_measure',
         'sc.item_kind',
         'sc.sku',
-        trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate')
-      )
+        trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+        trx.raw('CAST(sc.cost AS FLOAT) as cost'),
+        'sc.cost_currency'
+      );
+
+    if (options.currency_code) {
+      query
+        .leftJoin('service_prices as sp', function () {
+          this.on('sp.service_id', 'sc.service_id')
+            .andOn('sp.tenant', 'sc.tenant')
+            .andOn('sp.currency_code', trx.raw('?', [options.currency_code]));
+        })
+        .select(trx.raw('CAST(sp.rate AS FLOAT) as currency_rate'))
+        .select(trx.raw(
+          '(EXISTS (SELECT 1 FROM service_prices sp2 WHERE sp2.service_id = sc.service_id AND sp2.tenant = sc.tenant)) as has_currency_prices'
+        ));
+    }
+
+    const rows = await query
       .orderBy('sc.service_name', 'asc')
       .limit(limit)
       .offset(offset);
@@ -321,6 +348,21 @@ export const getServiceById = withAuth(async (user, { tenant }, serviceId: strin
 // Define a type for the input data
 export type CreateServiceInput = Omit<IService, 'service_id' | 'tenant'>;
 
+function normalizeCreateServiceError(serviceData: CreateServiceInput, error: unknown): ActionMessageError | null {
+    const typedError = error as { code?: string; constraint?: string };
+
+    if (
+        typedError?.code === '23505' &&
+        serviceData.item_kind === 'product' &&
+        serviceData.sku?.trim() &&
+        typedError.constraint?.includes('service_catalog_product_sku_unique')
+    ) {
+        return actionError(`A product with SKU "${serviceData.sku.trim()}" already exists. Use a different SKU or edit the existing product.`);
+    }
+
+    return null;
+}
+
 
 function safeRevalidate(path: string): void {
     try {
@@ -334,7 +376,7 @@ export const createService = withAuth(async (
     user,
     { tenant },
     serviceData: CreateServiceInput
-): Promise<IService | ActionPermissionError> => {
+): Promise<IService | ActionPermissionError | ActionMessageError> => {
     const canCreate = await hasPermission(user, 'service', 'create');
     if (!canCreate) {
       return permissionError('Permission denied: Cannot create services/products');
@@ -388,6 +430,10 @@ export const createService = withAuth(async (
         });
     } catch (error) {
         console.error('[serviceActions] Error creating service:', error);
+        const normalizedError = normalizeCreateServiceError(serviceData, error);
+        if (normalizedError) {
+            return normalizedError;
+        }
         throw error; // Re-throw the error
     }
 });
@@ -660,7 +706,7 @@ export const getServicesByCategory = withAuth(async (user, { tenant }, categoryI
 });
 
 // New action to get combined service types for UI selection
-export const getServiceTypesForSelection = withAuth(async (user, { tenant }): Promise<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }[]> => {
+export const getServiceTypesForSelection = withAuth(async (user, { tenant }): Promise<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]> => {
    try {
        const { knex: db } = await createTenantKnex();
        const serviceTypes = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -794,7 +840,7 @@ export const createServiceTypeInline = withAuth(async (
   user,
   { tenant },
   name: string,
-  billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage' = 'usage'
+  billing_method: 'fixed' | 'hourly' | 'usage' = 'usage'
 ): Promise<IServiceType> => {
   try {
     const { knex: db } = await createTenantKnex();

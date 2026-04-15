@@ -1,13 +1,21 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { FileText, Settings } from 'lucide-react';
-import type { IInvoiceTemplate, TaxSource } from '@alga-psa/types';
+import type { IInvoiceTemplate, IQuote, TaxSource, InvoiceViewModel as DbInvoiceViewModel } from '@alga-psa/types';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
-import { getInvoiceForRendering, getInvoicePurchaseOrderSummary, type InvoicePurchaseOrderSummary } from '@alga-psa/billing/actions/invoiceQueries';
+import type { DraftInvoicePropertiesUpdateResult } from '@alga-psa/billing/actions/invoiceModification';
+import {
+  getInvoiceForRendering,
+  getInvoicePurchaseOrderSummary,
+  getResolvedInvoiceTemplateId,
+  type InvoicePurchaseOrderSummary
+} from '@alga-psa/billing/actions/invoiceQueries';
+import { getQuoteByConvertedInvoiceId } from '@alga-psa/billing/actions/quoteActions';
 import { mapDbInvoiceToWasmViewModel } from '../../../lib/adapters/invoiceAdapters';
 import { PurchaseOrderSummaryBanner } from './PurchaseOrderSummaryBanner';
 import { TemplateRenderer } from '../TemplateRenderer';
@@ -16,7 +24,8 @@ import CreditExpirationInfo from '../CreditExpirationInfo';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
-import { resolveInvoiceTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
+import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
+import DraftInvoiceDetailsCard, { type DraftInvoiceDetailsSummary } from './DraftInvoiceDetailsCard';
 
 interface InvoicePreviewPanelProps {
   invoiceId: string | null;
@@ -29,8 +38,10 @@ interface InvoicePreviewPanelProps {
   onEmail?: () => Promise<void>;
   onEdit?: () => void;
   onUnfinalize?: () => Promise<void>;
+  onDraftInvoiceUpdated?: (updated: DraftInvoicePropertiesUpdateResult) => Promise<void> | void;
   isFinalized: boolean;
   creditApplied?: number;
+  draftInvoiceSummary?: DbInvoiceViewModel | null;
 }
 
 const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
@@ -44,21 +55,40 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   onEmail,
   onEdit,
   onUnfinalize,
+  onDraftInvoiceUpdated,
   isFinalized,
-  creditApplied = 0
+  creditApplied = 0,
+  draftInvoiceSummary = null
 }) => {
+  const router = useRouter();
   const [detailedInvoiceData, setDetailedInvoiceData] = useState<WasmInvoiceViewModel | null>(null);
   const [poSummary, setPoSummary] = useState<InvoicePurchaseOrderSummary | null>(null);
+  const [resolvedTemplateId, setResolvedTemplateId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [taxSource, setTaxSource] = useState<TaxSource>('internal');
+  const [sourceQuote, setSourceQuote] = useState<IQuote | null>(null);
+  const [previewRefreshCounter, setPreviewRefreshCounter] = useState(0);
+  const [draftInvoiceEditorSummary, setDraftInvoiceEditorSummary] = useState<DraftInvoiceDetailsSummary | null>(draftInvoiceSummary);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const selectedTemplate = templates.find(t => t.template_id === selectedTemplateId) || null;
+  // Match invoice/PDF rendering: honor an explicit URL template selection first,
+  // then fall back to the invoice's resolved client/default template.
+  const effectiveTemplateId =
+    selectedTemplateId && templates.some((t) => t.template_id === selectedTemplateId)
+      ? selectedTemplateId
+      : resolvedTemplateId && templates.some((t) => t.template_id === resolvedTemplateId)
+        ? resolvedTemplateId
+      : templates[0]?.template_id ?? null;
+
+  const selectedTemplate = effectiveTemplateId
+    ? templates.find((t) => t.template_id === effectiveTemplateId) ?? null
+    : null;
+
   const resolvedPreviewPrintSettings = useMemo(
-    () => resolveInvoiceTemplatePrintSettingsFromAst(selectedTemplate?.templateAst ?? null),
+    () => resolveTemplatePrintSettingsFromAst(selectedTemplate?.templateAst ?? null),
     [selectedTemplate]
   );
 
@@ -78,10 +108,22 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   }, []);
 
   useEffect(() => {
+    if (!invoiceId) {
+      setDraftInvoiceEditorSummary(null);
+      return;
+    }
+
+    if (draftInvoiceSummary?.invoice_id === invoiceId) {
+      setDraftInvoiceEditorSummary(draftInvoiceSummary);
+    }
+  }, [draftInvoiceSummary, invoiceId]);
+
+  useEffect(() => {
     const loadInvoiceData = async () => {
       if (!invoiceId) {
         setDetailedInvoiceData(null);
         setTaxSource('internal');
+        setResolvedTemplateId(null);
         return;
       }
 
@@ -91,7 +133,11 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
       setPoSummary(null);
 
       try {
-        const dbInvoiceData = await getInvoiceForRendering(invoiceId);
+        const [dbInvoiceData, summary, templateId] = await Promise.all([
+          getInvoiceForRendering(invoiceId),
+          getInvoicePurchaseOrderSummary(invoiceId),
+          getResolvedInvoiceTemplateId(invoiceId),
+        ]);
 
         if (!dbInvoiceData) {
           throw new Error(`Invoice data for ID ${invoiceId} not found.`);
@@ -106,8 +152,8 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           throw new Error(`Failed to map invoice data for ID ${invoiceId} to view model.`);
         }
 
-        const summary = await getInvoicePurchaseOrderSummary(invoiceId);
         setPoSummary(summary);
+        setResolvedTemplateId(templateId);
 
         setDetailedInvoiceData(viewModel);
       } catch (err) {
@@ -116,12 +162,51 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         setError(`Failed to load preview: ${message}`);
         setDetailedInvoiceData(null);
         setPoSummary(null);
+        setResolvedTemplateId(null);
       } finally {
         setIsLoading(false);
       }
     };
 
     loadInvoiceData();
+  }, [invoiceId, previewRefreshCounter]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSourceQuote = async () => {
+      if (!invoiceId) {
+        if (isMounted) {
+          setSourceQuote(null);
+        }
+        return;
+      }
+
+      try {
+        const result = await getQuoteByConvertedInvoiceId(invoiceId);
+        if (!isMounted) {
+          return;
+        }
+
+        if (result && !('permissionError' in result)) {
+          setSourceQuote(result);
+          return;
+        }
+
+        setSourceQuote(null);
+      } catch (sourceQuoteError) {
+        console.error(`Error fetching source quote for invoice ${invoiceId}:`, sourceQuoteError);
+        if (isMounted) {
+          setSourceQuote(null);
+        }
+      }
+    };
+
+    void loadSourceQuote();
+
+    return () => {
+      isMounted = false;
+    };
   }, [invoiceId]);
 
   const handleAction = async (action: () => Promise<void>, actionName: string) => {
@@ -135,6 +220,24 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     } finally {
       setIsActionLoading(false);
     }
+  };
+
+  const handleDraftInvoiceUpdated = async (updated: DraftInvoicePropertiesUpdateResult) => {
+    setDraftInvoiceEditorSummary((current) => {
+      if (!current || current.invoice_id !== updated.invoiceId) {
+        return current;
+      }
+
+      return {
+        ...current,
+        invoice_number: updated.invoiceNumber,
+        invoice_date: updated.invoiceDate,
+        due_date: updated.dueDate,
+      };
+    });
+
+    setPreviewRefreshCounter((current) => current + 1);
+    await onDraftInvoiceUpdated?.(updated);
   };
 
   // Calculate scale based on container width
@@ -159,6 +262,13 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   return (
     <Card className="h-full">
       <div className="p-6" ref={containerRef}>
+        {!isFinalized && draftInvoiceEditorSummary ? (
+          <DraftInvoiceDetailsCard
+            invoice={draftInvoiceEditorSummary}
+            onSaved={handleDraftInvoiceUpdated}
+          />
+        ) : null}
+
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-semibold">Invoice Preview</h3>
@@ -178,7 +288,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               )
             }))}
             onValueChange={onTemplateChange}
-            value={selectedTemplateId || ''}
+            value={effectiveTemplateId || ''}
             placeholder="Select invoice template..."
           />
         </div>
@@ -188,6 +298,18 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
             <AlertDescription className="text-sm">{error}</AlertDescription>
           </Alert>
         )}
+
+        {sourceQuote ? (
+          <div className="mb-4">
+            <Button
+              id="invoice-preview-open-source-quote"
+              variant="outline"
+              onClick={() => router.push(`/msp/billing?tab=quotes&quoteId=${sourceQuote.quote_id}`)}
+            >
+              View Source Quote {sourceQuote.quote_number ? `(${sourceQuote.quote_number})` : ''}
+            </Button>
+          </div>
+        ) : null}
 
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
@@ -269,28 +391,20 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               )}
             </div>
 
-            <div className="mb-4 max-h-[600px] overflow-y-auto overflow-x-auto">
+            <div className="mb-4 max-h-[80vh] overflow-y-auto overflow-x-auto">
               <div
                 style={{
-                  width: `${baseInvoiceWidth * scale}px`,
-                  height: `${baseInvoiceHeight * scale}px`
+                  zoom: scale,
+                  width: `${baseInvoiceWidth}px`,
+                  transition: 'zoom 0.2s ease-out'
                 }}
               >
-                <div
-                  style={{
-                    transform: `scale(${scale})`,
-                    transformOrigin: 'top left',
-                    width: `${baseInvoiceWidth}px`,
-                    transition: 'transform 0.2s ease-out'
-                  }}
-                >
-                  <PaperInvoice templateAst={selectedTemplate?.templateAst ?? null}>
-                    <TemplateRenderer
-                      template={selectedTemplate}
-                      invoiceData={detailedInvoiceData}
-                    />
-                  </PaperInvoice>
-                </div>
+                <PaperInvoice templateAst={selectedTemplate?.templateAst ?? null}>
+                  <TemplateRenderer
+                    template={selectedTemplate}
+                    invoiceData={detailedInvoiceData}
+                  />
+                </PaperInvoice>
               </div>
             </div>
 

@@ -172,7 +172,6 @@ export async function assignSlaPolicyToBoard(
     .where({ tenant, board_id: boardId })
     .update({
       sla_policy_id: policyId,
-      updated_at: trx.fn.now()
     });
 
   console.log(`[ItilSlaService] Assigned SLA policy ${policyId} to board ${boardId}`);

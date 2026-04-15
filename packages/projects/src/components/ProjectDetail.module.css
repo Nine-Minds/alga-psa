@@ -67,10 +67,19 @@
   position: sticky;
   top: 1rem;
   align-self: flex-start;
-  max-height: calc(100vh - 2rem);
+  height: calc(100dvh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  min-height: 0;
   display: flex;
   flex-direction: row;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@supports not (height: 100dvh) {
+  .phasesContainer {
+    height: calc(100vh - 2rem);
+    max-height: calc(100vh - 2rem);
+  }
 }
 
 .phasesContainerExpanded {
@@ -115,7 +124,10 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
   overflow: hidden;
+  position: relative;
+  overscroll-behavior: contain;
 }
 
 /* Fixed header section */
@@ -128,8 +140,11 @@
 /* Scrollable phases list area */
 .phasesScrollArea {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 0.5rem 1rem 1rem 1rem;
   margin: 0;
   list-style: none;
@@ -162,12 +177,28 @@
   background: rgb(var(--color-border-300));
 }
 
+.phaseEditActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgb(var(--color-border-100));
+  flex-shrink: 0;
+}
+
 .phasesList {
   width: 250px;
   min-width: 250px;
   max-width: 250px;
+  height: 100%;
   max-height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden; /* Let the inner phasesScrollArea handle scrolling */
+  overscroll-behavior: contain;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -277,35 +308,49 @@
   justify-content: center;
 }
 
-/* Proxy scrollbar inset at the bottom of the header card */
-.kanbanScrollbarProxy {
-  overflow-x: auto;
-  overflow-y: hidden;
-  margin: -0.75rem -0.75rem 0; /* tight to content, edge-to-edge, flush with bottom */
-  /* Firefox */
-  scrollbar-width: thin;
-  scrollbar-color: rgb(var(--color-border-200)) transparent;
+/* Always-visible custom horizontal scrollbar for the kanban board */
+.kanbanScrollbarShell {
+  margin: -0.1rem -0.75rem 0;
+  padding: 0.2rem 0.75rem 0.05rem;
 }
 
-.kanbanScrollbarProxy::-webkit-scrollbar {
-  height: 6px;
+.kanbanScrollbarTrack {
+  position: relative;
+  height: 4px;
+  border-radius: 9999px;
+  background: rgb(var(--color-border-100) / 0.45);
+  cursor: pointer;
 }
 
-.kanbanScrollbarProxy::-webkit-scrollbar-track {
-  background: transparent;
+.kanbanScrollbarThumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: rgb(var(--color-border-300) / 0.9);
+  cursor: grab;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  touch-action: none;
 }
 
-.kanbanScrollbarProxy::-webkit-scrollbar-thumb {
-  background: rgb(var(--color-border-200));
-  border-radius: 3px;
+.kanbanScrollbarThumb:hover {
+  background: rgb(var(--color-border-400) / 0.95);
 }
 
-.kanbanScrollbarProxy::-webkit-scrollbar-thumb:hover {
-  background: rgb(var(--color-border-300));
+.kanbanScrollbarThumb:focus-visible {
+  outline: 2px solid rgb(var(--color-primary-500));
+  outline-offset: 2px;
+  background: rgb(var(--color-border-400) / 0.95);
 }
 
-.kanbanScrollbarProxyInner {
-  height: 1px;
+.kanbanScrollbarThumb:active {
+  cursor: grabbing;
+}
+
+.kanbanScrollbarThumbStatic {
+  background: rgb(var(--color-border-200) / 0.7);
+  pointer-events: none;
 }
 
 .kanbanContainer {
@@ -314,10 +359,10 @@
   display: flex;
   flex-direction: column;
   min-height: 0; /* Allow it to shrink */
-  overflow-x: auto; /* Horizontal scrolling only */
-  overflow-y: hidden;
-  /* Hide native scrollbar - using proxy scrollbar instead */
+  overflow: auto;
+  /* Hide the native scrollbar - using the custom track in the header instead */
   scrollbar-width: none; /* Firefox */
+  cursor: grab;
 }
 
 .kanbanContainer::-webkit-scrollbar {
@@ -327,11 +372,9 @@
 
 .kanbanBoard {
   display: flex;
+  flex: 1 0 auto;
   gap: 1rem;
   min-width: min-content;
-  flex: 1;
-  min-height: 0;
-  height: 100%;
   padding-bottom: 0.5rem; /* Space for scrollbar */
 }
 
@@ -342,53 +385,18 @@
   min-width: 350px; /* Ensure minimum width */
   max-width: 350px; /* Prevent columns from growing */
   flex-shrink: 0; /* Prevent columns from shrinking */
-  height: 100%;
-  max-height: 100%;
-  overflow: hidden; /* Prevent overflow on the column itself */
 }
 
 .kanbanTasks {
   padding: 8px;
-  flex: 1;
-  overflow-y: auto; /* Individual column scrolling */
-  overflow-x: hidden;
-  scrollbar-width: thin; /* Firefox */
-  scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
-  scroll-behavior: smooth;
+  flex: 1 0 auto; /* Grow to fill stretched columns, but never shrink below content */
   border-radius: 4px;
 }
 
-/* Always show scrollbar to make it clear each column scrolls independently */
-.kanbanTasks::-webkit-scrollbar {
-  width: 8px !important;
-}
-
-.kanbanTasks::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1) !important;
-  border-radius: 4px !important;
-}
-
-.kanbanTasks::-webkit-scrollbar-thumb {
-  background-color: rgba(155, 155, 155, 0.7) !important;
-  border-radius: 4px !important;
-}
-
-.kanbanTasks::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(155, 155, 155, 0.9) !important;
-}
-
-/* Firefox scrollbar */
-.kanbanTasks {
-  scrollbar-width: auto !important;
-  scrollbar-color: rgba(155, 155, 155, 0.7) rgba(0, 0, 0, 0.1) !important;
-}
-
 .kanbanWrapper {
-  flex: 1;
+  flex: 1 0 auto;
   padding: 1px;
   position: relative;
-  height: 100%;
-  min-height: 0;
 }
 
 .statusBadge {

@@ -16,15 +16,30 @@ export const sampleInvoices: InvoiceViewModel[] = [
     invoice_charges: [
       {
         description: 'Unbirthday Party Planning Services',
-        quantity: 364,
-        unit_price: 2.75,
+        quantity: 1,
+        unit_price: 1001.00,
         total_price: 1001.00,
         tax_amount: 100.10,
         net_amount: 1001.00,
         item_id: 'UNBIRTH-001',
         invoice_id: 'MAD-001',
         is_manual: false,
-        rate: 2.75
+        rate: 1001.00,
+        service_period_start: '2023-05-01',
+        service_period_end: '2023-07-01',
+        billing_timing: 'arrears',
+        recurring_detail_periods: [
+          {
+            service_period_start: '2023-05-01',
+            service_period_end: '2023-06-01',
+            billing_timing: 'arrears',
+          },
+          {
+            service_period_start: '2023-06-01',
+            service_period_end: '2023-07-01',
+            billing_timing: 'arrears',
+          },
+        ],
       },
       {
         description: 'Cheshire Cat Grin Polishing',
@@ -36,7 +51,17 @@ export const sampleInvoices: InvoiceViewModel[] = [
         item_id: 'GRIN-002',
         invoice_id: 'MAD-001',
         is_manual: false,
-        rate: 55.44
+        rate: 55.44,
+        service_period_start: '2023-07-01',
+        service_period_end: '2023-08-01',
+        billing_timing: 'advance',
+        recurring_detail_periods: [
+          {
+            service_period_start: '2023-07-01',
+            service_period_end: '2023-08-01',
+            billing_timing: 'advance',
+          },
+        ],
       }
     ],
     client: {
@@ -66,15 +91,25 @@ export const sampleInvoices: InvoiceViewModel[] = [
     invoice_charges: [
       {
         description: 'Royal Croquet Ground Maintenance',
-        quantity: 42,
-        unit_price: 66.67,
+        quantity: 1,
+        unit_price: 2800.00,
         total_price: 2800.00,
         tax_amount: 280.00,
         net_amount: 2800.00,
         item_id: 'CROQUET-001',
         invoice_id: 'RED-002',
         is_manual: false,
-        rate: 66.67
+        rate: 2800.00,
+        service_period_start: '2023-07-01',
+        service_period_end: '2023-08-01',
+        billing_timing: 'advance',
+        recurring_detail_periods: [
+          {
+            service_period_start: '2023-07-01',
+            service_period_end: '2023-08-01',
+            billing_timing: 'advance',
+          },
+        ],
       },
       {
         description: 'Painting the Roses Red',

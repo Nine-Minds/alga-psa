@@ -27,6 +27,12 @@ try {
 // Determine if this is an EE build
 const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
+// When USE_PREBUILT is set (Docker/CI), resolve pre-built packages from dist/ instead of src/.
+// Local dev always uses src/ — no extra build step required.
+const usePrebuilt = truthyEnv(process.env.USE_PREBUILT);
+const prebuiltDir = (pkg) => usePrebuilt ? `../packages/${pkg}/dist` : `../packages/${pkg}/src`;
+const prebuiltDirAbs = (pkg) => path.join(__dirname, usePrebuilt ? `../packages/${pkg}/dist` : `../packages/${pkg}/src`);
+
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
 
@@ -220,6 +226,15 @@ const nextConfig = {
       '@alga-psa/tenancy/': '../packages/tenancy/src/',
       '@alga-psa/event-schemas': '../packages/event-schemas/src',
       '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
+      // Leaf horizontal packages (resolve to source during local dev)
+      '@alga-psa/types': '../packages/types/src',
+      '@alga-psa/types/': '../packages/types/src/',
+      '@alga-psa/core': '../packages/core/src',
+      '@alga-psa/core/': '../packages/core/src/',
+      '@alga-psa/validation': '../packages/validation/src',
+      '@alga-psa/validation/': '../packages/validation/src/',
+      '@alga-psa/formatting': '../packages/formatting/src',
+      '@alga-psa/formatting/': '../packages/formatting/src/',
       // Documents package
       '@alga-psa/documents': '../packages/documents/src',
       '@alga-psa/documents/': '../packages/documents/src/',
@@ -389,25 +404,18 @@ const nextConfig = {
     '@blocknote/react',
     '@blocknote/mantine',
     '@emoji-mart/data',
-    '@alga-psa/core',
-    '@alga-psa/auth',
-    '@alga-psa/tags',
     '@alga-psa/ui',
-    '@alga-psa/clients',
     '@alga-psa/scheduling',
     '@alga-psa/users',
-    '@alga-psa/notifications',
     '@alga-psa/email',
     '@alga-psa/teams',
     '@alga-psa/tenancy',
     '@alga-psa/integrations',
     '@alga-psa/client-portal',
     '@alga-psa/portal-shared',
-    '@alga-psa/event-schemas',
     '@alga-psa/documents',
     '@alga-psa/reference-data',
     '@alga-psa/billing',
-    '@alga-psa/assets',
     '@alga-psa/msp-composition',
     '@alga-psa/user-composition',
     '@alga-psa/projects',
@@ -417,7 +425,6 @@ const nextConfig = {
     '@product/settings-extensions',
     '@product/billing',
     '@alga-psa/workflows',
-    '@alga-psa/sla',
     // New aliasing packages
     '@alga-psa/product-extension-actions',
     '@alga-psa/product-auth-ee',
@@ -472,15 +479,25 @@ const nextConfig = {
       '@img/sharp-libvips-dev/include': path.join(__dirname, 'src/empty/shims/empty.ts'),
       '@img/sharp-libvips-dev/cplusplus': path.join(__dirname, 'src/empty/shims/empty.ts'),
       '@img/sharp-wasm32/versions': path.join(__dirname, 'src/empty/shims/empty.ts'),
-      '@alga-psa/auth': path.join(__dirname, '../packages/auth/src'),
       '@alga-psa/ui': path.join(__dirname, '../packages/ui/src'),
-      '@alga-psa/clients': path.join(__dirname, '../packages/clients/src'),
+      // Pre-built packages: src/ for local dev, dist/ for production (USE_PREBUILT=true)
+      '@alga-psa/auth': prebuiltDirAbs('auth'),
+      '@alga-psa/notifications': prebuiltDirAbs('notifications'),
+      '@alga-psa/clients': prebuiltDirAbs('clients'),
+      '@alga-psa/types': prebuiltDirAbs('types'),
+      '@alga-psa/core': prebuiltDirAbs('core'),
+      '@alga-psa/validation': prebuiltDirAbs('validation'),
+      '@alga-psa/formatting': prebuiltDirAbs('formatting'),
+      '@alga-psa/event-schemas': prebuiltDirAbs('event-schemas'),
+      '@alga-psa/sla': prebuiltDirAbs('sla'),
+      '@alga-psa/assets': prebuiltDirAbs('assets'),
+      '@alga-psa/tags': prebuiltDirAbs('tags'),
+      // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
       '@alga-psa/ee-calendar': path.join(__dirname, '../ee/packages/calendar/src'),
       '@alga-psa/ee-microsoft-teams': path.join(__dirname, '../ee/packages/microsoft-teams/src'),
       '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
       '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),
-      '@alga-psa/event-schemas': path.join(__dirname, '../packages/event-schemas/src'),
       '@alga-psa/surveys': path.join(__dirname, '../packages/surveys/src'),
       '@alga-psa/client-portal': path.join(__dirname, '../packages/client-portal/src'),
       '@alga-psa/portal-shared': path.join(__dirname, '../packages/portal-shared/src'),
@@ -514,7 +531,7 @@ const nextConfig = {
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
-        : path.join(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx'),
+        : path.join(__dirname, usePrebuilt ? '../packages/auth/dist/components/SsoProviderButtons.js' : '../packages/auth/src/components/SsoProviderButtons.tsx'),
       '@alga-psa/ee-stubs': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'),
@@ -724,6 +741,12 @@ const nextConfig = {
     // These are optional runtime dependencies that may not be installed
     config.externals.push('ffmpeg-static');
     config.externals.push('ffprobe-static');
+
+    // Externalize expo-server-sdk for server builds.
+    // The SDK uses require('../package.json') internally which breaks when bundled.
+    if (isServer) {
+      config.externals.push('expo-server-sdk');
+    }
 
     // Externalize sharp for server builds to avoid bundling native dependencies.
     // sharp (and its optional @img/* helpers) should be resolved at runtime by Node.
@@ -1016,6 +1039,7 @@ const nextConfig = {
     '@opentelemetry/resources',
     '@opentelemetry/semantic-conventions',
     '@opentelemetry/api',
+    'expo-server-sdk',
   ],
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {

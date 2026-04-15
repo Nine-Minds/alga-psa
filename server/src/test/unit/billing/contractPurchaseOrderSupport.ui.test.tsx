@@ -4,12 +4,18 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  buildServicePeriodRecurringDueWorkRow,
+} from '@alga-psa/shared/billingClients/recurringDueWork';
+import { buildRecurringServicePeriodRecord } from '../../test-utils/recurringTimingFixtures';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
 import * as billingCycleActions from '@alga-psa/billing/actions/billingCycleActions';
 import * as billingAndTaxActions from '@alga-psa/billing/actions/billingAndTax';
 import * as invoiceGenerationActions from '@alga-psa/billing/actions/invoiceGeneration';
+import * as recurringBillingRunActions from '@alga-psa/billing/actions/recurringBillingRunActions';
+import type { IRecurringDueWorkInvoiceCandidate } from '@alga-psa/types';
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ data, columns, id }: any) => {
@@ -23,7 +29,7 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
       <table data-testid={id || 'data-table'}>
         <tbody>
           {data.map((row: any, rowIndex: number) => (
-            <tr key={row.billing_cycle_id ?? rowIndex}>
+            <tr key={row.candidateKey ?? row.billing_cycle_id ?? rowIndex}>
               {columns.map((col: any, colIndex: number) => (
                 <td key={colIndex}>
                   {col.render
@@ -84,75 +90,181 @@ vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
   },
 }));
 
-const { AutomaticInvoices } = await import('@alga-psa/billing');
+const { default: AutomaticInvoices } = await import('../../../../../packages/billing/src/components/billing-dashboard/AutomaticInvoices');
+
+function createClientRow(input: {
+  clientId: string;
+  clientName: string;
+  billingCycleId: string;
+  scheduleKey: string;
+  periodKey: string;
+}) {
+  return buildServicePeriodRecurringDueWorkRow({
+    clientId: input.clientId,
+    clientName: input.clientName,
+    billingCycleId: input.billingCycleId,
+    record: buildRecurringServicePeriodRecord({
+      cadenceOwner: 'client',
+      duePosition: 'advance',
+      sourceObligation: {
+        tenant: 'tenant-1',
+        obligationId: `${input.clientId}-line-1`,
+        obligationType: 'client_contract_line',
+        chargeFamily: 'fixed',
+      },
+      scheduleKey: input.scheduleKey,
+      periodKey: input.periodKey,
+      invoiceWindow: {
+        start: '2025-01-01',
+        end: '2025-02-01',
+        semantics: 'half_open',
+      },
+      servicePeriod: {
+        start: '2025-01-01',
+        end: '2025-02-01',
+        semantics: 'half_open',
+      },
+    }),
+  });
+}
 
 function createPeriods() {
   return [
-    {
-      client_id: 'client-1',
-      client_name: 'Alpha Co',
-      billing_cycle_id: 'cycle-1',
-      billing_cycle: 'monthly',
-      period_start_date: '2025-01-01T00:00:00Z',
-      period_end_date: '2025-02-01T00:00:00Z',
-      effective_date: '2025-01-01T00:00:00Z',
-      tenant: 'tenant-1',
-      can_generate: true,
-      is_early: false,
-    },
-    {
-      client_id: 'client-2',
-      client_name: 'Beta Co',
-      billing_cycle_id: 'cycle-2',
-      billing_cycle: 'monthly',
-      period_start_date: '2025-01-01T00:00:00Z',
-      period_end_date: '2025-02-01T00:00:00Z',
-      effective_date: '2025-01-01T00:00:00Z',
-      tenant: 'tenant-1',
-      can_generate: true,
-      is_early: false,
-    },
+    createClientRow({
+      clientId: 'client-1',
+      clientName: 'Alpha Co',
+      billingCycleId: 'cycle-1',
+      scheduleKey: 'schedule:tenant-1:client_contract_line:alpha-line-1:client:advance',
+      periodKey: 'period:2025-01-01:2025-02-01:alpha',
+    }),
+    createClientRow({
+      clientId: 'client-2',
+      clientName: 'Beta Co',
+      billingCycleId: 'cycle-2',
+      scheduleKey: 'schedule:tenant-1:client_contract_line:beta-line-1:client:advance',
+      periodKey: 'period:2025-01-01:2025-02-01:beta',
+    }),
   ] as any;
 }
 
+function buildInvoiceCandidate(
+  members: any[],
+  options: { candidateKey?: string } = {},
+): IRecurringDueWorkInvoiceCandidate {
+  const first = members[0];
+  const servicePeriodStart = members
+    .map((member) => member.servicePeriodStart)
+    .sort()[0];
+  const servicePeriodEnd = members
+    .map((member) => member.servicePeriodEnd)
+    .sort()
+    .slice(-1)[0];
+  const windowStart = first.invoiceWindowStart;
+  const windowEnd = first.invoiceWindowEnd;
+  const canGenerate = members.every((member) => Boolean(member.canGenerate));
+
+  return {
+    candidateKey: options.candidateKey ?? `candidate:${first.executionIdentityKey}`,
+    clientId: first.clientId,
+    clientName: first.clientName ?? null,
+    windowStart,
+    windowEnd,
+    windowLabel: `${windowStart} to ${windowEnd}`,
+    servicePeriodStart,
+    servicePeriodEnd,
+    servicePeriodLabel: `${servicePeriodStart} to ${servicePeriodEnd}`,
+    cadenceOwners: Array.from(new Set(members.map((member) => member.cadenceOwner))),
+    cadenceSources: Array.from(new Set(members.map((member) => member.cadenceSource))),
+    contractId: first.contractId ?? null,
+    contractName: first.contractName ?? null,
+    splitReasons: [],
+    memberCount: members.length,
+    canGenerate,
+    blockedReason: canGenerate ? null : 'Blocked',
+    members,
+  };
+}
+
+function createContractRow() {
+  return buildServicePeriodRecurringDueWorkRow({
+    clientId: 'client-9',
+    clientName: 'Zenith Health',
+    contractId: 'contract-1',
+    contractLineId: 'line-1',
+    contractName: 'Zenith Annual Support',
+    contractLineName: 'Managed Services',
+    record: buildRecurringServicePeriodRecord({
+      cadenceOwner: 'contract',
+      duePosition: 'arrears',
+      sourceObligation: {
+        tenant: 'tenant-1',
+        obligationId: 'line-1',
+        obligationType: 'contract_line',
+        chargeFamily: 'fixed',
+      },
+      invoiceWindow: {
+        start: '2025-04-08',
+        end: '2025-05-08',
+        semantics: 'half_open',
+      },
+      servicePeriod: {
+        start: '2025-03-08',
+        end: '2025-04-08',
+        semantics: 'half_open',
+      },
+    }),
+  });
+}
+
 describe('Contract PO UI flows', () => {
-  const previewInvoiceMock = vi.spyOn(invoiceGenerationActions, 'previewInvoice');
-  const generateInvoiceMock = vi.spyOn(invoiceGenerationActions, 'generateInvoice');
-  const getPurchaseOrderOverageForBillingCycleMock = vi.spyOn(
+  const previewInvoiceForSelectionInputMock = vi.spyOn(invoiceGenerationActions, 'previewInvoiceForSelectionInput');
+  const getPurchaseOrderOverageForSelectionInputMock = vi.spyOn(
     invoiceGenerationActions,
-    'getPurchaseOrderOverageForBillingCycle'
+    'getPurchaseOrderOverageForSelectionInput'
   );
-  const getInvoicedBillingCyclesPaginatedMock = vi.spyOn(billingCycleActions, 'getInvoicedBillingCyclesPaginated');
+  const generateInvoicesAsRecurringBillingRunMock = vi.spyOn(
+    recurringBillingRunActions,
+    'generateInvoicesAsRecurringBillingRun'
+  );
+  const getRecurringInvoiceHistoryPaginatedMock = vi.spyOn(billingCycleActions, 'getRecurringInvoiceHistoryPaginated');
   const removeBillingCycleMock = vi.spyOn(billingCycleActions, 'removeBillingCycle');
   const hardDeleteBillingCycleMock = vi.spyOn(billingCycleActions, 'hardDeleteBillingCycle');
-  const getAvailableBillingPeriodsMock = vi.spyOn(billingAndTaxActions, 'getAvailableBillingPeriods');
+  const getAvailableRecurringDueWorkMock = vi.spyOn(billingAndTaxActions, 'getAvailableRecurringDueWork');
 
   beforeEach(() => {
-    previewInvoiceMock.mockReset();
-    generateInvoiceMock.mockReset();
-    getPurchaseOrderOverageForBillingCycleMock.mockReset();
-    getInvoicedBillingCyclesPaginatedMock.mockReset();
+    previewInvoiceForSelectionInputMock.mockReset();
+    getPurchaseOrderOverageForSelectionInputMock.mockReset();
+    generateInvoicesAsRecurringBillingRunMock.mockReset();
+    getRecurringInvoiceHistoryPaginatedMock.mockReset();
     removeBillingCycleMock.mockReset();
     hardDeleteBillingCycleMock.mockReset();
-    getAvailableBillingPeriodsMock.mockReset();
+    getAvailableRecurringDueWorkMock.mockReset();
 
     // Mock paginated invoiced cycles (empty)
-    getInvoicedBillingCyclesPaginatedMock.mockResolvedValue({
-      cycles: [],
+    getRecurringInvoiceHistoryPaginatedMock.mockResolvedValue({
+      rows: [],
       total: 0,
       page: 1,
       pageSize: 10,
       totalPages: 0
     });
     // Mock paginated available billing periods with test data
-    getAvailableBillingPeriodsMock.mockResolvedValue({
-      periods: createPeriods(),
+    const periods = createPeriods();
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: periods.map((period) => buildInvoiceCandidate([period])),
+      materializationGaps: [],
       total: 2,
       page: 1,
       pageSize: 10,
       totalPages: 1
     });
-    generateInvoiceMock.mockResolvedValue(undefined);
+    generateInvoicesAsRecurringBillingRunMock.mockResolvedValue({
+      runId: 'run-1',
+      invoicesCreated: 0,
+      failedCount: 0,
+      failures: [],
+    });
+    getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -160,13 +272,13 @@ describe('Contract PO UI flows', () => {
   });
 
   it('T007: batch invoicing does not prompt when no invoice can overrun PO limits', async () => {
-    getPurchaseOrderOverageForBillingCycleMock.mockResolvedValue(null);
+    getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue(null);
 
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
 
     // Wait for data to load
     await waitFor(() => {
-      expect(getAvailableBillingPeriodsMock).toHaveBeenCalled();
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalled();
     });
 
     const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!
@@ -183,16 +295,34 @@ describe('Contract PO UI flows', () => {
     fireEvent.click(generateButton!);
 
     await waitFor(() => {
-      expect(getPurchaseOrderOverageForBillingCycleMock).toHaveBeenCalledTimes(2);
-      expect(generateInvoiceMock).toHaveBeenCalledTimes(2);
+      expect(getPurchaseOrderOverageForSelectionInputMock).toHaveBeenCalledTimes(2);
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledTimes(1);
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        targets: [
+          expect.objectContaining({
+            selectorInput: expect.objectContaining({
+              executionWindow: expect.objectContaining({
+                periodKey: 'period:2025-01-01:2025-02-01:alpha',
+              }),
+            }),
+          }),
+          expect.objectContaining({
+            selectorInput: expect.objectContaining({
+              executionWindow: expect.objectContaining({
+                periodKey: 'period:2025-01-01:2025-02-01:beta',
+              }),
+            }),
+          }),
+        ],
+      });
     });
 
     expect(screen.queryByText('Purchase Order Limit Overages')).toBeNull();
   });
 
   it('T008: batch invoicing prompts upfront when overage possible and can skip overage invoices', async () => {
-    getPurchaseOrderOverageForBillingCycleMock.mockImplementation(async (billingCycleId: string) => {
-      if (billingCycleId === 'cycle-1') {
+    getPurchaseOrderOverageForSelectionInputMock.mockImplementation(async (selectorInput: any) => {
+      if (selectorInput.executionWindow?.periodKey === 'period:2025-01-01:2025-02-01:alpha') {
         return { overage_cents: 500, po_number: 'PO-1' };
       }
       return null;
@@ -202,7 +332,7 @@ describe('Contract PO UI flows', () => {
 
     // Wait for data to load
     await waitFor(() => {
-      expect(getAvailableBillingPeriodsMock).toHaveBeenCalled();
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalled();
     });
 
     const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!
@@ -227,8 +357,19 @@ describe('Contract PO UI flows', () => {
     fireEvent.click(document.getElementById('po-overage-batch-decision-confirm')!);
 
     await waitFor(() => {
-      expect(generateInvoiceMock).toHaveBeenCalledTimes(1);
-      expect(generateInvoiceMock).toHaveBeenCalledWith('cycle-2', { allowPoOverage: false });
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledTimes(1);
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        targets: [
+          expect.objectContaining({
+            selectorInput: expect.objectContaining({
+              executionWindow: expect.objectContaining({
+                periodKey: 'period:2025-01-01:2025-02-01:beta',
+              }),
+            }),
+          }),
+        ],
+        allowPoOverage: false,
+      });
     });
 
     await waitFor(() => {
@@ -237,8 +378,8 @@ describe('Contract PO UI flows', () => {
   });
 
   it('T006: single invoice requires explicit override confirmation to proceed on overage', async () => {
-    getPurchaseOrderOverageForBillingCycleMock.mockResolvedValue({ overage_cents: 2500, po_number: 'PO-OVR' });
-    previewInvoiceMock.mockResolvedValue({
+    getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue({ overage_cents: 2500, po_number: 'PO-OVR' });
+    previewInvoiceForSelectionInputMock.mockResolvedValue({
       success: true,
       data: {
         invoiceNumber: 'INV-TEST',
@@ -258,7 +399,7 @@ describe('Contract PO UI flows', () => {
 
     // Wait for data to load
     await waitFor(() => {
-      expect(getAvailableBillingPeriodsMock).toHaveBeenCalled();
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalled();
     });
 
     const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!
@@ -277,21 +418,198 @@ describe('Contract PO UI flows', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Generate Invoice$/i }));
 
     await waitFor(() => {
-      expect(getPurchaseOrderOverageForBillingCycleMock).toHaveBeenCalled();
+      expect(getPurchaseOrderOverageForSelectionInputMock).toHaveBeenCalled();
       expect(screen.getByRole('button', { name: /Proceed Anyway/i })).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Proceed Anyway/i }));
 
     await waitFor(() => {
-      expect(getPurchaseOrderOverageForBillingCycleMock).toHaveBeenCalledTimes(1);
+      expect(getPurchaseOrderOverageForSelectionInputMock).toHaveBeenCalledTimes(1);
     });
 
-    const [billingCycleId] = getPurchaseOrderOverageForBillingCycleMock.mock.calls[0] ?? [];
-    expect(typeof billingCycleId).toBe('string');
+    const [selectorInput] = getPurchaseOrderOverageForSelectionInputMock.mock.calls[0] ?? [];
+    expect(selectorInput?.executionWindow?.periodKey).toBe('period:2025-01-01:2025-02-01:alpha');
 
     await waitFor(() => {
-      expect(generateInvoiceMock).toHaveBeenCalledWith(billingCycleId, { allowPoOverage: true });
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        targets: [
+          expect.objectContaining({
+            selectorInput: expect.objectContaining({
+              executionWindow: expect.objectContaining({
+                periodKey: 'period:2025-01-01:2025-02-01:alpha',
+              }),
+            }),
+            billingCycleId: 'cycle-1',
+          }),
+        ],
+        allowPoOverage: true,
+      });
     });
+  });
+
+  it('T036: batch PO-overage analysis resolves a contract-cadence row with no billing_cycle_id', async () => {
+    const contractRow = createContractRow();
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [buildInvoiceCandidate([contractRow])],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+    getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue({
+      overage_cents: 1200,
+      po_number: 'PO-CONTRACT',
+    } as any);
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+    });
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    const checkbox = within(readyTable).getAllByRole('checkbox')[0];
+    fireEvent.click(checkbox!);
+    fireEvent.click(
+      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+    );
+
+    await waitFor(() => {
+      expect(getPurchaseOrderOverageForSelectionInputMock).toHaveBeenCalledWith(contractRow.selectorInput);
+      expect(screen.getByText('Purchase Order Limit Overages')).toBeInTheDocument();
+      expect(screen.getByText(/Zenith Health: over by/i)).toBeInTheDocument();
+    });
+  });
+
+  it('T093: compatibility client-cadence PO-overage checks still run through selector-input identity without changing legacy batch behavior', async () => {
+    const [clientRow] = createPeriods();
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [buildInvoiceCandidate([clientRow])],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+    getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue({
+      overage_cents: 900,
+      po_number: 'PO-LEGACY',
+    } as any);
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Alpha Co')).toBeInTheDocument();
+    });
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    fireEvent.click(within(readyTable).getAllByRole('checkbox')[0]!);
+    fireEvent.click(
+      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+    );
+
+    await waitFor(() => {
+      expect(getPurchaseOrderOverageForSelectionInputMock).toHaveBeenCalledWith(clientRow.selectorInput);
+      expect(screen.getByText('Purchase Order Limit Overages')).toBeInTheDocument();
+      expect(screen.getByText(/Alpha Co: over by/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText('Allow overages (generate all invoices)'));
+    fireEvent.click(document.getElementById('po-overage-batch-decision-confirm')!);
+
+    await waitFor(() => {
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        targets: [
+          expect.objectContaining({
+            selectorInput: expect.objectContaining({
+              executionWindow: expect.objectContaining({
+                periodKey: 'period:2025-01-01:2025-02-01:alpha',
+              }),
+            }),
+            billingCycleId: 'cycle-1',
+          }),
+        ],
+        allowPoOverage: true,
+      });
+    });
+  });
+
+  it('T037/T038: selector-input preview generate supports contract-cadence rows, survives reopen, and submits recurring targets without a billing-cycle bridge', async () => {
+    const contractRow = createContractRow();
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [buildInvoiceCandidate([contractRow])],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+    getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue({
+      overage_cents: 2500,
+      po_number: 'PO-CONTRACT',
+    } as any);
+    previewInvoiceForSelectionInputMock.mockResolvedValue({
+      success: true,
+      data: {
+        invoiceNumber: 'INV-CONTRACT',
+        issueDate: '2025-04-08',
+        dueDate: '2025-05-08',
+        currencyCode: 'USD',
+        customer: { name: 'Zenith Health', address: '200 Support Way' },
+        tenantClient: { name: 'Tenant', address: 'Tenant Address', logoUrl: null },
+        items: [],
+        subtotal: 0,
+        tax: 0,
+        total: 0,
+      },
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+    });
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    const checkbox = within(readyTable).getAllByRole('checkbox')[0];
+    fireEvent.click(checkbox!);
+    fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^Generate Invoice$/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Close Preview/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
+
+    await waitFor(() => {
+      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledTimes(2);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^Generate Invoice$/i }));
+
+    await waitFor(() => {
+      expect(getPurchaseOrderOverageForSelectionInputMock).toHaveBeenCalledWith(contractRow.selectorInput);
+      expect(screen.getByRole('button', { name: /Proceed Anyway/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Proceed Anyway/i }));
+
+    await waitFor(() => {
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        targets: [
+          expect.objectContaining({
+            selectorInput: contractRow.selectorInput,
+            executionWindow: contractRow.executionWindow,
+          }),
+        ],
+        allowPoOverage: true,
+      });
+    });
+
+    const [generateCall] = generateInvoicesAsRecurringBillingRunMock.mock.calls;
+    expect(generateCall?.[0]?.targets?.[0]?.billingCycleId).toBeUndefined();
   });
 });

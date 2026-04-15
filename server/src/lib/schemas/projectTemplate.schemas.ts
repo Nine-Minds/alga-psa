@@ -30,6 +30,7 @@ export const projectTemplateTaskSchema = tenantSchema.extend({
   template_phase_id: z.string().uuid(),
   task_name: z.string().min(1).max(255),
   description: z.string().nullable().optional(),
+  description_rich_text: z.string().nullable().optional(),
   estimated_hours: z.number().positive().nullable().optional(),
   duration_days: z.number().int().positive().nullable().optional(),
   task_type_key: z.string().max(50).nullable().optional(),
@@ -92,6 +93,10 @@ export const applyTemplateSchema = z.object({
     z.string().datetime().optional()
   ),
   assigned_to: z.preprocess(
+    (val) => val === '' || val === null || val === undefined ? undefined : val,
+    z.string().uuid().optional()
+  ),
+  status_id: z.preprocess(
     (val) => val === '' || val === null || val === undefined ? undefined : val,
     z.string().uuid().optional()
   ),

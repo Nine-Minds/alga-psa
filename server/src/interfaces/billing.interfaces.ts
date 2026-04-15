@@ -1,5 +1,6 @@
 import { TenantEntity } from './index';
 import type { ISO8601String } from '@alga-psa/types';
+import type { CadenceOwner } from '@alga-psa/types';
 
 export interface IBillingPeriod extends TenantEntity {
   startDate: ISO8601String;
@@ -46,9 +47,15 @@ export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
 }
 
 type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license';
+export interface IRecurringChargeDetailPeriod {
+  servicePeriodStart?: ISO8601String | null;
+  servicePeriodEnd?: ISO8601String | null;
+  billingTiming?: 'arrears' | 'advance' | null;
+}
 export interface IBillingCharge extends TenantEntity {
   type: ChargeType;
   serviceId?: string;
+  config_id?: string;
   client_contract_line_id?: string; // Link back to the specific contract line assignment
   serviceName: string;
   rate: number;
@@ -65,6 +72,7 @@ export interface IBillingCharge extends TenantEntity {
   servicePeriodStart?: ISO8601String;
   servicePeriodEnd?: ISO8601String;
   billingTiming?: 'arrears' | 'advance';
+  recurringDetailPeriods?: IRecurringChargeDetailPeriod[];
 }
 
 export interface IDiscount extends TenantEntity {
@@ -95,6 +103,7 @@ export interface IClientContractLine extends TenantEntity {
   contract_line_id: string;
   template_contract_line_id?: string;
   billing_timing?: 'arrears' | 'advance';
+  cadence_owner?: CadenceOwner;
   service_category?: string;
   service_category_name?: string; // Added field from join with service_categories
   start_date: ISO8601String;
@@ -176,7 +185,7 @@ export interface IService extends TenantEntity {
   service_id: string;
   service_name: string;
   custom_service_type_id: string;   // FK to service_types (now required)
-  billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; // Billing method specific to this service instance (Now required)
+  billing_method: 'fixed' | 'hourly' | 'usage'; // Billing method specific to this service instance (Now required)
   default_rate: number; // Convenience field: primary rate (typically first/USD price)
   category_id: string | null;
   unit_of_measure: string;
@@ -202,7 +211,7 @@ export interface IService extends TenantEntity {
 export interface IStandardServiceType {
   id: string;
   name: string;
-  billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; // Updated to match service billing methods
+  billing_method: 'fixed' | 'hourly' | 'usage'; // Updated to match service billing methods
   display_order: number;
   created_at: ISO8601String;
   updated_at: ISO8601String;
@@ -212,7 +221,7 @@ export interface IStandardServiceType {
 export interface IServiceType extends TenantEntity {
   id: string;
   name: string;
-  billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; // Updated to match service billing methods
+  billing_method: 'fixed' | 'hourly' | 'usage'; // Updated to match service billing methods
   // standard_service_type_id removed
   is_active: boolean;
   description?: string | null;
@@ -231,6 +240,7 @@ export interface IContractLine extends TenantEntity {
   service_category?: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
   billing_timing?: 'arrears' | 'advance';
+  cadence_owner?: CadenceOwner;
   custom_rate?: number | null;
   display_order?: number;
   enable_proration?: boolean;
@@ -261,6 +271,7 @@ export interface IContractLinePreset extends TenantEntity {
   service_category?: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
   billing_timing?: 'arrears' | 'advance';
+  cadence_owner?: CadenceOwner;
   // Hourly-specific fields
   hourly_rate?: number | null;
   minimum_billable_time?: number | null;
@@ -416,10 +427,6 @@ export type TransactionType =
   | 'currency_adjustment'
   | 'tax_adjustment';
 
-export interface IBillingCycleInvoiceRequest {
-  billing_cycle_id: string;
-}
-
 export interface ITransaction extends TenantEntity {
   transaction_id: string;
   client_id: string;
@@ -436,6 +443,15 @@ export interface ITransaction extends TenantEntity {
   expiration_date?: ISO8601String;
   related_transaction_id?: string;
   currency_code: string;
+  invoice_number?: string;
+  invoice_status?: string;
+  invoice_service_period_start?: ISO8601String | null;
+  invoice_service_period_end?: ISO8601String | null;
+  invoice_date_basis?: 'financial_document_date' | 'canonical_recurring_service_period';
+  invoice_context_status?: 'canonical_recurring' | 'financial_document_fallback' | 'missing_source_context';
+  source_credit_id?: string;
+  source_invoice_id?: string;
+  lineage_origin?: 'source_invoice' | 'transferred_credit';
 }
 
 export interface ICreditTracking extends TenantEntity {
@@ -450,6 +466,19 @@ export interface ICreditTracking extends TenantEntity {
   is_expired: boolean;
   updated_at?: ISO8601String;
   currency_code: string;
+  transaction_description?: string;
+  transaction_type?: TransactionType;
+  invoice_id?: string;
+  transaction_date?: ISO8601String;
+  invoice_number?: string;
+  invoice_status?: string;
+  invoice_service_period_start?: ISO8601String | null;
+  invoice_service_period_end?: ISO8601String | null;
+  invoice_date_basis?: 'financial_document_date' | 'canonical_recurring_service_period';
+  invoice_context_status?: 'canonical_recurring' | 'financial_document_fallback' | 'missing_source_context';
+  source_credit_id?: string;
+  source_invoice_id?: string;
+  lineage_origin?: 'source_invoice' | 'transferred_credit';
 }
 
 export interface ICreditExpirationSettings {
@@ -488,6 +517,9 @@ export interface IDefaultBillingSettings extends TenantEntity {
   renewal_ticket_status_id?: string | null;
   renewal_ticket_priority?: string | null;
   renewal_ticket_assignee_id?: string | null;
+  default_recurring_cadence_owner?: CadenceOwner;
+  recurring_cadence_rollout_state?: 'mixed_enabled';
+  recurring_cadence_rollout_message?: string;
   created_at: ISO8601String;
   updated_at: ISO8601String;
 }
@@ -499,6 +531,9 @@ export interface IClientContractLineSettings extends TenantEntity {
   enable_credit_expiration?: boolean;
   credit_expiration_days?: number;
   credit_expiration_notification_days?: number[];
+  default_recurring_cadence_owner?: CadenceOwner;
+  recurring_cadence_rollout_state?: 'mixed_enabled';
+  recurring_cadence_rollout_message?: string;
   created_at: ISO8601String;
   updated_at: ISO8601String;
 }

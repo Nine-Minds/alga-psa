@@ -1,6 +1,12 @@
-import type { InputMapping, MappingValue, Step } from '@shared/workflow/runtime/client';
+import type {
+  InputMapping,
+  MappingValue,
+  Step,
+} from '@alga-psa/workflows/runtime';
 
 import type { ActionInputField } from './mapping';
+import { applyWorkflowActionPresentationHints } from './workflowActionPresentation';
+import { resolveWorkflowSchemaFieldEditor } from './workflowSchemaFieldEditor';
 
 type JsonSchema = {
   type?: string | string[];
@@ -21,6 +27,7 @@ type JsonSchema = {
   'x-workflow-picker-dependencies'?: string[];
   'x-workflow-picker-fixed-value-hint'?: string;
   'x-workflow-picker-allow-dynamic-reference'?: boolean;
+  'x-workflow-editor'?: import('@alga-psa/shared/workflow/runtime').WorkflowEditorJsonSchemaMetadata;
 };
 
 export type WorkflowDesignerActionRegistryItem = {
@@ -87,6 +94,7 @@ const normalizeSchemaType = (schema?: JsonSchema): string | undefined => {
   }
   return schema.type;
 };
+
 
 const flattenRequiredActionInputFields = (
   fields: ActionInputField[],
@@ -188,6 +196,7 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       'x-workflow-picker-dependencies'?: string[];
       'x-workflow-picker-fixed-value-hint'?: string;
       'x-workflow-picker-allow-dynamic-reference'?: boolean;
+      'x-workflow-editor'?: import('@alga-psa/shared/workflow/runtime').WorkflowEditorJsonSchemaMetadata;
     };
 
     let children: ActionInputField[] | undefined;
@@ -216,23 +225,7 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       itemType,
     };
     const hasConstraints = Object.values(constraints).some((constraint) => constraint !== undefined);
-    const picker =
-      typeof rawResolved['x-workflow-picker-kind'] === 'string'
-        ? {
-            kind: rawResolved['x-workflow-picker-kind'],
-            dependencies: Array.isArray(rawResolved['x-workflow-picker-dependencies'])
-              ? rawResolved['x-workflow-picker-dependencies']
-              : undefined,
-            fixedValueHint:
-              typeof rawResolved['x-workflow-picker-fixed-value-hint'] === 'string'
-                ? rawResolved['x-workflow-picker-fixed-value-hint']
-                : undefined,
-            allowsDynamicReference:
-              typeof rawResolved['x-workflow-picker-allow-dynamic-reference'] === 'boolean'
-                ? rawResolved['x-workflow-picker-allow-dynamic-reference']
-                : undefined,
-          }
-        : undefined;
+    const editor = resolveWorkflowSchemaFieldEditor(rawResolved);
 
     return {
       name,
@@ -243,7 +236,7 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       description: resolvedProp.description,
       required: isFieldRequired,
       examples: Array.isArray(resolvedProp.examples) ? resolvedProp.examples : undefined,
-      picker,
+      editor,
       enum: resolvedProp.enum,
       default: resolvedProp.default,
       constraints: hasConstraints ? constraints : undefined,
@@ -283,7 +276,7 @@ export const buildActionInputEditorState = (
   actionRegistry: WorkflowDesignerActionRegistryItem[]
 ): ActionInputEditorState => {
   const config = asRecord(step.config);
-  const selectedAction =
+  const selectedActionBase =
     step.type === 'action.call'
       ? getActionFromRegistry(
           typeof config?.actionId === 'string' ? config.actionId : undefined,
@@ -291,6 +284,9 @@ export const buildActionInputEditorState = (
           actionRegistry
         )
       : undefined;
+  const selectedAction = selectedActionBase
+    ? applyWorkflowActionPresentationHints(selectedActionBase)
+    : undefined;
   const actionInputFields = selectedAction?.inputSchema
     ? extractActionInputFields(selectedAction.inputSchema, selectedAction.inputSchema)
     : [];

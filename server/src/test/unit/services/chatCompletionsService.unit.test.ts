@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import type { ChatApiRegistryEntry } from '@ee/chat/registry/apiRegistry.schema';
 
 const openAiCreateSpy = vi.hoisted(() => vi.fn());
 const getSecretMock = vi.hoisted(() => vi.fn());
@@ -12,6 +13,7 @@ const getContactByContactNameIdMock = vi.hoisted(() => vi.fn());
 const getAssetDetailBundleMock = vi.hoisted(() => vi.fn());
 const secretState = vi.hoisted(() => ({ values: {} as Record<string, string | undefined> }));
 const googleAccessTokenState = vi.hoisted(() => ({ token: 'adc-token' as string | undefined }));
+const PLACEHOLDER_REGISTRY_DESCRIPTION = 'This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.';
 
 vi.mock('openai', () => {
   class OpenAI {
@@ -95,7 +97,7 @@ const ORIGINAL_ENV: Record<string, string | undefined> = Object.fromEntries(
   MANAGED_ENV_KEYS.map((key) => [key, process.env[key]]),
 );
 
-const registryEntry = {
+const registryEntry: ChatApiRegistryEntry = {
   id: 'tickets.list',
   method: 'get' as const,
   path: '/api/v1/tickets',
@@ -109,6 +111,15 @@ const registryEntry = {
   playbooks: ['Lookup context'],
   examples: [],
 };
+
+const buildRegistryEntry = (overrides: Partial<ChatApiRegistryEntry> = {}): ChatApiRegistryEntry => ({
+  ...registryEntry,
+  approvalRequired: false,
+  playbooks: [],
+  examples: [],
+  parameters: [],
+  ...overrides,
+});
 
 const resetManagedEnv = () => {
   for (const key of MANAGED_ENV_KEYS) {
@@ -136,6 +147,36 @@ const buildCompletion = (message: Record<string, unknown>) => ({
   ],
 });
 
+const buildFinishResponseCompletion = (
+  message: string,
+  options: {
+    reasoning?: string;
+    content?: string;
+    id?: string;
+  } = {},
+) =>
+  buildCompletion({
+    content: options.content ?? '',
+    ...(options.reasoning
+      ? {
+          reasoning_content: [{ type: 'reasoning', text: options.reasoning }],
+        }
+      : {}),
+    tool_calls: [
+      {
+        id: options.id ?? 'tool-call-finish',
+        type: 'function',
+        function: {
+          name: 'finish_response',
+          arguments: JSON.stringify({
+            message,
+            ...(options.reasoning ? { reasoning: options.reasoning } : {}),
+          }),
+        },
+      },
+    ],
+  });
+
 const buildChunkStream = (chunks: Array<Record<string, unknown>>) => ({
   async *[Symbol.asyncIterator]() {
     for (const chunk of chunks) {
@@ -143,6 +184,39 @@ const buildChunkStream = (chunks: Array<Record<string, unknown>>) => ({
     }
   },
 });
+
+const buildFinishResponseChunkStream = (
+  message: string,
+  options: {
+    reasoning?: string;
+    id?: string;
+  } = {},
+) =>
+  buildChunkStream([
+    {
+      choices: [
+        {
+          index: 0,
+          delta: {
+            tool_calls: [
+              {
+                index: 0,
+                id: options.id ?? 'tool-call-finish-stream',
+                type: 'function',
+                function: {
+                  name: 'finish_response',
+                  arguments: JSON.stringify({
+                    message,
+                    ...(options.reasoning ? { reasoning: options.reasoning } : {}),
+                  }),
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  ]);
 
 const buildRateLimitError = (retryAfter?: string) => {
   const error = new Error('Rate limited') as Error & {
@@ -236,6 +310,202 @@ describe('ChatCompletionsService (unit)', () => {
         },
       ]),
     ).toThrow('Invalid messages payload');
+  });
+
+  it('prefers create endpoints over read-only matches for project creation queries', async () => {
+    getRegistryMock.mockReturnValue([
+      buildRegistryEntry({
+        id: 'get-_api_v1_projects',
+        method: 'get',
+        path: '/api/v1/projects',
+        displayName: 'List Projects',
+        summary: 'List projects',
+        description: 'Returns active projects.',
+        tags: ['projects'],
+      }),
+      buildRegistryEntry({
+        id: 'get-_api_v1_projects_id_phases_phaseid_tasks',
+        method: 'get',
+        path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
+        displayName: 'List Project Phase Tasks',
+        summary: 'List project phase tasks',
+        description: 'Returns all tasks for a project phase.',
+        tags: ['projects'],
+        playbooks: ['Use after resolving the phase UUID.'],
+      }),
+      buildRegistryEntry({
+        id: 'post-_api_v1_projects',
+        method: 'post',
+        path: '/api/v1/projects',
+        displayName: 'POST v1',
+        summary: 'POST v1',
+        description: PLACEHOLDER_REGISTRY_DESCRIPTION,
+        tags: ['projects'],
+        requestBodySchema: {
+          type: 'object',
+          properties: {},
+        },
+      }),
+    ]);
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const results = (ChatCompletionsService as any).searchRegistry('create project', 5);
+
+    expect(results[0]).toMatchObject({
+      id: 'post-_api_v1_projects',
+      method: 'POST',
+      path: '/api/v1/projects',
+    });
+  });
+
+  it('prefers nested phase creation endpoints for project phase creation queries', async () => {
+    getRegistryMock.mockReturnValue([
+      buildRegistryEntry({
+        id: 'get-_api_v1_projects_id_phases_phaseid_tasks',
+        method: 'get',
+        path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
+        displayName: 'List Project Phase Tasks',
+        summary: 'List project phase tasks',
+        description: 'Returns all tasks for a project phase.',
+        tags: ['projects'],
+        playbooks: ['Use after resolving the phase UUID.'],
+      }),
+      buildRegistryEntry({
+        id: 'post-_api_v1_projects',
+        method: 'post',
+        path: '/api/v1/projects',
+        displayName: 'POST v1',
+        summary: 'POST v1',
+        description: PLACEHOLDER_REGISTRY_DESCRIPTION,
+        tags: ['projects'],
+      }),
+      buildRegistryEntry({
+        id: 'post-_api_v1_projects_id_phases',
+        method: 'post',
+        path: '/api/v1/projects/{id}/phases',
+        displayName: 'POST v1',
+        summary: 'POST v1',
+        description: PLACEHOLDER_REGISTRY_DESCRIPTION,
+        tags: ['projects'],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+          },
+        ],
+        requestBodySchema: {
+          type: 'object',
+          properties: {},
+        },
+      }),
+    ]);
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const results = (ChatCompletionsService as any).searchRegistry('create project phase', 5);
+
+    expect(results[0]).toMatchObject({
+      id: 'post-_api_v1_projects_id_phases',
+      method: 'POST',
+      path: '/api/v1/projects/{id}/phases',
+    });
+  });
+
+  it('keeps list queries pointed at list endpoints', async () => {
+    getRegistryMock.mockReturnValue([
+      buildRegistryEntry({
+        id: 'post-_api_v1_projects_id_phases',
+        method: 'post',
+        path: '/api/v1/projects/{id}/phases',
+        displayName: 'POST v1',
+        summary: 'POST v1',
+        description: PLACEHOLDER_REGISTRY_DESCRIPTION,
+        tags: ['projects'],
+      }),
+      buildRegistryEntry({
+        id: 'get-_api_v1_projects_id_phases_phaseid_tasks',
+        method: 'get',
+        path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
+        displayName: 'List Project Phase Tasks',
+        summary: 'List project phase tasks',
+        description: 'Returns all tasks for a project phase.',
+        tags: ['projects'],
+      }),
+    ]);
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const results = (ChatCompletionsService as any).searchRegistry('list project phase tasks', 5);
+
+    expect(results[0]).toMatchObject({
+      id: 'get-_api_v1_projects_id_phases_phaseid_tasks',
+      method: 'GET',
+      path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
+    });
+  });
+
+  it('prefers create task endpoints over task listing endpoints for task creation queries', async () => {
+    getRegistryMock.mockReturnValue([
+      buildRegistryEntry({
+        id: 'get-_api_v1_projects_id_tasks',
+        method: 'get',
+        path: '/api/v1/projects/{id}/tasks',
+        displayName: 'List Project Tasks',
+        summary: 'List project tasks',
+        description: 'Returns all tasks for a project.',
+        tags: ['projects'],
+      }),
+      buildRegistryEntry({
+        id: 'get-_api_v1_projects_id_phases_phaseid_tasks',
+        method: 'get',
+        path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
+        displayName: 'List Project Phase Tasks',
+        summary: 'List project phase tasks',
+        description: 'Returns all tasks for a project phase.',
+        tags: ['projects'],
+      }),
+      buildRegistryEntry({
+        id: 'post-_api_v1_projects_id_phases_phaseid_tasks',
+        method: 'post',
+        path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
+        displayName: 'Create Project Phase Task',
+        summary: 'Create project phase task',
+        description: 'Creates a new task in the specified project phase.',
+        tags: ['projects'],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+          },
+          {
+            name: 'phaseId',
+            in: 'path',
+            required: true,
+          },
+        ],
+        requestBodySchema: {
+          type: 'object',
+          properties: {
+            task_name: { type: 'string' },
+            project_status_mapping_id: { type: 'string' },
+          },
+          required: ['task_name', 'project_status_mapping_id'],
+        },
+      }),
+    ]);
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const results = (ChatCompletionsService as any).searchRegistry('create a project task in discovery', 5);
+
+    expect(results[0]).toMatchObject({
+      id: 'post-_api_v1_projects_id_phases_phaseid_tasks',
+      method: 'POST',
+      path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
+    });
   });
 
   it('preserves reasoning_content values during conversation normalization', async () => {
@@ -472,37 +742,41 @@ describe('ChatCompletionsService (unit)', () => {
     expect(parsed.reasoning).toBe('fallback reasoning');
   });
 
-  it('streams a visible fallback message when execute tool proposal targets an unknown function entry', async () => {
+  it('retries with a corrective function message when execute tool proposal targets an unknown entryId', async () => {
     process.env.AI_CHAT_PROVIDER = 'openrouter';
     setSecrets({
       OPENROUTER_API_KEY: 'openrouter-key',
       OPENROUTER_CHAT_MODEL: 'openrouter/model',
     });
 
-    openAiCreateSpy.mockResolvedValueOnce(
-      buildChunkStream([
-        {
-          choices: [
-            {
-              index: 0,
-              delta: {
-                tool_calls: [
-                  {
-                    index: 0,
-                    id: 'tool-call-missing-entry',
-                    type: 'function',
-                    function: {
-                      name: 'call_api_endpoint',
-                      arguments: JSON.stringify({ entryId: 'missing.entry' }),
+    openAiCreateSpy
+      .mockResolvedValueOnce(
+        buildChunkStream([
+          {
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      id: 'tool-call-missing-entry',
+                      type: 'function',
+                      function: {
+                        name: 'call_api_endpoint',
+                        arguments: JSON.stringify({ entryId: 'missing.entry' }),
+                      },
                     },
-                  },
-                ],
+                  ],
+                },
               },
-            },
-          ],
-        },
-      ]),
-    );
+            ],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        buildFinishResponseChunkStream('Recovered after registry miss.'),
+      );
 
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
 
@@ -514,12 +788,25 @@ describe('ChatCompletionsService (unit)', () => {
     }
 
     expect(streamedEvents).toEqual([
-      {
-        type: 'content_delta',
-        delta: 'I couldn\'t run "missing.entry" because that function is not available.',
-      },
+      { type: 'content_delta', delta: 'Recovered after registry miss.' },
       { type: 'done' },
     ]);
+    expect(openAiCreateSpy).toHaveBeenCalledTimes(2);
+
+    const retryCallArgs = openAiCreateSpy.mock.calls[1][0] as {
+      messages: Array<{ role: string; name?: string; content?: string }>;
+    };
+    const toolMessages = retryCallArgs.messages.filter((m) => m.role === 'tool');
+    expect(toolMessages.length).toBeGreaterThan(0);
+    const lastToolMessage = toolMessages[toolMessages.length - 1];
+    const parsedContent = JSON.parse(lastToolMessage.content ?? '{}') as {
+      error?: string;
+      requested_entry_id?: string;
+      suggestions?: unknown;
+    };
+    expect(parsedContent.requested_entry_id).toBe('missing.entry');
+    expect(parsedContent.error).toMatch(/missing\.entry/);
+    expect(Array.isArray(parsedContent.suggestions)).toBe(true);
   });
 
   it('retries streamed tool calls when the model emits invalid JSON arguments', async () => {
@@ -555,18 +842,7 @@ describe('ChatCompletionsService (unit)', () => {
         ]),
       )
       .mockResolvedValueOnce(
-        buildChunkStream([
-          {
-            choices: [
-              {
-                index: 0,
-                delta: {
-                  content: 'Recovered after retry.',
-                },
-              },
-            ],
-          },
-        ]),
+        buildFinishResponseChunkStream('Recovered after retry.'),
       );
 
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
@@ -592,7 +868,7 @@ describe('ChatCompletionsService (unit)', () => {
     expect(toolMessage).toEqual(
       expect.objectContaining({
         content: expect.stringContaining(
-          'Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only.',
+          'Tool arguments appeared truncated during streaming and were not a complete JSON object. Retry the same function call with the full JSON object only.',
         ),
       }),
     );
@@ -631,18 +907,7 @@ describe('ChatCompletionsService (unit)', () => {
         ]),
       )
       .mockResolvedValueOnce(
-        buildChunkStream([
-          {
-            choices: [
-              {
-                index: 0,
-                delta: {
-                  content: 'Recovered.',
-                },
-              },
-            ],
-          },
-        ]),
+        buildFinishResponseChunkStream('Recovered.'),
       );
 
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -738,9 +1003,7 @@ describe('ChatCompletionsService (unit)', () => {
         }),
       )
       .mockResolvedValueOnce(
-        buildCompletion({
-          content: 'Recovered after retry.',
-        }),
+        buildFinishResponseCompletion('Recovered after retry.'),
       );
 
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
@@ -771,7 +1034,7 @@ describe('ChatCompletionsService (unit)', () => {
     );
   });
 
-  it('appends assistant reasoning_content on final non-tool responses', async () => {
+  it('appends assistant reasoning_content on finish_response turns', async () => {
     process.env.AI_CHAT_PROVIDER = 'openrouter';
     setSecrets({
       OPENROUTER_API_KEY: 'openrouter-key',
@@ -779,9 +1042,8 @@ describe('ChatCompletionsService (unit)', () => {
     });
 
     openAiCreateSpy.mockResolvedValueOnce(
-      buildCompletion({
-        content: 'Done.',
-        reasoning_content: [{ type: 'reasoning', text: 'Checked all records.' }],
+      buildFinishResponseCompletion('Done.', {
+        reasoning: 'Checked all records.',
       }),
     );
 
@@ -806,6 +1068,100 @@ describe('ChatCompletionsService (unit)', () => {
     );
   });
 
+  it('retries non-stream plain assistant text until the model emits finish_response', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({
+      OPENROUTER_API_KEY: 'openrouter-key',
+      OPENROUTER_CHAT_MODEL: 'openrouter/model',
+    });
+
+    openAiCreateSpy
+      .mockResolvedValueOnce(
+        buildCompletion({
+          content: "I'll look up the endpoint first.",
+        }),
+      )
+      .mockResolvedValueOnce(buildFinishResponseCompletion('Here is the final answer.'));
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const result = await (ChatCompletionsService as any).processModelInteraction({
+      messages: [{ role: 'user', content: 'Help me add a task' }],
+      chatId: 'chat-1',
+      baseUrl: 'https://example.invalid',
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+    });
+
+    expect(result).toMatchObject({
+      type: 'assistant_message',
+      message: expect.objectContaining({ content: 'Here is the final answer.' }),
+    });
+    expect(openAiCreateSpy).toHaveBeenCalledTimes(2);
+    const retryRequest = openAiCreateSpy.mock.calls[1]?.[0] as Record<string, unknown>;
+    const retryMessages = retryRequest.messages as Array<Record<string, unknown>>;
+    expect(retryMessages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringContaining('every assistant turn must be exactly one function call'),
+        }),
+      ]),
+    );
+  });
+
+  it('retries streamed plain assistant text until the model emits finish_response', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({
+      OPENROUTER_API_KEY: 'openrouter-key',
+      OPENROUTER_CHAT_MODEL: 'openrouter/model',
+    });
+
+    openAiCreateSpy
+      .mockResolvedValueOnce(
+        buildChunkStream([
+          {
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  content: "I'll look up the endpoint first.",
+                },
+              },
+            ],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(buildFinishResponseChunkStream('Here is the streamed final answer.'));
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const events: Array<{ type: string; delta?: string }> = [];
+    for await (const event of ChatCompletionsService.createStructuredCompletionStream([
+      { role: 'user', content: 'Help me add a task' },
+    ])) {
+      events.push(event as { type: string; delta?: string });
+    }
+
+    expect(events).toEqual(
+      expect.arrayContaining([
+        { type: 'content_delta', delta: 'Here is the streamed final answer.' },
+        { type: 'done' },
+      ]),
+    );
+    expect(openAiCreateSpy).toHaveBeenCalledTimes(2);
+    const retryRequest = openAiCreateSpy.mock.calls[1]?.[0] as Record<string, unknown>;
+    const retryMessages = retryRequest.messages as Array<Record<string, unknown>>;
+    expect(retryMessages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringContaining('every assistant turn must be exactly one function call'),
+        }),
+      ]),
+    );
+  });
+
   it('uses provider-resolved OpenRouter model/client for non-stream completions and keeps tool_choice:auto', async () => {
     process.env.AI_CHAT_PROVIDER = 'openrouter';
     setSecrets({
@@ -813,11 +1169,7 @@ describe('ChatCompletionsService (unit)', () => {
       OPENROUTER_CHAT_MODEL: 'openrouter/custom-model',
     });
 
-    openAiCreateSpy.mockResolvedValueOnce(
-      buildCompletion({
-        content: 'OpenRouter result',
-      }),
-    );
+    openAiCreateSpy.mockResolvedValueOnce(buildFinishResponseCompletion('OpenRouter result'));
 
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
 
@@ -842,11 +1194,7 @@ describe('ChatCompletionsService (unit)', () => {
       VERTEX_CHAT_MODEL: 'glm-5-maas',
     });
 
-    openAiCreateSpy.mockResolvedValueOnce(
-      buildCompletion({
-        content: 'Vertex result',
-      }),
-    );
+    openAiCreateSpy.mockResolvedValueOnce(buildFinishResponseCompletion('Vertex result'));
 
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
 
@@ -1052,9 +1400,7 @@ describe('ChatCompletionsService (unit)', () => {
     openAiCreateSpy
       .mockRejectedValueOnce(buildRateLimitError())
       .mockResolvedValueOnce(
-        buildCompletion({
-          content: 'Recovered after rate limit.',
-        }),
+        buildFinishResponseCompletion('Recovered after rate limit.'),
       );
 
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
@@ -1089,18 +1435,7 @@ describe('ChatCompletionsService (unit)', () => {
     openAiCreateSpy
       .mockRejectedValueOnce(buildRateLimitError('1'))
       .mockResolvedValueOnce(
-        buildChunkStream([
-          {
-            choices: [
-              {
-                index: 0,
-                delta: {
-                  content: 'Recovered stream response',
-                },
-              },
-            ],
-          },
-        ]),
+        buildFinishResponseChunkStream('Recovered stream response'),
       );
 
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
@@ -1313,9 +1648,8 @@ describe('ChatCompletionsService (unit)', () => {
     });
 
     openAiCreateSpy.mockResolvedValueOnce(
-      buildCompletion({
-        content: 'Follow-up complete',
-        reasoning_content: [{ type: 'reasoning', text: 'follow-up reasoning' }],
+      buildFinishResponseCompletion('Follow-up complete', {
+        reasoning: 'follow-up reasoning',
       }),
     );
 

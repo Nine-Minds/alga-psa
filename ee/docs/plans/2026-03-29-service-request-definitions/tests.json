@@ -1,0 +1,10 @@
+[
+  {
+    "id": "T001",
+    "description": "E2E: <describe the test>",
+    "implemented": false,
+    "featureIds": [
+      "F001"
+    ]
+  }
+]

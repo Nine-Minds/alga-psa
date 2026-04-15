@@ -1,6 +1,13 @@
-import WorkflowScheduleStateModel from '@shared/workflow/persistence/workflowScheduleStateModel';
+import { WorkflowScheduleStateModel } from '@alga-psa/workflows/persistence';
+import { computeNextFireAtForSchedule } from '@alga-psa/workflows/lib/computeNextFireAt';
+import {
+  isWorkflowOccurrenceEligible,
+  normalizeWorkflowDayTypeFilter,
+  resolveWorkflowBusinessDaySettings
+} from '@alga-psa/workflows/lib/workflowBusinessDayScheduling';
 import { createTenantKnex } from 'server/src/lib/db';
 import { launchPublishedWorkflowRun } from '@alga-psa/workflows/lib/workflowRunLauncher';
+import { getJobRunner } from 'server/src/lib/jobs/JobRunnerFactory';
 import type { BaseJobData } from '../interfaces';
 
 export interface WorkflowScheduledRunJobData extends BaseJobData {
@@ -10,6 +17,8 @@ export interface WorkflowScheduledRunJobData extends BaseJobData {
 
 const buildWorkflowScheduleFireKey = (scheduleId: string, jobId: string): string =>
   `workflow-schedule-fire:${scheduleId}:${jobId}`;
+
+const TERMINAL_JOB_STATUSES = new Set(['completed', 'failed']);
 
 const toIsoDateTime = (value: unknown): string | null => {
   if (value instanceof Date) {
@@ -30,12 +39,12 @@ const buildScheduleTriggerMetadata = (params: {
   workflowId: string;
   workflowVersion: number;
   triggerType: 'schedule' | 'recurring';
-  runAt?: string | null;
+  scheduledFor?: string | null;
   cron?: string | null;
   timezone?: string | null;
 }) => {
   const firedAt = new Date().toISOString();
-  const scheduledFor = toIsoDateTime(params.runAt) ?? firedAt;
+  const scheduledFor = toIsoDateTime(params.scheduledFor) ?? firedAt;
   return {
     triggerType: params.triggerType,
     scheduleId: params.scheduleId,
@@ -47,6 +56,25 @@ const buildScheduleTriggerMetadata = (params: {
     workflowVersion: params.workflowVersion,
     ...(params.triggerType === 'recurring' && params.cron ? { cron: params.cron } : {})
   };
+};
+
+const cancelRecurringWorkflowScheduleRegistration = async (
+  jobId: string | null | undefined,
+  tenantId: string
+): Promise<void> => {
+  const stableJobId = typeof jobId === 'string' ? jobId.trim() : '';
+  if (!stableJobId) return;
+
+  const runner = await getJobRunner();
+  const cancelled = await runner.cancelJob(stableJobId, tenantId);
+  if (cancelled) return;
+
+  const current = await runner.getJobStatus(stableJobId, tenantId).catch(() => null);
+  if (!current || TERMINAL_JOB_STATUSES.has(String(current.status).toLowerCase())) {
+    return;
+  }
+
+  throw new Error('Failed to cancel recurring workflow schedule after calendar resolution error');
 };
 
 async function runScheduledWorkflow(
@@ -73,16 +101,77 @@ async function runScheduledWorkflow(
   }
 
   const payload = (schedule.payload_json ?? {}) as Record<string, unknown>;
+  const scheduledOccurrenceIso = (
+    schedule.trigger_type === 'schedule'
+      ? toIsoDateTime(schedule.run_at)
+      : (toIsoDateTime(data.jobScheduledAt) ?? new Date().toISOString())
+  );
   const triggerMetadata = buildScheduleTriggerMetadata({
     scheduleId: schedule.id,
     scheduleName: schedule.name,
     workflowId: schedule.workflow_id,
     workflowVersion: schedule.workflow_version,
     triggerType: schedule.trigger_type,
-    runAt: schedule.run_at,
+    scheduledFor: scheduledOccurrenceIso,
     cron: schedule.cron,
     timezone: schedule.timezone
   });
+
+  if (schedule.trigger_type === 'recurring') {
+    const dayTypeFilter = normalizeWorkflowDayTypeFilter(schedule.day_type_filter);
+    const resolvedBusinessDaySettings = await resolveWorkflowBusinessDaySettings(knex, {
+      tenantId: tenant,
+      dayTypeFilter,
+      businessHoursScheduleId: schedule.business_hours_schedule_id ?? null
+    });
+
+    if (resolvedBusinessDaySettings.ok === false) {
+      const { issue } = resolvedBusinessDaySettings;
+      try {
+        await cancelRecurringWorkflowScheduleRegistration(schedule.job_id, tenant);
+      } catch (cancelError) {
+        const cancellationMessage = cancelError instanceof Error ? cancelError.message : String(cancelError);
+        await WorkflowScheduleStateModel.update(knex, schedule.id, {
+          last_fire_at: triggerMetadata.firedAt,
+          last_run_status: 'error',
+          last_error: `${issue.message} (${cancellationMessage})`,
+          last_fire_key: fireKey
+        }).catch(() => undefined);
+        throw cancelError;
+      }
+
+      await WorkflowScheduleStateModel.update(knex, schedule.id, {
+        enabled: false,
+        status: 'failed',
+        job_id: null,
+        runner_schedule_id: null,
+        next_fire_at: null,
+        last_fire_at: triggerMetadata.firedAt,
+        last_run_status: 'error',
+        last_error: issue.message,
+        last_fire_key: fireKey
+      });
+      return;
+    }
+
+    const occurrenceIsoForClassification = scheduledOccurrenceIso ?? triggerMetadata.scheduledFor;
+    const isEligible = isWorkflowOccurrenceEligible({
+      dayTypeFilter,
+      occurrence: new Date(occurrenceIsoForClassification),
+      occurrenceTimezone: schedule.timezone ?? 'UTC',
+      resolution: resolvedBusinessDaySettings.value
+    });
+    if (!isEligible) {
+      await WorkflowScheduleStateModel.update(knex, schedule.id, {
+        last_fire_at: triggerMetadata.firedAt,
+        last_run_status: 'skipped',
+        last_error: null,
+        last_fire_key: fireKey,
+        next_fire_at: computeNextFireAtForSchedule(schedule)
+      });
+      return;
+    }
+  }
 
   try {
     await launchPublishedWorkflowRun(knex, {
@@ -109,7 +198,8 @@ async function runScheduledWorkflow(
           next_fire_at: null
         }
       : {
-          status: schedule.status
+          status: schedule.status,
+          next_fire_at: computeNextFireAtForSchedule(schedule)
         };
 
     await WorkflowScheduleStateModel.update(knex, schedule.id, {

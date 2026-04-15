@@ -1,0 +1,292 @@
+{
+  "page": {
+    "title": "11111",
+    "subtitle": "11111",
+    "actions": {
+      "import": "11111",
+      "newArticle": "11111"
+    },
+    "tabs": {
+      "articles": "11111",
+      "reviewDashboard": "11111"
+    },
+    "feedback": {
+      "loadError": "11111",
+      "createError": "11111",
+      "userLoadError": "11111"
+    },
+    "newArticleTitle": "11111"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "11111",
+      "review": "11111",
+      "published": "11111",
+      "archived": "11111"
+    },
+    "audienceLabels": {
+      "internal": "11111",
+      "client": "11111",
+      "public": "11111"
+    },
+    "typeLabels": {
+      "how_to": "11111",
+      "faq": "11111",
+      "troubleshooting": "11111",
+      "reference": "11111"
+    },
+    "reviewCycleOptions": {
+      "30": "11111",
+      "60": "11111",
+      "90": "11111",
+      "180": "11111",
+      "365": "11111",
+      "none": "11111"
+    },
+    "fallbacks": {
+      "emptyDate": "11111"
+    }
+  },
+  "list": {
+    "title": "11111",
+    "countSummary": "11111 {{count}} 11111",
+    "itemLabel": "11111",
+    "empty": "11111",
+    "createFirst": "11111",
+    "table": {
+      "title": "11111",
+      "type": "11111",
+      "audience": "11111",
+      "status": "11111",
+      "tags": "11111",
+      "stats": "11111",
+      "updated": "11111",
+      "actions": "11111"
+    },
+    "stats": {
+      "views": "11111",
+      "helpful": "11111",
+      "notHelpful": "11111"
+    },
+    "actions": {
+      "edit": "11111",
+      "submitForReview": "11111",
+      "publish": "11111",
+      "archive": "11111"
+    },
+    "pagination": {
+      "itemsPerPage": {
+        "10": "11111",
+        "20": "11111",
+        "50": "11111"
+      }
+    },
+    "stale": {
+      "reviewOverdue": "11111"
+    },
+    "dialogs": {
+      "archive": {
+        "title": "11111",
+        "message": "11111 {{title}} 11111"
+      }
+    },
+    "feedback": {
+      "archiveError": "11111",
+      "archiveSuccess": "11111"
+    }
+  },
+  "editor": {
+    "header": {
+      "untitled": "11111",
+      "back": "11111"
+    },
+    "actions": {
+      "submitForReview": "11111",
+      "publish": "11111",
+      "archive": "11111",
+      "saveMetadata": "11111",
+      "saving": "11111"
+    },
+    "feedback": {
+      "permissionDenied": "11111",
+      "notFound": "11111",
+      "loadError": "11111",
+      "noChanges": "11111",
+      "saveError": "11111",
+      "saveSuccess": "11111",
+      "publishError": "11111",
+      "publishSuccess": "11111",
+      "statusChangeError": "11111",
+      "submitForReviewSuccess": "11111",
+      "archiveSuccess": "11111"
+    },
+    "badges": {
+      "reviewOverdue": "11111"
+    },
+    "stats": {
+      "title": "11111",
+      "views": "11111",
+      "helpful": "11111",
+      "notHelpful": "11111",
+      "published": "11111"
+    },
+    "metadata": {
+      "title": "11111",
+      "fields": {
+        "title": "11111",
+        "slug": "11111",
+        "articleType": "11111",
+        "audience": "11111",
+        "category": "11111",
+        "reviewCycle": "11111",
+        "nextReview": "11111",
+        "noCategory": "11111"
+      }
+    },
+    "tags": {
+      "title": "11111"
+    }
+  },
+  "filters": {
+    "title": "11111",
+    "actions": {
+      "clear": "11111"
+    },
+    "labels": {
+      "search": "11111",
+      "status": "11111",
+      "audience": "11111",
+      "articleType": "11111",
+      "category": "11111",
+      "tags": "11111"
+    },
+    "placeholders": {
+      "search": "11111",
+      "status": "11111",
+      "audience": "11111",
+      "articleType": "11111",
+      "category": "11111",
+      "tags": "11111"
+    },
+    "options": {
+      "status": {
+        "all": "11111"
+      },
+      "audience": {
+        "all": "11111"
+      },
+      "articleType": {
+        "all": "11111"
+      },
+      "category": {
+        "all": "11111"
+      }
+    }
+  },
+  "categoryTree": {
+    "allCategories": "11111",
+    "empty": "11111"
+  },
+  "publishing": {
+    "title": "11111",
+    "currentStatus": "11111",
+    "actions": {
+      "submitForReview": "11111",
+      "publish": "11111",
+      "approveAndPublish": "11111",
+      "archive": "11111",
+      "republish": "11111"
+    },
+    "flow": {
+      "draft": "11111",
+      "review": "11111",
+      "published": "11111"
+    },
+    "warnings": {
+      "audience": "11111 {{audience}} 11111"
+    },
+    "dialogs": {
+      "publish": {
+        "title": "11111",
+        "message": "11111",
+        "messageWithAudience": "11111 {{audience}} 11111"
+      },
+      "archive": {
+        "title": "11111",
+        "message": "11111"
+      }
+    },
+    "feedback": {
+      "publishError": "11111",
+      "publishSuccess": "11111",
+      "archiveError": "11111",
+      "archiveSuccess": "11111"
+    }
+  },
+  "reviewDashboard": {
+    "summary": {
+      "awaitingReview": "11111",
+      "overdueReviews": "11111"
+    },
+    "empty": "11111",
+    "sections": {
+      "awaitingReview": "11111",
+      "overdue": "11111"
+    },
+    "labels": {
+      "submitted": "11111",
+      "due": "11111",
+      "lastReviewed": "11111",
+      "never": "11111"
+    },
+    "actions": {
+      "view": "11111",
+      "review": "11111",
+      "reviewNow": "11111"
+    },
+    "feedback": {
+      "loadError": "11111"
+    }
+  },
+  "importDialog": {
+    "title": "11111",
+    "dropzone": {
+      "title": "11111",
+      "formats": "11111"
+    },
+    "fields": {
+      "audience": "11111",
+      "articleType": "11111"
+    },
+    "actions": {
+      "import": "11111 {{count}} 11111",
+      "importing": "11111"
+    },
+    "feedback": {
+      "unsupportedFileType": "11111 {{fileName}} 11111",
+      "permissionDenied": "11111",
+      "importSuccess": "11111 {{imported}} 11111 {{total}} 11111",
+      "allFailed": "11111",
+      "importError": "11111"
+    },
+    "results": {
+      "summary": "11111 {{imported}} 11111 {{total}} 11111",
+      "failedCount": "11111 {{count}} 11111"
+    }
+  },
+  "staleness": {
+    "badges": {
+      "reviewOverdue": "11111",
+      "reviewDueSoon": "11111",
+      "overdueBy": "11111 {{count}} 11111",
+      "dueIn": "11111 {{count}} 11111"
+    },
+    "tooltips": {
+      "reviewOverdue": "11111 {{date}} 11111",
+      "reviewDue": "11111 {{date}} 11111"
+    }
+  },
+  "common": {
+    "done": "11111"
+  }
+}

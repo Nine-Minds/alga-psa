@@ -1,0 +1,104 @@
+[
+  {
+    "id": "F001",
+    "description": "Persist per-board inbound reopen policy fields for enablement, cutoff duration, optional reopen status, and AI acknowledgement suppression.",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F002",
+    "description": "Expose board settings UI and server actions for editing inbound reopen policy using board-owned ticket statuses.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Requirements"]
+  },
+  {
+    "id": "F003",
+    "description": "Load matched ticket board policy during inbound reply handling before comment creation.",
+    "implemented": true,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "When reopen-on-reply is disabled for a board, attach threaded replies to closed tickets without reopening.",
+    "implemented": true,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F005",
+    "description": "Apply the per-board cutoff window so replies older than the configured threshold bypass closed-ticket attachment and enter the new-ticket path.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements"]
+  },
+  {
+    "id": "F006",
+    "description": "Always reopen matched closed tickets for internal-user replies that fall within the cutoff window.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements"]
+  },
+  {
+    "id": "F007",
+    "description": "Reopen matched closed tickets for client/contact replies within the cutoff window when AI suppression is disabled or not applicable.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "Resolve reopen target status from board `reopen_status_id` and fall back to the board default open status when unset.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements"]
+  },
+  {
+    "id": "F009",
+    "description": "Apply reopen transitions using existing ticket status semantics so `status_id`, `is_closed`, `closed_at`, and `closed_by` stay aligned.",
+    "implemented": true,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F010",
+    "description": "Preserve existing inbound dedupe and token-only self-notification skipping before reopen decisions execute.",
+    "implemented": true,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F011",
+    "description": "Introduce a shared acknowledgement-decision interface with a default non-AI implementation that never suppresses reopen.",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F012",
+    "description": "Provide an EE acknowledgement-decision implementation behind manual edition-aware resolution so AI logic stays isolated in `@ee/...` code.",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F013",
+    "description": "Require both board AI suppression enablement and tenant `AI Assistant` entitlement before any acknowledgement LLM call.",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F014",
+    "description": "Use the standard LLM path with a minimal prompt and tiny formatted output such as `ACK` or `NOT_ACK` for short acknowledgement-like client replies.",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F015",
+    "description": "Treat `ACK` client replies as comment-only updates that keep the ticket closed.",
+    "implemented": true,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F016",
+    "description": "Treat invalid AI output, missing EE code, missing entitlement, or AI runtime errors as reopen-normal fallback behavior.",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F017",
+    "description": "Record decision metadata sufficient to explain reopen, cutoff, and AI suppression outcomes during debugging.",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements", "Observability"]
+  }
+]

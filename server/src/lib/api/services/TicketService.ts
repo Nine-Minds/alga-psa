@@ -7,21 +7,25 @@ import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
+import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { getEventBus } from 'server/src/lib/eventBus';
+import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 // Event types no longer needed as we create objects directly
-import { 
-  CreateTicketData, 
-  UpdateTicketData, 
+import {
+  CreateTicketData,
+  UpdateTicketData,
   TicketFilterData,
   CreateTicketCommentData,
+  CreateTicketMaterialData,
+  UpdateTicketCommentData,
   TicketSearchData,
   CreateTicketFromAssetData
 } from '../schemas/ticket';
@@ -29,7 +33,10 @@ import { ListOptions } from '../controllers/types';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
 import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketRichRender';
-import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
+import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
+import { aggregateReactions } from '@alga-psa/types';
+import { StorageService } from '@alga-psa/storage/StorageService';
+import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
 
 const TICKET_MOBILE_LIST_FIELDS = [
@@ -307,6 +314,7 @@ export class TicketService extends BaseService<ITicket> {
       .select(
         't.*',
         'comp.client_name',
+        'cl.location_name as location_name',
         'cl.email as client_email',
         'cl.phone as client_phone',
         'cont.full_name as contact_name',
@@ -329,11 +337,17 @@ export class TicketService extends BaseService<ITicket> {
       return null;
     }
 
-    const documents = await this.getTicketDocuments(id, context);
+    const [documents, contactAvatarUrl, clientLogoUrl] = await Promise.all([
+      this.getTicketDocuments(id, context),
+      ticket.contact_name_id ? getContactAvatarUrl(ticket.contact_name_id, context.tenant) : Promise.resolve(null),
+      ticket.client_id ? getClientLogoUrl(ticket.client_id, context.tenant) : Promise.resolve(null),
+    ]);
 
     return {
       ...this.withDescriptionHtml(ticket as ITicketWithDetails),
-      documents
+      documents,
+      contact_avatar_url: contactAvatarUrl,
+      client_logo_url: clientLogoUrl,
     } as ITicketWithDetails;
   }
 
@@ -374,6 +388,355 @@ export class TicketService extends BaseService<ITicket> {
     return documents as IDocument[];
   }
 
+  async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext): Promise<IDocument> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const existingTicket = await knex('tickets')
+      .select('ticket_id')
+      .where({ ticket_id: ticketId, tenant: context.tenant })
+      .first();
+
+    if (!existingTicket) {
+      throw new NotFoundError('Ticket not found');
+    }
+
+    if (!file) {
+      throw new ValidationError('File is required', [
+        { path: ['file'], message: 'file is required' },
+      ]);
+    }
+
+    const mimeType = file.type || 'application/octet-stream';
+    await StorageService.validateFileUpload(context.tenant, mimeType, file.size);
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const uploadResult = await StorageService.uploadFile(context.tenant, buffer, file.name, {
+      mime_type: mimeType,
+      uploaded_by_id: context.userId,
+    });
+
+    const folderRecord = await knex('document_folders')
+      .where({
+        tenant: context.tenant,
+        entity_id: ticketId,
+        entity_type: 'ticket',
+        folder_path: '/Tickets/Attachments',
+      })
+      .select('folder_path')
+      .first();
+
+    const typeResult = await this.getDocumentTypeIdForMime(knex, context.tenant, mimeType);
+    const documentId = uuidv4();
+    const document: IDocument = {
+      document_id: documentId,
+      document_name: file.name,
+      type_id: typeResult.isShared ? null : typeResult.typeId,
+      shared_type_id: typeResult.isShared ? typeResult.typeId : undefined,
+      user_id: context.userId,
+      order_number: 0,
+      created_by: context.userId,
+      tenant: context.tenant,
+      file_id: uploadResult.file_id,
+      storage_path: uploadResult.storage_path,
+      mime_type: mimeType,
+      file_size: file.size,
+      folder_path: folderRecord?.folder_path,
+    };
+
+    await withTransaction(knex, async (trx) => {
+      await trx('documents').insert(document);
+      await trx('document_associations').insert({
+        association_id: uuidv4(),
+        document_id: documentId,
+        entity_id: ticketId,
+        entity_type: 'ticket',
+        tenant: context.tenant,
+      });
+    });
+
+    const createdDocument = await this.getDocumentById(documentId, context);
+    if (!createdDocument) {
+      throw new Error('Uploaded document could not be loaded');
+    }
+
+    return createdDocument;
+  }
+
+  async downloadTicketDocument(
+    ticketId: string,
+    documentId: string,
+    context: ServiceContext
+  ): Promise<{ buffer: Buffer; fileName: string; mimeType: string }> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    // Verify the document belongs to this ticket and tenant
+    const doc = await knex('documents as d')
+      .join('document_associations as da', function () {
+        this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
+      })
+      .where({
+        'da.entity_id': ticketId,
+        'da.entity_type': 'ticket',
+        'd.document_id': documentId,
+        'd.tenant': context.tenant,
+      })
+      .select('d.file_id', 'd.document_name', 'd.mime_type')
+      .first();
+
+    if (!doc || !doc.file_id) {
+      throw new NotFoundError('Document not found');
+    }
+
+    const result = await StorageService.downloadFile(doc.file_id);
+    return {
+      buffer: result.buffer,
+      fileName: doc.document_name || result.metadata.original_name,
+      mimeType: doc.mime_type || result.metadata.mime_type,
+    };
+  }
+
+  async deleteTicketDocument(
+    ticketId: string,
+    documentId: string,
+    context: ServiceContext
+  ): Promise<void> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const doc = await knex('documents as d')
+      .join('document_associations as da', function () {
+        this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
+      })
+      .where({
+        'da.entity_id': ticketId,
+        'da.entity_type': 'ticket',
+        'd.document_id': documentId,
+        'd.tenant': context.tenant,
+      })
+      .select('d.document_id', 'd.file_id', 'da.association_id')
+      .first();
+
+    if (!doc) {
+      throw new NotFoundError('Document not found');
+    }
+
+    await withTransaction(knex, async (trx) => {
+      await trx('document_associations')
+        .where({ association_id: doc.association_id, tenant: context.tenant })
+        .del();
+
+      // Only delete the document itself if no other associations remain
+      const remaining = await trx('document_associations')
+        .where({ document_id: documentId, tenant: context.tenant })
+        .count('* as count')
+        .first();
+
+      if (!remaining || Number(remaining.count) === 0) {
+        await trx('documents')
+          .where({ document_id: documentId, tenant: context.tenant })
+          .del();
+      }
+    });
+  }
+
+  async getTicketMaterials(ticketId: string, context: ServiceContext): Promise<ITicketMaterial[]> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const materials = await knex('ticket_materials as tm')
+      .leftJoin('service_catalog as sc', function () {
+        this.on('tm.service_id', '=', 'sc.service_id')
+          .andOn('tm.tenant', '=', 'sc.tenant');
+      })
+      .where({
+        'tm.ticket_id': ticketId,
+        'tm.tenant': context.tenant,
+      })
+      .select('tm.*', 'sc.service_name as service_name', 'sc.sku as sku')
+      .orderBy('tm.created_at', 'desc');
+
+    return materials as ITicketMaterial[];
+  }
+
+  async addTicketMaterial(
+    ticketId: string,
+    data: CreateTicketMaterialData,
+    context: ServiceContext,
+  ): Promise<ITicketMaterial> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const quantity = Math.floor(Number(data.quantity));
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      throw new ValidationError('Validation failed', [
+        { path: ['quantity'], message: 'quantity must be greater than 0' },
+      ]);
+    }
+
+    const rate = Math.round(Number(data.rate));
+    if (!Number.isFinite(rate) || rate < 0) {
+      throw new ValidationError('Validation failed', [
+        { path: ['rate'], message: 'rate must be 0 or greater' },
+      ]);
+    }
+
+    const ticket = await knex('tickets')
+      .where({ ticket_id: ticketId, tenant: context.tenant })
+      .select('ticket_id', 'client_id')
+      .first();
+
+    if (!ticket) {
+      throw new NotFoundError('Ticket not found');
+    }
+
+    if (!ticket.client_id) {
+      throw new ValidationError('Validation failed', [
+        { path: ['ticket_id'], message: 'ticket must be associated with a client' },
+      ]);
+    }
+
+    const product = await knex('service_catalog')
+      .where({
+        tenant: context.tenant,
+        service_id: data.service_id,
+        item_kind: 'product',
+      })
+      .select('service_id')
+      .first();
+
+    if (!product) {
+      throw new ValidationError('Validation failed', [
+        { path: ['service_id'], message: 'service_id must reference an existing product' },
+      ]);
+    }
+
+    const [createdMaterial] = await knex('ticket_materials')
+      .insert({
+        tenant: context.tenant,
+        ticket_id: ticketId,
+        client_id: ticket.client_id,
+        service_id: data.service_id,
+        quantity,
+        rate,
+        currency_code: data.currency_code,
+        description: data.description ?? null,
+        is_billed: false,
+      })
+      .returning('ticket_material_id');
+
+    const material = await this.getTicketMaterialById(
+      createdMaterial.ticket_material_id,
+      context,
+    );
+
+    if (!material) {
+      throw new Error('Created material could not be loaded');
+    }
+
+    return material;
+  }
+
+  private async getDocumentById(documentId: string, context: ServiceContext): Promise<IDocument | null> {
+    const { knex } = await this.getKnex();
+
+    const document = await knex('documents as d')
+      .leftJoin('users as u', function () {
+        this.on('d.created_by', '=', 'u.user_id')
+          .andOn('d.tenant', '=', 'u.tenant');
+      })
+      .leftJoin('document_types as dt', function () {
+        this.on('d.type_id', '=', 'dt.type_id')
+          .andOn('d.tenant', '=', 'dt.tenant');
+      })
+      .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id')
+      .where({
+        'd.document_id': documentId,
+        'd.tenant': context.tenant,
+      })
+      .select(
+        'd.*',
+        knex.raw("CONCAT(u.first_name, ' ', u.last_name) as created_by_full_name"),
+        knex.raw('COALESCE(dt.type_name, sdt.type_name) as type_name'),
+        knex.raw('COALESCE(dt.icon, sdt.icon) as type_icon')
+      )
+      .first();
+
+    return (document as IDocument | undefined) ?? null;
+  }
+
+  private async getTicketMaterialById(
+    ticketMaterialId: string,
+    context: ServiceContext,
+  ): Promise<ITicketMaterial | null> {
+    const { knex } = await this.getKnex();
+
+    const material = await knex('ticket_materials as tm')
+      .leftJoin('service_catalog as sc', function () {
+        this.on('tm.service_id', '=', 'sc.service_id')
+          .andOn('tm.tenant', '=', 'sc.tenant');
+      })
+      .where({
+        'tm.ticket_material_id': ticketMaterialId,
+        'tm.tenant': context.tenant,
+      })
+      .select('tm.*', 'sc.service_name as service_name', 'sc.sku as sku')
+      .first();
+
+    return (material as ITicketMaterial | undefined) ?? null;
+  }
+
+  private async getDocumentTypeIdForMime(
+    knex: Knex,
+    tenant: string,
+    mimeType: string,
+  ): Promise<{ typeId: string; isShared: boolean }> {
+    const tenantType = await knex('document_types')
+      .where({ tenant, type_name: mimeType })
+      .first();
+
+    if (tenantType) {
+      return { typeId: tenantType.type_id, isShared: false };
+    }
+
+    const sharedType = await knex('shared_document_types')
+      .where({ type_name: mimeType })
+      .first();
+
+    if (sharedType) {
+      return { typeId: sharedType.type_id, isShared: true };
+    }
+
+    const generalType = `${mimeType.split('/')[0]}/*`;
+
+    const generalTenantType = await knex('document_types')
+      .where({ tenant, type_name: generalType })
+      .first();
+
+    if (generalTenantType) {
+      return { typeId: generalTenantType.type_id, isShared: false };
+    }
+
+    const generalSharedType = await knex('shared_document_types')
+      .where({ type_name: generalType })
+      .first();
+
+    if (generalSharedType) {
+      return { typeId: generalSharedType.type_id, isShared: true };
+    }
+
+    const unknownType = await knex('shared_document_types')
+      .where({ type_name: 'application/octet-stream' })
+      .first();
+
+    if (!unknownType) {
+      throw new Error('Unknown document type not found in shared document types');
+    }
+
+    return { typeId: unknownType.type_id, isShared: true };
+  }
+
   private assertValidTicketId(id: string): void {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
@@ -411,6 +774,19 @@ export class TicketService extends BaseService<ITicket> {
       const { knex } = await this.getKnex();
   
       return withTransaction(knex, async (trx) => {
+        // Validate status belongs to the specified board before proceeding
+        const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
+          data.status_id,
+          data.board_id,
+          context.tenant,
+          trx
+        );
+        if (!statusBelongsToBoard.valid) {
+          throw new ValidationError('Validation failed', [
+            { path: ['status_id'], message: `status_id ${data.status_id} does not belong to board_id ${data.board_id}` }
+          ]);
+        }
+
         // Convert API data format to TicketModel input format
         const createTicketInput: CreateTicketInput = {
           title: data.title,
@@ -494,18 +870,33 @@ export class TicketService extends BaseService<ITicket> {
         }
       });
 
-      if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
-        const status = await trx('statuses')
-          .where({
-            status_id: cleanedData.status_id,
-            tenant: context.tenant,
-            status_type: 'ticket'
-          })
-          .first();
+      const isBoardChange =
+        cleanedData.board_id !== undefined &&
+        cleanedData.board_id !== currentTicket.board_id;
 
-        if (!status) {
+      if (isBoardChange && !cleanedData.status_id) {
+        throw new ValidationError('Validation failed', [
+          { path: ['status_id'], message: 'Changing the board requires selecting a status for the destination board' }
+        ]);
+      }
+
+      if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
+        const effectiveBoardId = cleanedData.board_id ?? currentTicket.board_id;
+        const statusResult = effectiveBoardId
+          ? await TicketModel.validateStatusBelongsToBoard(
+            cleanedData.status_id,
+            effectiveBoardId,
+            context.tenant,
+            trx
+          )
+          : {
+            valid: false,
+            error: 'Invalid status: board_id is required when selecting a ticket status'
+          };
+
+        if (!statusResult.valid) {
           throw new ValidationError('Validation failed', [
-            { path: ['status_id'], message: 'Status not found' }
+            { path: ['status_id'], message: statusResult.error || 'Status not found' }
           ]);
         }
       }
@@ -537,6 +928,11 @@ export class TicketService extends BaseService<ITicket> {
           .where({ status_id: currentTicket.status_id, tenant: context.tenant })
           .first();
 
+        // Keep the ticket row's denormalized close flag aligned with the selected status.
+        await trx('tickets')
+          .where({ ticket_id: id, tenant: context.tenant })
+          .update({ is_closed: !!newStatus?.is_closed });
+
         // Record closed_at / closed_by when transitioning to/from closed status
         if (newStatus?.is_closed && !oldStatus?.is_closed) {
           await trx('tickets')
@@ -549,28 +945,17 @@ export class TicketService extends BaseService<ITicket> {
         }
 
         if (newStatus?.is_closed) {
-          await this.safePublishEvent('TicketClosed', {
-            id: require("crypto").randomUUID(),
-            eventType: "TICKET_CLOSED" as const,
-            timestamp: new Date().toISOString(),
-            payload: {
-              tenantId: context.tenant,
-              ticketId: ticket.ticket_id,
-              userId: context.userId
-            }
+          await this.safePublishEvent('TICKET_CLOSED', context, {
+            ticketId: ticket.ticket_id,
+            closedByUserId: context.userId,
+            closedAt: new Date().toISOString(),
           });
         }
       }
 
-      await this.safePublishEvent('TicketUpdated', {
-        id: require("crypto").randomUUID(),
-        eventType: "TICKET_UPDATED" as const,
-        timestamp: new Date().toISOString(),
-        payload: {
-          tenantId: context.tenant,
-          ticketId: ticket.ticket_id,
-          userId: context.userId
-        }
+      await this.safePublishEvent('TICKET_UPDATED', context, {
+        ticketId: ticket.ticket_id,
+        updatedByUserId: context.userId,
       });
 
       return this.withDescriptionHtml(ticket as ITicket);
@@ -598,6 +983,19 @@ export class TicketService extends BaseService<ITicket> {
 
       if (!asset) {
         throw new NotFoundError('Asset not found');
+      }
+
+      // Validate status belongs to the specified board
+      const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
+        data.status_id,
+        data.board_id,
+        context.tenant,
+        trx
+      );
+      if (!statusBelongsToBoard.valid) {
+        throw new ValidationError('Validation failed', [
+          { path: ['status_id'], message: `status_id ${data.status_id} does not belong to board_id ${data.board_id}` }
+        ]);
       }
 
       // Create adapters for API service context
@@ -649,7 +1047,7 @@ export class TicketService extends BaseService<ITicket> {
   async getTicketComments(
     ticketId: string,
     context: ServiceContext,
-    options?: { limit?: number; offset?: number; order?: 'asc' | 'desc' }
+    options?: { limit?: number; offset?: number; order?: 'asc' | 'desc'; contentFormat?: 'full' | 'markdown' }
   ): Promise<any[]> {
     const { knex } = await this.getKnex();
 
@@ -696,18 +1094,68 @@ export class TicketService extends BaseService<ITicket> {
       })
     );
 
+    // Batch-fetch reactions for all comments
+    const commentIds = comments.map(c => c.comment_id).filter(Boolean) as string[];
+    let reactionsMap: Record<string, any[]> = {};
+    let reactionUserNames: Record<string, string> = {};
+    if (commentIds.length > 0) {
+      const reactionRows = await knex('comment_reactions')
+        .where({ tenant: context.tenant })
+        .whereIn('comment_id', commentIds)
+        .select('comment_id', 'emoji', 'user_id')
+        .orderBy('created_at', 'asc');
+
+      reactionsMap = aggregateReactions(reactionRows, 'comment_id', context.userId);
+
+      const reactionUserIds = [...new Set(reactionRows.map(r => r.user_id))];
+      if (reactionUserIds.length > 0) {
+        const reactionUsers = await knex('users')
+          .where({ tenant: context.tenant })
+          .whereIn('user_id', reactionUserIds)
+          .select('user_id', 'first_name', 'last_name');
+        for (const u of reactionUsers) {
+          reactionUserNames[u.user_id] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown';
+        }
+      }
+    }
+
+    const useMarkdown = options?.contentFormat === 'markdown';
+
     // Map database fields to API response format
-    return comments.map(comment => ({
-      ...comment,
-      comment_text: comment.note,
-      comment_html: renderTicketRichTextHtml(comment.note),
-      created_by: comment.user_id ?? null,
-      created_by_name: comment.created_by_name || comment.author_contact_name || null,
-      created_by_avatar_url: comment.user_id ? (avatarMap[comment.user_id] ?? null) : null,
-      author_contact_id: comment.author_contact_id || comment.contact_id || null,
-      author_contact_name: comment.author_contact_name || null,
-      author_contact_email: comment.author_contact_email || null
-    }));
+    return comments.map(comment => {
+      if (useMarkdown) {
+        // Compact format: only markdown text and metadata, no heavy BlockNote JSON or HTML
+        return {
+          comment_id: comment.comment_id,
+          ticket_id: comment.ticket_id,
+          markdown_content: comment.markdown_content || null,
+          author_type: comment.author_type,
+          is_internal: comment.is_internal,
+          is_resolution: comment.is_resolution,
+          created_at: comment.created_at,
+          updated_at: comment.updated_at,
+          created_by: comment.user_id ?? null,
+          created_by_name: comment.created_by_name || comment.author_contact_name || null,
+          author_contact_id: comment.author_contact_id || comment.contact_id || null,
+          author_contact_name: comment.author_contact_name || null,
+        };
+      }
+
+      return {
+        ...comment,
+        comment_text: comment.note,
+        markdown_content: comment.markdown_content || null,
+        comment_html: renderTicketRichTextHtml(comment.note),
+        created_by: comment.user_id ?? null,
+        created_by_name: comment.created_by_name || comment.author_contact_name || null,
+        created_by_avatar_url: comment.user_id ? (avatarMap[comment.user_id] ?? null) : null,
+        author_contact_id: comment.author_contact_id || comment.contact_id || null,
+        author_contact_name: comment.author_contact_name || null,
+        author_contact_email: comment.author_contact_email || null,
+        reactions: reactionsMap[comment.comment_id] ?? [],
+        reaction_user_names: reactionUserNames,
+      };
+    });
   }
 
   /**
@@ -735,7 +1183,7 @@ export class TicketService extends BaseService<ITicket> {
         ticket_id: ticketId,
         note: data.comment_text,
         is_internal: data.is_internal || false,
-        is_resolution: false,
+        is_resolution: data.is_resolution || false,
         user_id: context.userId,
         tenant: context.tenant,
         created_at: knex.raw('now()'),
@@ -766,8 +1214,7 @@ export class TicketService extends BaseService<ITicket> {
       const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
 
       // Publish TICKET_COMMENT_ADDED event for mention notifications
-      await this.safePublishEvent('TICKET_COMMENT_ADDED', {
-        tenantId: context.tenant,
+      await this.safePublishEvent('TICKET_COMMENT_ADDED', context, {
         ticketId: ticketId,
         userId: context.userId,
         comment: {
@@ -787,6 +1234,52 @@ export class TicketService extends BaseService<ITicket> {
         author_contact_id: comment.contact_id ?? null,
         author_contact_name: null,
         author_contact_email: null
+      };
+    });
+  }
+
+  /**
+   * Update an existing comment (only the comment author may edit)
+   */
+  async updateComment(
+    ticketId: string,
+    commentId: string,
+    data: UpdateTicketCommentData,
+    context: ServiceContext
+  ): Promise<any> {
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      const comment = await trx('comments')
+        .where({ comment_id: commentId, ticket_id: ticketId, tenant: context.tenant })
+        .first();
+
+      if (!comment) {
+        throw new NotFoundError('Comment not found');
+      }
+
+      if (comment.is_system_generated) {
+        throw new ValidationError('System-generated comments cannot be edited');
+      }
+
+      if (comment.user_id !== context.userId) {
+        throw new ValidationError('You can only edit your own comments');
+      }
+
+      const [updated] = await trx('comments')
+        .where({ comment_id: commentId, tenant: context.tenant })
+        .update({
+          note: data.comment_text,
+          updated_at: knex.raw('now()'),
+        })
+        .returning('*');
+
+      return {
+        ...updated,
+        comment_text: updated.note,
+        comment_html: renderTicketRichTextHtml(updated.note),
+        created_by: updated.user_id ?? null,
+        author_contact_id: updated.contact_id ?? null,
       };
     });
   }
@@ -862,7 +1355,13 @@ export class TicketService extends BaseService<ITicket> {
 
     // Execute query
     const tickets = await query
-      .select('t.*', 'comp.client_name', 'cont.full_name as contact_name')
+      .select(
+        't.*',
+        'comp.client_name',
+        'cont.full_name as contact_name',
+        'stat.name as status_name',
+        'stat.is_closed as status_is_closed'
+      )
       .limit(searchData.limit || 25)
       .orderBy('t.entered_at', 'desc');
 
@@ -940,8 +1439,8 @@ export class TicketService extends BaseService<ITicket> {
               .andOn('t.tenant', '=', 's.tenant');
         })
         .where('t.tenant', context.tenant)
-        .groupBy('s.name')
-        .select('s.name as status_name', knex.raw('COUNT(*) as count')),
+        .groupBy('s.status_id', 's.name')
+        .select('s.status_id', 's.name as status_name', knex.raw('COUNT(*) as count')),
 
       // Tickets by priority
       knex('tickets as t')
@@ -992,7 +1491,8 @@ export class TicketService extends BaseService<ITicket> {
       unassigned_tickets: parseInt(totalStats.unassigned_tickets),
       overdue_tickets: 0, // Would need SLA configuration to calculate
       tickets_by_status: statusStats.reduce((acc: any, row: any) => {
-        acc[row.status_name] = parseInt(row.count);
+        const key = row.status_id || row.status_name || 'unknown';
+        acc[key] = parseInt(row.count);
         return acc;
       }, {}),
       tickets_by_priority: priorityStats.reduce((acc: any, row: any) => {
@@ -1082,7 +1582,34 @@ export class TicketService extends BaseService<ITicket> {
                 .from('clients as c')
                 .whereRaw('c.client_id = t.client_id')
                 .andWhere('c.tenant', query.client.raw('t.tenant'))
-                .andWhereILike('c.client_name', `%${value}%`);
+                .andWhere('c.client_name', value);
+          });
+          break;
+        case 'contact_name':
+          query.whereExists(function() {
+            this.select('*')
+                .from('contacts as cn')
+                .whereRaw('cn.contact_name_id = t.contact_name_id')
+                .andWhere('cn.tenant', query.client.raw('t.tenant'))
+                .andWhere('cn.full_name', value);
+          });
+          break;
+        case 'board_name':
+          query.whereExists(function() {
+            this.select('*')
+                .from('boards as b')
+                .whereRaw('b.board_id = t.board_id')
+                .andWhere('b.tenant', query.client.raw('t.tenant'))
+                .andWhere('b.board_name', value);
+          });
+          break;
+        case 'category_name':
+          query.whereExists(function() {
+            this.select('*')
+                .from('categories as cat')
+                .whereRaw('cat.category_id = t.category_id')
+                .andWhere('cat.tenant', query.client.raw('t.tenant'))
+                .andWhere('cat.category_name', value);
           });
           break;
         case 'search':
@@ -1119,7 +1646,7 @@ export class TicketService extends BaseService<ITicket> {
                 .from('priorities as p')
                 .whereRaw('p.priority_id = t.priority_id')
                 .andWhere('p.tenant', query.client.raw('t.tenant'))
-                .andWhereILike('p.priority_name', `%${value}%`);
+                .andWhere('p.priority_name', value);
           });
           break;
         case 'status_name':
@@ -1128,7 +1655,7 @@ export class TicketService extends BaseService<ITicket> {
                 .from('statuses as s')
                 .whereRaw('s.status_id = t.status_id')
                 .andWhere('s.tenant', query.client.raw('t.tenant'))
-                .andWhereILike('s.name', `%${value}%`);
+                .andWhere('s.name', value);
           });
           break;
         case 'entered_from':
@@ -1173,19 +1700,22 @@ export class TicketService extends BaseService<ITicket> {
   /**
    * Safely publish events
    */
-  private async safePublishEvent(eventType: string, event: any): Promise<void> {
+  private async safePublishEvent(eventType: string, context: ServiceContext, payload: Record<string, unknown>): Promise<void> {
     if (process.env.E2E_SKIP_APP_INIT === 'true') {
       return;
     }
 
     try {
-      await getEventBus().publish(
-        {
-          eventType,
-          payload: event
+      await publishWorkflowEvent({
+        eventType: eventType as any,
+        payload,
+        ctx: {
+          tenantId: context.tenant,
+          actor: context.userId
+            ? { actorType: 'USER', actorUserId: context.userId }
+            : { actorType: 'SYSTEM' },
         },
-        { channel: getEmailEventChannel() }
-      );
+      });
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);
     }

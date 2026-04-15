@@ -49,6 +49,7 @@ services:
       TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal-dev:7233}
       TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
       TEMPORAL_JOB_TASK_QUEUE: ${TEMPORAL_JOB_TASK_QUEUE:-alga-jobs}
+      WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE: ${WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE:-workflow-runtime-v2}
       # Secret provider configuration (EE edition - for local dev, vault is disabled by default)
       # For production with vault, set SECRET_READ_CHAIN=env,filesystem,vault in your environment
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
@@ -232,6 +233,10 @@ services:
       WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"
       WORKFLOW_REDIS_BATCH_SIZE: "10"
       WORKFLOW_REDIS_IDLE_TIMEOUT_MS: "60000"
+      TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal-dev:7233}
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+      TEMPORAL_JOB_TASK_QUEUE: ${TEMPORAL_JOB_TASK_QUEUE:-alga-jobs}
+      WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING: ${WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING:-false}
       # WorkerServer listens on PORT (defaults to 4000)
       PORT: "4000"
     ports:
@@ -358,6 +363,8 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${DB_HOST_DOCKER:-postgres}
       DB_PORT: ${DB_PORT:-5432}
+      AI_DOCUMENT_API_URL: ${AI_DOCUMENT_API_URL:-http://server:3000/api/v1/ai/document-assist}
+      AI_DOCUMENT_API_KEY: ${AI_DOCUMENT_API_KEY:-}
     volumes:
       - type: bind
         source: ./secrets/db_password_server

@@ -14,18 +14,22 @@ import {
 } from '../actions/projectTaskStatusActions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from 'react-i18next';
 
 interface ProjectTaskStatusEditorProps {
   projectId: string;
+  phaseId?: string | null;
   error?: string;
   onChange?: () => void;
 }
 
 export function ProjectTaskStatusEditor({
   projectId,
+  phaseId,
   error,
   onChange
 }: ProjectTaskStatusEditorProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [showAvailableList, setShowAvailableList] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [availableStatuses, setAvailableStatuses] = useState<IStatus[]>([]);
@@ -38,19 +42,19 @@ export function ProjectTaskStatusEditor({
       try {
         setIsLoading(true);
         const [mappings, tenantStatuses] = await Promise.all([
-          getProjectStatusMappings(projectId),
+          getProjectStatusMappings(projectId, phaseId),
           getTenantProjectStatuses()
         ]);
         setProjectStatusMappings(mappings);
         setAvailableStatuses(tenantStatuses);
       } catch (error) {
-        handleError(error, 'Failed to load task statuses');
+        handleError(error, t('settings.statuses.load_task_statuses_failed', 'Failed to load task statuses'));
       } finally {
         setIsLoading(false);
       }
     };
     fetchData();
-  }, [projectId]);
+  }, [projectId, phaseId, t]);
 
   // Get status details by ID from tenant library
   const getStatusDetails = (statusId: string) => {
@@ -60,7 +64,7 @@ export function ProjectTaskStatusEditor({
   // Add a status to the project
   const addStatus = async (statusId: string) => {
     if (projectStatusMappings.find(m => m.status_id === statusId)) {
-      toast.error('Status already added');
+      toast.error(t('settings.statuses.already_added', 'Status already added'));
       return;
     }
 
@@ -68,7 +72,7 @@ export function ProjectTaskStatusEditor({
       const newMapping = await addStatusToProject(projectId, {
         status_id: statusId,
         is_visible: true
-      });
+      }, phaseId);
 
       setProjectStatusMappings([...projectStatusMappings, newMapping]);
 
@@ -81,9 +85,9 @@ export function ProjectTaskStatusEditor({
       }
 
       onChange?.();
-      toast.success('Status added successfully');
+      toast.success(t('settings.statuses.added_success', 'Status added successfully'));
     } catch (error) {
-      handleError(error, 'Failed to add status');
+      handleError(error, t('settings.statuses.add_task_status_failed', 'Failed to add status'));
     }
   };
 
@@ -93,9 +97,9 @@ export function ProjectTaskStatusEditor({
       await deleteProjectStatusMapping(mappingId);
       setProjectStatusMappings(projectStatusMappings.filter(m => m.project_status_mapping_id !== mappingId));
       onChange?.();
-      toast.success('Status removed successfully');
+      toast.success(t('settings.statuses.removed_success', 'Status removed successfully'));
     } catch (error) {
-      handleError(error, 'Failed to remove status');
+      handleError(error, t('settings.statuses.remove_task_status_failed', 'Failed to remove status'));
     }
   };
 
@@ -113,7 +117,8 @@ export function ProjectTaskStatusEditor({
     }));
 
     try {
-      await reorderProjectStatuses(projectId, statusOrder);
+      await reorderProjectStatuses(projectId, statusOrder, phaseId);
+      
 
       // Update local state with new order
       const reordered = newMappings.map((m, idx) => ({
@@ -123,7 +128,7 @@ export function ProjectTaskStatusEditor({
       setProjectStatusMappings(reordered);
       onChange?.();
     } catch (error) {
-      handleError(error, 'Failed to reorder statuses');
+      handleError(error, t('settings.statuses.reorder_failed', 'Failed to reorder statuses'));
     }
   };
 
@@ -141,7 +146,8 @@ export function ProjectTaskStatusEditor({
     }));
 
     try {
-      await reorderProjectStatuses(projectId, statusOrder);
+      await reorderProjectStatuses(projectId, statusOrder, phaseId);
+      
 
       // Update local state with new order
       const reordered = newMappings.map((m, idx) => ({
@@ -151,7 +157,7 @@ export function ProjectTaskStatusEditor({
       setProjectStatusMappings(reordered);
       onChange?.();
     } catch (error) {
-      handleError(error, 'Failed to reorder statuses');
+      handleError(error, t('settings.statuses.reorder_failed', 'Failed to reorder statuses'));
     }
   };
 
@@ -164,10 +170,12 @@ export function ProjectTaskStatusEditor({
     return (
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
-          Task Statuses
+          {phaseId
+            ? t('settings.statuses.phase_task_statuses_label', 'Phase Task Statuses')
+            : t('settings.statuses.task_statuses_label', 'Task Statuses')}
         </label>
         <div className="text-sm text-gray-500 p-3 bg-gray-50 rounded-lg border">
-          Loading...
+          {t('settings.statuses.loading', 'Loading...')}
         </div>
       </div>
     );
@@ -177,7 +185,9 @@ export function ProjectTaskStatusEditor({
     <div className="space-y-2">
       <div className="flex justify-between items-center">
         <label className="block text-sm font-medium text-gray-700">
-          Task Statuses
+          {phaseId
+            ? t('settings.statuses.phase_task_statuses_label', 'Phase Task Statuses')
+            : t('settings.statuses.task_statuses_label', 'Task Statuses')}
         </label>
         {!isExpanded && (
           <Button
@@ -188,7 +198,7 @@ export function ProjectTaskStatusEditor({
             id="customize-task-statuses-button"
           >
             <ChevronRight className="w-4 h-4 mr-1" />
-            Customize
+            {t('settings.statuses.customize', 'Customize')}
           </Button>
         )}
       </div>
@@ -217,7 +227,11 @@ export function ProjectTaskStatusEditor({
       {isExpanded && (
         <>
           <div className="flex justify-between items-center mb-2">
-            <span className="text-xs text-gray-600">Customize task statuses for this project</span>
+            <span className="text-xs text-gray-600">
+              {phaseId
+                ? t('settings.statuses.customize_phase', 'Customize task statuses for this phase')
+                : t('settings.statuses.customize_project', 'Customize task statuses for this project')}
+            </span>
             {unselectedStatuses.length > 0 && (
               <Button
                 type="button"
@@ -225,18 +239,18 @@ export function ProjectTaskStatusEditor({
                 size="sm"
                 onClick={() => setShowAvailableList(!showAvailableList)}
                 id="toggle-available-task-statuses"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Add Status
-              </Button>
-            )}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t('settings.statuses.add_from_library', 'Add Status')}
+                </Button>
+              )}
           </div>
 
           {/* Available statuses dropdown */}
           {showAvailableList && unselectedStatuses.length > 0 && (
             <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
               <div className="text-xs font-medium text-gray-600 mb-2">
-                Available Statuses (click to add):
+                {t('settings.statuses.available_statuses_click_add', 'Available Statuses (click to add):')}
               </div>
               {unselectedStatuses.map((status) => (
                 <button
@@ -247,11 +261,11 @@ export function ProjectTaskStatusEditor({
                   id={`add-task-status-${status.status_id}`}
                 >
                   {status.name}
-                  {status.is_closed && (
-                    <span className="ml-2 text-xs px-2 py-0.5 bg-gray-200 rounded">
-                      Closed
-                    </span>
-                  )}
+                    {status.is_closed && (
+                      <span className="ml-2 text-xs px-2 py-0.5 bg-gray-200 rounded">
+                        {t('settings.statuses.closed', 'Closed')}
+                      </span>
+                    )}
                 </button>
               ))}
             </div>
@@ -276,7 +290,7 @@ export function ProjectTaskStatusEditor({
                         onClick={() => moveUp(index)}
                         disabled={index === 0}
                         className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                        title="Move up"
+                        title={t('settings.statuses.move_up', 'Move up')}
                         id={`move-up-task-status-${status.status_id}`}
                       >
                         <ChevronUp className="w-3 h-3" />
@@ -286,7 +300,7 @@ export function ProjectTaskStatusEditor({
                         onClick={() => moveDown(index)}
                         disabled={index === projectStatusMappings.length - 1}
                         className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                        title="Move down"
+                        title={t('settings.statuses.move_down', 'Move down')}
                         id={`move-down-task-status-${status.status_id}`}
                       >
                         <ChevronDown className="w-3 h-3" />
@@ -298,7 +312,7 @@ export function ProjectTaskStatusEditor({
                       <span className="font-medium">{status.name}</span>
                       {status.is_closed && (
                         <span className="ml-2 text-xs px-2 py-0.5 bg-gray-200 rounded">
-                          Closed
+                          {t('settings.statuses.closed', 'Closed')}
                         </span>
                       )}
                     </div>
@@ -313,7 +327,7 @@ export function ProjectTaskStatusEditor({
                       type="button"
                       onClick={() => removeStatus(mapping.project_status_mapping_id)}
                       className="p-1 hover:bg-destructive/15 rounded text-destructive"
-                      title="Remove status"
+                      title={t('settings.statuses.remove', 'Remove status')}
                       id={`remove-task-status-${status.status_id}`}
                     >
                       <X className="w-4 h-4" />
@@ -324,13 +338,17 @@ export function ProjectTaskStatusEditor({
             </div>
           ) : (
             <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg border-2 border-dashed">
-              <p className="font-medium mb-1">No statuses selected</p>
-              <p className="text-xs">Click "Add Status" to add statuses to your project.</p>
+              <p className="font-medium mb-1">
+                {t('settings.statuses.none_selected', 'No statuses selected')}
+              </p>
+              <p className="text-xs">
+                {t('settings.statuses.none_selected_hint', 'Click "Add Status" to add statuses to your project.')}
+              </p>
             </div>
           )}
 
           <p className="text-xs text-gray-500 mt-2">
-            Arrange statuses in the order tasks will flow through them.
+            {t('settings.statuses.arrange_hint', 'Arrange statuses in the order tasks will flow through them.')}
           </p>
         </>
       )}

@@ -45,14 +45,27 @@ docker compose -f docker-compose.base.yaml -f docker-compose.ee.yaml up
 
 ```
 alga-psa/
-├── server/             # Main application server
-│   ├── src/           # Source code
-│   ├── migrations/    # Database migrations
-│   └── tests/         # Test files
-├── hocuspocus/        # Real-time collaboration
-├── redis/             # Redis configuration
-└── setup/             # Setup and initialization
+├── server/                  # Next.js application server
+│   ├── src/                 # Source code (App Router pages, components, lib)
+│   └── migrations/          # Database migrations (CE)
+├── packages/                # Shared @alga-psa/* packages (~50 packages)
+│   ├── build-tools/         # Shared tsup build preset
+│   └── <domain>/            # Domain packages (billing, clients, tickets, etc.)
+├── ee/                      # Enterprise Edition (server, packages, migrations)
+├── shared/                  # Legacy shared libraries
+├── hocuspocus/              # Real-time collaboration server
+├── services/
+│   └── workflow-worker/     # Workflow processing service
+└── sdk/                     # Extension SDK & samples
 ```
+
+### Package Build System
+
+Domain logic lives in `@alga-psa/*` packages under `packages/`. Some are **pre-built** (compiled by tsup to `dist/` before dev/build), others are **source-transpiled** (compiled by Next.js from `src/`).
+
+- `npm run dev` automatically builds all pre-built packages via `npx nx build-deps server` before starting the dev server
+- Nx caches build outputs — subsequent runs are near-instant
+- See [Package Build System](../architecture/package-build-system.md) for full details on which packages use which mode and how to flip a package
 
 ### 2. Branch Strategy
 

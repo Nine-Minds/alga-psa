@@ -6,6 +6,7 @@ import { DEFAULT_BLOCK, TextEditor } from '@alga-psa/ui/editor';
 import { Save, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { PartialBlock } from '@blocknote/core';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientNotesPanelProps {
   clientId: string;
@@ -20,6 +21,7 @@ export const ClientNotesPanel: React.FC<ClientNotesPanelProps> = ({
   clientId,
   legacyNotes
 }) => {
+  const { t } = useTranslation('msp/clients');
   const {
     noteContent,
     noteDocument,
@@ -47,7 +49,7 @@ export const ClientNotesPanel: React.FC<ClientNotesPanelProps> = ({
     <Card className="bg-white">
       <CardHeader className="pb-2">
         <div className="flex flex-row items-center justify-between">
-          <CardTitle>Notes & Quick Info</CardTitle>
+          <CardTitle>{t('clientNotesPanel.title', { defaultValue: 'Notes & Quick Info' })}</CardTitle>
           <Button
             id="save-client-note-btn"
             variant="ghost"
@@ -61,7 +63,7 @@ export const ClientNotesPanel: React.FC<ClientNotesPanelProps> = ({
             ) : (
               <Save size={14} />
             )}
-            Save
+            {t('clientNotesPanel.save', { defaultValue: 'Save' })}
           </Button>
         </div>
       </CardHeader>
@@ -69,7 +71,7 @@ export const ClientNotesPanel: React.FC<ClientNotesPanelProps> = ({
         {/* Legacy notes display for backward compatibility */}
         {legacyNotes && legacyNotes.trim() !== '' && (
           <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-4 mb-4">
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Initial Note</h4>
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('clientNotesPanel.initialNote', { defaultValue: 'Initial Note' })}</h4>
             <p className="whitespace-pre-wrap text-sm text-gray-600 dark:text-gray-400">{legacyNotes}</p>
           </div>
         )}
@@ -77,11 +79,11 @@ export const ClientNotesPanel: React.FC<ClientNotesPanelProps> = ({
         {error && (
           <div className="mb-3">
             <Alert variant="destructive">
-              <AlertTitle>Notes failed to load</AlertTitle>
+              <AlertTitle>{t('clientNotesPanel.loadErrorTitle', { defaultValue: 'Notes failed to load' })}</AlertTitle>
               <AlertDescription>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm">
-                    {error instanceof Error ? error.message : 'Unknown error'}
+                    {error instanceof Error ? error.message : t('clientNotesPanel.unknownError', { defaultValue: 'Unknown error' })}
                   </span>
                   <Button
                     id="retry-client-notes-btn"
@@ -89,7 +91,7 @@ export const ClientNotesPanel: React.FC<ClientNotesPanelProps> = ({
                     size="sm"
                     onClick={() => void refresh()}
                   >
-                    Retry
+                    {t('clientNotesPanel.retry', { defaultValue: 'Retry' })}
                   </Button>
                 </div>
               </AlertDescription>
@@ -115,7 +117,7 @@ export const ClientNotesPanel: React.FC<ClientNotesPanelProps> = ({
         {lastUpdated && (
           <div className="flex justify-end mt-2">
             <span className="text-xs text-gray-500">
-              Last updated: {new Date(lastUpdated).toLocaleString()}
+              {t('clientNotesPanel.lastUpdated', { defaultValue: 'Last updated: {{value}}', value: new Date(lastUpdated).toLocaleString() })}
             </span>
           </div>
         )}

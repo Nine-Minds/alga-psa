@@ -4,12 +4,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import type { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType } from '@alga-psa/types'; // Renamed for clarity
-import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType } from '@alga-psa/types'; // Added import
+import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily } from '@alga-psa/types'; // Added import
 import type { IClientWithLocation } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import type { ISO8601String } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { buildPostDropRecurringObligationCandidates } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 
@@ -29,6 +30,172 @@ interface InvoiceContext {
   session: Session;
   knex: Knex;
   tenant: string;
+}
+
+function normalizeRecurringDateForPersistence(value: unknown): string | null {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    return value.slice(0, 10);
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  try {
+    return new Date(value as any).toISOString().slice(0, 10);
+  } catch (_error) {
+    return null;
+  }
+}
+
+function addUtcDayToDateOnly(value: string): string {
+  const next = new Date(`${value}T00:00:00.000Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return next.toISOString().slice(0, 10);
+}
+
+async function linkRecurringServicePeriodToInvoiceDetail(params: {
+  tx: Knex.Transaction;
+  tenant: string;
+  clientId: string;
+  invoiceId: string;
+  invoiceChargeId: string;
+  invoiceChargeDetailId: string;
+  configId?: string | null;
+  contractLineId?: string | null;
+  chargeFamily: RecurringChargeFamily;
+  servicePeriodStart?: string | null;
+  servicePeriodEnd?: string | null;
+  billingTiming?: 'arrears' | 'advance' | null;
+  linkedAt: string;
+}) {
+  const {
+    tx,
+    tenant,
+    clientId,
+    invoiceId,
+    invoiceChargeId,
+    invoiceChargeDetailId,
+    configId,
+    contractLineId,
+    chargeFamily,
+    servicePeriodStart,
+    servicePeriodEnd,
+    billingTiming,
+    linkedAt,
+  } = params;
+
+  if ((!configId && !contractLineId) || !servicePeriodStart || !servicePeriodEnd || !billingTiming) {
+    return 0;
+  }
+
+  const invoiceBuilder = tx('invoices') as any;
+  if (!invoiceBuilder || typeof invoiceBuilder.where !== 'function') {
+    return 0;
+  }
+
+  const invoiceWindow = await invoiceBuilder
+    .where({ invoice_id: invoiceId, tenant })
+    .first(['billing_period_start', 'billing_period_end']);
+
+  const invoiceWindowStart = normalizeRecurringDateForPersistence(invoiceWindow?.billing_period_start);
+  const invoiceWindowEnd = normalizeRecurringDateForPersistence(invoiceWindow?.billing_period_end);
+  const normalizedServicePeriodStart = normalizeRecurringDateForPersistence(servicePeriodStart);
+  const normalizedServicePeriodEnd = normalizeRecurringDateForPersistence(servicePeriodEnd);
+  const normalizedServicePeriodEndExclusive = normalizedServicePeriodEnd
+    ? addUtcDayToDateOnly(normalizedServicePeriodEnd)
+    : null;
+
+  if (!invoiceWindowStart || !invoiceWindowEnd || !normalizedServicePeriodStart || !normalizedServicePeriodEnd) {
+    return 0;
+  }
+
+  let resolvedContractLineId = contractLineId ?? null;
+  if (!resolvedContractLineId && configId) {
+    const configBuilder = tx('contract_line_service_configuration') as any;
+    if (!configBuilder || typeof configBuilder.where !== 'function') {
+      return 0;
+    }
+
+    const configRow = await configBuilder
+      .where({ tenant, config_id: configId })
+      .first('contract_line_id') as { contract_line_id?: string } | undefined;
+
+    resolvedContractLineId = configRow?.contract_line_id ?? null;
+  }
+
+  if (!resolvedContractLineId) {
+    return 0;
+  }
+
+  const obligationCandidates = buildPostDropRecurringObligationCandidates({
+    contractLineId: resolvedContractLineId,
+    chargeFamily: chargeFamily,
+  }).map((candidate) => ({
+    obligation_type: candidate.obligationType,
+    obligation_id: candidate.obligationId,
+  }));
+
+  return tx('recurring_service_periods')
+    .where({ tenant, charge_family: chargeFamily, due_position: billingTiming })
+    .where(function recurringObligationMatch() {
+      for (const [index, candidate] of obligationCandidates.entries()) {
+        if (index === 0) {
+          this.where(function matchObligationCandidate() {
+            this.where('obligation_type', candidate.obligation_type)
+              .andWhere('obligation_id', candidate.obligation_id);
+          });
+          continue;
+        }
+
+        this.orWhere(function matchObligationCandidate() {
+          this.where('obligation_type', candidate.obligation_type)
+            .andWhere('obligation_id', candidate.obligation_id);
+        });
+      }
+    })
+    .whereIn('lifecycle_state', ['generated', 'edited', 'locked'])
+    .whereNull('invoice_charge_detail_id')
+    .where({
+      service_period_start: normalizedServicePeriodStart,
+      invoice_window_start: invoiceWindowStart,
+      invoice_window_end: invoiceWindowEnd,
+    })
+    .where(function recurringServicePeriodEndMatch() {
+      this.where('service_period_end', normalizedServicePeriodEnd);
+      if (normalizedServicePeriodEndExclusive) {
+        this.orWhere('service_period_end', normalizedServicePeriodEndExclusive);
+      }
+    })
+    .update({
+      lifecycle_state: 'billed',
+      invoice_id: invoiceId,
+      invoice_charge_id: invoiceChargeId,
+      invoice_charge_detail_id: invoiceChargeDetailId,
+      invoice_linked_at: linkedAt,
+      updated_at: linkedAt,
+    });
+}
+
+function getRecurringChargeFamilyForInvoiceLinkage(
+  charge: IBillingCharge,
+): RecurringChargeFamily | null {
+  switch (charge.type) {
+    case 'fixed':
+    case 'product':
+    case 'license':
+    case 'bucket':
+    case 'usage':
+      return charge.type;
+    case 'time':
+      return 'hourly';
+    default:
+      return null;
+  }
 }
 
 export async function validateSessionAndTenant(): Promise<InvoiceContext> {
@@ -141,10 +308,76 @@ export function calculateNetAmount(
   }
 }
 
+export async function recalculatePercentageDiscountInvoiceCharges(
+  tx: Knex.Transaction,
+  invoiceId: string,
+  tenant: string,
+  existingInvoiceItems?: ManualInvoiceItem[],
+): Promise<ManualInvoiceItem[]> {
+  const invoiceItems: ManualInvoiceItem[] = existingInvoiceItems ??
+    await tx('invoice_charges')
+      .where({ invoice_id: invoiceId, tenant })
+      .select('*');
+
+  const percentageDiscountItems = invoiceItems.filter(
+    (item) =>
+      item.is_discount === true &&
+      item.discount_type === 'percentage' &&
+      item.discount_percentage != null,
+  );
+
+  if (percentageDiscountItems.length === 0) {
+    return invoiceItems;
+  }
+
+  const nonDiscountItems = invoiceItems.filter((item) => item.is_discount !== true);
+  const subtotal = nonDiscountItems.reduce(
+    (sum, item) => sum + Number(item.net_amount || 0),
+    0,
+  );
+  const nonDiscountAmountsById = new Map(
+    nonDiscountItems.map((item) => [item.item_id, Number(item.net_amount || 0)]),
+  );
+  const normalizedInvoiceItems = invoiceItems.map((item) => ({ ...item }));
+
+  for (const discountItem of percentageDiscountItems) {
+    const applicableAmount = discountItem.applies_to_item_id
+      ? (nonDiscountAmountsById.get(discountItem.applies_to_item_id) ?? 0)
+      : subtotal;
+    const recalculatedNetAmount = -Math.round(
+      (applicableAmount * Number(discountItem.discount_percentage || 0)) / 100,
+    );
+
+    if (
+      Number(discountItem.net_amount || 0) !== recalculatedNetAmount ||
+      Number(discountItem.total_price || 0) !== recalculatedNetAmount
+    ) {
+      await tx('invoice_charges')
+        .where({ item_id: discountItem.item_id, tenant })
+        .update({
+          net_amount: recalculatedNetAmount,
+          total_price: recalculatedNetAmount,
+        });
+    }
+
+    const normalizedItem = normalizedInvoiceItems.find(
+      (item) => item.item_id === discountItem.item_id,
+    );
+    if (normalizedItem) {
+      normalizedItem.net_amount = recalculatedNetAmount;
+      normalizedItem.total_price = recalculatedNetAmount;
+    }
+  }
+
+  return normalizedInvoiceItems;
+}
+
 /**
  * Persists manual invoice items to the database.
  * Handles both regular manual items and manual discount items.
  * Resolves service ID references for discounts.
+ * Manual invoice rows remain intentionally periodless: they do not create
+ * canonical invoice_charge_details rows or own recurring service-period truth.
  * @returns The subtotal of the persisted manual items.
  */
 export async function persistManualInvoiceCharges(
@@ -252,6 +485,9 @@ export async function persistManualInvoiceCharges(
     let applicableItemId = requestItem.applies_to_item_id;
     let applicableAmount;
 
+    // Manual discount/adjusment provenance may point at an existing invoice
+    // charge (including a recurring parent charge), but that linkage remains an
+    // advisory manual-row reference rather than canonical recurring timing data.
     // Resolve service ID reference if needed
     if (requestItem.applies_to_service_id && !applicableItemId) {
       applicableItemId = serviceToItemMap.get(requestItem.applies_to_service_id);
@@ -346,7 +582,16 @@ async function persistFixedInvoiceCharges(
 ): Promise<number> {
   let fixedSubtotal = 0;
   const now = Temporal.Now.instant().toString();
-  const fixedPlanDetailsMap = new Map<string, { consolidatedItem: any; details: IFixedPriceCharge[] }>();
+  const isRecurringFixedCharge = (charge: IFixedPriceCharge) =>
+    Boolean(
+      charge.client_contract_line_id &&
+        (charge.servicePeriodStart || charge.servicePeriodEnd || charge.billingTiming),
+    );
+  const fixedPlanDetailsMap = new Map<string, {
+    sourceClientContractLineId: string;
+    consolidatedItem: any;
+    details: IFixedPriceCharge[];
+  }>();
 
   for (const charge of fixedCharges) {
     // --- Handle Detailed Fixed Price Charges (V1 Scope) ---
@@ -355,25 +600,30 @@ async function persistFixedInvoiceCharges(
     console.log('[persistFixedInvoiceCharges] charge.config_id:', charge.config_id, 'Type:', typeof charge.config_id);
     // --- END DEBUG LOGGING ---
     // Rely on config_id being present and truthy, as 'in' check might be unreliable depending on object creation
-    if (charge.config_id) {
-      // Use client_contract_line_id from the base IBillingCharge interface if needed for grouping
+    if (charge.config_id || isRecurringFixedCharge(charge)) {
+      // Use assignment + line identity so sibling assignments that share a base line id
+      // cannot collapse into one consolidated fixed recurring parent charge.
       const clientContractLineId = charge.client_contract_line_id;
+      const clientContractId = charge.client_contract_id ?? null;
       if (!clientContractLineId) {
         // This shouldn't happen if billingEngine adds it correctly, but good to check.
         console.error("Detailed fixed price charge is missing client_contract_line_id:", charge);
         throw new Error("Internal error: Detailed fixed price charge must have a client_contract_line_id.");
       }
+      const fixedPlanGroupKey = `${clientContractId ?? '__no_assignment__'}:${clientContractLineId}`;
 
-      // Group by clientContractLineId instead of planId
-      if (!fixedPlanDetailsMap.has(clientContractLineId)) {
+      if (!fixedPlanDetailsMap.has(fixedPlanGroupKey)) {
           if (charge.base_rate === undefined || charge.base_rate === null) {
               console.error("Detailed fixed price charge is missing base_rate:", charge);
               throw new Error("Internal error: Detailed fixed price charge must have a base_rate.");
           }
 
           // --- Determine Consolidated Item Tax Region & Taxability (Derived from Charges) ---
-          // Get all charges associated with this clientContractLineId to determine consolidated properties
-          const chargesForThisPlan = fixedCharges.filter(c => c.client_contract_line_id === clientContractLineId);
+          // Keep grouping scoped to one assignment + one line identity.
+          const chargesForThisPlan = fixedCharges.filter((c) =>
+            c.client_contract_line_id === clientContractLineId
+            && (c.client_contract_id ?? null) === clientContractId,
+          );
 
           // Determine if *any* charge in this group is taxable
           const isAnyChargeTaxable = chargesForThisPlan.some(c => c.is_taxable);
@@ -395,11 +645,11 @@ async function persistFixedInvoiceCharges(
           }
           // --- End Determine Consolidated Item Tax Region & Taxability ---
 
-          console.log(`[INVOICE DEBUG] Setting fixedPlanDetailsMap for ${clientContractLineId}, charge.base_rate: ${charge.base_rate}`);
-          const planClientContractId =
-            chargesForThisPlan.find((c) => c.client_contract_id)?.client_contract_id ?? null;
+          console.log(`[INVOICE DEBUG] Setting fixedPlanDetailsMap for ${fixedPlanGroupKey}, charge.base_rate: ${charge.base_rate}`);
+          const planClientContractId = clientContractId;
 
-          fixedPlanDetailsMap.set(clientContractLineId, {
+          fixedPlanDetailsMap.set(fixedPlanGroupKey, {
+              sourceClientContractLineId: clientContractLineId,
               consolidatedItem: {
                   invoice_id: invoiceId,
                   service_id: null,
@@ -428,7 +678,7 @@ async function persistFixedInvoiceCharges(
           });
       }
 
-      const planEntry = fixedPlanDetailsMap.get(clientContractLineId)!;
+      const planEntry = fixedPlanDetailsMap.get(fixedPlanGroupKey)!;
       planEntry.details.push(charge);
 
     } else {
@@ -469,7 +719,13 @@ async function persistFixedInvoiceCharges(
   // --- Process Consolidated Fixed Plan Items and Details ---
 
   // Fetch plan details (name and fixed config base rate) for all consolidated items first
-  const clientPlanIds = Array.from(fixedPlanDetailsMap.keys());
+  const clientPlanIds = Array.from(
+    new Set(
+      Array.from(fixedPlanDetailsMap.values()).map(
+        (planEntry) => planEntry.sourceClientContractLineId,
+      ),
+    ),
+  );
   // Map: clientContractLineId -> { contract_line_name: string, contract_line_base_rate: number | null }
   const planInfoMap = new Map<string, { contract_line_name: string; contract_line_base_rate: number | null }>();
 
@@ -509,10 +765,10 @@ async function persistFixedInvoiceCharges(
 
 
   // Iterate using clientContractLineId as the key
-  for (const [clientContractLineId, planEntry] of fixedPlanDetailsMap.entries()) {
-    const planInfo = planInfoMap.get(clientContractLineId);
+  for (const [fixedPlanGroupKey, planEntry] of fixedPlanDetailsMap.entries()) {
+    const planInfo = planInfoMap.get(planEntry.sourceClientContractLineId);
     if (!planInfo) {
-        console.error(`Could not find plan info for clientContractLineId: ${clientContractLineId}`);
+        console.error(`Could not find plan info for clientContractLineId: ${planEntry.sourceClientContractLineId}`);
         // Decide how to handle missing plan info (skip? throw error?)
         continue;
     }
@@ -526,7 +782,7 @@ async function persistFixedInvoiceCharges(
     planEntry.consolidatedItem.unit_price = planInfo.contract_line_base_rate !== null
         ? Math.round(planInfo.contract_line_base_rate)
         : planEntry.consolidatedItem.unit_price; // Fallback to initially set price (from first service)
-    console.log(`[INVOICE DEBUG] Updated unit_price for ${clientContractLineId}: contract_line_base_rate=${planInfo.contract_line_base_rate}, oldUnitPrice=${oldUnitPrice}, newUnitPrice=${planEntry.consolidatedItem.unit_price}`);
+    console.log(`[INVOICE DEBUG] Updated unit_price for ${fixedPlanGroupKey}: contract_line_base_rate=${planInfo.contract_line_base_rate}, oldUnitPrice=${oldUnitPrice}, newUnitPrice=${planEntry.consolidatedItem.unit_price}`);
 
     let planNetTotal = 0;
     let planTaxTotal = 0;
@@ -566,6 +822,7 @@ async function persistFixedInvoiceCharges(
       is_manual: false,
       is_discount: false,
       is_taxable: planIsTaxable,
+      client_contract_id: planEntry.consolidatedItem.client_contract_id ?? null,
       created_by: session.user.id,
       created_at: now,
       updated_at: now,
@@ -577,6 +834,12 @@ async function persistFixedInvoiceCharges(
       const allocatedAmountCents = Number(detail.allocated_amount ?? detail.total ?? 0);
       const taxAmountCents = Number(detail.tax_amount || 0);
       const detailQuantity = Number(detail.quantity ?? 1) || 1;
+      if (!detail.serviceId) {
+        throw new Error('Internal error: Detailed fixed recurring charge must include a serviceId.');
+      }
+      if (!detail.config_id) {
+        throw new Error('Internal error: Detailed fixed recurring charge must include a config_id.');
+      }
       const unitPriceCents = detailQuantity !== 0
         ? Math.round(allocatedAmountCents / detailQuantity)
         : allocatedAmountCents;
@@ -606,6 +869,22 @@ async function persistFixedInvoiceCharges(
         tax_amount: taxAmountCents,
         tax_rate: detail.tax_rate ?? 0,
         tenant
+      });
+
+      await linkRecurringServicePeriodToInvoiceDetail({
+        tx,
+        tenant,
+        clientId: client.client_id,
+        invoiceId,
+        invoiceChargeId: parentItemId,
+        invoiceChargeDetailId: detailId,
+        configId: detail.config_id,
+        contractLineId: detail.client_contract_line_id ?? null,
+        chargeFamily: 'fixed',
+        servicePeriodStart: detail.servicePeriodStart ?? null,
+        servicePeriodEnd: detail.servicePeriodEnd ?? null,
+        billingTiming: detail.billingTiming ?? null,
+        linkedAt: now,
       });
     }
 
@@ -697,6 +976,50 @@ export async function persistInvoiceCharges(
       tenant
     };
     await tx('invoice_charges').insert(invoiceItem);
+
+    const recurringChargeFamily = getRecurringChargeFamilyForInvoiceLinkage(charge);
+    const shouldPersistDetail =
+      recurringChargeFamily !== null
+      && Boolean(charge.servicePeriodStart || charge.servicePeriodEnd || charge.billingTiming);
+
+    if (shouldPersistDetail) {
+      const detailId = uuidv4();
+      if (!charge.config_id) {
+        throw new Error(`Internal error: Recurring ${charge.type} charge must include a config_id.`);
+      }
+
+      await tx('invoice_charge_details').insert({
+        item_detail_id: detailId,
+        item_id: invoiceItem.item_id,
+        service_id: charge.serviceId,
+        config_id: charge.config_id,
+        quantity: charge.quantity ?? 1,
+        rate: charge.rate ?? 0,
+        service_period_start: charge.servicePeriodStart ?? null,
+        service_period_end: charge.servicePeriodEnd ?? null,
+        billing_timing: charge.billingTiming ?? null,
+        created_at: now,
+        updated_at: now,
+        tenant
+      });
+
+      await linkRecurringServicePeriodToInvoiceDetail({
+        tx,
+        tenant,
+        clientId: client.client_id,
+        invoiceId,
+        invoiceChargeId: invoiceItem.item_id,
+        invoiceChargeDetailId: detailId,
+        configId: charge.config_id,
+        contractLineId: charge.client_contract_line_id ?? null,
+        chargeFamily: recurringChargeFamily,
+        servicePeriodStart: charge.servicePeriodStart ?? null,
+        servicePeriodEnd: charge.servicePeriodEnd ?? null,
+        billingTiming: charge.billingTiming ?? null,
+        linkedAt: now,
+      });
+    }
+
     otherSubtotal += netAmount;
   }
 
@@ -722,7 +1045,8 @@ export async function calculateAndDistributeTax(
 
   // Handle external tax sources
   if (taxSource === 'external') {
-    // For external tax source, use external_tax_amount values
+    // External tax remains amount-authoritative: recurring detail periods preserve service timing
+    // elsewhere, but imported tax amounts are applied exactly as received here.
     console.log(`[calculateAndDistributeTax] Using external tax amounts for invoice ${invoiceId}`);
 
     // Copy external_tax_amount to tax_amount and update total_price
@@ -748,7 +1072,7 @@ export async function calculateAndDistributeTax(
   }
 
   if (taxSource === 'pending_external') {
-    // For pending external tax, use zero tax (external tax not yet imported)
+    // Pending external tax is likewise import-state driven rather than service-period driven.
     console.log(`[calculateAndDistributeTax] Invoice ${invoiceId} has pending external tax - using zero tax`);
 
     const items = await tx('invoice_charges')
@@ -779,20 +1103,33 @@ export async function calculateAndDistributeTax(
     .first();
   const currencyCode = invoiceForCurrency?.currency_code || 'USD';
 
-  const invoiceItems: ManualInvoiceItem[] = await tx('invoice_charges') // Use ManualInvoiceItem type for base structure
+  let invoiceItems: ManualInvoiceItem[] = await tx('invoice_charges') // Use ManualInvoiceItem type for base structure
     .where({ invoice_id: invoiceId, tenant })
     .select('*');
+  // Percentage discounts remain financial-only rows even when the invoice also
+  // contains canonical recurring detail-backed charges. Recalculate them from
+  // the current non-discount subtotal or targeted line amount before tax and
+  // total recomputation so recurring detail provenance stays on the source rows.
+  invoiceItems = await recalculatePercentageDiscountInvoiceCharges(
+    tx,
+    invoiceId,
+    tenant,
+    invoiceItems,
+  );
   console.log(`[calculateAndDistributeTax] Fetched ${invoiceItems.length} invoice items:`, JSON.stringify(invoiceItems.map(i => ({id: i.item_id, desc: i.description, net: i.net_amount, tax: i.tax_amount, taxable: i.is_taxable, region: i.tax_region, is_discount: i.is_discount})), null, 2));
 
-  // Correctly identify consolidated items by checking for existence in invoice_charge_details
-  // Fetch item_id and invoice_id from invoice_charge_details to link back correctly
+  // Only fixed-plan parents should be treated as consolidated tax carriers.
   const detailParentIdsResult = await tx('invoice_charge_details')
-    .where('invoice_charge_details.tenant', tenant)
+    .join('invoice_charge_fixed_details as iifd', function() {
+      this.on('iifd.item_detail_id', '=', 'invoice_charge_details.item_detail_id')
+        .andOn('iifd.tenant', '=', 'invoice_charge_details.tenant');
+    })
     .join('invoice_charges', function() {
       this.on('invoice_charges.item_id', '=', 'invoice_charge_details.item_id')
         .andOn('invoice_charges.tenant', '=', 'invoice_charge_details.tenant');
     })
-    .where('invoice_charges.invoice_id', invoiceId) // Filter by the main invoice ID
+    .where('invoice_charge_details.tenant', tenant)
+    .where('invoice_charges.invoice_id', invoiceId)
     .andWhere('invoice_charges.tenant', tenant)
     .distinct('invoice_charge_details.item_id');
   const detailParentIds = new Set(detailParentIdsResult.map((row: { item_id: string }) => row.item_id));

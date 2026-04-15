@@ -1,0 +1,862 @@
+{
+  "common": {
+    "actions": {
+      "back": "Terug",
+      "cancel": "Annuleren",
+      "close": "Sluiten",
+      "continue": "Doorgaan",
+      "finish": "Afronden",
+      "invite": "Uitnodigen",
+      "next": "Volgende",
+      "retry": "Opnieuw proberen",
+      "save": "Opslaan",
+      "saving": "Opslaan...",
+      "skip": "Overslaan",
+      "submit": "Verzenden"
+    },
+    "states": {
+      "loading": "Laden...",
+      "optional": "Optioneel",
+      "required": "Verplicht"
+    },
+    "no": "Nee",
+    "yes": "Ja"
+  },
+  "onboardingProvider": {
+    "title": "Onboardingprovider",
+    "description": "Onboarding op routeniveau die controleert of de tenant is voltooid en onvoltooide tenants naar de wizard doorstuurt"
+  },
+  "onboardingWizard": {
+    "title": "Onboardingwizard",
+    "description": "Wizard-shell voor MSP-tenantconfiguratie met dialoog-/volledig-pagina weergave, voortgang, validatie en afronding",
+    "steps": {
+      "clientInfo": "Klantinfo",
+      "teamMembers": "Teamleden",
+      "addClient": "Klant toevoegen",
+      "clientContact": "Klantcontact",
+      "billing": "Facturatie",
+      "ticketing": "Tickets"
+    },
+    "errors": {
+      "saveClientInfo": "Klantinfo opslaan mislukt",
+      "addTeamMembers": "Teamleden toevoegen mislukt",
+      "saveClient": "Klant opslaan mislukt",
+      "addContact": "Contact toevoegen mislukt",
+      "setupBilling": "Facturatie instellen mislukt",
+      "unknown": "Onbekende fout",
+      "validationFailed": "Validatie mislukt",
+      "configureTicketing": "Ticketconfiguratie mislukt",
+      "completeOnboarding": "Onboarding afronden mislukt"
+    },
+    "debug": {
+      "title": "Debuginfo:",
+      "currentStep": "Huidige stap: {{stepIndex}} ({{stepName}})",
+      "isValid": "Geldig: {{value}}",
+      "isRequired": "Verplicht: {{value}}",
+      "viewData": "Gegevens bekijken"
+    },
+    "actions": {
+      "finish": "Configuratie afronden",
+      "saving": "Opslaan...",
+      "completing": "Afronden..."
+    },
+    "shell": {
+      "title": "Stel je systeem in",
+      "description": "Laten we je werkruimte configureren en klaarzetten voor gebruik."
+    }
+  },
+  "addClientStep": {
+    "title": "Klant toevoegen-stap",
+    "description": "Wizardstap voor het aanmaken of opnieuw bekijken van het primaire klantrecord tijdens onboarding",
+    "validation": {
+      "email": {
+        "invalid": "Voer een geldig e-mailadres in"
+      },
+      "website": {
+        "example": "Voer een geldige website in (bijv. example.com)",
+        "format": "Voer een geldig websiteformaat in"
+      },
+      "phone": {
+        "tooShort": "Telefoonnummer lijkt te kort",
+        "tooLong": "Telefoonnummer lijkt te lang",
+        "invalidCharacters": "Telefoonnummer bevat ongeldige tekens"
+      }
+    },
+    "header": {
+      "title": "Voeg je eerste klant toe",
+      "description": "Laten we je eerste klant toevoegen om te starten. Je kunt deze stap overslaan en klanten later toevoegen."
+    },
+    "created": {
+      "title": "Klant succesvol aangemaakt!",
+      "description": "{{clientName}} is toegevoegd aan je klantenlijst."
+    },
+    "fields": {
+      "clientName": {
+        "label": "Klantnaam",
+        "placeholder": "Voorbeeld BV"
+      },
+      "clientEmail": {
+        "label": "Klant-e-mail",
+        "placeholder": "contact@voorbeeld.nl"
+      },
+      "clientPhone": {
+        "label": "Telefoonnummer",
+        "placeholder": "+31 6 12345678"
+      },
+      "website": {
+        "label": "Website",
+        "placeholder": "https://voorbeeld.nl"
+      }
+    },
+    "common": {
+      "noteLabel": "Opmerking:",
+      "optionalLabel": "Optioneel:"
+    },
+    "note": {
+      "defaultTaxSettings": "De klant wordt aangemaakt met standaard niet-belastbare (0%) belastinginstellingen. Je kunt belastingtarieven later configureren in de klantinstellingen.",
+      "optional": "Je kunt deze stap overslaan en klanten later toevoegen via je dashboard."
+    }
+  },
+  "billingSetupStep": {
+    "title": "Facturatie-instelstap",
+    "description": "Wizardstap voor het definiëren van de eerste service, prijsstelling, factureringsmodus en standaard contractregels",
+    "serviceTypes": {
+      "toasts": {
+        "deleted": "Servicetype succesvol verwijderd"
+      },
+      "errors": {
+        "delete": "Servicetype verwijderen mislukt",
+        "nameRequired": "Naam van servicetype is verplicht",
+        "duplicate": "Er bestaat al een servicetype met deze naam",
+        "create": "Servicetype aanmaken mislukt",
+        "createRetry": "Servicetype aanmaken mislukt. Probeer het opnieuw."
+      },
+      "actions": {
+        "manage": "Servicetypen beheren",
+        "import": "Importeren uit standaard",
+        "add": "Nieuw toevoegen",
+        "confirmAdd": "Servicetype toevoegen"
+      },
+      "noteLabel": "Opmerking:",
+      "description": "Servicetypen zijn taxonomielabels voor organisatie en filtering. De factureringsmodus wordt apart op elke service ingesteld.",
+      "addForm": {
+        "title": "Nieuw servicetype toevoegen",
+        "fields": {
+          "name": {
+            "label": "Naam *",
+            "placeholder": "bijv. Premium Support"
+          },
+          "description": {
+            "label": "Beschrijving",
+            "placeholder": "Beschrijf dit servicetype..."
+          },
+          "billingMethod": {
+            "label": "Factureringsmethode *"
+          },
+          "displayOrder": {
+            "label": "Weergavevolgorde",
+            "placeholder": "Laat leeg voor automatisch genereren",
+            "help": "Bepaalt de volgorde waarin servicetypen in keuzelijsten door het platform verschijnen. Lagere nummers komen eerst."
+          }
+        }
+      },
+      "import": {
+        "title": "Standaard servicetypen importeren",
+        "description": "Selecteer standaard servicetypen om in je systeem te importeren:",
+        "success": {
+          "titleOne": "Servicetype succesvol geïmporteerd!",
+          "titleOther": "Servicetypen succesvol geïmporteerd!",
+          "description": "{{count}} type{{suffix}} toegevoegd aan je catalogus.",
+          "skipped": "{{count}} overgeslagen."
+        },
+        "actions": {
+          "importing": "Importeren...",
+          "importSelected": "Geselecteerde importeren ({{count}})"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Naam",
+          "billingMethod": "Factureringsmethode",
+          "order": "Volgorde",
+          "actions": "Acties"
+        }
+      },
+      "current": {
+        "title": "Huidige servicetypen",
+        "removeTitle": "Servicetype verwijderen"
+      }
+    },
+    "header": {
+      "title": "Maak je eerste service aan",
+      "description": "Voeg een service toe en kies hoe deze gefactureerd moet worden. Het servicetype identificeert de servicecategorie, terwijl de factureringsmodus de prijslogica bepaalt.",
+      "serviceTitle": "Maak uw eerste service",
+      "serviceDescription": "Voeg een service toe en kies hoe deze moet worden gefactureerd. Het servicetype identificeert de servicecategorie, terwijl de facturatiemodus het prijsgedrag bepaalt."
+    },
+    "created": {
+      "title": "Service succesvol aangemaakt!",
+      "description": "{{serviceName}} is toegevoegd aan je servicecatalogus."
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Servicenaam *",
+        "placeholder": "Managed IT Services"
+      },
+      "serviceDescription": {
+        "label": "Servicebeschrijving",
+        "placeholder": "Uitgebreide IT-ondersteuning en beheerdiensten..."
+      },
+      "serviceType": {
+        "label": "Servicetype *",
+        "required": "(Verplicht)",
+        "emptyPlaceholder": "Servicetypen aanmaken of importeren",
+        "placeholder": "Selecteer een servicetype",
+        "emptyHelp": "Klik op \"Servicetypen beheren\" om servicetypen aan te maken of te importeren"
+      },
+      "billingMode": {
+        "label": "Factureringsmodus"
+      },
+      "defaultRate": {
+        "label": "Standaardtarief",
+        "placeholder": "150"
+      },
+      "defaultCurrency": {
+        "label": "Standaardvaluta *",
+        "description": "Deze valuta wordt standaard gebruikt voor alle facturatie — services, contracten, offertes en facturen. U kunt deze later per klant overschrijven."
+      }
+    },
+    "billingMethods": {
+      "fixed": "Vast",
+      "hourly": "Uurtarief",
+      "usageBased": "Op gebruik gebaseerd",
+      "usage": "Gebruik"
+    },
+    "validation": {
+      "actionRequiredLabel": "Actie vereist:",
+      "actionRequiredDescription": "Klik hierboven op \"Servicetypen beheren\" om minstens één servicetype aan te maken of te importeren voordat je een service aanmaakt."
+    }
+  },
+  "clientContactStep": {
+    "title": "Klantcontact-stap",
+    "description": "Wizardstap voor het verzamelen van de primaire contactgegevens van de klant",
+    "validation": {
+      "email": {
+        "invalid": "Voer een geldig e-mailadres in"
+      }
+    },
+    "empty": {
+      "title": "Klantcontact",
+      "description": "Er is geen klantinformatie opgegeven. Sla deze stap over of ga terug om eerst een klant toe te voegen."
+    },
+    "header": {
+      "title": "Contact toevoegen voor {{clientName}}",
+      "clientFallback": "Klant",
+      "description": "Voeg een primair contactpersoon voor deze klant toe."
+    },
+    "created": {
+      "title": "Contact succesvol aangemaakt!",
+      "description": "{{contactName}} is toegevoegd aan {{clientName}}.",
+      "contactFallback": "Het contact",
+      "clientFallback": "de klant"
+    },
+    "fields": {
+      "contactName": {
+        "label": "Contactnaam",
+        "placeholder": "Jan Jansen"
+      },
+      "contactEmail": {
+        "label": "Contact-e-mail",
+        "placeholder": "jan.jansen@voorbeeld.nl"
+      },
+      "contactRole": {
+        "label": "Rol/Titel",
+        "placeholder": "IT-manager"
+      }
+    },
+    "common": {
+      "optionalLabel": "Optioneel:"
+    },
+    "footer": {
+      "optional": "Je kunt deze stap overslaan en contacten later toevoegen vanuit het profiel van de klant."
+    }
+  },
+  "clientInfoStep": {
+    "title": "Klantinfo-stap",
+    "description": "Wizardstap voor het verzamelen van de identiteit van de MSP-operator, bedrijfsinformatie en de eerste klantbasisgegevens",
+    "revisit": {
+      "title": "Bedrijfsinformatie",
+      "description": "Controleer of werk je bedrijfsgegevens bij.",
+      "fields": {
+        "companyName": {
+          "label": "Bedrijfsnaam",
+          "placeholder": "Acme IT Solutions"
+        }
+      },
+      "note": "Je kunt deze wizard op elk moment gebruiken om de instellingen van je werkruimte opnieuw te configureren."
+    },
+    "common": {
+      "noteLabel": "Opmerking:"
+    },
+    "header": {
+      "title": "Klantinformatie",
+      "description": "Laten we beginnen met het instellen van je klantprofiel."
+    },
+    "fields": {
+      "firstName": {
+        "label": "Voornaam",
+        "placeholder": "Jan"
+      },
+      "lastName": {
+        "label": "Achternaam",
+        "placeholder": "Jansen"
+      },
+      "companyName": {
+        "label": "Bedrijfsnaam",
+        "placeholder": "Acme IT Solutions"
+      },
+      "email": {
+        "label": "E-mailadres",
+        "placeholder": "jan@acmeit.com",
+        "help": "Dit wordt gebruikt om in te loggen op je account."
+      }
+    },
+    "password": {
+      "resetRequired": {
+        "title": "Wachtwoord opnieuw instellen vereist",
+        "description": "Je moet een nieuw wachtwoord instellen om door te gaan met het installatieproces. Deze stap kan niet worden overgeslagen."
+      },
+      "title": "Stel je wachtwoord in",
+      "description": "Stel een nieuw wachtwoord in ter vervanging van je tijdelijke wachtwoord.",
+      "fields": {
+        "newPassword": {
+          "label": "Nieuw wachtwoord",
+          "placeholder": "Maak een sterk wachtwoord"
+        },
+        "confirmPassword": {
+          "label": "Wachtwoord bevestigen",
+          "placeholder": "Voer je wachtwoord opnieuw in",
+          "match": "Wachtwoorden komen overeen",
+          "mismatch": "Wachtwoorden komen niet overeen"
+        }
+      },
+      "requirements": {
+        "title": "Wachtwoord moet bevatten:",
+        "minLength": "Minstens 8 tekens",
+        "uppercase": "Eén hoofdletter",
+        "lowercase": "Eén kleine letter",
+        "number": "Eén cijfer",
+        "specialCharacter": "Eén speciaal teken"
+      },
+      "strength": {
+        "label": "Wachtwoordsterkte: {{strength}}",
+        "strong": "Sterk",
+        "medium": "Gemiddeld",
+        "weak": "Zwaks"
+      }
+    },
+    "footer": {
+      "note": "Alle velden op deze pagina zijn vereist om door te gaan."
+    }
+  },
+  "teamMembersStep": {
+    "title": "Teamleden-stap",
+    "description": "Wizardstap voor het uitnodigen van eerste teamleden en het toewijzen van onboardingrollen",
+    "license": {
+      "limitReached": "Licentielimiet bereikt ({{current}}/{{limit}}). Neem contact op met support om je licentielimiet te verhogen.",
+      "remaining": {
+        "one": "Je kunt nog 1 teamlid toevoegen.",
+        "other": "Je kunt nog {{count}} teamleden toevoegen."
+      },
+      "summary": {
+        "noLimit": "Gebruikers: {{count}} (geen limiet)",
+        "limited": "Gebruikers: {{current}}/{{limit}}"
+      }
+    },
+    "errors": {
+      "requiredFields": "Vul alle verplichte velden in, inclusief wachtwoord",
+      "invalidEmail": "Voer een geldig e-mailadres in",
+      "passwordLength": "Wachtwoord moet minstens 8 tekens lang zijn",
+      "saveFailed": "Teamlid opslaan mislukt",
+      "generic": "Er is een fout opgetreden"
+    },
+    "header": {
+      "title": "Teamleden uitnodigen",
+      "description": "Voeg je teamleden toe om ze op weg te helpen. Je kunt deze stap overslaan en ze later toevoegen."
+    },
+    "created": {
+      "titleOne": "1 teamlid succesvol aangemaakt!",
+      "titleOther": "{{count}} teamleden succesvol aangemaakt!",
+      "users": "Aangemaakte gebruikers: {{users}}"
+    },
+    "member": {
+      "title": "Teamlid {{index}}",
+      "createdBadge": "Aangemaakt",
+      "actions": {
+        "saving": "Opslaan...",
+        "save": "Opslaan"
+      }
+    },
+    "fields": {
+      "firstName": {
+        "label": "Voornaam",
+        "placeholder": "Jan"
+      },
+      "lastName": {
+        "label": "Achternaam",
+        "placeholder": "Jansen"
+      },
+      "email": {
+        "label": "E-mail",
+        "placeholder": "jan@klant.com"
+      },
+      "role": {
+        "label": "Rol"
+      },
+      "password": {
+        "label": "Tijdelijk wachtwoord",
+        "placeholder": "Stel een tijdelijk wachtwoord in",
+        "help": "De gebruiker moet dit wachtwoord wijzigen bij de eerste inlog"
+      }
+    },
+    "roles": {
+      "admin": "Beheerder",
+      "technician": "Technicus",
+      "manager": "Manager",
+      "user": "Gebruiker"
+    },
+    "actions": {
+      "saveCurrentFirst": "Sla eerst het huidige teamlid op",
+      "addAnother": "Nog een teamlid toevoegen"
+    },
+    "unsaved": {
+      "title": "Onopgeslagen teamlid",
+      "description": "Sla het huidige teamlid op voordat je een nieuw toevoegt."
+    },
+    "limitReached": {
+      "title": "Gebruikerslimiet bereikt",
+      "description": "Je hebt het maximale aantal gebruikers voor je huidige abonnement bereikt. Neem contact op met support om je limiet te verhogen."
+    },
+    "optional": {
+      "label": "Optioneel:",
+      "description": "Je kunt deze stap overslaan en teamleden later uitnodigen via de instellingenpagina."
+    }
+  },
+  "ticketingConfigStep": {
+    "title": "Ticketconfiguratie-stap",
+    "description": "Wizardstap voor het configureren van borden, statussen, prioriteiten, categorieën en SLA-standaarden tijdens onboarding",
+    "boards": {
+      "toasts": {
+        "firstDefaultSet": "Eerste bord automatisch als standaard ingesteld",
+        "deleted": "Bord succesvol verwijderd",
+        "defaultUpdated": "Standaardbord succesvol bijgewerkt"
+      },
+      "errors": {
+        "import": "Borden importeren mislukt",
+        "delete": "Bord verwijderen mislukt.",
+        "defaultRequired": "Er moet minstens één bord als standaard zijn ingesteld",
+        "defaultUpdate": "Standaardbord instellen mislukt",
+        "duplicate": "Bord bestaat al",
+        "create": "Bord aanmaken mislukt. Probeer het opnieuw."
+      },
+      "delete": {
+        "fallbackEntity": "dit bord"
+      },
+      "title": "Borden",
+      "description": "Borden helpen tickets te organiseren per afdeling, team of workflowtype. Wanneer klanten tickets aanmaken via het klantenportaal, worden ze automatisch toegewezen aan het bord dat als standaard is gemarkeerd.",
+      "tip": "Klik op de ster in de kolom Standaard om te wijzigen welk bord standaard is.",
+      "actions": {
+        "import": "Importeren uit standaard",
+        "add": "Nieuw bord toevoegen",
+        "confirmAdd": "Bord toevoegen"
+      },
+      "addForm": {
+        "title": "Nieuw bord toevoegen",
+        "fields": {
+          "name": {
+            "label": "Bordnaam *",
+            "placeholder": "Voer bordnaam in"
+          },
+          "description": {
+            "label": "Beschrijving",
+            "placeholder": "Voer beschrijving in"
+          },
+          "displayOrder": {
+            "label": "Weergavevolgorde",
+            "placeholder": "Laat leeg voor automatisch genereren",
+            "help": "Bepaalt de volgorde waarin borden in keuzelijsten door het platform verschijnen. Lagere nummers komen eerst."
+          },
+          "itil": {
+            "label": "Dit bord ITIL-conform maken"
+          }
+        },
+        "configurationTitle": "Bordconfiguratie"
+      },
+      "import": {
+        "title": "Standaardborden importeren",
+        "success": {
+          "one": "1 bord succesvol geïmporteerd.",
+          "other": "{{count}} borden succesvol geïmporteerd."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Naam",
+          "default": "Standaard",
+          "order": "Volgorde",
+          "itil": "ITIL"
+        }
+      },
+      "current": {
+        "title": "Huidige borden",
+        "defaultTitle": "Standaardbord",
+        "setDefaultTitle": "Als standaardbord instellen",
+        "removeTitle": "Bord verwijderen"
+      }
+    },
+    "categories": {
+      "import": {
+        "unknownParent": "Onbekende bovenliggende categorie",
+        "title": "Standaardcategorieën importeren",
+        "success": {
+          "one": "1 categorie succesvol geïmporteerd.",
+          "other": "{{count}} categorieën succesvol geïmporteerd."
+        },
+        "targetBoard": {
+          "label": "Doelbord *",
+          "placeholder": "Selecteer een bord voor geïmporteerde categorieën",
+          "help": "Alle geïmporteerde categorieën worden aan dit bord toegewezen"
+        },
+        "parentAutoSelectTitle": "Bovenliggende categorie wordt automatisch geselecteerd"
+      },
+      "errors": {
+        "missingParents": "Subcategorieën kunnen niet worden geïmporteerd zonder hun bovenliggende categorieën. Selecteer ook: {{parents}}",
+        "duplicate": "Categorie bestaat al in dit bord",
+        "create": "Categorie aanmaken mislukt. Probeer het opnieuw.",
+        "delete": "Categorie verwijderen mislukt."
+      },
+      "delete": {
+        "fallbackEntity": "deze categorie"
+      },
+      "toasts": {
+        "deleted": "Categorie succesvol verwijderd"
+      },
+      "title": "Categorieën",
+      "requiresBoard": "(bord vereist)",
+      "description": "Categorieën helpen tickets te organiseren per soort probleem of verzoek. Je kunt bovenliggende categorieën maken met subcategorieën voor betere organisatie. Voorbeelden zijn Technische ondersteuning (met subcategorieën zoals Hardware, Software, Netwerk) of Serviceverzoeken.",
+      "actions": {
+        "import": "Importeren uit standaard",
+        "add": "Nieuwe categorie toevoegen",
+        "confirmAdd": "Categorie toevoegen"
+      },
+      "addForm": {
+        "title": "Nieuwe categorie toevoegen",
+        "fields": {
+          "name": {
+            "label": "Categorienaam *",
+            "placeholder": "Voer categorienaam in"
+          },
+          "board": {
+            "label": "Doelbord *",
+            "placeholder": "Selecteer een bord"
+          },
+          "parent": {
+            "label": "Bovenliggende categorie",
+            "noneOption": "Geen (topniveaucategorie)",
+            "placeholder": "Selecteer bovenliggende categorie"
+          },
+          "displayOrder": {
+            "label": "Weergavevolgorde",
+            "placeholder": "Laat leeg voor automatisch genereren",
+            "help": "Bepaalt de volgorde waarin categorieën in keuzelijsten door het platform verschijnen. Lagere nummers komen eerst."
+          }
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Naam",
+          "order": "Volgorde"
+        }
+      },
+      "current": {
+        "title": "Huidige categorieën ({{count}} totaal)",
+        "removeTitle": "Categorie verwijderen"
+      }
+    },
+    "statuses": {
+      "toasts": {
+        "firstDefaultSet": "Eerste open status automatisch als standaard ingesteld",
+        "deleted": "Status succesvol verwijderd",
+        "defaultUpdated": "Standaardstatus succesvol bijgewerkt"
+      },
+      "delete": {
+        "fallbackEntity": "deze status"
+      },
+      "errors": {
+        "delete": "Status verwijderen mislukt.",
+        "defaultRequired": "Er moet minstens één status als standaard zijn ingesteld",
+        "closedCannotBeDefault": "Gesloten statussen kunnen niet als standaard worden ingesteld",
+        "selectBoardForDefault": "Selecteer of maak een bord aan voordat je statusstandaarden wijzigt.",
+        "defaultUpdate": "Standaardstatus instellen mislukt",
+        "duplicate": "Status bestaat al",
+        "selectBoardForAdd": "Selecteer of maak een bord aan voordat je statussen toevoegt.",
+        "create": "Status aanmaken mislukt. Probeer het opnieuw."
+      },
+      "title": "Statussen",
+      "description": "Statussen worden per bord geconfigureerd. Selecteer hieronder een bord om de levenscyclus voor tickets op dat bord te definiëren. De standaard open status voor het geselecteerde bord wordt automatisch toegewezen aan nieuwe tickets op dat bord.",
+      "tip": "Borden delen geen statussen. Schakel hier tussen borden om elke statusset te bekijken of te wijzigen.",
+      "fields": {
+        "board": {
+          "label": "Bord",
+          "placeholder": "Selecteer bord"
+        }
+      },
+      "noBoardWarning": "Maak of importeer een bord voordat je statussen configureert. Elk bord heeft zijn eigen open standaardstatus nodig.",
+      "actions": {
+        "import": "Importeren uit standaard",
+        "add": "Nieuwe status toevoegen",
+        "confirmAdd": "Status toevoegen"
+      },
+      "addForm": {
+        "title": "Nieuwe status toevoegen",
+        "fields": {
+          "name": {
+            "label": "Statusnaam *",
+            "placeholder": "Voer statusnaam in"
+          },
+          "displayOrder": {
+            "label": "Weergavevolgorde",
+            "placeholder": "Laat leeg voor automatisch genereren",
+            "help": "Bepaalt de volgorde waarin statussen in keuzelijsten door het platform verschijnen. Lagere nummers komen eerst."
+          },
+          "state": {
+            "closedLabel": "Gesloten status",
+            "openLabel": "Open status",
+            "closedHelp": "Deze status geeft aan dat de ticket is opgelost en gesloten",
+            "openHelp": "Deze status geeft aan dat de ticket nog open is en aandacht nodig heeft"
+          }
+        }
+      },
+      "import": {
+        "title": "Standaardstatussen importeren",
+        "targetBoard": "Importeren naar {{boardName}}.",
+        "success": {
+          "one": "1 status succesvol geïmporteerd.",
+          "other": "{{count}} statussen succesvol geïmporteerd."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Naam",
+          "type": "Type",
+          "default": "Standaard",
+          "order": "Volgorde"
+        }
+      },
+      "types": {
+        "closed": "Gesloten",
+        "open": "Open"
+      },
+      "current": {
+        "title": "Huidige statussen",
+        "titleWithBoard": "Huidige statussen voor {{boardName}}",
+        "defaultTitle": "Standaardstatus",
+        "setDefaultTitle": "Als standaardstatus instellen",
+        "removeTitle": "Status verwijderen"
+      },
+      "empty": {
+        "forBoard": "{{boardName}} heeft nog geen statussen. Voeg minstens één open standaardstatus toe of importeer deze voordat je onboarding afrondt.",
+        "noBoardSelected": "Selecteer een bord om de statussen te configureren."
+      }
+    },
+    "priorities": {
+      "errors": {
+        "duplicate": "Prioriteit bestaat al",
+        "missingSession": "Gebruikerssessie niet gevonden. Vernieuw en probeer het opnieuw.",
+        "create": "Prioriteit aanmaken mislukt. Probeer het opnieuw.",
+        "delete": "Prioriteit verwijderen mislukt."
+      },
+      "delete": {
+        "fallbackEntity": "deze prioriteit"
+      },
+      "toasts": {
+        "deleted": "Prioriteit succesvol verwijderd"
+      },
+      "title": "Prioriteiten",
+      "description": "Prioriteiten helpen de urgentie van tickets en service level agreements (SLA's) te bepalen. Elke prioriteit heeft een kleur voor snelle visuele herkenning. Typische prioriteiten zijn Kritiek (rood), Hoog (oranje), Gemiddeld (blauw) en Laag (groen).",
+      "actions": {
+        "import": "Importeren uit standaard",
+        "add": "Nieuwe prioriteit toevoegen",
+        "confirmAdd": "Prioriteit toevoegen"
+      },
+      "addForm": {
+        "title": "Nieuwe prioriteit toevoegen",
+        "fields": {
+          "name": {
+            "label": "Prioriteitsnaam *",
+            "placeholder": "Voer prioriteitsnaam in"
+          },
+          "displayOrder": {
+            "label": "Weergavevolgorde",
+            "placeholder": "Laat leeg voor automatisch genereren",
+            "help": "Bepaalt de volgorde waarin prioriteiten in keuzelijsten door het platform verschijnen. Lagere nummers komen eerst."
+          },
+          "color": {
+            "label": "Prioriteitskleur",
+            "choose": "Kleur kiezen"
+          }
+        }
+      },
+      "import": {
+        "title": "Standaardprioriteiten importeren",
+        "success": {
+          "one": "1 prioriteit succesvol geïmporteerd.",
+          "other": "{{count}} prioriteiten succesvol geïmporteerd."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Naam",
+          "color": "Kleur",
+          "order": "Volgorde"
+        }
+      },
+      "current": {
+        "title": "Huidige prioriteiten",
+        "removeTitle": "Prioriteit verwijderen"
+      }
+    },
+    "common": {
+      "errors": {
+        "validateDeletion": "Verwijdering valideren mislukt. Probeer het opnieuw."
+      },
+      "noteLabel": "Opmerking:",
+      "tipLabel": "Tip:",
+      "actions": {
+        "importing": "Importeren...",
+        "importCount": "Importeren ({{count}})"
+      },
+      "table": {
+        "actions": "Acties"
+      }
+    },
+    "header": {
+      "title": "Ticketconfiguratie instellen",
+      "description": "Stel je supportsysteem voor tickets in. Importeer standaardconfiguraties of maak je eigen configuratie aan."
+    },
+    "loading": {
+      "description": "Bestaande configuratie laden..."
+    },
+    "numbering": {
+      "title": "Ticketnummering",
+      "description": "Configureer hoe ticketnummers worden gegenereerd. Elke ticket krijgt een unieke identifier bestaande uit een optioneel voorvoegsel en een volgnummer met optionele voorloopnullen.",
+      "fields": {
+        "prefix": {
+          "label": "Ticketvoorvoegsel",
+          "placeholder": "TK-",
+          "help": "Optioneel. Laat leeg voor geen voorvoegsel of voer een aangepast voorvoegsel in (bijv. \"TK-\", \"TICKET-\")"
+        },
+        "paddingLength": {
+          "label": "Opvullengte",
+          "help": "Minimaal aantal cijfers. Bijv. 6 maakt van \"1\" \"000001\""
+        },
+        "startNumber": {
+          "label": "Startnummer"
+        }
+      },
+      "example": "Voorbeeld: {{value}}"
+    },
+    "itil": {
+      "actions": {
+        "openReference": "ITIL-categorieën en prioriteitenmatrix bekijken"
+      },
+      "title": "ITIL-standaardreferentie",
+      "categories": {
+        "title": "ITIL-standaardcategorieën en subcategorieën",
+        "hardware": {
+          "title": "Hardware",
+          "server": "• Server",
+          "desktopLaptop": "• Desktop/laptop",
+          "networkEquipment": "• Netwerkapparatuur",
+          "printer": "• Printer",
+          "storage": "• Opslag",
+          "mobileDevice": "• Mobiel apparaat"
+        },
+        "software": {
+          "title": "Software",
+          "operatingSystem": "• Besturingssysteem",
+          "businessApplication": "• Bedrijfsapplicatie",
+          "database": "• Database",
+          "emailCollaboration": "• E-mail/samenwerking",
+          "securitySoftware": "• Beveiligingssoftware",
+          "customApplication": "• Maatwerkapplicatie"
+        },
+        "network": {
+          "title": "Netwerk",
+          "connectivity": "• Connectiviteit",
+          "vpn": "• VPN",
+          "wifi": "• Wi-Fi",
+          "internetAccess": "• Internettoegang",
+          "lanWan": "• LAN/WAN",
+          "firewall": "• Firewall"
+        },
+        "security": {
+          "title": "Beveiliging",
+          "malwareVirus": "• Malware/virus",
+          "unauthorizedAccess": "• Ongeautoriseerde toegang",
+          "dataBreach": "• Datalek",
+          "phishingSpam": "• Phishing/spam",
+          "policyViolation": "• Beleidsovertreding",
+          "accountLockout": "• Accountvergrendeling"
+        },
+        "serviceRequest": {
+          "title": "Serviceverzoek",
+          "accessRequest": "• Toegangsverzoek",
+          "newUserSetup": "• Nieuwe gebruiker instellen",
+          "softwareInstallation": "• Software-installatie",
+          "equipmentRequest": "• Apparatuuraanvraag",
+          "informationRequest": "• Informatieverzoek",
+          "changeRequest": "• Wijzigingsverzoek"
+        }
+      },
+      "matrix": {
+        "title": "ITIL-prioriteitenmatrix (Impact × Urgentie)",
+        "urgency": {
+          "high": "Hoog",
+          "label": "Urgentie",
+          "mediumHigh": "Middel-hoog",
+          "medium": "Middel",
+          "mediumLow": "Middel-laag",
+          "low": "Laag"
+        },
+        "impact": {
+          "high": "Hoge impact (1)",
+          "mediumHigh": "Middel-hoge impact (2)",
+          "medium": "Middelmatige impact (3)",
+          "mediumLow": "Middel-lage impact (4)",
+          "low": "Lage impact (5)"
+        },
+        "priority": {
+          "critical": "Kritiek (1)",
+          "high": "Hoog (2)",
+          "medium": "Middel (3)",
+          "low": "Laag (4)",
+          "planning": "Planning (5)"
+        },
+        "explanation": {
+          "impact": "Impact: Hoeveel gebruikers/bedrijfsfuncties worden geraakt?",
+          "urgency": "Urgentie: Hoe snel moet dit worden opgelost?",
+          "priority": "Prioriteit: Automatisch berekend op basis van de Impact × Urgentie-matrix hierboven."
+        }
+      }
+    },
+    "supportEmail": {
+      "label": "Support-e-mail",
+      "placeholder": "support@jouwklant.nl",
+      "help": "Dit e-mailadres wordt gebruikt om supporttickets aan te maken. E-mails naar dit adres genereren automatisch tickets in je systeem."
+    },
+    "finalRequirement": {
+      "label": "Verplicht:",
+      "description": "Configureer minstens één bord en één prioriteit om de installatie af te ronden. Importeer standaardconfiguraties om je ticketsysteem snel in te richten."
+    }
+  }
+}

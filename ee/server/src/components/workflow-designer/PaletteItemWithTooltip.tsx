@@ -13,7 +13,7 @@ export type PaletteTooltipItem = {
   actionVersion?: number;
   groupKey?: string;
   iconToken?: string;
-  tileKind?: 'core-object' | 'transform' | 'app';
+  tileKind?: 'core-object' | 'transform' | 'app' | 'ai';
 };
 
 const PaletteTooltip: React.FC<{
@@ -96,19 +96,19 @@ export const PaletteItemWithTooltip: React.FC<{
       {...provided.draggableProps}
       {...(disabled ? {} : provided.dragHandleProps)}
       className={`
-        group relative flex items-center justify-center
-        w-10 h-10 rounded-lg border cursor-grab
+        group relative flex w-full min-h-[4.5rem] flex-col items-center justify-start gap-1 rounded-lg border px-1 py-2 text-center
         transition-all duration-150
-        ${disabled ? 'cursor-not-allowed opacity-50' : ''}
+        ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-grab'}
         ${isDragging
-          ? 'shadow-lg ring-2 ring-primary-400 bg-primary-50 border-primary-300 z-50'
-          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+          ? 'shadow-lg ring-2 ring-primary-400 bg-primary-50 border-primary-300 dark:bg-primary-500/20 dark:border-primary-400 z-50'
+          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-[rgb(var(--color-border-200))] dark:hover:border-[rgb(var(--color-border-300))] dark:hover:bg-[rgb(var(--color-background))]'
         }
       `}
       id={`workflow-designer-add-${item.id}`}
       data-testid={`palette-item-${item.id}`}
       role="button"
       aria-disabled={disabled}
+      aria-label={item.label}
       onClick={(event) => {
         event.stopPropagation();
         if (disabled) return;
@@ -117,7 +117,15 @@ export const PaletteItemWithTooltip: React.FC<{
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <span className="text-gray-500 group-hover:text-gray-700">{icon}</span>
+      <span className="flex h-5 w-5 items-center justify-center text-gray-500 group-hover:text-gray-700 dark:text-[rgb(var(--color-text-500))] dark:group-hover:text-[rgb(var(--color-text-700))]">
+        {icon}
+      </span>
+      <span
+        className="w-full truncate text-[10px] font-medium leading-tight text-gray-600 group-hover:text-gray-800 dark:text-[rgb(var(--color-text-600))] dark:group-hover:text-[rgb(var(--color-text-800))]"
+        title={item.label}
+      >
+        {item.label}
+      </span>
       <PaletteTooltip
         label={item.label}
         description={item.description}

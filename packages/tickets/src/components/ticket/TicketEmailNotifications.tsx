@@ -7,6 +7,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { ContentCard } from '@alga-psa/ui/components';
 import { getEmailLogsForTicket, type EmailSendingLogRecord } from '@alga-psa/email/actions';
 import type { ColumnDefinition } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Mail } from 'lucide-react';
 
 interface TicketEmailNotificationsProps {
@@ -36,12 +37,12 @@ function parseEmailList(value: unknown): string[] {
   return [];
 }
 
-function formatSentAt(value: unknown): string {
+function formatSentAt(value: unknown, locale: string): string {
   const date = value instanceof Date ? value : new Date(String(value));
   if (Number.isNaN(date.getTime())) {
     return '—';
   }
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale, {
     month: 'short',
     day: '2-digit',
     year: 'numeric',
@@ -55,6 +56,7 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
   ticketId,
   variant = 'card',
 }) => {
+  const { t, i18n } = useTranslation('features/tickets');
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<EmailSendingLogRecord[]>([]);
   const [limit, setLimit] = useState(INITIAL_LIMIT);
@@ -85,12 +87,12 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
   const columns: ColumnDefinition<EmailSendingLogRecord>[] = useMemo(() => {
     return [
       {
-        title: 'Time',
+        title: t('emailNotifications.time', 'Time'),
         dataIndex: 'sent_at',
-        render: (value) => formatSentAt(value),
+        render: (value) => formatSentAt(value, i18n.language || 'en'),
       },
       {
-        title: 'Recipient',
+        title: t('emailNotifications.recipient', 'Recipient'),
         dataIndex: 'to_addresses',
         render: (value) => {
           const list = parseEmailList(value);
@@ -98,12 +100,12 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
         },
       },
       {
-        title: 'Subject',
+        title: t('emailNotifications.subject', 'Subject'),
         dataIndex: 'subject',
         render: (value) => String(value || '—'),
       },
       {
-        title: 'Status',
+        title: t('emailNotifications.status', 'Status'),
         dataIndex: 'status',
         render: (value) => {
           const v = String(value || '').toLowerCase();
@@ -119,22 +121,26 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
         },
       },
       {
-        title: 'Error',
+        title: t('emailNotifications.error', 'Error'),
         dataIndex: 'error_message',
         render: (value, record) => {
           if (record.status !== 'failed') return '—';
-          return String(value || 'Unknown error');
+          return String(value || t('emailNotifications.unknownError', 'Unknown error'));
         },
       },
     ];
-  }, []);
+  }, [i18n.language, t]);
 
   const content = (
     <>
       {isLoading ? (
-        <div className="text-sm text-[rgb(var(--color-text-500))]">Loading…</div>
+        <div className="text-sm text-[rgb(var(--color-text-500))]">
+          {t('emailNotifications.loading', 'Loading…')}
+        </div>
       ) : logs.length === 0 ? (
-        <div className="text-sm text-[rgb(var(--color-text-500))]">No email notifications found.</div>
+        <div className="text-sm text-[rgb(var(--color-text-500))]">
+          {t('emailNotifications.empty', 'No email notifications found.')}
+        </div>
       ) : (
         <DataTable id={`${id}-table`} data={logs} columns={columns} pagination={false} />
       )}
@@ -142,7 +148,7 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
       {hasMore && !isLoading && (
         <div className="mt-4 flex justify-center">
           <Button id={`${id}-load-more`} variant="outline" onClick={() => setLimit((prev) => prev + LOAD_MORE_STEP)}>
-            Load more
+            {t('emailNotifications.loadMore', 'Load more')}
           </Button>
         </div>
       )}
@@ -150,7 +156,7 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
   );
 
   return (
-    <ReflectionContainer id={id} label="Ticket Email Notifications">
+    <ReflectionContainer id={id} label={t('emailNotifications.title', 'Email Notifications')}>
       {variant === 'flat' ? (
         <div className="space-y-4">{content}</div>
       ) : (
@@ -158,7 +164,7 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
           id={id}
           collapsible
           defaultExpanded={false}
-          title="Email Notifications"
+          title={t('emailNotifications.title', 'Email Notifications')}
           headerIcon={<Mail className="w-5 h-5" />}
           count={logs.length}
         >

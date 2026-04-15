@@ -19,6 +19,7 @@ exports.seed = async function(knex) {
         tenant,
         zero_dollar_invoice_handling: 'normal',
         suppress_zero_dollar_invoices: true,
+        default_currency_code: 'USD',
         created_at: knex.fn.now(),
         updated_at: knex.fn.now()
       });

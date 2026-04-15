@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   DEFAULT_INVOICE_PRINT_SETTINGS,
   millimetersToPixels,
-  resolveInvoiceTemplatePrintSettings,
+  resolveTemplatePrintSettings,
 } from '@alga-psa/types';
 import { getNodeLayout, getNodeMetadata, getNodeStyle } from '../utils/nodeProps';
 import { useInvoiceDesignerStore } from './designerStore';
@@ -67,7 +67,7 @@ describe('designerStore print settings', () => {
 
   it('bootstraps new workspaces with explicit default print settings and matching geometry', () => {
     const state = useInvoiceDesignerStore.getState();
-    const expected = resolveInvoiceTemplatePrintSettings({
+    const expected = resolveTemplatePrintSettings({
       printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
     });
     const documentNode = state.nodes.find((node) => node.type === 'document');

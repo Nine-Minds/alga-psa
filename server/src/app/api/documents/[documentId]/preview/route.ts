@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageError, StorageProviderFactory } from '@alga-psa/storage';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 
@@ -55,16 +55,21 @@ export async function GET(
       return new NextResponse('Preview not available', { status: 404 });
     }
 
-    // Download preview from storage
-    const downloadResult = await StorageService.downloadFile(document.preview_file_id);
-    if (!downloadResult) {
+    const fileRecord = await knex('external_files')
+      .where({ file_id: document.preview_file_id, tenant, is_deleted: false })
+      .first();
+
+    if (!fileRecord) {
       return new NextResponse('Preview file not found in storage', { status: 404 });
     }
 
+    const provider = await StorageProviderFactory.createProvider();
+    const buffer = await provider.download(fileRecord.storage_path);
+
     // Set aggressive caching headers
     const headers = new Headers();
-    headers.set('Content-Type', 'image/jpeg');
-    headers.set('Content-Length', downloadResult.buffer.length.toString());
+    headers.set('Content-Type', fileRecord.mime_type || 'image/jpeg');
+    headers.set('Content-Length', buffer.length.toString());
 
     // Cache for 1 year - previews are immutable (file_id changes if regenerated)
     headers.set('Cache-Control', 'public, max-age=31536000, immutable');
@@ -83,12 +88,20 @@ export async function GET(
       return new NextResponse(null, { status: 304, headers });
     }
 
-    return new NextResponse(downloadResult.buffer as any, {
+    return new NextResponse(buffer as any, {
       status: 200,
       headers,
     });
 
   } catch (error) {
+    if (
+      error instanceof StorageError &&
+      error.operation === 'download' &&
+      (error.cause?.message === 'File not found' || error.message === 'File not found')
+    ) {
+      return new NextResponse('Preview file not found in storage', { status: 404 });
+    }
+
     console.error(`Error serving preview for document ${documentId}:`, error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }

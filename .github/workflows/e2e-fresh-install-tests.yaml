@@ -114,7 +114,9 @@ jobs:
 
           # Authentication Configuration
           NEXTAUTH_URL=http://localhost:3000
+          NEXTAUTH_SECRET=placeholder-key-32-chars-long-04
           NEXTAUTH_SESSION_EXPIRES=86400
+          AUTH_TRUST_HOST=true
 
           # Optional Configuration
           REQUIRE_HOCUSPOCUS=false
@@ -180,8 +182,24 @@ jobs:
           echo "Building all required images with --no-cache to ensure fresh build"
           # Build all images needed for e2e tests upfront
           # Excludes: workflow-worker (EE only, not needed for CE e2e)
+          # Excludes: hocuspocus (built separately below with repo-root context)
           docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build --no-cache \
-            server setup email-service hocuspocus
+            server setup email-service
+        shell: bash
+
+      - name: Build hocuspocus image with repo-root context
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          # hocuspocus/Dockerfile expects repo-root as build context (it does
+          # `COPY hocuspocus/package.json ...`), but docker-compose.ce.yaml sets
+          # `context: ./hocuspocus`, which breaks the build. Build it directly
+          # here with the correct context and tag it with the name compose v2
+          # auto-generates (`<project>-<service>:latest`) so subsequent
+          # `docker-compose up` calls reuse this image instead of rebuilding.
+          docker build --no-cache \
+            -f hocuspocus/Dockerfile \
+            -t alga-e2e-test-hocuspocus:latest \
+            .
         shell: bash
 
       - name: Start foundational services (postgres and redis)

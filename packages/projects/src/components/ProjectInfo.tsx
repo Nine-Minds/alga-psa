@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IClient, IProject, IUserWithRoles } from '@alga-psa/types';
+import { IClient, IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
-import { Edit2, Save } from 'lucide-react';
+import { Download, Edit2, Save } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useDrawer } from "@alga-psa/ui";
@@ -14,9 +14,12 @@ import { TagManager } from '@alga-psa/tags/components';
 import { toast } from 'react-hot-toast';
 import CreateTemplateDialog from './project-templates/CreateTemplateDialog';
 import ProjectMaterialsDrawer from './ProjectMaterialsDrawer';
+import ProjectTaskExportDialog from './ProjectTaskExportDialog';
+import { useTranslation } from 'react-i18next';
 
 interface ProjectInfoProps {
   project: IProject;
+  phases: IProjectPhase[];
   contact?: {
     full_name: string;
   };
@@ -33,6 +36,7 @@ interface ProjectInfoProps {
 
 export default function ProjectInfo({
   project,
+  phases,
   contact,
   assignedUser,
   users,
@@ -44,10 +48,12 @@ export default function ProjectInfo({
   allTagTexts = [],
   onTagsChange
 }: ProjectInfoProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const { openDrawer, closeDrawer } = useDrawer();
 
   const [currentProject, setCurrentProject] = useState(project);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const [projectMetrics, setProjectMetrics] = useState<{
     taskCompletionPercentage: number;
     hoursCompletionPercentage: number;
@@ -117,7 +123,7 @@ export default function ProjectInfo({
       {/* First line: Back nav, project number, title, tags, and edit button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-5">
-          <BackNav href="/msp/projects">← Back to Projects</BackNav>
+          <BackNav href="/msp/projects">{t('backToProjects', '← Back to Projects')}</BackNav>
 
           {/* Project number */}
           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -143,7 +149,16 @@ export default function ProjectInfo({
             onClick={() => setShowTemplateDialog(true)}
           >
             <Save className="h-4 w-4 mr-2" />
-            Save as Template
+            {t('projectInfo.saveAsTemplate', 'Save as Template')}
+          </Button>
+          <Button
+            id="export-tasks-button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowExportDialog(true)}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {t('export.exportTasks', 'Export Tasks')}
           </Button>
           <Button
             id="project-materials-button"
@@ -151,7 +166,7 @@ export default function ProjectInfo({
             size="sm"
             onClick={handleMaterialsClick}
           >
-            Materials
+            {t('projectInfo.materials', 'Materials')}
           </Button>
           <Button
             id="edit-project-button"
@@ -160,7 +175,7 @@ export default function ProjectInfo({
             onClick={handleEditClick}
           >
             <Edit2 className="h-4 w-4 mr-2" />
-            Edit
+            {t('common:actions.edit', 'Edit')}
           </Button>
         </div>
       </div>
@@ -174,27 +189,27 @@ export default function ProjectInfo({
       <div className="flex items-center space-x-8">
         {/* Client Section */}
         <div className="flex items-center space-x-2">
-          <h5 className="font-bold text-gray-800 dark:text-gray-200">Client:</h5>
+          <h5 className="font-bold text-gray-800 dark:text-gray-200">{t('projectInfo.client', 'Client:')}</h5>
           <p className="text-base text-gray-800 dark:text-gray-200">
-            {currentProject.client_name || 'N/A'}
+            {currentProject.client_name || t('projectInfo.notAvailable', 'N/A')}
           </p>
         </div>
 
         {/* Contact Section */}
         <div className="flex items-center space-x-2">
-          <h5 className="font-bold text-gray-800 dark:text-gray-200">Contact:</h5>
+          <h5 className="font-bold text-gray-800 dark:text-gray-200">{t('projectInfo.contact', 'Contact:')}</h5>
           <p className="text-base text-gray-800 dark:text-gray-200">
-            {contact?.full_name || 'N/A'}
+            {contact?.full_name || t('projectInfo.notAvailable', 'N/A')}
           </p>
         </div>
         
         {/* Project Budget Section - takes remaining space */}
         {projectMetrics && (
           <div className="flex items-center space-x-2 flex-1">
-            <h5 className="font-bold text-gray-800 dark:text-gray-200">Budget:</h5>
+            <h5 className="font-bold text-gray-800 dark:text-gray-200">{t('projectInfo.budget', 'Budget:')}</h5>
             <div className="flex items-center space-x-3 flex-1">
               <span className="text-base text-gray-800 dark:text-gray-200 whitespace-nowrap">
-                {projectMetrics.spentHours.toFixed(1)} of {projectMetrics.budgetedHours.toFixed(1)} hours
+                {t('hoursUsed', '{{spent}} of {{budgeted}} hours', { spent: projectMetrics.spentHours.toFixed(1), budgeted: projectMetrics.budgetedHours.toFixed(1) })}
               </span>
               <div className="flex-1">
                 <HoursProgressBar 
@@ -204,10 +219,10 @@ export default function ProjectInfo({
                   showTooltip={true}
                   tooltipContent={
                     <div className="p-2">
-                      <p className="font-medium">Hours Usage</p>
-                      <p className="text-sm">{projectMetrics.spentHours.toFixed(1)} of {projectMetrics.budgetedHours.toFixed(1)} hours used</p>
-                      <p className="text-sm">{projectMetrics.remainingHours.toFixed(1)} hours remaining</p>
-                      <p className="text-sm text-gray-300 mt-1">Shows budget hours usage for the entire project</p>
+                      <p className="font-medium">{t('hoursUsage', 'Hours Usage')}</p>
+                      <p className="text-sm">{t('hoursUsedDetail', '{{spent}} of {{budgeted}} hours used', { spent: projectMetrics.spentHours.toFixed(1), budgeted: projectMetrics.budgetedHours.toFixed(1) })}</p>
+                      <p className="text-sm">{t('hoursRemaining', '{{remaining}} hours remaining', { remaining: projectMetrics.remainingHours.toFixed(1) })}</p>
+                      <p className="text-sm text-gray-300 mt-1">{t('projectInfo.hoursUsageDescription', 'Shows budget hours usage for the entire project')}</p>
                     </div>
                   }
                 />
@@ -224,10 +239,18 @@ export default function ProjectInfo({
           initialProjectId={currentProject.project_id}
           onTemplateCreated={(templateId) => {
             setShowTemplateDialog(false);
-            toast.success('Template created successfully');
+            toast.success(t('projectInfo.templateCreatedSuccess', 'Template created successfully'));
           }}
         />
       )}
+
+      {/* Export Tasks Dialog */}
+      <ProjectTaskExportDialog
+        isOpen={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        projectId={currentProject.project_id}
+        phases={phases}
+      />
     </div>
   );
 }

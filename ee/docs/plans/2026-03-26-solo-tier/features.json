@@ -1,0 +1,637 @@
+[
+  {
+    "id": "F001",
+    "description": "Add 'solo' to TENANT_TIERS array so it becomes ['solo', 'pro', 'premium']",
+    "implemented": true,
+    "prdRefs": [
+      "R1.1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Update TenantTier type to include 'solo'",
+    "implemented": true,
+    "prdRefs": [
+      "R1.1"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Add TIER_LABELS entry: solo -> 'Solo'",
+    "implemented": true,
+    "prdRefs": [
+      "R1.1"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Add TIER_RANK record: { solo: 0, pro: 1, premium: 2 }",
+    "implemented": true,
+    "prdRefs": [
+      "R1.2"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Add tierAtLeast(tier, minimum) helper using TIER_RANK comparison",
+    "implemented": true,
+    "prdRefs": [
+      "R1.3"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Add INTEGRATIONS to TIER_FEATURES enum with min tier 'pro'",
+    "implemented": true,
+    "prdRefs": [
+      "R1.4"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Add EXTENSIONS to TIER_FEATURES enum with min tier 'pro'",
+    "implemented": true,
+    "prdRefs": [
+      "R1.4"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Add MANAGED_EMAIL to TIER_FEATURES enum with min tier 'pro'",
+    "implemented": true,
+    "prdRefs": [
+      "R1.4"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Add SSO to TIER_FEATURES enum with min tier 'pro'",
+    "implemented": true,
+    "prdRefs": [
+      "R1.4"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Add ADVANCED_ASSETS to TIER_FEATURES enum with min tier 'pro'",
+    "implemented": true,
+    "prdRefs": [
+      "R1.4"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Add CLIENT_PORTAL_ADMIN to TIER_FEATURES enum with min tier 'pro'",
+    "implemented": true,
+    "prdRefs": [
+      "R1.4"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Add WORKFLOW_DESIGNER to TIER_FEATURES enum with min tier 'pro'",
+    "implemented": true,
+    "prdRefs": [
+      "R1.4"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Add MOBILE_ACCESS to TIER_FEATURES enum with min tier 'pro'",
+    "implemented": true,
+    "prdRefs": [
+      "R1.4"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Rewrite tierHasFeature() to use TIER_RANK comparison instead of map lookup",
+    "implemented": true,
+    "prdRefs": [
+      "R1.5"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Derive TIER_FEATURE_MAP from FEATURE_MINIMUM_TIER + TIER_RANK",
+    "implemented": true,
+    "prdRefs": [
+      "R1.6"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Add AI_ASSISTANT to ADD_ONS enum",
+    "implemented": true,
+    "prdRefs": [
+      "R1.7"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Add ADD_ON_LABELS record with AI_ASSISTANT -> 'AI Assistant'",
+    "implemented": true,
+    "prdRefs": [
+      "R1.7"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Add ADD_ON_DESCRIPTIONS with marketing-friendly description for AI_ASSISTANT",
+    "implemented": true,
+    "prdRefs": [
+      "R1.7"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "resolveTier() returns 'pro' for null/invalid input (unchanged behavior, Solo is opt-in)",
+    "implemented": true,
+    "prdRefs": [
+      "R1.8"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "isValidTier('solo') returns true",
+    "implemented": true,
+    "prdRefs": [
+      "R1.1"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Create getActiveAddOns(tenantId) service querying tenant_addons for non-expired add-ons",
+    "implemented": true,
+    "prdRefs": [
+      "R1b.1"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Create assertAddOnAccess(addOn) that throws if tenant lacks the add-on",
+    "implemented": true,
+    "prdRefs": [
+      "R1b.2"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "assertAddOnAccess bypasses check in CE edition (all add-ons unlocked)",
+    "implemented": true,
+    "prdRefs": [
+      "R1b.2",
+      "R2.3"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Add STRIPE_AI_ADDON_PRICE_ID and STRIPE_AI_ADDON_ANNUAL_PRICE_ID env vars to Stripe config",
+    "implemented": true,
+    "prdRefs": [
+      "R1b.3"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Add isSolo boolean to TierContextValue (tier === 'solo')",
+    "implemented": true,
+    "prdRefs": [
+      "R2.1"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Add addOns array to TierContextValue populated from session/DB",
+    "implemented": true,
+    "prdRefs": [
+      "R2.2"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Add hasAddOn(addOn) helper to TierContextValue",
+    "implemented": true,
+    "prdRefs": [
+      "R2.2"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "CE edition bypasses add-on checks (hasAddOn returns true for all)",
+    "implemented": true,
+    "prdRefs": [
+      "R2.3"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Add requiredFeature?: TIER_FEATURES to MenuItem interface in menuConfig",
+    "implemented": true,
+    "prdRefs": [
+      "R3.1"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Annotate Extensions menu item with requiredFeature: TIER_FEATURES.EXTENSIONS",
+    "implemented": true,
+    "prdRefs": [
+      "R3.2"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Annotate Workflow Editor subitem with requiredFeature: TIER_FEATURES.WORKFLOW_DESIGNER",
+    "implemented": true,
+    "prdRefs": [
+      "R3.2"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "SidebarWithFeatureFlags filters out menu items where requiredFeature is set and tier lacks it",
+    "implemented": true,
+    "prdRefs": [
+      "R3.3"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Sidebar filtering applies recursively to subItems",
+    "implemented": true,
+    "prdRefs": [
+      "R3.3"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Add requiredFeature?: TIER_FEATURES to TabContent type in SettingsPage",
+    "implemented": true,
+    "prdRefs": [
+      "R4.1"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Tag Integrations settings tab with TIER_FEATURES.INTEGRATIONS",
+    "implemented": true,
+    "prdRefs": [
+      "R4.2"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Tag Extensions settings tab with TIER_FEATURES.EXTENSIONS",
+    "implemented": true,
+    "prdRefs": [
+      "R4.2"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Tag Email settings tab with TIER_FEATURES.MANAGED_EMAIL",
+    "implemented": true,
+    "prdRefs": [
+      "R4.2"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Render FeatureUpgradeNotice instead of content when tab's requiredFeature is gated",
+    "implemented": true,
+    "prdRefs": [
+      "R4.3"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Gated settings tabs remain visible and clickable (not hidden)",
+    "implemented": true,
+    "prdRefs": [
+      "R4.4"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Settings sidebar items remain visible regardless of tier (no requiredFeature filtering in settings mode)",
+    "implemented": true,
+    "prdRefs": [
+      "R4.4"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Add assertTierAccess(TIER_FEATURES.INTEGRATIONS) to calendar/entra/teams EE route handlers",
+    "implemented": true,
+    "prdRefs": [
+      "R5.1"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Add assertTierAccess(TIER_FEATURES.EXTENSIONS) to extension install/uninstall EE route handlers",
+    "implemented": true,
+    "prdRefs": [
+      "R5.1"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Add assertTierAccess(TIER_FEATURES.MANAGED_EMAIL) to managed email EE handlers",
+    "implemented": true,
+    "prdRefs": [
+      "R5.1"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Add assertTierAccess(TIER_FEATURES.SSO) to SSO/OAuth EE handlers",
+    "implemented": true,
+    "prdRefs": [
+      "R5.1"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Add assertTierAccess(TIER_FEATURES.ADVANCED_ASSETS) to RMM EE handlers",
+    "implemented": true,
+    "prdRefs": [
+      "R5.1"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Add assertAddOnAccess(ADD_ONS.AI_ASSISTANT) to chat completions route",
+    "implemented": true,
+    "prdRefs": [
+      "R5.2"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Add assertAddOnAccess(ADD_ONS.AI_ASSISTANT) to document-assist route",
+    "implemented": true,
+    "prdRefs": [
+      "R5.2"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Gate RightSidebar AI component with hasAddOn(ADD_ONS.AI_ASSISTANT)",
+    "implemented": true,
+    "prdRefs": [
+      "R5.3"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Check tenant tier in exchangeOttForSession() — reject Solo with 403",
+    "implemented": true,
+    "prdRefs": [
+      "R5b.1"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Return upgrade message in 403 response for Solo mobile auth attempts",
+    "implemented": true,
+    "prdRefs": [
+      "R5b.2"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Add 'alga-psa-solo': 'solo' to stripeTierMapping",
+    "implemented": true,
+    "prdRefs": [
+      "R6.1"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "getTierPriceIds() returns { basePriceId, userPriceId: null } for Solo",
+    "implemented": true,
+    "prdRefs": [
+      "R6.2"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "createLicenseCheckoutSession() emits single line item when userPriceId is null",
+    "implemented": true,
+    "prdRefs": [
+      "R6.2"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "handleCheckoutCompleted sets licensed_user_count = 1 for Solo (no per-user item)",
+    "implemented": true,
+    "prdRefs": [
+      "R6.3"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "handleSubscriptionUpdated sets licensed_user_count = 1 for Solo",
+    "implemented": true,
+    "prdRefs": [
+      "R6.3"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "upgradeTier() supports Solo -> Pro: adds per-user line item, swaps base price",
+    "implemented": true,
+    "prdRefs": [
+      "R6.4"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "New downgradeTier() validates active user count = 1 before proceeding",
+    "implemented": true,
+    "prdRefs": [
+      "R6.5"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "downgradeTier() removes per-user item and swaps base price to Solo",
+    "implemented": true,
+    "prdRefs": [
+      "R6.5"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "purchaseAddOn(AI_ASSISTANT) creates checkout session for AI add-on subscription item",
+    "implemented": true,
+    "prdRefs": [
+      "R6.6"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "cancelAddOn(AI_ASSISTANT) removes AI line item from subscription",
+    "implemented": true,
+    "prdRefs": [
+      "R6.6"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Stripe webhook inserts tenant_addons row when AI subscription item is activated",
+    "implemented": true,
+    "prdRefs": [
+      "R6.7"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Stripe webhook deactivates tenant_addons row when AI subscription item is removed/cancelled",
+    "implemented": true,
+    "prdRefs": [
+      "R6.7"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Add env vars to .env.example: STRIPE_SOLO_BASE_PRICE_ID, STRIPE_SOLO_BASE_ANNUAL_PRICE_ID, STRIPE_AI_ADDON_PRICE_ID, STRIPE_AI_ADDON_ANNUAL_PRICE_ID",
+    "implemented": true,
+    "prdRefs": [
+      "R6.2",
+      "R1b.3"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Block addUser action when plan is 'solo' and used >= 1 internal users",
+    "implemented": true,
+    "prdRefs": [
+      "R7.1"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Return error 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.' on block",
+    "implemented": true,
+    "prdRefs": [
+      "R7.1"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Disable 'Add User' button in user management UI when isSolo with upgrade CTA",
+    "implemented": true,
+    "prdRefs": [
+      "R7.2"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Add FEATURE_DISPLAY_NAMES entries for all 8 new TIER_FEATURES in AccountManagement",
+    "implemented": true,
+    "prdRefs": [
+      "R8.1"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Solo-specific messaging on account page: 'Your Solo plan includes core PSA features...'",
+    "implemented": true,
+    "prdRefs": [
+      "R8.2"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Show 'Upgrade to Pro' card for Solo tenants in AccountManagement",
+    "implemented": true,
+    "prdRefs": [
+      "R8.3"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Show 'Downgrade to Solo' option for Pro tenants when active user count = 1",
+    "implemented": true,
+    "prdRefs": [
+      "R8.4"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Show 'Add AI Assistant' purchase card when add-on is not active (any tier)",
+    "implemented": true,
+    "prdRefs": [
+      "R8.5"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Show 'AI Assistant (active)' status when add-on is active with cancel option",
+    "implemented": true,
+    "prdRefs": [
+      "R8.5"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Update upgradeTierAction() to support Solo -> Pro",
+    "implemented": true,
+    "prdRefs": [
+      "R6.4"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Add downgradeTierAction() with user count validation",
+    "implemented": true,
+    "prdRefs": [
+      "R6.5"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Solo checkout includes 7-day trial period (trialDays=7)",
+    "implemented": true,
+    "prdRefs": [
+      "R6.2"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Solo->Pro trial: activate Pro features for established Solo customers (past 7-day trial)",
+    "implemented": true,
+    "prdRefs": [
+      "R6.8"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Solo->Pro trial blocked if customer is still in their Solo trial period",
+    "implemented": true,
+    "prdRefs": [
+      "R6.8"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Solo->Pro trial reverts to Solo at trial end if not converted to paid Pro",
+    "implemented": true,
+    "prdRefs": [
+      "R6.8"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Show 'Try Pro free' CTA for established Solo customers in AccountManagement",
+    "implemented": true,
+    "prdRefs": [
+      "R6.8",
+      "R8.3"
+    ]
+  }
+]

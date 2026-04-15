@@ -7,7 +7,9 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SERVICE_ROOT = path.resolve(__dirname, '..');
-const DIST_ROOT = path.join(SERVICE_ROOT, 'dist');
+const DIST_ROOT = path.resolve(
+  process.env.WORKFLOW_WORKER_VALIDATE_DIST_ROOT || path.join(SERVICE_ROOT, 'dist'),
+);
 
 const ENTRY_CANDIDATES = [
   path.join(DIST_ROOT, 'services/workflow-worker/src/index.js'),
@@ -87,6 +89,10 @@ function addViolation(violations, filePath, specifier, reason) {
   });
 }
 
+function isWorkerRuntimeEntrypoint(filePath) {
+  return filePath.endsWith(path.join('ee', 'packages', 'workflows', 'src', 'runtime', 'worker.js'));
+}
+
 function validate() {
   if (!fs.existsSync(DIST_ROOT)) {
     throw new Error(`dist not found at ${DIST_ROOT}`);
@@ -125,6 +131,36 @@ function validate() {
           current,
           specifier,
           'ui package import is not allowed in worker runtime graph'
+        );
+      }
+
+      if (specifier.startsWith('@shared/')) {
+        addViolation(
+          violations,
+          current,
+          specifier,
+          'unresolved @shared alias is not allowed in worker runtime graph'
+        );
+      }
+
+      if (specifier.includes('/runtime/bootstrap')) {
+        addViolation(
+          violations,
+          current,
+          specifier,
+          'bootstrap/app-only runtime dependency leaked into worker runtime graph'
+        );
+      }
+
+      if (
+        (specifier.includes('workflowInferenceService') || specifier.includes('registerAiActions'))
+        && !isWorkerRuntimeEntrypoint(current)
+      ) {
+        addViolation(
+          violations,
+          current,
+          specifier,
+          'worker runtime graph may only reach AI runtime wiring through the dedicated runtime/worker entrypoint'
         );
       }
 

@@ -7,6 +7,7 @@ import ClientDetails from './ClientDetails';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientQuickViewProps {
   clientId: string;
@@ -14,6 +15,7 @@ interface ClientQuickViewProps {
 }
 
 export const ClientQuickView: React.FC<ClientQuickViewProps> = ({ clientId, onClose }) => {
+  const { t } = useTranslation('msp/clients');
   const [client, setClient] = useState<IClientWithLocation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,20 +27,20 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({ clientId, onCl
       try {
         const data = await getClientById(clientId);
         if (!data) {
-          setError('Client not found');
+          setError(t('clientQuickView.notFound', { defaultValue: 'Client not found' }));
         } else {
           setClient(data);
         }
       } catch (err) {
         console.error('Error fetching client for quick view:', err);
-        setError('Failed to load client details');
+        setError(t('clientQuickView.loadError', { defaultValue: 'Failed to load client details' }));
       } finally {
         setLoading(false);
       }
     };
 
     fetchClient();
-  }, [clientId]);
+  }, [clientId, t]);
 
   if (loading) {
     return (
@@ -53,7 +55,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({ clientId, onCl
       <div className="p-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error || 'Something went wrong'}</AlertDescription>
+          <AlertDescription>{error || t('clientQuickView.unknownError', { defaultValue: 'Something went wrong' })}</AlertDescription>
         </Alert>
       </div>
     );

@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
+import { ADD_ONS } from '@alga-psa/types';
+import { AddOnAccessError, assertAddOnAccess } from '@/lib/tier-gating/assertAddOnAccess';
 
 const isEnterpriseEdition =
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -28,6 +30,22 @@ export async function POST(req: NextRequest) {
         headers: { 'Content-Type': 'application/json' },
       },
     );
+  }
+
+  try {
+    await assertAddOnAccess(ADD_ONS.AI_ASSISTANT);
+  } catch (error) {
+    if (error instanceof AddOnAccessError) {
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    throw error;
   }
 
   const { ChatCompletionsService } = await import('@product/chat/entry');

@@ -73,12 +73,16 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
 
   const timeEntries = await db('time_entries')
-    .where({
-      time_sheet_id: validatedParams.timeSheetId,
-      tenant
+    .leftJoin('service_catalog', function() {
+      this.on('time_entries.service_id', '=', 'service_catalog.service_id')
+        .andOn('time_entries.tenant', '=', 'service_catalog.tenant');
     })
-    .orderBy('start_time', 'desc')
-    .select('*');
+    .where({
+      'time_entries.time_sheet_id': validatedParams.timeSheetId,
+      'time_entries.tenant': tenant
+    })
+    .orderBy('time_entries.start_time', 'desc')
+    .select('time_entries.*', 'service_catalog.service_name');
 
   const changeRequestsByEntryId = await fetchTimeEntryChangeRequestsForEntryIdsFromDb(
     db,
@@ -189,7 +193,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
         throw new Error(`Unknown work item type: ${entry.work_item_type}`);
     }
 
-    // Fetch service information with new schema (using billing_method instead of service_type)
+    // Fetch service information without treating billing mode as service identity/type.
     const [service] = await db('service_catalog as sc')
       .leftJoin('service_types as st', function() {
         this.on('sc.custom_service_type_id', '=', 'st.id')
@@ -201,7 +205,9 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
       })
       .select(
         'sc.service_name',
-        'sc.billing_method as service_type', // Use billing_method as service_type for backwards compatibility
+        'st.name as service_type',
+        'sc.billing_method as billing_mode',
+        'sc.item_kind',
         db.raw('CAST(sc.default_rate AS FLOAT) as default_rate')
       );
 
@@ -218,6 +224,8 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
         id: entry.service_id,
         name: service.service_name,
         type: service.service_type,
+        billing_mode: service.billing_mode,
+        item_kind: service.item_kind,
         default_rate: service.default_rate
       } : null
     };
@@ -408,6 +416,7 @@ export const saveTimeEntry = withAuth(async (
     // If no contract line ID is provided, try to determine the default one
     if (!contract_line_id && service_id) {
       try {
+        const effectiveDateForContractResolution = work_date || start_time;
         const defaultPlanId = await determineDefaultContractLine(
           work_item_type === 'project_task' ?
             (await db('project_tasks')
@@ -433,7 +442,8 @@ export const saveTimeEntry = withAuth(async (
                   })
                   .first('client_id'))?.client_id
                 : null,
-          service_id
+          service_id,
+          effectiveDateForContractResolution
         );
 
         if (defaultPlanId) {

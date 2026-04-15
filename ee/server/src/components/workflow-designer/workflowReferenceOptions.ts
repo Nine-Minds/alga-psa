@@ -41,32 +41,69 @@ const normalizeSchemaType = (schema?: JsonSchema): string | undefined => {
   return schema.type;
 };
 
-const collectSchemaPaths = (schema: JsonSchema, root: JsonSchema, prefix: string): string[] => {
+type ReferenceOption = {
+  value: string;
+  label: string;
+};
+
+const buildReferenceOptionLabel = (
+  path: string,
+  description: string | undefined,
+  fallbackLabel: string
+): string => {
+  const trimmedDescription = description?.trim();
+  if (!trimmedDescription) {
+    return fallbackLabel;
+  }
+  return `${fallbackLabel} (${trimmedDescription})`;
+};
+
+const collectSchemaPaths = (
+  schema: JsonSchema,
+  root: JsonSchema,
+  prefix: string,
+  fallbackLabelPrefix: string
+): ReferenceOption[] => {
   const resolved = resolveSchema(schema, root);
   const type = normalizeSchemaType(resolved);
   if (type !== 'object' || !resolved.properties) {
-    return [prefix];
+    return [{
+      value: prefix,
+      label: buildReferenceOptionLabel(prefix, resolved.description, fallbackLabelPrefix),
+    }];
   }
 
-  const paths: string[] = [prefix];
+  const paths: ReferenceOption[] = [{
+    value: prefix,
+    label: buildReferenceOptionLabel(prefix, resolved.description, fallbackLabelPrefix),
+  }];
   Object.entries(resolved.properties).forEach(([key, child]) => {
     const childSchema = resolveSchema(child, root);
     const childType = normalizeSchemaType(childSchema);
     const nextPrefix = `${prefix}.${key}`;
+    const nextFallbackLabel = nextPrefix.startsWith(`${prefix}.`)
+      ? nextPrefix.slice(prefix.length + 1)
+      : nextPrefix;
 
     if (childType === 'object' && childSchema.properties) {
-      paths.push(...collectSchemaPaths(childSchema, root, nextPrefix));
+      paths.push(...collectSchemaPaths(childSchema, root, nextPrefix, nextFallbackLabel));
       return;
     }
 
     if (childType === 'array' && childSchema.items) {
       const arrayPrefix = `${nextPrefix}[]`;
-      paths.push(arrayPrefix);
-      paths.push(...collectSchemaPaths(childSchema.items, root, arrayPrefix));
+      paths.push({
+        value: arrayPrefix,
+        label: buildReferenceOptionLabel(arrayPrefix, childSchema.description, `${nextFallbackLabel}[]`),
+      });
+      paths.push(...collectSchemaPaths(childSchema.items, root, arrayPrefix, `${nextFallbackLabel}[]`));
       return;
     }
 
-    paths.push(nextPrefix);
+    paths.push({
+      value: nextPrefix,
+      label: buildReferenceOptionLabel(nextPrefix, childSchema.description, nextFallbackLabel),
+    });
   });
 
   return paths;
@@ -101,16 +138,19 @@ export const buildWorkflowReferenceFieldOptions = (
   }
 
   if (payloadSchema) {
-    collectSchemaPaths(payloadSchema, payloadSchema, 'payload').forEach((path) => {
-      pushUniqueOption(options, path, path);
+    collectSchemaPaths(payloadSchema, payloadSchema, 'payload', 'payload').forEach((option) => {
+      pushUniqueOption(options, option.value, option.label);
     });
   }
 
   dataContext?.steps.forEach((stepOutput) => {
     const basePath = `vars.${stepOutput.saveAs}`;
     pushUniqueOption(options, basePath, `🔗 ${basePath} (${stepOutput.stepName})`);
-    collectSchemaPaths(stepOutput.outputSchema, stepOutput.outputSchema, basePath).forEach((path) => {
-      pushUniqueOption(options, path, path);
+    collectSchemaPaths(stepOutput.outputSchema, stepOutput.outputSchema, basePath, stepOutput.saveAs).forEach((option) => {
+      if (option.value === basePath) {
+        return;
+      }
+      pushUniqueOption(options, option.value, option.label);
     });
   });
 

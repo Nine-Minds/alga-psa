@@ -44,7 +44,6 @@ export interface TeamsAppManifest {
   manifestVersion: string;
   version: string;
   id: string;
-  packageName: string;
   developer: {
     name: string;
     websiteUrl: string;
@@ -92,7 +91,7 @@ export interface TeamsAppManifest {
       type: 'query' | 'action';
       title: string;
       description: string;
-      contexts: string[];
+      context: string[];
       parameters?: Array<{
         name: string;
         title: string;

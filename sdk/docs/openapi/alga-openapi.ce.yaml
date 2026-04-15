@@ -9,21 +9,25 @@ servers:
   - url: http://localhost:3000
     description: Local development
 tags:
+  - name: Boards
+  - name: Projects
   - name: Service Categories
+  - name: Statuses
+  - name: Storage
   - name: admin
   - name: assets
   - name: auth
   - name: automation
   - name: billing
   - name: billing-analytics
-  - name: contract-lines
   - name: categories
   - name: chat
-  - name: companies
   - name: client-contract-lines
-  - name: companies
-  - name: client-contract-lines
+  - name: clients
   - name: contacts
+  - name: contract-line-templates
+  - name: contract-lines
+  - name: contracts
   - name: documents
   - name: email
   - name: ext
@@ -40,10 +44,9 @@ tags:
   - name: meta
   - name: permission-checks
   - name: permissions
-  - name: contracts
-  - name: contract-line-templates
   - name: projects
   - name: quickbooks
+  - name: quotes
   - name: rbac
   - name: readyz
   - name: roles
@@ -86,6 +89,308 @@ components:
     PlaceholderObject:
       type: object
       properties: {}
+    BoardIdParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Board UUID.
+      required:
+        - id
+    BoardApiResponse:
+      type: object
+      properties:
+        board_id:
+          type: string
+          format: uuid
+        board_name:
+          type: string
+        description:
+          type:
+            - string
+            - "null"
+        display_order:
+          type: number
+        is_default:
+          type: boolean
+        is_inactive:
+          type: boolean
+        category_type:
+          type:
+            - string
+            - "null"
+          enum:
+            - custom
+            - itil
+        priority_type:
+          type:
+            - string
+            - "null"
+          enum:
+            - custom
+            - itil
+        display_itil_impact:
+          type:
+            - boolean
+            - "null"
+        display_itil_urgency:
+          type:
+            - boolean
+            - "null"
+        default_assigned_to:
+          type:
+            - string
+            - "null"
+          format: uuid
+        inbound_reply_reopen_enabled:
+          type: boolean
+        inbound_reply_reopen_cutoff_hours:
+          type: integer
+        inbound_reply_reopen_status_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        inbound_reply_ai_ack_suppression_enabled:
+          type: boolean
+        enable_live_ticket_timer:
+          type:
+            - boolean
+            - "null"
+        tenant:
+          type: string
+          format: uuid
+      required:
+        - board_id
+        - board_name
+        - description
+        - display_order
+        - is_default
+        - is_inactive
+        - category_type
+        - priority_type
+        - display_itil_impact
+        - display_itil_urgency
+        - default_assigned_to
+        - enable_live_ticket_timer
+        - tenant
+    BoardEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/BoardApiResponse"
+      required:
+        - data
+    BoardListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BoardApiResponse"
+      required:
+        - data
+    BoardCreateRequest:
+      type: object
+      properties:
+        board_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 1000
+        is_default:
+          type: boolean
+        is_inactive:
+          type: boolean
+        category_type:
+          type: string
+          enum: &a1
+            - custom
+            - itil
+        priority_type:
+          type: string
+          enum: &a2
+            - custom
+            - itil
+        default_assigned_to:
+          type:
+            - string
+            - "null"
+          format: uuid
+        display_itil_impact:
+          type: boolean
+        display_itil_urgency:
+          type: boolean
+        enable_live_ticket_timer:
+          type: boolean
+      required:
+        - board_name
+      description: Payload for creating a new board.
+    BoardUpdateRequest:
+      type: object
+      properties:
+        board_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 1000
+        is_default:
+          type: boolean
+        is_inactive:
+          type: boolean
+        category_type:
+          type: string
+          enum: *a1
+        priority_type:
+          type: string
+          enum: *a2
+        default_assigned_to:
+          type:
+            - string
+            - "null"
+          format: uuid
+        display_itil_impact:
+          type: boolean
+        display_itil_urgency:
+          type: boolean
+        enable_live_ticket_timer:
+          type: boolean
+      description: Payload for updating a board. All fields are optional.
+    StatusIdParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Status UUID.
+      required:
+        - id
+    StatusApiResponse:
+      type: object
+      properties:
+        status_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status_type:
+          type: string
+          enum:
+            - ticket
+            - project
+            - project_task
+            - interaction
+        order_number:
+          type: number
+        is_closed:
+          type: boolean
+        is_default:
+          type:
+            - boolean
+            - "null"
+        item_type:
+          type:
+            - string
+            - "null"
+        standard_status_id:
+          type:
+            - string
+            - "null"
+        is_custom:
+          type:
+            - boolean
+            - "null"
+        tenant:
+          type: string
+          format: uuid
+      required:
+        - status_id
+        - name
+        - status_type
+        - order_number
+        - is_closed
+        - is_default
+        - item_type
+        - standard_status_id
+        - is_custom
+        - tenant
+    StatusEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/StatusApiResponse"
+      required:
+        - data
+    StatusListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatusApiResponse"
+      required:
+        - data
+    StatusCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        status_type:
+          type: string
+          enum:
+            - ticket
+            - project
+            - project_task
+            - interaction
+        board_id:
+          type: string
+          format: uuid
+        is_closed:
+          type: boolean
+        is_default:
+          type: boolean
+        order_number:
+          type: integer
+          minimum: 0
+        color:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
+        icon:
+          type: string
+          maxLength: 50
+      required:
+        - name
+        - status_type
+      description: Payload for creating a new status. For ticket statuses, board_id is
+        required.
+    StatusUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        is_closed:
+          type: boolean
+        is_default:
+          type: boolean
+        order_number:
+          type: integer
+          minimum: 0
+        color:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
+        icon:
+          type: string
+          maxLength: 50
+      description: Payload for updating a status. All fields are optional.
     ServiceCategory:
       type: object
       properties:
@@ -197,8 +502,903 @@ components:
       required:
         - data
         - pagination
+    ProjectIdParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Project UUID.
+      required:
+        - id
+    ProjectPhaseTaskParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Project UUID.
+        phaseId:
+          type: string
+          format: uuid
+          description: Project phase UUID.
+      required:
+        - id
+        - phaseId
+    ProjectTaskIdParams:
+      type: object
+      properties:
+        taskId:
+          type: string
+          format: uuid
+          description: Project task UUID.
+      required:
+        - taskId
+    ProjectTaskApiResponse:
+      type: object
+      properties:
+        task_id:
+          type: string
+          format: uuid
+        phase_id:
+          type: string
+          format: uuid
+        task_name:
+          type: string
+        description:
+          type:
+            - string
+            - "null"
+        assigned_to:
+          type:
+            - string
+            - "null"
+          format: uuid
+        estimated_hours:
+          type:
+            - number
+            - "null"
+        actual_hours:
+          type:
+            - number
+            - "null"
+        project_status_mapping_id:
+          type: string
+          format: uuid
+        due_date:
+          type:
+            - string
+            - "null"
+          format: date-time
+        priority_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        task_type_key:
+          type: string
+        wbs_code:
+          type: string
+        order_key:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        tenant:
+          type: string
+          format: uuid
+        tags:
+          type: array
+          items:
+            type: string
+      required:
+        - task_id
+        - phase_id
+        - task_name
+        - description
+        - assigned_to
+        - estimated_hours
+        - actual_hours
+        - project_status_mapping_id
+        - priority_id
+        - task_type_key
+        - wbs_code
+        - created_at
+        - updated_at
+        - tenant
+    ProjectTaskEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ProjectTaskApiResponse"
+      required:
+        - data
+    ProjectTaskListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectTaskApiResponse"
+      required:
+        - data
+    ProjectTaskStatusMappingApiResponse:
+      type: object
+      properties:
+        project_status_mapping_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        status_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        standard_status_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        is_standard:
+          type: boolean
+        custom_name:
+          type:
+            - string
+            - "null"
+        display_order:
+          type: number
+        is_visible:
+          type: boolean
+        tenant:
+          type: string
+          format: uuid
+        status_name:
+          type: string
+        name:
+          type: string
+        is_closed:
+          type: boolean
+      required:
+        - project_status_mapping_id
+        - project_id
+        - is_standard
+        - custom_name
+        - display_order
+        - is_visible
+        - tenant
+        - status_name
+        - name
+        - is_closed
+    ProjectTaskStatusMappingListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectTaskStatusMappingApiResponse"
+      required:
+        - data
+    ProjectTaskUpdateRequest:
+      type: object
+      properties:
+        task_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        assigned_to:
+          type: string
+          format: uuid
+        estimated_hours:
+          type: number
+          minimum: 0
+        due_date:
+          type: string
+          format: date-time
+        priority_id:
+          type: string
+          format: uuid
+        task_type_key:
+          type: string
+          default: general
+        project_status_mapping_id:
+          type: string
+          format: uuid
+        wbs_code:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+      description: Payload for updating a project task. To change task status, send
+        project_status_mapping_id as a UUID. This endpoint does not accept
+        project_id, phase_id, or human-readable status names.
+    StoragePutRequest:
+      type: object
+      properties:
+        value: {}
+        metadata:
+          type: object
+          additionalProperties: {}
+        ttlSeconds:
+          type: integer
+          exclusiveMinimum: 0
+        ifRevision:
+          type: integer
+          minimum: 0
+        schemaVersion:
+          type: integer
+          exclusiveMinimum: 0
+    StoragePutResponse:
+      type: object
+      properties:
+        namespace:
+          type: string
+        key:
+          type: string
+        revision:
+          type: integer
+          exclusiveMinimum: 0
+        ttlExpiresAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - namespace
+        - key
+        - revision
+        - ttlExpiresAt
+        - createdAt
+        - updatedAt
+    StorageGetResponse:
+      type: object
+      properties:
+        namespace:
+          type: string
+        key:
+          type: string
+        revision:
+          type: integer
+          exclusiveMinimum: 0
+        value: {}
+        metadata:
+          type: object
+          additionalProperties: {}
+        ttlExpiresAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - namespace
+        - key
+        - revision
+        - metadata
+        - ttlExpiresAt
+        - createdAt
+        - updatedAt
+    StorageListQuery:
+      type: object
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        cursor:
+          type: string
+        keyPrefix:
+          type: string
+          maxLength: 256
+        includeValues:
+          type: boolean
+        includeMetadata:
+          type: boolean
+    StorageListItem:
+      type: object
+      properties:
+        namespace:
+          type: string
+        key:
+          type: string
+        revision:
+          type: integer
+          exclusiveMinimum: 0
+        value: {}
+        metadata:
+          type: object
+          additionalProperties: {}
+        ttlExpiresAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - namespace
+        - key
+        - revision
+        - ttlExpiresAt
+        - createdAt
+        - updatedAt
+    StorageListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StorageListItem"
+        nextCursor:
+          type:
+            - string
+            - "null"
+      required:
+        - items
+        - nextCursor
+    StorageBulkPutRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+                minLength: 1
+                maxLength: 256
+              value: {}
+              metadata:
+                type: object
+                additionalProperties: {}
+              ttlSeconds:
+                type: integer
+                exclusiveMinimum: 0
+              ifRevision:
+                type: integer
+                minimum: 0
+              schemaVersion:
+                type: integer
+                exclusiveMinimum: 0
+            required:
+              - key
+          minItems: 1
+      required:
+        - items
+    StorageBulkPutResponse:
+      type: object
+      properties:
+        namespace:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              revision:
+                type: integer
+                exclusiveMinimum: 0
+              ttlExpiresAt:
+                type:
+                  - string
+                  - "null"
+                format: date-time
+            required:
+              - key
+              - revision
+              - ttlExpiresAt
+      required:
+        - namespace
+        - items
+    StorageNamespaceParams:
+      type: object
+      properties:
+        namespace:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required:
+        - namespace
+    StorageNamespaceKeyParams:
+      allOf:
+        - $ref: "#/components/schemas/StorageNamespaceParams"
+        - type: object
+          properties:
+            key:
+              type: string
+              minLength: 1
+              maxLength: 256
+          required:
+            - key
+    StorageIfRevisionHeader:
+      type: object
+      properties:
+        if-revision-match:
+          type: string
+    StorageDeleteQuery:
+      type: object
+      properties:
+        ifRevision:
+          type:
+            - integer
+            - "null"
+          minimum: 0
   parameters: {}
 paths:
+  /api/v1/boards:
+    get:
+      summary: List boards
+      description: Returns a paginated list of ticket boards for the current tenant.
+        Use this to discover valid board_id values before creating tickets or
+        statuses.
+      tags:
+        - Boards
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket
+        x-chat-callable: true
+        x-chat-display-name: List Boards
+        x-chat-rbac-resource: ticket
+        x-chat-approval-required: false
+      responses:
+        "200":
+          description: Boards returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardListEnvelope"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create board
+      description: Creates a new ticket board. After creating a board, create at least
+        one status for it via POST /api/v1/statuses so tickets can be assigned
+        to the board.
+      tags:
+        - Boards
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket
+        x-chat-callable: true
+        x-chat-display-name: Create Board
+        x-chat-rbac-resource: ticket
+        x-chat-approval-required: true
+      requestBody:
+        description: Board creation payload.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BoardCreateRequest"
+            description: Board creation payload.
+      responses:
+        "201":
+          description: Board created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardEnvelope"
+        "400":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/boards/{id}:
+    get:
+      summary: Get board by ID
+      description: Returns a single board by its UUID.
+      tags:
+        - Boards
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket
+        x-chat-callable: true
+        x-chat-display-name: Get Board
+        x-chat-rbac-resource: ticket
+        x-chat-approval-required: false
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Board UUID.
+          required: true
+          description: Board UUID.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Board returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardEnvelope"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Board not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: Update board
+      description: Updates an existing board. All fields are optional — only send the
+        fields you want to change.
+      tags:
+        - Boards
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket
+        x-chat-callable: true
+        x-chat-display-name: Update Board
+        x-chat-rbac-resource: ticket
+        x-chat-approval-required: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Board UUID.
+          required: true
+          description: Board UUID.
+          name: id
+          in: path
+      requestBody:
+        description: Board update payload.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BoardUpdateRequest"
+            description: Board update payload.
+      responses:
+        "200":
+          description: Board updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardEnvelope"
+        "400":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Board not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete board
+      description: Deletes a board by its UUID. This will fail if the board has
+        associated tickets.
+      tags:
+        - Boards
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket
+        x-chat-callable: true
+        x-chat-display-name: Delete Board
+        x-chat-rbac-resource: ticket
+        x-chat-approval-required: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Board UUID.
+          required: true
+          description: Board UUID.
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Board deleted successfully.
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Board not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/statuses:
+    get:
+      summary: List statuses
+      description: Returns a paginated list of statuses. For ticket statuses, filter
+        by type=ticket and board_id to get statuses that belong to a specific
+        board. The status_id must belong to the same board_id when creating
+        tickets.
+      tags:
+        - Statuses
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket
+        x-chat-callable: true
+        x-chat-display-name: List Statuses
+        x-chat-rbac-resource: ticket
+        x-chat-approval-required: false
+      responses:
+        "200":
+          description: Statuses returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusListEnvelope"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create status
+      description: "Creates a new status. For ticket statuses, board_id is required.
+        The status_type must be one of: ticket, project, project_task,
+        interaction."
+      tags:
+        - Statuses
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket
+        x-chat-callable: true
+        x-chat-display-name: Create Status
+        x-chat-rbac-resource: ticket
+        x-chat-approval-required: true
+      requestBody:
+        description: Status creation payload.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusCreateRequest"
+            description: Status creation payload.
+      responses:
+        "201":
+          description: Status created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusEnvelope"
+        "400":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/statuses/{id}:
+    get:
+      summary: Get status by ID
+      description: Returns a single status by its UUID.
+      tags:
+        - Statuses
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket
+        x-chat-callable: true
+        x-chat-display-name: Get Status
+        x-chat-rbac-resource: ticket
+        x-chat-approval-required: false
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Status UUID.
+          required: true
+          description: Status UUID.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Status returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusEnvelope"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Status not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: Update status
+      description: Updates an existing status. All fields are optional — only send the
+        fields you want to change.
+      tags:
+        - Statuses
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket
+        x-chat-callable: true
+        x-chat-display-name: Update Status
+        x-chat-rbac-resource: ticket
+        x-chat-approval-required: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Status UUID.
+          required: true
+          description: Status UUID.
+          name: id
+          in: path
+      requestBody:
+        description: Status update payload.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusUpdateRequest"
+            description: Status update payload.
+      responses:
+        "200":
+          description: Status updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusEnvelope"
+        "400":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Status not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete status
+      description: Deletes a status by its UUID. Cannot delete the last default status
+        for a board.
+      tags:
+        - Statuses
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket
+        x-chat-callable: true
+        x-chat-display-name: Delete Status
+        x-chat-rbac-resource: ticket
+        x-chat-approval-required: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Status UUID.
+          required: true
+          description: Status UUID.
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Status deleted successfully.
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Status not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/categories/service:
     get:
       summary: List service categories
@@ -210,6 +1410,10 @@ paths:
       extensions:
         x-tenant-header-required: true
         x-rbac-resource: service-category
+        x-chat-callable: true
+        x-chat-display-name: List Service Categories
+        x-chat-rbac-resource: service-category
+        x-chat-approval-required: false
       parameters:
         - schema:
             type: string
@@ -264,6 +1468,10 @@ paths:
       extensions:
         x-tenant-header-required: true
         x-rbac-resource: service-category
+        x-chat-callable: true
+        x-chat-display-name: Create Service Category
+        x-chat-rbac-resource: service-category
+        x-chat-approval-required: true
       requestBody:
         description: Service category payload
         required: true
@@ -298,6 +1506,307 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: Authenticated user lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/projects/{id}/task-status-mappings:
+    get:
+      summary: List project task status mappings
+      description: Returns the task status mappings configured for the specified
+        project. Use this endpoint to translate a human-readable status label
+        such as "In Progress" into a project_status_mapping_id UUID before
+        updating a task.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project
+        x-chat-callable: true
+        x-chat-display-name: List Project Task Status Mappings
+        x-chat-rbac-resource: project
+        x-chat-approval-required: false
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project UUID.
+          required: true
+          description: Project UUID.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Project task status mappings returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectTaskStatusMappingListEnvelope"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Project not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/projects/{id}/tasks:
+    get:
+      summary: List project tasks
+      description: Returns all tasks for the specified project UUID. Use this endpoint
+        to identify a task by task_name before fetching or updating it.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project
+        x-chat-callable: true
+        x-chat-display-name: List Project Tasks
+        x-chat-rbac-resource: project
+        x-chat-approval-required: false
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project UUID.
+          required: true
+          description: Project UUID.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Project tasks returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectTaskListEnvelope"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Project not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/projects/{id}/phases/{phaseId}/tasks:
+    get:
+      summary: List project phase tasks
+      description: Returns all tasks for the specified project phase. Both id and
+        phaseId must be UUID path parameters.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project
+        x-chat-callable: true
+        x-chat-display-name: List Project Phase Tasks
+        x-chat-rbac-resource: project
+        x-chat-approval-required: false
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project UUID.
+          required: true
+          description: Project UUID.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Project phase UUID.
+          required: true
+          description: Project phase UUID.
+          name: phaseId
+          in: path
+      responses:
+        "200":
+          description: Project phase tasks returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectTaskListEnvelope"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Project phase not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/projects/tasks/{taskId}:
+    get:
+      summary: Get project task
+      description: Returns a single project task by its task UUID.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project
+        x-chat-callable: true
+        x-chat-display-name: Get Project Task
+        x-chat-rbac-resource: project
+        x-chat-approval-required: false
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project task UUID.
+          required: true
+          description: Project task UUID.
+          name: taskId
+          in: path
+      responses:
+        "200":
+          description: Project task returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectTaskEnvelope"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Project task not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: Update project task
+      description: Updates a project task by task UUID. Use project_status_mapping_id
+        when changing task status, and only send fields defined in the request
+        schema.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project
+        x-chat-callable: true
+        x-chat-display-name: Update Project Task
+        x-chat-rbac-resource: project
+        x-chat-approval-required: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project task UUID.
+          required: true
+          description: Project task UUID.
+          name: taskId
+          in: path
+      requestBody:
+        description: Project task update payload.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectTaskUpdateRequest"
+            description: Project task update payload.
+      responses:
+        "200":
+          description: Project task updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectTaskEnvelope"
+        "400":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Project task not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: DELETE v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - projects
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "204":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
           content:
             application/json:
               schema:
@@ -8474,6 +9983,713 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes:
+    get:
+      summary: GET v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}:
+    get:
+      summary: GET v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: PUT v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: DELETE v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "204":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/activities:
+    get:
+      summary: GET v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/approve:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/convert:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/convert/preview:
+    get:
+      summary: GET v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/items:
+    get:
+      summary: GET v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/items/{itemId}:
+    put:
+      summary: PUT v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: DELETE v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "204":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/items/reorder:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/remind:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/request-changes:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/resend:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/revisions:
+    get:
+      summary: GET v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/send:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/submit-for-approval:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/meta/docs:
     get:
       summary: GET v1
@@ -9427,99 +11643,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/projects/tasks/{taskId}:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - projects
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - projects
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - projects
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/projects/tasks/{taskId}/checklist:
     get:
       summary: GET v1
@@ -9789,64 +11912,6 @@ paths:
             schema:
               $ref: "#/components/schemas/PlaceholderObject"
             description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/projects/{id}/phases/{phaseId}/tasks:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - projects
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/projects/{id}/tasks:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - projects
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
       responses:
         "200":
           description: Placeholder success response
@@ -18138,6 +20203,351 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/storage/namespaces/{namespace}/records:
+    get:
+      summary: List records in a namespace
+      tags:
+        - Storage
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: storage
+        x-chat-callable: true
+        x-chat-display-name: List Storage Records
+        x-chat-rbac-resource: storage
+        x-chat-approval-required: false
+        x-edition: CE
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+          required: true
+          name: namespace
+          in: path
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: cursor
+          in: query
+        - schema:
+            type: string
+            maxLength: 256
+          required: false
+          name: keyPrefix
+          in: query
+        - schema:
+            type: boolean
+          required: false
+          name: includeValues
+          in: query
+        - schema:
+            type: boolean
+          required: false
+          name: includeMetadata
+          in: query
+      responses:
+        "200":
+          description: List of records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageListResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Bulk insert or update records
+      tags:
+        - Storage
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: storage
+        x-chat-callable: true
+        x-chat-display-name: Upsert Storage Records
+        x-chat-rbac-resource: storage
+        x-chat-approval-required: true
+        x-edition: CE
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+          required: true
+          name: namespace
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StorageBulkPutRequest"
+      responses:
+        "200":
+          description: Bulk operation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageBulkPutResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Revision mismatch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/storage/namespaces/{namespace}/records/{key}:
+    get:
+      summary: Get a record by key
+      tags:
+        - Storage
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: storage
+        x-chat-callable: true
+        x-chat-display-name: Get Storage Record
+        x-chat-rbac-resource: storage
+        x-chat-approval-required: false
+        x-edition: CE
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+          required: true
+          name: namespace
+          in: path
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 256
+          required: true
+          name: key
+          in: path
+        - schema:
+            type: string
+          required: false
+          name: if-revision-match
+          in: header
+      responses:
+        "200":
+          description: Record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageGetResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Revision mismatch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: Create or update a record by key
+      tags:
+        - Storage
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: storage
+        x-chat-callable: true
+        x-chat-display-name: Put Storage Record
+        x-chat-rbac-resource: storage
+        x-chat-approval-required: true
+        x-edition: CE
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+          required: true
+          name: namespace
+          in: path
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 256
+          required: true
+          name: key
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoragePutRequest"
+      responses:
+        "200":
+          description: Updated record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoragePutResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Revision mismatch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete a record by key
+      tags:
+        - Storage
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: storage
+        x-edition: CE
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+          required: true
+          name: namespace
+          in: path
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 256
+          required: true
+          name: key
+          in: path
+        - schema:
+            type:
+              - integer
+              - "null"
+            minimum: 0
+          required: false
+          name: ifRevision
+          in: query
+      responses:
+        "204":
+          description: Record deleted
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
           content:
             application/json:
               schema:

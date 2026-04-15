@@ -1,0 +1,260 @@
+[
+  {
+    "id": "F000a",
+    "description": "3-panel row (palette | canvas | inspector) fills available height with overflow-hidden",
+    "implemented": true,
+    "prdRefs": ["FR-0"]
+  },
+  {
+    "id": "F000b",
+    "description": "Inspector aside panel has overflow-y-auto and scrolls independently",
+    "implemented": true,
+    "prdRefs": ["FR-0"]
+  },
+  {
+    "id": "F000c",
+    "description": "Palette panel has overflow-y-auto and scrolls independently (no fixed-top floating hack)",
+    "implemented": true,
+    "prdRefs": ["FR-0"]
+  },
+  {
+    "id": "F000d",
+    "description": "Remove isPaletteFloating / fixed top-0 logic — replaced by CSS overflow scroll",
+    "implemented": true,
+    "prdRefs": ["FR-0"]
+  },
+  {
+    "id": "F000e",
+    "description": "Canvas stays visible while scrolling either side panel",
+    "implemented": true,
+    "prdRefs": ["FR-0"]
+  },
+  {
+    "id": "F001",
+    "description": "Grid column layout picker: visual widget with 5 preset grid column options in Layout Controls panel",
+    "implemented": true,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F002",
+    "description": "Grid column picker: clicking a preset sets layout.gridTemplateColumns to corresponding value",
+    "implemented": true,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F002a",
+    "description": "Grid column picker: clicking a preset from flex mode switches layout.display to 'grid' and applies the chosen columns",
+    "implemented": true,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F003",
+    "description": "Grid column picker: active preset highlighted based on current gridTemplateColumns value",
+    "implemented": true,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F004",
+    "description": "Grid column picker: shows when layoutMode === 'grid' inside renderContainerLayoutControls",
+    "implemented": true,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F004a",
+    "description": "Grid column picker: remains visible in flex mode so users can switch into grid without raw CSS editing",
+    "implemented": true,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F004b",
+    "description": "Layout controls render for section nodes as well as container nodes",
+    "implemented": true,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F005",
+    "description": "Grid column picker: raw CSS input visible below for custom gridTemplateColumns values",
+    "implemented": true,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F006",
+    "description": "Spacing stepper: gap field uses numeric stepper + unit selector instead of text input",
+    "implemented": true,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F007",
+    "description": "Spacing stepper: padding field uses numeric stepper + unit selector",
+    "implemented": true,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F008",
+    "description": "Spacing stepper: unit dropdown with px (default), %, rem options",
+    "implemented": true,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F009",
+    "description": "Spacing stepper: parses existing CSS values on load (e.g. '16px' -> 16, px)",
+    "implemented": true,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F010",
+    "description": "Spacing stepper: writes back as combined CSS string (e.g. '16px')",
+    "implemented": true,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F011",
+    "description": "Margin: four individual stepper fields (top, right, bottom, left)",
+    "implemented": true,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F012",
+    "description": "Margin: link-all toggle that syncs all four values when linked",
+    "implemented": true,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F013",
+    "description": "Margin: parses existing CSS shorthand on load",
+    "implemented": true,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F014",
+    "description": "Margin: writes back as CSS shorthand string",
+    "implemented": true,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F015",
+    "description": "New preset: 'Notes + Totals Row' (2-col grid: wide notes left, narrow totals right)",
+    "implemented": true,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F016",
+    "description": "New preset: 'Two Equal Columns' (2-col grid section)",
+    "implemented": true,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F017",
+    "description": "New preset: 'Three Info Columns' (3-col grid for info cards)",
+    "implemented": true,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F018",
+    "description": "New presets use CSS grid layout properties (not legacy flex mode)",
+    "implemented": true,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F018a",
+    "description": "New preset: 'Recurring + One-time Tables' adds two stacked dynamic tables pre-bound to recurringItems and onetimeItems",
+    "implemented": true,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F019",
+    "description": "Quote binding: recurringItems collection filters line_items where is_recurring === true",
+    "implemented": true,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F020",
+    "description": "Quote binding: onetimeItems collection filters line_items where is_recurring !== true",
+    "implemented": true,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F021",
+    "description": "Quote binding: serviceItems collection filters line_items where service_item_kind === 'service'",
+    "implemented": true,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F022",
+    "description": "Quote binding: productItems collection filters line_items where service_item_kind === 'product'",
+    "implemented": true,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F023",
+    "description": "Quote value binding: recurringSubtotal, recurringTax, recurringTotal computed aggregates",
+    "implemented": true,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F024",
+    "description": "Quote value binding: onetimeSubtotal, onetimeTax, onetimeTotal computed aggregates",
+    "implemented": true,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F025",
+    "description": "Quote value binding: serviceSubtotal, serviceTax, serviceTotal computed aggregates",
+    "implemented": true,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F026",
+    "description": "Quote value binding: productSubtotal, productTax, productTotal computed aggregates",
+    "implemented": true,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F027",
+    "description": "QuoteViewModel type extended with filtered item arrays (recurring_items, onetime_items, etc.)",
+    "implemented": true,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F028",
+    "description": "QuoteViewModel type extended with per-group aggregate fields",
+    "implemented": true,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F029",
+    "description": "mapLoadedQuoteToViewModel computes filtered arrays from line_items",
+    "implemented": true,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F030",
+    "description": "mapLoadedQuoteToViewModel computes per-group aggregates from filtered arrays",
+    "implemented": true,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F031",
+    "description": "Table editor collection dropdown lists new filtered collection bindings",
+    "implemented": true,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F032",
+    "description": "Fields palette tab shows new quote aggregate bindings for discovery",
+    "implemented": true,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F033",
+    "description": "All new inspector controls work correctly in dark theme",
+    "implemented": true,
+    "prdRefs": ["NFR"]
+  },
+  {
+    "id": "F034",
+    "description": "Existing templates render identically after changes (no visual regression)",
+    "implemented": true,
+    "prdRefs": ["NFR"]
+  }
+]

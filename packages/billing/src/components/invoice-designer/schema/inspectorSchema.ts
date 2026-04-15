@@ -64,6 +64,26 @@ export type DesignerInspectorField =
       visibleWhen?: DesignerInspectorVisibleWhen;
     }
   | {
+      kind: 'css-length-stepper';
+      id: string;
+      label: string;
+      path: string;
+      domId?: string;
+      allowedUnits?: Array<'px' | '%' | 'rem'>;
+      defaultUnit?: 'px' | '%' | 'rem';
+      visibleWhen?: DesignerInspectorVisibleWhen;
+    }
+  | {
+      kind: 'css-length-box';
+      id: string;
+      label: string;
+      path: string;
+      domId?: string;
+      allowedUnits?: Array<'px' | '%' | 'rem'>;
+      defaultUnit?: 'px' | '%' | 'rem';
+      visibleWhen?: DesignerInspectorVisibleWhen;
+    }
+  | {
       kind: 'css-color';
       id: string;
       label: string;
@@ -84,6 +104,15 @@ export type DesignerInspectorField =
       kind: 'widget';
       id: string;
       widget: 'table-editor';
+      domId?: string;
+      visibleWhen?: DesignerInspectorVisibleWhen;
+    }
+  | {
+      kind: 'widget';
+      id: string;
+      widget: 'field-binding-picker';
+      label: string;
+      path: string;
       domId?: string;
       visibleWhen?: DesignerInspectorVisibleWhen;
     };

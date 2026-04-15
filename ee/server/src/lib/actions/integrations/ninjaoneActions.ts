@@ -14,11 +14,14 @@ import fs from 'fs';
 import { revalidatePath } from 'next/cache';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { createTenantKnex } from '@/lib/db';
 import { auditLog } from '@/lib/logging/auditLog';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createNinjaOneClient, disconnectNinjaOne } from '../../integrations/ninjaone';
 import { removeNinjaOneWebhook } from '../../integrations/ninjaone/webhooks/webhookRegistration';
+import { cancelNinjaOneProactiveRefresh } from '../../integrations/ninjaone/proactiveRefresh';
 import type { SyncOptions } from '../../integrations/ninjaone/sync/syncEngine';
 import { getNinjaOneSyncStrategy } from '../../integrations/ninjaone/sync/syncStrategy';
 import {
@@ -34,7 +37,7 @@ import {
   NinjaOneRegion,
   NinjaOneOAuthCredentials,
 } from '../../../interfaces/ninjaone.interfaces';
-import { buildIntegrationDisconnectedPayload } from '@shared/workflow/streams/domainEventBuilders/integrationConnectionEventBuilders';
+import { buildIntegrationDisconnectedPayload } from '@alga-psa/workflow-streams';
 
 // Secret names for NinjaOne credentials
 const NINJAONE_CREDENTIALS_SECRET = 'ninjaone_credentials';
@@ -74,6 +77,15 @@ const getRedirectUri = () => {
   return `${baseUrl}/api/integrations/ninjaone/callback`;
 };
 
+function withAdvancedAssetsAccess<TArgs extends unknown[], TResult>(
+  handler: (user: any, context: { tenant: string }, ...args: TArgs) => Promise<TResult>,
+) {
+  return withAuth(async (user, context, ...args: TArgs): Promise<TResult> => {
+    await assertTierAccess(TIER_FEATURES.ADVANCED_ASSETS);
+    return handler(user, context as { tenant: string }, ...args);
+  });
+}
+
 /**
  * Extract safe error info for logging (avoids circular reference issues with axios errors)
  */
@@ -101,7 +113,7 @@ function extractErrorInfo(error: unknown): object {
  * Save NinjaOne API credentials for a tenant
  * These credentials are used for OAuth authentication with NinjaOne
  */
-export const saveNinjaOneCredentials = withAuth(async (
+export const saveNinjaOneCredentials = withAdvancedAssetsAccess(async (
   user,
   { tenant },
   clientId: string,
@@ -142,7 +154,7 @@ export const saveNinjaOneCredentials = withAuth(async (
  * Get the status of stored NinjaOne credentials
  * Returns whether credentials exist and a masked version of the secret
  */
-export const getNinjaOneCredentialsStatus = withAuth(async (user, { tenant }): Promise<{
+export const getNinjaOneCredentialsStatus = withAdvancedAssetsAccess(async (user, { tenant }): Promise<{
   hasCredentials: boolean;
   clientId?: string;
   clientSecretMasked?: string;
@@ -181,7 +193,7 @@ export const getNinjaOneCredentialsStatus = withAuth(async (user, { tenant }): P
 /**
  * Clear NinjaOne API credentials for a tenant
  */
-export const clearNinjaOneCredentials = withAuth(async (user, { tenant }): Promise<{ success: boolean; error?: string }> => {
+export const clearNinjaOneCredentials = withAdvancedAssetsAccess(async (user, { tenant }): Promise<{ success: boolean; error?: string }> => {
   try {
     // Check permission
     const canUpdate = await hasPermission(user, 'settings', 'update');
@@ -207,7 +219,7 @@ export const clearNinjaOneCredentials = withAuth(async (user, { tenant }): Promi
 /**
  * Get the current NinjaOne connection status
  */
-export const getNinjaOneConnectionStatus = withAuth(async (user, { tenant }): Promise<RmmConnectionStatus> => {
+export const getNinjaOneConnectionStatus = withAdvancedAssetsAccess(async (user, { tenant }): Promise<RmmConnectionStatus> => {
   try {
     // Check permission
     const canView = await hasPermission(user, 'settings', 'read');
@@ -272,7 +284,7 @@ export const getNinjaOneConnectionStatus = withAuth(async (user, { tenant }): Pr
 /**
  * Disconnect NinjaOne integration
  */
-export const disconnectNinjaOneIntegration = withAuth(async (user, { tenant }): Promise<{ success: boolean; error?: string }> => {
+export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (user, { tenant }): Promise<{ success: boolean; error?: string }> => {
   try {
     // Check permission
     const canUpdate = await hasPermission(user, 'settings', 'update');
@@ -303,20 +315,33 @@ export const disconnectNinjaOneIntegration = withAuth(async (user, { tenant }): 
       });
     }
 
-    // 2. Remove OAuth token credentials from secret storage
+    // 2. Load the integration row and stop its lifecycle workflow before mutating secrets.
+    let existingIntegration = await knex('rmm_integrations')
+      .where({ tenant, provider: 'ninjaone' })
+      .first();
+
+    if (existingIntegration?.integration_id) {
+      await cancelNinjaOneProactiveRefresh(
+        tenant,
+        existingIntegration.integration_id,
+        'disconnect'
+      );
+
+      existingIntegration = await knex('rmm_integrations')
+        .where({ tenant, provider: 'ninjaone' })
+        .first();
+    }
+
+    // 3. Remove OAuth token credentials from secret storage
     await disconnectNinjaOne(tenant);
 
-    // 3. Remove client credentials (client ID and secret) from secret storage
+    // 4. Remove client credentials (client ID and secret) from secret storage
     const secretProvider = await getSecretProviderInstance();
     await secretProvider.deleteTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
     await secretProvider.deleteTenantSecret(tenant, NINJAONE_CLIENT_SECRET_SECRET);
     logger.info('[NinjaOneActions] Cleared NinjaOne client credentials', { tenant });
 
-    // 4. Update integration record (clear webhook-related settings)
-    const existingIntegration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
-      .first();
-
+    // 5. Update integration record (clear webhook-related settings)
     if (existingIntegration) {
       // Parse existing settings - handle both string and object cases
       let settings: Record<string, any> = {};
@@ -391,7 +416,7 @@ export const disconnectNinjaOneIntegration = withAuth(async (user, { tenant }): 
 /**
  * Test the NinjaOne connection
  */
-export const testNinjaOneConnection = withAuth(async (user, { tenant }): Promise<{ success: boolean; error?: string }> => {
+export const testNinjaOneConnection = withAdvancedAssetsAccess(async (user, { tenant }): Promise<{ success: boolean; error?: string }> => {
   try {
     // Check permission
     const canView = await hasPermission(user, 'settings', 'read');
@@ -418,7 +443,7 @@ export const testNinjaOneConnection = withAuth(async (user, { tenant }): Promise
 /**
  * Sync organizations from NinjaOne
  */
-export const syncNinjaOneOrganizations = withAuth(async (user, { tenant }): Promise<RmmSyncResult> => {
+export const syncNinjaOneOrganizations = withAdvancedAssetsAccess(async (user, { tenant }): Promise<RmmSyncResult> => {
   try {
     // Check permission
     const canUpdate = await hasPermission(user, 'settings', 'update');
@@ -483,7 +508,7 @@ export const syncNinjaOneOrganizations = withAuth(async (user, { tenant }): Prom
 /**
  * Get organization mappings
  */
-export const getNinjaOneOrganizationMappings = withAuth(async (user, { tenant }): Promise<RmmOrganizationMapping[]> => {
+export const getNinjaOneOrganizationMappings = withAdvancedAssetsAccess(async (user, { tenant }): Promise<RmmOrganizationMapping[]> => {
   try {
     // Check permission
     const canView = await hasPermission(user, 'settings', 'read');
@@ -529,7 +554,7 @@ export const getNinjaOneOrganizationMappings = withAuth(async (user, { tenant })
 /**
  * Update organization mapping
  */
-export const updateNinjaOneOrganizationMapping = withAuth(async (
+export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async (
   user,
   { tenant },
   mappingId: string,
@@ -580,7 +605,7 @@ export const updateNinjaOneOrganizationMapping = withAuth(async (
 /**
  * Get connect URL for NinjaOne OAuth
  */
-export const getNinjaOneConnectUrl = withAuth(async (user, { tenant }, region: NinjaOneRegion = 'US'): Promise<string> => {
+export const getNinjaOneConnectUrl = withAdvancedAssetsAccess(async (user, { tenant }, region: NinjaOneRegion = 'US'): Promise<string> => {
   if (!NINJAONE_REGIONS[region]) {
     throw new Error(`Invalid region: ${region}`);
   }
@@ -621,7 +646,7 @@ export const getNinjaOneConnectUrl = withAuth(async (user, { tenant }, region: N
 /**
  * Trigger a full device sync
  */
-export const triggerNinjaOneFullSync = withAuth(async (
+export const triggerNinjaOneFullSync = withAdvancedAssetsAccess(async (
   user,
   { tenant },
   options?: Partial<SyncOptions>
@@ -679,7 +704,7 @@ export const triggerNinjaOneFullSync = withAuth(async (
 /**
  * Trigger an incremental device sync
  */
-export const triggerNinjaOneIncrementalSync = withAuth(async (user, { tenant }): Promise<RmmSyncResult> => {
+export const triggerNinjaOneIncrementalSync = withAdvancedAssetsAccess(async (user, { tenant }): Promise<RmmSyncResult> => {
   try {
     // Check permission
     const canUpdate = await hasPermission(user, 'settings', 'update');
@@ -737,7 +762,7 @@ export const triggerNinjaOneIncrementalSync = withAuth(async (user, { tenant }):
 /**
  * Sync a single device by its NinjaOne ID
  */
-export const syncNinjaOneDevice = withAuth(async (user, { tenant }, deviceId: number): Promise<{
+export const syncNinjaOneDevice = withAdvancedAssetsAccess(async (user, { tenant }, deviceId: number): Promise<{
   success: boolean;
   asset?: Asset;
   error?: string;
@@ -782,7 +807,7 @@ export const syncNinjaOneDevice = withAuth(async (user, { tenant }, deviceId: nu
 /**
  * Get remote access URL for a device
  */
-export const getNinjaOneRemoteAccessUrl = withAuth(async (user, { tenant }, assetId: string): Promise<{
+export const getNinjaOneRemoteAccessUrl = withAdvancedAssetsAccess(async (user, { tenant }, assetId: string): Promise<{
   success: boolean;
   url?: string;
   error?: string;
@@ -856,7 +881,7 @@ export const getNinjaOneRemoteAccessUrl = withAuth(async (user, { tenant }, asse
 /**
  * Get active RMM alerts for an asset
  */
-export const getAssetAlerts = withAuth(async (user, { tenant }, assetId: string): Promise<{
+export const getAssetAlerts = withAdvancedAssetsAccess(async (user, { tenant }, assetId: string): Promise<{
   success: boolean;
   alerts?: RmmAlert[];
   error?: string;
@@ -907,7 +932,7 @@ export const getAssetAlerts = withAuth(async (user, { tenant }, assetId: string)
 /**
  * Acknowledge an RMM alert
  */
-export const acknowledgeRmmAlert = withAuth(async (user, { tenant }, alertId: string): Promise<{
+export const acknowledgeRmmAlert = withAdvancedAssetsAccess(async (user, { tenant }, alertId: string): Promise<{
   success: boolean;
   error?: string;
 }> => {
@@ -947,7 +972,7 @@ export const acknowledgeRmmAlert = withAuth(async (user, { tenant }, alertId: st
 /**
  * Create a ticket from an RMM alert
  */
-export const createTicketFromRmmAlert = withAuth(async (user, { tenant }, alertId: string): Promise<{
+export const createTicketFromRmmAlert = withAdvancedAssetsAccess(async (user, { tenant }, alertId: string): Promise<{
   success: boolean;
   ticketId?: string;
   error?: string;
@@ -1009,7 +1034,7 @@ export const createTicketFromRmmAlert = withAuth(async (user, { tenant }, alertI
 /**
  * Get NinjaOne device details for an asset
  */
-export const getNinjaOneDeviceDetails = withAuth(async (user, { tenant }, assetId: string): Promise<{
+export const getNinjaOneDeviceDetails = withAdvancedAssetsAccess(async (user, { tenant }, assetId: string): Promise<{
   success: boolean;
   device?: any;
   error?: string;
@@ -1051,7 +1076,7 @@ export const getNinjaOneDeviceDetails = withAuth(async (user, { tenant }, assetI
 /**
  * Trigger patch status sync for all RMM-managed assets
  */
-export const triggerPatchStatusSync = withAuth(async (user, { tenant }, options?: {
+export const triggerPatchStatusSync = withAdvancedAssetsAccess(async (user, { tenant }, options?: {
   assetIds?: string[];
 }): Promise<{
   success: boolean;
@@ -1108,7 +1133,7 @@ export const triggerPatchStatusSync = withAuth(async (user, { tenant }, options?
 /**
  * Trigger software inventory sync for all RMM-managed assets
  */
-export const triggerSoftwareInventorySync = withAuth(async (user, { tenant }, options?: {
+export const triggerSoftwareInventorySync = withAdvancedAssetsAccess(async (user, { tenant }, options?: {
   assetIds?: string[];
   trackChanges?: boolean;
 }): Promise<{
@@ -1169,7 +1194,7 @@ export const triggerSoftwareInventorySync = withAuth(async (user, { tenant }, op
 /**
  * Search for software across all assets
  */
-export const searchSoftware = withAuth(async (
+export const searchSoftware = withAdvancedAssetsAccess(async (
   user,
   { tenant },
   searchTerm: string,
@@ -1221,7 +1246,7 @@ export const searchSoftware = withAuth(async (
 /**
  * Get compliance summary for RMM-managed assets
  */
-export const getRmmComplianceSummary = withAuth(async (user, { tenant }): Promise<{
+export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { tenant }): Promise<{
   success: boolean;
   summary?: {
     totalDevices: number;

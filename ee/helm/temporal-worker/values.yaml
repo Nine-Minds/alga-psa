@@ -65,6 +65,7 @@ vault:
 secrets:
   internalApiSharedSecret: "change-me-in-production"
   algaAuthKey: "change-me-in-production"
+  nextauthSecret: "change-me-in-production"
 
 # Service Account configuration
 serviceAccount:
@@ -159,14 +160,23 @@ extraEnv: []
   # - name: EXTRA_VAR
   #   value: "extra-value"
 
+# Auth configuration
+auth:
+  nextauthSecretSecret:
+    name: ""
+    key: NEXTAUTH_SECRET
+
 # Portal domain management configuration
 portalDomain:
   # Namespace where TLS certificates are issued (source secrets)
   certificateNamespace: ""  # Set to your certificate namespace
-  # Namespace where Istio gateway resources (and replicated TLS secrets) live
-  gatewayNamespace: istio-system
+  # Namespace where gateway resources (and replicated TLS secrets) live when secret replication is enabled
+  gatewayNamespace: ""
   # Whether to create RBAC bindings that allow the worker to sync TLS secrets
-  secretReplicationEnabled: true
+  secretReplicationEnabled: false
+  # Optional base VirtualService reference (<namespace>/<name>) for portal-domain workflows.
+  # Leave empty when portal-domain routing is not managed in this environment.
+  baseVirtualService: ""
 
 # Additional volumes
 extraVolumes: []
@@ -186,11 +196,11 @@ db:
   host: "postgresql.default.svc.cluster.local"
   port: "5432"
   serverDatabase: "app_server"
-  user: "app_user"
+  user: "app_user_pgbouncer"
   # Secret references for passwords
   serverPasswordSecret:
     name: "db-secrets"
-    key: "server-password"
+    key: "pgbouncer-password"
   adminPasswordSecret:
     name: "db-secrets"
     key: "admin-password"

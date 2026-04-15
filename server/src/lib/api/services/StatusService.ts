@@ -43,7 +43,19 @@ export class StatusService extends BaseService<IStatus> {
     if (filters.type) {
       dataQuery = dataQuery.where('status_type', filters.type);
       countQuery = countQuery.where('status_type', filters.type);
+
+      if (filters.type === 'ticket') {
+        dataQuery = dataQuery.whereNotNull('board_id');
+        countQuery = countQuery.whereNotNull('board_id');
+      }
+
       delete filters.type;
+    }
+
+    if (filters.board_id) {
+      dataQuery = dataQuery.where('board_id', filters.board_id);
+      countQuery = countQuery.where('board_id', filters.board_id);
+      delete filters.board_id;
     }
 
     // Apply search filter
@@ -100,6 +112,10 @@ export class StatusService extends BaseService<IStatus> {
         tenant: context.tenant
       })
       .first();
+
+    if (status?.status_type === 'ticket' && !status.board_id) {
+      return null;
+    }
 
     return status as IStatus | null;
   }

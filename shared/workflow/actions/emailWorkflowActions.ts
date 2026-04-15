@@ -94,6 +94,7 @@ export interface FindContactByEmailOutput {
   contact_id: string;
   name: string;
   email: string;
+  matched_email?: string;
   client_id: string;
   user_id?: string;
   user_type?: 'internal' | 'client';
@@ -267,6 +268,7 @@ export async function findContactByEmail(
           contact_id: '',
           name: displayName || normalizedEmail,
           email: normalizeEmailAddress(internalUser.email) ?? normalizedEmail,
+          matched_email: normalizedEmail,
           client_id: '',
           user_id: internalUser.user_id,
           user_type: 'internal' as const,
@@ -297,8 +299,18 @@ export async function findContactByEmail(
             .andOn('clients.tenant', 'contacts.tenant');
         })
         .where({
-          'contacts.email': normalizedEmail,
           'contacts.tenant': tenant
+        })
+        .andWhere(function contactEmailMatch(this: Knex.QueryBuilder) {
+          this
+            .where('contacts.email', normalizedEmail)
+            .orWhereExists(function additionalEmailMatch() {
+              this.select(trx.raw('1'))
+                .from('contact_additional_email_addresses as caea')
+                .whereRaw('caea.contact_name_id = contacts.contact_name_id')
+                .andWhere('caea.tenant', tenant)
+                .andWhere('caea.normalized_email_address', normalizedEmail);
+            });
         })
         .orderBy('contacts.created_at', 'asc')
         .orderBy('contacts.contact_name_id', 'asc');
@@ -316,6 +328,7 @@ export async function findContactByEmail(
         const hydrated = candidatesById.get(candidate.contact_id) ?? candidate;
         return {
           ...candidate,
+          matched_email: normalizedEmail,
           phone: getDefaultPhoneNumber(hydrated),
           user_id: candidate?.user_id ?? undefined,
           user_type: candidate?.user_id ? 'client' : undefined,
@@ -1478,7 +1491,7 @@ export async function parseEmailReplyBody(
   },
   config?: Record<string, any>
 ): Promise<any> {
-  const module = await import('@shared/lib/email/replyParser');
+  const module = await import('../../lib/email/replyParser');
   const parseEmailReply = module.parseEmailReply as (input: { text: string; html?: string }, cfg?: Record<string, any>) => any;
   return parseEmailReply({
     text: body?.text || '',

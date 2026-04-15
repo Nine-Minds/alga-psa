@@ -1,15 +1,18 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 
-import type { WorkflowDefinition, WorkflowTimeTrigger } from '@shared/workflow/runtime';
-import WorkflowScheduleStateModel, {
+import type { WorkflowDefinition, WorkflowTimeTrigger } from '@alga-psa/workflows/runtime';
+import {
+  WorkflowScheduleStateModel,
   type WorkflowScheduleStateRecord,
-  type WorkflowScheduleStateStatus
-} from '@shared/workflow/persistence/workflowScheduleStateModel';
+  type WorkflowScheduleStateStatus,
+  type WorkflowScheduleDayTypeFilter
+} from '@alga-psa/workflows/persistence';
 import {
   getWorkflowScheduleJobRunner,
   type WorkflowScheduleJobResult as ScheduleJobResult
 } from './jobRunnerProvider';
+import { computeNextFireAtForSchedule } from './computeNextFireAt';
 
 export const WORKFLOW_ONE_TIME_TRIGGER_JOB = 'workflow-time-trigger-once';
 export const WORKFLOW_RECURRING_TRIGGER_JOB = 'workflow-time-trigger-recurring';
@@ -18,6 +21,8 @@ const LEGACY_INLINE_SCHEDULE_NAME = 'Workflow schedule';
 export type DesiredWorkflowSchedule = {
   triggerType: 'schedule' | 'recurring';
   workflowVersion: number;
+  dayTypeFilter: WorkflowScheduleDayTypeFilter;
+  businessHoursScheduleId?: string | null;
   runAt?: string | null;
   cron?: string | null;
   timezone?: string | null;
@@ -42,10 +47,18 @@ type WorkflowScheduleJobData = {
   scheduleId: string;
 };
 
-const workflowScheduleSingletonKey = (workflowId: string, scheduleId: string): string =>
+export const buildWorkflowScheduleSingletonKey = (workflowId: string, scheduleId: string): string =>
   `workflow-schedule:${workflowId}:${scheduleId}`;
 
 const TERMINAL_JOB_STATUSES = new Set(['completed', 'failed']);
+
+const computeNextFireAtForDesired = (desired: DesiredWorkflowSchedule): string | null =>
+  computeNextFireAtForSchedule({
+    triggerType: desired.triggerType,
+    cron: desired.cron,
+    timezone: desired.timezone,
+    enabled: desired.enabled
+  });
 
 const isTimeTriggerDefinition = (trigger: WorkflowDefinition['trigger']): trigger is WorkflowTimeTrigger =>
   trigger?.type === 'schedule' || trigger?.type === 'recurring';
@@ -72,6 +85,8 @@ const buildRestoreDesiredSchedule = (
   return {
     triggerType: existing.trigger_type,
     workflowVersion: existing.workflow_version,
+    dayTypeFilter: existing.day_type_filter ?? 'any',
+    businessHoursScheduleId: existing.business_hours_schedule_id ?? null,
     runAt: existing.run_at ?? null,
     cron: existing.cron ?? null,
     timezone: existing.timezone ?? null,
@@ -89,6 +104,8 @@ const buildDesiredScheduleFromExisting = (
   return {
     triggerType: existing.trigger_type,
     workflowVersion: existing.workflow_version,
+    dayTypeFilter: existing.day_type_filter ?? 'any',
+    businessHoursScheduleId: existing.business_hours_schedule_id ?? null,
     runAt: existing.run_at ?? null,
     cron: existing.cron ?? null,
     timezone: existing.timezone ?? null,
@@ -117,6 +134,8 @@ const buildDesiredScheduleForPublishedWorkflowVersion = (
   return {
     triggerType: existing.trigger_type,
     workflowVersion,
+    dayTypeFilter: existing.day_type_filter ?? 'any',
+    businessHoursScheduleId: existing.business_hours_schedule_id ?? null,
     runAt: existing.run_at ?? null,
     cron: existing.cron ?? null,
     timezone: existing.timezone ?? null,
@@ -139,7 +158,7 @@ async function scheduleDesiredWorkflow(
     workflowId,
     scheduleId
   };
-  const singletonKey = workflowScheduleSingletonKey(workflowId, scheduleId);
+  const singletonKey = buildWorkflowScheduleSingletonKey(workflowId, scheduleId);
 
   if (desired.triggerType === 'schedule') {
     const runAt = desired.runAt ? new Date(desired.runAt) : null;
@@ -210,7 +229,8 @@ async function restorePreviousScheduleRegistration(
     job_id: restored?.jobId ?? null,
     runner_schedule_id: restored?.externalId ?? null,
     enabled: true,
-    status: desired.status
+    status: desired.status,
+    next_fire_at: computeNextFireAtForDesired(desired)
   });
 }
 
@@ -230,6 +250,8 @@ async function persistScheduleCreate(
     workflow_version: params.record.desired.workflowVersion,
     name: params.record.name,
     trigger_type: params.record.desired.triggerType,
+    day_type_filter: params.record.desired.dayTypeFilter ?? 'any',
+    business_hours_schedule_id: params.record.desired.businessHoursScheduleId ?? null,
     run_at: params.record.desired.runAt ?? null,
     cron: params.record.desired.cron ?? null,
     timezone: params.record.desired.timezone ?? null,
@@ -238,6 +260,7 @@ async function persistScheduleCreate(
     status: params.record.desired.status,
     job_id: params.scheduled?.jobId ?? null,
     runner_schedule_id: params.scheduled?.externalId ?? null,
+    next_fire_at: computeNextFireAtForDesired(params.record.desired),
     last_error: null
   });
 }
@@ -255,6 +278,8 @@ async function persistScheduleUpdate(
     workflow_version: params.record.desired.workflowVersion,
     name: params.record.name,
     trigger_type: params.record.desired.triggerType,
+    day_type_filter: params.record.desired.dayTypeFilter ?? 'any',
+    business_hours_schedule_id: params.record.desired.businessHoursScheduleId ?? null,
     run_at: params.record.desired.runAt ?? null,
     cron: params.record.desired.cron ?? null,
     timezone: params.record.desired.timezone ?? null,
@@ -263,6 +288,7 @@ async function persistScheduleUpdate(
     status: params.record.desired.status,
     job_id: params.scheduled?.jobId ?? null,
     runner_schedule_id: params.scheduled?.externalId ?? null,
+    next_fire_at: computeNextFireAtForDesired(params.record.desired),
     last_error: null
   });
 }
@@ -278,6 +304,8 @@ export function buildDesiredWorkflowSchedule(
     return {
       triggerType: 'schedule',
       workflowVersion,
+      dayTypeFilter: 'any',
+      businessHoursScheduleId: null,
       runAt: definition.trigger.runAt,
       enabled,
       status: toDesiredScheduleStatus(enabled)
@@ -287,6 +315,8 @@ export function buildDesiredWorkflowSchedule(
   return {
     triggerType: 'recurring',
     workflowVersion,
+    dayTypeFilter: 'any',
+    businessHoursScheduleId: null,
     cron: definition.trigger.cron,
     timezone: definition.trigger.timezone,
     enabled,
@@ -530,7 +560,8 @@ export async function syncWorkflowScheduleState(
         status: 'disabled',
         name: existing.name ?? LEGACY_INLINE_SCHEDULE_NAME,
         job_id: null,
-        runner_schedule_id: null
+        runner_schedule_id: null,
+        next_fire_at: null
       });
     } catch (error) {
       await restorePreviousScheduleRegistration(knex, existing).catch(() => undefined);
@@ -549,6 +580,8 @@ export async function syncWorkflowScheduleState(
         workflow_version: params.desired.workflowVersion,
         name: LEGACY_INLINE_SCHEDULE_NAME,
         trigger_type: params.desired.triggerType,
+        day_type_filter: params.desired.dayTypeFilter ?? 'any',
+        business_hours_schedule_id: params.desired.businessHoursScheduleId ?? null,
         run_at: params.desired.runAt ?? null,
         cron: params.desired.cron ?? null,
         timezone: params.desired.timezone ?? null,
@@ -556,7 +589,8 @@ export async function syncWorkflowScheduleState(
         enabled: params.desired.enabled,
         status: params.desired.status,
         job_id: scheduled?.jobId ?? null,
-        runner_schedule_id: scheduled?.externalId ?? null
+        runner_schedule_id: scheduled?.externalId ?? null,
+        next_fire_at: computeNextFireAtForDesired(params.desired)
       });
     } catch (error) {
       if (scheduled?.jobId) {
@@ -570,7 +604,10 @@ export async function syncWorkflowScheduleState(
     return WorkflowScheduleStateModel.update(knex, existing.id, {
       workflow_version: params.desired.workflowVersion,
       name: existing.name ?? LEGACY_INLINE_SCHEDULE_NAME,
-      status: params.desired.status
+      day_type_filter: params.desired.dayTypeFilter ?? 'any',
+      business_hours_schedule_id: params.desired.businessHoursScheduleId ?? null,
+      status: params.desired.status,
+      next_fire_at: computeNextFireAtForDesired(params.desired)
     });
   }
 
@@ -601,6 +638,8 @@ export async function syncWorkflowScheduleState(
       workflow_version: params.desired.workflowVersion,
       name: existing.name ?? LEGACY_INLINE_SCHEDULE_NAME,
       trigger_type: params.desired.triggerType,
+      day_type_filter: params.desired.dayTypeFilter ?? 'any',
+      business_hours_schedule_id: params.desired.businessHoursScheduleId ?? null,
       run_at: params.desired.runAt ?? null,
       cron: params.desired.cron ?? null,
       timezone: params.desired.timezone ?? null,
@@ -609,6 +648,7 @@ export async function syncWorkflowScheduleState(
       status: params.desired.status,
       job_id: scheduledReplacement?.jobId ?? null,
       runner_schedule_id: scheduledReplacement?.externalId ?? null,
+      next_fire_at: computeNextFireAtForDesired(params.desired),
       last_error: null
     });
   } catch (error) {

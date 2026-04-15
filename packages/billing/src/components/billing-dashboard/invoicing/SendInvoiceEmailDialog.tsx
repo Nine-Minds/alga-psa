@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Mail, User, Building, AlertCircle, CheckCircle, Loader2, FileText } from 'lucide-react';
 import {
@@ -117,6 +117,35 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
       title="Send Invoice Email"
       id="send-invoice-email-dialog"
       className="max-w-2xl"
+      footer={(
+        <div className="flex justify-end space-x-2">
+          <Button
+            id="send-invoice-email-cancel"
+            variant="outline"
+            onClick={onClose}
+            disabled={sending}
+          >
+            Cancel
+          </Button>
+          <Button
+            id="send-invoice-email-send"
+            onClick={handleSend}
+            disabled={loading || sending || validRecipientCount === 0}
+          >
+            {sending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Mail className="h-4 w-4 mr-2" />
+                Send {validRecipientCount > 0 ? `${validRecipientCount} Email${validRecipientCount > 1 ? 's' : ''}` : 'Email'}
+              </>
+            )}
+          </Button>
+        </div>
+      )}
     >
       {loading ? (
         <div className="flex items-center justify-center py-12">
@@ -246,33 +275,6 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
         </div>
       )}
 
-      <DialogFooter>
-        <Button
-          id="send-invoice-email-cancel"
-          variant="outline"
-          onClick={onClose}
-          disabled={sending}
-        >
-          Cancel
-        </Button>
-        <Button
-          id="send-invoice-email-send"
-          onClick={handleSend}
-          disabled={loading || sending || validRecipientCount === 0}
-        >
-          {sending ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Sending...
-            </>
-          ) : (
-            <>
-              <Mail className="h-4 w-4 mr-2" />
-              Send {validRecipientCount > 0 ? `${validRecipientCount} Email${validRecipientCount > 1 ? 's' : ''}` : 'Email'}
-            </>
-          )}
-        </Button>
-      </DialogFooter>
     </Dialog>
   );
 };

@@ -1,0 +1,37 @@
+namespace: msp
+enabled: true
+
+image:
+  repository: ghcr.io/nine-minds/workflow-worker
+  tag: latest
+  pullPolicy: IfNotPresent
+  is_private: false
+  credentials: ""
+
+workflow:
+  redis:
+    host: redis.msp.svc.cluster.local
+    port: "6379"
+    passwordSecret:
+      name: redis-credentials
+      key: REDIS_PASSWORD
+
+db:
+  type: postgres
+  host: pgbouncer.msp.svc.cluster.local
+  port: "6432"
+  serverDatabase: server
+  user: app_user_pgbouncer
+  serverPasswordSecret:
+    name: db-credentials
+    key: DB_PASSWORD_PGBOUNCER
+  adminUser: postgres
+  adminPasswordSecret:
+    name: db-credentials
+    key: DB_PASSWORD_SUPERUSER
+
+livenessProbe:
+  enabled: false
+
+readinessProbe:
+  enabled: false

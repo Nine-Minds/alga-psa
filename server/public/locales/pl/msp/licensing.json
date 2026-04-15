@@ -1,0 +1,169 @@
+{
+  "reduceModal": {
+    "title": "Zmniejsz liczbę licencji",
+    "enterpriseOnly": "Ta funkcja jest dostępna tylko w wersji Enterprise."
+  },
+  "purchaseForm": {
+    "title": "Zakup licencji",
+    "enterpriseOnlyHosted": "Zakup licencji jest dostępny w wersji Enterprise dla wdrożeń hostowanych.",
+    "communityEditionUnlimited": "Samodzielnie hostowana wersja Community Edition ma nieograniczoną liczbę użytkowników bez dodatkowych kosztów."
+  },
+  "purchasePage": {
+    "title": "Kup licencje",
+    "description": "Dodaj więcej licencji użytkowników do swojego konta AlgaPSA"
+  },
+  "purchaseSuccess": {
+    "metaTitle": "Zakup zakończony",
+    "scheduledTitle": "Zmiana została zaplanowana pomyślnie!",
+    "updatedTitle": "Aktualizacja zakończona pomyślnie!",
+    "scheduledDescription": "Zmiana liczby licencji została zaplanowana i wejdzie w życie z końcem bieżącego okresu rozliczeniowego.",
+    "updatedDescription": "Aktualizacja licencji została pomyślnie przetworzona!",
+    "loadingSubscriptionDetails": "Ładowanie szczegółów subskrypcji...",
+    "updatingLicenseCount": "Aktualizowanie liczby licencji...",
+    "licenseInformation": "Informacje o licencjach",
+    "youNowHave": "Masz teraz",
+    "totalLicenses": "licencji łącznie",
+    "changeEffective": "Zmiana obowiązuje od",
+    "whatsNext": "Co dalej?",
+    "scheduledSteps": {
+      "currentLicenses": "Twoje obecne licencje pozostaną aktywne do końca okresu rozliczeniowego",
+      "autoUpdate": "Liczba licencji zaktualizuje się automatycznie w zaplanowanym terminie",
+      "emailConfirmation": "Otrzymasz potwierdzenie e-mail, gdy zmiana wejdzie w życie"
+    },
+    "updatedSteps": {
+      "activeReady": "Twoje licencje są teraz aktywne i gotowe do użycia",
+      "createUsers": "Możesz od razu utworzyć nowych użytkowników w Zarządzaniu użytkownikami",
+      "invoiceProrated": "Następna faktura będzie zawierać naliczenia proporcjonalne"
+    },
+    "sessionDetails": "Szczegóły sesji (dla wsparcia)",
+    "sessionId": "ID sesji:",
+    "goToAccountManagement": "Przejdź do zarządzania kontem"
+  },
+  "subscriptionForm": {
+    "title": "Zarządzaj subskrypcją licencji",
+    "errors": {
+      "loadPricing": "Nie udało się wczytać cennika",
+      "loadLicenseInformation": "Nie udało się wczytać informacji o licencjach",
+      "prepareUpdate": "Nie udało się przygotować aktualizacji licencji",
+      "processUpdate": "Nie udało się przetworzyć aktualizacji licencji",
+      "missingCheckoutSessionData": "Brakuje danych sesji płatności"
+    },
+    "checkout": {
+      "title": "Dokończ zakup",
+      "summary": "Kupujesz {{quantity}} {{licenseLabel}} za {{price}} za licencję na {{interval}}.",
+      "total": "Razem: {{total}}/{{interval}}",
+      "cancel": "Anuluj"
+    },
+    "confirmation": {
+      "title": "Potwierdź aktualizację licencji",
+      "increaseDescription": "Przed potwierdzeniem sprawdź szczegóły zwiększenia liczby licencji.",
+      "decreaseDescription": "Przed potwierdzeniem sprawdź szczegóły zmniejszenia liczby licencji. Zmiany wejdą w życie z końcem okresu rozliczeniowego.",
+      "currentMonthlyCost": "Obecny koszt miesięczny",
+      "currentLicenseCount": "Obecna liczba licencji",
+      "newMonthlyCost": "Nowy koszt miesięczny",
+      "newLicenseCount": "Nowa liczba licencji",
+      "monthlyIncrease": "Miesięczny wzrost",
+      "monthlySavings": "Miesięczna oszczędność",
+      "paymentMethod": "Metoda płatności",
+      "changePaymentMethod": "Zmień",
+      "immediateChargeTitle": "Natychmiastowe obciążenie",
+      "immediateChargeDescription": "Kwota {{amountDue}} zostanie pobrana teraz jako należność proporcjonalna.",
+      "prorationDescription": "Rozliczenie proporcjonalne: {{amount}} za pozostałą część tego okresu rozliczeniowego",
+      "scheduledTitle": "Zaplanowano na koniec okresu",
+      "scheduledDescription": "Zmniejszenie liczby licencji wejdzie w życie {{date}} z końcem bieżącego okresu rozliczeniowego.",
+      "scheduledKeepAccess": "Do tego czasu zachowasz dostęp do wszystkich {{count}} licencji.",
+      "cancel": "Anuluj",
+      "confirmPayNow": "Potwierdź i zapłać teraz",
+      "confirmSchedule": "Potwierdź harmonogram"
+    },
+    "usage": {
+      "title": "Bieżące wykorzystanie licencji",
+      "licensesUsed": "wykorzystanych licencji"
+    },
+    "fields": {
+      "totalLicenseCount": "Łączna liczba licencji"
+    },
+    "help": {
+      "totalLicenseCount": "Wprowadź nową łączną liczbę licencji (minimum: {{minimum}}). Obecnie: {{current}}",
+      "reduceViaAccount": "Aby zmniejszyć liczbę licencji, przejdź do zarządzania kontem",
+      "quantityWarning": "Ostrzeżenie: masz {{used}} użytkowników, ale ustawiasz łączną liczbę na {{quantity}}"
+    },
+    "pricing": {
+      "pricePerLicense": "Cena za licencję:",
+      "quantity": "Liczba:",
+      "total": "Razem:"
+    },
+    "actions": {
+      "creatingCheckout": "Tworzenie płatności...",
+      "noChange": "Brak zmian",
+      "updateToTotal": "Zaktualizuj do łącznej liczby {{quantity}} ({{difference}} {{licenseLabel}})"
+    },
+    "info": {
+      "totalQuantity": "To ustawia łączną liczbę w subskrypcji (nie dodaje licencji do obecnej liczby)",
+      "increasingImmediate": "Zwiększenie liczby licencji: natychmiastowy dostęp z naliczeniem proporcjonalnym",
+      "billedMonthly": "Licencje są rozliczane miesięcznie i można je anulować w dowolnym momencie"
+    },
+    "solo": {
+      "title": "Solo obejmuje jednego użytkownika",
+      "description": "Plan Solo jest przeznaczony dla jednego użytkownika i nie obsługuje dodawania licencji. Przejdź na Pro, aby dodać więcej użytkowników do swojego zespołu.",
+      "upgradeCta": "Przejdź na Pro"
+    }
+  },
+  "removalModal": {
+    "title": "Usuń licencje",
+    "description": "Usuń licencje z konta. Zmiany wejdą w życie z końcem bieżącego okresu rozliczeniowego.",
+    "stats": {
+      "currentLicenses": "Obecne licencje",
+      "activeUsers": "Aktywni użytkownicy"
+    },
+    "fields": {
+      "newLicenseCount": "Nowa liczba licencji",
+      "minimum": "Minimum: {{count}} (aby objąć wszystkich aktywnych użytkowników)"
+    },
+    "validation": {
+      "positiveInteger": "Liczba licencji musi być dodatnią liczbą całkowitą (minimum 1)",
+      "useAddFlow": "Użyj procesu \"Dodaj licencje\", aby zwiększyć liczbę licencji",
+      "deactivateUsers": "Masz {{activeUsers}} aktywnych użytkowników. Najpierw dezaktywuj {{usersToDeactivate}} {{userLabel}}."
+    },
+    "actions": {
+      "goToUserManagement": "Przejdź do zarządzania użytkownikami",
+      "reviewRemoval": "Przejrzyj usunięcie",
+      "confirmRemoval": "Potwierdź usunięcie"
+    },
+    "scheduled": {
+      "title": "Usunięcie zostanie zaplanowane",
+      "description": "Liczba licencji zmniejszy się z {{current}} do {{next}} z końcem bieżącego okresu rozliczeniowego.",
+      "creditDescription": "Na następnej fakturze otrzymasz uznanie za niewykorzystane licencje."
+    },
+    "confirmation": {
+      "description": "Przejrzyj i potwierdź usunięcie licencji:",
+      "currentMonthlyCost": "Obecny koszt miesięczny",
+      "currentLicenseCount": "Obecna liczba licencji",
+      "newMonthlyCost": "Nowy koszt miesięczny",
+      "newLicenseCount": "Nowa liczba licencji",
+      "monthlySavings": "Miesięczna oszczędność",
+      "creditNotice": "Zmiany wejdą w życie z końcem bieżącego okresu rozliczeniowego. Otrzymasz proporcjonalne uznanie na następnej fakturze."
+    },
+    "errors": {
+      "deactivateUsersFirst": "Najpierw dezaktywuj użytkowników",
+      "reduceFailed": "Nie udało się zmniejszyć liczby licencji",
+      "removeFailed": "Nie udało się usunąć licencji. Spróbuj ponownie."
+    },
+    "success": {
+      "scheduled": "Usunięcie licencji zostało zaplanowane! Liczba licencji zmieni się z {{current}} na {{next}} dnia {{effectiveDate}}."
+    }
+  },
+  "shared": {
+    "licenseSingular": "licencja",
+    "licensePlural": "licencje",
+    "userSingular": "użytkownik",
+    "userPlural": "użytkowników",
+    "licenseCount": "{{count}} {{licenseLabel}}",
+    "perInterval": "{{amount}}/{{interval}}",
+    "none": "Brak",
+    "intervals": {
+      "month": "miesiąc",
+      "year": "rok"
+    }
+  }
+}

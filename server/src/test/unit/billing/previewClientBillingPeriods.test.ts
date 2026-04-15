@@ -48,6 +48,7 @@ function makeFakeTransaction(responses: Record<string, any>): { trx: any; calls:
 let currentTrx: any | null = null;
 
 vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
   withTransaction: async (_knex: any, fn: any) => {
     if (!currentTrx) throw new Error('No test transaction configured');
     return await fn(currentTrx);
@@ -56,10 +57,7 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(async () => ({ user: { id: 'user-1' } })),
-}));
-
-vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
+  withAuth: (fn: any) => fn,
 }));
 
 describe('previewClientBillingPeriods', () => {
@@ -75,14 +73,23 @@ describe('previewClientBillingPeriods', () => {
     };
     const { trx } = makeFakeTransaction(responses);
     currentTrx = trx;
-    const { previewClientBillingPeriods } = await import('@alga-psa/billing/actions');
+    const { previewClientBillingPeriods } = await import('../../../../../packages/billing/src/actions/billingCycleAnchorActions');
 
-    const periods = await previewClientBillingPeriods('client-1', {
-      count: 3,
-      referenceDate: '2026-01-09T00:00:00Z',
+    const result = await previewClientBillingPeriods(
+      { id: 'user-1' },
+      { tenant: 'tenant-1' },
+      'client-1',
+      {
+        count: 3,
+        referenceDate: '2026-01-09T00:00:00Z',
+      }
+    );
+
+    expect(result.cadenceContext).toMatchObject({
+      cadenceOwner: 'client',
+      previewHeading: 'Upcoming client-cadence invoice windows (preview)',
     });
-
-    expect(periods).toEqual([
+    expect(result.periods).toEqual([
       { periodStartDate: '2025-12-10T00:00:00Z', periodEndDate: '2026-01-10T00:00:00Z' },
       { periodStartDate: '2026-01-10T00:00:00Z', periodEndDate: '2026-02-10T00:00:00Z' },
       { periodStartDate: '2026-02-10T00:00:00Z', periodEndDate: '2026-03-10T00:00:00Z' },

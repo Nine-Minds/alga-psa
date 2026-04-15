@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import type { InvoiceTemplateAst } from '@alga-psa/types';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
-import { evaluateInvoiceTemplateAst } from './evaluator';
-import { renderInvoiceTemplateAstHtmlDocument } from './server-render';
+import type { TemplateAst } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import { evaluateTemplateAst } from './evaluator';
+import { renderTemplateAstHtmlDocument } from './server-render';
 
-describe('renderInvoiceTemplateAstHtmlDocument', () => {
+describe('renderTemplateAstHtmlDocument', () => {
   it('returns a full HTML document wrapper for server/headless PDF rendering', async () => {
-    const ast: InvoiceTemplateAst = {
+    const ast: TemplateAst = {
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       layout: {
         id: 'root',
         type: 'document',
@@ -22,11 +22,11 @@ describe('renderInvoiceTemplateAstHtmlDocument', () => {
       },
     };
 
-    const evaluation = evaluateInvoiceTemplateAst(ast, {
+    const evaluation = evaluateTemplateAst(ast, {
       invoiceNumber: 'INV-1001',
       items: [],
     });
-    const htmlDocument = await renderInvoiceTemplateAstHtmlDocument(ast, evaluation, {
+    const htmlDocument = await renderTemplateAstHtmlDocument(ast, evaluation, {
       title: 'Invoice INV-1001',
       bodyClassName: 'pdf-body',
       additionalCss: '.pdf-body { margin: 0; }',

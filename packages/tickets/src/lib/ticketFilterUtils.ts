@@ -1,11 +1,15 @@
 import type { ITicketListFilters } from '@alga-psa/types';
+import {
+  isTicketStatusOpenFilter,
+  TICKET_STATUS_FILTER_OPEN,
+} from './ticketStatusFilter';
 
 /**
  * Default ticket list filters matching the ticket list's initial state.
  * Used when navigating to a ticket directly (no returnFilters in URL).
  */
 export const DEFAULT_TICKET_LIST_FILTERS: ITicketListFilters = {
-  statusId: 'open',
+  statusId: TICKET_STATUS_FILTER_OPEN,
   priorityId: 'all',
   searchQuery: '',
   boardFilterState: 'active',
@@ -27,7 +31,7 @@ export function parseReturnFilters(returnFiltersEncoded: string): ITicketListFil
   const decoded = decodeURIComponent(returnFiltersEncoded);
   const params = new URLSearchParams(decoded);
 
-  const statusId = params.get('statusId') || 'open';
+  const statusId = params.get('statusId') || TICKET_STATUS_FILTER_OPEN;
 
   return {
     boardId: params.get('boardId') || undefined,
@@ -38,7 +42,7 @@ export function parseReturnFilters(returnFiltersEncoded: string): ITicketListFil
     contactId: params.get('contactId') || undefined,
     searchQuery: params.get('searchQuery') || '',
     boardFilterState: (params.get('boardFilterState') as 'active' | 'inactive' | 'all') || 'active',
-    showOpenOnly: statusId === 'open',
+    showOpenOnly: isTicketStatusOpenFilter(statusId),
     tags: params.get('tags') ? params.get('tags')!.split(',').map(t => decodeURIComponent(t)) : undefined,
     assignedToIds: params.get('assignedToIds') ? params.get('assignedToIds')!.split(',') : undefined,
     assignedTeamIds: params.get('assignedTeamIds') ? params.get('assignedTeamIds')!.split(',') : undefined,

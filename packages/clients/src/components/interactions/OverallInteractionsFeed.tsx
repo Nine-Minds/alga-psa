@@ -364,6 +364,26 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
         onClose={() => setIsFilterDialogOpen(false)}
         title="Filter Interactions"
         disableFocusTrap
+        footer={
+          <div className="flex justify-between w-full">
+            <Button
+              id="reset-filters-button"
+              onClick={resetFilters}
+              variant="ghost"
+              size="sm"
+              className="text-gray-500 hover:text-gray-700 flex items-center gap-1"
+            >
+              <XCircle className="h-4 w-4" />
+              Reset
+            </Button>
+            <Button
+              id="apply-filters-button"
+              onClick={handleApplyFilters}
+            >
+              Apply Filters
+            </Button>
+          </div>
+        }
       >
         <DialogContent>
           <div className="space-y-4">
@@ -456,24 +476,6 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
                   minDate={startTime}
                 />
               </div>
-            </div>
-            <div className="flex justify-between">
-              <Button
-                id="reset-filters-button"
-                onClick={resetFilters}
-                variant="ghost"
-                size="sm"
-                className="text-gray-500 hover:text-gray-700 flex items-center gap-1"
-              >
-                <XCircle className="h-4 w-4" />
-                Reset
-              </Button>
-              <Button 
-                id="apply-filters-button"
-                onClick={handleApplyFilters}
-              >
-                Apply Filters
-              </Button>
             </div>
           </div>
         </DialogContent>

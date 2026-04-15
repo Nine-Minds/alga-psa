@@ -39,29 +39,41 @@ import { getUserLocaleAction, updateUserLocaleAction } from '@alga-psa/user-comp
 import { getInheritedLocaleAction } from '@alga-psa/tenancy/actions';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 
+function ConnectSsoLoading() {
+  const { t } = useTranslation('msp/profile');
+
+  return (
+    <SettingsTabSkeleton
+      title={t('profile.loadingStates.sso.title', { defaultValue: 'Single Sign-On' })}
+      description={t('profile.loadingStates.sso.description', { defaultValue: 'Loading SSO settings...' })}
+    />
+  );
+}
+
 // Dynamic import for EE SSO wrapper component
 const ConnectSsoWrapper = dynamic(
   () => import('@enterprise/components/settings/profile/ConnectSsoWrapper'),
   {
-    loading: () => (
-      <SettingsTabSkeleton
-        title="Single Sign-On"
-        description="Loading SSO settings..."
-      />
-    ),
+    loading: ConnectSsoLoading,
     ssr: false,
   },
 );
 
+function CalendarLoading() {
+  const { t } = useTranslation('msp/profile');
+
+  return (
+    <SettingsTabSkeleton
+      title={t('profile.loadingStates.calendar.title', { defaultValue: 'Calendar' })}
+      description={t('profile.loadingStates.calendar.description', { defaultValue: 'Loading calendar settings...' })}
+    />
+  );
+}
+
 const CalendarProfileSettings = dynamic(
   () => import('@alga-psa/ee-calendar/components').then((mod) => mod.CalendarProfileSettings),
   {
-    loading: () => (
-      <SettingsTabSkeleton
-        title="Calendar"
-        description="Loading calendar settings..."
-      />
-    ),
+    loading: CalendarLoading,
     ssr: false,
   },
 );
@@ -73,7 +85,7 @@ interface UserProfileProps {
 }
 
 export default function UserProfile({ userId }: UserProfileProps) {
-  const { t } = useTranslation('msp/settings');
+  const { t } = useTranslation('msp/profile');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
   const isCalendarTabAvailable = isCalendarEnterpriseEdition();
@@ -170,7 +182,9 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
       } catch (err) {
         console.error('Error initializing profile:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load profile');
+        setError(err instanceof Error ? err.message : t('profile.messages.error.loadFailed', {
+          defaultValue: 'Failed to load profile',
+        }));
       } finally {
         setLoading(false);
       }
@@ -285,7 +299,9 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
     } catch (err) {
       console.error('Error saving profile:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save profile');
+      setError(err instanceof Error ? err.message : t('profile.messages.error.saveFailed', {
+        defaultValue: 'Failed to save profile',
+      }));
     }
   };
 
@@ -317,7 +333,10 @@ export default function UserProfile({ userId }: UserProfileProps) {
   if (error) {
     return (
       <Card className="p-6">
-        <div className="text-destructive">Error: {error}</div>
+        <div className="text-destructive">{t('profile.messages.error.errorPrefix', {
+          defaultValue: 'Error: {{error}}',
+          error,
+        })}</div>
       </Card>
     );
   }
@@ -333,7 +352,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const tabContent: TabContent[] = [
     {
       id: 'profile',
-      label: "Profile",
+      label: t('profile.tabs.profile', { defaultValue: 'Profile' }),
       content: (
         <Card>
           <CardHeader>
@@ -486,7 +505,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
     },
     {
       id: 'security',
-      label: "Security",
+      label: t('profile.tabs.security', { defaultValue: 'Security' }),
       content: (
         <div className="space-y-6">
           <PasswordChangeForm />
@@ -496,17 +515,17 @@ export default function UserProfile({ userId }: UserProfileProps) {
     },
     {
       id: 'single-sign-on',
-      label: "Single Sign-On",
+      label: t('profile.tabs.sso', { defaultValue: 'Single Sign-On' }),
       content: <ConnectSsoWrapper />,
     },
     {
       id: 'api-keys',
-      label: "API Keys",
+      label: t('profile.tabs.apiKeys', { defaultValue: 'API Keys' }),
       content: <ApiKeysSetup />,
     },
     {
       id: 'notifications',
-      label: "Notifications",
+      label: t('profile.tabs.notifications', { defaultValue: 'Notifications' }),
       content: (
         <Card>
           <CardHeader>
@@ -558,7 +577,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
     },
     ...(isCalendarTabAvailable ? [{
       id: 'calendar',
-      label: "Calendar",
+      label: t('profile.tabs.calendar', { defaultValue: 'Calendar' }),
       content: <CalendarProfileSettings />,
     }] : []),
   ];

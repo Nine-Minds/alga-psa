@@ -14,7 +14,8 @@
     "portal": "Portal",
     "notifications": "Notifiche",
     "documents": "Documenti",
-    "knowledgeBase": "Base di conoscenza"
+    "knowledgeBase": "Base di conoscenza",
+    "requestServices": "Richiedi servizi"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -137,7 +138,9 @@
         "description": "Consulta documenti e risorse condivise"
       }
     },
-    "forgotPassword": "Hai dimenticato la password?"
+    "forgotPassword": "Hai dimenticato la password?",
+    "sessionEndedTitle": "Sessione terminata",
+    "sessionEndedMessage": "La tua sessione è stata disconnessa. Accedi di nuovo."
   },
   "account": {
     "title": "Account",
@@ -339,7 +342,9 @@
       "uploadError": "Impossibile caricare. Riprova.",
       "deleteSuccess": "Eliminato correttamente.",
       "deleteError": "Impossibile eliminare.",
-      "deleteConfirm": "Sei sicuro di voler eliminare questo elemento? Questa azione non può essere annullata."
+      "deleteConfirm": "Sei sicuro di voler eliminare questo elemento? Questa azione non può essere annullata.",
+      "linking": "Collegamento...",
+      "linkDocument": "Collega documento"
     },
     "validation": {
       "clientNameRequired": "Il nome dell'azienda è obbligatorio",

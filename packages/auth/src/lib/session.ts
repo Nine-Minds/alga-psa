@@ -68,8 +68,13 @@ export function getSessionMaxAge(): number {
 /**
  * Get the session cookie name (environment-aware with port suffix for dev)
  */
+export function isSecureCookieEnvironment(): boolean {
+  return process.env.NODE_ENV === 'production'
+    && (!process.env.NEXTAUTH_URL || process.env.NEXTAUTH_URL.startsWith('https://'));
+}
+
 export function getSessionCookieName(): string {
-  const baseName = process.env.NODE_ENV === 'production'
+  const baseName = isSecureCookieEnvironment()
     ? '__Secure-authjs.session-token'
     : 'authjs.session-token';
 
@@ -77,17 +82,27 @@ export function getSessionCookieName(): string {
 }
 
 /**
- * Get the session cookie configuration
+ * Get the session cookie configuration.
+ *
+ * Browsers hosting the PSA inside a Microsoft Teams iframe treat the session
+ * cookie as third-party. With the default `SameSite=Lax` the browser refuses
+ * to send it from the Teams iframe, so every navigation inside the tab looks
+ * unauthenticated even though sign-in succeeded. Operators that need the
+ * Teams personal tab to work set `TEAMS_IFRAME_SESSION_COOKIE=true` on the
+ * deployment, which relaxes the session cookie to `SameSite=None; Secure`.
+ * The cookie still requires HTTPS and carries the `__Secure-` prefix.
  */
 export function getSessionCookieConfig(): CookieOption {
-  const environment = process.env.NODE_ENV ?? 'development';
-  const secure = environment === 'production';
+  const secure = isSecureCookieEnvironment();
+  const crossSiteAllowed = process.env.TEAMS_IFRAME_SESSION_COOKIE === 'true';
+  const sameSite: CookieOption['options']['sameSite'] =
+    crossSiteAllowed && secure ? 'none' : 'lax';
 
   return {
     name: getSessionCookieName(),
     options: {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite,
       path: '/',
       secure,
     },

@@ -1,0 +1,533 @@
+{
+  "page": {
+    "title": "Cronograma",
+    "actions": {
+      "configureAvailability": "Configurar disponibilidad",
+      "appointmentRequests": "Solicitudes de cita"
+    }
+  },
+  "sidebar": {
+    "actions": {
+      "compareAll": "Comparar todo",
+      "clearAll": "Borrar todo",
+      "viewWeek": "Ver semana",
+      "compare": "Comparar",
+      "stopComparing": "Deja de comparar"
+    },
+    "labels": {
+      "inactive": "(Inactivo)"
+    },
+    "aria": {
+      "viewWeek": "Ver semana para {{name}}",
+      "compare": "Comparar {{name}}"
+    }
+  },
+  "agentView": {
+    "loading": "Cargando...",
+    "errors": {
+      "loadPermissions": "No se pudieron cargar los permisos de usuario",
+      "forbidden": "No tienes permiso para ver este programa."
+    }
+  },
+  "calendar": {
+    "legend": {
+      "types": {
+        "ticket": "Boleto",
+        "projectTask": "Tarea del proyecto",
+        "nonBillableCategory": "Categoría no facturable",
+        "adHoc": "Entrada ad hoc",
+        "interaction": "Interacción",
+        "appointmentRequest": "Solicitud de cita"
+      },
+      "showInactiveUsers": "Mostrar usuarios inactivos"
+    },
+    "loading": {
+      "initial": "Cargando agenda...",
+      "overlay": "Cargando..."
+    },
+    "errors": {
+      "validateDeletion": "No se pudo validar la eliminación. Por favor inténtalo de nuevo.",
+      "loadPermissions": "No se pudieron cargar los permisos.",
+      "loadCurrentUser": "No se pudo cargar el usuario actual.",
+      "unknown": "Se produjo un error desconocido",
+      "deleteFailed": "No se pudo eliminar la entrada del programa",
+      "deleteUnexpected": "Se produjo un error al eliminar la entrada del programa.",
+      "updateFailed": "No se pudo actualizar la entrada del cronograma: {{error}}",
+      "createFailed": "No se pudo agregar la entrada de programación: {{error}}",
+      "saveUnexpected": "Se produjo un error al guardar la entrada del programa."
+    },
+    "toolbar": {
+      "previousAria": "Anterior {{view}}",
+      "previous": "< Anterior",
+      "today": "Hoy",
+      "nextAria": "Siguiente {{view}}",
+      "next": "Siguiente >",
+      "views": {
+        "month": "Mes",
+        "week": "Semana",
+        "day": "Día"
+      }
+    },
+    "event": {
+      "fallbacks": {
+        "unknownTechnician": "Desconocido",
+        "unassigned": "No asignado",
+        "untitled": "Intitulado"
+      },
+      "tooltip": {
+        "scheduledFor": "Programado para: {{technicians}}",
+        "start": "Inicio: {{dateTime}}",
+        "end": "Fin: {{dateTime}}",
+        "multiDay": "(varios días)"
+      }
+    },
+    "deleteDialog": {
+      "title": "Eliminar entrada de programación",
+      "messageRecurring": "Seleccione qué eventos eliminar:",
+      "messageSingle": "¿Está seguro de que desea eliminar esta entrada del programa? Esta acción no se puede deshacer.",
+      "confirm": "Eliminar",
+      "entityFallback": "esta entrada de horario",
+      "options": {
+        "single": "Sólo este evento",
+        "future": "Este y futuros eventos.",
+        "all": "Todos los eventos"
+      }
+    }
+  },
+  "weeklyEvent": {
+    "actions": {
+      "delete": "Eliminar entrada"
+    },
+    "continuation": {
+      "previousWeek": "Continúa de la semana anterior."
+    }
+  },
+  "requests": {
+    "errors": {
+      "load": "No se pudieron cargar las solicitudes de citas",
+      "ticketNotFound": "Boleto no encontrado",
+      "loadTicket": "No se pudo cargar el boleto",
+      "assignTechnicianRequired": "Por favor asigne un técnico",
+      "approve": "No se pudo aprobar la solicitud",
+      "declineReasonRequired": "Por favor proporcione una razón para rechazar",
+      "decline": "No se pudo rechazar la solicitud"
+    },
+    "feedback": {
+      "approved": "Solicitud de cita aprobada",
+      "declined": "Solicitud de cita rechazada"
+    },
+    "filters": {
+      "statusLabel": "Filtrar por estado",
+      "statusOptions": {
+        "all": "Todo",
+        "pending": "Pendiente",
+        "approved": "Aprobado",
+        "declined": "Rechazado",
+        "cancelled": "Cancelado"
+      }
+    },
+    "fallbacks": {
+      "invalidDateTime": "Fecha/hora no válida"
+    },
+    "list": {
+      "title": "Solicitudes de cita",
+      "badgeTotal": "Total",
+      "loading": "Cargando solicitudes...",
+      "empty": "No se encontraron {{status}} solicitudes",
+      "duration": "{{count}} minutos",
+      "ticketFallback": "Boleto #{{ticket}}",
+      "fallbacks": {
+        "publicRequest": "Solicitud pública"
+      }
+    },
+    "detail": {
+      "back": "← Volver a la lista",
+      "title": "Detalles de la solicitud",
+      "section": {
+        "requestInformation": "Solicitar información"
+      },
+      "labels": {
+        "reference": "Referencia",
+        "client": "Cliente",
+        "contact": "Contacto",
+        "email": "Correo electrónico",
+        "phone": "Teléfono",
+        "service": "Servicio",
+        "requestedTime": "Hora solicitada",
+        "duration": "Duración",
+        "status": "Estado",
+        "linkedTicket": "Boleto vinculado",
+        "description": "Descripción"
+      }
+    },
+    "approval": {
+      "title": "Detalles de aprobación",
+      "fields": {
+        "assignedTechnician": "Asignar técnico *",
+        "finalDateTime": "Fecha y hora finales",
+        "internalNotes": "Notas internas (opcional)",
+        "linkedTicket": "Enlace al boleto (opcional)"
+      },
+      "placeholders": {
+        "assignedTechnician": "Seleccionar técnico",
+        "internalNotes": "Agregue cualquier nota interna...",
+        "linkedTicket": "Ingrese el ID del boleto para vincular..."
+      },
+      "actions": {
+        "approve": "Aprobar",
+        "decline": "Rechazar"
+      }
+    },
+    "decline": {
+      "title": "Rechazar solicitud",
+      "fields": {
+        "reason": "Motivo del rechazo *"
+      },
+      "placeholders": {
+        "reason": "Proporcione una razón para rechazar esta solicitud..."
+      },
+      "actions": {
+        "confirm": "Confirmar rechazo",
+        "cancel": "Cancelar"
+      }
+    }
+  },
+  "availabilitySettings": {
+    "dialog": {
+      "title": "Configuración de disponibilidad"
+    },
+    "loading": "Cargando configuración...",
+    "tabs": {
+      "general": "Configuraciones generales",
+      "userHours": "Horas de usuario",
+      "serviceRules": "Reglas de servicio",
+      "exceptions": "Excepciones"
+    },
+    "days": {
+      "sunday": "Domingo",
+      "monday": "Lunes",
+      "tuesday": "Martes",
+      "wednesday": "Miércoles",
+      "thursday": "Jueves",
+      "friday": "Viernes",
+      "saturday": "Sábado"
+    },
+    "common": {
+      "yes": "Sí",
+      "no": "No",
+      "columns": {
+        "action": "Acción"
+      },
+      "actions": {
+        "edit": "Editar"
+      },
+      "defaultApprover": {
+        "placeholder": "Seleccione un aprobador"
+      },
+      "teamSelect": {
+        "label": "Seleccionar equipo",
+        "placeholder": "Selecciona un equipo"
+      }
+    },
+    "feedback": {
+      "loadError": "No se pudo cargar la configuración"
+    },
+    "general": {
+      "autoApproval": {
+        "title": "Habilitar aprobación automática",
+        "description": "Aprobar automáticamente las citas que cumplan con los criterios configurados a continuación",
+        "criteriaTitle": "Criterios de aprobación automática:",
+        "criteria": {
+          "requireAvailability": "El técnico debe tener la disponibilidad configurada para el tiempo solicitado.",
+          "requireContract": "El cliente debe tener contrato activo (si el servicio lo requiere)",
+          "checkConflicts": "No hay conflictos de programación con las citas existentes.",
+          "respectBuffers": "Respetar los tiempos de amortiguación antes/después de las citas."
+        }
+      },
+      "defaultApprover": {
+        "label": "Aprobador predeterminado",
+        "help": "Aprobador predeterminado en toda la empresa para solicitudes de citas que requieren aprobación manual. Esto se puede anular por técnico en la configuración de Horas de usuario."
+      },
+      "advanceBookingDays": {
+        "label": "Reserva anticipada predeterminada (días)"
+      },
+      "minimumNoticeHours": {
+        "label": "Aviso Mínimo (Horas)"
+      },
+      "actions": {
+        "save": "Guardar configuración general"
+      },
+      "feedback": {
+        "saveSuccess": "Configuración general guardada",
+        "saveError": "No se pudo guardar la configuración"
+      }
+    },
+    "userHours": {
+      "roleManager": {
+        "label": "Gerente de equipo:",
+        "description": "Puede configurar los ajustes de disponibilidad para los miembros de su(s) equipo(s). La siguiente tabla \"Usuarios configurados\" muestra todos los usuarios con configuraciones de disponibilidad en todo el sistema."
+      },
+      "roleAdmin": {
+        "label": "Administrador:",
+        "description": "Puede configurar los ajustes de disponibilidad para cualquier usuario del sistema. La siguiente tabla \"Usuarios configurados\" muestra todos los usuarios con configuraciones de disponibilidad."
+      },
+      "userSelect": {
+        "label": "Seleccionar usuario para configurar",
+        "placeholderSelectTeamFirst": "Seleccione un equipo primero",
+        "placeholder": "Seleccione un usuario para configurar"
+      },
+      "appointmentSettings": {
+        "title": "Configuración de citas",
+        "defaultDuration": {
+          "label": "Duración predeterminada de la cita (minutos)",
+          "help": "Anulación de duración específica del técnico. Déjelo vacío para usar la duración específica del servicio de las Reglas de servicio.",
+          "placeholder": "Déjelo vacío para usar el servicio predeterminado"
+        },
+        "bufferAfter": {
+          "label": "Tiempo de reserva entre citas (minutos)",
+          "placeholder": "15"
+        },
+        "defaultApprover": {
+          "label": "Aprobador predeterminado",
+          "help": "¿Quién debe revisar y aprobar las solicitudes de citas para este técnico que requieren aprobación manual?"
+        },
+        "allowClientPreference": {
+          "label": "Permitir preferencia del cliente",
+          "help": "Permitir que los clientes soliciten este técnico específicamente"
+        }
+      },
+      "schedule": {
+        "timezoneNotice": "Los horarios están en su zona horaria local ({{timeZone}})",
+        "columns": {
+          "day": "Día",
+          "available": "Disponible",
+          "startTime": "Hora de inicio",
+          "endTime": "Hora de finalización"
+        }
+      },
+      "configuredUsers": {
+        "title": "Usuarios configurados",
+        "description": "Usuarios con configuración de disponibilidad configurada",
+        "empty": "Aún no hay usuarios configurados",
+        "columns": {
+          "userName": "Nombre de usuario",
+          "status": "Estado"
+        },
+        "status": {
+          "configured": "Configurado"
+        }
+      },
+      "actions": {
+        "save": "Ahorre horas de usuario"
+      },
+      "feedback": {
+        "selectUserError": "Por favor seleccione un usuario",
+        "saveSuccess": "Horas de usuario guardadas",
+        "saveError": "No se pudieron guardar las horas del usuario"
+      }
+    },
+    "serviceRules": {
+      "serviceSelect": {
+        "label": "Seleccione el servicio para configurar",
+        "placeholder": "Seleccione un servicio para configurar"
+      },
+      "editor": {
+        "title": "Editar reglas: {{serviceName}}",
+        "allowWithoutContract": {
+          "label": "Permitir reserva sin contrato"
+        },
+        "maxAppointmentsPerDay": {
+          "label": "Citas máximas por día"
+        },
+        "defaultDuration": {
+          "label": "Duración predeterminada de la cita (minutos)",
+          "help": "Duración predeterminada para citas de este tipo de servicio. Puede ser anulado por configuraciones específicas del técnico en Horas de usuario.",
+          "placeholder": "por ejemplo, 60 (minutos)"
+        }
+      },
+      "configuredServices": {
+        "title": "Servicios configurados",
+        "description": "Servicios con reglas de citas configuradas",
+        "empty": "Aún no hay servicios configurados",
+        "columns": {
+          "serviceName": "Nombre del servicio",
+          "duration": "Duración (min)",
+          "withoutContract": "Sin contrato",
+          "maxPerDay": "Máximo por día"
+        }
+      },
+      "common": {
+        "noLimit": "Sin límite"
+      },
+      "actions": {
+        "save": "Guardar reglas de servicio"
+      },
+      "feedback": {
+        "selectServiceError": "Por favor seleccione un servicio",
+        "saveSuccess": "Reglas de servicio guardadas",
+        "saveError": "No se pudieron guardar las reglas del servicio"
+      }
+    },
+    "exceptions": {
+      "form": {
+        "title": "Agregar excepción",
+        "date": {
+          "label": "Seleccionar fecha"
+        },
+        "user": {
+          "label": "Usuario (opcional: dejar vacío para toda la empresa)",
+          "placeholder": "Seleccionar usuario"
+        },
+        "isAvailable": {
+          "label": "Disponible en este día"
+        },
+        "reason": {
+          "label": "Razón",
+          "placeholder": "Vacaciones, tiempo libre, etc."
+        }
+      },
+      "common": {
+        "companyWide": "En toda la empresa"
+      },
+      "actions": {
+        "add": "Agregar excepción"
+      },
+      "list": {
+        "title": "Excepciones existentes",
+        "empty": "No hay excepciones configuradas",
+        "status": {
+          "available": "Disponible",
+          "unavailable": "Indisponible"
+        }
+      },
+      "feedback": {
+        "selectDateError": "Por favor seleccione una fecha",
+        "addSuccess": "Excepción agregada",
+        "addError": "No se pudo agregar la excepción",
+        "deleteSuccess": "Excepción eliminada",
+        "deleteError": "No se pudo eliminar la excepción"
+      }
+    }
+  },
+  "entryPopup": {
+    "title": {
+      "appointmentRequest": "Solicitud de cita",
+      "view": "Ver entrada",
+      "edit": "Editar entrada",
+      "new": "Nueva entrada"
+    },
+    "alerts": {
+      "privateEntryOnlyCreator": "Esta es una entrada privada. Sólo el creador puede ver o editar detalles."
+    },
+    "validation": {
+      "summaryTitle": "Por favor complete los campos requeridos:",
+      "titleRequiredForAdHoc": "El título es obligatorio para las entradas ad-hoc.",
+      "startRequired": "Fecha/hora de inicio",
+      "endRequired": "Fecha/hora de finalización",
+      "assigneeRequired": "Al menos un usuario asignado",
+      "startInvalid": "La fecha de inicio no es válida",
+      "endInvalid": "La fecha de finalización no es válida",
+      "endAfterStart": "La fecha de finalización debe ser posterior a la fecha de inicio.",
+      "recurrenceIntervalPositive": "El intervalo de recurrencia debe ser un número entero positivo.",
+      "recurrenceCountPositive": "El número de ocurrencias debe ser un número entero positivo.",
+      "recurrenceEndInvalid": "La fecha de finalización de la recurrencia no es válida",
+      "recurrenceEndAfterStart": "La fecha de finalización de la recurrencia debe ser posterior a la fecha de inicio."
+    },
+    "fields": {
+      "title": "Título",
+      "assignedUsers": "Usuarios asignados *",
+      "privateEntry": "Entrada privada (no visible para otros usuarios)",
+      "start": "Comenzar *",
+      "end": "Fin *",
+      "notes": "Notas"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "close": "Cerrar",
+      "save": "Guardar",
+      "delete": "Eliminar entrada"
+    },
+    "workItem": {
+      "adHocFallback": "Entrada ad hoc (sin elemento de trabajo)",
+      "openDetails": "Detalles"
+    },
+    "appointmentRequest": {
+      "approved": {
+        "title": "Cita aprobada",
+        "descriptionWithDate": "Esta cita se originó a partir de una solicitud de un cliente y fue aprobada el {{date}}.",
+        "description": "Esta cita se originó a partir de una solicitud de un cliente."
+      },
+      "pending": {
+        "title": "Solicitud de cita pendiente",
+        "description": "Esta es una solicitud de cita de un cliente. Puede aprobarlo o rechazarlo a continuación."
+      },
+      "declined": {
+        "title": "Solicitud de cita rechazada",
+        "descriptionWithReason": "Esta solicitud de cita fue rechazada: {{reason}}",
+        "description": "Esta solicitud de cita fue rechazada."
+      },
+      "cancelled": {
+        "title": "Solicitud de cita cancelada",
+        "description": "Esta solicitud de cita fue cancelada por el cliente."
+      },
+      "requestedDateTimeLabel": "Fecha y hora solicitadas",
+      "assignTechnicianLabel": "Asignar técnico *",
+      "assignTechnicianPlaceholder": "Seleccionar técnico",
+      "scheduledDateTimeLabel": "Fecha y hora programadas",
+      "noNotes": "No se proporcionaron notas",
+      "declineReasonLabel": "Motivo del rechazo *",
+      "declineReasonPlaceholder": "Proporcione una razón para rechazar esta solicitud...",
+      "actions": {
+        "approve": "Aprobar",
+        "decline": "Rechazar",
+        "confirmDecline": "Confirmar rechazo"
+      },
+      "toasts": {
+        "assignTechnicianRequired": "Por favor asigne un técnico",
+        "approved": "Solicitud de cita aprobada",
+        "approveFailed": "No se pudo aprobar la solicitud",
+        "declineReasonRequired": "Por favor proporcione una razón para rechazar",
+        "declined": "Solicitud de cita rechazada",
+        "declineFailed": "No se pudo rechazar la solicitud"
+      }
+    },
+    "recurrence": {
+      "label": "Reaparición",
+      "intervalLabel": "Intervalo",
+      "endLabel": "Fin",
+      "endDateLabel": "Fecha de finalización",
+      "occurrencesLabel": "Ocurrencias",
+      "workdaysOnly": "Solo días laborables (lunes a viernes, excepto festivos)",
+      "options": {
+        "none": "Ninguno",
+        "daily": "A diario",
+        "weekly": "Semanalmente",
+        "monthly": "Mensual",
+        "yearly": "Anual"
+      },
+      "endOptions": {
+        "never": "Nunca",
+        "date": "En la fecha",
+        "count": "Después"
+      },
+      "applyDialog": {
+        "title": "Aplicar cambios a",
+        "message": "Seleccione qué eventos actualizar:"
+      }
+    },
+    "delete": {
+      "validationFailed": "No se pudo validar la eliminación. Por favor inténtalo de nuevo.",
+      "entityFallback": "esta entrada de horario",
+      "scopeDialog": {
+        "title": "Eliminar entrada de programación",
+        "message": "Seleccione qué eventos eliminar:",
+        "confirm": "Continuar"
+      }
+    },
+    "scopeOptions": {
+      "single": "Sólo este evento",
+      "future": "Este y futuros eventos.",
+      "all": "Todos los eventos"
+    }
+  }
+}

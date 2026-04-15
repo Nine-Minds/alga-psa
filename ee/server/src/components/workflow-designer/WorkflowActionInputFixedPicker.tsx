@@ -3,14 +3,39 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { Input } from '@alga-psa/ui/components/Input';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
+import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
+import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
-import { getTicketFieldOptions } from '@alga-psa/integrations/actions';
-import { getTeamsBasic } from '@alga-psa/teams/actions';
-import type { InputMapping, MappingValue } from '@shared/workflow/runtime/client';
+import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrations/actions';
+import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { getTeamAvatarUrlsBatchAction, getTeamsBasic } from '@alga-psa/teams/actions';
+import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions';
+import type {
+  IBoard,
+  IClient,
+  IContact,
+  IUser,
+  ITeam,
+  TicketFieldOptions,
+} from '@alga-psa/types';
+import type { InputMapping, MappingValue } from '@alga-psa/workflows/runtime';
 
 export type WorkflowActionInputPickerField = {
   name: string;
   nullable?: boolean;
+  editor?: {
+    kind: 'text' | 'picker' | 'color' | 'json' | 'custom';
+    dependencies?: string[];
+    fixedValueHint?: string;
+    allowsDynamicReference?: boolean;
+    picker?: {
+      resource: string;
+    };
+  };
   picker?: {
     kind: string;
     dependencies?: string[];
@@ -33,6 +58,39 @@ type WorkflowPickerOption = SelectOption & {
   assigneeType?: 'user' | 'team';
 };
 
+type WorkflowTicketSearchResult = {
+  ticket_id: string;
+  ticket_number?: string | null;
+  title?: string | null;
+  status_name?: string | null;
+};
+
+type WorkflowPickerData = {
+  ticketOptions: TicketFieldOptions | null;
+  contacts: IContact[];
+  users: IUser[];
+  teams: ITeam[];
+  tickets: WorkflowTicketSearchResult[];
+};
+
+const EMPTY_PICKER_DATA: WorkflowPickerData = {
+  ticketOptions: null,
+  contacts: [],
+  users: [],
+  teams: [],
+  tickets: [],
+};
+
+const EMPTY_TICKET_FIELD_OPTIONS: TicketFieldOptions = {
+  boards: [],
+  statuses: [],
+  priorities: [],
+  categories: [],
+  clients: [],
+  users: [],
+  locations: [],
+};
+
 const TICKET_PICKER_DEPENDENCY_HINTS: Partial<Record<string, Record<string, string>>> = {
   contact: {
     client_id: 'Choose a fixed Client first to load contact options.',
@@ -43,11 +101,38 @@ const TICKET_PICKER_DEPENDENCY_HINTS: Partial<Record<string, Record<string, stri
   'ticket-category': {
     board_id: 'Choose a fixed Board first to load category options.',
   },
+  'ticket-status': {
+    board_id: 'Choose a fixed Board first to load status options.',
+    ticket_id: 'Choose a fixed Ticket first to load status options.',
+  },
   'ticket-subcategory': {
     board_id: 'Choose a fixed Board first to load subcategory options.',
     category_id: 'Choose a fixed Category first to load subcategory options.',
   },
 };
+
+export const WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES = new Set([
+  'board',
+  'client',
+  'contact',
+  'user',
+  'user-or-team',
+  'ticket',
+  'ticket-status',
+  'ticket-priority',
+  'ticket-category',
+  'ticket-subcategory',
+  'client-location',
+]);
+
+const DEDICATED_PICKER_KINDS = new Set([
+  'board',
+  'client',
+  'contact',
+  'user',
+  'user-or-team',
+  'ticket',
+]);
 
 const getPathSegments = (path: string): string[] =>
   path
@@ -105,45 +190,92 @@ const resolveDependency = (
   };
 };
 
-const mapTicketFieldOptions = async (kind: string): Promise<WorkflowPickerOption[]> => {
-  const { options } = await getTicketFieldOptions();
+const buildDisabledExplanation = (
+  kind: string,
+  dependencies: DependencyResolution[]
+): string | undefined => {
+  const hints = TICKET_PICKER_DEPENDENCY_HINTS[kind];
+  if (!hints) return undefined;
+
+  const unresolved = dependencies.find((dependency) => dependency.status !== 'fixed' && hints[dependency.path]);
+  return unresolved ? hints[unresolved.path] : undefined;
+};
+
+const getWorkflowPickerPlaceholder = (
+  field: WorkflowActionInputPickerField,
+  isLoading: boolean,
+  explanation?: string
+): string => {
+  if (isLoading) {
+    return 'Loading options...';
+  }
+
+  if (explanation) {
+    return explanation;
+  }
+
+  const hint = field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim();
+  if (hint) {
+    return hint;
+  }
+
+  return `Select ${field.name.replace(/_/g, ' ')}`;
+};
+
+const toBoards = (ticketOptions: TicketFieldOptions | null): IBoard[] =>
+  (ticketOptions?.boards ?? []).map((board) => ({
+    board_id: board.id,
+    board_name: board.name,
+    is_default: board.is_default,
+    is_inactive: false,
+  } as IBoard));
+
+const toClients = (ticketOptions: TicketFieldOptions | null): IClient[] =>
+  (ticketOptions?.clients ?? []).map((client) => ({
+    client_id: client.id,
+    client_name: client.name,
+    is_inactive: false,
+  } as IClient));
+
+const mapTicketFieldOptions = (
+  kind: string,
+  ticketOptions: TicketFieldOptions | null
+): WorkflowPickerOption[] => {
+  if (!ticketOptions) {
+    return [];
+  }
 
   switch (kind) {
     case 'board':
-      return options.boards.map((board) => ({
+      return ticketOptions.boards.map((board) => ({
         value: board.id,
         label: board.name,
       }));
     case 'client':
-      return options.clients.map((client) => ({
+      return ticketOptions.clients.map((client) => ({
         value: client.id,
         label: client.name,
       }));
     case 'ticket-status':
-      return options.statuses.map((status) => ({
+      return ticketOptions.statuses.map((status) => ({
         value: status.id,
         label: status.name,
       }));
     case 'ticket-priority':
-      return options.priorities.map((priority) => ({
+      return ticketOptions.priorities.map((priority) => ({
         value: priority.id,
         label: priority.name,
       }));
-    case 'user':
-      return options.users.map((user) => ({
-        value: user.id,
-        label: user.name,
-      }));
     case 'ticket-category':
     case 'ticket-subcategory':
-      return options.categories.map((category) => ({
+      return ticketOptions.categories.map((category) => ({
         value: category.id,
         label: category.name,
         boardId: category.board_id ?? null,
         parentId: category.parent_id ?? null,
       }));
     case 'client-location':
-      return options.locations.map((location) => ({
+      return ticketOptions.locations.map((location) => ({
         value: location.id,
         label: location.name,
         clientId: location.client_id ?? null,
@@ -153,44 +285,42 @@ const mapTicketFieldOptions = async (kind: string): Promise<WorkflowPickerOption
   }
 };
 
-const loadWorkflowPickerOptions = async (
+const mapWorkflowPickerOptions = (
   kind: string,
-  dependencies: DependencyResolution[]
-): Promise<WorkflowPickerOption[]> => {
+  data: WorkflowPickerData
+): WorkflowPickerOption[] => {
   switch (kind) {
-    case 'contact': {
-      const fixedClient = dependencies.find((dependency) => dependency.path === 'client_id');
-      const contacts = fixedClient?.status === 'fixed' && fixedClient.value
-        ? await getContactsByClient(fixedClient.value)
-        : await getAllContacts();
-
-      return contacts.map((contact) => ({
+    case 'contact':
+      return data.contacts.map((contact) => ({
         value: contact.contact_name_id,
         label: contact.email ? `${contact.full_name} (${contact.email})` : contact.full_name,
         clientId: contact.client_id ?? null,
       }));
-    }
-    case 'user-or-team': {
-      const [users, teams] = await Promise.all([
-        mapTicketFieldOptions('user'),
-        getTeamsBasic(),
-      ]);
-
+    case 'user':
+      return data.users.map((user) => ({
+        value: user.user_id,
+        label: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username,
+      }));
+    case 'user-or-team':
       return [
-        ...users.map((user) => ({
-          ...user,
-          label: `User: ${user.label}`,
+        ...data.users.map((user) => ({
+          value: user.user_id,
+          label: `User: ${`${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username}`,
           assigneeType: 'user' as const,
         })),
-        ...teams.map((team) => ({
+        ...data.teams.map((team) => ({
           value: team.team_id,
           label: `Team: ${team.team_name}`,
           assigneeType: 'team' as const,
         })),
       ];
-    }
+    case 'ticket':
+      return data.tickets.map((ticket) => ({
+        value: ticket.ticket_id,
+        label: ticket.ticket_number ? `${ticket.ticket_number} · ${ticket.title ?? ticket.ticket_id}` : (ticket.title ?? ticket.ticket_id),
+      }));
     default:
-      return mapTicketFieldOptions(kind);
+      return mapTicketFieldOptions(kind, data.ticketOptions);
   }
 };
 
@@ -247,17 +377,6 @@ const filterWorkflowPickerOptions = (
   }
 };
 
-const buildDisabledExplanation = (
-  kind: string,
-  dependencies: DependencyResolution[]
-): string | undefined => {
-  const hints = TICKET_PICKER_DEPENDENCY_HINTS[kind];
-  if (!hints) return undefined;
-
-  const unresolved = dependencies.find((dependency) => dependency.status !== 'fixed' && hints[dependency.path]);
-  return unresolved ? hints[unresolved.path] : undefined;
-};
-
 const appendCurrentValueOption = (
   options: WorkflowPickerOption[],
   currentValue: string | null
@@ -275,26 +394,299 @@ const appendCurrentValueOption = (
   ];
 };
 
-const getWorkflowPickerPlaceholder = (
-  field: WorkflowActionInputPickerField,
-  isLoading: boolean,
-  explanation?: string
-): string => {
-  if (isLoading) {
-    return 'Loading options...';
-  }
+const loadWorkflowPickerData = async (
+  kind: string,
+  dependencies: DependencyResolution[]
+): Promise<WorkflowPickerData> => {
+  switch (kind) {
+    case 'ticket-status': {
+      const fixedBoard = dependencies.find((dependency) => dependency.path === 'board_id');
+      const fixedTicket = dependencies.find((dependency) => dependency.path === 'ticket_id');
+      let boardId: string | null = null;
 
-  if (explanation) {
-    return explanation;
-  }
+      if (fixedBoard?.status === 'fixed' && fixedBoard.value) {
+        boardId = fixedBoard.value;
+      } else if (fixedTicket?.status === 'fixed' && fixedTicket.value) {
+        const ticket = await getTicketById(fixedTicket.value);
+        boardId = ticket?.board_id ?? null;
+      }
 
-  const hint = field.picker?.fixedValueHint?.trim();
-  if (hint) {
-    return hint;
-  }
+      if (!boardId) {
+        return {
+          ...EMPTY_PICKER_DATA,
+          ticketOptions: EMPTY_TICKET_FIELD_OPTIONS,
+        };
+      }
 
-  return `Select ${field.name.replace(/_/g, ' ')}`;
+      const { statuses } = await getAvailableStatuses(boardId);
+      return {
+        ...EMPTY_PICKER_DATA,
+        ticketOptions: {
+          ...EMPTY_TICKET_FIELD_OPTIONS,
+          statuses,
+        },
+      };
+    }
+    case 'contact': {
+      const fixedClient = dependencies.find((dependency) => dependency.path === 'client_id');
+      const contacts = fixedClient?.status === 'fixed' && fixedClient.value
+        ? await getContactsByClient(fixedClient.value)
+        : await getAllContacts();
+      return {
+        ...EMPTY_PICKER_DATA,
+        contacts,
+      };
+    }
+    case 'user':
+      return {
+        ...EMPTY_PICKER_DATA,
+        users: await getAllUsersBasic(true, 'internal'),
+      };
+    case 'user-or-team': {
+      const [users, teams] = await Promise.all([
+        getAllUsersBasic(true, 'internal'),
+        getTeamsBasic(),
+      ]);
+
+      return {
+        ...EMPTY_PICKER_DATA,
+        users,
+        teams: teams.map((team) => ({
+          ...team,
+          members: [],
+        })),
+      };
+    }
+    default:
+      return {
+        ...EMPTY_PICKER_DATA,
+        ticketOptions: (await getTicketFieldOptions()).options,
+      };
+  }
 };
+
+const WorkflowTicketPicker: React.FC<{
+  field: WorkflowActionInputPickerField;
+  value: string | null;
+  onChange: (value: string | null) => void;
+  idPrefix: string;
+  disabled?: boolean;
+}> = ({ field, value, onChange, idPrefix, disabled }) => {
+  const [search, setSearch] = useState('');
+  const [options, setOptions] = useState<WorkflowPickerOption[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const normalizedSearch = search.trim();
+
+    const loadOptions = async () => {
+      if (!normalizedSearch) {
+        if (value) {
+          try {
+            setIsLoading(true);
+            setLoadError(null);
+            const ticket = await getTicketById(value);
+            if (!active) return;
+            setOptions(ticket ? [{
+              value: ticket.ticket_id,
+              label: ticket.ticket_number ? `${ticket.ticket_number} · ${ticket.title ?? ticket.ticket_id}` : (ticket.title ?? ticket.ticket_id),
+            }] : []);
+          } catch (error) {
+            if (!active) return;
+            console.error('Failed to load selected workflow ticket picker value:', error);
+            setOptions(value ? [{ value, label: value }] : []);
+            setLoadError(error instanceof Error ? error.message : 'Failed to load ticket');
+          } finally {
+            if (active) {
+              setIsLoading(false);
+            }
+          }
+          return;
+        }
+
+        setOptions([]);
+        setLoadError(null);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setLoadError(null);
+        const result = await getTicketsForList({
+          boardFilterState: 'active',
+          searchQuery: normalizedSearch,
+        });
+        if (!active) return;
+        const mapped = ((result as { tickets?: WorkflowTicketSearchResult[] } | null)?.tickets ?? [])
+          .slice(0, 25)
+          .map((ticket) => ({
+            value: ticket.ticket_id,
+            label: ticket.ticket_number ? `${ticket.ticket_number} · ${ticket.title ?? ticket.ticket_id}` : (ticket.title ?? ticket.ticket_id),
+          }));
+        setOptions(appendCurrentValueOption(mapped, value));
+      } catch (error) {
+        if (!active) return;
+        console.error('Failed to search tickets for workflow picker:', error);
+        setOptions(appendCurrentValueOption([], value));
+        setLoadError(error instanceof Error ? error.message : 'Failed to search tickets');
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    const timeoutId = window.setTimeout(() => {
+      void loadOptions();
+    }, normalizedSearch ? 200 : 0);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [search, value]);
+
+  const placeholder = field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Search tickets by number or title';
+
+  return (
+    <div className="space-y-2">
+      <Input
+        id={`${idPrefix}-literal-ticket-search`}
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+      />
+      <CustomSelect
+        id={`${idPrefix}-literal-picker`}
+        options={options}
+        value={value ?? ''}
+        onValueChange={(nextValue) => onChange(nextValue || null)}
+        placeholder={search.trim().length > 0 ? 'Select ticket' : 'Type above to search tickets'}
+        disabled={disabled || isLoading || (search.trim().length === 0 && !value)}
+      />
+      {loadError && (
+        <p className="text-[11px] text-gray-500">{loadError}</p>
+      )}
+    </div>
+  );
+};
+
+const renderDedicatedPicker = ({
+  field,
+  pickerKind,
+  data,
+  dependencyResolutions,
+  value,
+  onChange,
+  idPrefix,
+  disabled,
+}: {
+  field: WorkflowActionInputPickerField;
+  pickerKind: string;
+  data: WorkflowPickerData;
+  dependencyResolutions: DependencyResolution[];
+  value: string | null;
+  onChange: (value: string | null) => void;
+  idPrefix: string;
+  disabled?: boolean;
+}): React.ReactNode => {
+  switch (pickerKind) {
+    case 'board': {
+      const boards = toBoards(data.ticketOptions);
+      return (
+        <BoardPicker
+          id={`${idPrefix}-literal-picker`}
+          boards={boards}
+          selectedBoardId={value}
+          onSelect={(nextValue) => onChange(nextValue)}
+          filterState="active"
+          onFilterStateChange={() => {}}
+          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Select Board'}
+        />
+      );
+    }
+    case 'client': {
+      const clients = toClients(data.ticketOptions);
+      return (
+        <ClientPicker
+          id={`${idPrefix}-literal-picker`}
+          clients={clients}
+          selectedClientId={value}
+          onSelect={(nextValue) => onChange(nextValue)}
+          filterState="active"
+          onFilterStateChange={() => {}}
+          clientTypeFilter="all"
+          onClientTypeFilterChange={() => {}}
+          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Select Client'}
+        />
+      );
+    }
+    case 'contact':
+      return (
+        <ContactPicker
+          id={`${idPrefix}-literal-picker`}
+          contacts={data.contacts}
+          value={value ?? ''}
+          onValueChange={(nextValue) => onChange(nextValue || null)}
+          clientId={getResolvedDependencyValue(dependencyResolutions, 'client_id')}
+          label={field.name.replace(/_/g, ' ')}
+          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Select Contact'}
+        />
+      );
+    case 'user':
+      return (
+        <UserPicker
+          id={`${idPrefix}-literal-picker`}
+          label={field.name.replace(/_/g, ' ')}
+          value={value ?? ''}
+          onValueChange={(nextValue) => onChange(nextValue || null)}
+          users={data.users}
+          userTypeFilter="internal"
+          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Select User'}
+          buttonWidth="full"
+        />
+      );
+    case 'user-or-team':
+      return (
+        <UserAndTeamPicker
+          id={`${idPrefix}-literal-picker`}
+          label={field.name.replace(/_/g, ' ')}
+          value={value ?? ''}
+          onValueChange={(nextValue) => onChange(nextValue || null)}
+          onTeamSelect={(teamId) => onChange(teamId)}
+          users={data.users}
+          teams={data.teams}
+          userTypeFilter="internal"
+          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+          getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Select User or Team'}
+          buttonWidth="full"
+        />
+      );
+    case 'ticket':
+      return (
+        <WorkflowTicketPicker
+          field={field}
+          value={value}
+          onChange={onChange}
+          idPrefix={idPrefix}
+          disabled={disabled}
+        />
+      );
+    default:
+      return null;
+  }
+};
+
+const getResolvedDependencyValue = (
+  dependencies: DependencyResolution[],
+  path: string
+): string | undefined => dependencies.find((dependency) => dependency.path === path && dependency.status === 'fixed')?.value;
 
 export const WorkflowActionInputFixedPicker: React.FC<{
   field: WorkflowActionInputPickerField;
@@ -311,15 +703,18 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   rootInputMapping,
   disabled,
 }) => {
-  const [options, setOptions] = useState<WorkflowPickerOption[]>([]);
+  const [data, setData] = useState<WorkflowPickerData>(EMPTY_PICKER_DATA);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadedDependencySignature, setLoadedDependencySignature] = useState<string | null>(null);
 
-  const pickerKind = field.picker?.kind;
+  const pickerKind = field.editor?.picker?.resource ?? field.picker?.kind;
   const dependencyResolutions = useMemo(
-    () => (field.picker?.dependencies ?? []).map((dependency) => resolveDependency(rootInputMapping, dependency)),
-    [field.picker?.dependencies, rootInputMapping]
+    () =>
+      (field.editor?.dependencies ?? field.picker?.dependencies ?? []).map((dependency) =>
+        resolveDependency(rootInputMapping, dependency)
+      ),
+    [field.editor?.dependencies, field.picker?.dependencies, rootInputMapping]
   );
   const disabledExplanation = useMemo(
     () => (pickerKind ? buildDisabledExplanation(pickerKind, dependencyResolutions) : undefined),
@@ -329,10 +724,14 @@ export const WorkflowActionInputFixedPicker: React.FC<{
     () => JSON.stringify(dependencyResolutions),
     [dependencyResolutions]
   );
+  const baseOptions = useMemo(() => {
+    if (!pickerKind) return [];
+    return mapWorkflowPickerOptions(pickerKind, data);
+  }, [data, pickerKind]);
   const filteredOptions = useMemo(() => {
     if (!pickerKind) return [];
-    return filterWorkflowPickerOptions(pickerKind, options, dependencyResolutions);
-  }, [dependencyResolutions, options, pickerKind]);
+    return filterWorkflowPickerOptions(pickerKind, baseOptions, dependencyResolutions);
+  }, [baseOptions, dependencyResolutions, pickerKind]);
   const pickerOptions = useMemo(() => {
     return appendCurrentValueOption(filteredOptions, value);
   }, [filteredOptions, value]);
@@ -342,18 +741,18 @@ export const WorkflowActionInputFixedPicker: React.FC<{
       dependencyResolutions.every((dependency) => dependency.status === 'fixed'),
     [dependencyResolutions]
   );
+  const hasDedicatedPicker = pickerKind ? DEDICATED_PICKER_KINDS.has(pickerKind) : false;
 
   useEffect(() => {
-    if (!pickerKind) {
-      setOptions([]);
+    if (!pickerKind || pickerKind === 'ticket') {
+      setData(EMPTY_PICKER_DATA);
       setLoadError(null);
       setLoadedDependencySignature(null);
       return;
     }
 
-    const shouldSkipLoad = Boolean(disabledExplanation);
-    if (shouldSkipLoad) {
-      setOptions([]);
+    if (disabledExplanation) {
+      setData(EMPTY_PICKER_DATA);
       setLoadError(null);
       setLoadedDependencySignature(null);
       return;
@@ -364,16 +763,16 @@ export const WorkflowActionInputFixedPicker: React.FC<{
     setLoadError(null);
     setLoadedDependencySignature(null);
 
-    loadWorkflowPickerOptions(pickerKind, dependencyResolutions)
-      .then((nextOptions) => {
+    loadWorkflowPickerData(pickerKind, dependencyResolutions)
+      .then((nextData) => {
         if (!active) return;
-        setOptions(nextOptions);
+        setData(nextData);
         setLoadedDependencySignature(dependencySignature);
       })
       .catch((error) => {
         if (!active) return;
         console.error('Failed to load workflow picker options:', error);
-        setOptions([]);
+        setData(EMPTY_PICKER_DATA);
         setLoadError(error instanceof Error ? error.message : 'Failed to load options');
       })
       .finally(() => {
@@ -402,16 +801,36 @@ export const WorkflowActionInputFixedPicker: React.FC<{
     return null;
   }
 
+  const shouldRenderFallback =
+    disabled ||
+    isLoading ||
+    Boolean(disabledExplanation) ||
+    Boolean(loadError) ||
+    !hasDedicatedPicker;
+
   return (
     <div className="space-y-2">
-      <CustomSelect
-        id={`${idPrefix}-literal-picker`}
-        options={pickerOptions}
-        value={value ?? ''}
-        onValueChange={(nextValue) => onChange(nextValue || null)}
-        placeholder={getWorkflowPickerPlaceholder(field, isLoading, disabledExplanation)}
-        disabled={disabled || isLoading || Boolean(disabledExplanation)}
-      />
+      {shouldRenderFallback ? (
+        <CustomSelect
+          id={`${idPrefix}-literal-picker`}
+          options={pickerOptions}
+          value={value ?? ''}
+          onValueChange={(nextValue) => onChange(nextValue || null)}
+          placeholder={getWorkflowPickerPlaceholder(field, isLoading, disabledExplanation)}
+          disabled={disabled || isLoading || Boolean(disabledExplanation) || Boolean(loadError)}
+        />
+      ) : (
+        renderDedicatedPicker({
+          field,
+          pickerKind,
+          data,
+          dependencyResolutions,
+          value,
+          onChange,
+          idPrefix,
+          disabled,
+        })
+      )}
       {(disabledExplanation || loadError) && (
         <p className="text-[11px] text-gray-500">
           {disabledExplanation ?? loadError}

@@ -1,22 +1,24 @@
 import type {
-  InvoiceTemplateAst,
-  InvoiceTemplateNode,
-  InvoiceTemplatePrintSettings,
-  InvoiceTemplateNodeStyleRef,
-  InvoiceTemplateTableColumn,
-  InvoiceTemplateTotalsRow,
-  InvoiceTemplateValueExpression,
-  InvoiceTemplateValueFormat,
+  TemplateAst,
+  TemplateFieldBorderStyle,
+  TemplateNode,
+  TemplatePrintSettings,
+  TemplateNodeStyleRef,
+  TemplateFieldDisplayFormat,
+  TemplateTableColumn,
+  TemplateTotalsRow,
+  TemplateValueExpression,
+  TemplateValueFormat,
 } from '@alga-psa/types';
 import {
-  INVOICE_TEMPLATE_AST_VERSION,
-  normalizeInvoiceTemplatePrintSettings,
-  resolveInvoiceTemplatePrintSettings,
+  TEMPLATE_AST_VERSION,
+  normalizeTemplatePrintSettings,
+  resolveTemplatePrintSettings,
 } from '@alga-psa/types';
 import {
-  decodeInvoiceTemplatePathExpression,
-  encodeInvoiceTemplatePathExpression,
-  parseInvoiceTemplateToken,
+  decodeTemplatePathExpression,
+  encodeTemplatePathExpression,
+  parseTemplateToken,
 } from '../../../lib/invoice-template-ast/templateInterpolationFilters';
 import type {
   DesignerComponentType,
@@ -28,8 +30,9 @@ import type {
 import { createEmptyDesignerTransformWorkspace, DOCUMENT_NODE_ID } from '../state/designerStore';
 import { getDefinition } from '../constants/componentCatalog';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
+import { resolveMediaFrameSize } from '../utils/mediaSizing';
 import {
-  toInvoiceTemplateTransformPipeline,
+  toTemplateTransformPipeline,
   validateDesignerTransformWorkspace,
 } from '../transforms/transformWorkspace';
 
@@ -45,13 +48,25 @@ const cloneJson = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 const asTrimmedString = (value: unknown): string =>
   typeof value === 'string' ? value.trim() : '';
 
-const isInvoiceTemplateValueFormat = (value: unknown): value is InvoiceTemplateValueFormat =>
+const isTemplateValueFormat = (value: unknown): value is TemplateValueFormat =>
   value === 'text' || value === 'number' || value === 'currency' || value === 'date';
 
-const parseInvoiceTemplateValueFormat = (value: unknown): InvoiceTemplateValueFormat | undefined =>
-  isInvoiceTemplateValueFormat(value) ? value : undefined;
+const parseTemplateValueFormat = (value: unknown): TemplateValueFormat | undefined =>
+  isTemplateValueFormat(value) ? value : undefined;
 
-const isInvoiceTemplateValueExpression = (value: unknown): value is InvoiceTemplateValueExpression => {
+const isTemplateFieldDisplayFormat = (value: unknown): value is TemplateFieldDisplayFormat =>
+  value === 'single-line' || value === 'multiline' || value === 'raw';
+
+const parseTemplateFieldDisplayFormat = (value: unknown): TemplateFieldDisplayFormat | undefined =>
+  isTemplateFieldDisplayFormat(value) ? value : undefined;
+
+const isTemplateFieldBorderStyle = (value: unknown): value is TemplateFieldBorderStyle =>
+  value === 'underline' || value === 'box' || value === 'none';
+
+const parseTemplateFieldBorderStyle = (value: unknown): TemplateFieldBorderStyle | undefined =>
+  isTemplateFieldBorderStyle(value) ? value : undefined;
+
+const isTemplateValueExpression = (value: unknown): value is TemplateValueExpression => {
   if (!isRecord(value)) {
     return false;
   }
@@ -72,8 +87,8 @@ const isInvoiceTemplateValueExpression = (value: unknown): value is InvoiceTempl
 };
 
 const resolveExpressionPreviewText = (
-  expression: InvoiceTemplateValueExpression,
-  astInput: InvoiceTemplateAst
+  expression: TemplateValueExpression,
+  astInput: TemplateAst
 ): string => {
   if (expression.type === 'literal') {
     return String(expression.value ?? '');
@@ -86,7 +101,7 @@ const resolveExpressionPreviewText = (
     return `{{${denormalizeBindingPath(bindingPath)}}}`;
   }
   if (expression.type === 'path') {
-    const parsed = decodeInvoiceTemplatePathExpression(expression.path);
+    const parsed = decodeTemplatePathExpression(expression.path);
     const denormalizedPath = denormalizeBindingPath(parsed.path);
     if (parsed.filter) {
       return `{{${denormalizedPath} | ${parsed.filter}}}`;
@@ -111,6 +126,40 @@ const normalizeInvoiceBindingPath = (bindingKey: string): string => {
     'invoice.discount': 'discount',
     'invoice.currencyCode': 'currencyCode',
     'invoice.poNumber': 'poNumber',
+    'invoice.recurringServicePeriodStart': 'recurringServicePeriodStart',
+    'invoice.recurringServicePeriodEnd': 'recurringServicePeriodEnd',
+    'invoice.recurringServicePeriodLabel': 'recurringServicePeriodLabel',
+    'quote.quoteNumber': 'quoteNumber',
+    'quote.quoteDate': 'quoteDate',
+    'quote.validUntil': 'validUntil',
+    'quote.status': 'status',
+    'quote.title': 'title',
+    'quote.scope': 'scope',
+    'quote.poNumber': 'poNumber',
+    'quote.subtotal': 'subtotal',
+    'quote.discountTotal': 'discountTotal',
+    'quote.tax': 'tax',
+    'quote.total': 'total',
+    'quote.termsAndConditions': 'termsAndConditions',
+    'quote.clientNotes': 'clientNotes',
+    'quote.version': 'version',
+    'quote.acceptedByName': 'acceptedByName',
+    'quote.acceptedAt': 'acceptedAt',
+    'quoteTotals.recurringSubtotal': 'recurringSubtotal',
+    'quoteTotals.recurringTax': 'recurringTax',
+    'quoteTotals.recurringTotal': 'recurringTotal',
+    'quoteTotals.onetimeSubtotal': 'onetimeSubtotal',
+    'quoteTotals.onetimeTax': 'onetimeTax',
+    'quoteTotals.onetimeTotal': 'onetimeTotal',
+    'quoteTotals.serviceSubtotal': 'serviceSubtotal',
+    'quoteTotals.serviceTax': 'serviceTax',
+    'quoteTotals.serviceTotal': 'serviceTotal',
+    'quoteTotals.productSubtotal': 'productSubtotal',
+    'quoteTotals.productTax': 'productTax',
+    'quoteTotals.productTotal': 'productTotal',
+    'client.name': 'client.name',
+    'client.address': 'client.address',
+    'contact.name': 'contact.name',
     'customer.name': 'customer.name',
     'customer.address': 'customer.address',
     'tenant.name': 'tenantClient.name',
@@ -122,6 +171,8 @@ const normalizeInvoiceBindingPath = (bindingKey: string): string => {
   }
   return aliases[normalized] ?? normalized;
 };
+
+const supportsFieldDisplayFormat = (bindingPath: string): boolean => bindingPath.trim().endsWith('.address');
 
 const TEMPLATE_TOKEN_PATTERN = /\{\{\s*([^{}]+?)\s*\}\}/g;
 const SIMPLE_BINDING_ALIASES = new Set([
@@ -153,7 +204,7 @@ const sanitizeTemplateArgName = (input: string, fallbackIndex: number): string =
   return /^[a-zA-Z_]/.test(candidate) ? candidate : `value_${candidate}`;
 };
 
-const parseTemplateInterpolationExpression = (text: string): InvoiceTemplateValueExpression | null => {
+const parseTemplateInterpolationExpression = (text: string): TemplateValueExpression | null => {
   if (!text.includes('{{')) {
     return null;
   }
@@ -165,7 +216,7 @@ const parseTemplateInterpolationExpression = (text: string): InvoiceTemplateValu
 
   const parsedMatches = matches.map((match, index) => {
     const rawToken = asTrimmedString(match[1]);
-    const parsedToken = parseInvoiceTemplateToken(rawToken);
+    const parsedToken = parseTemplateToken(rawToken);
     if (!parsedToken || !isLikelyBindingTokenPath(parsedToken.path)) {
       return null;
     }
@@ -176,7 +227,7 @@ const parseTemplateInterpolationExpression = (text: string): InvoiceTemplateValu
     return {
       rawMatch: match[0],
       startIndex: match.index ?? 0,
-      normalizedPath: encodeInvoiceTemplatePathExpression(normalizedPath, parsedToken.filter),
+      normalizedPath: encodeTemplatePathExpression(normalizedPath, parsedToken.filter),
       argNameBase: sanitizeTemplateArgName(rawToken, index + 1),
     };
   });
@@ -201,7 +252,7 @@ const parseTemplateInterpolationExpression = (text: string): InvoiceTemplateValu
   }
 
   const usedArgNames = new Set<string>();
-  const templateArgs: Record<string, InvoiceTemplateValueExpression> = {};
+  const templateArgs: Record<string, TemplateValueExpression> = {};
   let cursor = 0;
   let template = '';
 
@@ -313,11 +364,11 @@ const resolveNodeTextContent = (node: WorkspaceNode): string => {
   );
 };
 
-const resolveTextNodeContentExpression = (node: WorkspaceNode): InvoiceTemplateValueExpression => {
+const resolveTextNodeContentExpression = (node: WorkspaceNode): TemplateValueExpression => {
   const metadata = getWorkspaceNodeMetadata(node);
   const currentText = resolveNodeTextContent(node);
   const parsedExpression = parseTemplateInterpolationExpression(currentText);
-  const preservedExpression = isInvoiceTemplateValueExpression(metadata.astContentExpression)
+  const preservedExpression = isTemplateValueExpression(metadata.astContentExpression)
     ? metadata.astContentExpression
     : null;
 
@@ -342,7 +393,7 @@ const resolveTextNodeContentExpression = (node: WorkspaceNode): InvoiceTemplateV
   return parsedExpression ?? { type: 'literal', value: currentText };
 };
 
-const createNodeStyle = (node: WorkspaceNode): InvoiceTemplateNode['style'] | undefined => {
+const createNodeStyle = (node: WorkspaceNode): TemplateNode['style'] | undefined => {
   const inline: Record<string, unknown> = {};
   const style = getWorkspaceNodeStyle(node);
   const metadata = getWorkspaceNodeMetadata(node);
@@ -386,6 +437,7 @@ const createNodeStyle = (node: WorkspaceNode): InvoiceTemplateNode['style'] | un
 
   if (style.aspectRatio) inline.aspectRatio = style.aspectRatio;
   if (style.objectFit) inline.objectFit = style.objectFit;
+  if (style.objectPosition) inline.objectPosition = style.objectPosition;
   if (style.margin) inline.margin = style.margin;
   if (style.border) inline.border = style.border;
   if (style.borderRadius) inline.borderRadius = style.borderRadius;
@@ -424,7 +476,7 @@ const createNodeStyle = (node: WorkspaceNode): InvoiceTemplateNode['style'] | un
     }
   }
 
-  const styleRef: NonNullable<InvoiceTemplateNode['style']> = {};
+  const styleRef: NonNullable<TemplateNode['style']> = {};
   if (styleTokenIds.length > 0) {
     styleRef.tokenIds = styleTokenIds;
   }
@@ -631,6 +683,9 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   if (aspectRatio) style.aspectRatio = aspectRatio;
   const objectFit = coerceObjectFit(inline.objectFit);
   if (objectFit) style.objectFit = objectFit;
+  if (typeof inline.objectPosition === 'string' && inline.objectPosition.trim().length > 0) {
+    style.objectPosition = inline.objectPosition.trim();
+  }
 
   const margin = coerceCssLength(inline.margin);
   if (margin) style.margin = margin;
@@ -693,16 +748,16 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   return Object.keys(style).length > 0 ? style : undefined;
 };
 
-const mapTableColumns = (node: WorkspaceNode): InvoiceTemplateTableColumn[] => {
+const mapTableColumns = (node: WorkspaceNode): TemplateTableColumn[] => {
   const metadata = getWorkspaceNodeMetadata(node);
   const columns = Array.isArray(metadata.columns) ? metadata.columns : [];
 
-  const mapColumnStyle = (value: unknown): InvoiceTemplateNodeStyleRef | undefined => {
+  const mapColumnStyle = (value: unknown): TemplateNodeStyleRef | undefined => {
     if (!isRecord(value)) {
       return undefined;
     }
 
-    const mapped: InvoiceTemplateNodeStyleRef = {};
+    const mapped: TemplateNodeStyleRef = {};
 
     if (Array.isArray(value.tokenIds)) {
       const tokenIds = value.tokenIds.filter(
@@ -721,7 +776,7 @@ const mapTableColumns = (node: WorkspaceNode): InvoiceTemplateTableColumn[] => {
   };
 
   const mappedColumns = columns
-    .map((column, index): InvoiceTemplateTableColumn | null => {
+    .map((column, index): TemplateTableColumn | null => {
       if (!isRecord(column)) {
         return null;
       }
@@ -730,15 +785,22 @@ const mapTableColumns = (node: WorkspaceNode): InvoiceTemplateTableColumn[] => {
       const key = normalizeInvoiceBindingPath(
         asTrimmedString(column.key) || asTrimmedString(column.path) || asTrimmedString(column.bindingKey)
       );
-      const preservedExpression = isInvoiceTemplateValueExpression(column.valueExpression)
+      const preservedExpression = isTemplateValueExpression(column.valueExpression)
         ? column.valueExpression
         : null;
-      const parsedFormat = parseInvoiceTemplateValueFormat(column.format ?? column.type);
+      const parsedFormat = parseTemplateValueFormat(column.format ?? column.type);
+      const placeholderKey = sanitizeId(id);
+      const resolvedValue =
+        preservedExpression?.type === 'path'
+          ? { type: 'path' as const, path: key.length > 0 ? key : 'description' }
+          : key.length > 0 && key !== placeholderKey
+            ? { type: 'path' as const, path: key }
+            : preservedExpression ?? { type: 'path' as const, path: key.length > 0 ? key : 'description' };
 
-      const mapped: InvoiceTemplateTableColumn = {
+      const mapped: TemplateTableColumn = {
         id: sanitizeId(id),
         header: header.length > 0 ? header : undefined,
-        value: preservedExpression ?? { type: 'path', path: key.length > 0 ? key : 'description' },
+        value: resolvedValue,
       };
       const style = mapColumnStyle(column.style);
       if (style) {
@@ -749,7 +811,7 @@ const mapTableColumns = (node: WorkspaceNode): InvoiceTemplateTableColumn[] => {
       }
       return mapped;
     })
-    .filter((column): column is InvoiceTemplateTableColumn => Boolean(column));
+    .filter((column): column is TemplateTableColumn => Boolean(column));
 
   if (mappedColumns.length > 0) {
     return mappedColumns;
@@ -768,7 +830,7 @@ const getAstNodeId = (node: WorkspaceNode): string => {
   return originalId.length > 0 ? originalId : node.id;
 };
 
-const createBaseNode = (node: WorkspaceNode): Pick<InvoiceTemplateNode, 'id' | 'style'> => ({
+const createBaseNode = (node: WorkspaceNode): Pick<TemplateNode, 'id' | 'style'> => ({
   id: getAstNodeId(node),
   style: createNodeStyle(node),
 });
@@ -790,18 +852,18 @@ const getWorkspaceNodeSize = (node: WorkspaceNode | undefined): { width?: number
 
 const getWorkspaceRootPrintSettings = (
   rootMetadata: UnknownRecord
-): InvoiceTemplatePrintSettings | null => {
+): TemplatePrintSettings | null => {
   const explicitPrintSettings = isRecord(rootMetadata.printSettings)
-    ? (rootMetadata.printSettings as Partial<InvoiceTemplatePrintSettings>)
+    ? (rootMetadata.printSettings as Partial<TemplatePrintSettings>)
     : null;
   const importedTemplateMetadata = isRecord(rootMetadata.__astTemplateMetadata)
     ? (rootMetadata.__astTemplateMetadata as UnknownRecord)
     : null;
   const importedPrintSettings = importedTemplateMetadata && isRecord(importedTemplateMetadata.printSettings)
-    ? (importedTemplateMetadata.printSettings as Partial<InvoiceTemplatePrintSettings>)
+    ? (importedTemplateMetadata.printSettings as Partial<TemplatePrintSettings>)
     : null;
 
-  return normalizeInvoiceTemplatePrintSettings(explicitPrintSettings ?? importedPrintSettings);
+  return normalizeTemplatePrintSettings(explicitPrintSettings ?? importedPrintSettings);
 };
 
 const resolveCollectionSourceBindingId = (
@@ -821,7 +883,7 @@ const mapDesignerNodeToAstNode = (
   registerValueBinding: (path: string) => string,
   registerCollectionBinding: (path: string) => string,
   transformOutputBindingId?: string
-): InvoiceTemplateNode | null => {
+): TemplateNode | null => {
   const children = node.children
     .map((childId) => nodesById.get(childId))
     .filter((child): child is WorkspaceNode => Boolean(child))
@@ -834,11 +896,11 @@ const mapDesignerNodeToAstNode = (
         transformOutputBindingId
       )
     )
-    .filter((child): child is InvoiceTemplateNode => Boolean(child));
+    .filter((child): child is TemplateNode => Boolean(child));
 
   switch (node.type) {
     case 'document': {
-      const mappedChildren: InvoiceTemplateNode[] = [];
+      const mappedChildren: TemplateNode[] = [];
       for (const childId of node.children) {
         const childNode = nodesById.get(childId);
         if (!childNode) continue;
@@ -916,13 +978,19 @@ const mapDesignerNodeToAstNode = (
       const bindingPath = resolveFieldBindingPath(node);
       const bindingId = registerValueBinding(bindingPath);
       const explicitLabel = asTrimmedString(metadata.label);
-      const format = parseInvoiceTemplateValueFormat(metadata.format);
+      const format = parseTemplateValueFormat(metadata.format);
+      const displayFormat = parseTemplateFieldDisplayFormat(metadata.displayFormat);
+      const borderStyle = parseTemplateFieldBorderStyle(metadata.fieldBorderStyle);
       const astImported = metadata.__astImported === true;
       const hadImportedFormat = metadata.__astFieldHadFormat === true;
       const hadImportedEmptyValue = metadata.__astFieldHadEmptyValue === true;
+      const hadImportedPlaceholder = metadata.__astFieldHadPlaceholder === true;
       const hasExplicitEmptyValue = typeof metadata.emptyValue === 'string';
       const emptyValue = hasExplicitEmptyValue ? asTrimmedString(metadata.emptyValue) : '';
-      const mapped: InvoiceTemplateNode = {
+      const hasExplicitPlaceholder = typeof metadata.placeholder === 'string';
+      const placeholder = hasExplicitPlaceholder ? asTrimmedString(metadata.placeholder) : '';
+      const hasExplicitBorderStyle = typeof metadata.fieldBorderStyle === 'string';
+      const mapped: TemplateNode = {
         ...createBaseNode(node),
         type: 'field',
         binding: { bindingId },
@@ -939,8 +1007,19 @@ const mapDesignerNodeToAstNode = (
         // Designer-authored fields default to empty string; imported templates only retain this when explicitly present.
         mapped.emptyValue = '';
       }
+      if (hasExplicitPlaceholder) {
+        mapped.placeholder = placeholder;
+      } else if (astImported && hadImportedPlaceholder) {
+        mapped.placeholder = '';
+      }
       if (format && (!astImported || hadImportedFormat || format !== 'text')) {
         mapped.format = format;
+      }
+      if (displayFormat && supportsFieldDisplayFormat(bindingPath)) {
+        mapped.displayFormat = displayFormat;
+      }
+      if (hasExplicitBorderStyle && borderStyle) {
+        mapped.borderStyle = borderStyle;
       }
       return mapped;
     }
@@ -953,6 +1032,17 @@ const mapDesignerNodeToAstNode = (
         registerCollectionBinding,
         transformOutputBindingId
       );
+      const headerBg = asTrimmedString(metadata.headerBackgroundColor);
+      const headerClr = asTrimmedString(metadata.headerColor);
+      const headerStyle: TemplateNodeStyleRef | undefined =
+        headerBg.length > 0 || headerClr.length > 0
+          ? {
+              inline: {
+                ...(headerBg.length > 0 ? { backgroundColor: headerBg } : {}),
+                ...(headerClr.length > 0 ? { color: headerClr } : {}),
+              },
+            }
+          : undefined;
       return {
         ...createBaseNode(node),
         type: 'dynamic-table',
@@ -961,6 +1051,7 @@ const mapDesignerNodeToAstNode = (
           itemBinding: 'item',
         },
         columns: mapTableColumns(node),
+        headerStyle,
         emptyStateText:
           typeof metadata.emptyStateText === 'string' && metadata.emptyStateText.trim().length > 0
             ? metadata.emptyStateText.trim()
@@ -972,20 +1063,20 @@ const mapDesignerNodeToAstNode = (
         const metadata = getWorkspaceNodeMetadata(node);
         const sourceBindingPath = resolveCollectionPath(node);
         const rowsSource = Array.isArray(metadata.totalsRows) ? metadata.totalsRows : [];
-        const rows: InvoiceTemplateTotalsRow[] =
+        const rows: TemplateTotalsRow[] =
           rowsSource
-            .map((row, index): InvoiceTemplateTotalsRow | null => {
+            .map((row, index): TemplateTotalsRow | null => {
               if (!isRecord(row)) {
                 return null;
               }
               const id = asTrimmedString(row.id) || `row-${index + 1}`;
               const label = asTrimmedString(row.label) || id;
-              const preservedValue = isInvoiceTemplateValueExpression(row.valueExpression)
+              const preservedValue = isTemplateValueExpression(row.valueExpression)
                 ? row.valueExpression
                 : null;
               const valuePath = normalizeInvoiceBindingPath(asTrimmedString(row.valuePath));
-              const format = parseInvoiceTemplateValueFormat(row.format ?? row.type);
-              const mappedRow: InvoiceTemplateTotalsRow = {
+              const format = parseTemplateValueFormat(row.format ?? row.type);
+              const mappedRow: TemplateTotalsRow = {
                 id: sanitizeId(id),
                 label,
                 value: preservedValue ?? { type: 'path', path: valuePath.length > 0 ? valuePath : 'total' },
@@ -996,9 +1087,18 @@ const mapDesignerNodeToAstNode = (
               if (row.emphasize === true) {
                 mappedRow.emphasize = true;
               }
+              if (isRecord(row.style) && Object.keys(row.style).length > 0) {
+                const rowStyleRef: TemplateNodeStyleRef = {};
+                if (isRecord(row.style.inline)) {
+                  rowStyleRef.inline = { ...(row.style.inline as Record<string, unknown>) };
+                }
+                if (Object.keys(rowStyleRef).length > 0) {
+                  mappedRow.style = rowStyleRef;
+                }
+              }
               return mappedRow;
             })
-            .filter((row): row is InvoiceTemplateTotalsRow => Boolean(row));
+            .filter((row): row is TemplateTotalsRow => Boolean(row));
 
         return {
           ...createBaseNode(node),
@@ -1038,17 +1138,51 @@ const mapDesignerNodeToAstNode = (
       const metadata = getWorkspaceNodeMetadata(node);
       const src = asTrimmedString(metadata.src) || asTrimmedString(metadata.url) || '';
       const alt = asTrimmedString(metadata.alt);
-      const preservedSrcExpression = isInvoiceTemplateValueExpression(metadata.astSrcExpression)
+      const preservedSrcExpression = isTemplateValueExpression(metadata.astSrcExpression)
         ? metadata.astSrcExpression
         : null;
-      const preservedAltExpression = isInvoiceTemplateValueExpression(metadata.astAltExpression)
+      const preservedAltExpression = isTemplateValueExpression(metadata.astAltExpression)
         ? metadata.astAltExpression
         : null;
+
+      // Detect whether the user changed the src/alt after import.
+      // Follow the same pattern as resolveTextNodeContentExpression: compare the
+      // current value with the imported preview value and only preserve the original
+      // AST expression when the value is unchanged.
+      // For non-literal expressions (bindings, templates, paths) the imported
+      // preview value is an empty sentinel — any non-empty user-entered value
+      // means the user is overriding the dynamic expression with a static URL.
+      const srcChanged = preservedSrcExpression
+        ? (() => {
+            const importedPreview = asTrimmedString(metadata.__astSrcPreviewValue);
+            if (preservedSrcExpression.type === 'literal') {
+              // Literal: changed if the current value differs from the imported one.
+              return importedPreview.length > 0
+                ? src !== importedPreview
+                : src !== asTrimmedString(preservedSrcExpression.value);
+            }
+            // Non-literal (binding/template/path): the imported preview is '' (sentinel).
+            // If the user typed a non-empty URL, they want to override the expression.
+            return src.length > 0;
+          })()
+        : false;
+      const altChanged = preservedAltExpression
+        ? (() => {
+            const importedPreview = asTrimmedString(metadata.__astAltPreviewValue);
+            if (preservedAltExpression.type === 'literal') {
+              return importedPreview.length > 0
+                ? alt !== importedPreview
+                : alt !== asTrimmedString(preservedAltExpression.value);
+            }
+            return alt.length > 0;
+          })()
+        : false;
+
       return {
         ...createBaseNode(node),
         type: 'image',
-        src: preservedSrcExpression ?? { type: 'literal', value: src },
-        alt: preservedAltExpression ?? { type: 'literal', value: alt },
+        src: (!srcChanged && preservedSrcExpression) ? preservedSrcExpression : { type: 'literal', value: src },
+        alt: (!altChanged && preservedAltExpression) ? preservedAltExpression : { type: 'literal', value: alt },
       };
     }
     case 'signature':
@@ -1064,9 +1198,9 @@ const mapDesignerNodeToAstNode = (
   }
 };
 
-export const exportWorkspaceToInvoiceTemplateAst = (
+export const exportWorkspaceToTemplateAst = (
   workspace: DesignerWorkspaceSnapshot
-): InvoiceTemplateAst => {
+): TemplateAst => {
   const entries = Object.entries(workspace.nodesById ?? {});
   const nodesById = new Map(entries.map(([id, node]) => [id, node as WorkspaceNode]));
   const root =
@@ -1082,7 +1216,7 @@ export const exportWorkspaceToInvoiceTemplateAst = (
   const rootSize = getWorkspaceNodeSize(root);
   const pageSize = getWorkspaceNodeSize(pageNode);
   const pageLayout = pageNode ? getWorkspaceNodeLayout(pageNode) : undefined;
-  const resolvedPrintSettings = resolveInvoiceTemplatePrintSettings({
+  const resolvedPrintSettings = resolveTemplatePrintSettings({
     printSettings: getWorkspaceRootPrintSettings(rootMetadata),
     pageWidthPx: pageSize.width,
     pageHeightPx: pageSize.height,
@@ -1207,7 +1341,7 @@ export const exportWorkspaceToInvoiceTemplateAst = (
       throw new Error(firstIssue.message);
     }
   }
-  const exportedTransforms = toInvoiceTemplateTransformPipeline(workspaceTransforms);
+  const exportedTransforms = toTemplateTransformPipeline(workspaceTransforms);
   const layout = root
     ? mapDesignerNodeToAstNode(
         root,
@@ -1231,12 +1365,12 @@ export const exportWorkspaceToInvoiceTemplateAst = (
 
   return {
     kind: 'invoice-template-ast',
-    version: INVOICE_TEMPLATE_AST_VERSION,
+    version: TEMPLATE_AST_VERSION,
     metadata: Object.keys(nextTemplateMetadata).length > 0
-      ? (nextTemplateMetadata as InvoiceTemplateAst['metadata'])
+      ? (nextTemplateMetadata as TemplateAst['metadata'])
       : undefined,
     styles: isRecord(rootMetadata.__astStyleCatalog)
-      ? ({ ...(rootMetadata.__astStyleCatalog as Record<string, unknown>) } as InvoiceTemplateAst['styles'])
+      ? ({ ...(rootMetadata.__astStyleCatalog as Record<string, unknown>) } as TemplateAst['styles'])
       : undefined,
     bindings: {
       values: valueBindings,
@@ -1253,9 +1387,9 @@ export const exportWorkspaceToInvoiceTemplateAst = (
   };
 };
 
-export const exportWorkspaceToInvoiceTemplateAstJson = (
+export const exportWorkspaceToTemplateAstJson = (
   workspace: DesignerWorkspaceSnapshot
-): string => JSON.stringify(exportWorkspaceToInvoiceTemplateAst(workspace), null, 2);
+): string => JSON.stringify(exportWorkspaceToTemplateAst(workspace), null, 2);
 
 const denormalizeBindingPath = (path: string): string => {
   const aliases: Record<string, string> = {
@@ -1268,6 +1402,36 @@ const denormalizeBindingPath = (path: string): string => {
     discount: 'invoice.discount',
     currencyCode: 'invoice.currencyCode',
     poNumber: 'invoice.poNumber',
+    recurringServicePeriodStart: 'invoice.recurringServicePeriodStart',
+    recurringServicePeriodEnd: 'invoice.recurringServicePeriodEnd',
+    recurringServicePeriodLabel: 'invoice.recurringServicePeriodLabel',
+    quoteNumber: 'quote.quoteNumber',
+    quoteDate: 'quote.quoteDate',
+    validUntil: 'quote.validUntil',
+    status: 'quote.status',
+    title: 'quote.title',
+    scope: 'quote.scope',
+    discountTotal: 'quote.discountTotal',
+    termsAndConditions: 'quote.termsAndConditions',
+    clientNotes: 'quote.clientNotes',
+    version: 'quote.version',
+    acceptedByName: 'quote.acceptedByName',
+    acceptedAt: 'quote.acceptedAt',
+    recurringSubtotal: 'quoteTotals.recurringSubtotal',
+    recurringTax: 'quoteTotals.recurringTax',
+    recurringTotal: 'quoteTotals.recurringTotal',
+    onetimeSubtotal: 'quoteTotals.onetimeSubtotal',
+    onetimeTax: 'quoteTotals.onetimeTax',
+    onetimeTotal: 'quoteTotals.onetimeTotal',
+    serviceSubtotal: 'quoteTotals.serviceSubtotal',
+    serviceTax: 'quoteTotals.serviceTax',
+    serviceTotal: 'quoteTotals.serviceTotal',
+    productSubtotal: 'quoteTotals.productSubtotal',
+    productTax: 'quoteTotals.productTax',
+    productTotal: 'quoteTotals.productTotal',
+    'client.name': 'client.name',
+    'client.address': 'client.address',
+    'contact.name': 'contact.name',
     'customer.name': 'customer.name',
     'customer.address': 'customer.address',
     'tenantClient.name': 'tenant.name',
@@ -1276,16 +1440,46 @@ const denormalizeBindingPath = (path: string): string => {
   return aliases[path] ?? path;
 };
 
-const parseSizeFromStyle = (node: InvoiceTemplateNode): { width?: number; height?: number } => {
-  const inline = node.style?.inline ?? {};
-  return {
-    width: parsePxLength(inline.width),
-    height: parsePxLength(inline.height),
-  };
+const resolveImportedCollectionBindingPath = (
+  astInput: TemplateAst,
+  bindingId: string,
+  fallbackPath = 'items'
+): string => {
+  const trimmedBindingId = asTrimmedString(bindingId);
+  if (trimmedBindingId.length === 0) {
+    return fallbackPath;
+  }
+
+  const registeredPath = astInput.bindings?.collections?.[trimmedBindingId]?.path;
+  if (typeof registeredPath === 'string' && registeredPath.trim().length > 0) {
+    return registeredPath;
+  }
+
+  const transformOutputBindingId = normalizeInvoiceBindingPath(
+    asTrimmedString(astInput.transforms?.outputBindingId)
+  );
+  if (transformOutputBindingId.length > 0 && normalizeInvoiceBindingPath(trimmedBindingId) === transformOutputBindingId) {
+    return transformOutputBindingId;
+  }
+
+  return fallbackPath;
 };
 
-export const importInvoiceTemplateAstToWorkspace = (
-  ast: InvoiceTemplateAst
+const parseSizeFromStyle = (node: TemplateNode): { width?: number; height?: number } => {
+  const inline = node.style?.inline ?? {};
+
+  if (node.type !== 'image') {
+    return {
+      width: parsePxLength(inline.width),
+      height: parsePxLength(inline.height),
+    };
+  }
+
+  return resolveMediaFrameSize(inline);
+};
+
+export const importTemplateAstToWorkspace = (
+  ast: TemplateAst
 ): DesignerWorkspaceSnapshot => {
   const astDocument = ast.layout.type === 'document' ? ast.layout : null;
   const documentInline = astDocument && isRecord(astDocument.style?.inline)
@@ -1304,7 +1498,7 @@ export const importInvoiceTemplateAstToWorkspace = (
       : undefined;
   const legacyDocumentSize = astDocument ? parseSizeFromStyle(astDocument) : {};
   const legacyPageSize = astPageSectionCandidate ? parseSizeFromStyle(astPageSectionCandidate) : {};
-  const resolvedPrintSettings = resolveInvoiceTemplatePrintSettings({
+  const resolvedPrintSettings = resolveTemplatePrintSettings({
     printSettings: ast.metadata?.printSettings,
     pageWidthPx: legacyPageSize.width,
     pageHeightPx: legacyPageSize.height,
@@ -1439,7 +1633,7 @@ export const importInvoiceTemplateAstToWorkspace = (
       documentNode.children.push(pageNode.id);
 
       const buildWorkspaceNode = (
-        inputNode: InvoiceTemplateNode,
+        inputNode: TemplateNode,
         designerType: DesignerComponentType,
         depthIndex: number,
         depth: number
@@ -1519,13 +1713,13 @@ export const importInvoiceTemplateAstToWorkspace = (
       };
 
       const importAstNode = (
-        inputNode: InvoiceTemplateNode,
+        inputNode: TemplateNode,
         parent: WorkspaceNode,
-        astInput: InvoiceTemplateAst,
+        astInput: TemplateAst,
         depthIndex: number,
         depth: number
       ) => {
-        const typeMap: Partial<Record<InvoiceTemplateNode['type'], DesignerComponentType>> = {
+        const typeMap: Partial<Record<TemplateNode['type'], DesignerComponentType>> = {
           section: 'section',
           stack: 'container',
           text: 'text',
@@ -1567,8 +1761,18 @@ export const importInvoiceTemplateAstToWorkspace = (
           metadata.bindingKey = denormalizeBindingPath(bindingPath);
           metadata.__astFieldHadFormat = Object.prototype.hasOwnProperty.call(inputNode, 'format');
           metadata.__astFieldHadEmptyValue = Object.prototype.hasOwnProperty.call(inputNode, 'emptyValue');
+          metadata.__astFieldHadPlaceholder = Object.prototype.hasOwnProperty.call(inputNode, 'placeholder');
+          metadata.__astFieldHadBorderStyle = Object.prototype.hasOwnProperty.call(inputNode, 'borderStyle');
           if (inputNode.format) {
             metadata.format = inputNode.format;
+          }
+          if (inputNode.displayFormat) {
+            metadata.displayFormat = inputNode.displayFormat;
+          }
+          if (inputNode.borderStyle) {
+            metadata.fieldBorderStyle = inputNode.borderStyle;
+          } else {
+            metadata.fieldBorderStyle = 'none';
           }
           if (inputNode.label) {
             metadata.label = inputNode.label;
@@ -1576,13 +1780,16 @@ export const importInvoiceTemplateAstToWorkspace = (
           if (typeof inputNode.emptyValue === 'string') {
             metadata.emptyValue = inputNode.emptyValue;
           }
+          if (typeof inputNode.placeholder === 'string') {
+            metadata.placeholder = inputNode.placeholder;
+          }
         } else if (inputNode.type === 'dynamic-table' || inputNode.type === 'table') {
-          const collectionPath =
-            astInput.bindings?.collections?.[
-              inputNode.type === 'dynamic-table'
-                ? inputNode.repeat.sourceBinding.bindingId
-                : inputNode.sourceBinding.bindingId
-            ]?.path ?? 'items';
+          const collectionPath = resolveImportedCollectionBindingPath(
+            astInput,
+            inputNode.type === 'dynamic-table'
+              ? inputNode.repeat.sourceBinding.bindingId
+              : inputNode.sourceBinding.bindingId
+          );
           metadata.collectionBindingKey = denormalizeBindingPath(collectionPath);
           metadata.columns = inputNode.columns.map((column) => {
             const mappedColumn: Record<string, unknown> = {
@@ -1605,10 +1812,17 @@ export const importInvoiceTemplateAstToWorkspace = (
           if (typeof inputNode.emptyStateText === 'string' && inputNode.emptyStateText.trim().length > 0) {
             metadata.emptyStateText = inputNode.emptyStateText.trim();
           }
+          if (inputNode.headerStyle?.inline) {
+            const hs = inputNode.headerStyle.inline;
+            if (hs.backgroundColor) metadata.headerBackgroundColor = hs.backgroundColor;
+            if (hs.color) metadata.headerColor = hs.color;
+          }
         } else if (inputNode.type === 'totals') {
-          const sourcePath =
-            astInput.bindings?.collections?.[inputNode.sourceBinding.bindingId]?.path ??
-            inputNode.sourceBinding.bindingId;
+          const sourcePath = resolveImportedCollectionBindingPath(
+            astInput,
+            inputNode.sourceBinding.bindingId,
+            inputNode.sourceBinding.bindingId
+          );
           metadata.collectionBindingKey = denormalizeBindingPath(sourcePath);
           metadata.totalsRows = inputNode.rows.map((row) => ({
             id: row.id,
@@ -1618,16 +1832,29 @@ export const importInvoiceTemplateAstToWorkspace = (
             type: row.format,
             format: row.format,
             emphasize: row.emphasize === true,
+            ...(row.style ? { style: row.style } : {}),
           }));
         } else if (inputNode.type === 'image') {
           metadata.astSrcExpression = inputNode.src;
           if (inputNode.src.type === 'literal') {
-            metadata.src = String(inputNode.src.value ?? '');
+            const literalSrc = String(inputNode.src.value ?? '');
+            metadata.src = literalSrc;
+            metadata.url = literalSrc;
+            metadata.__astSrcPreviewValue = literalSrc;
+          } else {
+            // Non-literal (binding/template/path): leave metadata.src empty but
+            // record an empty sentinel so the export can detect when the user
+            // replaces the dynamic expression with a typed URL.
+            metadata.__astSrcPreviewValue = '';
           }
           if (inputNode.alt) {
             metadata.astAltExpression = inputNode.alt;
             if (inputNode.alt.type === 'literal') {
-              metadata.alt = String(inputNode.alt.value ?? '');
+              const literalAlt = String(inputNode.alt.value ?? '');
+              metadata.alt = literalAlt;
+              metadata.__astAltPreviewValue = literalAlt;
+            } else {
+              metadata.__astAltPreviewValue = '';
             }
           }
         } else if (inputNode.type === 'section') {

@@ -9,6 +9,7 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import { deleteAsset } from '../actions/assetActions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import type { DeletionValidationResult } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ButtonProps = ComponentProps<typeof Button>;
 
@@ -31,8 +32,9 @@ export default function DeleteAssetButton({
   className,
   redirectTo,
   onDeleted,
-  label = 'Delete'
+  label
 }: DeleteAssetButtonProps) {
+  const { t } = useTranslation('msp/assets');
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
@@ -57,14 +59,16 @@ export default function DeleteAssetButton({
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('deleteAssetButton.errors.validationFailed', {
+          defaultValue: 'Failed to validate deletion. Please try again.'
+        }),
         dependencies: [],
         alternatives: []
       });
     } finally {
       setIsDeleteValidating(false);
     }
-  }, [assetId]);
+  }, [assetId, t]);
 
   const handleConfirm = async () => {
     startTransition(async () => {
@@ -89,7 +93,9 @@ export default function DeleteAssetButton({
         setDeleteValidation({
           canDelete: false,
           code: 'VALIDATION_FAILED',
-          message: 'Failed to delete asset. Please try again.',
+          message: t('deleteAssetButton.errors.deleteFailed', {
+            defaultValue: 'Failed to delete asset. Please try again.'
+          }),
           dependencies: [],
           alternatives: []
         });
@@ -113,7 +119,11 @@ export default function DeleteAssetButton({
         disabled={isPending}
       >
         <Trash2 className="h-4 w-4" />
-        <span>{isPending ? 'Removing…' : label}</span>
+        <span>
+          {isPending
+            ? t('deleteAssetButton.actions.removing', { defaultValue: 'Removing…' })
+            : label ?? t('common.actions.delete', { defaultValue: 'Delete' })}
+        </span>
       </Button>
 
       <DeleteEntityDialog
@@ -121,7 +131,9 @@ export default function DeleteAssetButton({
         isOpen={isDialogOpen}
         onClose={resetDeleteState}
         onConfirmDelete={handleConfirm}
-        entityName={assetName ?? 'this asset'}
+        entityName={assetName ?? t('deleteAssetButton.entityNameFallback', {
+          defaultValue: 'this asset'
+        })}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing || isPending}

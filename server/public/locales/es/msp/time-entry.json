@@ -1,0 +1,405 @@
+{
+  "common": {
+    "actions": {
+      "view": "Ver",
+      "back": "Atrás",
+      "save": "Guardar entrada",
+      "saveGeneric": "Guardar",
+      "saving": "Guardando...",
+      "cancel": "Cancelar",
+      "reset": "Restablecer",
+      "delete": "Eliminar",
+      "change": "Cambiar",
+      "select": "Seleccionar",
+      "getStarted": "Empezar",
+      "addItem": "Agregar elemento",
+      "addEntry": "Entrada",
+      "addComment": "Agregar comentario",
+      "adding": "Añadiendo...",
+      "approve": "Aprobar",
+      "reject": "Rechazar",
+      "requestChanges": "Solicitar cambios",
+      "reverseApproval": "Revertir aprobación",
+      "reopen": "Reabrir",
+      "reopenForEdits": "Reabrir para ediciones",
+      "submitTimeSheet": "Enviar hoja de tiempo",
+      "showDetails": "Mostrar detalles",
+      "hideDetails": "Ocultar detalles",
+      "copyToAnotherDay": "Copiar a otro día",
+      "viewDetails": "Ver detalles",
+      "manageTimePeriods": "Administrar períodos de tiempo",
+      "selectWorkItem": "Seleccionar elemento de trabajo",
+      "clearFilter": "Borrar filtro"
+    },
+    "states": {
+      "inProgress": "En progreso",
+      "submitted": "Enviado",
+      "approved": "Aprobado",
+      "changesRequested": "Cambios solicitados",
+      "unknown": "Desconocido",
+      "current": "Actual",
+      "active": "Activo",
+      "addressed": "Atendido",
+      "changeRequested": "Cambio solicitado",
+      "loading": "Cargando..."
+    },
+    "fallbacks": {
+      "na": "N/D",
+      "none": "No hay entradas",
+      "notFound": "No encontrado",
+      "untitled": "Sin título",
+      "unassigned": "Sin asignar",
+      "noDueDate": "Sin fecha de vencimiento",
+      "noServiceSelected": "Ningún servicio seleccionado",
+      "noNotes": "Sin notas",
+      "noUserFound": "No se encontró ningún usuario"
+    },
+    "units": {
+      "hoursShort": "h",
+      "minutesShort": "m",
+      "hoursAbbrev": "h",
+      "dayOne": "día",
+      "dayOther": "días",
+      "percentBillable": "{{value}}% facturable"
+    },
+    "types": {
+      "all": "Todos los tipos",
+      "ticket": "Ticket",
+      "tickets": "Tickets",
+      "projectTask": "Tarea del proyecto",
+      "projectTasks": "Tareas del proyecto",
+      "interaction": "Interacción",
+      "interactions": "Interacciones",
+      "adHocEntry": "Entrada ad hoc",
+      "adHocEntries": "Entradas ad hoc",
+      "billable": "Facturable"
+    }
+  },
+  "timeTracking": {
+    "subjectUserLabel": "Usuario"
+  },
+  "timeEntryProvider": {
+    "errors": {
+      "initialize": "No se pudieron inicializar las entradas de tiempo"
+    }
+  },
+  "timePeriodList": {
+    "title": "Seleccione un período de tiempo",
+    "columns": {
+      "period": "Período",
+      "status": "Estado",
+      "hoursEntered": "Horas ingresadas",
+      "daysLogged": "Días registrados",
+      "lastEntry": "Última entrada",
+      "actions": "Acciones"
+    },
+    "lastEntry": {
+      "none": "No hay entradas"
+    }
+  },
+  "timeEntryForm": {
+    "labels": {
+      "service": "Servicio",
+      "date": "Fecha",
+      "startTime": "Hora de inicio",
+      "endTime": "Hora de finalización",
+      "duration": "Duración",
+      "billable": "facturable",
+      "notes": "Notas",
+      "deleteTimeEntry": "Eliminar entrada de tiempo",
+      "unsavedChanges": "Cambios no guardados"
+    },
+    "placeholders": {
+      "selectService": "Seleccione un servicio",
+      "selectDate": "Seleccionar fecha",
+      "addNotes": "Agregar notas"
+    },
+    "validation": {
+      "startBeforeEnd": "La hora de inicio debe ser anterior a la hora de finalización.",
+      "endAfterStart": "La hora de finalización debe ser posterior a la hora de inicio.",
+      "durationMinimum": "La duración debe ser de al menos 1 minuto.",
+      "minimumDuration": "La duración mínima es de 1 minuto.",
+      "serviceRequired": "Se requiere servicio para entradas de tiempo",
+      "timePeriodRange": "La fecha debe estar dentro del período actual ({{periodRange}})",
+      "endAfterStartPicker": "La hora de finalización debe ser posterior a la hora de inicio."
+    }
+  },
+  "workItemPicker": {
+    "actions": {
+      "createAdHocEntry": "Crear entrada ad hoc"
+    },
+    "placeholders": {
+      "search": "Buscar elementos de trabajo...",
+      "adHocTitle": "Ingrese el título para la entrada ad-hoc",
+      "startTime": "Hora de inicio",
+      "endTime": "Hora de finalización"
+    },
+    "filters": {
+      "includeInactive": "Incluir inactivos",
+      "filters": "Filtros",
+      "assignedTo": "Asignado a",
+      "assignedToMe": "Asignado a mi",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de finalización"
+    },
+    "empty": {
+      "searching": "Búsqueda...",
+      "noWorkItems": "No se encontraron elementos de trabajo"
+    }
+  },
+  "workItemList": {
+    "meta": {
+      "assignedTo": "Asignado a: {{value}}",
+      "dueDate": "Fecha de vencimiento: {{value}}",
+      "contact": "Contacto: {{value}}",
+      "scheduledEnd": "Fin programado: {{value}}"
+    },
+    "assignment": {
+      "oneUser": "1 usuario asignado",
+      "multipleUsers": "{{count}} usuarios asignados",
+      "additionalUsers": "{{name}}, +{{count}} usuario",
+      "additionalUsersOther": "{{name}}, +{{count}} usuarios"
+    },
+    "bundledTicket": "Boleto combinado: registra el tiempo en el boleto maestro{{suffix}}.",
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "pageInfo": "Página {{current}} de {{total}} ({{records}} registros totales)"
+    },
+    "interactionType": "{{type}} • {{client}}",
+    "currentSelection": "Elemento de trabajo actual"
+  },
+  "timeSheetHeader": {
+    "title": "Hoja de tiempo",
+    "titleFor": "Hoja de horas para {{name}}",
+    "editedBy": "Editado por {{name}}",
+    "aria": {
+      "previousWeek": "Semana anterior",
+      "nextWeek": "La próxima semana"
+    },
+    "pagination": {
+      "pageInfo": "Página {{current}} de {{total}}"
+    },
+    "labels": {
+      "status": "Estado:",
+      "showIntervals": "Mostrar intervalos",
+      "grid": "Cuadrícula",
+      "list": "Lista"
+    }
+  },
+  "approval": {
+    "titleFor": "Aprobación de la hoja de horas para {{name}}",
+    "sections": {
+      "summary": "Resumen",
+      "breakdownByWorkItemType": "Desglose por tipo de elemento de trabajo",
+      "dailyBreakdown": "Desglose diario",
+      "detailedEntries": "Entradas de tiempo detalladas",
+      "comments": "Comentarios",
+      "timeEntryDetails": "Detalles de entrada de tiempo"
+    },
+    "labels": {
+      "period": "Período",
+      "submitted": "Enviado",
+      "total": "Total",
+      "billable": "facturable",
+      "nonBillable": "No facturable",
+      "workItem": "Elemento de trabajo",
+      "service": "Servicio",
+      "duration": "Duración",
+      "notes": "Notas",
+      "entryChangeSuggestion": "Sugerencia de cambio de entrada",
+      "approver": "Aprobador",
+      "employee": "Empleado"
+    },
+    "table": {
+      "date": "Fecha",
+      "workItem": "Elemento de trabajo",
+      "start": "Comenzar",
+      "end": "Fin",
+      "billable": "facturable",
+      "status": "Estado"
+    },
+    "comments": {
+      "changesRequestedHint": "(Se han solicitado cambios; revise los comentarios)",
+      "responsePlaceholder": "Añade tu respuesta a los cambios solicitados...",
+      "placeholder": "Añade un comentario...",
+      "respondToChanges": "Responder a los cambios"
+    },
+    "changeSuggestionPlaceholder": "Dígale al empleado exactamente qué corregir en esta entrada."
+  },
+  "approvalActions": {
+    "dialogs": {
+      "rejectTitle": "Rechazar hoja de tiempo",
+      "requestChangesTitle": "Solicitar cambios"
+    },
+    "labels": {
+      "rejectionReason": "Motivo del rechazo"
+    },
+    "placeholders": {
+      "rejectionReason": "Ingrese el motivo del rechazo"
+    },
+    "confirm": {
+      "reject": "Confirmar Rechazar",
+      "changes": "Confirmar cambios"
+    }
+  },
+  "comments": {
+    "placeholder": "Añade un comentario...",
+    "responsePlaceholder": "Responder a los cambios solicitados...",
+    "respondToChanges": "Responder a los cambios"
+  },
+  "feedback": {
+    "approverFeedback": "Comentarios del aprobador",
+    "viewHistory": "Ver historial de comentarios",
+    "approverOn": "{{name}} en {{value}}"
+  },
+  "managerDashboard": {
+    "access": {
+      "title": "Se requiere acceso del líder del equipo",
+      "description": "Para aprobar hojas de horas de los miembros de su equipo, debe ser líder del equipo.",
+      "goToTeamSettings": "Ir a la configuración del equipo"
+    },
+    "title": "Aprobaciones de hojas de horas",
+    "actions": {
+      "hideApproved": "Ocultar aprobados",
+      "showApproved": "Mostrar aprobados",
+      "bulkApproveSelected": "Aprobar selección",
+      "reverse": "Revertir"
+    },
+    "columns": {
+      "select": "Seleccionar",
+      "employee": "Empleado",
+      "period": "Período",
+      "status": "Estado",
+      "actions": "Acciones"
+    },
+    "reverseApproval": {
+      "reason": "Aprobación revocada por el gerente",
+      "error": "No se pudo revertir la aprobación: {{error}}"
+    }
+  },
+  "workItemDrawer": {
+    "errors": {
+      "genericTitle": "Error al cargar el contenido",
+      "genericDescription": "Inténtalo de nuevo",
+      "failedInteraction": "No se pudieron cargar los detalles de la interacción",
+      "interactionNotFound": "Interacción no encontrada",
+      "noUserSession": "No se encontró una sesión de usuario",
+      "failedTicket": "No se pudo cargar el boleto",
+      "failedTask": "No se pudo cargar la tarea",
+      "failedTaskPhase": "No se pudo cargar la fase de tarea",
+      "failedTaskProjectMetadata": "No se pudieron cargar los metadatos del proyecto de tarea",
+      "failedAdHoc": "No se pudieron cargar los datos de la entrada ad hoc",
+      "unsupportedType": "Tipo de elemento de trabajo no compatible"
+    }
+  },
+  "timeSheetClient": {
+    "errors": {
+      "delegationDisabled": "La entrada de tiempo delegada está deshabilitada",
+      "failedReopen": "No se pudo reabrir la hoja de horas"
+    },
+    "reopen": {
+      "success": "Hoja de horas reabierta para modificaciones",
+      "reason": "Reabierto para ediciones",
+      "title": "¿Reabrir para ediciones?",
+      "message": "Esto moverá la hoja de horas nuevamente a Cambios solicitados para que se puedan editar las entradas de horas."
+    }
+  },
+  "timeSheetList": {
+    "delete": {
+      "title": "Eliminar elemento de trabajo",
+      "message": "Esto eliminará permanentemente todas las entradas de tiempo para este elemento de trabajo. Esta acción no se puede deshacer."
+    },
+    "summary": {
+      "entryOne": "entrada",
+      "entryOther": "entradas",
+      "total": "Total: {{value}}",
+      "billable": "Facturable: {{value}}"
+    },
+    "empty": {
+      "title": "Aún no hay entradas de tiempo",
+      "description": "Agregue un elemento de trabajo y comience a realizar un seguimiento de su tiempo.",
+      "noEntries": "No hay entradas"
+    },
+    "columns": {
+      "workItem": "Elemento de trabajo",
+      "timeEntry": "Registro de tiempo",
+      "duration": "Duración",
+      "billableDuration": "Duración facturable",
+      "actions": "Acciones"
+    },
+    "dayGroup": {
+      "entryOne": "{{count}} entrada",
+      "entryOther": "{{count}} entradas"
+    },
+    "focusFilter": {
+      "summary": "Mostrando {{count}} entradas para {{workItem}} el {{date}}",
+      "description": "Solo son visibles las entradas de la celda seleccionada.",
+      "backToGrid": "Volver a la cuadrícula"
+    }
+  },
+  "selectedWorkItem": {
+    "adHocNoWorkItem": "Entrada ad hoc (sin elemento de trabajo)"
+  },
+  "contractInfo": {
+    "noContract": "No se encontró ninguna línea de contrato para este servicio. El tiempo se asignará al contrato predeterminado gestionado por el sistema.",
+    "contract": "Contrato: {{name}}",
+    "defaultContract": "Contrato predeterminado gestionado por el sistema",
+    "multipleLines": "Múltiples líneas de contrato disponibles: usando la selección predeterminada"
+  },
+  "billableLegend": {
+    "title": "Leyenda facturable",
+    "description": "Indicadores de color para ratios de tiempo facturables"
+  },
+  "intervalItem": {
+    "now": "Ahora",
+    "autoClosed": "Auto cerrado",
+    "active": "Activo"
+  },
+  "intervals": {
+    "title": "Intervalos de tiempo del boleto",
+    "hideShortIntervals": "Ocultar intervalos inferiores a 1 minuto",
+    "totalTime": "Tiempo total: {{value}}",
+    "selectedOne": "{{count}} intervalo seleccionado",
+    "selectedOther": "{{count}} intervalos seleccionados",
+    "tooltips": {
+      "createTimeEntry": "Crear entrada de tiempo a partir de intervalos seleccionados",
+      "deleteSelected": "Eliminar intervalos seleccionados",
+      "mergeSelected": "Fusionar intervalos seleccionados"
+    },
+    "actions": {
+      "selectAll": "Seleccionar todo",
+      "deselectAll": "Deseleccionar todo",
+      "merge": "Unir"
+    },
+    "states": {
+      "loading": "Intervalos de carga...",
+      "noIntervalsThisPeriod": "No se encontraron intervalos para este período de tiempo.",
+      "noIntervalsThisTicket": "No se encontraron intervalos para este ticket",
+      "noIntervalsLongerThanMinute": "No se encontraron intervalos superiores a 1 minuto"
+    },
+    "entryName": "Entrada de hora del billete",
+    "messages": {
+      "cannotFindTimeSheet": "No se puede crear una entrada de horas: no se pudo encontrar ni crear una hoja de horas",
+      "mergeFirst": "Primero combine los intervalos antes de crear una entrada de tiempo.",
+      "sameTicketOnly": "Solo se pueden crear entradas de tiempo a partir de intervalos del mismo ticket",
+      "mergeSameTicketOnly": "Solo se pueden fusionar intervalos del mismo ticket",
+      "mergeSuccess": "Los intervalos se fusionaron exitosamente",
+      "failedMerge": "No se pudieron fusionar intervalos",
+      "noActivePeriod": "No se encontró ningún período de tiempo activo",
+      "failedFetchTimeSheet": "No se pudo crear o recuperar la hoja de horas",
+      "failedPrepareTimeEntry": "No se pudo preparar la entrada de tiempo",
+      "savedSuccess": "La entrada de tiempo se guardó correctamente",
+      "failedSave": "No se pudo guardar la entrada de tiempo"
+    }
+  },
+  "addWorkItemDialog": {
+    "title": "Agregar elemento de trabajo",
+    "description": "Seleccione un elemento de trabajo para agregarlo a la hoja de horas",
+    "close": "Cerrar el cuadro de diálogo Agregar elemento de trabajo",
+    "focus": "Centrarse en el cuadro de diálogo Agregar elemento de trabajo"
+  },
+  "timeEntryReadOnly": {
+    "viewEntryDetails": "Ver detalles de la entrada"
+  }
+}

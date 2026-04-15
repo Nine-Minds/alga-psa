@@ -1,0 +1,463 @@
+{
+  "configuration": {
+    "loading": "E-Mail-Anbieter werden geladen...",
+    "feedback": {
+      "testingConnection": "Verbindung testen für {{providerName}}...",
+      "connectionSuccess": "Verbunden mit {{providerName}}.",
+      "connectionError": "Verbindungstest fehlgeschlagen",
+      "refreshWatchError": "Das Watch-Abonnement konnte nicht aktualisiert werden",
+      "renewalError": "Die Verlängerung ist fehlgeschlagen",
+      "initiateOauthError": "IMAP-OAuth konnte nicht gestartet werden",
+      "resyncing": "{{providerName}} wird erneut synchronisiert...",
+      "resyncError": "Die Neusynchronisierung des IMAP-Anbieters ist fehlgeschlagen",
+      "resyncStarted": "Neusynchronisierung für {{providerName}} gestartet.",
+      "enterpriseOnly": "Eingehende E-Mails von Microsoft 365 sind nur in der Enterprise Edition verfügbar."
+    },
+    "editDrawer": {
+      "title": "E-Mail-Anbieter bearbeiten",
+      "description": "Konfiguration für {{providerName}} aktualisieren"
+    },
+    "header": {
+      "title": "Konfiguration des E-Mail-Anbieters",
+      "description": {
+        "enterprise": "Konfigurieren Sie Gmail-, Microsoft 365- oder IMAP-Anbieter so, dass sie eingehende E-Mails als Tickets empfangen und verarbeiten",
+        "standard": "Konfigurieren Sie Gmail- oder IMAP-Anbieter so, dass sie eingehende E-Mails als Tickets empfangen und verarbeiten"
+      },
+      "counts": {
+        "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
+        "standard": "Gmail: {{gmail}} · IMAP: {{imap}}"
+      }
+    },
+    "actions": {
+      "addProvider": "E-Mail-Anbieter hinzufügen"
+    },
+    "nav": {
+      "providers": "Anbieter",
+      "defaults": "Standardeinstellungen"
+    },
+    "setup": {
+      "title": "Einrichtungsanweisungen",
+      "microsoft": {
+        "title": "Microsoft 365-Setup",
+        "steps": {
+          "registerApp": "Registrieren Sie eine Anwendung in Azure AD",
+          "permissions": "Konfigurieren Sie API-Berechtigungen für Mail.Read",
+          "redirectUrl": "Richten Sie die Weiterleitungs-URL in Ihrer App-Registrierung ein",
+          "credentials": "Verwenden Sie die Client-ID und das Client-Geheimnis im obigen Formular"
+        }
+      },
+      "gmail": {
+        "title": "Gmail-Setup",
+        "enterpriseSteps": {
+          "enterAddress": "Geben Sie Ihre Gmail-Adresse und Ihren Anbieternamen ein",
+          "connect": "Klicken Sie auf „Gmail verbinden“, um den Zugriff zu autorisieren",
+          "preferences": "Konfigurieren Sie die E-Mail-Verarbeitungseinstellungen",
+          "save": "Speichern, um die Einrichtung abzuschließen"
+        },
+        "standardSteps": {
+          "project": "Erstellen Sie ein Projekt in der Google Cloud Console",
+          "oauth": "Aktivieren Sie die Gmail-API und erstellen Sie OAuth2-Anmeldeinformationen",
+          "pubsub": "Richten Sie ein Pub/Sub-Thema für Push-Benachrichtigungen ein",
+          "consent": "Konfigurieren Sie den OAuth-Zustimmungsbildschirm und fügen Sie Testbenutzer hinzu"
+        }
+      }
+    }
+  },
+  "list": {
+    "header": {
+      "title": "E-Mail-Anbieter ({{count}})"
+    },
+    "filters": {
+      "searchPlaceholder": "Anbieter suchen...",
+      "allProviders": "Alle Anbieter"
+    },
+    "actions": {
+      "refresh": "Aktualisieren"
+    }
+  },
+  "selector": {
+    "header": {
+      "title": "Wählen Sie Ihren E-Mail-Anbieter",
+      "description": "Wählen Sie den E-Mail-Dienst aus, den Sie für die Verarbeitung eingehender E-Mails verwenden möchten. Sie können mehrere E-Mail-Anbieter pro Konto konfigurieren."
+    },
+    "cards": {
+      "google": {
+        "title": "Google Mail",
+        "description": "Google Workspace / Gmail-Integration",
+        "features": {
+          "accounts": "✓ Gmail- und Google Workspace-Konten",
+          "filtering": "✓ Labelbasierte E-Mail-Filterung",
+          "processing": "✓ E-Mail-Verarbeitung in Echtzeit",
+          "authentication": "✓ Automatische OAuth-Authentifizierung"
+        },
+        "action": "Gmail einrichten"
+      },
+      "microsoft": {
+        "title": "Microsoft 365",
+        "description": "Microsoft 365 / Outlook-Integration",
+        "features": {
+          "accounts": "✓ Microsoft 365- und Outlook-Konten",
+          "filtering": "✓ Ordnerbasierte E-Mail-Filterung",
+          "processing": "✓ E-Mail-Verarbeitung in Echtzeit",
+          "authentication": "✓ Azure AD OAuth-Integration"
+        },
+        "action": "Microsoft 365 einrichten"
+      },
+      "imap": {
+        "title": "IMAP",
+        "description": "Benutzerdefinierte IMAP-Server-Integration",
+        "features": {
+          "accounts": "✓ Jedes IMAP-kompatible Postfach",
+          "filtering": "✓ Ordnerbasierte E-Mail-Filterung",
+          "authentication": "✓ OAuth2- oder Passwortauthentifizierung",
+          "listener": "✓ Echtzeit-IDLE-Listener"
+        },
+        "action": "IMAP einrichten"
+      }
+    },
+    "actions": {
+      "cancel": "Abbrechen"
+    },
+    "help": {
+      "enterprise": "Wählen Sie den Anbieter, den Ihre Organisation bereits nutzt. Wenn Sie Google Workspace verwenden, wählen Sie Gmail; Wenn Sie Microsoft 365 verwenden, wählen Sie Microsoft 365. Sie können dies später ändern, indem Sie Ihren E-Mail-Anbieter entfernen und neu konfigurieren.",
+      "standard": "Wählen Sie den Anbieter, den Ihre Organisation bereits nutzt. Wenn Sie Google Workspace verwenden, wählen Sie Gmail; andernfalls wählen Sie IMAP. Sie können dies später ändern, indem Sie Ihren E-Mail-Anbieter entfernen und neu konfigurieren."
+    }
+  },
+  "wizard": {
+    "title": {
+      "select": "Wählen Sie E-Mail-Anbieter",
+      "setup": "{{provider}}-Konfiguration"
+    },
+    "actions": {
+      "cancel": "Abbrechen",
+      "back": "Zurück",
+      "close": "Schließen"
+    }
+  },
+  "providerCard": {
+    "subscription": {
+      "expired": "Abgelaufen",
+      "expiresInHours": "Läuft in {{count}}h ab",
+      "expiresInDays": "Läuft in {{count}}d ab"
+    },
+    "badges": {
+      "disabled": "Deaktiviert",
+      "connected": "Verbunden",
+      "disconnected": "Getrennt",
+      "error": "Fehler",
+      "configuring": "Konfigurieren",
+      "unknown": "Unbekannt"
+    },
+    "lastSync": {
+      "never": "Nie",
+      "justNow": "Soeben",
+      "minutesAgo": "Vor {{count}}m",
+      "hoursAgo": "Vor {{count}}h",
+      "daysAgo": "Vor {{count}}d"
+    },
+    "actions": {
+      "edit": "Konfiguration bearbeiten",
+      "testing": "Testen…",
+      "testConnection": "Testverbindung",
+      "refreshWatch": "Pub/Sub-Watch aktualisieren",
+      "retryRenewal": "Erneut versuchen",
+      "runDiagnostics": "Microsoft 365-Diagnose ausführen",
+      "reconnectOauth": "OAuth erneut verbinden",
+      "resyncing": "Neusynchronisierung…",
+      "resyncMailbox": "Postfach neu synchronisieren",
+      "delete": "Anbieter löschen"
+    },
+    "fields": {
+      "status": "Status",
+      "lastSync": "Letzte Synchronisierung",
+      "created": "Erstellt",
+      "subscription": "Abonnement",
+      "defaults": "Ticket-Standardeinstellungen",
+      "error": "Fehler:"
+    },
+    "values": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "disabled": "Deaktiviert",
+      "error": "Fehler"
+    },
+    "types": {
+      "google": "Google Mail",
+      "microsoft": "Microsoft 365",
+      "imap": "IMAP"
+    },
+    "filters": {
+      "folders": "Ordner: {{filters}}",
+      "labels": "Beschriftungen: {{filters}}"
+    },
+    "warnings": {
+      "inboundDefaults": "Es sind Standardeinstellungen für eingehende Tickets erforderlich und E-Mails werden erst verarbeitet, wenn eine davon ausgewählt wird."
+    },
+    "defaults": {
+      "placeholder": "Standardeinstellungen auswählen...",
+      "empty": "Keine Standardeinstellungen verfügbar"
+    },
+    "empty": {
+      "title": "Keine E-Mail-Anbieter konfiguriert",
+      "description": "Fügen Sie einen E-Mail-Anbieter hinzu, um eingehende E-Mails als Tickets zu empfangen und zu verarbeiten.",
+      "action": "E-Mail-Anbieter hinzufügen"
+    }
+  },
+  "forms": {
+    "common": {
+      "actions": {
+        "cancel": "Abbrechen",
+        "saving": "Speichern...",
+        "updateProvider": "Anbieter aktualisieren",
+        "addProvider": "Anbieter hinzufügen",
+        "createProvider": "Anbieter erstellen",
+        "manageDefaults": "Standardeinstellungen verwalten",
+        "refreshList": "Liste aktualisieren",
+        "openProvidersSettings": "Anbietereinstellungen öffnen"
+      },
+      "validation": {
+        "requiredFieldsTitle": "Bitte füllen Sie die erforderlichen Felder aus:",
+        "fixHighlightedFields": "Bitte korrigieren Sie die hervorgehobenen Felder und versuchen Sie es erneut."
+      },
+      "ticketDefaults": {
+        "title": "Ticket-Standardeinstellungen",
+        "description": "Wählen Sie Standardeinstellungen aus, die auf per E-Mail erstellte Tickets angewendet werden sollen",
+        "label": "Standardeinstellungen für eingehende Tickets",
+        "placeholder": "Standardeinstellungen auswählen (optional)",
+        "empty": "Keine Standardeinstellungen verfügbar"
+      },
+      "oauth": {
+        "authorizing": "Wird autorisiert...",
+        "authorized": "Autorisiert",
+        "authorizeAccess": "Zugriff autorisieren"
+      }
+    },
+    "microsoft": {
+      "validation": {
+        "providerNameRequired": "Der Name des Anbieters ist erforderlich",
+        "emailRequired": "Eine gültige E-Mail-Adresse ist erforderlich",
+        "redirectRequired": "Ein gültiger Weiterleitungs-URI ist erforderlich",
+        "authorizeRequiresValid": "Bitte füllen Sie vor der Autorisierung alle erforderlichen Felder aus",
+        "oauthInitiateFailed": "OAuth konnte nicht gestartet werden",
+        "popupBlocked": "Das OAuth-Popup konnte nicht geöffnet werden. Bitte erlauben Sie Popups für diese Website.",
+        "closedEarly": "Das Autorisierungsfenster wurde vor dem Abschluss geschlossen. Bitte versuchen Sie es erneut.",
+        "authorizationFailed": "Die Autorisierung ist fehlgeschlagen"
+      },
+      "requiredFields": {
+        "providerName": "Anbietername",
+        "emailAddress": "E-Mail-Adresse",
+        "redirectUri": "Umleitungs-URI"
+      },
+      "basic": {
+        "title": "Grundkonfiguration",
+        "description": "Grundeinstellungen für Ihren Microsoft 365-E-Mail-Anbieter",
+        "providerNameLabel": "Anbietername *",
+        "providerNamePlaceholder": "z. B. Support-E-Mail",
+        "emailLabel": "E-Mail-Adresse *",
+        "emailPlaceholder": "support@client.com",
+        "enableProvider": "Diesen Anbieter aktivieren"
+      },
+      "oauth": {
+        "sectionTitle": "Microsoft OAuth-Konfiguration",
+        "sectionDescription": "Anmeldeinformationen für Microsoft-Apps werden in den Anbietereinstellungen konfiguriert und hier wiederverwendet.",
+        "setupLabel": "Microsoft Entra",
+        "notConfigured": "Die Microsoft-Anbietereinstellungen sind nicht konfiguriert.",
+        "setupHelp": "Konfigurieren Sie zunächst Anbieter unter Einstellungen → Integrationen → Anbieter und kehren Sie dann hierher zurück, um dieses Postfach zu autorisieren.",
+        "redirectUriLabel": "Weiterleitungs-URI *",
+        "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
+        "authorizationTitle": "OAuth-Autorisierung",
+        "authorizationDescription": "Schließen Sie den OAuth-Ablauf ab, um Zugriff auf das Postfach zu gewähren"
+      },
+      "advanced": {
+        "title": "Erweiterte Einstellungen",
+        "description": "Konfigurieren Sie erweiterte E-Mail-Verarbeitungsoptionen",
+        "folderFiltersLabel": "Ordnerfilter",
+        "folderFiltersPlaceholder": "Posteingang, Support, Benutzerdefinierter Ordner",
+        "folderFiltersHelp": "Durch Kommas getrennte Liste der zu überwachenden Ordner (Standard: Posteingang)",
+        "maxEmailsPerSync": "Maximale E-Mails pro Synchronisierung"
+      }
+    },
+    "gmail": {
+      "validation": {
+        "providerNameRequired": "Der Name des Anbieters ist erforderlich",
+        "gmailAddressRequired": "Eine gültige Gmail-Adresse ist erforderlich",
+        "authorizeRequiresValid": "Bitte füllen Sie vor der Autorisierung alle erforderlichen Felder aus",
+        "googleNotConfigured": "Die Google-Integration ist für diesen Mandanten nicht konfiguriert. Konfigurieren Sie zuerst Google und versuchen Sie es dann erneut.",
+        "oauthInitiateFailed": "OAuth konnte nicht gestartet werden",
+        "popupBlocked": "Das OAuth-Popup konnte nicht geöffnet werden. Bitte erlauben Sie Popups für diese Website.",
+        "closedEarly": "Das Autorisierungsfenster wurde vor dem Abschluss geschlossen.",
+        "authorizationFailed": "Die Autorisierung ist fehlgeschlagen",
+        "popupFailed": "OAuth-Popup ist fehlgeschlagen"
+      },
+      "messages": {
+        "setupIncomplete": "Anbieter gespeichert, aber Einrichtung unvollständig: {{error}}",
+        "warningsTitle": "Einrichtung mit Warnungen abgeschlossen:",
+        "settingUp": "Gmail-Benachrichtigungen einrichten..."
+      },
+      "requiredFields": {
+        "providerName": "Anbietername",
+        "gmailAddress": "Gmail-Adresse"
+      },
+      "basic": {
+        "title": "Grundkonfiguration",
+        "description": "Grundeinstellungen für Ihren Gmail-E-Mail-Anbieter",
+        "providerNameLabel": "Anbietername *",
+        "providerNamePlaceholder": "z. B. Support Gmail",
+        "mailboxLabel": "Gmail-Adresse *",
+        "mailboxPlaceholder": "support@client.com",
+        "enableProvider": "Diesen Anbieter aktivieren"
+      },
+      "oauth": {
+        "sectionTitle": "Google OAuth",
+        "sectionDescription": "Verwendet die mandanteneigene Google-App, die unter Einstellungen → Integrationen → Anbieter konfiguriert ist.",
+        "setupLabel": "Google Cloud Console",
+        "notConfigured": "Die Google-Integration ist für diesen Mandanten nicht konfiguriert.",
+        "setupHelp": "Konfigurieren Sie zunächst mandanteneigenes Google OAuth + Pub/Sub: Einstellungen → Integrationen → Anbieter.",
+        "openSettings": "Google-Einstellungen öffnen",
+        "requiredTitle": "OAuth-Autorisierung erforderlich",
+        "stepTitle": "Schritt 1: OAuth-Autorisierung",
+        "stepDescription": "Schließen Sie den OAuth-Ablauf ab, um Zugriff auf Gmail zu gewähren",
+        "buttonSuccessSaving": "Erfolgreich autorisiert! Speichern Sie Ihre Einstellungen...",
+        "requiredDescriptionAdd": "Sie müssen die obige OAuth-Autorisierung abschließen, bevor Sie den Anbieter hinzufügen, um Gmail-Benachrichtigungen zu aktivieren.",
+        "requiredDescriptionUpdate": "Sie müssen die obige OAuth-Autorisierung abschließen, bevor Sie den Anbieter aktualisieren, um Gmail-Benachrichtigungen zu aktivieren."
+      },
+      "advanced": {
+        "title": "Erweiterte Einstellungen",
+        "description": "Konfigurieren Sie erweiterte E-Mail-Verarbeitungsoptionen",
+        "completeSetupSuffix": "& Komplette Einrichtung"
+      },
+      "processing": {
+        "labelFiltersLabel": "Zu überwachende Gmail-Labels",
+        "labelFiltersPlaceholder": "Posteingang, Support, benutzerdefiniertes Label",
+        "labelFiltersHelp": "Durch Kommas getrennte Liste der zu überwachenden Gmail-Labels (Standard: INBOX)"
+      }
+    },
+    "imap": {
+      "validation": {
+        "providerNameRequired": "Der Name des Anbieters ist erforderlich",
+        "mailboxRequired": "Postfach ist erforderlich",
+        "mailboxInvalid": "Gültiges Postfach ist erforderlich (z. B. user@domain.com, user@localhost, user@test-server oder user)",
+        "hostRequired": "IMAP-Host ist erforderlich",
+        "usernameRequired": "IMAP-Benutzername ist erforderlich",
+        "oauthInitiateFailed": "IMAP-OAuth konnte nicht gestartet werden"
+      },
+      "basic": {
+        "title": "Grundeinstellungen",
+        "description": "Definieren Sie die Verbindungsdetails für das IMAP-Postfach.",
+        "providerName": "Anbietername",
+        "mailboxAddress": "Postfachadresse",
+        "host": "IMAP-Host",
+        "port": "Port",
+        "useTls": "TLS/SSL verwenden",
+        "allowStarttls": "STARTTLS-Upgrade zulassen"
+      },
+      "auth": {
+        "title": "Authentifizierung",
+        "description": "Wählen Sie Passwort oder OAuth2-Authentifizierung.",
+        "typeLabel": "Authentifizierungstyp",
+        "passwordOption": "Passwort",
+        "oauth2Option": "OAuth2 (XOAUTH2)",
+        "username": "Benutzername",
+        "password": "Passwort / App-Passwort",
+        "passwordHelp": "Passwörter werden sicher gespeichert und nicht angezeigt. Lassen Sie das Feld leer, um das vorhandene Passwort beizubehalten.",
+        "oauthStatus": "OAuth-Status",
+        "connected": "Verbunden",
+        "notConnected": "Nicht verbunden",
+        "reconnectOauth": "OAuth erneut verbinden",
+        "authorizeUrl": "URL autorisieren",
+        "tokenUrl": "Token-URL",
+        "clientId": "OAuth-Client-ID",
+        "clientSecret": "OAuth-Client-Geheimnis",
+        "scopes": "OAuth-Bereiche",
+        "scopesPlaceholder": "durch Leerzeichen getrennte Bereiche"
+      },
+      "processing": {
+        "title": "Verarbeitungseinstellungen",
+        "description": "Wählen Sie Ordner und Verarbeitungsverhalten.",
+        "folderFilters": "Ordnerfilter",
+        "folderFiltersPlaceholder": "Posteingang, Support, Tickets",
+        "active": "Aktiv"
+      }
+    }
+  },
+  "inboundDefaultsForm": {
+    "feedback": {
+      "loadOptionsError": "Feldoptionen konnten nicht geladen werden",
+      "loading": "Formularoptionen werden geladen..."
+    },
+    "validation": {
+      "nameRequired": "Kurzname und Anzeigename sind erforderlich",
+      "boardRequired": "Board ist erforderlich",
+      "statusRequired": "Status ist erforderlich",
+      "priorityRequired": "Priorität ist erforderlich",
+      "clientRequired": "Firma ist erforderlich"
+    },
+    "fields": {
+      "shortName": {
+        "label": "Kurzname *",
+        "placeholder": "E-Mail-allgemein",
+        "help": "Eindeutige Kennung (z. B. E-Mail-Allgemein, Support-Abrechnung)"
+      },
+      "displayName": {
+        "label": "Anzeigename *",
+        "placeholder": "Allgemeiner E-Mail-Support"
+      },
+      "description": {
+        "label": "Beschreibung",
+        "placeholder": "Optionale Beschreibung, wann diese Standardwerte verwendet werden"
+      },
+      "active": {
+        "label": "Aktiv"
+      },
+      "board": {
+        "label": "Board *",
+        "placeholder": "Board auswählen"
+      },
+      "status": {
+        "label": "Status *",
+        "placeholder": "Status auswählen",
+        "selectBoardFirst": "Zuerst Board auswählen",
+        "loading": "Status werden geladen..."
+      },
+      "priority": {
+        "label": "Priorität *",
+        "placeholder": "Wählen Sie Priorität aus"
+      },
+      "client": {
+        "label": "Kunde *",
+        "placeholder": "Wählen Sie Kunde aus",
+        "help": "Erforderlich: Wird als Auffangkunde verwendet, wenn in der E-Mail kein Kunde zugeordnet werden kann."
+      },
+      "category": {
+        "label": "Kategorie",
+        "placeholder": "Kategorie auswählen",
+        "placeholderNoBoard": "Wählen Sie zuerst das Board aus",
+        "empty": "Für das ausgewählte Board wurden keine Kategorien gefunden."
+      },
+      "location": {
+        "label": "Standort",
+        "placeholder": "Standort auswählen",
+        "placeholderNoClient": "Wählen Sie zuerst den Kunden aus (optional)",
+        "help": "Wird nur angewendet, wenn der Auffangkunde verwendet wird (kein Treffer gefunden)."
+      },
+      "enteredBy": {
+        "label": "Eingetragen von",
+        "placeholder": "System (null)",
+        "help": "Wird nur verwendet, wenn wir keinen Kontakt oder Kunden zuordnen können. Bei Systemtickets wird „System“ als Ersteller angezeigt."
+      }
+    },
+    "section": {
+      "ticketDefaults": "Ticket-Standardeinstellungen"
+    },
+    "optionSuffix": {
+      "default": "(Standard)"
+    },
+    "actions": {
+      "cancel": "Abbrechen",
+      "updating": "Wird aktualisiert...",
+      "creating": "Wird erstellt...",
+      "update": "Standardeinstellungen aktualisieren",
+      "create": "Standardeinstellungen erstellen"
+    }
+  }
+}

@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CalendarDays, Layers, Layers2, XCircle } from 'lucide-react';
 import { IUserWithRoles } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TechnicianSidebarProps {
   technicians: IUserWithRoles[];
@@ -24,6 +25,7 @@ const TechnicianSidebar: React.FC<TechnicianSidebarProps> = ({
   onResetSelections,
   onSelectAll
 }) => {
+  const { t } = useTranslation('msp/schedule');
 
   const internalTechnicians = useMemo(() => {
     return technicians
@@ -48,7 +50,7 @@ const TechnicianSidebar: React.FC<TechnicianSidebarProps> = ({
             className="text-xs px-2 py-1 h-7"
           >
             <Layers className="h-4 w-4 mr-1" />
-            Compare All
+            {t('sidebar.actions.compareAll', { defaultValue: 'Compare All' })}
           </Button>
           <Button
             id="reset-selections-button"
@@ -59,7 +61,7 @@ const TechnicianSidebar: React.FC<TechnicianSidebarProps> = ({
             disabled={!focusedTechnicianId && comparisonTechnicianIds.length === 0}
           >
             <XCircle className="h-4 w-4 mr-1" />
-            Clear All
+            {t('sidebar.actions.clearAll', { defaultValue: 'Clear All' })}
           </Button>
         </div>
       </div>
@@ -85,7 +87,11 @@ const TechnicianSidebar: React.FC<TechnicianSidebarProps> = ({
           >
             <span className="truncate">
               {tech.first_name} {tech.last_name}
-              {isInactive && <span className="ml-1 text-xs">(Inactive)</span>}
+              {isInactive && (
+                <span className="ml-1 text-xs">
+                  {t('sidebar.labels.inactive', { defaultValue: '(Inactive)' })}
+                </span>
+              )}
             </span>
             <div className="flex items-center flex-shrink-0">
               {!isFocus && (
@@ -94,9 +100,12 @@ const TechnicianSidebar: React.FC<TechnicianSidebarProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => onSetFocus(tech.user_id)}
-                  tooltipText="View Week"
+                  tooltipText={t('sidebar.actions.viewWeek', { defaultValue: 'View Week' })}
                   tooltip={true}
-                  aria-label={`View week for ${tech.first_name} ${tech.last_name}`}
+                  aria-label={t('sidebar.aria.viewWeek', {
+                    defaultValue: 'View week for {{name}}',
+                    name: `${tech.first_name} ${tech.last_name}`,
+                  })}
                 >
                   <CalendarDays className="h-4 w-4" />
                 </Button>
@@ -107,9 +116,16 @@ const TechnicianSidebar: React.FC<TechnicianSidebarProps> = ({
                   variant={isComparing ? "default" : "ghost"}
                   size="sm"
                   onClick={() => onComparisonChange(tech.user_id, !isComparing)}
-                  tooltipText={isComparing ? "Stop Comparing" : "Compare"}
+                  tooltipText={
+                    isComparing
+                      ? t('sidebar.actions.stopComparing', { defaultValue: 'Stop Comparing' })
+                      : t('sidebar.actions.compare', { defaultValue: 'Compare' })
+                  }
                   tooltip={true}
-                  aria-label={`Compare ${tech.first_name} ${tech.last_name}`}
+                  aria-label={t('sidebar.aria.compare', {
+                    defaultValue: 'Compare {{name}}',
+                    name: `${tech.first_name} ${tech.last_name}`,
+                  })}
                 >
                   <Layers2 className="h-4 w-4" />
                 </Button>

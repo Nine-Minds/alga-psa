@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -34,7 +34,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   const [planName, setPlanName] = useState('');
   const [planType, setPlanType] = useState<PlanType | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
-  const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('advance');
+  const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('arrears');
 
   // Fixed plan state
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
@@ -221,7 +221,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
     setPlanName('');
     setPlanType(null);
     setBillingFrequency('monthly');
-    setBillingTiming('advance');
+    setBillingTiming('arrears');
     setBaseRate(undefined);
     setBaseRateInput('');
     setEnableProration(false);
@@ -292,7 +292,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       };
                       setFixedServices(next);
                     }}
-                    billingMethods={['fixed', 'per_unit']}
+                    itemKinds={['service', 'product']}
                     placeholder="Select an item"
                     className="w-full"
                   />
@@ -446,7 +446,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                         }));
                       }
                     }}
-                    billingMethods={['hourly']}
+                    itemKinds={['service']}
                     placeholder="Select a service"
                     className="w-full"
                   />
@@ -639,7 +639,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                         }));
                       }
                     }}
-                    billingMethods={['usage']}
+                    itemKinds={['service']}
                     placeholder="Select a service"
                     className="w-full"
                   />
@@ -788,9 +788,25 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
       onClose={onClose}
       title="Create Custom Contract Line"
       className="max-w-3xl"
+      footer={(
+        <div className="flex justify-end space-x-2">
+          <Button id="custom-contract-line-cancel" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            id="custom-contract-line-submit"
+            type="button"
+            onClick={() => (document.getElementById('custom-contract-line-form') as HTMLFormElement | null)?.requestSubmit()}
+            disabled={isSaving}
+            className={!planName.trim() || !planType || !billingFrequency ? 'opacity-50' : ''}
+          >
+            {isSaving ? 'Creating...' : 'Create Contract Line'}
+          </Button>
+        </div>
+      )}
     >
       <DialogContent>
-        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+        <form id="custom-contract-line-form" onSubmit={handleSubmit} className="space-y-6" noValidate>
           {hasAttemptedSubmit && validationErrors.length > 0 && (
             <Alert variant="destructive">
               <AlertDescription>
@@ -961,7 +977,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="enable-proration" className="font-medium text-[rgb(var(--color-text-800))]">
-                        Enable Proration
+                        Adjust for Partial Periods
                       </Label>
                       <Switch
                         id="enable-proration"
@@ -970,7 +986,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      When enabled, the recurring fee will be prorated for partial billing periods
+                      When enabled, the recurring fee scales to the covered portion of a service period when the contract starts or ends inside that period.
                     </p>
                   </div>
                 </>
@@ -1002,19 +1018,6 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
             </section>
           )}
 
-          <DialogFooter>
-            <Button id="custom-contract-line-cancel" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              id="custom-contract-line-submit"
-              type="submit"
-              disabled={isSaving}
-              className={!planName.trim() || !planType || !billingFrequency ? 'opacity-50' : ''}
-            >
-              {isSaving ? 'Creating...' : 'Create Contract Line'}
-            </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

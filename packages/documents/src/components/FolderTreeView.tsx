@@ -36,6 +36,7 @@ export default function FolderTreeView({
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
+  const [visibilityTogglePending, setVisibilityTogglePending] = useState<{ node: IFolderNode; newValue: boolean } | null>(null);
   const { t } = useTranslation('common');
 
   const loadFolderTree = useCallback(async function loadFolderTree() {
@@ -121,14 +122,23 @@ export default function FolderTreeView({
     }
   }
 
-  async function handleToggleVisibility(node: IFolderNode) {
+  function handleToggleVisibility(node: IFolderNode) {
     const newValue = !node.is_client_visible;
+    if (node.documentCount > 0) {
+      setVisibilityTogglePending({ node, newValue });
+    } else {
+      applyFolderVisibility(node, newValue, false);
+    }
+  }
+
+  async function applyFolderVisibility(node: IFolderNode, newValue: boolean, cascade: boolean) {
     try {
       const result = await toggleFolderVisibilityByPath(
         node.path,
         newValue,
         entityId ?? null,
-        entityType ?? null
+        entityType ?? null,
+        cascade
       );
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
@@ -278,6 +288,38 @@ export default function FolderTreeView({
           defaultValue: `Are you sure you want to delete the folder "${folderToDelete}"? This will only work if the folder is empty.`
         })}
         confirmLabel={t('documents.folders.deleteAction', 'Delete')}
+      />
+
+      <ConfirmationDialog
+        isOpen={visibilityTogglePending !== null}
+        onClose={() => {
+          if (visibilityTogglePending) {
+            applyFolderVisibility(visibilityTogglePending.node, visibilityTogglePending.newValue, false);
+          }
+          setVisibilityTogglePending(null);
+        }}
+        onConfirm={() => {
+          if (visibilityTogglePending) {
+            applyFolderVisibility(visibilityTogglePending.node, visibilityTogglePending.newValue, true);
+          }
+          setVisibilityTogglePending(null);
+        }}
+        title={t('documents.visibility.cascadeTitle', 'Update document visibility')}
+        message={
+          visibilityTogglePending?.newValue
+            ? t('documents.visibility.cascadeMakeVisible', {
+                name: visibilityTogglePending?.node.name ?? '',
+                count: visibilityTogglePending?.node.documentCount ?? 0,
+                defaultValue: `Would you also like to make all ${visibilityTogglePending?.node.documentCount ?? 0} document(s) in "${visibilityTogglePending?.node.name ?? ''}" visible to the client portal?`
+              })
+            : t('documents.visibility.cascadeMakeHidden', {
+                name: visibilityTogglePending?.node.name ?? '',
+                count: visibilityTogglePending?.node.documentCount ?? 0,
+                defaultValue: `Would you also like to hide all ${visibilityTogglePending?.node.documentCount ?? 0} document(s) in "${visibilityTogglePending?.node.name ?? ''}" from the client portal?`
+              })
+        }
+        confirmLabel={t('documents.visibility.cascadeYes', 'Yes, update documents')}
+        cancelLabel={t('documents.visibility.cascadeNo', 'No, folder only')}
       />
     </div>
   );

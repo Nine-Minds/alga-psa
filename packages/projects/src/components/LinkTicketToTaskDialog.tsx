@@ -10,6 +10,7 @@ import { getProjects, getProjectDetails } from '../actions/projectActions';
 import { addTicketLinkAction } from '../actions/projectTaskActions';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from 'react-i18next';
 
 interface LinkTicketToTaskDialogProps {
   ticket: {
@@ -23,6 +24,7 @@ interface LinkTicketToTaskDialogProps {
 export default function LinkTicketToTaskDialog({
   ticket
 }: LinkTicketToTaskDialogProps): React.JSX.Element {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [open, setOpen] = useState(false);
   const [projects, setProjects] = useState<IProject[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
@@ -125,13 +127,13 @@ export default function LinkTicketToTaskDialog({
       const task = tasks.find((t) => t.task_id === selectedTaskId);
       const phaseId = task?.phase_id || selectedPhaseId;
       await addTicketLinkAction(selectedProjectId, selectedTaskId, ticket.ticket_id, phaseId);
-      toast.success('Ticket linked to task successfully');
+      toast.success(t('dialogs.linkTicketToTask.linkedSuccess', 'Ticket linked to task successfully'));
       setOpen(false);
       setSelectedProjectId('');
       setSelectedPhaseId('');
       setSelectedTaskId('');
     } catch (error) {
-      handleError(error, 'Failed to link ticket to task');
+      handleError(error, t('dialogs.linkTicketToTask.linkTicketError', 'Failed to link ticket'));
     } finally {
       setIsLinking(false);
     }
@@ -147,14 +149,19 @@ export default function LinkTicketToTaskDialog({
         className="flex items-center"
       >
         <Link className="h-4 w-4 mr-1" />
-        Link to Task
+        {t('dialogs.linkTicketToTask.button', 'Link to Task')}
       </Button>
 
-      <Dialog isOpen={open} onClose={() => setOpen(false)} title="Link Ticket to Task" className="max-w-lg">
+      <Dialog
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        title={t('dialogs.linkTicketToTask.title', 'Link Ticket to Task')}
+        className="max-w-lg"
+      >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Project
+              {t('dialogs.linkTicketToTask.projectLabel', 'Project')}
             </label>
             <SearchableSelect
               id="link-task-project"
@@ -165,14 +172,14 @@ export default function LinkTicketToTaskDialog({
                 setSelectedTaskId('');
               }}
               options={projectOptions}
-              placeholder="Select a project"
+              placeholder={t('dialogs.linkTicketToTask.projectPlaceholder', 'Select a project')}
               dropdownMode="overlay"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Phase (optional filter)
+              {t('dialogs.linkTicketToTask.phaseLabel', 'Phase (optional filter)')}
             </label>
             <SearchableSelect
               id="link-task-phase"
@@ -182,7 +189,7 @@ export default function LinkTicketToTaskDialog({
                 setSelectedTaskId('');
               }}
               options={phaseOptions}
-              placeholder="All phases"
+              placeholder={t('dialogs.linkTicketToTask.phasePlaceholder', 'All phases')}
               disabled={!selectedProjectId || phaseOptions.length === 0}
               dropdownMode="overlay"
             />
@@ -190,14 +197,14 @@ export default function LinkTicketToTaskDialog({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Task
+              {t('dialogs.linkTicketToTask.taskLabel', 'Task')}
             </label>
             <SearchableSelect
               id="link-task-select"
               value={selectedTaskId}
               onChange={setSelectedTaskId}
               options={taskOptions}
-              placeholder="Select a task"
+              placeholder={t('dialogs.linkTicketToTask.taskPlaceholder', 'Select a task')}
               disabled={!selectedProjectId || taskOptions.length === 0}
               dropdownMode="overlay"
             />
@@ -205,14 +212,16 @@ export default function LinkTicketToTaskDialog({
         </div>
         <div className="mt-6 flex justify-end gap-2">
           <Button id="link-task-cancel" variant="ghost" onClick={() => setOpen(false)}>
-            Cancel
+            {t('common:actions.cancel', 'Cancel')}
           </Button>
           <Button
             id="link-task-confirm"
             onClick={handleLink}
             disabled={!selectedProjectId || !selectedTaskId || isLinking}
           >
-            {isLinking ? 'Linking...' : 'Link'}
+            {isLinking
+              ? t('dialogs.linkTicketToTask.linking', 'Linking...')
+              : t('dialogs.linkTicketToTask.confirm', 'Link')}
           </Button>
         </div>
       </Dialog>

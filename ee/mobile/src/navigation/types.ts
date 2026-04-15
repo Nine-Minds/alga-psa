@@ -19,6 +19,7 @@ export type RootStackParamList = {
     ticketId: string;
     qaScenario?: TicketRichTextQaScenario;
   };
+  CreateTicket: undefined;
 };
 
 export type TicketsStackParamList = {
@@ -29,3 +30,4 @@ export type TabsParamList = {
   TicketsTab: undefined;
   SettingsTab: undefined;
 };
+

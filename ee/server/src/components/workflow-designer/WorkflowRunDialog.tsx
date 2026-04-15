@@ -20,11 +20,18 @@ import {
 } from '@alga-psa/workflows/actions';
 import { getEventCatalogEntries, getEventCatalogEntryByEventType } from '@alga-psa/workflows/actions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import type { InputMapping } from '@alga-psa/workflows/runtime';
 import {
   filterEventCatalogEntries,
   getSchemaDiffSummary,
   pickEventTemplates
 } from './workflowRunDialogUtils';
+import {
+  WorkflowActionInputFixedPicker,
+  WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES,
+  type WorkflowActionInputPickerField,
+} from './WorkflowActionInputFixedPicker';
+import { resolveWorkflowSchemaFieldEditor } from './workflowSchemaFieldEditor';
 
 type JsonSchema = {
   type?: string | string[];
@@ -43,6 +50,11 @@ type JsonSchema = {
   format?: string;
   $ref?: string;
   definitions?: Record<string, JsonSchema>;
+  'x-workflow-picker-kind'?: string;
+  'x-workflow-picker-dependencies'?: string[];
+  'x-workflow-picker-fixed-value-hint'?: string;
+  'x-workflow-picker-allow-dynamic-reference'?: boolean;
+  'x-workflow-editor'?: import('@alga-psa/shared/workflow/runtime').WorkflowEditorJsonSchemaMetadata;
 };
 
 type WorkflowRunDialogProps = {
@@ -111,12 +123,71 @@ const SAMPLE_TEMPLATES: Array<{ id: string; label: string; payload: Record<strin
 ];
 
 const resolveSchemaRef = (schema: JsonSchema, root: JsonSchema): JsonSchema => {
-  if (schema.$ref && root?.definitions) {
-    const refKey = schema.$ref.replace('#/definitions/', '');
-    return root.definitions?.[refKey] ?? schema;
+  if (!schema.$ref?.startsWith('#/')) {
+    return schema;
   }
-  return schema;
+
+  const segments = schema.$ref
+    .slice(2)
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => segment.replace(/~1/g, '/').replace(/~0/g, '~'));
+
+  let current: unknown = root;
+  for (const segment of segments) {
+    if (!current || typeof current !== 'object') {
+      return schema;
+    }
+    current = (current as Record<string, unknown>)[segment];
+  }
+
+  return current && typeof current === 'object' ? (current as JsonSchema) : schema;
 };
+
+const IMPLICIT_RUN_CONTEXT_FIELD_KEYS = new Set(['tenantId']);
+
+const schemaDeclaresTopLevelProperty = (
+  schema: JsonSchema | null | undefined,
+  propertyName: string,
+  root: JsonSchema | null | undefined = schema
+): boolean => {
+  if (!schema || !root) return false;
+
+  const resolved = resolveSchemaRef(schema, root);
+  if (resolved.properties && Object.prototype.hasOwnProperty.call(resolved.properties, propertyName)) {
+    return true;
+  }
+
+  const variants = [...(resolved.anyOf ?? []), ...(resolved.oneOf ?? [])];
+  return variants.some((variant) => schemaDeclaresTopLevelProperty(variant, propertyName, root));
+};
+
+const shouldInjectImplicitTenantId = (schema: JsonSchema | null | undefined, tenantId?: string | null): boolean => (
+  Boolean(tenantId && schemaDeclaresTopLevelProperty(schema, 'tenantId'))
+);
+
+const stripImplicitRunContextFields = (payload: Record<string, unknown>): Record<string, unknown> => {
+  const next = { ...payload };
+  for (const key of IMPLICIT_RUN_CONTEXT_FIELD_KEYS) {
+    delete next[key];
+  }
+  return next;
+};
+
+const applyImplicitRunContextFields = (
+  payload: Record<string, unknown>,
+  options: { tenantId?: string | null; schema?: JsonSchema | null }
+): Record<string, unknown> => {
+  const next = stripImplicitRunContextFields(payload);
+  if (options.tenantId && shouldInjectImplicitTenantId(options.schema, options.tenantId)) {
+    next.tenantId = options.tenantId;
+  }
+  return next;
+};
+
+const isImplicitRunContextFieldPath = (path: Array<string | number>): boolean => (
+  path.length === 1 && typeof path[0] === 'string' && IMPLICIT_RUN_CONTEXT_FIELD_KEYS.has(path[0])
+);
 
 const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unknown => {
   const resolved = resolveSchemaRef(schema, root);
@@ -150,6 +221,107 @@ const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unkn
   }
 };
 
+const UUID_SAMPLE_VALUE = '00000000-0000-4000-8000-000000000001';
+
+const toDateTimeLocalInputValue = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const fromDateTimeLocalInputValue = (value: string): string => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString();
+};
+
+const buildSyntheticValueFromSchema = (schema: JsonSchema, root: JsonSchema, path: Array<string | number> = []): unknown => {
+  const resolved = resolveSchemaRef(schema, root);
+
+  if (resolved.examples?.length) {
+    return resolved.examples[0];
+  }
+  if (resolved.example !== undefined) {
+    return resolved.example;
+  }
+  if (resolved.default !== undefined) {
+    return resolved.default;
+  }
+  if (resolved.anyOf?.length) {
+    return buildSyntheticValueFromSchema(resolved.anyOf[0], root, path);
+  }
+  if (resolved.oneOf?.length) {
+    return buildSyntheticValueFromSchema(resolved.oneOf[0], root, path);
+  }
+  if (resolved.enum?.length) {
+    return resolved.enum[0];
+  }
+
+  const type = Array.isArray(resolved.type) ? resolved.type[0] : resolved.type;
+  const fieldName = String(path[path.length - 1] ?? '').toLowerCase();
+
+  switch (type) {
+    case 'object': {
+      const required = new Set(resolved.required ?? []);
+      return Object.entries(resolved.properties ?? {}).reduce<Record<string, unknown>>((acc, [key, childSchema]) => {
+        if (required.has(key) || childSchema.default !== undefined || childSchema.example !== undefined || childSchema.examples?.length || childSchema.enum?.length) {
+          acc[key] = buildSyntheticValueFromSchema(childSchema, root, [...path, key]);
+        }
+        return acc;
+      }, {});
+    }
+    case 'array': {
+      if (!resolved.items) return [];
+      return [buildSyntheticValueFromSchema(resolved.items, root, [...path, 0])];
+    }
+    case 'string': {
+      if (resolved.format === 'date-time') return new Date().toISOString();
+      if (resolved.format === 'date') return new Date().toISOString().slice(0, 10);
+      if (resolved.format === 'uuid') {
+        return UUID_SAMPLE_VALUE;
+      }
+      if (fieldName.endsWith('id') || fieldName === 'id') {
+        return `${fieldName || 'id'}-sample-123`;
+      }
+      if (fieldName.includes('email')) return 'sample@example.com';
+      if (fieldName.includes('name')) return 'Sample Name';
+      if (fieldName.includes('type')) return 'sample';
+      return fieldName ? `${fieldName}-sample` : 'sample';
+    }
+    case 'number':
+    case 'integer':
+      return 1;
+    case 'boolean':
+      return true;
+    default:
+      return null;
+  }
+};
+
+const buildInitialPayloadFromSchema = (schema: JsonSchema | null): Record<string, unknown> => {
+  if (!schema) return {};
+  const examples = schema.examples ?? (schema.example !== undefined ? [schema.example] : []);
+  const fromExample = examples.find((entry) => entry && typeof entry === 'object' && !Array.isArray(entry));
+  if (fromExample) {
+    return fromExample as Record<string, unknown>;
+  }
+  const synthetic = buildSyntheticValueFromSchema(schema, schema);
+  if (synthetic && typeof synthetic === 'object' && !Array.isArray(synthetic)) {
+    return pruneSyntheticPickerBackedFields(schema, synthetic as Record<string, unknown>);
+  }
+  const fallback = buildDefaultValueFromSchema(schema, schema);
+  return fallback && typeof fallback === 'object' && !Array.isArray(fallback)
+    ? fallback as Record<string, unknown>
+    : {};
+};
+
 const setValueAtPath = (root: unknown, path: Array<string | number>, value: unknown): unknown => {
   if (path.length === 0) return value;
   const [head, ...rest] = path;
@@ -176,6 +348,137 @@ const pathToString = (path: Array<string | number>): string =>
 
 type ValidationError = { path: string; message: string };
 
+const normalizeSchemaType = (schema?: JsonSchema): string | undefined => {
+  if (!schema?.type) return undefined;
+  if (Array.isArray(schema.type)) {
+    return schema.type.find((value) => value !== 'null') ?? schema.type[0];
+  }
+  return schema.type;
+};
+
+const WORKFLOW_RUN_DIALOG_PICKER_FALLBACKS: Record<string, { resource: string; fixedValueHint?: string }> = {
+  ticketid: { resource: 'ticket', fixedValueHint: 'Search tickets by number or title' },
+  actorcontactid: { resource: 'contact', fixedValueHint: 'Select Contact' },
+  contactid: { resource: 'contact', fixedValueHint: 'Select Contact' },
+  createdbyuserid: { resource: 'user', fixedValueHint: 'Select User' },
+  actoruserid: { resource: 'user', fixedValueHint: 'Select User' },
+  clientid: { resource: 'client', fixedValueHint: 'Select Client' },
+};
+
+const resolveConcreteFieldSchema = (schema: JsonSchema, root: JsonSchema): JsonSchema => {
+  const resolved = resolveSchemaRef(schema, root);
+
+  if (resolved.anyOf?.length) {
+    const variant = resolved.anyOf.find((candidate) => {
+      const candidateResolved = resolveSchemaRef(candidate, root);
+      const candidateType = normalizeSchemaType(candidateResolved);
+      return candidateType && candidateType !== 'null';
+    });
+    if (variant) {
+      return resolveConcreteFieldSchema(variant, root);
+    }
+  }
+
+  if (resolved.oneOf?.length) {
+    const variant = resolved.oneOf.find((candidate) => {
+      const candidateResolved = resolveSchemaRef(candidate, root);
+      const candidateType = normalizeSchemaType(candidateResolved);
+      return candidateType && candidateType !== 'null';
+    });
+    if (variant) {
+      return resolveConcreteFieldSchema(variant, root);
+    }
+  }
+
+  return resolved;
+};
+
+const resolveRunDialogPickerField = (
+  schema: JsonSchema,
+  rootSchema: JsonSchema,
+  path: Array<string | number>
+): WorkflowActionInputPickerField | null => {
+  const fieldKey = path[path.length - 1];
+  if (typeof fieldKey !== 'string') {
+    return null;
+  }
+
+  const concreteSchema = resolveConcreteFieldSchema(schema, rootSchema);
+  if (normalizeSchemaType(concreteSchema) !== 'string') {
+    return null;
+  }
+
+  // Preferred path: annotate the schema itself with x-workflow-editor / x-workflow-picker-kind
+  // so the properties dialog and run dialog light up the same picker without adding UI-only logic here.
+  const schemaEditor = resolveWorkflowSchemaFieldEditor(resolveSchemaRef(schema, rootSchema)) ?? resolveWorkflowSchemaFieldEditor(concreteSchema);
+  const schemaPickerResource = schemaEditor?.picker?.resource;
+  if (schemaEditor?.kind === 'picker' && schemaPickerResource && WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES.has(schemaPickerResource)) {
+    return {
+      name: fieldKey,
+      nullable: Array.isArray(schema.type) ? schema.type.includes('null') : false,
+      editor: schemaEditor,
+    };
+  }
+
+  // Keep fallback inference intentionally narrow. If a new schema should always render a picker,
+  // prefer adding schema metadata at the source rather than growing this name-based map indefinitely.
+  const fallback = WORKFLOW_RUN_DIALOG_PICKER_FALLBACKS[fieldKey.toLowerCase()];
+  if (!fallback || !WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES.has(fallback.resource)) {
+    return null;
+  }
+
+  return {
+    name: fieldKey,
+    nullable: Array.isArray(schema.type) ? schema.type.includes('null') : false,
+    editor: {
+      kind: 'picker',
+      fixedValueHint: fallback.fixedValueHint,
+      picker: {
+        resource: fallback.resource,
+      },
+    },
+  };
+};
+
+const pruneSyntheticPickerBackedFields = (
+  schema: JsonSchema,
+  payload: Record<string, unknown>,
+  rootSchema: JsonSchema = schema,
+  path: Array<string | number> = []
+): Record<string, unknown> => {
+  const resolved = resolveSchemaRef(schema, rootSchema);
+  const next: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(payload)) {
+    const childPath = [...path, key];
+    const childSchema = resolved.properties?.[key];
+    if (!childSchema) {
+      next[key] = value;
+      continue;
+    }
+
+    // Synthetic defaults should not pretend we know actual entity identifiers.
+    // If a field should render a picker by default, prefer leaving it blank so the user picks a real record.
+    if (resolveRunDialogPickerField(childSchema, rootSchema, childPath)) {
+      continue;
+    }
+
+    if (isObjectRecord(value)) {
+      next[key] = pruneSyntheticPickerBackedFields(childSchema, value, rootSchema, childPath);
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      next[key] = value;
+      continue;
+    }
+
+    next[key] = value;
+  }
+
+  return next;
+};
+
 const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSchema, path = ''): ValidationError[] => {
   const resolved = resolveSchemaRef(schema, root);
   const type = Array.isArray(resolved.type) ? resolved.type[0] : resolved.type;
@@ -200,6 +503,9 @@ const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSch
       }
     }
     for (const [key, propSchema] of Object.entries(knownProperties)) {
+      if (objectValue[key] === undefined) {
+        continue;
+      }
       errors.push(...validateAgainstSchema(propSchema, objectValue[key], root, path ? `${path}.${key}` : key));
     }
     if (resolved.additionalProperties === false) {
@@ -280,6 +586,8 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   const [isStartingRun, setIsStartingRun] = useState(false);
   const [mode, setMode] = useState<'json' | 'form'>('json');
   const [schemaErrors, setSchemaErrors] = useState<ValidationError[]>([]);
+  const [showValidationSummary, setShowValidationSummary] = useState(false);
+  const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
   const [presets, setPresets] = useState<Preset[]>([]);
   const [presetName, setPresetName] = useState('');
   const [confirmSystemRun, setConfirmSystemRun] = useState(false);
@@ -385,6 +693,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       } catch {}
     } else if (triggerEventName) {
       setSchemaSource('event');
+      setMode('form');
     } else {
       setSchemaSource('payload');
     }
@@ -437,10 +746,12 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       setIsLoadingEvents(true);
       try {
         const user = await getCurrentUser();
+        setCurrentTenantId(user?.tenant ?? null);
         if (!user?.tenant) return;
         const entries = await getEventCatalogEntries();
         setEventCatalogEntries(entries as EventCatalogEntry[]);
       } catch {
+        setCurrentTenantId(null);
         setEventCatalogEntries([]);
       } finally {
         setIsLoadingEvents(false);
@@ -540,11 +851,15 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   useEffect(() => {
     if (!isOpen || !hasLoadedOptions) return;
     if (payloadTouched) return;
-    const text = JSON.stringify(defaults ?? {}, null, 2);
+    const initialPayload = stripImplicitRunContextFields(schemaSource === 'event' && activeSchema
+      ? buildInitialPayloadFromSchema(activeSchema)
+      : ((defaults ?? {}) as Record<string, unknown>));
+    const text = JSON.stringify(initialPayload ?? {}, null, 2);
     setRunPayloadText(text);
-    setFormValue(defaults ?? {});
+    setFormValue(initialPayload ?? {});
     setRunPayloadError(null);
-  }, [defaults, hasLoadedOptions, isOpen, payloadTouched]);
+    setShowValidationSummary(false);
+  }, [activeSchema, defaults, hasLoadedOptions, isOpen, payloadTouched, schemaSource]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -578,9 +893,14 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
         return null;
       }
     })() : formValue;
-    const errors = validateAgainstSchema(activeSchema, value ?? {}, activeSchema);
+    const effectiveValue = applyImplicitRunContextFields(
+      isObjectRecord(value) ? value : {},
+      { tenantId: currentTenantId, schema: activeSchema }
+    );
+    const errors = validateAgainstSchema(activeSchema, effectiveValue, activeSchema)
+      .filter((error) => !IMPLICIT_RUN_CONTEXT_FIELD_KEYS.has(error.path));
     setSchemaErrors(errors);
-  }, [activeSchema, formValue, mode, runPayloadText]);
+  }, [activeSchema, currentTenantId, formValue, mode, runPayloadText]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -638,6 +958,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   const handleRunPayloadChange = (value: string) => {
     setRunPayloadText(value);
     setPayloadTouched(true);
+    setShowValidationSummary(true);
     try {
       const parsed = JSON.parse(value);
       setFormValue(parsed);
@@ -649,15 +970,20 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 
   const applyTemplate = (payload: Record<string, unknown>, options: { markTouched?: boolean } = {}) => {
     const markTouched = options.markTouched ?? true;
-    const next = JSON.stringify(payload, null, 2);
+    const sanitizedPayload = stripImplicitRunContextFields(payload);
+    const next = JSON.stringify(sanitizedPayload, null, 2);
     setRunPayloadText(next);
-    setFormValue(payload);
+    setFormValue(sanitizedPayload);
     setRunPayloadError(null);
     setPayloadTouched(markTouched);
+    setShowValidationSummary(markTouched);
   };
 
   const handleResetDefaults = () => {
-    applyTemplate((defaults ?? {}) as Record<string, unknown>, { markTouched: true });
+    const resetPayload = schemaSource === 'event' && activeSchema
+      ? buildInitialPayloadFromSchema(activeSchema)
+      : ((defaults ?? {}) as Record<string, unknown>);
+    applyTemplate(resetPayload, { markTouched: true });
   };
 
   const handleCloneLatest = async () => {
@@ -692,9 +1018,8 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   };
 
   const handleLoadPreset = (preset: Preset) => {
-    setRunPayloadText(preset.payload);
     try {
-      setFormValue(JSON.parse(preset.payload));
+      applyTemplate(JSON.parse(preset.payload) as Record<string, unknown>, { markTouched: true });
       setRunPayloadError(null);
     } catch (error) {
       setRunPayloadError(error instanceof Error ? error.message : 'Invalid JSON');
@@ -730,11 +1055,15 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     }
     let payload: Record<string, unknown> = {};
     try {
-      payload = mode === 'json' ? JSON.parse(runPayloadText || '{}') : (formValue as Record<string, unknown>);
+      payload = applyImplicitRunContextFields(
+        mode === 'json' ? JSON.parse(runPayloadText || '{}') : (formValue as Record<string, unknown>),
+        { tenantId: currentTenantId, schema: activeSchema }
+      );
     } catch (err) {
       setRunPayloadError(err instanceof Error ? err.message : 'Invalid JSON');
       return;
     }
+    setShowValidationSummary(true);
     setIsStartingRun(true);
     try {
       const result = await startWorkflowRunAction({
@@ -758,6 +1087,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 
   const updateFormValue = (updater: (prev: unknown) => unknown) => {
     setPayloadTouched(true);
+    setShowValidationSummary(true);
     setFormValue((prev: unknown) => updater(prev));
   };
 
@@ -774,7 +1104,12 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     const label = resolved.title ?? (typeof fieldKey === 'string' ? fieldKey : 'Payload');
     const isRequired = typeof fieldKey === 'string' && requiredSet.has(fieldKey);
     const fieldPath = pathToString(path);
+    if (isImplicitRunContextFieldPath(path)) {
+      return null;
+    }
+
     const fieldErrors = schemaErrors.filter((err) => err.path === fieldPath);
+    const pickerField = resolveRunDialogPickerField(resolved, rootSchema, path);
 
     const commonHeader = (
       <div className="flex items-center justify-between">
@@ -955,6 +1290,25 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       <div className="text-xs text-gray-500 mt-1">{resolved.description}</div>
     ) : null;
 
+    if (pickerField) {
+      return (
+        <div className="space-y-1">
+          {commonHeader}
+          <WorkflowActionInputFixedPicker
+            field={pickerField}
+            value={typeof value === 'string' ? value : null}
+            onChange={(nextValue) => updateFormValue((prev) => setValueAtPath(prev, path, nextValue))}
+            idPrefix={`run-form-${fieldPath || 'root'}`}
+            rootInputMapping={(isObjectRecord(formValue) ? formValue : {}) as InputMapping}
+          />
+          {description}
+          {fieldErrors.map((err) => (
+            <div key={`${fieldPath}-err`} className="text-xs text-destructive">{err.message}</div>
+          ))}
+        </div>
+      );
+    }
+
     if (resolved.enum) {
       const options: SelectOption[] = resolved.enum.map((entry) => ({
         value: String(entry),
@@ -1000,16 +1354,29 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     }
 
     const inputType = resolved.format === 'date-time' ? 'datetime-local' : resolved.format === 'date' ? 'date' : 'text';
+    const renderedValue = (() => {
+      if (value == null) return '';
+      if (resolved.format === 'date-time' && typeof value === 'string') {
+        return toDateTimeLocalInputValue(value);
+      }
+      return String(value);
+    })();
     return (
       <div className="space-y-1">
         {commonHeader}
         <Input
           id={`run-form-${fieldPath}`}
           type={type === 'number' || type === 'integer' ? 'number' : inputType}
-          value={value == null ? '' : String(value)}
+          value={renderedValue}
           onChange={(event) => {
             const raw = event.target.value;
-            const parsed = raw === '' ? null : (type === 'number' || type === 'integer' ? Number(raw) : raw);
+            const parsed = raw === ''
+              ? null
+              : (type === 'number' || type === 'integer'
+                ? Number(raw)
+                : resolved.format === 'date-time'
+                  ? fromDateTimeLocalInputValue(raw)
+                  : raw);
             updateFormValue((prev) => setValueAtPath(prev, path, parsed));
           }}
         />
@@ -1042,9 +1409,34 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     () => SAMPLE_TEMPLATES.filter((template) => !eventTemplateIds.includes(template.id)),
     [eventTemplateIds]
   );
+  const segmentedButtonClass = (active: boolean) =>
+    active
+      ? 'border-[rgb(var(--color-primary-600))] bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))]'
+      : 'border-[rgb(var(--color-border-300))] bg-white text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-background-100))]';
+  const utilityButtonClass =
+    'border-[rgb(var(--color-border-300))] bg-white text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-background-100))]';
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title="Run Workflow" className="max-w-4xl">
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Run Workflow"
+      className="max-w-4xl"
+      footer={(
+        <div className="flex justify-end space-x-2">
+          <Button id="run-dialog-close" variant="outline" onClick={onClose}>
+            Close
+          </Button>
+          <Button
+            id="run-dialog-start-run"
+            onClick={handleStartRun}
+            disabled={!canRun || isStartingRun || !!runPayloadError || (isSystem && !confirmSystemRun)}
+          >
+            {isStartingRun ? 'Starting...' : 'Start Run'}
+          </Button>
+        </div>
+      )}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
@@ -1058,9 +1450,9 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 
         <div className="space-y-4">
           {!publishedVersion && (
-            <div className="rounded border border-warning/30 bg-warning/10 p-3 text-sm text-warning-foreground space-y-2">
-              <div className="font-medium">No published version</div>
-              <div className="text-xs opacity-90">
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 shadow-sm space-y-2">
+              <div className="font-semibold">No published version</div>
+              <div className="text-xs text-amber-900">
                 You can preview the payload builder, but you must publish the workflow before starting a run.
               </div>
               {canPublish && onPublishDraft && (
@@ -1068,6 +1460,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                   <Button
                     id="run-dialog-publish-draft"
                     size="sm"
+                    className="border-[rgb(var(--color-primary-600))] bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))]"
                     onClick={() => void onPublishDraft()}
                     disabled={isPaused}
                   >
@@ -1189,7 +1582,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             )}
 
             {schemaWarning && (
-              <div className="rounded border border-warning/30 bg-warning/10 p-2 text-xs text-warning-foreground space-y-2">
+              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950 shadow-sm space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span>{schemaWarning}</span>
                   {eventSchema && schemaSource !== 'event' && (
@@ -1197,6 +1590,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                       id="run-dialog-use-event-schema"
                       variant="outline"
                       size="sm"
+                      className={utilityButtonClass}
                       onClick={() => {
                         setSchemaSource('event');
                         if (eventSchema) {
@@ -1261,10 +1655,15 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           </div>
 
           {draftVersion && publishedVersion && draftVersion !== publishedVersion && (
-            <div className="rounded border border-warning/30 bg-warning/10 p-2 text-xs text-warning-foreground flex items-center justify-between">
-              <span>Draft version differs from published (v{publishedVersion}).</span>
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950 shadow-sm flex items-center justify-between gap-3">
+              <span className="font-medium">Draft version differs from published (v{publishedVersion}).</span>
               {canPublish && onPublishDraft && (
-                <Button id="run-dialog-publish-latest" size="sm" onClick={() => onPublishDraft()}>
+                <Button
+                  id="run-dialog-publish-latest"
+                  size="sm"
+                  className="border-[rgb(var(--color-primary-600))] bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))]"
+                  onClick={() => onPublishDraft()}
+                >
                   Publish latest
                 </Button>
               )}
@@ -1288,19 +1687,49 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           )}
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button id="run-dialog-mode-json" variant={mode === 'json' ? 'default' : 'outline'} size="sm" onClick={() => setMode('json')}>
+            <Button
+              id="run-dialog-mode-json"
+              variant={mode === 'json' ? 'default' : 'outline'}
+              size="sm"
+              className={segmentedButtonClass(mode === 'json')}
+              onClick={() => setMode('json')}
+            >
               JSON Editor
             </Button>
-            <Button id="run-dialog-mode-form" variant={mode === 'form' ? 'default' : 'outline'} size="sm" onClick={() => setMode('form')}>
+            <Button
+              id="run-dialog-mode-form"
+              variant={mode === 'form' ? 'default' : 'outline'}
+              size="sm"
+              className={segmentedButtonClass(mode === 'form')}
+              onClick={() => setMode('form')}
+            >
               Form Builder
             </Button>
-            <Button id="run-dialog-reset-defaults" variant="outline" size="sm" onClick={handleResetDefaults}>
+            <Button
+              id="run-dialog-reset-defaults"
+              variant="outline"
+              size="sm"
+              className={utilityButtonClass}
+              onClick={handleResetDefaults}
+            >
               Reset to defaults
             </Button>
-            <Button id="run-dialog-copy-payload" variant="outline" size="sm" onClick={copyPayload}>
+            <Button
+              id="run-dialog-copy-payload"
+              variant="outline"
+              size="sm"
+              className={utilityButtonClass}
+              onClick={copyPayload}
+            >
               Copy payload
             </Button>
-            <Button id="run-dialog-clone-latest" variant="outline" size="sm" onClick={handleCloneLatest}>
+            <Button
+              id="run-dialog-clone-latest"
+              variant="outline"
+              size="sm"
+              className={utilityButtonClass}
+              onClick={handleCloneLatest}
+            >
               Clone latest run
             </Button>
           </div>
@@ -1387,9 +1816,10 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             <div key={warning} className="text-xs text-yellow-700">{warning}</div>
           ))}
 
-          {schemaErrors.length > 0 && (
+          {showValidationSummary && schemaErrors.length > 0 && (
             <div className="rounded border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive space-y-1">
-              <div className="font-semibold">Schema validation errors</div>
+              <div className="font-semibold">Payload still needs required event fields before this run can start</div>
+              <div>Fill the missing fields below, switch to Form Builder, or use a sample payload button.</div>
               {schemaErrors.slice(0, 6).map((err, index) => (
                 <div key={`${err.path}-${index}`}>{err.path || 'payload'}: {err.message}</div>
               ))}
@@ -1420,18 +1850,6 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           )}
         </div>
 
-        <div className="mt-6 flex justify-end gap-2">
-          <Button id="run-dialog-close" variant="outline" onClick={onClose}>
-            Close
-          </Button>
-          <Button
-            id="run-dialog-start-run"
-            onClick={handleStartRun}
-            disabled={!canRun || isStartingRun || !!runPayloadError || (isSystem && !confirmSystemRun)}
-          >
-            {isStartingRun ? 'Starting...' : 'Start Run'}
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   );

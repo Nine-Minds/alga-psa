@@ -178,10 +178,11 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
           const authToken = overrideAuthToken ?? getAccessToken?.();
           const tenantId = getTenantId?.();
           const userAgentTag = getUserAgentTag?.();
+          const isFormDataBody = typeof FormData !== "undefined" && req.body instanceof FormData;
 
           const headers = mergeHeaders({
             accept: "application/json",
-            ...(req.body === undefined ? {} : { "content-type": "application/json" }),
+            ...(req.body === undefined || isFormDataBody ? {} : { "content-type": "application/json" }),
             ...(tenantId ? { "x-tenant-id": tenantId } : {}),
             ...(userAgentTag ? { "x-alga-client": userAgentTag } : {}),
             ...req.headers,
@@ -194,7 +195,12 @@ export function createApiClient(options: CreateApiClientOptions): ApiClient {
           const response = await fetchImpl(url, {
             method: req.method,
             headers,
-            body: req.body === undefined ? undefined : JSON.stringify(req.body),
+            body:
+              req.body === undefined
+                ? undefined
+                : isFormDataBody
+                  ? (req.body as FormData)
+                  : JSON.stringify(req.body),
             signal: abortController.signal,
           });
 

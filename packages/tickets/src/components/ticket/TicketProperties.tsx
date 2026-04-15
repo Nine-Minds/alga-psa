@@ -35,10 +35,12 @@ import TicketMaterialsCard from './TicketMaterialsCard';
 import TicketWatchListCard from './TicketWatchListCard';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useDrawer } from '@alga-psa/ui';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useQuickAddClient } from '@alga-psa/ui/context';
+import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -47,6 +49,7 @@ interface TicketPropertiesProps {
   contactInfo: any;
   createdByUser: any;
   board: any;
+  isLiveTicketTimerEnabled?: boolean;
   elapsedTime: number;
   isRunning: boolean;
   isTimerLocked?: boolean;
@@ -95,7 +98,7 @@ interface TicketPropertiesProps {
 }
 
 // Helper function to format location display
-const formatLocationDisplay = (location: IClientLocation): string => {
+const formatLocationDisplay = (location: IClientLocation, unnamedLocationLabel: string): string => {
   const parts: string[] = [];
   
   if (location.location_name) {
@@ -118,7 +121,7 @@ const formatLocationDisplay = (location: IClientLocation): string => {
     parts.push(location.postal_code);
   }
   
-  return parts.join(' - ') || 'Unnamed Location';
+  return parts.join(' - ') || unnamedLocationLabel;
 };
 
 const TicketProperties: React.FC<TicketPropertiesProps> = ({
@@ -128,6 +131,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   contactInfo,
   createdByUser,
   board,
+  isLiveTicketTimerEnabled,
   elapsedTime,
   isRunning,
   isTimerLocked = false,
@@ -176,7 +180,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
 }) => {
   const { openDrawer } = useDrawer();
   const { renderQuickAddContact } = useQuickAddClient();
+  const { t } = useTranslation('features/tickets');
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
+  const liveTicketTimerEnabled = isLiveTicketTimerEnabled ?? isBoardLiveTicketTimerEnabled(board);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
@@ -377,52 +383,63 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         id={`${id}-time-entry`}
         collapsible
         defaultExpanded
-        title="Time Entry"
+        title={t('properties.timeEntry', 'Time Entry')}
         headerIcon={<Clock className="w-5 h-5" />}
       >
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span>Ticket Timer - #{ticket.ticket_number}</span>
-          </div>
-          <div className={`${styles['digital-clock']} text-2xl flex items-center justify-between px-4`}>
-            <span>{formatTime(elapsedTime)}</span>
-            <div className='pl-5'>
-              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="21" viewBox="0 0 17 21" fill="none">
-                <path d="M0.625 20.2V1L15.825 10.2571L0.625 20.2Z" fill="#000" stroke="#000" strokeWidth="0.8" />
-              </svg>
-            </div>
-          </div>
-          <div className="flex justify-center space-x-2">
-            {!isRunning ? (
-              <Button
-                {...withDataAutomationId({ id: `${id}-start-timer-btn` })}
-                onClick={onStart}
-                className={`w-24 ${isTimerLocked ? 'opacity-60' : ''}`}
-                variant='soft'
-                aria-disabled={isTimerLocked}
-                title={isTimerLocked ? 'Timer active in another window' : undefined}
-              >
-                <Play className="mr-2 h-4 w-4" /> Start
-              </Button>
-            ) : (
-              <Button {...withDataAutomationId({ id: `${id}-pause-timer-btn` })} onClick={onPause} className={`w-24`} variant='soft'>
-                <Pause className="mr-2 h-4 w-4" /> Pause
-              </Button>
-            )}
-            <Button {...withDataAutomationId({ id: `${id}-stop-timer-btn` })} onClick={onStop} className={`w-24`} variant='soft'>
-              <StopCircle className="mr-2 h-4 w-4" /> Reset
-            </Button>
-          </div>
+          {liveTicketTimerEnabled && (
+            <>
+              <div className="flex items-center justify-between">
+                <span>{t('properties.ticketTimer', 'Ticket Timer - #{{ticketNumber}}', { ticketNumber: ticket.ticket_number })}</span>
+              </div>
+              <div className={`${styles['digital-clock']} text-2xl flex items-center justify-between px-4`}>
+                <span>{formatTime(elapsedTime)}</span>
+                <div className='pl-5'>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="17" height="21" viewBox="0 0 17 21" fill="none">
+                    <path d="M0.625 20.2V1L15.825 10.2571L0.625 20.2Z" fill="#000" stroke="#000" strokeWidth="0.8" />
+                  </svg>
+                </div>
+              </div>
+              <div className="flex justify-center space-x-2">
+                {!isRunning ? (
+                  <Button
+                    {...withDataAutomationId({ id: `${id}-start-timer-btn` })}
+                    onClick={onStart}
+                    className={`w-24 ${isTimerLocked ? 'opacity-60' : ''}`}
+                    variant='soft'
+                    aria-disabled={isTimerLocked}
+                    title={isTimerLocked ? t('properties.timerActiveElsewhere', 'Timer active in another window') : undefined}
+                  >
+                    <Play className="mr-2 h-4 w-4" /> {t('properties.start', 'Start')}
+                  </Button>
+                ) : (
+                  <Button {...withDataAutomationId({ id: `${id}-pause-timer-btn` })} onClick={onPause} className={`w-24`} variant='soft'>
+                    <Pause className="mr-2 h-4 w-4" /> {t('properties.pause', 'Pause')}
+                  </Button>
+                )}
+                <Button {...withDataAutomationId({ id: `${id}-stop-timer-btn` })} onClick={onStop} className={`w-24`} variant='soft'>
+                  <StopCircle className="mr-2 h-4 w-4" /> {t('properties.reset', 'Reset')}
+                </Button>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">{t('fields.description', 'Description')}</Label>
+                <Input
+                  {...withDataAutomationId({ id: `${id}-description-input` })}
+                  id="description"
+                  value={timeDescription}
+                  onChange={(e) => onTimeDescriptionChange(e.target.value)}
+                  placeholder={t('properties.enterWorkDescription', 'Enter work description')}
+                  className={styles['custom-input']}
+                />
+              </div>
+            </>
+          )}
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Input
-              {...withDataAutomationId({ id: `${id}-description-input` })}
-              id="description"
-              value={timeDescription}
-              onChange={(e) => onTimeDescriptionChange(e.target.value)}
-              placeholder="Enter work description"
-              className={styles['custom-input']}
-            />
+            {!liveTicketTimerEnabled && (
+              <p className="text-sm text-muted-foreground" data-testid={`${id}-live-timer-disabled-message`}>
+                {t('properties.liveTimerDisabled', 'Live ticket timer is disabled for this board.')}
+              </p>
+            )}
           </div>
           <Button
             {...withDataAutomationId({ id: `${id}-add-time-entry-btn` })}
@@ -430,16 +447,16 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             className={`w-full mt-4 flex items-center justify-center`}
             onClick={onAddTimeEntry}
           >
-            <span className="mr-2">Add Time Entry</span>
+            <span className="mr-2">{t('properties.addTimeEntry', 'Add Time Entry')}</span>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="#D6BBFB">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </Button>
 
           {/* Interval Management Section */}
-          {ticket.ticket_id && userId && renderIntervalManagement && (
+          {liveTicketTimerEnabled && ticket.ticket_id && userId && renderIntervalManagement && (
             <div className="mt-2 border-t pt-4" {...withDataAutomationId({ id: `${id}-interval-management` })}>
-              <h3 className="text-sm font-medium mb-2">Tracked Intervals</h3>
+              <h3 className="text-sm font-medium mb-2">{t('properties.trackedIntervals', 'Tracked Intervals')}</h3>
               {renderIntervalManagement({ ticketId: ticket.ticket_id, userId })}
             </div>
           )}
@@ -451,12 +468,12 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         id={`${id}-contact-info`}
         collapsible
         defaultExpanded
-        title="Contact Info"
+        title={t('properties.contactInfo', 'Contact Info')}
         headerIcon={<Building className="w-5 h-5" />}
       >
         <div className="space-y-2">
           <div>
-            <h5 className="font-bold">Contact</h5>
+            <h5 className="font-bold">{t('properties.contact', 'Contact')}</h5>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
@@ -473,7 +490,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                     className="text-sm text-blue-500 cursor-pointer hover:underline"
                     onClick={onContactClick}
                   >
-                    {contactInfo?.full_name || 'No contact selected'}
+                    {contactInfo?.full_name || t('properties.noContactSelected', 'No contact selected')}
                   </p>
                   <Button
                     {...withDataAutomationId({ id: `${id}-toggle-contact-picker-btn` })}
@@ -506,7 +523,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                       value={selectedContactId ?? contactInfo?.contact_name_id ?? ''}
                       onValueChange={setSelectedContactId}
                       clientId={client?.client_id}
-                      placeholder="Select or change contact"
+                      placeholder={t('properties.selectOrChangeContact', 'Select or change contact')}
                       onAddNew={() => setIsQuickAddContactOpen(true)}
                     />
                   </div>
@@ -520,7 +537,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                         setSelectedContactId(null);
                       }}
                     >
-                      Cancel
+                      {t('actions.cancel', 'Cancel')}
                     </Button>
                     <Button
                       {...withDataAutomationId({ id: `${id}-save-contact-picker-btn` })}
@@ -531,7 +548,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                         setShowContactPicker(false);
                       }}
                     >
-                      Save
+                      {t('actions.save', 'Save')}
                     </Button>
                   </div>
                 </div>
@@ -559,16 +576,16 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             selectedClientId: ticket.client_id || client?.client_id,
           })}
           <div>
-            <h5 className="font-bold">Created By</h5>
+            <h5 className="font-bold">{t('properties.createdBy', 'Created By')}</h5>
             <p className="text-sm">
-              {createdByUser ? `${createdByUser.first_name} ${createdByUser.last_name}` : 'N/A'}
+              {createdByUser ? `${createdByUser.first_name} ${createdByUser.last_name}` : t('properties.notAvailable', 'N/A')}
             </p>
           </div>
           <div>
-            <h5 className="font-bold">Created</h5>
+            <h5 className="font-bold">{t('fields.created', 'Created')}</h5>
             <p className="text-sm">
               {(() => {
-                if (!ticket.entered_at) return 'N/A';
+                if (!ticket.entered_at) return t('properties.notAvailable', 'N/A');
                 try {
                   const tz = getUserTimeZone();
                   const local = utcToLocal(ticket.entered_at, tz);
@@ -580,7 +597,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             </p>
           </div>
           <div>
-            <h5 className="font-bold">Client</h5>
+            <h5 className="font-bold">{t('fields.client', 'Client')}</h5>
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 {client && (
@@ -595,7 +612,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   className="text-sm text-blue-500 cursor-pointer hover:underline"
                   onClick={onClientClick}
                 >
-                  {client?.client_name || 'N/A'}
+                  {client?.client_name || t('properties.notAvailable', 'N/A')}
                 </p>
                 <Button
                   {...withDataAutomationId({ id: `${id}-show-client-picker-btn` })}
@@ -634,7 +651,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                         setSelectedClientId(null);
                       }}
                     >
-                      Cancel
+                      {t('actions.cancel', 'Cancel')}
                     </Button>
                     <Button
                       {...withDataAutomationId({ id: `${id}-save-client-picker-btn` })}
@@ -647,7 +664,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                         setShowClientPicker(false);
                       }}
                     >
-                      Save
+                      {t('actions.save', 'Save')}
                     </Button>
                   </div>
                 </div>
@@ -656,22 +673,24 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           </div>
           {client && locations.length > 0 && (
             <div>
-              <h5 className="font-bold">Location</h5>
+              <h5 className="font-bold">{t('properties.location', 'Location')}</h5>
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <p className="text-sm">
                     {(() => {
+                      const unnamedLocationLabel = t('quickAdd.unnamedLocation', 'Unnamed Location');
+                      const defaultSuffix = t('properties.defaultSuffix', '(Default)');
                       // If ticket has a location, show it
                       if (ticket.location) {
-                        return formatLocationDisplay(ticket.location);
+                        return formatLocationDisplay(ticket.location, unnamedLocationLabel);
                       }
                       // Otherwise, show the default location if one exists
                       const defaultLocation = locations.find(l => l.is_default);
                       if (defaultLocation) {
-                        return `${formatLocationDisplay(defaultLocation)} (Default)`;
+                        return `${formatLocationDisplay(defaultLocation, unnamedLocationLabel)} ${defaultSuffix}`;
                       }
                       // Otherwise show no location
-                      return 'No location specified';
+                      return t('properties.noLocationSpecified', 'No location specified');
                     })()}
                   </p>
                   <Button
@@ -691,13 +710,16 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                       value={selectedLocationId || ticket.location?.location_id || 'none'}
                       onValueChange={(value) => setSelectedLocationId(value === 'none' ? null : value)}
                       options={[
-                        { value: 'none', label: 'No specific location' },
+                        { value: 'none', label: t('properties.noSpecificLocation', 'No specific location') },
                         ...locations.map((location) => ({
                           value: location.location_id,
-                          label: formatLocationDisplay(location) + (location.is_default ? ' (Default)' : '')
+                          label: formatLocationDisplay(
+                            location,
+                            t('quickAdd.unnamedLocation', 'Unnamed Location')
+                          ) + (location.is_default ? ` ${t('properties.defaultSuffix', '(Default)')}` : '')
                         }))
                       ]}
-                      placeholder="Select location"
+                      placeholder={t('properties.selectLocation', 'Select location')}
                       className="w-full"
                     />
                     <div className="flex justify-end space-x-2">
@@ -710,7 +732,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                           setSelectedLocationId(null);
                         }}
                       >
-                        Cancel
+                        {t('actions.cancel', 'Cancel')}
                       </Button>
                       <Button
                         {...withDataAutomationId({ id: `${id}-save-location-picker-btn` })}
@@ -723,7 +745,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                           setShowLocationPicker(false);
                         }}
                       >
-                        Save
+                        {t('actions.save', 'Save')}
                       </Button>
                     </div>
                   </div>
@@ -732,18 +754,26 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             </div>
           )}
           <div>
-            <h5 className="font-bold">{contactInfo ? 'Contact Phone' : 'Client Phone'}</h5>
+            <h5 className="font-bold">
+              {contactInfo
+                ? t('properties.contactPhone', 'Contact Phone')
+                : t('properties.clientPhone', 'Client Phone')}
+            </h5>
             <p className="text-sm">
               {contactInfo?.default_phone_number
                 || contactInfo?.phone_numbers?.find((phoneNumber: { is_default?: boolean; phone_number?: string }) => phoneNumber.is_default)?.phone_number
                 || client?.phone_no
-                || 'N/A'}
+                || t('properties.notAvailable', 'N/A')}
             </p>
           </div>
           <div>
-            <h5 className="font-bold">{contactInfo ? 'Contact Email' : 'Client Email'}</h5>
+            <h5 className="font-bold">
+              {contactInfo
+                ? t('properties.contactEmail', 'Contact Email')
+                : t('properties.clientEmail', 'Client Email')}
+            </h5>
             <p className="text-sm">
-              {contactInfo?.email || client?.email || 'N/A'}
+              {contactInfo?.email || client?.email || t('properties.notAvailable', 'N/A')}
             </p>
           </div>
         </div>
@@ -753,7 +783,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         id={`${id}-agent-team`}
         collapsible
         defaultExpanded={!isAgentTeamEmpty}
-        title="Agent team"
+        title={t('properties.agentTeam', 'Agent team')}
         headerIcon={<Users className="w-5 h-5" />}
         count={(ticket.assigned_to ? 1 : 0) + additionalAgents.length}
       >
@@ -765,7 +795,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 type="button"
                 onClick={() => setShowAppointmentTooltip(prev => !prev)}
                 className="flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                title="Appointment requests"
+                title={t('properties.appointmentRequests', 'Appointment requests')}
               >
                 <CalendarCheck className="h-4 w-4 mr-1" />
                 <span>{appointmentRequests.length}</span>
@@ -785,7 +815,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                           : typeof dateVal === 'string' ? dateVal.slice(0, 10) : null;
                         const timeStr = typeof request.requested_time === 'string'
                           ? request.requested_time.slice(0, 5) : null;
-                        let displayDateTime = 'N/A';
+                        let displayDateTime = t('properties.notAvailable', 'N/A');
                         if (dateStr && timeStr) {
                           try {
                             const dt = new Date(`${dateStr}T${timeStr}:00Z`);
@@ -811,39 +841,39 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                               setShowAppointmentTooltip(false);
                               openDrawer(
                                 <div className="p-6 space-y-4">
-                                  <h2 className="text-lg font-semibold">Appointment Request</h2>
+                                  <h2 className="text-lg font-semibold">{t('properties.appointmentRequest', 'Appointment Request')}</h2>
                                   <div className="space-y-3">
                                     <div>
-                                      <span className="text-sm text-gray-500">Service</span>
-                                      <p className="text-sm font-medium">{request.service_name || 'N/A'}</p>
+                                      <span className="text-sm text-gray-500">{t('properties.service', 'Service')}</span>
+                                      <p className="text-sm font-medium">{request.service_name || t('properties.notAvailable', 'N/A')}</p>
                                     </div>
                                     <div>
-                                      <span className="text-sm text-gray-500">Status</span>
+                                      <span className="text-sm text-gray-500">{t('fields.status', 'Status')}</span>
                                       <p><span className={`text-xs px-2 py-0.5 rounded ${statusColor}`}>{request.status}</span></p>
                                     </div>
                                     <div>
-                                      <span className="text-sm text-gray-500">Requested Date & Time</span>
+                                      <span className="text-sm text-gray-500">{t('properties.requestedDateTime', 'Requested Date & Time')}</span>
                                       <p className="text-sm font-medium">{displayDateTime}</p>
                                     </div>
                                     <div>
-                                      <span className="text-sm text-gray-500">Duration</span>
-                                      <p className="text-sm font-medium">{request.requested_duration} minutes</p>
+                                      <span className="text-sm text-gray-500">{t('properties.duration', 'Duration')}</span>
+                                      <p className="text-sm font-medium">{request.requested_duration} {t('ticketSection.minutes', 'minutes')}</p>
                                     </div>
                                     {request.description && (
                                       <div>
-                                        <span className="text-sm text-gray-500">Description</span>
+                                        <span className="text-sm text-gray-500">{t('fields.description', 'Description')}</span>
                                         <p className="text-sm">{request.description}</p>
                                       </div>
                                     )}
                                     {request.contact_name && (
                                       <div>
-                                        <span className="text-sm text-gray-500">Contact</span>
+                                        <span className="text-sm text-gray-500">{t('properties.contact', 'Contact')}</span>
                                         <p className="text-sm font-medium">{request.contact_name}</p>
                                       </div>
                                     )}
                                     {request.approved_at && (
                                       <div>
-                                        <span className="text-sm text-gray-500">Approved At</span>
+                                        <span className="text-sm text-gray-500">{t('properties.approvedAt', 'Approved At')}</span>
                                         <p className="text-sm font-medium">
                                           {new Date(request.approved_at).toLocaleString('en-US', {
                                             month: 'short', day: 'numeric', year: 'numeric',
@@ -854,7 +884,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                                     )}
                                     {request.decline_reason && (
                                       <div>
-                                        <span className="text-sm text-gray-500">Decline Reason</span>
+                                        <span className="text-sm text-gray-500">{t('properties.declineReason', 'Decline Reason')}</span>
                                         <p className="text-sm text-red-600">{request.decline_reason}</p>
                                       </div>
                                     )}
@@ -866,7 +896,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                           >
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-medium text-gray-900 truncate">
-                                {request.service_name || 'Appointment'}
+                                {request.service_name || t('properties.appointmentFallback', 'Appointment')}
                               </span>
                               <span className={`text-xs px-1.5 py-0.5 rounded ${statusColor}`}>
                                 {request.status}
@@ -898,11 +928,11 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               <div className="flex items-center gap-1 bg-gray-100 rounded-full pl-1 pr-2 py-1">
                 <TeamAvatar
                   teamId={ticket.assigned_team_id!}
-                  teamName={team?.team_name || 'Team'}
+                  teamName={team?.team_name || t('properties.team', 'Team')}
                   avatarUrl={teamAvatarUrl}
                   size="sm"
                 />
-                <span className="text-sm">{team?.team_name || 'Assigned Team'}</span>
+                <span className="text-sm">{team?.team_name || t('properties.assignedTeamFallback', 'Assigned Team')}</span>
                 <div
                   role="button"
                   tabIndex={0}
@@ -919,9 +949,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 </div>
               </div>
               <span className="text-xs text-gray-500">
-                Lead: {team?.members?.find(m => m.role === 'lead' || m.user_id === team.manager_id)
+                {t('properties.lead', 'Lead')}: {team?.members?.find(m => m.role === 'lead' || m.user_id === team.manager_id)
                   ? `${team.members.find(m => m.role === 'lead' || m.user_id === team.manager_id)!.first_name || ''} ${team.members.find(m => m.role === 'lead' || m.user_id === team.manager_id)!.last_name || ''}`.trim()
-                  : 'Unknown'}
+                  : t('properties.unknown', 'Unknown')}
               </span>
             </div>
           </div>
@@ -929,7 +959,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         <div className="space-y-4">
           {/* Primary Agent */}
           <div>
-            <h5 className="font-bold mb-2">Primary Agent</h5>
+            <h5 className="font-bold mb-2">{t('properties.primaryAgent', 'Primary Agent')}</h5>
             {ticket.assigned_to ? (
               <div
                 className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
@@ -944,17 +974,28 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 />
                 <div className="flex flex-col">
                   <span className="text-sm">
-                    {availableAgents.find(a => a.user_id === ticket.assigned_to)?.first_name || 'Unknown'}{' '}
-                    {availableAgents.find(a => a.user_id === ticket.assigned_to)?.last_name || 'Agent'}
+                    {(() => {
+                      const assignedAgent = availableAgents.find(a => a.user_id === ticket.assigned_to);
+                      if (!assignedAgent) {
+                        return t('properties.unknownAgent', 'Unknown Agent');
+                      }
+
+                      const fullName = `${assignedAgent.first_name || ''} ${assignedAgent.last_name || ''}`.trim();
+                      return fullName || t('properties.unknownAgent', 'Unknown Agent');
+                    })()}
                   </span>
                   <div className="flex items-center text-xs text-gray-500 mt-1">
                     <Clock className="w-3 h-3 mr-1" />
-                    <span>Scheduled: {formatMinutesAsHoursAndMinutes(getAgentScheduledHours(ticket.assigned_to!))}</span>
+                    <span>
+                      {t('properties.scheduled', 'Scheduled: {{time}}', {
+                        time: formatMinutesAsHoursAndMinutes(getAgentScheduledHours(ticket.assigned_to!)),
+                      })}
+                    </span>
                   </div>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No primary agent assigned</p>
+              <p className="text-sm text-gray-500">{t('properties.noPrimaryAgentAssigned', 'No primary agent assigned')}</p>
             )}
           </div>
 
@@ -976,7 +1017,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
 
           {/* Additional Agents */}
           <div>
-            <h5 className="font-bold mb-2">Additional Agents</h5>
+            <h5 className="font-bold mb-2">{t('properties.additionalAgents', 'Additional Agents')}</h5>
             {teamsV2Enabled ? (
               <MultiUserAndTeamPicker
                 id={`${id}-additional-agents`}
@@ -984,7 +1025,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                 getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
                 teams={teams}
-                teamSectionLabel="Add Team Members"
+                teamSectionLabel={t('quickAdd.addTeamMembers', 'Add Team Members')}
                 onTeamValuesChange={(selectedTeamIds) => {
                   // When a team is selected, assign the team — assignTeamToTicket already
                   // expands team members into ticket_resources, so we must NOT also call
@@ -1030,7 +1071,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 }}
                 users={availableAgents.filter(agent => agent.user_id !== ticket.assigned_to)}
                 size="sm"
-                placeholder="Select additional agents..."
+                placeholder={t('properties.selectAdditionalAgents', 'Select additional agents...')}
                 onUserClick={onAgentClick}
               />
             ) : (
@@ -1068,7 +1109,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 }}
                 users={availableAgents.filter(agent => agent.user_id !== ticket.assigned_to)}
                 size="sm"
-                placeholder="Select additional agents..."
+                placeholder={t('properties.selectAdditionalAgents', 'Select additional agents...')}
                 onUserClick={onAgentClick}
               />
             )}
@@ -1102,15 +1143,53 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       {surveySummaryCard}
 
     </div>
-      {teamsV2Enabled && ticket.assigned_team_id && (
+      {teamsV2Enabled && ticket.assigned_team_id && (() => {
+        const removeTeamFooter = (
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="remove-team-cancel-btn"
+              variant="outline"
+              onClick={() => {
+                setPendingSwitchTeamId(null);
+                setIsRemoveTeamDialogOpen(false);
+              }}
+            >
+              {t('actions.cancel', 'Cancel')}
+            </Button>
+            <Button
+              id="remove-team-confirm-btn"
+              variant="default"
+              onClick={async () => {
+                if (onRemoveTeamAssignment) {
+                  await onRemoveTeamAssignment(
+                    removeTeamMode,
+                    removeTeamMode === 'selective' ? selectedTeamMemberIds : undefined
+                  );
+                }
+                // If switching to a new team, assign it after the old one is removed
+                if (pendingSwitchTeamId && onAssignTeam) {
+                  await onAssignTeam(pendingSwitchTeamId);
+                }
+                setPendingSwitchTeamId(null);
+                setIsRemoveTeamDialogOpen(false);
+              }}
+            >
+              {t('actions.confirm', 'Confirm')}
+            </Button>
+          </div>
+        );
+        return (
         <Dialog
           isOpen={isRemoveTeamDialogOpen}
           onClose={() => {
             setPendingSwitchTeamId(null);
             setIsRemoveTeamDialogOpen(false);
           }}
-          title={pendingSwitchTeamId ? "Switch team assignment" : "Remove team assignment"}
+          title={pendingSwitchTeamId
+            ? t('properties.switchTeamAssignment', 'Switch team assignment')
+            : t('properties.removeTeamAssignment', 'Remove team assignment')}
           id={`${id}-remove-team-dialog`}
+          footer={removeTeamFooter}
         >
         <DialogContent className="space-y-4">
           <div className="space-y-3">
@@ -1122,7 +1201,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 checked={removeTeamMode === 'remove_all'}
                 onChange={() => setRemoveTeamMode('remove_all')}
               />
-              <span>Remove all team members</span>
+              <span>{t('properties.removeTeamMode.removeAll', 'Remove all team members')}</span>
             </label>
             <label className="flex items-start gap-2 text-sm">
               <input
@@ -1132,7 +1211,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 checked={removeTeamMode === 'keep_all'}
                 onChange={() => setRemoveTeamMode('keep_all')}
               />
-              <span>Keep all team members as individual agents</span>
+              <span>{t('properties.removeTeamMode.keepAll', 'Keep all team members as individual agents')}</span>
             </label>
             <label className="flex items-start gap-2 text-sm">
               <input
@@ -1142,19 +1221,19 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 checked={removeTeamMode === 'selective'}
                 onChange={() => setRemoveTeamMode('selective')}
               />
-              <span>Select individual members to keep/remove</span>
+              <span>{t('properties.removeTeamMode.selective', 'Select individual members to keep/remove')}</span>
             </label>
           </div>
           {removeTeamMode === 'selective' && (
             <div className="space-y-2 border border-gray-100 rounded p-3">
               {teamMembersOnTicket.length === 0 ? (
-                <div className="text-sm text-gray-500">No team members found on this ticket.</div>
+                <div className="text-sm text-gray-500">{t('properties.noTeamMembersFound', 'No team members found on this ticket.')}</div>
               ) : (
                 teamMembersOnTicket.map(member => {
                   const memberId = member.additional_user_id!;
                   const agent = availableAgents.find(a => a.user_id === memberId);
                   const memberName = agent
-                    ? `${agent.first_name || ''} ${agent.last_name || ''}`.trim() || 'Unnamed User'
+                    ? `${agent.first_name || ''} ${agent.last_name || ''}`.trim() || t('properties.unnamedUser')
                     : memberId;
 
                   return (
@@ -1178,40 +1257,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             </div>
           )}
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id="remove-team-cancel-btn"
-            variant="outline"
-            onClick={() => {
-              setPendingSwitchTeamId(null);
-              setIsRemoveTeamDialogOpen(false);
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            id="remove-team-confirm-btn"
-            variant="default"
-            onClick={async () => {
-              if (onRemoveTeamAssignment) {
-                await onRemoveTeamAssignment(
-                  removeTeamMode,
-                  removeTeamMode === 'selective' ? selectedTeamMemberIds : undefined
-                );
-              }
-              // If switching to a new team, assign it after the old one is removed
-              if (pendingSwitchTeamId && onAssignTeam) {
-                await onAssignTeam(pendingSwitchTeamId);
-              }
-              setPendingSwitchTeamId(null);
-              setIsRemoveTeamDialogOpen(false);
-            }}
-          >
-            Confirm
-          </Button>
-        </DialogFooter>
       </Dialog>
-      )}
+      );
+      })()}
     </>
   );
 };

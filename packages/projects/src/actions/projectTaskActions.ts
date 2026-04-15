@@ -15,6 +15,7 @@ import type {
   IProjectTaskDependency,
   IProjectTicketLink,
   IProjectTicketLinkWithDetails,
+  ITicketLinkedTask,
   ITag,
   ITaskChecklistItem,
   ITaskType,
@@ -28,6 +29,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { omit } from 'lodash';
+import { getScopedProjectStatusMappings, ProjectStatusMappingDetails } from '../lib/projectStatusMappingUtils';
 import {
     createTaskSchema,
     updateTaskSchema,
@@ -43,7 +45,7 @@ import {
   buildProjectTaskDependencyBlockedPayload,
   buildProjectTaskDependencyUnblockedPayload,
   buildProjectTaskStatusChangedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 // Helper functions for workflow events
 async function resolveProjectStatusInfo(
@@ -72,6 +74,84 @@ async function resolveProjectStatusInfo(
   }
 
   return { status: row.status_name, isClosed: Boolean(row.is_closed) };
+}
+
+
+async function getEffectiveProjectStatusMappings(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectId: string,
+  phaseId?: string | null
+): Promise<ProjectStatusMappingDetails[]> {
+  if (!phaseId) {
+    return getScopedProjectStatusMappings(trx, tenant, projectId);
+  }
+
+  const phaseMappings = await getScopedProjectStatusMappings(trx, tenant, projectId, phaseId);
+  if (phaseMappings.length > 0) {
+    return phaseMappings;
+  }
+
+  return getScopedProjectStatusMappings(trx, tenant, projectId);
+}
+
+async function getProjectStatusMappingDetails(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectStatusMappingId: string
+): Promise<ProjectStatusMappingDetails | null> {
+  const row = await trx('project_status_mappings as psm')
+    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
+      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
+    })
+    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+    })
+    .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
+    .select(
+      'psm.*',
+      trx.raw('COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name'),
+      trx.raw('COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as name'),
+      trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+    )
+    .first<ProjectStatusMappingDetails>();
+
+  return row ?? null;
+}
+
+function resolveSameProjectTargetStatusMapping(
+  sourceMapping: ProjectStatusMappingDetails,
+  targetMappings: ProjectStatusMappingDetails[]
+): ProjectStatusMappingDetails | null {
+  const existingTargetMapping = targetMappings.find((mapping) =>
+    mapping.project_status_mapping_id === sourceMapping.project_status_mapping_id
+  );
+
+  if (existingTargetMapping) {
+    return existingTargetMapping;
+  }
+
+  const sameNameMapping = targetMappings.find((mapping) =>
+    mapping.status_name === sourceMapping.status_name
+  );
+
+  if (sameNameMapping) {
+    return sameNameMapping;
+  }
+
+  if (!sourceMapping.is_closed) {
+    const firstOpenMapping = targetMappings.find((mapping) => !mapping.is_closed);
+    if (firstOpenMapping) {
+      return firstOpenMapping;
+    }
+  } else {
+    const firstClosedMapping = targetMappings.find((mapping) => mapping.is_closed);
+    if (firstClosedMapping) {
+      return firstClosedMapping;
+    }
+  }
+
+  return targetMappings[0] ?? null;
 }
 
 function resolveTaskBlockRelation(params: {
@@ -558,6 +638,23 @@ export const getTaskTicketLinksAction = withAuth(async (
     }
 });
 
+export const getLinkedTasksForTicketAction = withAuth(async (
+    user,
+    { tenant },
+    ticketId: string
+): Promise<ITicketLinkedTask[]> => {
+    try {
+        const {knex: db} = await createTenantKnex();
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'read', trx);
+            return await ProjectTaskModel.getLinkedTasksForTicket(trx, tenant, ticketId);
+        });
+    } catch (error) {
+        console.error('Error getting linked tasks for ticket:', error);
+        throw error;
+    }
+});
+
 export const getTasksForPhase = withAuth(async (
     user,
     { tenant },
@@ -972,7 +1069,8 @@ export const moveTaskToPhase = withAuth(async (
             // Always use the provided status mapping ID if it exists
             let finalStatusMappingId = newStatusMappingId || existingTask.project_status_mapping_id;
 
-            // If moving to a different project and no specific status mapping is provided
+            // Preserve the existing cross-project remapping behavior.
+            // Same-project phase-aware remapping is handled in the branch below.
             if (currentPhase.project_id !== newPhase.project_id && !newStatusMappingId) {
                 // Get current status mapping
                 const currentMapping = await ProjectModel.getProjectStatusMapping(trx, tenant, existingTask.project_status_mapping_id);
@@ -1030,6 +1128,29 @@ export const moveTaskToPhase = withAuth(async (
 
                     finalStatusMappingId = equivalentMapping.project_status_mapping_id;
                 }
+            } else if (currentPhase.project_id === newPhase.project_id && currentPhase.phase_id !== newPhase.phase_id && !newStatusMappingId) {
+                const currentMapping = await getProjectStatusMappingDetails(trx, tenant, existingTask.project_status_mapping_id);
+                if (!currentMapping) {
+                    throw new Error('Current status mapping not found');
+                }
+
+                const targetPhaseMappings = await getEffectiveProjectStatusMappings(
+                    trx,
+                    tenant,
+                    newPhase.project_id,
+                    newPhase.phase_id
+                );
+
+                if (targetPhaseMappings.length === 0) {
+                    throw new Error('No valid status mappings found in target phase');
+                }
+
+                const resolvedMapping = resolveSameProjectTargetStatusMapping(currentMapping, targetPhaseMappings);
+                if (!resolvedMapping) {
+                    throw new Error('No valid status mappings found in target phase');
+                }
+
+                finalStatusMappingId = resolvedMapping.project_status_mapping_id;
             }
 
             // Generate new WBS code for the task
@@ -1078,6 +1199,7 @@ export const moveTaskToPhase = withAuth(async (
                 // Preserve other important fields
                 task_name: existingTask.task_name,
                 description: existingTask.description,
+                description_rich_text: existingTask.description_rich_text,
                 assigned_to: existingTask.assigned_to,
                 estimated_hours: existingTask.estimated_hours,
                 actual_hours: existingTask.actual_hours,
@@ -1253,6 +1375,7 @@ export const duplicateTaskToPhase = withAuth(async (
             const newTaskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'wbs_code' | 'created_at' | 'updated_at' | 'tenant'> = {
                 task_name: originalTask.task_name + ' (Copy)', // Add (Copy) suffix
                 description: originalTask.description,
+                description_rich_text: originalTask.description_rich_text,
                 due_date: originalTask.due_date,
                 estimated_hours: originalTask.estimated_hours,
                 actual_hours: 0, // Reset actual hours for the new task

@@ -31,6 +31,7 @@ export interface IProjectTemplateTask extends TenantEntity {
   template_phase_id: string;
   task_name: string;
   description?: string;
+  description_rich_text?: string;
   estimated_hours?: number;
   duration_days?: number;
   task_type_key?: string;
@@ -64,6 +65,7 @@ export interface IProjectTemplateChecklistItem extends TenantEntity {
 export interface IProjectTemplateStatusMapping extends TenantEntity {
   template_status_mapping_id: string;
   template_id: string;
+  template_phase_id?: string;
   status_id?: string;
   custom_status_name?: string;
   display_order: number;

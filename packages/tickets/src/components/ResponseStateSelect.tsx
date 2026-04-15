@@ -3,7 +3,8 @@
 import React from 'react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { TicketResponseState } from '@alga-psa/types';
-import { ResponseStateBadge, getResponseStateLabel } from '@alga-psa/ui/components';
+import { ResponseStateBadge } from '@alga-psa/ui/components';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ResponseStateSelectProps {
   value: TicketResponseState;
@@ -11,12 +12,6 @@ interface ResponseStateSelectProps {
   disabled?: boolean;
   className?: string;
 }
-
-const responseStateOptions = [
-  { value: 'awaiting_client', label: 'Awaiting Client' },
-  { value: 'awaiting_internal', label: 'Awaiting Internal' },
-  { value: 'clear', label: 'Clear' },
-];
 
 /**
  * ResponseStateSelect provides a dropdown to manually set or clear the response state.
@@ -28,6 +23,13 @@ export function ResponseStateSelect({
   disabled = false,
   className,
 }: ResponseStateSelectProps) {
+  const { t } = useTranslation('features/tickets');
+  const responseStateOptions = [
+    { value: 'awaiting_client', label: t('responseState.awaitingClient', 'Awaiting Client') },
+    { value: 'awaiting_internal', label: t('responseState.awaitingInternal', 'Awaiting Internal') },
+    { value: 'clear', label: t('responseState.clear', 'Clear') },
+  ];
+
   const handleChange = (newValue: string) => {
     if (newValue === 'clear') {
       onValueChange(null);
@@ -45,7 +47,7 @@ export function ResponseStateSelect({
 
   // If there's no current value, show "Set Response State" as placeholder
   const displayValue = value || '';
-  const placeholder = 'Set Response State';
+  const placeholder = t('responseState.setResponseState', 'Set Response State');
 
   return (
     <div className={className}>
@@ -81,14 +83,16 @@ export function ResponseStateDisplay({
   showLabel = true,
   className,
 }: ResponseStateDisplayProps) {
+  const { t } = useTranslation('features/tickets');
+
   if (!editable) {
     return (
       <div className={className}>
-        {showLabel && <h5 className="font-bold mb-2">Response State</h5>}
+        {showLabel && <h5 className="font-bold mb-2">{t('responseState.label', 'Response State')}</h5>}
         {value ? (
           <ResponseStateBadge responseState={value} size="md" />
         ) : (
-          <span className="text-sm text-gray-500">Not set</span>
+          <span className="text-sm text-gray-500">{t('responseState.notSet', 'Not set')}</span>
         )}
       </div>
     );
@@ -96,7 +100,7 @@ export function ResponseStateDisplay({
 
   return (
     <div className={className}>
-      {showLabel && <h5 className="font-bold mb-2">Response State</h5>}
+      {showLabel && <h5 className="font-bold mb-2">{t('responseState.label', 'Response State')}</h5>}
       {onValueChange && (
         <ResponseStateSelect
           value={value}

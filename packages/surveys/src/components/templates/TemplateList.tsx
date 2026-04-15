@@ -1,8 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { formatDistanceToNow } from 'date-fns';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { SurveyTemplate } from '@alga-psa/surveys/actions/surveyActions';
 import {
   updateSurveyTemplate,
@@ -37,7 +36,9 @@ interface TemplateListProps {
 }
 
 export function TemplateList({ templates, isLoading, onTemplatesChange, onRefresh }: TemplateListProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('msp/surveys');
+  const { t: tCommon } = useTranslation('common');
+  const { formatRelativeTime } = useFormatters();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<SurveyTemplate | null>(null);
@@ -67,14 +68,16 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('settings.templateList.delete.validationFailed', {
+          defaultValue: 'Failed to validate deletion. Please try again.',
+        }),
         dependencies: [],
-        alternatives: []
+        alternatives: [],
       });
     } finally {
       setIsDeleteValidating(false);
     }
-  }, []);
+  }, [t]);
 
   const sortedTemplates = useMemo(
     () =>
@@ -125,13 +128,17 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
         prev.map((item) => (item.templateId === updated.templateId ? updated : item))
       );
       toast({
-        title: t('surveys.settings.templateList.toasts.updated', 'Template updated'),
+        title: t('settings.templateList.toasts.updated', {
+          defaultValue: 'Template updated',
+        }),
         description: updated.templateName,
       });
     } catch (error) {
       console.error('[TemplateList] Failed to toggle template enabled', error);
       toast({
-        title: t('surveys.settings.templateList.toasts.error', 'Unable to save template'),
+        title: t('settings.templateList.toasts.error', {
+          defaultValue: 'Unable to save template',
+        }),
         description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
@@ -151,13 +158,17 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
         }))
       );
       toast({
-        title: t('surveys.settings.templateList.toasts.setDefault', 'Default template updated'),
+        title: t('settings.templateList.toasts.setDefault', {
+          defaultValue: 'Default template updated',
+        }),
         description: updated.templateName,
       });
     } catch (error) {
       console.error('[TemplateList] Failed to set default template', error);
       toast({
-        title: t('surveys.settings.templateList.toasts.error', 'Unable to save template'),
+        title: t('settings.templateList.toasts.error', {
+          defaultValue: 'Unable to save template',
+        }),
         description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
@@ -183,7 +194,9 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
       if (result.success) {
         onTemplatesChange((prev) => prev.filter((item) => item.templateId !== deleteTarget.templateId));
         toast({
-          title: t('surveys.settings.templateList.toasts.deleted', 'Template deleted'),
+          title: t('settings.templateList.toasts.deleted', {
+            defaultValue: 'Template deleted',
+          }),
           description: deleteTarget.templateName,
         });
         resetDeleteState();
@@ -195,9 +208,14 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: error instanceof Error ? error.message : 'Unable to delete template',
+        message:
+          error instanceof Error
+            ? error.message
+            : t('settings.templateList.delete.error', {
+                defaultValue: 'Unable to delete template',
+              }),
         dependencies: [],
-        alternatives: []
+        alternatives: [],
       });
     } finally {
       setIsDeleteProcessing(false);
@@ -211,7 +229,9 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
     } catch (error) {
       console.error('[TemplateList] Failed to refresh templates', error);
       toast({
-        title: t('surveys.settings.templateList.toasts.error', 'Unable to save template'),
+        title: t('settings.templateList.toasts.error', {
+          defaultValue: 'Unable to save template',
+        }),
         description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
@@ -229,21 +249,22 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
     const date =
       updatedAt instanceof Date ? updatedAt : updatedAt ? new Date(updatedAt) : null;
     if (!date || Number.isNaN(date.getTime())) {
-      return '—';
+      return '-';
     }
-    return formatDistanceToNow(date, { addSuffix: true });
+    return formatRelativeTime(date);
   };
 
   return (
     <Card>
       <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <CardTitle>{t('surveys.settings.templateList.title', 'Survey templates')}</CardTitle>
+          <CardTitle>
+            {t('settings.templateList.title', { defaultValue: 'Survey templates' })}
+          </CardTitle>
           <CardDescription>
-            {t(
-              'surveys.settings.templateList.description',
-              'Manage the prompts and rating scales sent to your clients.'
-            )}
+            {t('settings.templateList.description', {
+              defaultValue: 'Manage the prompts and rating scales sent to your clients.',
+            })}
           </CardDescription>
         </div>
         <div className="flex gap-2">
@@ -255,7 +276,7 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
             disabled={isRefreshing}
           >
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {t('actions.refresh', 'Refresh')}
+            {tCommon('actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
           <Button
             id="survey-template-add-button"
@@ -263,7 +284,7 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
             className="gap-2"
           >
             <PlusIcon className="h-4 w-4" />
-            {t('surveys.settings.templateList.createButton', 'New template')}
+            {t('settings.templateList.createButton', { defaultValue: 'New template' })}
           </Button>
         </div>
       </CardHeader>
@@ -272,35 +293,36 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
           <div className="flex justify-center py-12">
             <LoadingIndicator
               layout="stacked"
-              text={t('surveys.common.loading', 'Loading...')}
+              text={t('common.loading', { defaultValue: 'Loading...' })}
             />
           </div>
         ) : sortedTemplates.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-200 py-16 text-center">
             <h3 className="text-lg font-semibold">
-              {t('surveys.settings.templateList.emptyTitle', 'No survey templates yet')}
+              {t('settings.templateList.emptyTitle', {
+                defaultValue: 'No survey templates yet',
+              })}
             </h3>
             <p className="max-w-md text-sm text-gray-500">
-              {t(
-                'surveys.settings.templateList.emptyDescription',
-                'Create your first template to define the survey wording and rating scale.'
-              )}
+              {t('settings.templateList.emptyDescription', {
+                defaultValue: 'Create your first template to define the survey wording and rating scale.',
+              })}
             </p>
             <Button id="survey-template-empty-create" onClick={handleOpenCreate} className="mt-2 gap-2">
               <PlusIcon className="h-4 w-4" />
-              {t('surveys.settings.templateList.createButton', 'New template')}
+              {t('settings.templateList.createButton', { defaultValue: 'New template' })}
             </Button>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('surveys.settings.templateList.table.name', 'Template')}</TableHead>
-                <TableHead>{t('surveys.settings.templateList.table.rating', 'Rating scale')}</TableHead>
-                <TableHead>{t('surveys.settings.templateList.table.status', 'Status')}</TableHead>
-                <TableHead>{t('surveys.settings.templateList.table.updated', 'Updated')}</TableHead>
+                <TableHead>{t('settings.templateList.table.name', { defaultValue: 'Template' })}</TableHead>
+                <TableHead>{t('settings.templateList.table.rating', { defaultValue: 'Rating scale' })}</TableHead>
+                <TableHead>{t('settings.templateList.table.status', { defaultValue: 'Status' })}</TableHead>
+                <TableHead>{t('settings.templateList.table.updated', { defaultValue: 'Updated' })}</TableHead>
                 <TableHead className="text-right">
-                  {t('surveys.settings.templateList.table.actions', 'Actions')}
+                  {t('settings.templateList.table.actions', { defaultValue: 'Actions' })}
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -312,7 +334,7 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
                       <span className="font-medium">{template.templateName}</span>
                       {template.isDefault && (
                         <Badge variant="outline">
-                          {t('surveys.settings.templateList.defaultBadge', 'Default')}
+                          {t('settings.templateList.defaultBadge', { defaultValue: 'Default' })}
                         </Badge>
                       )}
                     </div>
@@ -321,7 +343,9 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
                   <TableCell>
                     {template.ratingScale}{' '}
                     <span className="text-xs uppercase tracking-wide text-gray-500">
-                      {t(`surveys.settings.templateForm.ratingTypes.${template.ratingType}`, template.ratingType)}
+                      {t(`settings.templateForm.ratingTypes.${template.ratingType}`, {
+                        defaultValue: template.ratingType,
+                      })}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -333,8 +357,12 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
                         onCheckedChange={(checked) => handleToggleEnabled(template, Boolean(checked))}
                         label={
                           template.enabled
-                            ? t('surveys.settings.templateList.status.enabled', 'Enabled')
-                            : t('surveys.settings.templateList.status.disabled', 'Disabled')
+                            ? t('settings.templateList.status.enabled', {
+                                defaultValue: 'Enabled',
+                              })
+                            : t('settings.templateList.status.disabled', {
+                                defaultValue: 'Disabled',
+                              })
                         }
                       />
                     </div>
@@ -348,7 +376,10 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          aria-label={`Open actions for ${template.templateName}`}
+                          aria-label={t('settings.templateList.actionsMenuAria', {
+                            defaultValue: 'Open actions for {{name}}',
+                            name: template.templateName,
+                          })}
                         >
                           <MoreVertical className="h-4 w-4" />
                         </Button>
@@ -358,7 +389,7 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
                           id={`survey-template-edit-${template.templateId}`}
                           onSelect={() => handleEdit(template)}
                         >
-                          {t('actions.edit', 'Edit')}
+                          {tCommon('actions.edit', { defaultValue: 'Edit' })}
                         </DropdownMenuItem>
                         {!template.isDefault && (
                           <DropdownMenuItem
@@ -366,7 +397,9 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
                             disabled={isToggling === template.templateId}
                             onSelect={() => handleSetDefault(template)}
                           >
-                            {t('surveys.settings.templateList.actions.setDefault', 'Set as default')}
+                            {t('settings.templateList.actions.setDefault', {
+                              defaultValue: 'Set as default',
+                            })}
                           </DropdownMenuItem>
                         )}
                         {!template.isDefault && <DropdownMenuSeparator />}
@@ -375,7 +408,7 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
                           className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                           onSelect={() => handleDelete(template)}
                         >
-                          {t('actions.delete', 'Delete')}
+                          {tCommon('actions.delete', { defaultValue: 'Delete' })}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -393,10 +426,14 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
         onClose={closeDialog}
         title={
           editingTemplate
-            ? t('surveys.settings.templateForm.titleEdit', 'Edit survey template')
-            : t('surveys.settings.templateForm.titleCreate', 'Create survey template')
+            ? t('settings.templateForm.titleEdit', {
+                defaultValue: 'Edit survey template',
+              })
+            : t('settings.templateForm.titleCreate', {
+                defaultValue: 'Create survey template',
+              })
         }
-        className="max-w-3xl"
+        className="max-w-6xl"
       >
         <TemplateForm
           template={editingTemplate ?? undefined}
@@ -411,11 +448,17 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
         isOpen={isDeleteDialogOpen}
         onClose={resetDeleteState}
         onConfirmDelete={handleDeleteConfirm}
-        entityName={deleteTarget?.templateName || 'this survey template'}
+        entityName={
+          deleteTarget?.templateName ||
+          t('settings.templateList.delete.entityFallback', {
+            defaultValue: 'this survey template',
+          })
+        }
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}
       />
+
     </Card>
   );
 }

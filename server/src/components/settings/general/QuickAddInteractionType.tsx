@@ -105,13 +105,38 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
 
   const SelectedIconComponent = selectedIcon ? getIconComponent(selectedIcon) : null;
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="cancel-interaction-type"
+        variant="outline"
+        onClick={handleClose}
+        disabled={isLoading}
+      >
+        {t('interactions.quickAdd.actions.cancel')}
+      </Button>
+      <Button
+        id={editingType ? "update-interaction-type" : "create-interaction-type"}
+        onClick={handleSubmit}
+        disabled={isLoading}
+        className={`bg-primary-500 text-white hover:bg-primary-600 ${!typeName.trim() ? 'opacity-50' : ''}`}
+      >
+        {isLoading
+          ? (editingType ? t('interactions.quickAdd.actions.updating') : t('interactions.quickAdd.actions.creating'))
+          : (editingType ? t('interactions.quickAdd.actions.update') : t('interactions.quickAdd.actions.create'))
+        }
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog 
-      isOpen={isOpen} 
+    <Dialog
+      isOpen={isOpen}
       onClose={handleClose}
       title={editingType ? t('interactions.quickAdd.dialog.editTitle') : t('interactions.quickAdd.dialog.createTitle')}
       id={editingType ? "edit-interaction-type-dialog" : "add-interaction-type-dialog"}
       className="max-w-xl"
+      footer={footer}
     >
       <div className="space-y-6">
         {/* Error Alert */}
@@ -176,28 +201,6 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button
-            id="cancel-interaction-type"
-            variant="outline"
-            onClick={handleClose}
-            disabled={isLoading}
-          >
-            {t('interactions.quickAdd.actions.cancel')}
-          </Button>
-          <Button
-            id={editingType ? "update-interaction-type" : "create-interaction-type"}
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className={`bg-primary-500 text-white hover:bg-primary-600 ${!typeName.trim() ? 'opacity-50' : ''}`}
-          >
-            {isLoading
-              ? (editingType ? t('interactions.quickAdd.actions.updating') : t('interactions.quickAdd.actions.creating'))
-              : (editingType ? t('interactions.quickAdd.actions.update') : t('interactions.quickAdd.actions.create'))
-            }
-          </Button>
-        </div>
       </div>
     </Dialog>
   );

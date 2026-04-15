@@ -27,11 +27,12 @@ import { BucketOverlayInput } from '../contracts/ContractWizard';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [
-  { value: 'fixed', label: 'Fixed Price' },
-  { value: 'hourly', label: 'Hourly' },
-  { value: 'usage', label: 'Usage Based' }
+const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; labelKey: string; defaultLabel: string }> = [
+  { value: 'fixed', labelKey: 'services.usagePreset.billingMethod.fixed', defaultLabel: 'Fixed Price' },
+  { value: 'hourly', labelKey: 'services.usagePreset.billingMethod.hourly', defaultLabel: 'Hourly' },
+  { value: 'usage', labelKey: 'services.usagePreset.billingMethod.usage', defaultLabel: 'Usage Based' }
 ];
 
 interface UsageContractLinePresetServicesListProps {
@@ -42,12 +43,13 @@ interface UsageContractLinePresetServicesListProps {
 interface PresetServiceWithBucket extends IContractLinePresetService {
   service_name?: string;
   service_type_name?: string;
-  billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
+  billing_method?: 'fixed' | 'hourly' | 'usage' | null;
   default_rate?: number;
   bucket_overlay?: BucketOverlayInput | null;
 }
 
 const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServicesListProps> = ({ presetId, onServiceAdded }) => {
+  const { t } = useTranslation('msp/contract-lines');
   const [presetServices, setPresetServices] = useState<PresetServiceWithBucket[]>([]);
   const [originalServices, setOriginalServices] = useState<PresetServiceWithBucket[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
@@ -94,8 +96,8 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
 
         return {
           ...presetService,
-          service_name: serviceDetails?.service_name || 'Unknown Service',
-          service_type_name: serviceDetails?.service_type_name || 'N/A',
+          service_name: serviceDetails?.service_name || t('services.usagePreset.unknownService', { defaultValue: 'Unknown Service' }),
+          service_type_name: serviceDetails?.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' }),
           billing_method: serviceDetails?.billing_method,
           default_rate: serviceDetails?.default_rate,
           bucket_overlay: bucketOverlay
@@ -108,11 +110,13 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
       setSelectedServicesToAdd([]);
     } catch (error) {
       console.error('Error fetching preset services data:', error);
-      setError('Failed to load services data');
+      setError(t('services.usagePreset.errors.failedToLoadServicesData', {
+        defaultValue: 'Failed to load services data',
+      }));
     } finally {
       setIsLoading(false);
     }
-  }, [presetId]);
+  }, [presetId, t]);
 
   useEffect(() => {
     fetchData();
@@ -243,15 +247,15 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
         service_id: serviceId,
         custom_rate: service?.default_rate || 0,
         quantity: undefined,
-        unit_of_measure: service?.unit_of_measure || 'unit',
+        unit_of_measure: service?.unit_of_measure || t('services.usagePreset.defaultUnit', { defaultValue: 'unit' }),
         bucket_total_minutes: undefined,
         bucket_overage_rate: undefined,
         bucket_allow_rollover: undefined,
         tenant: '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        service_name: service?.service_name || 'Unknown Service',
-        service_type_name: service?.service_type_name || 'N/A',
+        service_name: service?.service_name || t('services.usagePreset.unknownService', { defaultValue: 'Unknown Service' }),
+        service_type_name: service?.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' }),
         billing_method: service?.billing_method,
         default_rate: service?.default_rate,
         bucket_overlay: null
@@ -302,15 +306,23 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
       await updateContractLinePresetServices(presetId, servicesToSave);
       await fetchData();
 
-      toast.success('Contract line preset services saved successfully');
+      toast.success(t('services.usagePreset.toast.savedSuccessfully', {
+        defaultValue: 'Contract line preset services saved successfully',
+      }));
 
       if (onServiceAdded) {
         onServiceAdded();
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save services';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('services.usagePreset.errors.failedToSaveServices', {
+            defaultValue: 'Failed to save services',
+          });
       setError(errorMessage);
-      handleError(error, 'Failed to save services');
+      handleError(error, t('services.usagePreset.errors.failedToSaveServices', {
+        defaultValue: 'Failed to save services',
+      }));
     } finally {
       setIsSaving(false);
     }
@@ -333,7 +345,9 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
       {hasUnsavedChanges && (
         <Alert variant="warning" className="mb-4">
           <AlertDescription>
-            You have unsaved changes. Click "Save Changes" to apply them.
+            {t('services.usagePreset.unsavedChanges.banner', {
+              defaultValue: 'You have unsaved changes. Click "Save Changes" to apply them.',
+            })}
           </AlertDescription>
         </Alert>
       )}
@@ -346,12 +360,18 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
       )}
 
       {isLoading ? (
-        <div className="text-center py-4">Loading services...</div>
+        <div className="text-center py-4">
+          {t('services.usagePreset.loadingServices', { defaultValue: 'Loading services...' })}
+        </div>
       ) : (
         <>
           <div className="mb-4">
             {presetServices.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No services currently associated with this contract line preset.</p>
+              <p className="text-sm text-muted-foreground">
+                {t('services.usagePreset.emptyState', {
+                  defaultValue: 'No services currently associated with this contract line preset.',
+                })}
+              </p>
             ) : (
               <div className="space-y-3">
                 {presetServices.map((service) => (
@@ -361,7 +381,15 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                       <div className="flex-1">
                         <h4 className="font-medium">{service.service_name}</h4>
                         <p className="text-sm text-muted-foreground">
-                          Service Type: {service.service_type_name} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method}
+                          {t('services.usagePreset.serviceMetadata', {
+                            defaultValue: 'Service Type: {{type}} | Method: {{method}}',
+                            type: service.service_type_name,
+                            method: BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)
+                              ? t(BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)!.labelKey, {
+                                  defaultValue: BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)!.defaultLabel,
+                                })
+                              : service.billing_method,
+                          })}
                         </p>
                       </div>
                       <DropdownMenu>
@@ -371,7 +399,9 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                             variant="ghost"
                             className="h-8 w-8 p-0"
                           >
-                            <span className="sr-only">Open menu</span>
+                            <span className="sr-only">
+                              {t('common.actions.openMenu', { defaultValue: 'Open menu' })}
+                            </span>
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -382,7 +412,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                             onClick={() => handleRemoveService(service.service_id)}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Remove
+                            {t('common.actions.remove', { defaultValue: 'Remove' })}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -391,7 +421,9 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                     {/* Rate and Unit */}
                     <div className="grid grid-cols-2 gap-4 mb-3">
                       <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium">Rate per Unit:</label>
+                        <label className="text-sm font-medium">
+                          {t('services.usagePreset.ratePerUnitLabel', { defaultValue: 'Rate per Unit:' })}
+                        </label>
                         <span className="text-muted-foreground">$</span>
                       <Input
                         type="text"
@@ -406,15 +438,19 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                         />
                       </div>
                       <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium">Unit:</label>
+                        <label className="text-sm font-medium">
+                          {t('services.usagePreset.unitLabel', { defaultValue: 'Unit:' })}
+                        </label>
                         <Input
                           type="text"
-                          value={service.unit_of_measure || 'unit'}
+                          value={service.unit_of_measure || t('services.usagePreset.defaultUnit', { defaultValue: 'unit' })}
                           onChange={(e) => {
                             handleUnitChange(service.service_id, e.target.value);
                           }}
                           className="w-32"
-                          placeholder="e.g., GB, user, device"
+                          placeholder={t('services.usagePreset.unitPlaceholder', {
+                            defaultValue: 'e.g., GB, user, device',
+                          })}
                         />
                       </div>
                     </div>
@@ -422,7 +458,9 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                     {/* Bucket Overlay Section */}
                     <div className="space-y-3 pt-3 border-t border-dashed border-secondary-100">
                       <SwitchWithLabel
-                        label="Recommend bucket of consumption"
+                        label={t('services.usagePreset.recommendBucketLabel', {
+                          defaultValue: 'Recommend bucket of consumption',
+                        })}
                         checked={Boolean(service.bucket_overlay)}
                         onCheckedChange={(checked) => toggleBucketOverlay(service.service_id, Boolean(checked))}
                       />
@@ -431,7 +469,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                           mode="usage"
                           value={service.bucket_overlay}
                           onChange={(overlay) => updateBucketOverlay(service.service_id, overlay)}
-                          unitLabel={service.unit_of_measure || 'units'}
+                          unitLabel={service.unit_of_measure || t('services.usagePreset.defaultUnits', { defaultValue: 'units' })}
                           automationId={`preset-usage-bucket-${service.service_id}`}
                           billingFrequency={billingFrequency}
                         />
@@ -444,15 +482,27 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
           </div>
 
           <div className="mt-6 border-t pt-4">
-            <h4 className="text-md font-medium mb-2">Add Services to Contract Line Preset</h4>
+            <h4 className="text-md font-medium mb-2">
+              {t('services.usagePreset.addServicesHeading', {
+                defaultValue: 'Add Services to Contract Line Preset',
+              })}
+            </h4>
             {servicesAvailableToAdd.length === 0 ? (
-              <p className="text-sm text-muted-foreground">All available usage-based services are already associated with this preset.</p>
+              <p className="text-sm text-muted-foreground">
+                {t('services.usagePreset.allServicesAssociated', {
+                  defaultValue: 'All available usage-based services are already associated with this preset.',
+                })}
+              </p>
             ) : (
               <>
                 <div className="mb-3">
                   <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto border rounded p-2">
                     {servicesAvailableToAdd.map(service => {
-                      const serviceTypeName = service.service_type_name || 'N/A';
+                      const serviceTypeName = service.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' });
+                      const billingMethodOption = BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method);
+                      const billingMethod = billingMethodOption
+                        ? t(billingMethodOption.labelKey, { defaultValue: billingMethodOption.defaultLabel })
+                        : service.billing_method;
                       return (
                         <div
                           key={service.service_id}
@@ -475,7 +525,13 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                           <div className="flex-grow flex flex-col text-sm">
                             <span>{service.service_name}</span>
                             <span className="text-xs text-muted-foreground">
-                              Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Default Rate: ${(Number(service.default_rate) / 100).toFixed(2)} | Unit: {service.unit_of_measure || 'unit'}
+                              {t('services.usagePreset.serviceToAddMetadata', {
+                                defaultValue: 'Service Type: {{type}} | Method: {{method}} | Default Rate: {{rate}} | Unit: {{unit}}',
+                                type: serviceTypeName,
+                                method: billingMethod,
+                                rate: `$${(Number(service.default_rate) / 100).toFixed(2)}`,
+                                unit: service.unit_of_measure || t('services.usagePreset.defaultUnit', { defaultValue: 'unit' }),
+                              })}
                             </span>
                           </div>
                         </div>
@@ -490,7 +546,10 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                   className="w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Selected Services {selectedServicesToAdd.length > 0 ? `(${selectedServicesToAdd.length})` : ''}
+                  {t('services.usagePreset.addSelectedServices', {
+                    defaultValue: 'Add Selected ({{count}}) Services',
+                    count: selectedServicesToAdd.length,
+                  })}
                 </Button>
               </>
             )}
@@ -504,7 +563,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
               onClick={handleReset}
               disabled={isSaving || !hasUnsavedChanges}
             >
-              Reset
+              {t('common.actions.reset', { defaultValue: 'Reset' })}
             </Button>
             <Button
               id="save-preset-services"
@@ -512,7 +571,11 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
               disabled={isSaving || !hasUnsavedChanges}
             >
               <span className={hasUnsavedChanges ? 'font-bold' : ''}>
-                {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
+                {isSaving
+                  ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                  : hasUnsavedChanges
+                    ? t('common.actions.saveChangesDirty', { defaultValue: 'Save Changes *' })
+                    : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
               </span>
               {!isSaving && <Save className="ml-2 h-4 w-4" />}
             </Button>
@@ -525,10 +588,18 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
         isOpen={showNavigateAwayConfirm}
         onClose={handleNavigateAwayDismiss}
         onConfirm={handleNavigateAwayConfirm}
-        title="Unsaved Changes"
-        message="You have unsaved changes. Are you sure you want to leave this page? All changes will be lost."
-        confirmLabel="Leave Page"
-        cancelLabel="Stay on Page"
+        title={t('services.usagePreset.unsavedChanges.dialogTitle', {
+          defaultValue: 'Unsaved Changes',
+        })}
+        message={t('services.usagePreset.unsavedChanges.dialogMessage', {
+          defaultValue: 'You have unsaved changes. Are you sure you want to leave this page? All changes will be lost.',
+        })}
+        confirmLabel={t('services.usagePreset.unsavedChanges.confirmLabel', {
+          defaultValue: 'Leave Page',
+        })}
+        cancelLabel={t('services.usagePreset.unsavedChanges.cancelLabel', {
+          defaultValue: 'Stay on Page',
+        })}
       />
     </div>
   );

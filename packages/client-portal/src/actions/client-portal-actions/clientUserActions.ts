@@ -6,7 +6,7 @@ import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { revalidatePath } from 'next/cache';
 // Note: getUserClientId removed - was unused and caused nested withAuth issues
-import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents';
+import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from '@alga-psa/auth/actions';
 import {
@@ -107,11 +107,7 @@ export const resetClientUserPassword = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    // Check if the password field exists in the users table
-    const hasPasswordField = await knex.schema.hasColumn('users', 'password');
-    const passwordField = hasPasswordField ? 'password' : 'hashed_password';
-
-    console.log(`Using password field: ${passwordField}`);
+    const passwordField = 'hashed_password';
 
     const hashedPassword = await hashPassword(newPassword);
 

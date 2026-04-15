@@ -334,4 +334,48 @@ describe('TicketMobileEditorRuntime', () => {
     expect(editor.getHTML()).toContain('<img');
     expect(editor.getHTML()).toContain('/api/documents/view/file-123');
   });
+
+  it('emits content-height after initialization and restores min-height on body, html, and element', () => {
+    // Set min-height on all three levels to simulate the real WebView CSS
+    document.documentElement.style.minHeight = '100%';
+    document.body.style.minHeight = '100%';
+    container.style.minHeight = '100%';
+
+    runtime.handleMessage({
+      type: 'init',
+      payload: {
+        content: 'Height test',
+        editable: false,
+      },
+    });
+
+    // Should have emitted a content-height message
+    const heightMsg = getLastMessage(messages, 'content-height');
+    expect(heightMsg.payload.height).toBeTypeOf('number');
+    expect(heightMsg.payload.height).toBeGreaterThanOrEqual(0);
+
+    // min-height should be restored on all three levels after measurement
+    expect(container.style.minHeight).toBe('100%');
+    expect(document.body.style.minHeight).toBe('100%');
+    expect(document.documentElement.style.minHeight).toBe('100%');
+  });
+
+  it('measures content height without min-height inflation', () => {
+    // Give the container actual content but set a large min-height
+    container.style.minHeight = '9999px';
+    document.body.style.minHeight = '9999px';
+    document.documentElement.style.minHeight = '9999px';
+
+    runtime.handleMessage({
+      type: 'init',
+      payload: {
+        content: 'Short',
+        editable: false,
+      },
+    });
+
+    const heightMsg = getLastMessage(messages, 'content-height');
+    // The measured height should NOT be 9999 — it should reflect actual content
+    expect(heightMsg.payload.height).toBeLessThan(9999);
+  });
 });

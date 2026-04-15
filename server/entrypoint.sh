@@ -137,12 +137,18 @@ validate_environment() {
         "LOG_IS_FORMAT_JSON"
         "LOG_IS_FULL_DETAILS"
         "EMAIL_ENABLE"
-        "EMAIL_FROM"
-        "EMAIL_PORT"
-        "EMAIL_USERNAME"
         "NEXTAUTH_URL"
         "NEXTAUTH_SESSION_EXPIRES"
     )
+
+    # Email vars only required when email is enabled
+    if [ "${EMAIL_ENABLE}" != "false" ]; then
+        required_vars+=(
+            "EMAIL_FROM"
+            "EMAIL_PORT"
+            "EMAIL_USERNAME"
+        )
+    fi
 
     local missing_vars=()
     for var in "${required_vars[@]}"; do
@@ -167,7 +173,7 @@ validate_environment() {
     esac
 
     # Validate numeric values
-    if ! [[ "$EMAIL_PORT" =~ ^[1-9][0-9]*$ ]]; then
+    if [ "${EMAIL_ENABLE}" != "false" ] && ! [[ "$EMAIL_PORT" =~ ^[1-9][0-9]*$ ]]; then
         log "Error: EMAIL_PORT must be a number greater than 0"
         return 1
     fi

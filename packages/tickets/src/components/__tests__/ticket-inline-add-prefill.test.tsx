@@ -4,12 +4,14 @@
 import React, { useEffect } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QuickAddTicket } from '../QuickAddTicket';
 
 const addTicketMock = vi.fn();
 const updateTicketMock = vi.fn();
 const uploadDocumentMock = vi.fn();
 const getTicketFormDataMock = vi.fn();
+const getTicketStatusesMock = vi.fn();
 const getContactsByClientMock = vi.fn();
 const getClientLocationsMock = vi.fn();
 const pushMock = vi.fn();
@@ -193,6 +195,58 @@ vi.mock('@alga-psa/clients/components', () => ({
     },
 }));
 
+vi.mock('@alga-psa/ui/context', () => ({
+  useQuickAddClient: () => ({
+    renderQuickAddContact: ({ isOpen, selectedClientId, onContactAdded }: any) => {
+      if (!isOpen) {
+        return null;
+      }
+
+      return (
+        <div data-testid="quick-add-contact-dialog">
+          <div data-testid="quick-add-contact-client">{selectedClientId}</div>
+          <button
+            type="button"
+            onClick={() => onContactAdded({
+              contact_name_id: 'contact-new',
+              full_name: 'Grace Hopper',
+              email: 'grace@example.com',
+              client_id: selectedClientId,
+              is_inactive: false,
+            })}
+          >
+            Create Contact
+          </button>
+        </div>
+      );
+    },
+    renderQuickAddClient: ({ open, onClientAdded, onOpenChange }: any) => {
+      if (!open) {
+        return null;
+      }
+
+      return (
+        <div data-testid="quick-add-client-dialog">
+          <button
+            type="button"
+            onClick={() => {
+              onClientAdded({
+                client_id: 'client-new',
+                client_name: 'New Client',
+                client_type: 'company',
+                is_inactive: false,
+              });
+              onOpenChange(false);
+            }}
+          >
+            Create Client
+          </button>
+        </div>
+      );
+    },
+  }),
+}));
+
 vi.mock('@alga-psa/ui/components/UserPicker', () => ({
   __esModule: true,
   default: function UserPickerMock({ onValueChange }: any) {
@@ -224,7 +278,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
       <option value="" />
       {options.map((option: any) => (
         <option key={option.value} value={option.value}>
-          {option.label}
+          {typeof option.label === 'string' ? option.label : option.value}
         </option>
       ))}
     </select>
@@ -232,13 +286,21 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/tickets/actions', () => ({
-  getTicketCategoriesByBoard: vi.fn().mockResolvedValue({ categories: [], boardConfig: { priority_type: 'custom' } }),
+  getTicketCategoriesByBoard: vi.fn().mockResolvedValue({
+    categories: [],
+    boardConfig: {
+      category_type: 'custom',
+      priority_type: 'custom',
+      display_itil_impact: false,
+      display_itil_urgency: false,
+    },
+  }),
   getTicketCategories: vi.fn(),
   getAllBoards: vi.fn()
 }));
 
 vi.mock('@alga-psa/reference-data/actions', () => ({
-  getTicketStatuses: vi.fn().mockResolvedValue([]),
+  getTicketStatuses: (...args: unknown[]) => getTicketStatusesMock(...args),
   getAllPriorities: vi.fn().mockResolvedValue([])
 }));
 
@@ -373,8 +435,113 @@ vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: () => ({ enabled: false })
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (_key: string, fallback?: string, options?: Record<string, unknown>) => {
+      if (!fallback) {
+        return _key;
+      }
+
+      return fallback.replace(/\{\{(\w+)\}\}/g, (_match, name) => String(options?.[name] ?? ''));
+    },
+  }),
+}));
+
+vi.mock('../useQuickAddRichTextUploadSession', async () => {
+  const React = await vi.importActual<typeof import('react')>('react');
+
+  return {
+    useQuickAddRichTextUploadSession: ({ onDiscard }: { onDiscard?: () => void }) => {
+      const [stagedClipboardImages, setStagedClipboardImages] = React.useState<
+        Array<{ file: File; url: string }>
+      >([]);
+      const [showDraftCancelDialog, setShowDraftCancelDialog] = React.useState(false);
+
+      return {
+        stagedClipboardImages,
+        uploadFile: async (file: File) => {
+          const url = `blob:${file.name}`;
+          setStagedClipboardImages((current) => [...current, { file, url }]);
+          return url;
+        },
+        requestDiscard: () => {
+          if (stagedClipboardImages.length > 0) {
+            setShowDraftCancelDialog(true);
+            return;
+          }
+          onDiscard?.();
+        },
+        resetDraftTracking: () => {
+          setStagedClipboardImages([]);
+          setShowDraftCancelDialog(false);
+        },
+        showDraftCancelDialog,
+        setShowDraftCancelDialog,
+        deleteTrackedDraftClipboardImages: async () => {
+          setStagedClipboardImages([]);
+          setShowDraftCancelDialog(false);
+          onDiscard?.();
+        },
+        keepDraftClipboardImages: () => {
+          setShowDraftCancelDialog(false);
+        },
+        isDeletingDraftImages: false,
+      };
+    },
+  };
+});
+
+vi.mock('../lib/ticketRichText', () => ({
+  parseTicketRichTextContent: (value: string) => {
+    if (!value) {
+      return [];
+    }
+
+    try {
+      return JSON.parse(value);
+    } catch {
+      return [
+        {
+          type: 'paragraph',
+          props: {
+            textAlignment: 'left',
+            backgroundColor: 'default',
+            textColor: 'default',
+          },
+          content: [
+            {
+              type: 'text',
+              text: value,
+              styles: {},
+            },
+          ],
+        },
+      ];
+    }
+  },
+  serializeTicketRichTextContent: (content: unknown) => JSON.stringify(content ?? []),
+}));
+
+vi.mock('../lib/ticketRichTextImages', () => ({
+  removeTicketRichTextImageUrls: (content: any[], urlsToRemove: Set<string>) =>
+    content.filter((block) => block?.type !== 'image' || !urlsToRemove.has(block?.props?.url)),
+  replaceTicketRichTextImageUrls: (content: any[], replacementUrls: Map<string, string>) =>
+    content.map((block) =>
+      block?.type === 'image' && replacementUrls.has(block?.props?.url)
+        ? {
+            ...block,
+            props: {
+              ...block.props,
+              url: replacementUrls.get(block.props.url),
+            },
+          }
+        : block
+    ),
+}));
+
 describe('QuickAddTicket prefills', () => {
   beforeEach(() => {
+    addTicketMock.mockReset();
     pushMock.mockReset();
     updateTicketMock.mockReset();
     uploadDocumentMock.mockReset();
@@ -388,6 +555,9 @@ describe('QuickAddTicket prefills', () => {
       statuses: [{ status_id: 'status-1', name: 'Open' }],
       selectedClient: { client_id: 'client-1', client_type: 'company' }
     });
+    getTicketStatusesMock.mockResolvedValue([
+      { status_id: 'status-1', name: 'Open', is_default: true, is_closed: false },
+    ]);
     addTicketMock.mockResolvedValue({ ticket_id: 'ticket-1', attributes: {} });
     updateTicketMock.mockResolvedValue({});
     uploadDocumentMock.mockResolvedValue({
@@ -441,7 +611,7 @@ describe('QuickAddTicket prefills', () => {
     expect(screen.getByTestId('due-date')).toHaveValue('2026-02-05T12:00:00.000Z');
   });
 
-  it('navigates to the created ticket when Save + Open is clicked', async () => {
+  it('navigates to the created ticket when Create + View Ticket is clicked', async () => {
     const onTicketAdded = vi.fn();
 
     render(
@@ -453,12 +623,13 @@ describe('QuickAddTicket prefills', () => {
     );
 
     await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+    await waitFor(() => expect(getTicketStatusesMock).toHaveBeenCalledWith('board-1'));
 
     fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), {
       target: { value: 'New ticket from quick add' }
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save + Open' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create + View Ticket' }));
 
     await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
     await waitFor(() => expect(onTicketAdded).toHaveBeenCalled());
@@ -528,6 +699,14 @@ describe('QuickAddTicket prefills', () => {
   });
 
   it('T022: creating a client adds it locally and auto-selects it', async () => {
+    getTicketFormDataMock.mockResolvedValueOnce({
+      users: [],
+      boards: [{ board_id: 'board-1', board_name: 'Support' }],
+      priorities: [{ priority_id: 'priority-1', priority_name: 'High' }],
+      clients: [{ client_id: 'client-1', client_name: 'Acme', client_type: 'company' }],
+      statuses: [{ status_id: 'status-1', name: 'Open' }],
+    });
+
     render(
       <QuickAddTicket
         open={true}
@@ -556,6 +735,7 @@ describe('QuickAddTicket prefills', () => {
       />
     );
 
+    await screen.findByRole('button', { name: /\+ add new category/i }, { timeout: 5000 });
     fireEvent.click(await screen.findByRole('button', { name: /\+ add new category/i }, { timeout: 5000 }));
 
     expect(screen.getByTestId('quick-add-category-dialog')).toBeInTheDocument();
@@ -572,6 +752,7 @@ describe('QuickAddTicket prefills', () => {
     );
 
     await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+    await waitFor(() => expect(getTicketStatusesMock).toHaveBeenCalledWith('board-1'));
 
     fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), {
       target: { value: 'Rich text quick add' }
@@ -579,7 +760,7 @@ describe('QuickAddTicket prefills', () => {
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Pasted markdown replacement' }
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Save Ticket' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
     const submittedFormData = addTicketMock.mock.calls[0][0] as FormData;
@@ -619,6 +800,8 @@ describe('QuickAddTicket prefills', () => {
   });
 
   it('uploads staged clipboard images after ticket creation and persists the final description', async () => {
+    const user = userEvent.setup();
+
     render(
       <QuickAddTicket
         open={true}
@@ -628,6 +811,7 @@ describe('QuickAddTicket prefills', () => {
     );
 
     await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+    await waitFor(() => expect(getTicketStatusesMock).toHaveBeenCalledWith('board-1'));
 
     fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), {
       target: { value: 'Ticket with pasted image' }
@@ -635,8 +819,8 @@ describe('QuickAddTicket prefills', () => {
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Ticket body' }
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Paste Image' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save Ticket' }));
+    await user.click(screen.getByRole('button', { name: 'Paste Image' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(uploadDocumentMock).toHaveBeenCalled());
     await waitFor(() => expect(updateTicketMock).toHaveBeenCalledWith(

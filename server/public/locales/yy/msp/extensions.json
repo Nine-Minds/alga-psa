@@ -1,0 +1,80 @@
+{
+  "navigation": {
+    "heading": "55555"
+  },
+  "enterpriseFeature": {
+    "title": "55555",
+    "description": "55555 {{feature}} 55555"
+  },
+  "settings": {
+    "title": "55555",
+    "description": "55555",
+    "tabs": {
+      "manage": "55555",
+      "install": "55555"
+    },
+    "enterpriseOnly": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "links": {
+      "needLogs": "55555",
+      "debugConsole": "55555"
+    },
+    "loading": {
+      "extensions": "55555",
+      "installer": "55555"
+    },
+    "featureNames": {
+      "settings": "55555",
+      "details": "55555",
+      "permissions": "55555",
+      "management": "55555",
+      "installer": "55555"
+    }
+  },
+  "communityEdition": {
+    "listUnavailable": "55555",
+    "dynamicListUnavailable": "55555",
+    "dynamicInstallUnavailable": "55555"
+  },
+  "page": {
+    "metadata": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "title": "55555",
+    "description": "55555"
+  },
+  "detail": {
+    "metadataTitle": "55555",
+    "extensionId": "55555 {{id}} 55555"
+  },
+  "runtime": {
+    "metadataTitle": "55555",
+    "loadError": "55555",
+    "notFoundTitle": "55555",
+    "goToExtensions": "55555",
+    "bundleUnavailableTitle": "55555",
+    "bundleUnavailableDescription": "55555",
+    "goToDetails": "55555",
+    "runtimeDomainUnavailableTitle": "55555",
+    "runtimeDomainUnavailableDescription": "55555"
+  },
+  "detailsPage": {
+    "metadata": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "title": "55555",
+    "description": "55555"
+  },
+  "settingsPage": {
+    "metadata": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "title": "55555",
+    "description": "55555"
+  }
+}

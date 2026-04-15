@@ -3,12 +3,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   createAccountingExportBatch,
   executeAccountingExportBatch,
@@ -85,7 +87,31 @@ const DEFAULT_ADAPTERS = [
   { id: 'quickbooks_desktop', label: 'QuickBooks Desktop' }
 ] as const;
 
+function getAccountingExportStatusKey(status: AccountingExportStatus): string {
+  switch (status) {
+    case 'pending':
+      return 'pending';
+    case 'validating':
+      return 'validating';
+    case 'ready':
+      return 'ready';
+    case 'delivered':
+      return 'delivered';
+    case 'posted':
+      return 'posted';
+    case 'failed':
+      return 'failed';
+    case 'cancelled':
+      return 'cancelled';
+    case 'needs_attention':
+      return 'needsAttention';
+    default:
+      return 'pending';
+  }
+}
+
 export default function AccountingExportsTab(): React.JSX.Element {
+  const { t } = useTranslation('msp/billing');
   const [loading, setLoading] = useState(true);
   const [batches, setBatches] = useState<AccountingExportBatch[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
@@ -114,11 +140,13 @@ export default function AccountingExportsTab(): React.JSX.Element {
       setBatches(Array.isArray(typedData) ? typedData : []);
     } catch (e) {
       setBatches([]);
-      handleError(e, 'Failed to load accounting export batches');
+      handleError(e, t('accountingExports.toast.loadBatchesError', {
+        defaultValue: 'Failed to load accounting export batches',
+      }));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const loadBatchDetail = useCallback(async (batchId: string) => {
     setDetailLoading(true);
@@ -132,11 +160,13 @@ export default function AccountingExportsTab(): React.JSX.Element {
       setSelectedDetail(detail as unknown as BatchDetail);
     } catch (e) {
       setSelectedDetail(null);
-      handleError(e, 'Failed to load batch details');
+      handleError(e, t('accountingExports.toast.loadDetailError', {
+        defaultValue: 'Failed to load batch details',
+      }));
     } finally {
       setDetailLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void loadBatches();
@@ -151,6 +181,8 @@ export default function AccountingExportsTab(): React.JSX.Element {
     () => (selectedDetail?.batch?.batch_id ? selectedDetail.batch : batches.find((b) => b.batch_id === selectedBatchId) ?? null),
     [selectedBatchId, selectedDetail, batches]
   );
+  const getStatusLabel = (status: AccountingExportStatus) =>
+    t(`accountingExports.status.${getAccountingExportStatusKey(status)}`, { defaultValue: status });
 
   const onCreate = async () => {
     setCreating(true);
@@ -179,12 +211,16 @@ export default function AccountingExportsTab(): React.JSX.Element {
         return;
       }
       const batch = batchResult as unknown as AccountingExportBatch;
-      toast.success('Accounting export batch created');
+      toast.success(t('accountingExports.toast.created', {
+        defaultValue: 'Accounting export batch created',
+      }));
       setCreateOpen(false);
       setSelectedBatchId(batch.batch_id);
       await loadBatches();
     } catch (e) {
-      handleError(e, 'Failed to create export batch');
+      handleError(e, t('accountingExports.toast.createError', {
+        defaultValue: 'Failed to create export batch',
+      }));
     } finally {
       setCreating(false);
     }
@@ -197,11 +233,15 @@ export default function AccountingExportsTab(): React.JSX.Element {
         handleError(result.permissionError);
         return;
       }
-      toast.success('Batch execution started');
+      toast.success(t('accountingExports.toast.executing', {
+        defaultValue: 'Batch execution started',
+      }));
       await loadBatches();
       await loadBatchDetail(batchId);
     } catch (e) {
-      handleError(e, 'Failed to execute batch');
+      handleError(e, t('accountingExports.toast.executeError', {
+        defaultValue: 'Failed to execute batch',
+      }));
     }
   };
 
@@ -210,9 +250,11 @@ export default function AccountingExportsTab(): React.JSX.Element {
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
-            <CardTitle>Accounting Exports</CardTitle>
+            <CardTitle>{t('accountingExports.title', { defaultValue: 'Accounting Exports' })}</CardTitle>
             <CardDescription>
-              Create export batches, validate mappings, and deliver files for manual import into your accounting system.
+              {t('accountingExports.description', {
+                defaultValue: 'Create export batches, validate mappings, and deliver files for manual import into your accounting system.',
+              })}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -222,28 +264,34 @@ export default function AccountingExportsTab(): React.JSX.Element {
               onClick={() => void loadBatches()}
               disabled={loading}
             >
-              Refresh
+              {t('accountingExports.actions.refresh', { defaultValue: 'Refresh' })}
             </Button>
             <Button onClick={() => setCreateOpen(true)} id="accounting-exports-new-batch">
-              New Export
+              {t('accountingExports.actions.newExport', { defaultValue: 'New Export' })}
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-sm text-muted-foreground">Loading batches...</div>
+            <div className="text-sm text-muted-foreground">
+              {t('accountingExports.states.loadingBatches', { defaultValue: 'Loading batches...' })}
+            </div>
           ) : batches.length === 0 ? (
-            <div className="text-sm text-muted-foreground">No export batches yet.</div>
+            <div className="text-sm text-muted-foreground">
+              {t('accountingExports.states.empty', { defaultValue: 'No export batches yet.' })}
+            </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Batch</TableHead>
-                  <TableHead>Adapter</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t('accountingExports.table.batch', { defaultValue: 'Batch' })}</TableHead>
+                  <TableHead>{t('accountingExports.table.adapter', { defaultValue: 'Adapter' })}</TableHead>
+                  <TableHead>{t('accountingExports.table.status', { defaultValue: 'Status' })}</TableHead>
+                  <TableHead>{t('accountingExports.table.created', { defaultValue: 'Created' })}</TableHead>
+                  <TableHead>{t('accountingExports.table.updated', { defaultValue: 'Updated' })}</TableHead>
+                  <TableHead className="text-right">
+                    {t('accountingExports.table.actions', { defaultValue: 'Actions' })}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -251,7 +299,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
                   <TableRow key={batch.batch_id}>
                     <TableCell className="font-mono text-xs">{batch.batch_id}</TableCell>
                     <TableCell>{batch.adapter_type}</TableCell>
-                    <TableCell>{batch.status}</TableCell>
+                    <TableCell>{getStatusLabel(batch.status)}</TableCell>
                     <TableCell>{formatIso(batch.created_at)}</TableCell>
                     <TableCell>{formatIso(batch.updated_at)}</TableCell>
                     <TableCell className="text-right">
@@ -262,7 +310,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
                           onClick={() => setSelectedBatchId(batch.batch_id)}
                           id={`accounting-exports-open-${batch.batch_id}`}
                         >
-                          Open
+                          {t('accountingExports.actions.open', { defaultValue: 'Open' })}
                         </Button>
                         <Button
                           variant="default"
@@ -270,7 +318,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
                           onClick={() => void onExecute(batch.batch_id)}
                           id={`accounting-exports-execute-${batch.batch_id}`}
                         >
-                          Execute
+                          {t('accountingExports.actions.execute', { defaultValue: 'Execute' })}
                         </Button>
                       </div>
                     </TableCell>
@@ -288,34 +336,52 @@ export default function AccountingExportsTab(): React.JSX.Element {
           if (creating) return;
           setCreateOpen(false);
         }}
-        title="New Accounting Export"
+        title={t('accountingExports.createDialog.title', { defaultValue: 'New Accounting Export' })}
         id="accounting-exports-create"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="accounting-export-create-cancel"
+              variant="outline"
+              onClick={() => setCreateOpen(false)}
+              disabled={creating}
+            >
+              {t('common.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button onClick={() => void onCreate()} disabled={creating} id="accounting-export-create-submit">
+              {creating
+                ? t('accountingExports.actions.creating', { defaultValue: 'Creating...' })
+                : t('accountingExports.actions.createBatch', { defaultValue: 'Create Batch' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>New Accounting Export</DialogTitle>
+            <DialogTitle>{t('accountingExports.createDialog.title', { defaultValue: 'New Accounting Export' })}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="accounting-export-adapter">Adapter</Label>
-              <select
+              <Label htmlFor="accounting-export-adapter">
+                {t('accountingExports.createDialog.fields.adapter', { defaultValue: 'Adapter' })}
+              </Label>
+              <CustomSelect
                 id="accounting-export-adapter"
-                className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                 value={adapterType}
-                onChange={(e) => setAdapterType(e.target.value as any)}
-              >
-                {DEFAULT_ADAPTERS.map((opt) => (
-                  <option key={opt.id} value={opt.id}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                onValueChange={(value) => setAdapterType(value as (typeof DEFAULT_ADAPTERS)[number]['id'])}
+                options={DEFAULT_ADAPTERS.map((opt) => ({
+                  value: opt.id,
+                  label: opt.label,
+                }))}
+              />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="accounting-export-start-date">Start Date</Label>
+                <Label htmlFor="accounting-export-start-date">
+                  {t('accountingExports.createDialog.fields.startDate', { defaultValue: 'Start Date' })}
+                </Label>
                 <Input
                   id="accounting-export-start-date"
                   type="date"
@@ -324,7 +390,9 @@ export default function AccountingExportsTab(): React.JSX.Element {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="accounting-export-end-date">End Date</Label>
+                <Label htmlFor="accounting-export-end-date">
+                  {t('accountingExports.createDialog.fields.endDate', { defaultValue: 'End Date' })}
+                </Label>
                 <Input
                   id="accounting-export-end-date"
                   type="date"
@@ -335,49 +403,48 @@ export default function AccountingExportsTab(): React.JSX.Element {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="accounting-export-client-search">Client Search</Label>
+              <Label htmlFor="accounting-export-client-search">
+                {t('accountingExports.createDialog.fields.clientSearch', { defaultValue: 'Client Search' })}
+              </Label>
               <Input
                 id="accounting-export-client-search"
-                placeholder="Optional client name filter"
+                placeholder={t('accountingExports.createDialog.placeholders.clientSearch', {
+                  defaultValue: 'Optional client name filter',
+                })}
                 value={clientSearch}
                 onChange={(e) => setClientSearch(e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="accounting-export-statuses">Invoice Statuses</Label>
+              <Label htmlFor="accounting-export-statuses">
+                {t('accountingExports.createDialog.fields.invoiceStatuses', { defaultValue: 'Invoice Statuses' })}
+              </Label>
               <Input
                 id="accounting-export-statuses"
-                placeholder="Comma-separated (optional), e.g. finalized,posted"
+                placeholder={t('accountingExports.createDialog.placeholders.invoiceStatuses', {
+                  defaultValue: 'Comma-separated (optional), e.g. finalized,posted',
+                })}
                 value={invoiceStatuses}
                 onChange={(e) => setInvoiceStatuses(e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="accounting-export-notes">Notes</Label>
+              <Label htmlFor="accounting-export-notes">
+                {t('accountingExports.createDialog.fields.notes', { defaultValue: 'Notes' })}
+              </Label>
               <Input
                 id="accounting-export-notes"
-                placeholder="Optional notes"
+                placeholder={t('accountingExports.createDialog.placeholders.notes', {
+                  defaultValue: 'Optional notes',
+                })}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
             </div>
           </div>
 
-          <DialogFooter className="mt-6">
-            <Button
-              id="accounting-export-create-cancel"
-              variant="outline"
-              onClick={() => setCreateOpen(false)}
-              disabled={creating}
-            >
-              Cancel
-            </Button>
-            <Button onClick={() => void onCreate()} disabled={creating} id="accounting-export-create-submit">
-              {creating ? 'Creating...' : 'Create Batch'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -387,50 +454,68 @@ export default function AccountingExportsTab(): React.JSX.Element {
           setSelectedBatchId(null);
           setSelectedDetail(null);
         }}
-        title="Accounting Export Batch"
+        title={t('accountingExports.detailDialog.title', { defaultValue: 'Accounting Export Batch' })}
         id="accounting-exports-detail"
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Batch Details</DialogTitle>
+            <DialogTitle>{t('accountingExports.detailDialog.subtitle', { defaultValue: 'Batch Details' })}</DialogTitle>
           </DialogHeader>
 
           {detailLoading ? (
-            <div className="text-sm text-muted-foreground">Loading batch details...</div>
+            <div className="text-sm text-muted-foreground">
+              {t('accountingExports.states.loadingDetails', { defaultValue: 'Loading batch details...' })}
+            </div>
           ) : !selectedBatch ? (
-            <div className="text-sm text-muted-foreground">Batch not found.</div>
+            <div className="text-sm text-muted-foreground">
+              {t('accountingExports.states.batchNotFound', { defaultValue: 'Batch not found.' })}
+            </div>
           ) : (
             <div className="space-y-4">
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
-                  <div className="text-xs text-muted-foreground">Batch ID</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t('accountingExports.detailDialog.fields.batchId', { defaultValue: 'Batch ID' })}
+                  </div>
                   <div className="font-mono text-xs">{selectedBatch.batch_id}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">Adapter</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t('accountingExports.detailDialog.fields.adapter', { defaultValue: 'Adapter' })}
+                  </div>
                   <div className="text-sm">{selectedBatch.adapter_type}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">Status</div>
-                  <div className="text-sm">{selectedBatch.status}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t('accountingExports.detailDialog.fields.status', { defaultValue: 'Status' })}
+                  </div>
+                  <div className="text-sm">{getStatusLabel(selectedBatch.status)}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">Created</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t('accountingExports.detailDialog.fields.created', { defaultValue: 'Created' })}
+                  </div>
                   <div className="text-sm">{formatIso(selectedBatch.created_at)}</div>
                 </div>
               </div>
 
               <div className="grid gap-3 md:grid-cols-3">
                 <div>
-                  <div className="text-xs text-muted-foreground">Lines</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t('accountingExports.detailDialog.fields.lines', { defaultValue: 'Lines' })}
+                  </div>
                   <div className="text-sm">{selectedDetail?.lines?.length ?? 0}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">Errors</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t('accountingExports.detailDialog.fields.errors', { defaultValue: 'Errors' })}
+                  </div>
                   <div className="text-sm">{selectedDetail?.errors?.length ?? 0}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">Delivered</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t('accountingExports.detailDialog.fields.delivered', { defaultValue: 'Delivered' })}
+                  </div>
                   <div className="text-sm">{formatIso(selectedBatch.delivered_at)}</div>
                 </div>
               </div>
@@ -442,13 +527,13 @@ export default function AccountingExportsTab(): React.JSX.Element {
                   onClick={() => void loadBatchDetail(selectedBatch.batch_id)}
                   disabled={detailLoading}
                 >
-                  Refresh
+                  {t('accountingExports.actions.refresh', { defaultValue: 'Refresh' })}
                 </Button>
                 <Button
                   id="accounting-exports-detail-execute"
                   onClick={() => void onExecute(selectedBatch.batch_id)}
                 >
-                  Execute
+                  {t('accountingExports.actions.execute', { defaultValue: 'Execute' })}
                 </Button>
               </div>
             </div>

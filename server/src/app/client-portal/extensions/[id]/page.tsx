@@ -1,1 +1,1 @@
-export { default, metadata } from '@product/extensions/entry';
+export { default, generateMetadata } from '@product/extensions/entry';

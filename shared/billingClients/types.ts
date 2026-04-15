@@ -28,6 +28,7 @@ export interface PaginatedClientsResponse {
 export type ClientContractAssignmentCreateInput = {
   client_id: string;
   contract_id: string;
+  template_contract_id?: string | null;
   start_date: string;
   end_date: string | null;
   is_active: boolean;
@@ -35,6 +36,11 @@ export type ClientContractAssignmentCreateInput = {
   notice_period_days?: number;
   renewal_term_months?: number;
   use_tenant_renewal_defaults?: boolean;
+  renewal_due_date_action_policy?: 'queue_only' | 'create_ticket' | null;
+  renewal_ticket_board_id?: string | null;
+  renewal_ticket_status_id?: string | null;
+  renewal_ticket_priority?: string | null;
+  renewal_ticket_assignee_id?: string | null;
   po_required?: boolean;
   po_number?: string | null;
   po_amount?: number | null;

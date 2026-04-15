@@ -1,0 +1,169 @@
+{
+  "reduceModal": {
+    "title": "Lizenzen reduzieren",
+    "enterpriseOnly": "Diese Funktion ist nur in der Enterprise-Edition verfügbar."
+  },
+  "purchaseForm": {
+    "title": "Lizenzkauf",
+    "enterpriseOnlyHosted": "Der Lizenzkauf ist in der Enterprise-Edition für gehostete Bereitstellungen verfügbar.",
+    "communityEditionUnlimited": "Die selbst gehostete Community-Edition unterstützt unbegrenzt viele Benutzer ohne zusätzliche Kosten."
+  },
+  "purchasePage": {
+    "title": "Lizenzen kaufen",
+    "description": "Fügen Sie Ihrem AlgaPSA-Konto weitere Benutzerlizenzen hinzu"
+  },
+  "purchaseSuccess": {
+    "metaTitle": "Kauf erfolgreich",
+    "scheduledTitle": "Änderung erfolgreich geplant!",
+    "updatedTitle": "Aktualisierung erfolgreich!",
+    "scheduledDescription": "Ihre Lizenzänderung wurde geplant und tritt am Ende Ihres aktuellen Abrechnungszeitraums in Kraft.",
+    "updatedDescription": "Ihre Lizenzaktualisierung wurde erfolgreich verarbeitet!",
+    "loadingSubscriptionDetails": "Abonnementdetails werden geladen...",
+    "updatingLicenseCount": "Lizenzanzahl wird aktualisiert...",
+    "licenseInformation": "Lizenzinformationen",
+    "youNowHave": "Sie haben jetzt",
+    "totalLicenses": "Lizenzen insgesamt",
+    "changeEffective": "Änderung wirksam ab",
+    "whatsNext": "Wie geht es weiter?",
+    "scheduledSteps": {
+      "currentLicenses": "Ihre aktuellen Lizenzen bleiben bis zum Ende des Abrechnungszeitraums aktiv",
+      "autoUpdate": "Die Lizenzanzahl wird am geplanten Datum automatisch aktualisiert",
+      "emailConfirmation": "Sie erhalten eine E-Mail-Bestätigung, wenn die Änderung wirksam wird"
+    },
+    "updatedSteps": {
+      "activeReady": "Ihre Lizenzen sind jetzt aktiv und einsatzbereit",
+      "createUsers": "Sie können sofort neue Benutzer über die Benutzerverwaltung erstellen",
+      "invoiceProrated": "Ihre nächste Rechnung enthält die anteiligen Kosten"
+    },
+    "sessionDetails": "Sitzungsdetails (für den Support)",
+    "sessionId": "Sitzungs-ID:",
+    "goToAccountManagement": "Zur Kontoverwaltung"
+  },
+  "subscriptionForm": {
+    "title": "Lizenzabonnement verwalten",
+    "errors": {
+      "loadPricing": "Preise konnten nicht geladen werden",
+      "loadLicenseInformation": "Lizenzinformationen konnten nicht geladen werden",
+      "prepareUpdate": "Lizenzaktualisierung konnte nicht vorbereitet werden",
+      "processUpdate": "Lizenzaktualisierung konnte nicht verarbeitet werden",
+      "missingCheckoutSessionData": "Checkout-Sitzungsdaten fehlen"
+    },
+    "checkout": {
+      "title": "Schließen Sie Ihren Kauf ab",
+      "summary": "Sie kaufen {{quantity}} {{licenseLabel}} zu {{price}} pro Lizenz pro {{interval}}.",
+      "total": "Gesamt: {{total}}/{{interval}}",
+      "cancel": "Abbrechen"
+    },
+    "confirmation": {
+      "title": "Lizenzaktualisierung bestätigen",
+      "increaseDescription": "Prüfen Sie die Details Ihrer Lizenzerhöhung, bevor Sie bestätigen.",
+      "decreaseDescription": "Prüfen Sie die Details Ihrer Lizenzreduzierung. Die Änderungen treten am Ende Ihres Abrechnungszeitraums in Kraft.",
+      "currentMonthlyCost": "Aktuelle monatliche Kosten",
+      "currentLicenseCount": "Aktuelle Lizenzanzahl",
+      "newMonthlyCost": "Neue monatliche Kosten",
+      "newLicenseCount": "Neue Lizenzanzahl",
+      "monthlyIncrease": "Monatliche Erhöhung",
+      "monthlySavings": "Monatliche Einsparung",
+      "paymentMethod": "Zahlungsmethode",
+      "changePaymentMethod": "Ändern",
+      "immediateChargeTitle": "Sofortige Belastung",
+      "immediateChargeDescription": "Ihnen werden jetzt {{amountDue}} für den anteiligen Betrag berechnet.",
+      "prorationDescription": "Zeitanteilige Berechnung: {{amount}} für den Rest dieses Abrechnungszeitraums",
+      "scheduledTitle": "Zum Periodenende geplant",
+      "scheduledDescription": "Die Lizenzreduzierung tritt am {{date}} zum Ende Ihres aktuellen Abrechnungszeitraums in Kraft.",
+      "scheduledKeepAccess": "Sie behalten bis dahin Zugriff auf alle {{count}} Lizenzen.",
+      "cancel": "Abbrechen",
+      "confirmPayNow": "Bestätigen und jetzt bezahlen",
+      "confirmSchedule": "Planung bestätigen"
+    },
+    "usage": {
+      "title": "Aktuelle Lizenznutzung",
+      "licensesUsed": "verwendete Lizenzen"
+    },
+    "fields": {
+      "totalLicenseCount": "Gesamte Lizenzanzahl"
+    },
+    "help": {
+      "totalLicenseCount": "Geben Sie die neue Gesamtzahl der Lizenzen ein (Minimum: {{minimum}}). Aktuell: {{current}}",
+      "reduceViaAccount": "Um Lizenzen zu reduzieren, gehen Sie zur Kontoverwaltung",
+      "quantityWarning": "Warnung: Sie haben {{used}} Benutzer, setzen die Gesamtzahl aber auf {{quantity}}"
+    },
+    "pricing": {
+      "pricePerLicense": "Preis pro Lizenz:",
+      "quantity": "Anzahl:",
+      "total": "Gesamt:"
+    },
+    "actions": {
+      "creatingCheckout": "Checkout wird erstellt...",
+      "noChange": "Keine Änderung",
+      "updateToTotal": "Auf insgesamt {{quantity}} aktualisieren ({{difference}} {{licenseLabel}})"
+    },
+    "info": {
+      "totalQuantity": "Dies legt die Gesamtzahl Ihres Abonnements fest (keine Addition zu bestehenden Lizenzen)",
+      "increasingImmediate": "Lizenzerhöhungen: sofortiger Zugriff mit anteiliger Berechnung",
+      "billedMonthly": "Lizenzen werden monatlich berechnet und können jederzeit gekündigt werden"
+    },
+    "solo": {
+      "title": "Solo umfasst einen Benutzer",
+      "description": "Der Solo-Tarif ist für einen einzelnen Benutzer konzipiert und unterstützt das Hinzufügen von Lizenzen nicht. Upgraden Sie auf Pro, um Ihrem Team weitere Benutzer hinzuzufügen.",
+      "upgradeCta": "Upgrade auf Pro"
+    }
+  },
+  "removalModal": {
+    "title": "Lizenzen entfernen",
+    "description": "Entfernen Sie Lizenzen aus Ihrem Konto. Änderungen treten am Ende Ihres aktuellen Abrechnungszeitraums in Kraft.",
+    "stats": {
+      "currentLicenses": "Aktuelle Lizenzen",
+      "activeUsers": "Aktive Benutzer"
+    },
+    "fields": {
+      "newLicenseCount": "Neue Lizenzanzahl",
+      "minimum": "Minimum: {{count}} (um alle aktiven Benutzer unterzubringen)"
+    },
+    "validation": {
+      "positiveInteger": "Die Lizenzanzahl muss eine positive ganze Zahl sein (mindestens 1)",
+      "useAddFlow": "Verwenden Sie den Ablauf \"Lizenzen hinzufügen\", um Lizenzen zu erhöhen",
+      "deactivateUsers": "Sie haben {{activeUsers}} aktive Benutzer. Bitte deaktivieren Sie zuerst {{usersToDeactivate}} {{userLabel}}."
+    },
+    "actions": {
+      "goToUserManagement": "Zur Benutzerverwaltung",
+      "reviewRemoval": "Entfernung prüfen",
+      "confirmRemoval": "Entfernung bestätigen"
+    },
+    "scheduled": {
+      "title": "Entfernung wird geplant",
+      "description": "Ihre Lizenzanzahl wird am Ende Ihres aktuellen Abrechnungszeitraums von {{current}} auf {{next}} reduziert.",
+      "creditDescription": "Sie erhalten auf Ihrer nächsten Rechnung eine Gutschrift für die ungenutzten Lizenzen."
+    },
+    "confirmation": {
+      "description": "Bitte prüfen und bestätigen Sie die Entfernung Ihrer Lizenzen:",
+      "currentMonthlyCost": "Aktuelle monatliche Kosten",
+      "currentLicenseCount": "Aktuelle Lizenzanzahl",
+      "newMonthlyCost": "Neue monatliche Kosten",
+      "newLicenseCount": "Neue Lizenzanzahl",
+      "monthlySavings": "Monatliche Einsparung",
+      "creditNotice": "Die Änderungen treten am Ende Ihres aktuellen Abrechnungszeitraums in Kraft. Sie erhalten auf Ihrer nächsten Rechnung eine anteilige Gutschrift."
+    },
+    "errors": {
+      "deactivateUsersFirst": "Bitte deaktivieren Sie zuerst Benutzer",
+      "reduceFailed": "Lizenzen konnten nicht reduziert werden",
+      "removeFailed": "Lizenzen konnten nicht entfernt werden. Bitte versuchen Sie es erneut."
+    },
+    "success": {
+      "scheduled": "Das Entfernen der Lizenzen wurde geplant! Ihre Lizenzanzahl ändert sich am {{effectiveDate}} von {{current}} auf {{next}}."
+    }
+  },
+  "shared": {
+    "licenseSingular": "Lizenz",
+    "licensePlural": "Lizenzen",
+    "userSingular": "Benutzer",
+    "userPlural": "Benutzer",
+    "licenseCount": "{{count}} {{licenseLabel}}",
+    "perInterval": "{{amount}}/{{interval}}",
+    "none": "Keine",
+    "intervals": {
+      "month": "Monat",
+      "year": "Jahr"
+    }
+  }
+}

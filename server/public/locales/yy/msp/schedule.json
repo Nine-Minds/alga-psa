@@ -1,0 +1,533 @@
+{
+  "page": {
+    "title": "55555",
+    "actions": {
+      "configureAvailability": "55555",
+      "appointmentRequests": "55555"
+    }
+  },
+  "sidebar": {
+    "actions": {
+      "compareAll": "55555",
+      "clearAll": "55555",
+      "viewWeek": "55555",
+      "compare": "55555",
+      "stopComparing": "55555"
+    },
+    "labels": {
+      "inactive": "55555"
+    },
+    "aria": {
+      "viewWeek": "55555 {{name}} 55555",
+      "compare": "55555 {{name}} 55555"
+    }
+  },
+  "agentView": {
+    "loading": "55555",
+    "errors": {
+      "loadPermissions": "55555",
+      "forbidden": "55555"
+    }
+  },
+  "calendar": {
+    "legend": {
+      "types": {
+        "ticket": "55555",
+        "projectTask": "55555",
+        "nonBillableCategory": "55555",
+        "adHoc": "55555",
+        "interaction": "55555",
+        "appointmentRequest": "55555"
+      },
+      "showInactiveUsers": "55555"
+    },
+    "loading": {
+      "initial": "55555",
+      "overlay": "55555"
+    },
+    "errors": {
+      "validateDeletion": "55555",
+      "loadPermissions": "55555",
+      "loadCurrentUser": "55555",
+      "unknown": "55555",
+      "deleteFailed": "55555",
+      "deleteUnexpected": "55555",
+      "updateFailed": "55555 {{error}} 55555",
+      "createFailed": "55555 {{error}} 55555",
+      "saveUnexpected": "55555"
+    },
+    "toolbar": {
+      "previousAria": "55555 {{view}} 55555",
+      "previous": "55555",
+      "today": "55555",
+      "nextAria": "55555 {{view}} 55555",
+      "next": "55555",
+      "views": {
+        "month": "55555",
+        "week": "55555",
+        "day": "55555"
+      }
+    },
+    "event": {
+      "fallbacks": {
+        "unknownTechnician": "55555",
+        "unassigned": "55555",
+        "untitled": "55555"
+      },
+      "tooltip": {
+        "scheduledFor": "55555 {{technicians}} 55555",
+        "start": "55555 {{dateTime}} 55555",
+        "end": "55555 {{dateTime}} 55555",
+        "multiDay": "55555"
+      }
+    },
+    "deleteDialog": {
+      "title": "55555",
+      "messageRecurring": "55555",
+      "messageSingle": "55555",
+      "confirm": "55555",
+      "entityFallback": "55555",
+      "options": {
+        "single": "55555",
+        "future": "55555",
+        "all": "55555"
+      }
+    }
+  },
+  "weeklyEvent": {
+    "actions": {
+      "delete": "55555"
+    },
+    "continuation": {
+      "previousWeek": "55555"
+    }
+  },
+  "requests": {
+    "errors": {
+      "load": "55555",
+      "ticketNotFound": "55555",
+      "loadTicket": "55555",
+      "assignTechnicianRequired": "55555",
+      "approve": "55555",
+      "declineReasonRequired": "55555",
+      "decline": "55555"
+    },
+    "feedback": {
+      "approved": "55555",
+      "declined": "55555"
+    },
+    "filters": {
+      "statusLabel": "55555",
+      "statusOptions": {
+        "all": "55555",
+        "pending": "55555",
+        "approved": "55555",
+        "declined": "55555",
+        "cancelled": "55555"
+      }
+    },
+    "fallbacks": {
+      "invalidDateTime": "55555"
+    },
+    "list": {
+      "title": "55555",
+      "badgeTotal": "55555",
+      "loading": "55555",
+      "empty": "55555 {{status}} 55555",
+      "duration": "55555 {{count}} 55555",
+      "ticketFallback": "55555 {{ticket}} 55555",
+      "fallbacks": {
+        "publicRequest": "55555"
+      }
+    },
+    "detail": {
+      "back": "55555",
+      "title": "55555",
+      "section": {
+        "requestInformation": "55555"
+      },
+      "labels": {
+        "reference": "55555",
+        "client": "55555",
+        "contact": "55555",
+        "email": "55555",
+        "phone": "55555",
+        "service": "55555",
+        "requestedTime": "55555",
+        "duration": "55555",
+        "status": "55555",
+        "linkedTicket": "55555",
+        "description": "55555"
+      }
+    },
+    "approval": {
+      "title": "55555",
+      "fields": {
+        "assignedTechnician": "55555",
+        "finalDateTime": "55555",
+        "internalNotes": "55555",
+        "linkedTicket": "55555"
+      },
+      "placeholders": {
+        "assignedTechnician": "55555",
+        "internalNotes": "55555",
+        "linkedTicket": "55555"
+      },
+      "actions": {
+        "approve": "55555",
+        "decline": "55555"
+      }
+    },
+    "decline": {
+      "title": "55555",
+      "fields": {
+        "reason": "55555"
+      },
+      "placeholders": {
+        "reason": "55555"
+      },
+      "actions": {
+        "confirm": "55555",
+        "cancel": "55555"
+      }
+    }
+  },
+  "availabilitySettings": {
+    "dialog": {
+      "title": "55555"
+    },
+    "loading": "55555",
+    "tabs": {
+      "general": "55555",
+      "userHours": "55555",
+      "serviceRules": "55555",
+      "exceptions": "55555"
+    },
+    "days": {
+      "sunday": "55555",
+      "monday": "55555",
+      "tuesday": "55555",
+      "wednesday": "55555",
+      "thursday": "55555",
+      "friday": "55555",
+      "saturday": "55555"
+    },
+    "common": {
+      "yes": "55555",
+      "no": "55555",
+      "columns": {
+        "action": "55555"
+      },
+      "actions": {
+        "edit": "55555"
+      },
+      "defaultApprover": {
+        "placeholder": "55555"
+      },
+      "teamSelect": {
+        "label": "55555",
+        "placeholder": "55555"
+      }
+    },
+    "feedback": {
+      "loadError": "55555"
+    },
+    "general": {
+      "autoApproval": {
+        "title": "55555",
+        "description": "55555",
+        "criteriaTitle": "55555",
+        "criteria": {
+          "requireAvailability": "55555",
+          "requireContract": "55555",
+          "checkConflicts": "55555",
+          "respectBuffers": "55555"
+        }
+      },
+      "defaultApprover": {
+        "label": "55555",
+        "help": "55555"
+      },
+      "advanceBookingDays": {
+        "label": "55555"
+      },
+      "minimumNoticeHours": {
+        "label": "55555"
+      },
+      "actions": {
+        "save": "55555"
+      },
+      "feedback": {
+        "saveSuccess": "55555",
+        "saveError": "55555"
+      }
+    },
+    "userHours": {
+      "roleManager": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "roleAdmin": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "userSelect": {
+        "label": "55555",
+        "placeholderSelectTeamFirst": "55555",
+        "placeholder": "55555"
+      },
+      "appointmentSettings": {
+        "title": "55555",
+        "defaultDuration": {
+          "label": "55555",
+          "help": "55555",
+          "placeholder": "55555"
+        },
+        "bufferAfter": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "defaultApprover": {
+          "label": "55555",
+          "help": "55555"
+        },
+        "allowClientPreference": {
+          "label": "55555",
+          "help": "55555"
+        }
+      },
+      "schedule": {
+        "timezoneNotice": "55555 {{timeZone}} 55555",
+        "columns": {
+          "day": "55555",
+          "available": "55555",
+          "startTime": "55555",
+          "endTime": "55555"
+        }
+      },
+      "configuredUsers": {
+        "title": "55555",
+        "description": "55555",
+        "empty": "55555",
+        "columns": {
+          "userName": "55555",
+          "status": "55555"
+        },
+        "status": {
+          "configured": "55555"
+        }
+      },
+      "actions": {
+        "save": "55555"
+      },
+      "feedback": {
+        "selectUserError": "55555",
+        "saveSuccess": "55555",
+        "saveError": "55555"
+      }
+    },
+    "serviceRules": {
+      "serviceSelect": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "editor": {
+        "title": "55555 {{serviceName}} 55555",
+        "allowWithoutContract": {
+          "label": "55555"
+        },
+        "maxAppointmentsPerDay": {
+          "label": "55555"
+        },
+        "defaultDuration": {
+          "label": "55555",
+          "help": "55555",
+          "placeholder": "55555"
+        }
+      },
+      "configuredServices": {
+        "title": "55555",
+        "description": "55555",
+        "empty": "55555",
+        "columns": {
+          "serviceName": "55555",
+          "duration": "55555",
+          "withoutContract": "55555",
+          "maxPerDay": "55555"
+        }
+      },
+      "common": {
+        "noLimit": "55555"
+      },
+      "actions": {
+        "save": "55555"
+      },
+      "feedback": {
+        "selectServiceError": "55555",
+        "saveSuccess": "55555",
+        "saveError": "55555"
+      }
+    },
+    "exceptions": {
+      "form": {
+        "title": "55555",
+        "date": {
+          "label": "55555"
+        },
+        "user": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "isAvailable": {
+          "label": "55555"
+        },
+        "reason": {
+          "label": "55555",
+          "placeholder": "55555"
+        }
+      },
+      "common": {
+        "companyWide": "55555"
+      },
+      "actions": {
+        "add": "55555"
+      },
+      "list": {
+        "title": "55555",
+        "empty": "55555",
+        "status": {
+          "available": "55555",
+          "unavailable": "55555"
+        }
+      },
+      "feedback": {
+        "selectDateError": "55555",
+        "addSuccess": "55555",
+        "addError": "55555",
+        "deleteSuccess": "55555",
+        "deleteError": "55555"
+      }
+    }
+  },
+  "entryPopup": {
+    "title": {
+      "appointmentRequest": "55555",
+      "view": "55555",
+      "edit": "55555",
+      "new": "55555"
+    },
+    "alerts": {
+      "privateEntryOnlyCreator": "55555"
+    },
+    "validation": {
+      "summaryTitle": "55555",
+      "titleRequiredForAdHoc": "55555",
+      "startRequired": "55555",
+      "endRequired": "55555",
+      "assigneeRequired": "55555",
+      "startInvalid": "55555",
+      "endInvalid": "55555",
+      "endAfterStart": "55555",
+      "recurrenceIntervalPositive": "55555",
+      "recurrenceCountPositive": "55555",
+      "recurrenceEndInvalid": "55555",
+      "recurrenceEndAfterStart": "55555"
+    },
+    "fields": {
+      "title": "55555",
+      "assignedUsers": "55555",
+      "privateEntry": "55555",
+      "start": "55555",
+      "end": "55555",
+      "notes": "55555"
+    },
+    "actions": {
+      "cancel": "55555",
+      "close": "55555",
+      "save": "55555",
+      "delete": "55555"
+    },
+    "workItem": {
+      "adHocFallback": "55555",
+      "openDetails": "55555"
+    },
+    "appointmentRequest": {
+      "approved": {
+        "title": "55555",
+        "descriptionWithDate": "55555 {{date}} 55555",
+        "description": "55555"
+      },
+      "pending": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "declined": {
+        "title": "55555",
+        "descriptionWithReason": "55555 {{reason}} 55555",
+        "description": "55555"
+      },
+      "cancelled": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "requestedDateTimeLabel": "55555",
+      "assignTechnicianLabel": "55555",
+      "assignTechnicianPlaceholder": "55555",
+      "scheduledDateTimeLabel": "55555",
+      "noNotes": "55555",
+      "declineReasonLabel": "55555",
+      "declineReasonPlaceholder": "55555",
+      "actions": {
+        "approve": "55555",
+        "decline": "55555",
+        "confirmDecline": "55555"
+      },
+      "toasts": {
+        "assignTechnicianRequired": "55555",
+        "approved": "55555",
+        "approveFailed": "55555",
+        "declineReasonRequired": "55555",
+        "declined": "55555",
+        "declineFailed": "55555"
+      }
+    },
+    "recurrence": {
+      "label": "55555",
+      "intervalLabel": "55555",
+      "endLabel": "55555",
+      "endDateLabel": "55555",
+      "occurrencesLabel": "55555",
+      "workdaysOnly": "55555",
+      "options": {
+        "none": "55555",
+        "daily": "55555",
+        "weekly": "55555",
+        "monthly": "55555",
+        "yearly": "55555"
+      },
+      "endOptions": {
+        "never": "55555",
+        "date": "55555",
+        "count": "55555"
+      },
+      "applyDialog": {
+        "title": "55555",
+        "message": "55555"
+      }
+    },
+    "delete": {
+      "validationFailed": "55555",
+      "entityFallback": "55555",
+      "scopeDialog": {
+        "title": "55555",
+        "message": "55555",
+        "confirm": "55555"
+      }
+    },
+    "scopeOptions": {
+      "single": "55555",
+      "future": "55555",
+      "all": "55555"
+    }
+  }
+}

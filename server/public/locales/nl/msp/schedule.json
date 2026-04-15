@@ -1,0 +1,533 @@
+{
+  "page": {
+    "title": "Schema",
+    "actions": {
+      "configureAvailability": "Beschikbaarheid configureren",
+      "appointmentRequests": "Afspraakverzoeken"
+    }
+  },
+  "sidebar": {
+    "actions": {
+      "compareAll": "Vergelijk alles",
+      "clearAll": "Alles wissen",
+      "viewWeek": "Week bekijken",
+      "compare": "Vergelijken",
+      "stopComparing": "Stop met vergelijken"
+    },
+    "labels": {
+      "inactive": "(Inactief)"
+    },
+    "aria": {
+      "viewWeek": "Week bekijken voor {{name}}",
+      "compare": "Vergelijk {{name}}"
+    }
+  },
+  "agentView": {
+    "loading": "Laden...",
+    "errors": {
+      "loadPermissions": "Kan gebruikersrechten niet laden",
+      "forbidden": "U heeft geen toestemming om dit schema te bekijken."
+    }
+  },
+  "calendar": {
+    "legend": {
+      "types": {
+        "ticket": "Ticket",
+        "projectTask": "Projecttaak",
+        "nonBillableCategory": "Niet-factureerbare categorie",
+        "adHoc": "Ad-hoc-inzending",
+        "interaction": "Interactie",
+        "appointmentRequest": "Afspraakverzoek"
+      },
+      "showInactiveUsers": "Toon inactieve gebruikers"
+    },
+    "loading": {
+      "initial": "Schema laden...",
+      "overlay": "Laden..."
+    },
+    "errors": {
+      "validateDeletion": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
+      "loadPermissions": "Kan rechten niet laden.",
+      "loadCurrentUser": "Kan huidige gebruiker niet laden.",
+      "unknown": "Er is een onbekende fout opgetreden",
+      "deleteFailed": "Kan de planningsinvoer niet verwijderen",
+      "deleteUnexpected": "Er is een fout opgetreden bij het verwijderen van de planningsinvoer",
+      "updateFailed": "Kan planningsinvoer niet bijwerken: {{error}}",
+      "createFailed": "Kan schema-invoer niet toevoegen: {{error}}",
+      "saveUnexpected": "Er is een fout opgetreden bij het opslaan van de planningsinvoer"
+    },
+    "toolbar": {
+      "previousAria": "Vorige {{view}}",
+      "previous": "< Vorige",
+      "today": "Vandaag",
+      "nextAria": "Volgende {{view}}",
+      "next": "Volgende >",
+      "views": {
+        "month": "Maand",
+        "week": "Week",
+        "day": "Dag"
+      }
+    },
+    "event": {
+      "fallbacks": {
+        "unknownTechnician": "Onbekend",
+        "unassigned": "Niet toegewezen",
+        "untitled": "Zonder titel"
+      },
+      "tooltip": {
+        "scheduledFor": "Gepland voor: {{technicians}}",
+        "start": "Begin: {{dateTime}}",
+        "end": "Einde: {{dateTime}}",
+        "multiDay": "(Meerdaags)"
+      }
+    },
+    "deleteDialog": {
+      "title": "Schema-item verwijderen",
+      "messageRecurring": "Selecteer welke evenementen u wilt verwijderen:",
+      "messageSingle": "Weet u zeker dat u deze planningsinvoer wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "confirm": "Verwijderen",
+      "entityFallback": "deze schema-invoer",
+      "options": {
+        "single": "Alleen dit evenement",
+        "future": "Deze en toekomstige gebeurtenissen",
+        "all": "Alle evenementen"
+      }
+    }
+  },
+  "weeklyEvent": {
+    "actions": {
+      "delete": "Invoer verwijderen"
+    },
+    "continuation": {
+      "previousWeek": "Vervolg van vorige week"
+    }
+  },
+  "requests": {
+    "errors": {
+      "load": "Kan afspraakverzoeken niet laden",
+      "ticketNotFound": "Ticket niet gevonden",
+      "loadTicket": "Kan ticket niet laden",
+      "assignTechnicianRequired": "Wijs een technicus toe",
+      "approve": "Kan het verzoek niet goedkeuren",
+      "declineReasonRequired": "Geef een reden op voor de weigering",
+      "decline": "Kan het verzoek niet weigeren"
+    },
+    "feedback": {
+      "approved": "Afspraakverzoek goedgekeurd",
+      "declined": "Afspraakverzoek afgewezen"
+    },
+    "filters": {
+      "statusLabel": "Filter op status",
+      "statusOptions": {
+        "all": "Alle",
+        "pending": "In behandeling",
+        "approved": "Goedgekeurd",
+        "declined": "Afgewezen",
+        "cancelled": "Geannuleerd"
+      }
+    },
+    "fallbacks": {
+      "invalidDateTime": "Ongeldige datum/tijd"
+    },
+    "list": {
+      "title": "Afspraakverzoeken",
+      "badgeTotal": "Totaal",
+      "loading": "Aanvragen laden...",
+      "empty": "Geen {{status}} verzoeken gevonden",
+      "duration": "{{count}} minuten",
+      "ticketFallback": "Ticket #{{ticket}}",
+      "fallbacks": {
+        "publicRequest": "Openbaar verzoek"
+      }
+    },
+    "detail": {
+      "back": "← Terug naar lijst",
+      "title": "Details aanvragen",
+      "section": {
+        "requestInformation": "Vraag informatie aan"
+      },
+      "labels": {
+        "reference": "Referentie",
+        "client": "Cliënt",
+        "contact": "Contact",
+        "email": "E-mail",
+        "phone": "Telefoon",
+        "service": "Dienst",
+        "requestedTime": "Gevraagde tijd",
+        "duration": "Duur",
+        "status": "Status",
+        "linkedTicket": "Gekoppeld kaartje",
+        "description": "Beschrijving"
+      }
+    },
+    "approval": {
+      "title": "Goedkeuringsdetails",
+      "fields": {
+        "assignedTechnician": "Technicus toewijzen *",
+        "finalDateTime": "Laatste datum en tijd",
+        "internalNotes": "Interne opmerkingen (optioneel)",
+        "linkedTicket": "Link naar ticket (optioneel)"
+      },
+      "placeholders": {
+        "assignedTechnician": "Selecteer technicus",
+        "internalNotes": "Voeg eventuele interne opmerkingen toe...",
+        "linkedTicket": "Voer ticket-ID in om te koppelen..."
+      },
+      "actions": {
+        "approve": "Goedkeuren",
+        "decline": "Afwijzen"
+      }
+    },
+    "decline": {
+      "title": "Verzoek weigeren",
+      "fields": {
+        "reason": "Reden van weigering *"
+      },
+      "placeholders": {
+        "reason": "Geef een reden op waarom u dit verzoek afwijst..."
+      },
+      "actions": {
+        "confirm": "Bevestig de weigering",
+        "cancel": "Annuleren"
+      }
+    }
+  },
+  "availabilitySettings": {
+    "dialog": {
+      "title": "Beschikbaarheidsinstellingen"
+    },
+    "loading": "Instellingen laden...",
+    "tabs": {
+      "general": "Algemene instellingen",
+      "userHours": "Gebruikersuren",
+      "serviceRules": "Serviceregels",
+      "exceptions": "Uitzonderingen"
+    },
+    "days": {
+      "sunday": "Zondag",
+      "monday": "Maandag",
+      "tuesday": "Dinsdag",
+      "wednesday": "Woensdag",
+      "thursday": "Donderdag",
+      "friday": "Vrijdag",
+      "saturday": "Zaterdag"
+    },
+    "common": {
+      "yes": "Ja",
+      "no": "Nee",
+      "columns": {
+        "action": "Actie"
+      },
+      "actions": {
+        "edit": "Bewerken"
+      },
+      "defaultApprover": {
+        "placeholder": "Selecteer een goedkeurder"
+      },
+      "teamSelect": {
+        "label": "Selecteer Team",
+        "placeholder": "Selecteer een team"
+      }
+    },
+    "feedback": {
+      "loadError": "Kan instellingen niet laden"
+    },
+    "general": {
+      "autoApproval": {
+        "title": "Automatische goedkeuring inschakelen",
+        "description": "Keur automatisch afspraken goed die voldoen aan de hieronder geconfigureerde criteria",
+        "criteriaTitle": "Criteria voor automatische goedkeuring:",
+        "criteria": {
+          "requireAvailability": "De technicus moet de beschikbaarheid voor de gevraagde tijd hebben geconfigureerd",
+          "requireContract": "Klant moet een actief contract hebben (als de service dit vereist)",
+          "checkConflicts": "Geen planningsconflicten met bestaande afspraken",
+          "respectBuffers": "Respecteer buffertijden voor/na afspraken"
+        }
+      },
+      "defaultApprover": {
+        "label": "Standaardgoedkeurder",
+        "help": "Bedrijfsbrede standaardgoedkeurder voor afspraakverzoeken die handmatige goedkeuring vereisen. Dit kan per technicus worden overschreven in de Gebruikersureninstellingen."
+      },
+      "advanceBookingDays": {
+        "label": "Standaard vooruitboeking (dagen)"
+      },
+      "minimumNoticeHours": {
+        "label": "Minimale kennisgeving (uren)"
+      },
+      "actions": {
+        "save": "Bewaar algemene instellingen"
+      },
+      "feedback": {
+        "saveSuccess": "Algemene instellingen opgeslagen",
+        "saveError": "Kan instellingen niet opslaan"
+      }
+    },
+    "userHours": {
+      "roleManager": {
+        "label": "Teammanager:",
+        "description": "U kunt beschikbaarheidsinstellingen configureren voor leden van uw team(s). In de onderstaande tabel 'Geconfigureerde gebruikers' worden alle gebruikers weergegeven met beschikbaarheidsinstellingen voor het hele systeem."
+      },
+      "roleAdmin": {
+        "label": "Beheerder:",
+        "description": "U kunt beschikbaarheidsinstellingen configureren voor elke gebruiker in het systeem. In de onderstaande tabel 'Geconfigureerde gebruikers' worden alle gebruikers met beschikbaarheidsinstellingen weergegeven."
+      },
+      "userSelect": {
+        "label": "Selecteer Gebruiker om te configureren",
+        "placeholderSelectTeamFirst": "Selecteer eerst een team",
+        "placeholder": "Selecteer een gebruiker om te configureren"
+      },
+      "appointmentSettings": {
+        "title": "Afspraakinstellingen",
+        "defaultDuration": {
+          "label": "Standaard afspraakduur (minuten)",
+          "help": "Technicusspecifieke duuroverschrijving. Laat dit leeg om de servicespecifieke duur uit Serviceregels te gebruiken.",
+          "placeholder": "Laat leeg om de servicestandaard te gebruiken"
+        },
+        "bufferAfter": {
+          "label": "Buffertijd tussen afspraken (minuten)",
+          "placeholder": "15"
+        },
+        "defaultApprover": {
+          "label": "Standaardgoedkeurder",
+          "help": "Wie moet afspraakverzoeken voor deze technicus beoordelen en goedkeuren die handmatige goedkeuring vereisen?"
+        },
+        "allowClientPreference": {
+          "label": "Klantvoorkeur toestaan",
+          "help": "Laat klanten specifiek om deze technieker vragen"
+        }
+      },
+      "schedule": {
+        "timezoneNotice": "De tijden zijn in uw lokale tijdzone ({{timeZone}})",
+        "columns": {
+          "day": "Dag",
+          "available": "Beschikbaar",
+          "startTime": "Begintijd",
+          "endTime": "Eindtijd"
+        }
+      },
+      "configuredUsers": {
+        "title": "Geconfigureerde gebruikers",
+        "description": "Gebruikers met geconfigureerde beschikbaarheidsinstellingen",
+        "empty": "Er zijn nog geen gebruikers geconfigureerd",
+        "columns": {
+          "userName": "Gebruikersnaam",
+          "status": "Status"
+        },
+        "status": {
+          "configured": "Geconfigureerd"
+        }
+      },
+      "actions": {
+        "save": "Bewaar gebruikersuren"
+      },
+      "feedback": {
+        "selectUserError": "Selecteer een gebruiker",
+        "saveSuccess": "Gebruikersuren opgeslagen",
+        "saveError": "Kan gebruikersuren niet opslaan"
+      }
+    },
+    "serviceRules": {
+      "serviceSelect": {
+        "label": "Selecteer Service om te configureren",
+        "placeholder": "Selecteer een service om te configureren"
+      },
+      "editor": {
+        "title": "Regels bewerken: {{serviceName}}",
+        "allowWithoutContract": {
+          "label": "Boeking zonder contract toestaan"
+        },
+        "maxAppointmentsPerDay": {
+          "label": "Maximaal aantal afspraken per dag"
+        },
+        "defaultDuration": {
+          "label": "Standaard afspraakduur (minuten)",
+          "help": "Standaardduur voor afspraken van dit servicetype. Kan worden overschreven door technicusspecifieke instellingen in Gebruikersuren.",
+          "placeholder": "bijvoorbeeld 60 (minuten)"
+        }
+      },
+      "configuredServices": {
+        "title": "Geconfigureerde diensten",
+        "description": "Services waarvoor afspraakregels zijn geconfigureerd",
+        "empty": "Nog geen services geconfigureerd",
+        "columns": {
+          "serviceName": "Dienstnaam",
+          "duration": "Duur (min)",
+          "withoutContract": "Zonder contract",
+          "maxPerDay": "Maximaal per dag"
+        }
+      },
+      "common": {
+        "noLimit": "Geen limiet"
+      },
+      "actions": {
+        "save": "Serviceregels opslaan"
+      },
+      "feedback": {
+        "selectServiceError": "Selecteer een dienst",
+        "saveSuccess": "Serviceregels opgeslagen",
+        "saveError": "Kan serviceregels niet opslaan"
+      }
+    },
+    "exceptions": {
+      "form": {
+        "title": "Uitzondering toevoegen",
+        "date": {
+          "label": "Selecteer Datum"
+        },
+        "user": {
+          "label": "Gebruiker (optioneel - laat leeg voor het hele bedrijf)",
+          "placeholder": "Selecteer gebruiker"
+        },
+        "isAvailable": {
+          "label": "Beschikbaar op deze dag"
+        },
+        "reason": {
+          "label": "Reden",
+          "placeholder": "Vakantie, vrije tijd, enz."
+        }
+      },
+      "common": {
+        "companyWide": "Bedrijfsbreed"
+      },
+      "actions": {
+        "add": "Uitzondering toevoegen"
+      },
+      "list": {
+        "title": "Bestaande uitzonderingen",
+        "empty": "Geen uitzonderingen geconfigureerd",
+        "status": {
+          "available": "Beschikbaar",
+          "unavailable": "Niet beschikbaar"
+        }
+      },
+      "feedback": {
+        "selectDateError": "Selecteer een datum",
+        "addSuccess": "Uitzondering toegevoegd",
+        "addError": "Kan uitzondering niet toevoegen",
+        "deleteSuccess": "Uitzondering verwijderd",
+        "deleteError": "Kan uitzondering niet verwijderen"
+      }
+    }
+  },
+  "entryPopup": {
+    "title": {
+      "appointmentRequest": "Afspraakverzoek",
+      "view": "Invoer bekijken",
+      "edit": "Invoer bewerken",
+      "new": "Nieuwe invoer"
+    },
+    "alerts": {
+      "privateEntryOnlyCreator": "Dit is een privé-ingang. Alleen de maker kan details bekijken of bewerken."
+    },
+    "validation": {
+      "summaryTitle": "Vul de verplichte velden in:",
+      "titleRequiredForAdHoc": "Voor ad-hocinzendingen is een titel vereist",
+      "startRequired": "Startdatum/-tijd",
+      "endRequired": "Einddatum/-tijd",
+      "assigneeRequired": "Ten minste één toegewezen gebruiker",
+      "startInvalid": "Startdatum is ongeldig",
+      "endInvalid": "Einddatum is ongeldig",
+      "endAfterStart": "De einddatum moet na de startdatum liggen",
+      "recurrenceIntervalPositive": "Het herhalingsinterval moet een positief geheel getal zijn",
+      "recurrenceCountPositive": "Het aantal keren dat het voorkomt moet een positief geheel getal zijn",
+      "recurrenceEndInvalid": "Einddatum van herhaling is ongeldig",
+      "recurrenceEndAfterStart": "De einddatum van het herhalingspatroon moet na de startdatum liggen"
+    },
+    "fields": {
+      "title": "Titel",
+      "assignedUsers": "Toegewezen gebruikers *",
+      "privateEntry": "Privétoegang (niet zichtbaar voor andere gebruikers)",
+      "start": "Begin *",
+      "end": "Einde *",
+      "notes": "Opmerkingen"
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "close": "Sluiten",
+      "save": "Opslaan",
+      "delete": "Invoer verwijderen"
+    },
+    "workItem": {
+      "adHocFallback": "Ad-hocinvoer (geen werkitem)",
+      "openDetails": "Details"
+    },
+    "appointmentRequest": {
+      "approved": {
+        "title": "Goedgekeurde afspraak",
+        "descriptionWithDate": "Deze afspraak kwam voort uit een verzoek van een klant en werd goedgekeurd op {{date}}.",
+        "description": "Deze afspraak is ontstaan ​​vanuit een verzoek van een cliënt."
+      },
+      "pending": {
+        "title": "Afspraakverzoek in behandeling",
+        "description": "Dit is een afspraakverzoek van een cliënt. U kunt het hieronder goedkeuren of afwijzen."
+      },
+      "declined": {
+        "title": "Afgewezen afspraakverzoek",
+        "descriptionWithReason": "Dit afspraakverzoek is afgewezen: {{reason}}",
+        "description": "Dit afspraakverzoek is afgewezen."
+      },
+      "cancelled": {
+        "title": "Afspraakverzoek geannuleerd",
+        "description": "Dit afspraakverzoek is door de cliënt geannuleerd."
+      },
+      "requestedDateTimeLabel": "Gevraagde datum en tijd",
+      "assignTechnicianLabel": "Technicus toewijzen *",
+      "assignTechnicianPlaceholder": "Selecteer technicus",
+      "scheduledDateTimeLabel": "Geplande datum en tijd",
+      "noNotes": "Geen aantekeningen verstrekt",
+      "declineReasonLabel": "Reden van weigering *",
+      "declineReasonPlaceholder": "Geef een reden op waarom u dit verzoek afwijst...",
+      "actions": {
+        "approve": "Goedkeuren",
+        "decline": "Afwijzen",
+        "confirmDecline": "Bevestig de weigering"
+      },
+      "toasts": {
+        "assignTechnicianRequired": "Wijs een technicus toe",
+        "approved": "Afspraakverzoek goedgekeurd",
+        "approveFailed": "Kan het verzoek niet goedkeuren",
+        "declineReasonRequired": "Geef een reden op voor de weigering",
+        "declined": "Afspraakverzoek afgewezen",
+        "declineFailed": "Kan het verzoek niet weigeren"
+      }
+    },
+    "recurrence": {
+      "label": "Herhaling",
+      "intervalLabel": "Interval",
+      "endLabel": "Einde",
+      "endDateLabel": "Einddatum",
+      "occurrencesLabel": "Voorvallen",
+      "workdaysOnly": "Alleen werkdagen (ma-vr, uitgezonderd feestdagen)",
+      "options": {
+        "none": "Geen",
+        "daily": "Dagelijks",
+        "weekly": "Wekelijks",
+        "monthly": "Maandelijks",
+        "yearly": "Jaarlijks"
+      },
+      "endOptions": {
+        "never": "Nooit",
+        "date": "Op datum",
+        "count": "Na"
+      },
+      "applyDialog": {
+        "title": "Wijzigingen toepassen op",
+        "message": "Selecteer welke evenementen u wilt updaten:"
+      }
+    },
+    "delete": {
+      "validationFailed": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
+      "entityFallback": "deze schema-invoer",
+      "scopeDialog": {
+        "title": "Schema-item verwijderen",
+        "message": "Selecteer welke evenementen u wilt verwijderen:",
+        "confirm": "Doorgaan"
+      }
+    },
+    "scopeOptions": {
+      "single": "Alleen dit evenement",
+      "future": "Deze en toekomstige gebeurtenissen",
+      "all": "Alle evenementen"
+    }
+  }
+}

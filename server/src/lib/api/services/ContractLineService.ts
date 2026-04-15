@@ -22,6 +22,13 @@ import {
   addContractLine as repositoryAddContractLine,
   removeContractLine as repositoryRemoveContractLine,
 } from 'server/src/lib/repositories/contractLineRepository';
+import {
+  DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+  resolveRecurringAuthoringPolicy,
+} from '@shared/billingClients/recurringAuthoringPolicy';
+import { normalizeTemplateRecurringStorage } from '@shared/billingClients/recurrenceStorageModel';
+import { resolveCadenceOwner } from '@shared/billingClients/recurringTiming';
+import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
 
 // Import schema types for validation
 import {
@@ -29,6 +36,7 @@ import {
   UpdateContractLineData,
   ContractLineResponse,
   ContractLineFilterData,
+  ContractFilterData,
   CreateFixedPlanConfigData,
   UpdateFixedPlanConfigData,
   CreateContractData,
@@ -63,6 +71,16 @@ export interface ContractLineServiceOptions {
   includeServices?: boolean;
   includeUsage?: boolean;
   includeClients?: boolean;
+}
+
+function normalizeContractLineCompatibility<T extends { service_category?: unknown; cadence_owner?: IContractLine['cadence_owner'] | null }>(
+  plan: T,
+): T & Pick<IContractLine, 'cadence_owner'> {
+  return {
+    ...plan,
+    service_category: plan.service_category || undefined,
+    cadence_owner: resolveCadenceOwner(plan.cadence_owner),
+  };
 }
 
 export interface PlanTemplate {
@@ -140,10 +158,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       ]);
   
       // Transform null to undefined for compatibility
-      const transformedPlans = plans.map((plan: any) => ({
-        ...plan,
-        service_category: plan.service_category || undefined
-      }));
+      const transformedPlans = plans.map((plan: any) => normalizeContractLineCompatibility(plan));
   
       return {
         data: transformedPlans as IContractLine[],
@@ -184,10 +199,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       ]);
   
       // Transform null to undefined for compatibility
-      const transformedPlans = plans.map((plan: any) => ({
-        ...plan,
-        service_category: plan.service_category || undefined
-      }));
+      const transformedPlans = plans.map((plan: any) => normalizeContractLineCompatibility(plan));
   
       // Add HATEOAS links
       const plansWithLinks = transformedPlans.map((plan: any) => 
@@ -219,10 +231,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
   
       // Transform null to undefined for compatibility
-      return {
-        ...plan,
-        service_category: plan.service_category || undefined
-      } as IContractLine;
+      return normalizeContractLineCompatibility(plan) as IContractLine;
     }
   
     /**
@@ -246,10 +255,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
     
         // Transform null to undefined for compatibility
-        const transformedPlan = {
-          ...plan,
-          service_category: plan.service_category || undefined
-        };
+        const transformedPlan = normalizeContractLineCompatibility(plan);
     
         // Add HATEOAS links
         return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as ContractLineResponse;
@@ -272,11 +278,23 @@ export class ContractLineService extends BaseService<IContractLine> {
 
         const baseRate = (data as any).base_rate ?? planData.custom_rate ?? null;
         const enableProration = (data as any).enable_proration ?? false;
-        const alignment = (data as any).billing_cycle_alignment ?? 'start';
+        const alignment = resolveBillingCycleAlignmentForCompatibility({
+          billingCycleAlignment: (data as any).billing_cycle_alignment,
+          enableProration,
+        });
+        const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          cadenceOwner: data.cadence_owner ?? planData.cadence_owner,
+          defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+          billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
+          enableProration,
+          billingCycleAlignment: alignment,
+        });
 
         planData.custom_rate = data.contract_line_type === 'Fixed' ? baseRate : planData.custom_rate ?? null;
-        planData.enable_proration = enableProration;
-        planData.billing_cycle_alignment = alignment;
+        planData.enable_proration = recurringAuthoringPolicy.enableProration;
+        planData.billing_cycle_alignment = recurringAuthoringPolicy.billingCycleAlignment;
+        planData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
+        planData.billing_timing = recurringAuthoringPolicy.billingTiming;
 
         delete (planData as any).base_rate;
 
@@ -312,6 +330,14 @@ export class ContractLineService extends BaseService<IContractLine> {
         
         // Prepare update data
         const updateData = this.addUpdateAuditFields(data, context);
+        const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          cadenceOwner: data.cadence_owner,
+          fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+          billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
+          fallbackBillingTiming: existingPlan.billing_timing,
+        });
+        updateData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
+        updateData.billing_timing = recurringAuthoringPolicy.billingTiming;
         
         // Handle plan type specific logic
         if (existingPlan.contract_line_type === 'Hourly') {
@@ -333,10 +359,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
         
         // Transform null to undefined for compatibility
-        return {
-          ...updatedPlan,
-          service_category: updatedPlan.service_category || undefined
-        } as IContractLine;
+        return normalizeContractLineCompatibility(updatedPlan) as IContractLine;
       });
     }
   
@@ -359,6 +382,14 @@ export class ContractLineService extends BaseService<IContractLine> {
         
         // Prepare update data
         const updateData = this.addUpdateAuditFields(data, context);
+        const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          cadenceOwner: data.cadence_owner,
+          fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+          billingTiming: data.billing_timing,
+          fallbackBillingTiming: existingPlan.billing_timing,
+        });
+        updateData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
+        updateData.billing_timing = recurringAuthoringPolicy.billingTiming;
         
         // Handle plan type specific logic
         if (existingPlan.contract_line_type === 'Hourly') {
@@ -380,10 +411,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
         
         // Transform null to undefined for compatibility
-        const transformedPlan = {
-          ...updatedPlan,
-          service_category: updatedPlan.service_category || undefined
-        };
+        const transformedPlan = normalizeContractLineCompatibility(updatedPlan);
         
         return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as ContractLineResponse;
       });
@@ -455,11 +483,16 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
 
       const model = new ContractLineFixedConfig(trx, context.tenant);
+      const existingConfig = await model.getByPlanId(planId);
       await model.upsert({
         contract_line_id: planId,
         base_rate: data.base_rate,
         enable_proration: data.enable_proration,
-        billing_cycle_alignment: data.billing_cycle_alignment,
+        billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+          billingCycleAlignment: data.billing_cycle_alignment,
+          enableProration: data.enable_proration,
+          fallbackAlignment: existingConfig?.billing_cycle_alignment,
+        }),
         tenant: context.tenant,
       });
 
@@ -487,7 +520,10 @@ export class ContractLineService extends BaseService<IContractLine> {
     return {
       base_rate: planConfig?.base_rate || null,
       enable_proration: planConfig?.enable_proration || false,
-      billing_cycle_alignment: planConfig?.billing_cycle_alignment || 'start',
+      billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+        billingCycleAlignment: planConfig?.billing_cycle_alignment,
+        enableProration: planConfig?.enable_proration,
+      }),
       config_id: serviceConfig?.config_id
     };
   }
@@ -672,13 +708,117 @@ export class ContractLineService extends BaseService<IContractLine> {
   // ============================================================================
 
   /**
-   * Create a new contract
+   * List client-owned contract headers exposed by the /contracts resource.
+   * Templates are managed through dedicated template endpoints and are excluded here.
+   */
+  async listContracts(
+    options: ListOptions,
+    context: ServiceContext
+  ): Promise<ListResult<ContractResponse>> {
+    const { knex } = await this.getKnex();
+    const {
+      page = 1,
+      limit = 25,
+      filters = {} as ContractFilterData,
+      sort,
+      order,
+    } = options;
+
+    const sortColumns: Record<string, string> = {
+      contract_name: 'c.contract_name',
+      billing_frequency: 'c.billing_frequency',
+      is_active: 'c.is_active',
+      created_at: 'c.created_at',
+      updated_at: 'c.updated_at',
+    };
+    const sortColumn = sort ? sortColumns[sort] ?? 'c.contract_name' : 'c.contract_name';
+    const sortDirection = order === 'desc' ? 'desc' : 'asc';
+
+    const baseQuery = knex('contracts as c')
+      .leftJoin('clients as oc', function joinOwnerClient() {
+        this.on('c.owner_client_id', '=', 'oc.client_id').andOn('c.tenant', '=', 'oc.tenant');
+      })
+      .leftJoin('contract_lines as cl', function joinLines() {
+        this.on('c.contract_id', '=', 'cl.contract_id').andOn('c.tenant', '=', 'cl.tenant');
+      })
+      .leftJoin('client_contracts as cc', function joinAssignments() {
+        this.on('c.contract_id', '=', 'cc.contract_id').andOn('c.tenant', '=', 'cc.tenant');
+      })
+      .where({ 'c.tenant': context.tenant })
+      .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
+      .whereNotNull('c.owner_client_id')
+      .groupBy('c.contract_id', 'oc.client_name')
+      .select(
+        'c.contract_id',
+        'c.contract_name',
+        'c.contract_description',
+        'c.owner_client_id',
+        'c.billing_frequency',
+        'c.status',
+        'c.is_active',
+        'c.created_at',
+        'c.updated_at',
+        'c.tenant',
+        'oc.client_name as owner_client_name',
+        knex.raw('COUNT(DISTINCT cl.contract_line_id)::int as total_plans'),
+        knex.raw('COUNT(DISTINCT cc.client_id)::int as clients_using_contract')
+      );
+
+    if (filters.contract_name) {
+      baseQuery.andWhere('c.contract_name', 'ilike', `%${filters.contract_name}%`);
+    }
+
+    if (typeof filters.is_active === 'boolean') {
+      baseQuery.andWhere('c.is_active', filters.is_active);
+    }
+
+    if (typeof filters.has_plans === 'boolean') {
+      baseQuery.havingRaw(
+        `COUNT(DISTINCT cl.contract_line_id) ${filters.has_plans ? '>' : '='} 0`
+      );
+    }
+
+    if (typeof filters.clients_count_min === 'number') {
+      baseQuery.havingRaw('COUNT(DISTINCT cc.client_id) >= ?', [filters.clients_count_min]);
+    }
+
+    if (typeof filters.clients_count_max === 'number') {
+      baseQuery.havingRaw('COUNT(DISTINCT cc.client_id) <= ?', [filters.clients_count_max]);
+    }
+
+    const [contracts, [{ count }]] = await Promise.all([
+      baseQuery
+        .clone()
+        .orderBy(sortColumn, sortDirection)
+        .limit(limit)
+        .offset((page - 1) * limit),
+      knex
+        .from(baseQuery.clone().as('client_owned_contracts'))
+        .count('* as count'),
+    ]);
+
+    const contractsWithLinks = contracts.map((contract: any) =>
+      addHateoasLinks(contract, this.generateContractLinks(contract.contract_id, context))
+    );
+
+    return {
+      data: contractsWithLinks as ContractResponse[],
+      total: parseInt(String(count ?? '0'), 10),
+    };
+  }
+
+  /**
+   * Create a new client-owned instantiated contract header.
    */
   async createContract(
     data: CreateContractData,
     context: ServiceContext
   ): Promise<ContractResponse> {
     const { knex } = await this.getKnex();
+
+    if (typeof data.owner_client_id !== 'string' || data.owner_client_id.trim().length === 0) {
+      throw new Error('Non-template contracts require an owning client');
+    }
     
     return withTransaction(knex, async (trx) => {
       const { contract_description, ...rest } = data as any;
@@ -687,6 +827,8 @@ export class ContractLineService extends BaseService<IContractLine> {
           contract_id: uuidv4(),
           ...rest,
           contract_description,
+          owner_client_id: data.owner_client_id.trim(),
+          status: data.status ?? 'draft',
         },
         context
       );
@@ -764,9 +906,6 @@ export class ContractLineService extends BaseService<IContractLine> {
       // Validate client exists
       await this.validateClientExists(data.client_id, context, trx);
 
-      // Check for overlapping assignments
-      await this.validateNoOverlappingAssignments(data, context, trx);
-
       // Get the client's contract to assign this line to
       let targetContractId: string | null = null;
       let templateContractId: string | null = null;
@@ -779,26 +918,39 @@ export class ContractLineService extends BaseService<IContractLine> {
 
         if (clientContract) {
           targetContractId = clientContract.contract_id;
-          templateContractId = clientContract.template_contract_id ?? clientContract.contract_id ?? null;
-
-          if (!clientContract.template_contract_id && clientContract.contract_id) {
-            await trx('client_contracts')
-              .where('tenant', context.tenant)
-              .where('client_contract_id', data.client_contract_id)
-              .update({
-                template_contract_id: clientContract.contract_id,
-                updated_at: trx.fn.now(),
-                updated_by: context.userId
-              });
-          }
+          templateContractId = clientContract.template_contract_id ?? null;
         }
       }
 
       if (!targetContractId) {
         throw new Error('Client contract not found or missing contract_id');
       }
+      if (!templateContractId) {
+        throw new Error(
+          `Client contract ${data.client_contract_id} is missing template provenance (template_contract_id) required for template clone operations`
+        );
+      }
 
-      // Create new contract_line for the client's contract
+      // The client contract owns the live cloned line. Reject only true duplicate
+      // clones inside that target contract rather than colliding on the removed
+      // client_contract_lines assignment rows.
+      await this.validateNoOverlappingAssignments(
+        data,
+        templateLine,
+        targetContractId,
+        context,
+        trx,
+      );
+
+      // Renewed or replacement assignments must create a fresh line identity so
+      // historical recurring detail periods stay attached to the superseded line.
+      // The template link stays as provenance on the assignment/response, but
+      // recurring cadence fields are copied onto the live line and do not keep
+      // following future template edits.
+      const templateRecurringStorage = normalizeTemplateRecurringStorage({
+        billing_timing: templateLine.billing_timing,
+        cadence_owner: templateLine.cadence_owner,
+      });
       const newContractLineId = uuidv4();
       const contractLineData = this.addCreateAuditFields({
         contract_line_id: newContractLineId,
@@ -808,7 +960,8 @@ export class ContractLineService extends BaseService<IContractLine> {
         billing_frequency: templateLine.billing_frequency,
         contract_line_type: templateLine.contract_line_type,
         service_category: templateLine.service_category ?? data.service_category,
-        billing_timing: templateLine.billing_timing ?? 'arrears',
+        billing_timing: templateRecurringStorage.billing_timing,
+        cadence_owner: templateRecurringStorage.cadence_owner,
         is_active: data.is_active ?? true,
         is_custom: false,
         custom_rate: data.custom_rate ?? templateLine.custom_rate,
@@ -852,8 +1005,8 @@ export class ContractLineService extends BaseService<IContractLine> {
 
   /**
    * Unassign contract line from client
-   * @deprecated This function operates on the legacy client_contract_lines table which is being phased out.
-   * Contracts are now client-specific via client_contracts, so individual line assignment is redundant.
+   * Client-owned lines are canonical after the post-drop cutover, so
+   * unassignment deactivates the cloned contract_line directly.
    */
   async unassignPlanFromClient(
     clientContractLineId: string,
@@ -862,11 +1015,14 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      // First get the client_id from the assignment record
-      const assignment = await trx('client_contract_lines')
-        .where('client_contract_line_id', clientContractLineId)
-        .where('tenant', context.tenant)
-        .select('client_id')
+      const assignment = await trx('contract_lines as cl')
+        .join('contracts as c', function joinContracts() {
+          this.on('cl.contract_id', '=', 'c.contract_id')
+            .andOn('cl.tenant', '=', 'c.tenant');
+        })
+        .where('cl.contract_line_id', clientContractLineId)
+        .where('cl.tenant', context.tenant)
+        .select('c.owner_client_id as client_id')
         .first();
 
       if (!assignment) {
@@ -876,14 +1032,12 @@ export class ContractLineService extends BaseService<IContractLine> {
       // Check if there are pending invoices or active usage
       await this.validateSafeUnassignment(clientContractLineId, assignment.client_id, context, trx);
 
-      // Soft delete by setting end_date and is_active = false
       const updateData = this.addUpdateAuditFields({
-        end_date: new Date().toISOString(),
         is_active: false
       }, context);
 
-      await trx('client_contract_lines')
-        .where('client_contract_line_id', clientContractLineId)
+      await trx('contract_lines')
+        .where('contract_line_id', clientContractLineId)
         .where('tenant', context.tenant)
         .update(updateData);
     });
@@ -918,6 +1072,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       const updateData = this.addUpdateAuditFields({
         is_active: data.is_active
       }, context);
+      updateData.cadence_owner = resolveCadenceOwner(plan.cadence_owner);
       
       const [updatedPlan] = await trx('contract_lines')
         .where('contract_line_id', planId)
@@ -925,21 +1080,10 @@ export class ContractLineService extends BaseService<IContractLine> {
         .update(updateData)
         .returning('*');
       
-      // If deactivating, also deactivate client assignments if requested
-      if (!data.is_active && data.effective_date) {
-        await trx('client_contract_lines')
-          .where('contract_line_id', planId)
-          .where('tenant', context.tenant)
-          .where('is_active', true)
-          .update({
-            is_active: false,
-            end_date: data.effective_date,
-            updated_at: new Date(),
-            updated_by: context.userId
-          });
-      }
-      
-      return addHateoasLinks(updatedPlan, this.generatePlanLinks(planId, context)) as ContractLineResponse;
+      return addHateoasLinks(
+        normalizeContractLineCompatibility(updatedPlan),
+        this.generatePlanLinks(planId, context),
+      ) as ContractLineResponse;
     });
   }
 
@@ -1122,12 +1266,26 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     // Get time entries for billable usage
     const timeEntries = await knex('time_entries as te')
-      .join('client_contract_lines as ccl', function() {
-        this.on('te.client_id', '=', 'ccl.client_id')
-            .andOn('te.tenant', '=', 'ccl.tenant');
+      .join('contract_lines as cl', function joinLines() {
+        this.on('cl.contract_line_id', '=', knex.raw('?', [planId]))
+          .andOn('cl.tenant', '=', 'te.tenant');
       })
-      .where('ccl.contract_line_id', planId)
+      .join('contracts as c', function joinContracts() {
+        this.on('cl.contract_id', '=', 'c.contract_id')
+          .andOn('cl.tenant', '=', 'c.tenant');
+      })
+      .join('client_contracts as cc', function joinAssignments() {
+        this.on('c.contract_id', '=', 'cc.contract_id')
+          .andOn('c.tenant', '=', 'cc.tenant')
+          .andOn('cc.client_id', '=', 'te.client_id');
+      })
       .where('te.tenant', context.tenant)
+      .where('cl.contract_line_id', planId)
+      .where('cc.is_active', true)
+      .andWhere(function limitToClientOwnedContracts() {
+        this.whereNull('c.is_template').orWhere('c.is_template', false);
+      })
+      .whereRaw('c.owner_client_id = cc.client_id')
       .whereBetween('te.start_time', [periodStart, periodEnd])
       .where('te.is_billable', true)
       .sum('te.duration as billable_minutes')
@@ -1254,13 +1412,25 @@ export class ContractLineService extends BaseService<IContractLine> {
     const plan = await this.getExistingPlan(planId, context);
     
     // Get client assignments
-    const clientStats = await knex('client_contract_lines')
-      .where('contract_line_id', planId)
-      .where('tenant', context.tenant)
+    const clientStats = await knex('contract_lines as cl')
+      .join('contracts as c', function joinContracts() {
+        this.on('cl.contract_id', '=', 'c.contract_id')
+          .andOn('cl.tenant', '=', 'c.tenant');
+      })
+      .leftJoin('client_contracts as cc', function joinAssignments() {
+        this.on('c.contract_id', '=', 'cc.contract_id')
+          .andOn('c.tenant', '=', 'cc.tenant');
+      })
+      .where('cl.contract_line_id', planId)
+      .where('cl.tenant', context.tenant)
       .select(
-        knex.raw('COUNT(*) as total_clients'),
-        knex.raw('COUNT(CASE WHEN is_active = true THEN 1 END) as active_clients')
+        knex.raw('COUNT(DISTINCT cc.client_id) as total_clients'),
+        knex.raw('COUNT(DISTINCT CASE WHEN cc.is_active = true THEN cc.client_id END) as active_clients')
       )
+      .whereRaw('c.owner_client_id = cc.client_id')
+      .andWhere(function limitToClientOwnedContracts() {
+        this.whereNull('c.is_template').orWhere('c.is_template', false);
+      })
       .first();
     
     // Get revenue data (simplified)
@@ -1313,7 +1483,24 @@ export class ContractLineService extends BaseService<IContractLine> {
     const [planCount, contractCount, assignmentCount] = await Promise.all([
       knex('contract_lines').where('tenant', context.tenant).count('* as count').first(),
       knex('contracts').where('tenant', context.tenant).count('* as count').first(),
-      knex('client_contract_lines').where('tenant', context.tenant).where('is_active', true).count('* as count').first()
+      knex('contract_lines as cl')
+        .join('contracts as c', function joinContracts() {
+          this.on('cl.contract_id', '=', 'c.contract_id')
+            .andOn('cl.tenant', '=', 'c.tenant');
+        })
+        .join('client_contracts as cc', function joinAssignments() {
+          this.on('c.contract_id', '=', 'cc.contract_id')
+            .andOn('c.tenant', '=', 'cc.tenant');
+        })
+        .where('cl.tenant', context.tenant)
+        .where('cl.is_active', true)
+        .where('cc.is_active', true)
+        .whereRaw('c.owner_client_id = cc.client_id')
+        .andWhere(function limitToClientOwnedContracts() {
+          this.whereNull('c.is_template').orWhere('c.is_template', false);
+        })
+        .countDistinct('cl.contract_line_id as count')
+        .first()
     ]);
     
     // Get plans by type
@@ -1509,22 +1696,6 @@ export class ContractLineService extends BaseService<IContractLine> {
     trx?: Knex.Transaction
   ): Promise<{ inUse: boolean; reason?: string }> {
     const { knex } = trx ? { knex: trx } : await this.getKnex();
-    
-    // Check client assignments
-    const clientAssignments = await knex('client_contract_lines')
-      .where('contract_line_id', planId)
-      .where('tenant', context.tenant)
-      .where('is_active', true)
-      .count('* as count')
-      .first();
-    
-    const clientCount = parseInt(String(clientAssignments?.count || '0'));
-    if (clientCount > 0) {
-      return {
-        inUse: true,
-        reason: `Plan is currently assigned to ${clientCount} ${clientCount === 1 ? 'client' : 'clients'}`
-      };
-    }
 
     // Check if plan is associated with any contracts and fetch associated clients
     // After migration 20251028090000, data is stored directly in contract_lines
@@ -1535,6 +1706,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       })
       .leftJoin('client_contracts as cc', function() {
         this.on('c.contract_id', '=', 'cc.contract_id')
+          .andOn('c.tenant', '=', 'cc.tenant')
           .andOn('cc.is_active', '=', knex.raw('?', [true]));
       })
       .leftJoin('clients as cl', function() {
@@ -1544,6 +1716,10 @@ export class ContractLineService extends BaseService<IContractLine> {
       .where('clx.contract_line_id', planId)
       .where('clx.tenant', context.tenant)
       .whereNotNull('clx.contract_id')
+      .whereRaw('c.owner_client_id = cc.client_id')
+      .andWhere(function limitToClientOwnedContracts() {
+        this.whereNull('c.is_template').orWhere('c.is_template', false);
+      })
       .select('c.contract_name', 'cl.client_name', 'c.contract_id')
       .orderBy(['c.contract_name', 'cl.client_name']);
 
@@ -1621,7 +1797,10 @@ export class ContractLineService extends BaseService<IContractLine> {
       contract_line_id: planId,
       base_rate: data.base_rate,
       enable_proration: data.enable_proration,
-      billing_cycle_alignment: data.billing_cycle_alignment,
+      billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+        billingCycleAlignment: data.billing_cycle_alignment,
+        enableProration: data.enable_proration,
+      }),
       tenant: context.tenant,
     });
 
@@ -1660,22 +1839,32 @@ export class ContractLineService extends BaseService<IContractLine> {
 
   private async validateNoOverlappingAssignments(
     data: CreateClientContractLineData,
+    templateLine: IContractLine,
+    targetContractId: string,
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    const overlapping = await trx('client_contract_lines')
-      .where('client_id', data.client_id)
-      .where('contract_line_id', data.contract_line_id)
+    const templateRecurringStorage = normalizeTemplateRecurringStorage({
+      billing_timing: templateLine.billing_timing,
+      cadence_owner: templateLine.cadence_owner,
+    });
+    const clonedCustomRate = data.custom_rate ?? templateLine.custom_rate ?? null;
+    const overlapping = await trx('contract_lines')
+      .where('contract_id', targetContractId)
       .where('tenant', context.tenant)
       .where('is_active', true)
-      .where(function() {
-        this.whereNull('end_date')
-            .orWhere('end_date', '>', data.start_date);
-      })
+      .where('contract_line_name', templateLine.contract_line_name)
+      .where('description', templateLine.description ?? null)
+      .where('billing_frequency', templateLine.billing_frequency)
+      .where('contract_line_type', templateLine.contract_line_type)
+      .where('service_category', templateLine.service_category ?? data.service_category ?? null)
+      .where('billing_timing', templateRecurringStorage.billing_timing)
+      .where('cadence_owner', templateRecurringStorage.cadence_owner)
+      .where('custom_rate', clonedCustomRate)
       .first();
     
     if (overlapping) {
-      throw new Error('Client already has an active assignment for this plan in the specified period');
+      throw new Error('Client contract already has an active cloned line matching this template assignment');
     }
   }
 
@@ -1774,7 +1963,10 @@ export class ContractLineService extends BaseService<IContractLine> {
       await this.createFixedPlanConfig(targetPlanId, {
         base_rate: fixedConfig.base_rate ?? undefined,
         enable_proration: fixedConfig.enable_proration ?? false,
-        billing_cycle_alignment: fixedConfig.billing_cycle_alignment ?? 'start'
+        billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+          billingCycleAlignment: fixedConfig.billing_cycle_alignment,
+          enableProration: fixedConfig.enable_proration,
+        }),
       }, context, trx);
     }
   }

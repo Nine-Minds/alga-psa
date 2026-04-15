@@ -40,6 +40,7 @@ import { useToast } from '@alga-psa/ui';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const FULL_ACCESS_VALUE = '__full_access__';
 
@@ -70,6 +71,7 @@ interface UserRole {
 }
 
 export function ContactPortalTab({ contact, currentUserPermissions }: ContactPortalTabProps) {
+  const { t } = useTranslation('msp/contacts');
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSendingInvitation, setIsSendingInvitation] = useState(false);
@@ -133,8 +135,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     } catch (error) {
       console.error('Error loading portal tab data:', error);
       toast({
-        title: "Error",
-        description: "Failed to load portal information",
+        title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+        description: t('contactPortalTab.toast.loadError', { defaultValue: 'Failed to load portal information' }),
         variant: "destructive"
       });
     } finally {
@@ -276,8 +278,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     } catch (error) {
       console.error('Error refreshing invitation history:', error);
       toast({
-        title: "Error",
-        description: "Failed to refresh invitation history",
+        title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+        description: t('contactPortalTab.toast.refreshHistoryError', { defaultValue: 'Failed to refresh invitation history' }),
         variant: "destructive"
       });
     } finally {
@@ -288,8 +290,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const handleSendInvitation = async () => {
     if (!currentUserPermissions.canInvite) {
       toast({
-        title: "Permission Denied",
-        description: "You do not have permission to send invitations",
+        title: t('contactPortalTab.toast.permissionDeniedTitle', { defaultValue: 'Permission Denied' }),
+        description: t('contactPortalTab.toast.sendInvitePermissionDenied', { defaultValue: 'You do not have permission to send invitations' }),
         variant: "destructive"
       });
       return;
@@ -301,23 +303,23 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
 
       if (result.success) {
         toast({
-          title: "Success",
-          description: result.message || "Portal invitation sent successfully!"
+          title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
+          description: result.message || t('contactPortalTab.toast.sendInviteSuccess', { defaultValue: 'Portal invitation sent successfully!' })
         });
         // Reload invitation history to show the new invitation
         await loadData();
       } else {
         toast({
-          title: "Error",
-          description: result.error || result.message || "Failed to send invitation",
+          title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+          description: result.error || result.message || t('contactPortalTab.toast.sendInviteFailed', { defaultValue: 'Failed to send invitation' }),
           variant: "destructive"
         });
       }
     } catch (error) {
       console.error('Error sending portal invitation:', error);
       toast({
-        title: "Error",
-        description: "Failed to send invitation",
+        title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+        description: t('contactPortalTab.toast.sendInviteFailed', { defaultValue: 'Failed to send invitation' }),
         variant: "destructive"
       });
     } finally {
@@ -332,23 +334,23 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
 
       if (result.success) {
         toast({
-          title: "Success",
-          description: "Invitation revoked successfully"
+          title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
+          description: t('contactPortalTab.toast.revokeInviteSuccess', { defaultValue: 'Invitation revoked successfully' })
         });
         // Reload invitation history
         await loadData();
       } else {
         toast({
-          title: "Error",
-          description: result.error || "Failed to revoke invitation",
+          title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+          description: result.error || t('contactPortalTab.toast.revokeInviteFailed', { defaultValue: 'Failed to revoke invitation' }),
           variant: "destructive"
         });
       }
     } catch (error) {
       console.error('Error revoking invitation:', error);
       toast({
-        title: "Error",
-        description: "Failed to revoke invitation",
+        title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+        description: t('contactPortalTab.toast.revokeInviteFailed', { defaultValue: 'Failed to revoke invitation' }),
         variant: "destructive"
       });
     } finally {
@@ -359,8 +361,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const handleResendInvitation = async (invitationId: string) => {
     if (!currentUserPermissions.canInvite) {
       toast({
-        title: "Permission Denied",
-        description: "You do not have permission to send invitations",
+        title: t('contactPortalTab.toast.permissionDeniedTitle', { defaultValue: 'Permission Denied' }),
+        description: t('contactPortalTab.toast.sendInvitePermissionDenied', { defaultValue: 'You do not have permission to send invitations' }),
         variant: "destructive"
       });
       return;
@@ -372,22 +374,22 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
 
       if (result.success) {
         toast({
-          title: "Success",
-          description: result.message || "Portal invitation resent successfully!"
+          title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
+          description: result.message || t('contactPortalTab.toast.resendInviteSuccess', { defaultValue: 'Portal invitation resent successfully!' })
         });
         await loadData();
       } else {
         toast({
-          title: "Error",
-          description: result.error || result.message || "Failed to resend invitation",
+          title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+          description: result.error || result.message || t('contactPortalTab.toast.resendInviteFailed', { defaultValue: 'Failed to resend invitation' }),
           variant: "destructive"
         });
       }
     } catch (error) {
       console.error('Error resending portal invitation:', error);
       toast({
-        title: "Error",
-        description: "Failed to resend invitation",
+        title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+        description: t('contactPortalTab.toast.resendInviteFailed', { defaultValue: 'Failed to resend invitation' }),
         variant: "destructive"
       });
     } finally {
@@ -432,8 +434,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const handlePortalAdminToggle = async (checked: boolean) => {
     if (!currentUserPermissions.canUpdateRoles) {
       toast({
-        title: "Permission Denied",
-        description: "You do not have permission to update client settings",
+        title: t('contactPortalTab.toast.permissionDeniedTitle', { defaultValue: 'Permission Denied' }),
+        description: t('contactPortalTab.toast.updatePortalSettingsPermissionDenied', { defaultValue: 'You do not have permission to update client settings' }),
         variant: "destructive"
       });
       return;
@@ -445,21 +447,23 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       if (result.success) {
         setIsPortalAdmin(checked);
         toast({
-          title: "Success",
-          description: checked ? "Contact marked as admin for client portal" : "Contact unmarked as admin for client portal"
+          title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
+          description: checked
+            ? t('contactPortalTab.toast.portalAdminEnabled', { defaultValue: 'Contact marked as admin for client portal' })
+            : t('contactPortalTab.toast.portalAdminDisabled', { defaultValue: 'Contact unmarked as admin for client portal' })
         });
       } else {
         toast({
-          title: "Error",
-          description: result.error || "Failed to update status",
+          title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+          description: result.error || t('contactPortalTab.toast.updatePortalAdminFailed', { defaultValue: 'Failed to update status' }),
           variant: "destructive"
         });
       }
     } catch (error) {
       console.error('Error updating portal admin status:', error);
       toast({
-        title: "Error",
-        description: "Failed to update admin flag",
+        title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+        description: t('contactPortalTab.toast.updateAdminFailed', { defaultValue: 'Failed to update admin flag' }),
         variant: "destructive"
       });
     } finally {
@@ -470,8 +474,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const handleAddRole = async () => {
     if (!currentUserPermissions.canUpdateRoles || !existingUser || !selectedRoleId) {
       toast({
-        title: "Permission Denied",
-        description: "You do not have permission to update user roles",
+        title: t('contactPortalTab.toast.permissionDeniedTitle', { defaultValue: 'Permission Denied' }),
+        description: t('contactPortalTab.toast.updateRolesPermissionDenied', { defaultValue: 'You do not have permission to update user roles' }),
         variant: "destructive"
       });
       return;
@@ -482,8 +486,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       await assignRoleToUser(existingUser.user_id, selectedRoleId);
 
       toast({
-        title: "Success",
-        description: "Role added successfully"
+        title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
+        description: t('contactPortalTab.toast.roleAdded', { defaultValue: 'Role added successfully' })
       });
       setSelectedRoleId('');
 
@@ -492,8 +496,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     } catch (error) {
       console.error('Error adding role:', error);
       toast({
-        title: "Error",
-        description: "Failed to add role",
+        title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+        description: t('contactPortalTab.toast.addRoleFailed', { defaultValue: 'Failed to add role' }),
         variant: "destructive"
       });
     } finally {
@@ -504,8 +508,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const handleRemoveRole = async (roleId: string) => {
     if (!currentUserPermissions.canUpdateRoles || !existingUser) {
       toast({
-        title: "Permission Denied",
-        description: "You do not have permission to update user roles",
+        title: t('contactPortalTab.toast.permissionDeniedTitle', { defaultValue: 'Permission Denied' }),
+        description: t('contactPortalTab.toast.updateRolesPermissionDenied', { defaultValue: 'You do not have permission to update user roles' }),
         variant: "destructive"
       });
       return;
@@ -516,8 +520,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       await removeRoleFromUser(existingUser.user_id, roleId);
 
       toast({
-        title: "Success",
-        description: "Role removed successfully"
+        title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
+        description: t('contactPortalTab.toast.roleRemoved', { defaultValue: 'Role removed successfully' })
       });
 
       // Reload user data
@@ -525,8 +529,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     } catch (error) {
       console.error('Error removing role:', error);
       toast({
-        title: "Error",
-        description: "Failed to remove role",
+        title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+        description: t('contactPortalTab.toast.removeRoleFailed', { defaultValue: 'Failed to remove role' }),
         variant: "destructive"
       });
     } finally {
@@ -537,8 +541,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   if (isLoading) {
     return (
       <SettingsTabSkeleton
-        title="Client Portal Access"
-        description="Loading portal information..."
+        title={t('contactPortalTab.title', { defaultValue: 'Client Portal Access' })}
+        description={t('contactPortalTab.loadingDescription', { defaultValue: 'Loading portal information...' })}
         showForm={true}
         showTable={false}
         noCard={false}
@@ -552,10 +556,10 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Client Portal Access
+            {t('contactPortalTab.title', { defaultValue: 'Client Portal Access' })}
           </CardTitle>
           <CardDescription>
-            Manage client portal access and permissions for this contact
+            {t('contactPortalTab.description', { defaultValue: 'Manage client portal access and permissions for this contact' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -566,10 +570,10 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="portal-admin" className="text-base">
-                    Portal Administrator
+                    {t('contactPortalTab.portalAdmin.label', { defaultValue: 'Portal Administrator' })}
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    When enabled, the user will be created with Client Admin role. When disabled, they'll get Client User role.
+                    {t('contactPortalTab.portalAdmin.helper', { defaultValue: 'When enabled, the user will be created with Client Admin role. When disabled, they\'ll get Client User role.' })}
                   </p>
                 </div>
                 <Switch
@@ -585,15 +589,17 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                 <Alert className="mb-4">
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    Invitation emails will be sent from your organization's email system.
-                    Replies will go to your client's default location email address.
+                    {t('contactPortalTab.information', {
+                      defaultValue:
+                        'Invitation emails will be sent from your organization\'s email system. Replies will go to your client\'s default location email address.'
+                    })}
                   </AlertDescription>
                 </Alert>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-sm font-medium">No Portal Access</h4>
+                    <h4 className="text-sm font-medium">{t('contactPortalTab.noAccess.title', { defaultValue: 'No Portal Access' })}</h4>
                     <p className="text-sm text-muted-foreground">
-                      This contact does not have client portal access yet
+                      {t('contactPortalTab.noAccess.description', { defaultValue: 'This contact does not have client portal access yet' })}
                     </p>
                   </div>
                   <Button
@@ -601,11 +607,13 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     onClick={handleSendInvitation}
                     disabled={!currentUserPermissions.canInvite || isSendingInvitation}
                     className="flex items-center gap-2"
-                  >
-                    <Mail className="h-4 w-4" />
-                    {isSendingInvitation ? "Sending..." : "Send Portal Invitation"}
-                  </Button>
-                </div>
+                    >
+                      <Mail className="h-4 w-4" />
+                    {isSendingInvitation
+                      ? t('contactPortalTab.actions.sending', { defaultValue: 'Sending...' })
+                      : t('contactPortalTab.actions.sendInvitation', { defaultValue: 'Send Portal Invitation' })}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -614,12 +622,12 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <User className="h-4 w-4" />
-                  <span>Portal access active</span>
+                  <span>{t('contactPortalTab.activeAccess', { defaultValue: 'Portal access active' })}</span>
                 </div>
 
                 {/* Role Management */}
                 <div className="space-y-2">
-                  <Label>Portal Roles</Label>
+                  <Label>{t('contactPortalTab.roles.label', { defaultValue: 'Portal Roles' })}</Label>
 
                   {/* Display current roles */}
                   <div className="space-y-2">
@@ -635,12 +643,12 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                             disabled={!currentUserPermissions.canUpdateRoles || isUpdating}
                             className="text-red-500 hover:text-red-600"
                           >
-                            Remove
+                            {t('common.actions.remove', { defaultValue: 'Remove' })}
                           </Button>
                         </div>
                       ))
                     ) : (
-                      <p className="text-sm text-muted-foreground">No roles assigned</p>
+                      <p className="text-sm text-muted-foreground">{t('contactPortalTab.roles.none', { defaultValue: 'No roles assigned' })}</p>
                     )}
                   </div>
 
@@ -657,7 +665,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                           value: role.role_id,
                           label: role.role_name
                         }))}
-                      placeholder="Select role to add"
+                      placeholder={t('contactPortalTab.roles.placeholder', { defaultValue: 'Select role to add' })}
                       className="flex-1"
                     />
                     {selectedRoleId && (
@@ -667,7 +675,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                         disabled={!currentUserPermissions.canUpdateRoles || isUpdating}
                         size="sm"
                       >
-                        Add Role
+                        {t('contactPortalTab.roles.addButton', { defaultValue: 'Add Role' })}
                       </Button>
                     )}
                   </div>
@@ -676,14 +684,14 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                 {/* Last Login Info */}
                 {existingUser.last_login_at && (
                   <div className="p-3 rounded-lg border bg-gray-50">
-                    <Label className="text-sm font-medium">Last Login</Label>
+                    <Label className="text-sm font-medium">{t('contactPortalTab.lastLogin.label', { defaultValue: 'Last Login' })}</Label>
                     <div className="mt-1 space-y-1">
                       <p className="text-sm text-muted-foreground">
                         {formatDate(existingUser.last_login_at)}
                       </p>
                       {existingUser.last_login_method && (
                         <p className="text-xs text-muted-foreground">
-                          via {existingUser.last_login_method}
+                          {t('contactPortalTab.lastLogin.via', { defaultValue: 'via {{method}}', method: existingUser.last_login_method })}
                         </p>
                       )}
                     </div>
@@ -693,9 +701,11 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                 {/* User Status */}
                 <div className="flex items-center justify-between p-3 rounded-lg border">
                   <div>
-                    <Label htmlFor="user-status">User Status</Label>
+                    <Label htmlFor="user-status">{t('contactPortalTab.userStatus.label', { defaultValue: 'User Status' })}</Label>
                     <p className="text-sm text-muted-foreground">
-                      {existingUser.is_inactive ? 'User is currently inactive' : 'User is currently active'}
+                      {existingUser.is_inactive
+                        ? t('contactPortalTab.userStatus.inactive', { defaultValue: 'User is currently inactive' })
+                        : t('contactPortalTab.userStatus.active', { defaultValue: 'User is currently active' })}
                     </p>
                   </div>
                   <Switch
@@ -704,8 +714,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     onCheckedChange={async (checked) => {
                       if (!currentUserPermissions.canUpdateRoles) {
                         toast({
-                          title: "Permission Denied",
-                          description: "You do not have permission to update user status",
+                          title: t('contactPortalTab.toast.permissionDeniedTitle', { defaultValue: 'Permission Denied' }),
+                          description: t('contactPortalTab.toast.updateStatusPermissionDenied', { defaultValue: 'You do not have permission to update user status' }),
                           variant: "destructive"
                         });
                         return;
@@ -714,15 +724,17 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                       try {
                         await updateClientUser(existingUser.user_id, { is_inactive: !checked });
                         toast({
-                          title: "Success",
-                          description: `User ${checked ? 'activated' : 'deactivated'} successfully`
+                          title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
+                          description: checked
+                            ? t('contactPortalTab.toast.userActivated', { defaultValue: 'User activated successfully' })
+                            : t('contactPortalTab.toast.userDeactivated', { defaultValue: 'User deactivated successfully' })
                         });
                         await loadData();
                       } catch (error) {
                         console.error('Error updating user status:', error);
                         toast({
-                          title: "Error",
-                          description: "Failed to update user status",
+                          title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+                          description: t('contactPortalTab.toast.updateUserStatusFailed', { defaultValue: 'Failed to update user status' }),
                           variant: "destructive"
                         });
                       } finally {
@@ -788,6 +800,10 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   {visibilityBoards.length > 0 ? (
                     <div className="space-y-2 rounded-lg border p-3 max-h-56 overflow-y-auto">
                       {visibilityBoards.map((board) => {
+                        if (!board.board_id) {
+                          return null;
+                        }
+
                         const checked = visibilityGroupBoardIds.includes(board.board_id);
                         return (
                           <label
@@ -795,8 +811,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                             className="flex items-center space-x-2 text-sm"
                           >
                             <Checkbox
+                              id={`visibility-group-board-${board.board_id}`}
                               checked={checked}
-                              onCheckedChange={() => handleToggleGroupBoard(board.board_id)}
+                              onChange={() => handleToggleGroupBoard(board.board_id!)}
                               disabled={isUpdating}
                             />
                             <span>{board.board_name}</span>
@@ -812,6 +829,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                 <div className="flex items-end justify-end gap-2">
                   {editingVisibilityGroupId && (
                     <Button
+                      id="visibility-group-cancel-button"
                       variant="outline"
                       size="sm"
                       onClick={resetVisibilityGroupForm}
@@ -821,6 +839,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     </Button>
                   )}
                   <Button
+                    id="visibility-group-save-button"
                     size="sm"
                     onClick={handleSaveVisibilityGroup}
                     disabled={isUpdating || !visibilityGroupName.trim()}
@@ -847,6 +866,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                       </div>
                       <div className="flex gap-2">
                         <Button
+                          id={`visibility-group-edit-${group.group_id}`}
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditVisibilityGroup(group.group_id)}
@@ -855,6 +875,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                           Edit
                         </Button>
                         <Button
+                          id={`visibility-group-delete-${group.group_id}`}
                           variant="outline"
                           size="sm"
                           onClick={() => handleDeleteVisibilityGroup(group.group_id)}
@@ -876,11 +897,11 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
           {/* Invitation History */}
           <div className="border-t pt-6">
             <div className="space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h4 className="text-sm font-medium">Invitation History</h4>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                  <h4 className="text-sm font-medium">{t('contactPortalTab.history.title', { defaultValue: 'Invitation History' })}</h4>
                   <p className="text-sm text-muted-foreground">
-                    Recent portal invitations sent to this contact
+                    {t('contactPortalTab.history.description', { defaultValue: 'Recent portal invitations sent to this contact' })}
                   </p>
                 </div>
                 <Button
@@ -890,9 +911,11 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   onClick={handleRefreshInvitationHistory}
                   disabled={isRefreshingInvitationHistory}
                   className="flex items-center gap-2"
-                >
+                  >
                   <RefreshCw className={`h-4 w-4 ${isRefreshingInvitationHistory ? 'animate-spin' : ''}`} />
-                  {isRefreshingInvitationHistory ? 'Refreshing...' : 'Refresh'}
+                  {isRefreshingInvitationHistory
+                    ? t('contactPortalTab.actions.refreshing', { defaultValue: 'Refreshing...' })
+                    : t('contactPortalTab.actions.refresh', { defaultValue: 'Refresh' })}
                 </Button>
               </div>
 
@@ -904,16 +927,18 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium">{invitation.email}</span>
                           <Badge variant={getStatusBadgeVariant(invitation.status)} size="sm">
-                            {invitation.status}
+                            {t(`contactPortalTab.history.status.${invitation.status}`, {
+                              defaultValue: invitation.status
+                            })}
                           </Badge>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Sent: {formatDate(invitation.created_at)}
+                          {t('contactPortalTab.history.sentPrefix', { defaultValue: 'Sent:' })} {formatDate(invitation.created_at)}
                           {invitation.status === 'pending' && (
-                            <span> • Expires: {formatDate(invitation.expires_at)}</span>
+                            <span> • {t('contactPortalTab.history.expiresPrefix', { defaultValue: 'Expires:' })} {formatDate(invitation.expires_at)}</span>
                           )}
                           {invitation.used_at && (
-                            <span> • Used: {formatDate(invitation.used_at)}</span>
+                            <span> • {t('contactPortalTab.history.usedPrefix', { defaultValue: 'Used:' })} {formatDate(invitation.used_at)}</span>
                           )}
                         </div>
                       </div>
@@ -928,7 +953,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                               onClick={() => handleResendInvitation(invitation.invitation_id)}
                               disabled={resendingInvitationId === invitation.invitation_id}
                             >
-                              {resendingInvitationId === invitation.invitation_id ? 'Resending...' : 'Resend'}
+                              {resendingInvitationId === invitation.invitation_id
+                                ? t('contactPortalTab.actions.resending', { defaultValue: 'Resending...' })
+                                : t('contactPortalTab.actions.resend', { defaultValue: 'Resend' })}
                             </Button>
                           )}
                           {invitation.status === 'pending' && (
@@ -940,7 +967,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                               disabled={isUpdating}
                               className="text-red-500 hover:text-red-600"
                             >
-                              Revoke
+                              {t('contactPortalTab.actions.revoke', { defaultValue: 'Revoke' })}
                             </Button>
                           )}
                         </div>
@@ -950,7 +977,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No portal invitations have been sent to this contact yet.
+                  {t('contactPortalTab.history.empty', { defaultValue: 'No portal invitations have been sent to this contact yet.' })}
                 </p>
               )}
             </div>

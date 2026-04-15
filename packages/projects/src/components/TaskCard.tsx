@@ -6,7 +6,8 @@ import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDep
 import { IUserWithRoles } from '@alga-psa/types';
 import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
-import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2, Tag } from 'lucide-react';
+import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2, Tag, MessageSquare } from 'lucide-react';
+import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
@@ -24,6 +25,7 @@ import {
 import styles from './ProjectDetail.module.css';
 import { highlightSearchMatch } from '../lib/searchUtils';
 import { calculateZoomScales } from './KanbanZoomControl';
+import { useTranslation } from 'react-i18next';
 
 interface TaskCardProps {
   task: IProjectTask;
@@ -35,6 +37,7 @@ interface TaskCardProps {
   taskDependencies?: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] };
   taskTags?: ITag[];
   documentCount?: number;
+  commentCount?: number;
   priority?: IPriority | IStandardPriority;
   isAnimating?: boolean;
   searchQuery?: string;
@@ -75,6 +78,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   taskDependencies,
   taskTags: providedTaskTags = [],
   documentCount: providedDocumentCount,
+  commentCount = 0,
   priority,
   isAnimating = false,
   searchQuery = '',
@@ -95,6 +99,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   teamNames = {},
   teamAvatarUrls = {},
 }) => {
+  const { t } = useTranslation(['features/projects', 'common']);
   // Use data from props — parent (StatusColumn) always provides arrays from batch-loaded data
   const [taskTickets, setTaskTickets] = useState<IProjectTicketLinkWithDetails[]>(
     task.ticket_links ?? ticketLinks ?? []
@@ -125,9 +130,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   };
   const tagSize = getTagSize();
 
+  const descriptionPlainText = extractTaskDescriptionText(task.description_rich_text ?? task.description);
+
   // Auto-expand description when search matches in description
   useEffect(() => {
-    if (!searchQuery.trim() || !task.description) {
+    if (!searchQuery.trim() || !descriptionPlainText) {
       setIsDescriptionExpanded(false);
       return;
     }
@@ -138,14 +145,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     const regex = new RegExp(pattern, searchCaseSensitive ? '' : 'i');
 
     // Auto-expand description if the match is in the description
-    const matchesDescription = regex.test(task.description);
+    const matchesDescription = regex.test(descriptionPlainText);
 
     if (matchesDescription) {
       setIsDescriptionExpanded(true);
     } else {
       setIsDescriptionExpanded(false);
     }
-  }, [searchQuery, searchCaseSensitive, searchWholeWord, task.description]);
+  }, [searchQuery, searchCaseSensitive, searchWholeWord, descriptionPlainText]);
 
   // Update documentCount when providedDocumentCount changes
   useEffect(() => {
@@ -260,10 +267,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         isDragging ? styles.dragging : ''
       } ${isAnimating ? styles.entering : ''}`}
       aria-grabbed={isDragging}
-      aria-label={`Task: ${task.task_name}. Drag to reorder or use menu for actions.`}
+      aria-label={t('projectDetail.taskCardAria', 'Task: {{taskName}}. Drag to reorder or use menu for actions.', {
+        taskName: task.task_name,
+      })}
     >
       {/* Task type indicator */}
-      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 left-1' : 'top-2 left-2'}`} title={taskType?.type_name || 'Task'}>
+      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 left-1' : 'top-2 left-2'}`} title={taskType?.type_name || t('task', 'Task')}>
         <Icon
           className={zoomLevel <= 15 ? 'w-3 h-3' : 'w-4 h-4'}
           style={{ color: taskType?.color || '#6B7280' }}
@@ -277,25 +286,25 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
             <Button id={`task-actions-${task.task_id}`} variant="ghost" size="sm" className={zoomLevel <= 15 ? 'h-5 w-5 p-0' : 'h-6 w-6 p-0'}>
               <MoreVertical className={zoomLevel <= 15 ? 'h-3 w-3' : 'h-4 w-4'} />
-              <span className="sr-only">Task Actions</span>
+              <span className="sr-only">{t('projectDetail.taskActions', 'Task Actions')}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
             <DropdownMenuItem onSelect={handleMoveClick}>
               <Move className="mr-2 h-4 w-4" />
-              <span>Move Task</span>
+              <span>{t('projectDetail.moveTaskTitle', 'Move Task')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={handleDuplicateClick}>
               <Copy className="mr-2 h-4 w-4" />
-              <span>Duplicate Task</span>
+              <span>{t('dialogs.duplicateTask.title', 'Duplicate Task')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={handleEditClick}>
               <Edit className="mr-2 h-4 w-4" />
-              <span>Edit Task</span>
+              <span>{t('taskForm.editTitle', 'Edit Task')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={handleDeleteClick} className="text-destructive focus:text-destructive focus:bg-destructive/10">
               <Trash2 className="mr-2 h-4 w-4" />
-              <span>Delete Task</span>
+              <span>{t('projectDetail.deleteTaskTitle', 'Delete Task')}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -314,7 +323,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               <div
                 className={`${zoomLevel <= 15 ? 'w-2 h-2' : 'w-3 h-3'} rounded-full`}
                 style={{ backgroundColor: priority.color || '#6B7280' }}
-                title={`Priority level: ${priority.priority_name}`}
+                title={t('projectDetail.priorityLevel', 'Priority level: {{priority}}', {
+                  priority: priority.priority_name,
+                })}
               />
               {zoomLevel > 15 && (
                 <span className={`${zoomScales.metaSize} text-gray-600`}>{priority.priority_name}</span>
@@ -333,17 +344,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               setIsTitleExpanded(!isTitleExpanded);
             }}
           >
-            {isTitleExpanded ? 'See less' : 'See more'}
+            {isTitleExpanded
+              ? t('projectDetail.seeLess', 'See less')
+              : t('projectDetail.seeMore', 'See more')}
           </Button>
         )}
       </div>
-      {task.description && zoomScales.showDescription && (
+      {descriptionPlainText && zoomScales.showDescription && (
         <div className={isCompact ? 'mb-0.5' : 'mb-2'}>
           <p
             ref={descriptionRef}
             className={`${zoomScales.descSize} text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
           >
-            {highlightSearchMatch(task.description, searchQuery, searchCaseSensitive, searchWholeWord)}
+            {highlightSearchMatch(descriptionPlainText, searchQuery, searchCaseSensitive, searchWholeWord)}
           </p>
           {(isDescriptionTruncated || isDescriptionExpanded) && (
             <Button
@@ -356,7 +369,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 setIsDescriptionExpanded(!isDescriptionExpanded);
               }}
             >
-              {isDescriptionExpanded ? 'See less' : 'See more'}
+              {isDescriptionExpanded
+                ? t('projectDetail.seeLess', 'See less')
+                : t('projectDetail.seeMore', 'See more')}
             </Button>
           )}
         </div>
@@ -389,10 +404,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           <Tooltip
             content={
               <div className="text-xs space-y-1.5">
-                <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                <div className="font-medium text-gray-300 mb-1">{t('taskForm.additionalAgentsLabel', 'Additional Agents')}:</div>
                 {displayResources.map((resource, i) => {
                   const resourceUser = users.find(u => u.user_id === resource.additional_user_id);
-                  const userName = resourceUser ? `${resourceUser.first_name} ${resourceUser.last_name}` : 'Unknown';
+                  const userName = resourceUser ? `${resourceUser.first_name} ${resourceUser.last_name}` : t('projectDetail.unknownUser', 'Unknown');
                   return (
                     <div key={i} className="flex items-center gap-2">
                       <UserAvatar
@@ -426,9 +441,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       <div className={`flex items-center justify-between ${zoomScales.metaSize} text-gray-500`}>
         <div className="flex items-center gap-2">
           {task.due_date ? (
-            <>{zoomLevel > 30 && 'Due: '}<span className='bg-primary-100 p-1 rounded-md'>{new Date(task.due_date).toLocaleDateString()}</span></>
+            <>{zoomLevel > 30 && `${t('projectDetail.dueLabel', 'Due')}: `}<span className='bg-primary-100 p-1 rounded-md'>{new Date(task.due_date).toLocaleDateString()}</span></>
           ) : (
-            zoomLevel > 30 && <>No due date</>
+            zoomLevel > 30 && <>{t('projectDetail.noDueDate', 'No due date')}</>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -436,7 +451,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             <Tooltip
               content={
                 <div className="text-xs space-y-1 max-w-xs">
-                  <div className="font-medium text-gray-300 mb-1">Checklist Items:</div>
+                  <div className="font-medium text-gray-300 mb-1">{t('projectDetail.checklistItems', 'Checklist Items:')}</div>
                   {checklistItems.map((item, i) => (
                     <div key={i} className="flex items-center gap-1.5">
                       <CheckSquare className={`h-3 w-3 ${item.completed ? 'text-green-400' : 'text-gray-400'}`} />
@@ -468,6 +483,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               <span>{documentCount}</span>
             </div>
           )}
+          {commentCount > 0 && (
+            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-400))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
+              <MessageSquare className="w-3 h-3" />
+              <span>{commentCount}</span>
+            </div>
+          )}
           {/* Dependencies indicator */}
           {taskDependencies && (taskDependencies.predecessors.length > 0 || taskDependencies.successors.length > 0) && (
             <Tooltip
@@ -475,7 +496,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 <div className="text-xs space-y-2 min-w-[220px]">
                   {taskDependencies.predecessors.length > 0 && (
                     <div>
-                      <div className="font-medium text-gray-300 mb-1">Depends on:</div>
+                      <div className="font-medium text-gray-300 mb-1">{t('taskDependencies.dependsOn', 'Depends on:')}</div>
                       {taskDependencies.predecessors.map((d, i) => {
                         const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
                         return (
@@ -483,7 +504,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                             <span className={isBlocking ? 'text-orange-400' : 'text-blue-400'}>
                               {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
                             </span>
-                            <span>{d.predecessor_task?.task_name || 'Unknown task'}</span>
+                            <span>{d.predecessor_task?.task_name || t('taskDependencies.unknownTask', 'Unknown task')}</span>
                           </div>
                         );
                       })}
@@ -491,7 +512,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                   )}
                   {taskDependencies.successors.length > 0 && (
                     <div>
-                      <div className="font-medium text-gray-300 mb-1">Blocks:</div>
+                      <div className="font-medium text-gray-300 mb-1">{t('projectDetail.blocksLabel', 'Blocks:')}</div>
                       {taskDependencies.successors.map((d, i) => {
                         const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
                         return (
@@ -499,7 +520,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                             <span className={isBlocking ? 'text-red-400' : 'text-blue-400'}>
                               {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
                             </span>
-                            <span>{d.successor_task?.task_name || 'Unknown task'}</span>
+                            <span>{d.successor_task?.task_name || t('taskDependencies.unknownTask', 'Unknown task')}</span>
                           </div>
                         );
                       })}
@@ -558,7 +579,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                       setIsTagsExpanded(false);
                     }}
                   >
-                    Hide tags
+                    {t('projectDetail.hideTags', 'Hide tags')}
                   </Button>
                   {onTaskTagsChange && task.task_id ? (
                     <TagManager
@@ -612,7 +633,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       {/* Critical path indicator */}
       {hasCriticalPath && (
         <div className="absolute bottom-1 right-1">
-          <span className="text-xs text-orange-600 font-medium bg-orange-50 px-2 py-0.5 rounded">Critical Path</span>
+          <span className="text-xs text-orange-600 font-medium bg-orange-50 px-2 py-0.5 rounded">{t('projectDetail.criticalPath', 'Critical Path')}</span>
         </div>
       )}
     </div>

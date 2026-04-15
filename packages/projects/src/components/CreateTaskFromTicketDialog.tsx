@@ -15,6 +15,7 @@ import TaskQuickAdd from './TaskQuickAdd';
 import { IUserWithRoles } from '@alga-psa/types';
 import { useTicketIntegration, TicketIntegrationProvider } from '../context/TicketIntegrationContext';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from 'react-i18next';
 
 interface CreateTaskFromTicketDialogProps {
   ticket: {
@@ -33,6 +34,7 @@ interface CreateTaskFromTicketDialogProps {
 export default function CreateTaskFromTicketDialog({
   ticket
 }: CreateTaskFromTicketDialogProps): React.JSX.Element {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [open, setOpen] = useState(false);
   const [projects, setProjects] = useState<IProject[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
@@ -195,14 +197,33 @@ export default function CreateTaskFromTicketDialog({
         className="flex items-center"
       >
         <ListTodo className="h-4 w-4 mr-1" />
-        Create Task
+        {t('dialogs.createTaskFromTicket.button', 'Create Task')}
       </Button>
 
-      <Dialog isOpen={open} onClose={() => setOpen(false)} title="Create Task from Ticket" className="max-w-lg">
+      <Dialog
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        title={t('dialogs.createTaskFromTicket.title', 'Create Task from Ticket')}
+        className="max-w-lg"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button id="create-task-cancel" variant="ghost" onClick={() => setOpen(false)}>
+              {t('common:actions.cancel', 'Cancel')}
+            </Button>
+            <Button
+              id="create-task-confirm"
+              onClick={handleCreate}
+              disabled={!selectedProjectId || !selectedPhaseId || !selectedStatusId}
+            >
+              {t('common:actions.create', 'Create')}
+            </Button>
+          </div>
+        }
+      >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Project
+              {t('dialogs.createTaskFromTicket.projectLabel', 'Project')}
             </label>
             <SearchableSelect
               id="create-task-project"
@@ -213,21 +234,21 @@ export default function CreateTaskFromTicketDialog({
                 setSelectedStatusId('');
               }}
               options={projectOptions}
-              placeholder="Select a project"
+              placeholder={t('dialogs.createTaskFromTicket.projectPlaceholder', 'Select a project')}
               dropdownMode="overlay"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Phase
+              {t('dialogs.createTaskFromTicket.phaseLabel', 'Phase')}
             </label>
             <SearchableSelect
               id="create-task-phase"
               value={selectedPhaseId}
               onChange={setSelectedPhaseId}
               options={phaseOptions}
-              placeholder="Select a phase"
+              placeholder={t('dialogs.createTaskFromTicket.phasePlaceholder', 'Select a phase')}
               disabled={!selectedProjectId || phaseOptions.length === 0}
               dropdownMode="overlay"
             />
@@ -235,14 +256,14 @@ export default function CreateTaskFromTicketDialog({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
+              {t('dialogs.createTaskFromTicket.statusLabel', 'Status')}
             </label>
             <SearchableSelect
               id="create-task-status"
               value={selectedStatusId}
               onChange={setSelectedStatusId}
               options={statusOptions}
-              placeholder="Select a status"
+              placeholder={t('dialogs.createTaskFromTicket.statusPlaceholder', 'Select a status')}
               disabled={!selectedProjectId || statusOptions.length === 0}
               dropdownMode="overlay"
             />
@@ -252,21 +273,9 @@ export default function CreateTaskFromTicketDialog({
             id="create-task-link-ticket"
             checked={shouldLink}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setShouldLink(e.target.checked)}
-            label="Link ticket to the created task"
+            label={t('dialogs.createTaskFromTicket.linkTicketLabel', 'Link ticket to the created task')}
             containerClassName="mb-0"
           />
-        </div>
-        <div className="mt-6 flex justify-end gap-2">
-          <Button id="create-task-cancel" variant="ghost" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            id="create-task-confirm"
-            onClick={handleCreate}
-            disabled={!selectedProjectId || !selectedPhaseId || !selectedStatusId}
-          >
-            Create
-          </Button>
         </div>
       </Dialog>
     </>

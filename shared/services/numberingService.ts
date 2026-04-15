@@ -7,7 +7,7 @@
 import type { Knex } from 'knex';
 
 // Define supported entity types
-export type EntityType = 'TICKET' | 'INVOICE' | 'PROJECT';
+export type EntityType = 'TICKET' | 'INVOICE' | 'PROJECT' | 'QUOTE';
 
 export interface NumberingServiceDependencies {
   knex: Knex | Knex.Transaction;
@@ -33,6 +33,20 @@ export class SharedNumberingService {
     }
 
     try {
+      if (entityType === 'QUOTE') {
+        await knex('next_number')
+          .insert({
+            tenant,
+            entity_type: 'QUOTE',
+            last_number: 0,
+            initial_value: 1,
+            prefix: 'Q-',
+            padding_length: 4,
+          })
+          .onConflict(['tenant', 'entity_type'])
+          .ignore();
+      }
+
       // Use parameterized query for CitusDB compatibility
       const result = await knex.raw(
         'SELECT generate_next_number(:tenant::uuid, :type::text) as number',

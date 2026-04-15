@@ -3,7 +3,7 @@
 import React from 'react';
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { millimetersToPixels, type InvoiceTemplateAst } from '@alga-psa/types';
+import { millimetersToPixels, type TemplateAst } from '@alga-psa/types';
 
 import PaperInvoice from './PaperInvoice';
 
@@ -21,7 +21,7 @@ const buildTemplateAst = ({
   widthPx: number;
   heightPx: number;
   paddingPx: number;
-}): InvoiceTemplateAst => ({
+}): TemplateAst => ({
   kind: 'invoice-template-ast',
   version: 1,
   metadata: paperPreset && typeof marginMm === 'number' ? { printSettings: { paperPreset, marginMm } } : undefined,

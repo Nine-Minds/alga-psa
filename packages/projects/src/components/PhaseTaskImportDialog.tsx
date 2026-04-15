@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -41,6 +41,7 @@ import {
   DEFAULT_PHASE_NAME,
 } from '@alga-psa/types';
 import type { IProjectStatusMapping } from '@alga-psa/types';
+import { useTranslation } from 'react-i18next';
 
 interface PhaseTaskImportDialogProps {
   isOpen: boolean;
@@ -67,6 +68,11 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   projectId,
   onImportComplete,
 }) => {
+  const { t } = useTranslation(['features/projects', 'common']);
+  const importT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
+    t(`import.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
+  const importFieldLabel = useCallback((fieldKey: string, fallback: string) =>
+    importT(`fields.${fieldKey}`, fallback), [importT]);
   const [step, setStep] = useState<ImportStep>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<ICSVTaskPreviewData | null>(null);
@@ -91,6 +97,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   const [priorityLookup, setPriorityLookup] = useState<Record<string, string>>({});
   const [serviceLookup, setServiceLookup] = useState<Record<string, string>>({});
   const [statusLookup, setStatusLookup] = useState<Record<string, string>>({});
+  const [statusLookupByPhase, setStatusLookupByPhase] = useState<Record<string, Record<string, string>>>({});
 
   // Status resolution state
   const [unmatchedStatuses, setUnmatchedStatuses] = useState<string[]>([]);
@@ -163,7 +170,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       const rows = parseCSV(text) as string[][];
 
       if (rows.length < 2) {
-        throw new Error('CSV file is empty or has no data rows');
+        throw new Error(importT('emptyCsvError', 'CSV file is empty or has no data rows'));
       }
 
       const headers = rows[0];
@@ -209,11 +216,11 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       setStep('mapping');
     } catch (error) {
       setFile(null);
-      setErrors([error instanceof Error ? error.message : 'Error reading CSV file']);
+      setErrors([error instanceof Error ? error.message : importT('readCsvError', 'Error reading CSV file')]);
     } finally {
       setIsProcessing(false);
     }
-  }, []);
+  }, [importT]);
 
   const handleMapColumn = useCallback((csvHeader: string, fieldKey: string) => {
     setColumnMappings(prev =>
@@ -231,12 +238,14 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
 
     for (const requiredField of requiredFields) {
       if (!columnMappings.some(mapping => mapping.taskField === requiredField)) {
-        errors.push(`Required field "${TASK_IMPORT_FIELDS[requiredField].label}" is not mapped`);
+        errors.push(importT('requiredFieldNotMapped', 'Required field "{{fieldLabel}}" is not mapped', {
+          fieldLabel: importFieldLabel(requiredField, TASK_IMPORT_FIELDS[requiredField].label),
+        }));
       }
     }
 
     return errors;
-  }, [columnMappings]);
+  }, [columnMappings, importFieldLabel, importT]);
 
   const handlePreview = useCallback(async () => {
     const mappingErrors = validateMappings();
@@ -273,6 +282,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       setPriorityLookup(validationResponse.priorityLookup);
       setServiceLookup(validationResponse.serviceLookup);
       setStatusLookup(validationResponse.statusLookup);
+      setStatusLookupByPhase(validationResponse.statusLookupByPhase || {});
       setUnmatchedStatuses(validationResponse.unmatchedStatuses);
       setUnmatchedAgents(validationResponse.unmatchedAgents);
 
@@ -357,7 +367,8 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         validationResponse.userLookup,
         validationResponse.priorityLookup,
         validationResponse.serviceLookup,
-        validationResponse.statusLookup
+        validationResponse.statusLookup,
+        validationResponse.statusLookupByPhase || {}
       );
       setGroupedPhases(grouped);
 
@@ -366,11 +377,11 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
 
       setStep('preview');
     } catch (error) {
-      setErrors([error instanceof Error ? error.message : 'Error processing CSV data']);
+      setErrors([error instanceof Error ? error.message : importT('processCsvError', 'Error processing CSV data')]);
     } finally {
       setIsProcessing(false);
     }
-  }, [fullCSVData, columnMappings, validateMappings, projectId]);
+  }, [fullCSVData, columnMappings, validateMappings, projectId, importT]);
 
   const handleImport = useCallback(async () => {
     if (isProcessing || groupedPhases.length === 0) return;
@@ -385,12 +396,12 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       onImportComplete(result);
       setStep('complete');
     } catch (error) {
-      setErrors([error instanceof Error ? error.message : 'Error importing data']);
+      setErrors([error instanceof Error ? error.message : importT('importDataError', 'Error importing data')]);
       setStep('preview');
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, groupedPhases, projectId, onImportComplete, statusResolutions]);
+  }, [isProcessing, groupedPhases, projectId, onImportComplete, statusResolutions, importT]);
 
   // Handle status resolution changes
   const handleStatusResolutionChange = useCallback((
@@ -446,6 +457,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       priorityLookup,
       serviceLookup,
       statusLookup,
+      statusLookupByPhase,
       agentResolutions
     );
     setGroupedPhases(grouped);
@@ -455,7 +467,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     } else {
       handleImport();
     }
-  }, [validationResults, userLookup, priorityLookup, serviceLookup, statusLookup, agentResolutions, unmatchedStatuses, handleImport]);
+  }, [validationResults, userLookup, priorityLookup, serviceLookup, statusLookup, statusLookupByPhase, agentResolutions, unmatchedStatuses, handleImport]);
 
   const handleClose = useCallback(() => {
     if (!isProcessing) {
@@ -517,12 +529,117 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   const requiresConfirmation = totalTasks >= LARGE_IMPORT_THRESHOLD;
   const canProceedWithImport = !requiresConfirmation || importConfirmed;
 
+  let footer: React.ReactNode = undefined;
+  if (step === 'mapping' && previewData) {
+    footer = (
+      <div className="flex justify-end gap-2">
+        <Button
+          id="mapping-back-btn"
+          variant="outline"
+          onClick={() => setStep('upload')}
+          disabled={isProcessing}
+        >
+          {t('common:actions.back', 'Back')}
+        </Button>
+        <Button id="mapping-preview-btn" onClick={handlePreview} disabled={isProcessing}>
+          {isProcessing ? importT('processingPreview', 'Processing...') : importT('preview', 'Preview')}
+        </Button>
+      </div>
+    );
+  } else if (step === 'preview' && validationResults.length > 0) {
+    footer = (
+      <div className="flex justify-end gap-2">
+        <Button
+          id="preview-back-btn"
+          variant="outline"
+          onClick={() => setStep('mapping')}
+          disabled={isProcessing}
+        >
+          {t('common:actions.back', 'Back')}
+        </Button>
+        <Button
+          id="preview-import-btn"
+          onClick={handleProceedFromPreview}
+          disabled={
+            groupedPhases.length === 0 ||
+            isProcessing ||
+            (invalidCount > 0 && !importOptions.skipInvalidRows) ||
+            (unmatchedAgents.length === 0 && unmatchedStatuses.length === 0 && !canProceedWithImport)
+          }
+        >
+          {isProcessing
+            ? importT('processingPreview', 'Processing...')
+            : unmatchedAgents.length > 0
+              ? importT('nextMapAgents', 'Next: Map Agents')
+              : unmatchedStatuses.length > 0
+                ? importT('nextResolveStatuses', 'Next: Resolve Statuses')
+                : importT('importTasksButton', 'Import {{tasks}} Tasks', { tasks: totalTasks })}
+        </Button>
+      </div>
+    );
+  } else if (step === 'agent_resolution' && unmatchedAgentInfo.length > 0) {
+    footer = (
+      <div className="flex justify-end gap-2">
+        <Button
+          id="agent-resolution-back-btn"
+          variant="outline"
+          onClick={() => setStep('preview')}
+          disabled={isProcessing}
+        >
+          {t('common:actions.back', 'Back')}
+        </Button>
+        <Button
+          id="agent-resolution-next-btn"
+          onClick={handleProceedFromAgentResolution}
+          disabled={isProcessing || hasIncompleteAgentMappings || (unmatchedStatuses.length === 0 && !canProceedWithImport)}
+        >
+          {isProcessing
+            ? importT('processingPreview', 'Processing...')
+            : unmatchedStatuses.length > 0
+              ? importT('nextResolveStatuses', 'Next: Resolve Statuses')
+              : importT('importTasksButton', 'Import {{tasks}} Tasks', { tasks: totalTasks })}
+        </Button>
+      </div>
+    );
+  } else if (step === 'status_resolution' && unmatchedStatusInfo.length > 0) {
+    footer = (
+      <div className="flex justify-end gap-2">
+        <Button
+          id="status-resolution-back-btn"
+          variant="outline"
+          onClick={() => setStep(unmatchedAgents.length > 0 ? 'agent_resolution' : 'preview')}
+          disabled={isProcessing}
+        >
+          {t('common:actions.back', 'Back')}
+        </Button>
+        <Button
+          id="status-resolution-import-btn"
+          onClick={handleImport}
+          disabled={isProcessing || hasIncompleteStatusMappings || !canProceedWithImport}
+        >
+          {isProcessing
+            ? importT('importingButton', 'Importing...')
+            : importT('importTasksButton', 'Import {{tasks}} Tasks', { tasks: totalTasks })}
+        </Button>
+      </div>
+    );
+  } else if (step === 'complete' && importResult) {
+    footer = (
+      <div className="flex justify-end">
+        <Button id="complete-close-btn" onClick={handleClose}>
+          {t('common:actions.close', 'Close')}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <Dialog
       isOpen={isOpen}
       onClose={handleClose}
-      title="Import Phases & Tasks"
+      title={importT('title', 'Import Phases & Tasks')}
       className="max-w-5xl"
+      footer={footer}
     >
       <DialogContent>
         {errors.length > 0 && (
@@ -541,11 +658,11 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         {step === 'upload' && (
           <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
             <Upload className="mx-auto h-12 w-12 text-gray-400" />
-            <p className="mt-2 text-sm text-gray-600">Upload a CSV file with phase and task data</p>
+            <p className="mt-2 text-sm text-gray-600">{importT('uploadIntro', 'Upload a CSV file with phase and task data')}</p>
             <p className="mt-1 text-xs text-gray-500">
-              <strong>Required:</strong> task_name<br />
-              <strong>Optional:</strong> phase_name, task_description, assigned_to, estimated_hours, actual_hours, due_date, priority, service, task_type, status, tags<br />
-              <strong>Note:</strong> Tasks without a phase_name will be grouped into "{DEFAULT_PHASE_NAME}"
+              <strong>{importT('requiredFields', 'Required:')}</strong> {importT('requiredFieldsList', 'task_name')}<br />
+              <strong>{importT('optionalFields', 'Optional:')}</strong> {importT('optionalFieldsList', 'phase_name, task_description, assigned_to, estimated_hours, actual_hours, due_date, priority, service, task_type, status, tags')}<br />
+              <strong>{importT('noteLabel', 'Note:')}</strong> {importT('defaultPhaseNote', 'Tasks without a phase_name will be grouped into "{{phaseName}}"', { phaseName: DEFAULT_PHASE_NAME })}
             </p>
             <div className="mt-4 space-y-3">
               <Input
@@ -572,7 +689,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 }}
                 className="w-full"
               >
-                Download CSV Template
+                {importT('downloadTemplate', 'Download CSV Template')}
               </Button>
             </div>
           </div>
@@ -581,14 +698,14 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         {/* Step 2: Mapping */}
         {step === 'mapping' && previewData && (
           <div>
-            <h3 className="text-lg font-medium mb-4">Map Task Fields to CSV Columns</h3>
+            <h3 className="text-lg font-medium mb-4">{importT('mapFieldsTitle', 'Map Task Fields to CSV Columns')}</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Select which CSV column contains the data for each field. Fields marked with * are required.
+              {importT('fieldInstructions', 'Select which CSV column contains the data for each field. Fields marked with * are required.')}
             </p>
             <div className="max-h-[60vh] overflow-y-auto pr-2">
               <div className="mb-2 flex items-center gap-4 text-sm font-semibold text-gray-700">
-                <span className="w-1/3">Field</span>
-                <span className="w-2/3">Select CSV Column</span>
+                <span className="w-1/3">{importT('fieldColumn', 'Field')}</span>
+                <span className="w-2/3">{importT('selectCsvColumn', 'Select CSV Column')}</span>
               </div>
               <div className="border-t pt-4 space-y-3">
                 {Object.entries(TASK_IMPORT_FIELDS).map(([fieldKey, { label }]) => {
@@ -602,11 +719,11 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
 
                   return (
                     <div key={fieldKey} className="flex items-center gap-4">
-                      <span className="w-1/3 text-sm font-medium">{label}</span>
+                      <span className="w-1/3 text-sm font-medium">{importFieldLabel(fieldKey, label)}</span>
                       <span className="text-gray-400">←</span>
                       <CustomSelect
                         options={[
-                          { value: 'unassigned', label: 'Not mapped' },
+                          { value: 'unassigned', label: importT('notMapped', 'Not mapped') },
                           ...previewData.headers
                             .filter(header => !mappedHeaders.includes(header))
                             .map(header => ({
@@ -641,48 +758,37 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
             {rowsTruncated && (
               <Alert variant="destructive" className="mt-4">
                 <AlertDescription>
-                  <strong>Row limit exceeded:</strong> Your CSV has {rowsTruncated.original.toLocaleString()} rows,
-                  but only the first {rowsTruncated.kept.toLocaleString()} rows will be imported.
-                  Please split your file into smaller batches for the remaining rows.
+                  <strong>{importT('rowLimitExceeded', 'Row limit exceeded:')}</strong>{' '}
+                  {importT('rowLimitDescription', 'Your CSV has {{original}} rows, but only the first {{kept}} rows will be imported. Please split your file into smaller batches for the remaining rows.', {
+                    original: rowsTruncated.original.toLocaleString(),
+                    kept: rowsTruncated.kept.toLocaleString(),
+                  })}
                 </AlertDescription>
               </Alert>
             )}
             {fullCSVData && fullCSVData.length > 100 && !rowsTruncated && (
               <Alert variant="info" className="mt-4">
                 <AlertDescription>
-                  You are importing {fullCSVData.length} tasks. Processing may take a moment.
+                  {importT('largeImportHelp', 'You are importing {{tasks}} tasks. Processing may take a moment.', {
+                    tasks: fullCSVData.length,
+                  })}
                 </AlertDescription>
               </Alert>
             )}
-            <div className="mt-4">
-              <DialogFooter>
-                <Button
-                  id="mapping-back-btn"
-                  variant="outline"
-                  onClick={() => setStep('upload')}
-                  disabled={isProcessing}
-                >
-                  Back
-                </Button>
-                <Button id="mapping-preview-btn" onClick={handlePreview} disabled={isProcessing}>
-                  {isProcessing ? 'Processing...' : 'Preview'}
-                </Button>
-              </DialogFooter>
-            </div>
           </div>
         )}
 
         {/* Step 3: Preview */}
         {step === 'preview' && validationResults.length > 0 && (
           <div>
-            <h3 className="text-lg font-medium mb-4">Preview Import</h3>
+            <h3 className="text-lg font-medium mb-4">{importT('previewTitle', 'Preview Import')}</h3>
             <Alert variant="info" className="mb-4">
               <AlertDescription>
-                <strong>Total rows:</strong> {validationResults.length} |
-                <strong className="ml-2">Valid:</strong> {validCount} |
-                <strong className="ml-2">Invalid:</strong> {invalidCount} |
-                <strong className="ml-2">Phases:</strong> {groupedPhases.length} |
-                <strong className="ml-2">Tasks:</strong> {totalTasks}
+                <strong>{importT('totalRows', 'Total rows:')}</strong> {validationResults.length} |
+                <strong className="ml-2">{importT('validRows', 'Valid:')}</strong> {validCount} |
+                <strong className="ml-2">{importT('invalidRows', 'Invalid:')}</strong> {invalidCount} |
+                <strong className="ml-2">{importT('phasesCount', 'Phases:')}</strong> {groupedPhases.length} |
+                <strong className="ml-2">{importT('tasksCount', 'Tasks:')}</strong> {totalTasks}
               </AlertDescription>
             </Alert>
 
@@ -690,12 +796,12 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
             <div className="mb-4">
               <div className="flex items-center justify-between py-3 border-b">
                 <div>
-                  <div className="text-gray-900 font-medium">Skip invalid rows</div>
-                  <div className="text-sm text-gray-500">Continue import even if some rows have validation errors</div>
+                  <div className="text-gray-900 font-medium">{importT('skipInvalidRows', 'Skip invalid rows')}</div>
+                  <div className="text-sm text-gray-500">{importT('skipInvalidRowsHelp', 'Continue import even if some rows have validation errors')}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-700">
-                    {importOptions.skipInvalidRows ? 'Yes' : 'No'}
+                    {importOptions.skipInvalidRows ? importT('yes', 'Yes') : importT('no', 'No')}
                   </span>
                   <Switch
                     checked={importOptions.skipInvalidRows}
@@ -710,7 +816,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
 
             {/* Grouped Preview */}
             <div className="mb-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Import Structure</h4>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">{importT('structureTitle', 'Import Structure')}</h4>
               <div className="border rounded-lg max-h-64 overflow-y-auto">
                 {groupedPhases.map((phase) => (
                   <div key={phase.phase_name} className="border-b last:border-b-0">
@@ -725,7 +831,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                         <ChevronRight className="h-4 w-4 text-gray-500" />
                       )}
                       <span className="font-medium">{phase.phase_name}</span>
-                      <span className="text-sm text-gray-500">({phase.tasks.length} tasks)</span>
+                      <span className="text-sm text-gray-500">{importT('phaseTaskCount', '({{count}} tasks)', { count: phase.tasks.length })}</span>
                     </button>
                     {expandedPhases.has(phase.phase_name) && (
                       <div className="pl-9 pb-2">
@@ -734,7 +840,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                             <span className="text-gray-400">•</span>
                             <span>{task.task_name}</span>
                             {task.estimated_hours && (
-                              <span className="text-gray-500">({task.estimated_hours}h)</span>
+                              <span className="text-gray-500">{importT('estimatedHoursSummary', '({{hours}}h)', { hours: task.estimated_hours })}</span>
                             )}
                           </div>
                         ))}
@@ -767,37 +873,37 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 }))}
                 columns={[
                   {
-                    title: 'Status',
+                    title: importT('table.status', 'Status'),
                     dataIndex: 'status',
                     render: (value: boolean) =>
                       value ? (
                         <div className="flex justify-center">
-                          <Tooltip content="Valid - Ready to import">
+                          <Tooltip content={importT('validReadyTooltip', 'Valid - Ready to import')}>
                             <Check className="h-5 w-5 text-green-600 cursor-help" />
                           </Tooltip>
                         </div>
                       ) : (
                         <div className="flex justify-center">
-                          <Tooltip content="Invalid - Has errors">
+                          <Tooltip content={importT('invalidReadyTooltip', 'Invalid - Has errors')}>
                             <AlertTriangle className="h-5 w-5 text-destructive cursor-help" />
                           </Tooltip>
                         </div>
                       ),
                   },
                   {
-                    title: 'Row',
+                    title: importT('table.row', 'Row'),
                     dataIndex: 'rowNumber',
                   },
                   {
-                    title: 'Phase',
+                    title: importT('table.phase', 'Phase'),
                     dataIndex: 'phase_name',
                   },
                   {
-                    title: 'Task',
+                    title: importT('table.task', 'Task'),
                     dataIndex: 'task_name',
                   },
                   {
-                    title: 'Issues',
+                    title: importT('table.issues', 'Issues'),
                     dataIndex: 'issues',
                     width: '30%',
                     render: (value: unknown, record: Record<string, unknown>) => {
@@ -805,7 +911,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                       const recordWarnings = (record.warnings || []) as string[];
 
                       if (recordErrors.length === 0 && recordWarnings.length === 0) {
-                        return <span className="text-gray-400">-</span>;
+                        return <span className="text-gray-400">{importT('noIssues', '-')}</span>;
                       }
 
                       return (
@@ -839,8 +945,8 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
             {unmatchedAgents.length > 0 && (
               <Alert variant="info" className="mt-4">
                 <AlertDescription>
-                  <strong>{unmatchedAgents.length} agent(s)</strong> from your CSV don't match existing users.
-                  You'll be asked to map these in the next step.
+                  <strong>{importT('unmatchedAgentsCount', '{{count}} agent(s)', { count: unmatchedAgents.length })}</strong>{' '}
+                  {importT('unmatchedAgentsWarning', "from your CSV don't match existing users. You'll be asked to map these in the next step.")}
                 </AlertDescription>
               </Alert>
             )}
@@ -849,8 +955,12 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
             {unmatchedStatuses.length > 0 && (
               <Alert variant="info" className="mt-4">
                 <AlertDescription>
-                  <strong>{unmatchedStatuses.length} status(es)</strong> from your CSV don't match existing project statuses.
-                  You'll be asked to resolve these {unmatchedAgents.length > 0 ? 'after mapping agents' : 'in the next step'}.
+                  <strong>{importT('unmatchedStatusesCount', '{{count}} status(es)', { count: unmatchedStatuses.length })}</strong>{' '}
+                  {importT('unmatchedStatusesWarning', "from your CSV don't match existing project statuses. You'll be asked to resolve these {{timing}}.", {
+                    timing: unmatchedAgents.length > 0
+                      ? importT('afterMappingAgents', 'after mapping agents')
+                      : importT('inTheNextStep', 'in the next step'),
+                  })}
                 </AlertDescription>
               </Alert>
             )}
@@ -859,8 +969,8 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
             {invalidCount > 0 && !importOptions.skipInvalidRows && (
               <Alert variant="destructive" className="mt-4">
                 <AlertDescription>
-                  <strong>{invalidCount} row(s)</strong> have validation errors.
-                  Enable "Skip invalid rows" to proceed with only the valid rows, or go back and fix your CSV.
+                  <strong>{importT('invalidRowsCount', '{{count}} row(s)', { count: invalidCount })}</strong>{' '}
+                  {importT('invalidRowsBlockingError', 'have validation errors. Enable "Skip invalid rows" to proceed with only the valid rows, or go back and fix your CSV.')}
                 </AlertDescription>
               </Alert>
             )}
@@ -878,11 +988,13 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                     />
                     <div>
                       <span className="font-medium">
-                        Confirm large import ({totalTasks} tasks)
+                        {importT('largeImportConfirm', 'Confirm large import ({{tasks}} tasks)', { tasks: totalTasks })}
                       </span>
                       <p className="text-sm mt-1">
-                        I understand this will create {groupedPhases.length} phase(s) and {totalTasks} task(s).
-                        This action may take a while to complete.
+                        {importT('largeImportConfirmHelp', 'I understand this will create {{phases}} phase(s) and {{tasks}} task(s). This action may take a while to complete.', {
+                          phases: groupedPhases.length,
+                          tasks: totalTasks,
+                        })}
                       </p>
                     </div>
                   </label>
@@ -890,48 +1002,16 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
               </Alert>
             )}
 
-            <div className="mt-4">
-              <DialogFooter>
-                <Button
-                  id="preview-back-btn"
-                  variant="outline"
-                  onClick={() => setStep('mapping')}
-                  disabled={isProcessing}
-                >
-                  Back
-                </Button>
-                <Button
-                  id="preview-import-btn"
-                  onClick={handleProceedFromPreview}
-                  disabled={
-                    groupedPhases.length === 0 ||
-                    isProcessing ||
-                    (invalidCount > 0 && !importOptions.skipInvalidRows) ||
-                    (unmatchedAgents.length === 0 && unmatchedStatuses.length === 0 && !canProceedWithImport)
-                  }
-                >
-                  {isProcessing
-                    ? 'Processing...'
-                    : unmatchedAgents.length > 0
-                      ? 'Next: Map Agents'
-                      : unmatchedStatuses.length > 0
-                        ? 'Next: Resolve Statuses'
-                        : `Import ${totalTasks} Tasks`}
-                </Button>
-              </DialogFooter>
-            </div>
           </div>
         )}
 
         {/* Step 4: Agent Resolution */}
         {step === 'agent_resolution' && unmatchedAgentInfo.length > 0 && (
           <div>
-            <h3 className="text-lg font-medium mb-4">Map Unmatched Agents</h3>
+            <h3 className="text-lg font-medium mb-4">{importT('mapUnmatchedAgentsTitle', 'Map Unmatched Agents')}</h3>
             <Alert variant="info" className="mb-4">
               <AlertDescription>
-                The following agent names from your CSV don't match any existing users.
-                Choose how to handle each one. The first agent in a comma-separated list becomes the primary assignee,
-                and additional agents become task resources.
+                {importT('agentResolutionIntro', "The following agent names from your CSV don't match any existing users. Choose how to handle each one. The first agent in a comma-separated list becomes the primary assignee, and additional agents become task resources.")}
               </AlertDescription>
             </Alert>
 
@@ -948,18 +1028,21 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <span className="font-medium text-gray-900">"{agentInfo.agentName}"</span>
+                        <span className="font-medium text-gray-900">&quot;{agentInfo.agentName}&quot;</span>
                         <span className="ml-2 text-sm text-gray-500">
-                          ({agentInfo.taskCount} task{agentInfo.taskCount !== 1 ? 's' : ''})
+                          {importT('taskCountLabel', '({{count}} task{{plural}})', {
+                            count: agentInfo.taskCount,
+                            plural: agentInfo.taskCount === 1 ? '' : 's',
+                          })}
                         </span>
                         {agentInfo.isPrimaryAgent && (
                           <span className="ml-2 text-xs bg-[rgb(var(--color-primary-100))] dark:bg-[rgb(var(--color-primary-900))] text-[rgb(var(--color-primary-800))] dark:text-[rgb(var(--color-primary-200))] px-2 py-0.5 rounded">
-                            Primary agent
+                            {importT('primaryAgent', 'Primary agent')}
                           </span>
                         )}
                         <div className="text-sm text-gray-500 mt-1">
-                          Tasks: {agentInfo.taskNames.join(', ')}
-                          {agentInfo.taskCount > 3 && ` and ${agentInfo.taskCount - 3} more...`}
+                          {importT('tasksList', 'Tasks: {{tasks}}', { tasks: agentInfo.taskNames.join(', ') })}
+                          {agentInfo.taskCount > 3 && importT('andMore', ' and {{count}} more...', { count: agentInfo.taskCount - 3 })}
                         </div>
                       </div>
                     </div>
@@ -975,14 +1058,14 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                             className="text-primary-500"
                           />
                           <span className="text-sm">
-                            Skip this agent
+                            {importT('skipAgent', 'Skip this agent')}
                           </span>
                         </label>
                         {resolution?.action === 'skip' && (
                           <p className="ml-6 text-xs text-gray-500 mt-1">
                             {agentInfo.isPrimaryAgent
-                              ? 'Tasks where this is the primary agent will be imported without an assignee.'
-                              : 'This additional agent will not be added to the affected tasks.'}
+                              ? importT('skipPrimaryAgentHelp', 'Tasks where this is the primary agent will be imported without an assignee.')
+                              : importT('skipAdditionalAgentHelp', 'This additional agent will not be added to the affected tasks.')}
                           </p>
                         )}
                       </div>
@@ -999,7 +1082,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                             }}
                             className="text-primary-500"
                           />
-                          <span className="text-sm">Map to existing user:</span>
+                          <span className="text-sm">{importT('mapToExistingUser', 'Map to existing user:')}</span>
                         </label>
                         <UserPicker
                           id={`agent-mapping-${agentInfo.agentName}`}
@@ -1010,7 +1093,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                           }
                           getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                           disabled={resolution?.action !== 'map_to_existing'}
-                          placeholder="Select user..."
+                          placeholder={importT('selectUserPlaceholder', 'Select user...')}
                           labelStyle="none"
                           buttonWidth="fit"
                           size="sm"
@@ -1026,7 +1109,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
             {hasIncompleteAgentMappings && (
               <Alert variant="destructive" className="mt-4">
                 <AlertDescription>
-                  Please select a target user for all "Map to existing user" resolutions before proceeding.
+                  {importT('mapAgentRequiredError', 'Please select a target user for all "Map to existing user" resolutions before proceeding.')}
                 </AlertDescription>
               </Alert>
             )}
@@ -1044,11 +1127,13 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                     />
                     <div>
                       <span className="font-medium">
-                        Confirm large import ({totalTasks} tasks)
+                        {importT('largeImportConfirm', 'Confirm large import ({{tasks}} tasks)', { tasks: totalTasks })}
                       </span>
                       <p className="text-sm mt-1">
-                        I understand this will create {groupedPhases.length} phase(s) and {totalTasks} task(s).
-                        This action may take a while to complete.
+                        {importT('largeImportConfirmHelp', 'I understand this will create {{phases}} phase(s) and {{tasks}} task(s). This action may take a while to complete.', {
+                          phases: groupedPhases.length,
+                          tasks: totalTasks,
+                        })}
                       </p>
                     </div>
                   </label>
@@ -1056,40 +1141,16 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
               </Alert>
             )}
 
-            <div className="mt-4">
-              <DialogFooter>
-                <Button
-                  id="agent-resolution-back-btn"
-                  variant="outline"
-                  onClick={() => setStep('preview')}
-                  disabled={isProcessing}
-                >
-                  Back
-                </Button>
-                <Button
-                  id="agent-resolution-next-btn"
-                  onClick={handleProceedFromAgentResolution}
-                  disabled={isProcessing || hasIncompleteAgentMappings || (unmatchedStatuses.length === 0 && !canProceedWithImport)}
-                >
-                  {isProcessing
-                    ? 'Processing...'
-                    : unmatchedStatuses.length > 0
-                      ? 'Next: Resolve Statuses'
-                      : `Import ${totalTasks} Tasks`}
-                </Button>
-              </DialogFooter>
-            </div>
           </div>
         )}
 
         {/* Step 5: Status Resolution */}
         {step === 'status_resolution' && unmatchedStatusInfo.length > 0 && (
           <div>
-            <h3 className="text-lg font-medium mb-4">Resolve Unmatched Statuses</h3>
+            <h3 className="text-lg font-medium mb-4">{importT('resolveStatusesTitle', 'Resolve Unmatched Statuses')}</h3>
             <Alert variant="info" className="mb-4">
               <AlertDescription>
-                The following statuses from your CSV don't match any existing project statuses.
-                Choose how to handle each one:
+                {importT('statusResolutionIntro', "The following statuses from your CSV don't match any existing project statuses. Choose how to handle each one:")}
               </AlertDescription>
             </Alert>
 
@@ -1106,13 +1167,16 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <span className="font-medium text-gray-900">"{statusInfo.statusName}"</span>
+                        <span className="font-medium text-gray-900">&quot;{statusInfo.statusName}&quot;</span>
                         <span className="ml-2 text-sm text-gray-500">
-                          ({statusInfo.taskCount} task{statusInfo.taskCount !== 1 ? 's' : ''})
+                          {importT('taskCountLabel', '({{count}} task{{plural}})', {
+                            count: statusInfo.taskCount,
+                            plural: statusInfo.taskCount === 1 ? '' : 's',
+                          })}
                         </span>
                         <div className="text-sm text-gray-500 mt-1">
-                          Tasks: {statusInfo.taskNames.join(', ')}
-                          {statusInfo.taskCount > 3 && ` and ${statusInfo.taskCount - 3} more...`}
+                          {importT('tasksList', 'Tasks: {{tasks}}', { tasks: statusInfo.taskNames.join(', ') })}
+                          {statusInfo.taskCount > 3 && importT('andMore', ' and {{count}} more...', { count: statusInfo.taskCount - 3 })}
                         </div>
                       </div>
                     </div>
@@ -1127,7 +1191,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                           className="text-primary-500"
                         />
                         <span className="text-sm">
-                          Create new status column "{statusInfo.statusName}"
+                          {importT('createNewStatus', 'Create new status column "{{statusName}}"', { statusName: statusInfo.statusName })}
                         </span>
                       </label>
 
@@ -1140,7 +1204,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                           className="text-primary-500"
                         />
                         <span className="text-sm">
-                          Use "No Status Specified" column (will be created if needed)
+                          {importT('noStatusSpecified', 'Use "No Status Specified" column (will be created if needed)')}
                         </span>
                       </label>
 
@@ -1156,7 +1220,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                             }}
                             className="text-primary-500"
                           />
-                          <span className="text-sm">Map to existing:</span>
+                          <span className="text-sm">{importT('mapToExistingStatus', 'Map to existing:')}</span>
                         </label>
                         <CustomSelect
                           options={projectStatusMappings.map(mapping => ({
@@ -1180,7 +1244,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
             {hasIncompleteStatusMappings && (
               <Alert variant="destructive" className="mt-4">
                 <AlertDescription>
-                  Please select a target status for all "Map to existing" resolutions before importing.
+                  {importT('mapStatusRequiredError', 'Please select a target status for all "Map to existing" resolutions before importing.')}
                 </AlertDescription>
               </Alert>
             )}
@@ -1197,11 +1261,13 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                     />
                     <div>
                       <span className="font-medium">
-                        Confirm large import ({totalTasks} tasks)
+                        {importT('largeImportConfirm', 'Confirm large import ({{tasks}} tasks)', { tasks: totalTasks })}
                       </span>
                       <p className="text-sm mt-1">
-                        I understand this will create {groupedPhases.length} phase(s) and {totalTasks} task(s).
-                        This action may take a while to complete.
+                        {importT('largeImportConfirmHelp', 'I understand this will create {{phases}} phase(s) and {{tasks}} task(s). This action may take a while to complete.', {
+                          phases: groupedPhases.length,
+                          tasks: totalTasks,
+                        })}
                       </p>
                     </div>
                   </label>
@@ -1209,25 +1275,6 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
               </Alert>
             )}
 
-            <div className="mt-4">
-              <DialogFooter>
-                <Button
-                  id="status-resolution-back-btn"
-                  variant="outline"
-                  onClick={() => setStep(unmatchedAgents.length > 0 ? 'agent_resolution' : 'preview')}
-                  disabled={isProcessing}
-                >
-                  Back
-                </Button>
-                <Button
-                  id="status-resolution-import-btn"
-                  onClick={handleImport}
-                  disabled={isProcessing || hasIncompleteStatusMappings || !canProceedWithImport}
-                >
-                  {isProcessing ? 'Importing...' : `Import ${totalTasks} Tasks`}
-                </Button>
-              </DialogFooter>
-            </div>
           </div>
         )}
 
@@ -1235,7 +1282,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         {step === 'importing' && (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Importing phases and tasks...</p>
+            <p className="text-gray-600">{importT('processing', 'Importing phases and tasks...')}</p>
           </div>
         )}
 
@@ -1245,22 +1292,28 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
             {importResult.success ? (
               <>
                 <Check className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Import Complete</h3>
+                <h3 className="text-lg font-medium mb-2">{importT('completeTitle', 'Import Complete')}</h3>
                 <p className="text-gray-600 mb-4">
-                  Successfully created {importResult.phasesCreated} phases and {importResult.tasksCreated} tasks
+                  {importT('successSummary', 'Successfully created {{phases}} phases and {{tasks}} tasks', {
+                    phases: importResult.phasesCreated,
+                    tasks: importResult.tasksCreated,
+                  })}
                 </p>
               </>
             ) : (
               <>
                 <AlertTriangle className="h-12 w-12 text-primary-500 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Import Completed with Issues</h3>
+                <h3 className="text-lg font-medium mb-2">{importT('completeWithIssuesTitle', 'Import Completed with Issues')}</h3>
                 <p className="text-gray-600 mb-2">
-                  Created {importResult.phasesCreated} phases and {importResult.tasksCreated} tasks
+                  {importT('createdSummary', 'Created {{phases}} phases and {{tasks}} tasks', {
+                    phases: importResult.phasesCreated,
+                    tasks: importResult.tasksCreated,
+                  })}
                 </p>
                 {importResult.errors.length > 0 && (
                   <Alert variant="destructive" className="text-left mt-4">
                     <AlertDescription>
-                      <p className="font-medium mb-2">Errors:</p>
+                      <p className="font-medium mb-2">{importT('errorsLabel', 'Errors:')}</p>
                       <ul className="list-disc list-inside">
                         {importResult.errors.map((error, index) => (
                           <li key={index}>{error}</li>
@@ -1271,11 +1324,6 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 )}
               </>
             )}
-            <DialogFooter>
-              <Button id="complete-close-btn" onClick={handleClose}>
-                Close
-              </Button>
-            </DialogFooter>
           </div>
         )}
       </DialogContent>

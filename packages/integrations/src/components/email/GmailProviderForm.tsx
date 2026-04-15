@@ -11,6 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ExternalLink } from 'lucide-react';
 import type { EmailProvider } from './types';
 import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '@alga-psa/integrations/actions';
@@ -19,7 +20,7 @@ import { useOAuthPopup } from './providers/gmail/useOAuthPopup';
 import { BasicConfigCard } from './providers/gmail/BasicConfigCard';
 import { ProcessingSettingsCard } from './providers/gmail/ProcessingSettingsCard';
 import { OAuthSection } from './providers/gmail/OAuthSection';
-import { ceGmailProviderSchema } from './providers/gmail/schemas';
+import { createCeGmailProviderSchema } from './providers/gmail/schemas';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
 import { getGoogleIntegrationStatus } from '@alga-psa/integrations/actions';
@@ -39,6 +40,7 @@ export function GmailProviderForm({
   onSuccess, 
   onCancel 
 }: GmailProviderFormProps) {
+  const { t } = useTranslation('msp/email-providers');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [setupWarnings, setSetupWarnings] = useState<string[]>([]);
@@ -48,11 +50,12 @@ export function GmailProviderForm({
   const [googleConfigReady, setGoogleConfigReady] = useState(false);
 
   const isEditing = !!provider;
+  const gmailProviderSchema = createCeGmailProviderSchema(t);
 
   // No manual cleanup needed; handled by hook
 
   const form = useForm<GmailProviderFormData>({
-    resolver: zodResolver(ceGmailProviderSchema) as any,
+    resolver: zodResolver(gmailProviderSchema) as any,
     defaultValues: provider && provider.googleConfig ? {
       providerName: provider.providerName,
       mailbox: provider.mailbox,
@@ -167,7 +170,10 @@ export function GmailProviderForm({
 
       // Check for setup errors or warnings
       if (result.setupError) {
-        setError(`Provider saved but setup incomplete: ${result.setupError}`);
+        setError(t('forms.gmail.messages.setupIncomplete', {
+          defaultValue: 'Provider saved but setup incomplete: {{error}}',
+          error: result.setupError,
+        }));
       }
       if (result.setupWarnings && result.setupWarnings.length > 0) {
         setSetupWarnings(result.setupWarnings);
@@ -200,13 +206,13 @@ export function GmailProviderForm({
       const isValid = await form.trigger();
       if (!isValid) {
         setOauthStatus('error');
-        setError('Please fill in all required fields before authorizing');
+        setError(t('forms.gmail.validation.authorizeRequiresValid', { defaultValue: 'Please fill in all required fields before authorizing' }));
         return;
       }
 
       if (!googleConfigReady) {
         setOauthStatus('error');
-        setError('Google integration is not configured for this tenant. Configure Google first, then retry.');
+        setError(t('forms.gmail.validation.googleNotConfigured', { defaultValue: 'Google integration is not configured for this tenant. Configure Google first, then retry.' }));
         return;
       }
 
@@ -242,7 +248,7 @@ export function GmailProviderForm({
       });
 
       if (!oauthResult.success) {
-        throw new Error((oauthResult as { success: false; error: string }).error || 'Failed to initiate OAuth');
+        throw new Error((oauthResult as { success: false; error: string }).error || t('forms.gmail.validation.oauthInitiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
       }
       const { authUrl } = oauthResult;
 
@@ -268,10 +274,10 @@ export function GmailProviderForm({
       {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
         <Alert variant="destructive">
           <AlertDescription>
-            <p className="font-medium mb-2">Please fill in the required fields:</p>
+            <p className="font-medium mb-2">{t('forms.common.validation.requiredFieldsTitle', { defaultValue: 'Please fill in the required fields:' })}</p>
             <ul className="list-disc list-inside space-y-1">
-              {form.formState.errors.providerName && <li>Provider Name</li>}
-              {form.formState.errors.mailbox && <li>Gmail Address</li>}
+              {form.formState.errors.providerName && <li>{t('forms.gmail.requiredFields.providerName', { defaultValue: 'Provider Name' })}</li>}
+              {form.formState.errors.mailbox && <li>{t('forms.gmail.requiredFields.gmailAddress', { defaultValue: 'Gmail Address' })}</li>}
             </ul>
           </AlertDescription>
         </Alert>
@@ -286,7 +292,7 @@ export function GmailProviderForm({
       {setupWarnings.length > 0 && (
         <Alert variant="warning">
           <AlertDescription>
-            <p className="font-medium mb-2">Setup completed with warnings:</p>
+            <p className="font-medium mb-2">{t('forms.gmail.messages.warningsTitle', { defaultValue: 'Setup completed with warnings:' })}</p>
             <ul className="list-disc list-inside space-y-1">
               {setupWarnings.map((warning, idx) => (
                 <li key={idx}>{warning}</li>
@@ -300,9 +306,9 @@ export function GmailProviderForm({
         <Alert variant="destructive">
           <AlertDescription>
             <div className="space-y-2">
-              <div className="font-medium">Google integration is not configured for this tenant.</div>
+              <div className="font-medium">{t('forms.gmail.oauth.notConfigured', { defaultValue: 'Google integration is not configured for this tenant.' })}</div>
               <div className="text-sm">
-                Configure tenant-owned Google OAuth + Pub/Sub first: <strong>Settings → Integrations → Providers</strong>.
+                {t('forms.gmail.oauth.setupHelp', { defaultValue: 'Configure tenant-owned Google OAuth + Pub/Sub first: Settings → Integrations → Providers.' })}
               </div>
               <div>
                 <Button
@@ -313,7 +319,7 @@ export function GmailProviderForm({
                     window.location.href = '/msp/settings?tab=integrations&category=providers';
                   }}
                 >
-                  Open Google Settings
+                  {t('forms.gmail.oauth.openSettings', { defaultValue: 'Open Google Settings' })}
                 </Button>
               </div>
             </div>
@@ -325,9 +331,15 @@ export function GmailProviderForm({
       {oauthStatus !== 'success' && (
         <Alert variant="warning">
           <AlertDescription>
-            <h4 className="font-medium">OAuth Authorization Required</h4>
+            <h4 className="font-medium">{t('forms.gmail.oauth.requiredTitle', { defaultValue: 'OAuth Authorization Required' })}</h4>
             <p className="text-sm mt-1">
-              You must complete OAuth authorization above before {isEditing ? 'updating' : 'adding'} the provider to enable Gmail notifications.
+              {isEditing
+                ? t('forms.gmail.oauth.requiredDescriptionUpdate', {
+                  defaultValue: 'You must complete OAuth authorization above before updating the provider to enable Gmail notifications.',
+                })
+                : t('forms.gmail.oauth.requiredDescriptionAdd', {
+                  defaultValue: 'You must complete OAuth authorization above before adding the provider to enable Gmail notifications.',
+                })}
             </p>
           </AlertDescription>
         </Alert>
@@ -337,16 +349,16 @@ export function GmailProviderForm({
       <BasicConfigCard
         form={form}
         hasAttemptedSubmit={hasAttemptedSubmit}
-        title="Basic Configuration"
-        description="Basic settings for your Gmail email provider"
+        title={t('forms.gmail.basic.title', { defaultValue: 'Basic Configuration' })}
+        description={t('forms.gmail.basic.description', { defaultValue: 'Basic settings for your Gmail email provider' })}
       />
 
       {/* Google OAuth */}
       <Card>
         <CardHeader>
-          <CardTitle>Google OAuth</CardTitle>
+          <CardTitle>{t('forms.gmail.oauth.sectionTitle', { defaultValue: 'Google OAuth' })}</CardTitle>
           <CardDescription>
-            Uses the tenant-owned Google app configured in <strong>Settings → Integrations → Providers</strong>.
+            {t('forms.gmail.oauth.sectionDescription', { defaultValue: 'Uses the tenant-owned Google app configured in Settings → Integrations → Providers.' })}
             <Button
               id="google-console-link"
               type="button"
@@ -355,7 +367,7 @@ export function GmailProviderForm({
               onClick={() => window.open('https://console.cloud.google.com/apis/credentials', '_blank')}
             >
               <ExternalLink className="h-3 w-3 mr-1" />
-              Google Cloud Console
+              {t('forms.gmail.oauth.setupLabel', { defaultValue: 'Google Cloud Console' })}
             </Button>
           </CardDescription>
         </CardHeader>
@@ -363,7 +375,7 @@ export function GmailProviderForm({
           {!googleConfigReady && (
             <Alert variant="destructive">
               <AlertDescription>
-                Google is not configured for this tenant. Configure Google settings before authorizing.
+                {t('forms.gmail.oauth.notConfigured', { defaultValue: 'Google integration is not configured for this tenant.' })}
               </AlertDescription>
             </Alert>
           )}
@@ -375,12 +387,12 @@ export function GmailProviderForm({
             buttonDisabled={!googleConfigReady}
             isEditing={isEditing}
             labels={{
-              title: 'Step 1: OAuth Authorization',
-              descriptionIdle: 'Complete OAuth flow to grant access to Gmail',
-              descriptionSuccess: 'Successfully authorized! Saving your settings...',
-              buttonIdleText: 'Authorize Access',
-              buttonAuthorizingText: 'Authorizing...',
-              buttonSuccessText: 'Authorized',
+              title: t('forms.gmail.oauth.stepTitle', { defaultValue: 'Step 1: OAuth Authorization' }),
+              descriptionIdle: t('forms.gmail.oauth.stepDescription', { defaultValue: 'Complete OAuth flow to grant access to Gmail' }),
+              descriptionSuccess: t('forms.gmail.oauth.buttonSuccessSaving', { defaultValue: 'Successfully authorized! Saving your settings...' }),
+              buttonIdleText: t('forms.common.oauth.authorizeAccess', { defaultValue: 'Authorize Access' }),
+              buttonAuthorizingText: t('forms.common.oauth.authorizing', { defaultValue: 'Authorizing...' }),
+              buttonSuccessText: t('forms.common.oauth.authorized', { defaultValue: 'Authorized' }),
             }}
           />
         </CardContent>
@@ -389,9 +401,9 @@ export function GmailProviderForm({
   {/* Ticket Defaults selection */}
   <Card>
     <CardHeader>
-      <CardTitle>Ticket Defaults</CardTitle>
+      <CardTitle>{t('forms.common.ticketDefaults.title', { defaultValue: 'Ticket Defaults' })}</CardTitle>
       <CardDescription>
-        Select defaults to apply to email-created tickets
+        {t('forms.common.ticketDefaults.description', { defaultValue: 'Select defaults to apply to email-created tickets' })}
         <Button
           id="manage-defaults-link"
           type="button"
@@ -399,23 +411,23 @@ export function GmailProviderForm({
           className="ml-2 p-0 h-auto"
           onClick={() => window.dispatchEvent(new CustomEvent('open-defaults-tab'))}
         >
-          Manage defaults
+          {t('forms.common.actions.manageDefaults', { defaultValue: 'Manage defaults' })}
         </Button>
       </CardDescription>
     </CardHeader>
     <CardContent>
       <CustomSelect
         id="gmail-inbound-defaults-select"
-        label="Inbound Ticket Defaults"
+        label={t('forms.common.ticketDefaults.label', { defaultValue: 'Inbound Ticket Defaults' })}
         value={(form.watch('inboundTicketDefaultsId') as any) || ''}
         onValueChange={(v) => form.setValue('inboundTicketDefaultsId', v || undefined)}
         options={defaultsOptions}
-        placeholder="Select defaults (optional)"
+        placeholder={t('forms.common.ticketDefaults.placeholder', { defaultValue: 'Select defaults (optional)' })}
         allowClear
       />
       <div className="text-right">
         <Button id="refresh-defaults-list" type="button" variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('inbound-defaults-updated'))}>
-          Refresh list
+          {t('forms.common.actions.refreshList', { defaultValue: 'Refresh list' })}
         </Button>
       </div>
     </CardContent>
@@ -424,14 +436,14 @@ export function GmailProviderForm({
 
       <ProcessingSettingsCard
         form={form}
-        title="Advanced Settings"
-        description="Configure advanced email processing options"
+        title={t('forms.gmail.advanced.title', { defaultValue: 'Advanced Settings' })}
+        description={t('forms.gmail.advanced.description', { defaultValue: 'Configure advanced email processing options' })}
       />
 
       {/* Form Actions */}
       <div className="flex items-center justify-end space-x-2">
         <Button id="gmail-cancel-btn" type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {t('forms.common.actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
         <Button 
           id="gmail-submit-btn" 
@@ -444,12 +456,14 @@ export function GmailProviderForm({
           {loading ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Setting up Gmail notifications...
+              {t('forms.gmail.messages.settingUp', { defaultValue: 'Setting up Gmail notifications...' })}
             </>
           ) : (
             <>
-              {isEditing ? 'Update Provider' : 'Add Provider'}
-              {oauthStatus === 'success' && ' & Complete Setup'}
+              {isEditing
+                ? t('forms.common.actions.updateProvider', { defaultValue: 'Update Provider' })
+                : t('forms.common.actions.addProvider', { defaultValue: 'Add Provider' })}
+              {oauthStatus === 'success' && t('forms.gmail.advanced.completeSetupSuffix', { defaultValue: ' & Complete Setup' })}
             </>
           )}
         </Button>

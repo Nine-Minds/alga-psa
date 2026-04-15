@@ -10,7 +10,7 @@
  * Tenant tiers as a const tuple.
  * Used to derive the TenantTier type.
  */
-export const TENANT_TIERS = ['pro', 'premium'] as const;
+export const TENANT_TIERS = ['solo', 'pro', 'premium'] as const;
 
 /**
  * Valid tenant tier values.
@@ -21,8 +21,19 @@ export type TenantTier = (typeof TENANT_TIERS)[number];
  * Display labels for each tier.
  */
 export const TIER_LABELS: Record<TenantTier, string> = {
+  solo: 'Solo',
   pro: 'Pro',
   premium: 'Premium',
+} as const;
+
+/**
+ * Numeric rank for comparing tiers.
+ * Higher rank means broader access.
+ */
+export const TIER_RANK: Record<TenantTier, number> = {
+  solo: 0,
+  pro: 1,
+  premium: 2,
 } as const;
 
 /**
@@ -38,21 +49,38 @@ export function isValidTier(value: unknown): value is TenantTier {
 export interface ResolvedTier {
   /** The resolved tier (defaults to 'pro' if invalid/null) */
   tier: TenantTier;
-  /** True if the plan was NULL, undefined, or invalid */
+  /** True if the plan was an invalid non-null string */
   isMisconfigured: boolean;
 }
 
 /**
  * Resolves a plan value to a tier.
- * - Valid tiers ('pro', 'premium') return as-is with isMisconfigured: false
- * - NULL, undefined, or invalid values return 'pro' with isMisconfigured: true
+ * - Valid tiers ('solo', 'pro', 'premium') return as-is with isMisconfigured: false
+ * - NULL/undefined values default to 'pro' with isMisconfigured: false
+ * - Invalid string values return 'pro' with isMisconfigured: true
  *
  * @param plan - The plan value from the tenants table
  * @returns The resolved tier and whether it was misconfigured
  */
 export function resolveTier(plan: string | null | undefined): ResolvedTier {
+  if (plan == null) {
+    return { tier: 'pro', isMisconfigured: false };
+  }
+
   if (isValidTier(plan)) {
     return { tier: plan, isMisconfigured: false };
   }
+
   return { tier: 'pro', isMisconfigured: true };
+}
+
+/**
+ * Check whether a tier meets or exceeds a minimum tier requirement.
+ *
+ * @param tier - The tenant's current tier
+ * @param minimum - The minimum tier required
+ * @returns True if the tenant tier is at least the minimum tier
+ */
+export function tierAtLeast(tier: TenantTier, minimum: TenantTier): boolean {
+  return TIER_RANK[tier] >= TIER_RANK[minimum];
 }

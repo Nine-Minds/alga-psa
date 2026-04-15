@@ -1,0 +1,80 @@
+{
+  "navigation": {
+    "heading": "Estensioni"
+  },
+  "enterpriseFeature": {
+    "title": "Funzionalità Enterprise",
+    "description": "Per {{feature}} è necessaria l'edizione Enterprise. Effettua l'upgrade per accedere a questa funzionalità."
+  },
+  "settings": {
+    "title": "Gestione estensioni",
+    "description": "Installi, configuri e gestisca le estensioni per ampliare le funzionalità di Alga PSA.",
+    "tabs": {
+      "manage": "Gestisci",
+      "install": "Installa"
+    },
+    "enterpriseOnly": {
+      "title": "Funzionalità Enterprise",
+      "description": "Le estensioni sono disponibili nell'edizione Enterprise di Alga PSA."
+    },
+    "links": {
+      "needLogs": "Servono i log delle estensioni?",
+      "debugConsole": "Apri console di debug demo Service Proxy"
+    },
+    "loading": {
+      "extensions": "Caricamento estensioni...",
+      "installer": "Caricamento programma di installazione..."
+    },
+    "featureNames": {
+      "settings": "impostazioni delle estensioni",
+      "details": "dettagli dell'estensione",
+      "permissions": "autorizzazioni dell'estensione",
+      "management": "gestione estensioni",
+      "installer": "programma di installazione delle estensioni"
+    }
+  },
+  "communityEdition": {
+    "listUnavailable": "Le estensioni non sono disponibili in questa edizione",
+    "dynamicListUnavailable": "Le estensioni non sono disponibili nella Community Edition",
+    "dynamicInstallUnavailable": "L'installazione delle estensioni non è disponibile nella Community Edition"
+  },
+  "page": {
+    "metadata": {
+      "title": "Estensioni",
+      "description": "Gestisci estensioni"
+    },
+    "title": "Estensioni",
+    "description": "La gestione delle estensioni è disponibile nell'edizione Enterprise."
+  },
+  "detail": {
+    "metadataTitle": "Estensioni - Funzionalità Enterprise",
+    "extensionId": "ID estensione: {{id}}"
+  },
+  "detailsPage": {
+    "metadata": {
+      "title": "Dettagli dell'estensione",
+      "description": "Visualizza i dettagli dell'estensione"
+    },
+    "title": "Dettagli dell'estensione",
+    "description": "I dettagli dell'estensione sono disponibili nell'edizione Enterprise."
+  },
+  "settingsPage": {
+    "metadata": {
+      "title": "Impostazioni estensioni",
+      "description": "Configura le impostazioni delle estensioni"
+    },
+    "title": "Impostazioni estensioni",
+    "description": "Le impostazioni delle estensioni sono disponibili nell'edizione Enterprise."
+  },
+  "runtime": {
+    "metadataTitle": "Estensione",
+    "loadError": "Impossibile caricare le informazioni di runtime dell'estensione",
+    "notFoundTitle": "Estensione non trovata.",
+    "goToExtensions": "Vai alle estensioni",
+    "bundleUnavailableTitle": "Pacchetto estensione non disponibile.",
+    "bundleUnavailableDescription": "Il pacchetto dell'estensione manca o non è stato caricato.",
+    "goToDetails": "Vai ai dettagli dell'estensione",
+    "runtimeDomainUnavailableTitle": "Dominio di runtime dell'estensione non disponibile.",
+    "runtimeDomainUnavailableDescription": "Esegui di nuovo il provisioning dell'estensione da Impostazioni -> Estensioni -> seleziona estensione -> Provisioning."
+  }
+}

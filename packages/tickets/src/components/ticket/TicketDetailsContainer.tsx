@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   addTicketCommentWithCacheForCurrentUser,
   updateTicketWithCacheForCurrentUser,
@@ -49,7 +50,7 @@ interface TicketDetailsContainerProps {
       }
     >;
     options: {
-      status: { value: string; label: string; is_closed?: boolean }[];
+      status: { value: string; label: string; is_closed?: boolean; board_id?: string | null }[];
       agent: { value: string; label: string }[];
       board: { value: string; label: string }[];
       priority: { value: string; label: string }[];
@@ -78,6 +79,7 @@ export default function TicketDetailsContainer({
 }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
+  const { t } = useTranslation('features/tickets');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Local comments state to avoid mutating ticketData directly
@@ -123,16 +125,16 @@ export default function TicketDetailsContainer({
 
   const handleTicketUpdate = async (field: string, value: any) => {
     if (!session?.user) {
-      toast.error('You must be logged in to update tickets');
+      toast.error(t('errors.authRequiredUpdate', 'You must be logged in to update tickets'));
       return;
     }
 
     try {
       setIsSubmitting(true);
       await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, { [field]: value });
-      toast.success(`${field} updated successfully`);
+      toast.success(t('messages.ticketUpdated', 'Ticket updated successfully'));
     } catch (error) {
-      handleError(error, `Failed to update ${field}`);
+      handleError(error, t('errors.updateField', 'Failed to update {{field}}', { field }));
     } finally {
       setIsSubmitting(false);
     }
@@ -141,7 +143,7 @@ export default function TicketDetailsContainer({
   // Handler for batch ticket updates (used by Save Changes button)
   const handleBatchTicketUpdate = useCallback(async (changes: Record<string, unknown>): Promise<boolean> => {
     if (!session?.user) {
-      toast.error('You must be logged in to update tickets');
+      toast.error(t('errors.authRequiredUpdate', 'You must be logged in to update tickets'));
       return false;
     }
 
@@ -155,22 +157,22 @@ export default function TicketDetailsContainer({
         }
 
         await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, normalizedChanges);
-        toast.success('Changes saved successfully');
+        toast.success(t('info.changesSaved', 'Changes saved successfully!'));
 
         // Refresh the page to get updated data
         router.refresh();
 
         return true;
       } catch (error) {
-        handleError(error, 'Failed to save changes');
+        handleError(error, t('errors.saveChanges', 'Failed to save changes'));
         return false;
       }
     });
-  }, [session?.user, ticketData.ticket.ticket_id, withSubmitting, router]);
+  }, [router, session?.user, t, ticketData.ticket.ticket_id, withSubmitting]);
 
   const handleAddComment = async (content: string, isInternal: boolean, isResolution: boolean) => {
     if (!session?.user) {
-      toast.error('You must be logged in to add comments');
+      toast.error(t('errors.authRequiredComment', 'You must be logged in to add comments'));
       return;
     }
 
@@ -184,9 +186,9 @@ export default function TicketDetailsContainer({
       );
 
       setComments(prev => [...prev, newComment]);
-      toast.success('Comment added successfully');
+      toast.success(t('messages.commentAdded', 'Comment added successfully'));
     } catch (error) {
-      handleError(error, 'Failed to add comment');
+      handleError(error, t('errors.addComment', 'Failed to add comment'));
     } finally {
       setIsSubmitting(false);
     }

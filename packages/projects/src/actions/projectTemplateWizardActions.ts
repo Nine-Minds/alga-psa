@@ -5,14 +5,20 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUser } from '@alga-psa/types';
+import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { OrderingService } from '../lib/orderingUtils';
 import type {
-  TemplateChecklistItem,
-  TemplatePhase,
-  TemplateStatusMapping,
   TemplateTask,
   TemplateWizardData,
 } from '@alga-psa/projects/types/templateWizard';
+
+function getTaskMarkdownDescription(task: TemplateTask): string | null {
+  if (task.description_rich_text) {
+    return convertBlockNoteToMarkdown(task.description_rich_text);
+  }
+
+  return task.description || null;
+}
 
 async function checkPermission(
   user: IUser,
@@ -53,28 +59,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
       })
       .returning('*');
 
-    // 2. Create status mappings
-    const statusMappingMap = new Map<string, string>(); // temp_id → template_status_mapping_id
-    console.log(`[createTemplateFromWizard] Creating ${data.status_mappings?.length || 0} status mappings`);
-    if (data.status_mappings && data.status_mappings.length > 0) {
-      for (const mapping of data.status_mappings) {
-        const [newMapping] = await trx('project_template_status_mappings')
-          .insert({
-            tenant,
-            template_id: template.template_id,
-            status_id: mapping.status_id || null,
-            custom_status_name: mapping.custom_status_name || null,
-            custom_status_color: mapping.custom_status_color || null,
-            display_order: mapping.display_order,
-          })
-          .returning('*');
-
-        console.log(`[createTemplateFromWizard] Status mapping: temp_id="${mapping.temp_id}" → template_status_mapping_id="${newMapping.template_status_mapping_id}" (display_order=${mapping.display_order})`);
-        statusMappingMap.set(mapping.temp_id, newMapping.template_status_mapping_id);
-      }
-    }
-
-    // 3. Create phases with proper ordering
+    // 2. Create phases with proper ordering
     const phaseMap = new Map<string, string>(); // temp_id → template_phase_id
     if (data.phases && data.phases.length > 0) {
       const sortedPhases = [...data.phases].sort((a, b) => a.order_number - b.order_number);
@@ -95,6 +80,28 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
           .returning('*');
 
         phaseMap.set(phase.temp_id, newPhase.template_phase_id);
+      }
+    }
+
+    // 3. Create status mappings after phases so phase-scoped mappings can reference template_phase_id
+    const statusMappingMap = new Map<string, string>(); // temp_id → template_status_mapping_id
+    if (data.status_mappings && data.status_mappings.length > 0) {
+      for (const mapping of data.status_mappings) {
+        const [newMapping] = await trx('project_template_status_mappings')
+          .insert({
+            tenant,
+            template_id: template.template_id,
+            template_phase_id: mapping.template_phase_id
+              ? phaseMap.get(mapping.template_phase_id) || null
+              : null,
+            status_id: mapping.status_id || null,
+            custom_status_name: mapping.custom_status_name || null,
+            custom_status_color: mapping.custom_status_color || null,
+            display_order: mapping.display_order,
+          })
+          .returning('*');
+
+        statusMappingMap.set(mapping.temp_id, newMapping.template_status_mapping_id);
       }
     }
 
@@ -125,14 +132,13 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
             ? statusMappingMap.get(task.template_status_mapping_id)
             : null;
 
-          console.log(`[createTemplateFromWizard] Task "${task.task_name}": temp_status_id="${task.template_status_mapping_id}" → template_status_mapping_id="${templateStatusMappingId || 'NULL'}"`);
-
           const [newTask] = await trx('project_template_tasks')
             .insert({
               tenant,
               template_phase_id: templatePhaseId,
               task_name: task.task_name,
-              description: task.description || null,
+              description: getTaskMarkdownDescription(task),
+              description_rich_text: task.description_rich_text || null,
               // Convert from hours (wizard UI) to minutes (storage)
               estimated_hours: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
               duration_days: task.duration_days || null,
@@ -227,28 +233,10 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
         updated_at: trx.fn.now(),
       });
 
-    // 2. Delete and recreate status mappings
+    // 2. Delete existing status mappings, phases, tasks, dependencies, and checklists
     await trx('project_template_status_mappings')
       .where({ template_id: templateId, tenant })
       .delete();
-
-    const statusMappingMap = new Map<string, string>(); // temp_id → template_status_mapping_id
-    if (data.status_mappings && data.status_mappings.length > 0) {
-      for (const mapping of data.status_mappings) {
-        const [newMapping] = await trx('project_template_status_mappings')
-          .insert({
-            tenant,
-            template_id: templateId,
-            status_id: mapping.status_id || null,
-            custom_status_name: mapping.custom_status_name || null,
-            custom_status_color: mapping.custom_status_color || null,
-            display_order: mapping.display_order,
-          })
-          .returning('*');
-
-        statusMappingMap.set(mapping.temp_id, newMapping.template_status_mapping_id);
-      }
-    }
 
     // 3. Delete existing phases, tasks, dependencies, and checklists
     // (CASCADE should handle related records)
@@ -275,6 +263,27 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
           .returning('*');
 
         phaseMap.set(phase.temp_id, newPhase.template_phase_id);
+      }
+    }
+
+    const statusMappingMap = new Map<string, string>();
+    if (data.status_mappings && data.status_mappings.length > 0) {
+      for (const mapping of data.status_mappings) {
+        const [newMapping] = await trx('project_template_status_mappings')
+          .insert({
+            tenant,
+            template_id: templateId,
+            template_phase_id: mapping.template_phase_id
+              ? phaseMap.get(mapping.template_phase_id) || null
+              : null,
+            status_id: mapping.status_id || null,
+            custom_status_name: mapping.custom_status_name || null,
+            custom_status_color: mapping.custom_status_color || null,
+            display_order: mapping.display_order,
+          })
+          .returning('*');
+
+        statusMappingMap.set(mapping.temp_id, newMapping.template_status_mapping_id);
       }
     }
 
@@ -308,7 +317,8 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
               tenant,
               template_phase_id: templatePhaseId,
               task_name: task.task_name,
-              description: task.description || null,
+              description: getTaskMarkdownDescription(task),
+              description_rich_text: task.description_rich_text || null,
               // Convert from hours (wizard UI) to minutes (storage)
               estimated_hours: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
               duration_days: task.duration_days || null,
@@ -464,6 +474,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
           template_phase_id: newPhaseId,
           task_name: task.task_name,
           description: task.description,
+          description_rich_text: task.description_rich_text,
           estimated_hours: task.estimated_hours,
           duration_days: task.duration_days,
           task_type_key: task.task_type_key,

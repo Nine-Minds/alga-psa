@@ -18,7 +18,9 @@ import type {
   IUser,
   IUserWithRoles,
   ItemType,
+  ProjectPhaseStatus,
   ProjectStatus,
+  ProjectWithPhases,
 } from '@alga-psa/types';
 import { getAllUsers, findUserById } from '@alga-psa/user-composition/actions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- server action calling another server action; cannot use React context composition
@@ -35,7 +37,7 @@ import { SharedNumberingService } from '@shared/services/numberingService';
 import {
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders';
+} from '@alga-psa/workflow-streams';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -131,6 +133,96 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
         console.error('Error fetching projects:', error);
         throw error;
     }
+});
+
+/**
+ * Lightweight action that returns all projects with their phases attached.
+ * Used by filter pickers that need to display projects + phases as a tree,
+ * but don't need the full project details (statuses, users, etc.)
+ */
+export const getProjectsWithPhases = withAuth(async (
+  user,
+  { tenant }
+): Promise<ProjectWithPhases[] | ActionPermissionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    const denied = await checkPermission(user, 'project', 'read', knex);
+    if (denied) return denied;
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const [projects, phases, statusMappings] = await Promise.all([
+        trx('projects')
+          .where({ tenant })
+          .select('project_id', 'project_name', 'is_inactive')
+          .orderBy('project_name'),
+        trx('project_phases')
+          .where({ tenant })
+          .select('phase_id', 'project_id', 'phase_name', 'wbs_code')
+          .orderBy('wbs_code'),
+        // Fetch all project status mappings with resolved names
+        trx('project_status_mappings as psm')
+          .leftJoin('statuses as s', function () {
+            this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
+          })
+          .leftJoin('standard_statuses as ss', function () {
+            this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+          })
+          .where('psm.tenant', tenant)
+          .select(
+            'psm.project_status_mapping_id as mapping_id',
+            'psm.project_id',
+            'psm.phase_id',
+            trx.raw("COALESCE(psm.custom_name, s.name, ss.name) as name"),
+            trx.raw("COALESCE(s.is_closed, ss.is_closed, false) as is_closed"),
+            'psm.display_order'
+          )
+          .orderBy('psm.display_order'),
+      ]);
+
+      // Group phases by project
+      const phasesByProject = new Map<string, Array<{
+        phase_id: string;
+        phase_name: string;
+        wbs_code: string;
+        statuses: ProjectPhaseStatus[];
+      }>>();
+
+      // Group status mappings: key = "project_id:phase_id" (phase_id may be null for defaults)
+      const statusesByScope = new Map<string, ProjectPhaseStatus[]>();
+      for (const m of statusMappings) {
+        const key = `${m.project_id}:${m.phase_id || '__default__'}`;
+        const list = statusesByScope.get(key) || [];
+        list.push({ mapping_id: m.mapping_id, name: m.name, is_closed: !!m.is_closed });
+        statusesByScope.set(key, list);
+      }
+
+      for (const phase of phases) {
+        const list = phasesByProject.get(phase.project_id) || [];
+        // Phase-specific statuses, falling back to project defaults
+        const phaseStatuses = statusesByScope.get(`${phase.project_id}:${phase.phase_id}`)
+          || statusesByScope.get(`${phase.project_id}:__default__`)
+          || [];
+        list.push({
+          phase_id: phase.phase_id,
+          phase_name: phase.phase_name,
+          wbs_code: phase.wbs_code,
+          statuses: phaseStatuses,
+        });
+        phasesByProject.set(phase.project_id, list);
+      }
+
+      return projects.map((p) => ({
+        project_id: p.project_id,
+        project_name: p.project_name,
+        is_inactive: p.is_inactive,
+        phases: phasesByProject.get(p.project_id) || [],
+      }));
+    });
+  } catch (error) {
+    console.error('Error fetching projects with phases:', error);
+    throw error;
+  }
 });
 
 export const getProjectPhase = withAuth(async (user, { tenant }, phaseId: string): Promise<IProjectPhase | null> => {
@@ -942,19 +1034,30 @@ async function getAllClientsForProjectsInternal(tenant: string): Promise<IClient
 }
 
 // Internal helper for getProjectTaskStatuses
-async function getProjectTaskStatusesInternal2(tenant: string, projectId: string, user: IUser): Promise<ProjectStatus[]> {
+async function getProjectTaskStatusesInternal2(
+    tenant: string,
+    projectId: string,
+    user: IUser,
+    phaseId?: string | null
+): Promise<ProjectStatus[]> {
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await getProjectTaskStatusesInternal(trx, tenant, projectId, user);
+        return await getProjectTaskStatusesInternal(trx, tenant, projectId, user, phaseId);
     });
 }
 
 // Internal function to get project task statuses within transaction
-async function getProjectTaskStatusesInternal(trx: Knex.Transaction, tenant: string, projectId: string, user: IUser): Promise<ProjectStatus[]> {
+async function getProjectTaskStatusesInternal(
+    trx: Knex.Transaction,
+    tenant: string,
+    projectId: string,
+    user: IUser,
+    phaseId?: string | null
+): Promise<ProjectStatus[]> {
     if (!await hasPermission(user, 'project', 'read', trx)) {
         throw new Error('Permission denied: Cannot read project');
     }
-    const statusMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, projectId);
+    const statusMappings = await ProjectModel.getEffectiveStatusMappings(trx, tenant, projectId, phaseId);
     if (!statusMappings || statusMappings.length === 0) {
         console.warn(`No status mappings found for project ${projectId}`);
         return [];
@@ -991,6 +1094,7 @@ async function getProjectTaskStatusesInternal(trx: Knex.Transaction, tenant: str
                 ...standardStatus,
                 project_status_mapping_id: mapping.project_status_mapping_id,
                 status_id: standardStatus.standard_status_id,
+                phase_id: mapping.phase_id,
                 custom_name: mapping.custom_name,
                 display_order: mapping.display_order,
                 is_visible: mapping.is_visible,
@@ -1007,6 +1111,7 @@ async function getProjectTaskStatusesInternal(trx: Knex.Transaction, tenant: str
                 ...customStatus,
                 project_status_mapping_id: mapping.project_status_mapping_id,
                 status_id: customStatus.status_id,
+                phase_id: mapping.phase_id,
                 custom_name: mapping.custom_name,
                 display_order: mapping.display_order,
                 is_visible: mapping.is_visible,
@@ -1120,12 +1225,17 @@ export const updateProjectStructure = withAuth(async (user, { tenant }, projectI
     }
 });
 
-export const getProjectTaskStatuses = withAuth(async (user, { tenant }, projectId: string): Promise<ProjectStatus[]> => {
+export const getProjectTaskStatuses = withAuth(async (
+    user,
+    { tenant },
+    projectId: string,
+    phaseId?: string | null
+): Promise<ProjectStatus[]> => {
     try {
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await getProjectTaskStatusesInternal(trx, tenant, projectId, user);
+            return await getProjectTaskStatusesInternal(trx, tenant, projectId, user, phaseId);
         });
     } catch (error) {
         console.error('Error fetching project statuses:', error);

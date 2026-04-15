@@ -16,12 +16,13 @@ import * as Accordion from '@radix-ui/react-accordion';
 import * as Tooltip from '@radix-ui/react-tooltip'; // Correct Radix UI import
 // Removed incorrect import: import { TooltipContent, TooltipProvider, TooltipTrigger } from '@alga-psa/ui/components/Tooltip';
 import { getContractLinePresetById, updateContractLinePreset } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { getContractLineServicesWithConfigurations } from '@alga-psa/billing/actions/contractLineServiceActions'; // Corrected import path
 import HourlyContractLinePresetServicesList from './HourlyContractLinePresetServicesList';
 import { IContractLinePreset, IService as IBillingService } from '@alga-psa/types'; // Use IService from billing.interfaces
 import { ServiceHourlyConfigForm } from './ServiceHourlyConfigForm';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
     upsertPlanServiceHourlyConfiguration, // Correct action import
     upsertUserTypeRatesForConfig // Added import for user type rates action
@@ -103,6 +104,8 @@ export function HourlyPresetConfiguration({
   presetId,
   className = '',
 }: HourlyPresetConfigurationProps) {
+  const { t } = useTranslation('msp/contract-lines');
+  const billingFrequencyOptions = useBillingFrequencyOptions();
   // Plan-wide state
   const [plan, setPlan] = useState<HourlyPlanData | null>(null);
   const [initialPlanData, setInitialPlanData] = useState<Partial<HourlyPlanData>>({}); // For plan-wide change detection
@@ -163,7 +166,9 @@ export function HourlyPresetConfiguration({
       // Fetch base plan details
       const fetchedPlan = await getContractLinePresetById(presetId) as HourlyPlanData;
       if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Hourly') {
-        setError('Invalid plan type or plan not found.');
+        setError(t('preset.hourly.errors.invalidPlanTypeOrNotFound', {
+          defaultValue: 'Invalid plan type or plan not found.',
+        }));
         setLoading(false);
         return;
       }
@@ -263,11 +268,13 @@ export function HourlyPresetConfiguration({
 
     } catch (err) {
       console.error('Error fetching plan data:', err);
-      setError('Failed to load plan configuration. Please try again.');
+      setError(t('preset.hourly.errors.failedToLoadPlanConfiguration', {
+        defaultValue: 'Failed to load plan configuration. Please try again.',
+      }));
     } finally {
       setLoading(false);
     }
-  }, [presetId]);
+  }, [presetId, t]);
 
   // Callback to refresh data when services are added/removed
   const handleServicesChanged = useCallback(() => {
@@ -282,16 +289,28 @@ export function HourlyPresetConfiguration({
   // Validate PLAN-WIDE inputs
   useEffect(() => {
     const newErrors: typeof planValidationErrors = {};
-    if (enableOvertime && overtimeRate !== undefined && overtimeRate < 0) newErrors.overtimeRate = 'Overtime rate cannot be negative';
-    if (enableOvertime && overtimeThreshold !== undefined && overtimeThreshold < 0) newErrors.overtimeThreshold = 'Overtime threshold cannot be negative';
-    if (enableAfterHoursRate && afterHoursMultiplier !== undefined && afterHoursMultiplier < 1) newErrors.afterHoursMultiplier = 'After hours multiplier must be at least 1';
+    if (enableOvertime && overtimeRate !== undefined && overtimeRate < 0) {
+      newErrors.overtimeRate = t('preset.hourly.validation.overtimeRateNonNegative', {
+        defaultValue: 'Overtime rate cannot be negative',
+      });
+    }
+    if (enableOvertime && overtimeThreshold !== undefined && overtimeThreshold < 0) {
+      newErrors.overtimeThreshold = t('preset.hourly.validation.overtimeThresholdNonNegative', {
+        defaultValue: 'Overtime threshold cannot be negative',
+      });
+    }
+    if (enableAfterHoursRate && afterHoursMultiplier !== undefined && afterHoursMultiplier < 1) {
+      newErrors.afterHoursMultiplier = t('preset.hourly.validation.afterHoursMultiplierMinOne', {
+        defaultValue: 'After hours multiplier must be at least 1',
+      });
+    }
     // Removed newUserTypeRate validation: if (newUserTypeRate !== undefined && newUserTypeRate < 0) newErrors.newUserTypeRate = 'User type rate cannot be negative';
 
     // Only update state if errors have actually changed
     if (!isEqual(newErrors, planValidationErrors)) {
         setPlanValidationErrors(newErrors);
     }
-  }, [enableOvertime, overtimeRate, overtimeThreshold, enableAfterHoursRate, afterHoursMultiplier, planValidationErrors]); // Removed newUserTypeRate from deps
+  }, [enableOvertime, overtimeRate, overtimeThreshold, enableAfterHoursRate, afterHoursMultiplier, planValidationErrors, t]); // Removed newUserTypeRate from deps
 
   // --- Updated Handlers for Service Config State ---
 
@@ -326,8 +345,16 @@ export function HourlyPresetConfiguration({
   // Plan basics save/reset handlers
   const validatePlanBasics = (): string[] => {
     const errors: string[] = [];
-    if (!planName.trim()) errors.push('Contract line name');
-    if (!billingFrequency) errors.push('Billing frequency');
+    if (!planName.trim()) {
+      errors.push(t('preset.hourly.basics.validation.contractLinePresetName', {
+        defaultValue: 'Contract line preset name',
+      }));
+    }
+    if (!billingFrequency) {
+      errors.push(t('preset.hourly.basics.validation.billingFrequency', {
+        defaultValue: 'Billing frequency',
+      }));
+    }
     return errors;
   };
 
@@ -357,7 +384,11 @@ export function HourlyPresetConfiguration({
       setIsBasicsDirty(false);
     } catch (error) {
       console.error('Error saving contract line preset basics:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save contract line preset';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('preset.hourly.errors.failedToSaveContractLinePreset', {
+            defaultValue: 'Failed to save contract line preset',
+          });
       setPlanBasicsErrors([errorMessage]);
     } finally {
       setIsSavingBasics(false);
@@ -381,7 +412,9 @@ export function HourlyPresetConfiguration({
     // Note: Service validation is now primarily handled within the upsert action via Zod.
 
     if (hasPlanErrors) { // Only check plan errors client-side for now
-        setSaveError("Cannot save, contract line preset-wide validation errors exist.");
+        setSaveError(t('preset.hourly.errors.cannotSaveValidationErrors', {
+          defaultValue: 'Cannot save, contract line preset-wide validation errors exist.',
+        }));
         setSaving(false);
         return;
     }
@@ -442,7 +475,10 @@ export function HourlyPresetConfiguration({
         // Extract Zod error messages if available
         const message = err.message?.includes("Validation Error:")
             ? err.message
-            : `Failed to save service configuration: ${err.message || 'Please try again.'}`;
+            : t('preset.hourly.errors.failedToSaveServiceConfiguration', {
+                defaultValue: 'Failed to save service configuration: {{message}}',
+                message: err.message || t('common.tryAgain', { defaultValue: 'Please try again.' }),
+              });
         setSaveError(message);
         // Potentially map Zod errors back to serviceValidationErrors state here if needed
     }
@@ -501,7 +537,10 @@ export function HourlyPresetConfiguration({
 
     } catch (err: any) {
         console.error('Error saving plan-wide configuration:', err);
-        setSaveError(`Failed to save plan-wide configuration: ${err.message || 'Please try again.'}`);
+        setSaveError(t('preset.hourly.errors.failedToSavePlanWideConfiguration', {
+          defaultValue: 'Failed to save plan-wide configuration: {{message}}',
+          message: err.message || t('common.tryAgain', { defaultValue: 'Please try again.' }),
+        }));
     } finally {
         setSaving(false);
     }
@@ -520,14 +559,6 @@ export function HourlyPresetConfiguration({
       }
   };
 
-  const userTypeOptions = [
-    { value: 'technician', label: 'Technician' },
-    { value: 'engineer', label: 'Engineer' },
-    { value: 'consultant', label: 'Consultant' },
-    { value: 'project_manager', label: 'Project Manager' },
-    { value: 'admin', label: 'Administrator' }
-  ];
-
   if (loading && !plan) {
     return <div className="flex justify-center items-center p-8"><Spinner size="sm" /></div>;
   }
@@ -542,7 +573,13 @@ export function HourlyPresetConfiguration({
   }
 
    if (!plan) {
-      return <div className="p-4">Contract line not found or invalid type.</div>;
+      return (
+        <div className="p-4">
+          {t('preset.hourly.errors.contractLineNotFoundOrInvalidType', {
+            defaultValue: 'Contract line not found or invalid type.',
+          })}
+        </div>
+      );
   }
 
   const hasUnsavedPlanChanges = !isEqual(
@@ -571,13 +608,22 @@ export function HourlyPresetConfiguration({
             {/* Contract Line Preset Basics - Inline Editing */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Edit Contract Line Preset: {plan?.preset_name || '...'} (Hourly)</CardTitle>
+                    <CardTitle>
+                      {t('preset.hourly.basics.cardTitle', {
+                        defaultValue: 'Edit Contract Line Preset: {{name}} (Hourly)',
+                        name: plan?.preset_name || '...',
+                      })}
+                    </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     {planBasicsErrors.length > 0 && (
                         <Alert variant="destructive">
                             <AlertDescription>
-                                <p className="font-medium mb-2">Please correct the following:</p>
+                                <p className="font-medium mb-2">
+                                  {t('common.validation.prefix', {
+                                    defaultValue: 'Please correct the following:',
+                                  })}
+                                </p>
                                 <ul className="list-disc list-inside space-y-1">
                                     {planBasicsErrors.map((err, idx) => (
                                         <li key={idx}>{err}</li>
@@ -589,14 +635,25 @@ export function HourlyPresetConfiguration({
 
                     <section className="space-y-4">
                         <div>
-                            <h3 className="text-lg font-semibold">Contract Line Preset Basics</h3>
+                            <h3 className="text-lg font-semibold">
+                              {t('preset.hourly.basics.heading', {
+                                defaultValue: 'Contract Line Preset Basics',
+                              })}
+                            </h3>
                             <p className="text-sm text-muted-foreground">
-                                Name the contract line preset and choose how it should bill by default.
+                                {t('preset.hourly.basics.description', {
+                                  defaultValue:
+                                    'Name the contract line preset and choose how it should bill by default.',
+                                })}
                             </p>
                         </div>
                         <div className="space-y-3">
                             <div>
-                                <Label htmlFor="hourly-name">Contract Line Preset Name *</Label>
+                                <Label htmlFor="hourly-name">
+                                  {t('preset.hourly.basics.nameLabel', {
+                                    defaultValue: 'Contract Line Preset Name *',
+                                  })}
+                                </Label>
                                 <Input
                                     id="hourly-name"
                                     value={planName}
@@ -604,12 +661,18 @@ export function HourlyPresetConfiguration({
                                         setPlanName(e.target.value);
                                         markBasicsDirty();
                                     }}
-                                    placeholder="e.g. Time & Materials Support"
+                                    placeholder={t('preset.hourly.basics.namePlaceholder', {
+                                      defaultValue: 'e.g. Time & Materials Support',
+                                    })}
                                     required
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="hourly-frequency">Billing Frequency *</Label>
+                                <Label htmlFor="hourly-frequency">
+                                  {t('preset.hourly.basics.billingFrequencyLabel', {
+                                    defaultValue: 'Billing Frequency *',
+                                  })}
+                                </Label>
                                 <CustomSelect
                                     id="hourly-frequency"
                                     value={billingFrequency}
@@ -617,15 +680,21 @@ export function HourlyPresetConfiguration({
                                         setBillingFrequency(value);
                                         markBasicsDirty();
                                     }}
-                                    options={BILLING_FREQUENCY_OPTIONS}
-                                    placeholder="Select billing frequency"
+                                    options={billingFrequencyOptions}
+                                    placeholder={t('preset.hourly.basics.billingFrequencyPlaceholder', {
+                                      defaultValue: 'Select billing frequency',
+                                    })}
                                 />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
                             <div>
-                                <Label htmlFor="minimum-billable-time">Minimum Billable Time (minutes)</Label>
+                                <Label htmlFor="minimum-billable-time">
+                                  {t('preset.hourly.basics.minimumBillableTimeLabel', {
+                                    defaultValue: 'Minimum Billable Time (minutes)',
+                                  })}
+                                </Label>
                                 <Input
                                     id="minimum-billable-time"
                                     type="number"
@@ -635,12 +704,23 @@ export function HourlyPresetConfiguration({
                                         setMinimumBillableTime(e.target.value ? parseInt(e.target.value) : undefined);
                                         markBasicsDirty();
                                     }}
-                                    placeholder="e.g., 15"
+                                    placeholder={t('preset.hourly.basics.minutesPlaceholder', {
+                                      defaultValue: 'e.g., 15',
+                                    })}
                                 />
-                                <p className="text-sm text-muted-foreground mt-1">e.g., 15 minutes - any time entry less than this will be rounded up</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {t('preset.hourly.basics.minimumBillableTimeHelp', {
+                                    defaultValue:
+                                      'e.g., 15 minutes - any time entry less than this will be rounded up',
+                                  })}
+                                </p>
                             </div>
                             <div>
-                                <Label htmlFor="round-up-to-nearest">Round Up To Nearest (minutes)</Label>
+                                <Label htmlFor="round-up-to-nearest">
+                                  {t('preset.hourly.basics.roundUpToNearestLabel', {
+                                    defaultValue: 'Round Up To Nearest (minutes)',
+                                  })}
+                                </Label>
                                 <Input
                                     id="round-up-to-nearest"
                                     type="number"
@@ -650,9 +730,16 @@ export function HourlyPresetConfiguration({
                                         setRoundUpToNearest(e.target.value ? parseInt(e.target.value) : undefined);
                                         markBasicsDirty();
                                     }}
-                                    placeholder="e.g., 15"
+                                    placeholder={t('preset.hourly.basics.minutesPlaceholder', {
+                                      defaultValue: 'e.g., 15',
+                                    })}
                                 />
-                                <p className="text-sm text-muted-foreground mt-1">e.g., 15 minutes - time entries will be rounded up to the nearest interval</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {t('preset.hourly.basics.roundUpToNearestHelp', {
+                                    defaultValue:
+                                      'e.g., 15 minutes - time entries will be rounded up to the nearest interval',
+                                  })}
+                                </p>
                             </div>
                         </div>
                     </section>
@@ -664,14 +751,16 @@ export function HourlyPresetConfiguration({
                             onClick={handleResetPlanBasics}
                             disabled={isSavingBasics || !isBasicsDirty}
                         >
-                            Reset
+                            {t('common.actions.reset', { defaultValue: 'Reset' })}
                         </Button>
                         <Button
                             id="save-hourly-plan-basics"
                             onClick={handleSavePlanBasics}
                             disabled={isSavingBasics || !isBasicsDirty}
                         >
-                            {isSavingBasics ? 'Saving…' : 'Save Changes'}
+                            {isSavingBasics
+                              ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                              : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
                         </Button>
                     </div>
                 </CardContent>
@@ -681,7 +770,11 @@ export function HourlyPresetConfiguration({
             {/* Add Services to Contract Line Preset */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Manage Contract Line Preset Services</CardTitle>
+                    <CardTitle>
+                      {t('preset.hourly.services.manageCardTitle', {
+                        defaultValue: 'Manage Contract Line Preset Services',
+                      })}
+                    </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <HourlyContractLinePresetServicesList presetId={presetId} onServiceAdded={handleServicesChanged} />

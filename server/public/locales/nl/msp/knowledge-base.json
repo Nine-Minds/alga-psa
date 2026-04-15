@@ -1,0 +1,292 @@
+{
+  "page": {
+    "title": "Kennisbank",
+    "subtitle": "Kennisbankartikelen maken en beheren",
+    "actions": {
+      "import": "Importeren",
+      "newArticle": "Nieuw artikel"
+    },
+    "tabs": {
+      "articles": "Artikelen",
+      "reviewDashboard": "Beoordelingsdashboard"
+    },
+    "feedback": {
+      "loadError": "Kan artikelen niet laden",
+      "createError": "Kan artikel niet maken",
+      "userLoadError": "Kan gebruiker niet laden. Artikelbewerking is niet beschikbaar."
+    },
+    "newArticleTitle": "Nieuw artikel"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "Voorlopige versie",
+      "review": "Ter beoordeling",
+      "published": "Gepubliceerd",
+      "archived": "Gearchiveerd"
+    },
+    "audienceLabels": {
+      "internal": "Intern",
+      "client": "Cliënt",
+      "public": "Openbaar"
+    },
+    "typeLabels": {
+      "how_to": "Hoe",
+      "faq": "Veelgestelde vragen",
+      "troubleshooting": "Problemen oplossen",
+      "reference": "Referentie"
+    },
+    "reviewCycleOptions": {
+      "30": "30 dagen",
+      "60": "60 dagen",
+      "90": "90 dagen",
+      "180": "180 dagen",
+      "365": "1 jaar",
+      "none": "Geen beoordelingscyclus"
+    },
+    "fallbacks": {
+      "emptyDate": "-"
+    }
+  },
+  "list": {
+    "title": "Knowledge Base-artikelen",
+    "countSummary": "{{count}} artikel(en)",
+    "itemLabel": "artikelen",
+    "empty": "Geen artikelen gevonden",
+    "createFirst": "Maak uw eerste artikel",
+    "table": {
+      "title": "Titel",
+      "type": "Type",
+      "audience": "Publiek",
+      "status": "Status",
+      "tags": "Labels",
+      "stats": "Statistieken",
+      "updated": "Bijgewerkt",
+      "actions": "Acties"
+    },
+    "stats": {
+      "views": "Bekeken",
+      "helpful": "Behulpzaam",
+      "notHelpful": "Niet nuttig"
+    },
+    "actions": {
+      "edit": "Bewerken",
+      "submitForReview": "Ter beoordeling indienen",
+      "publish": "Publiceren",
+      "archive": "Archiveren"
+    },
+    "pagination": {
+      "itemsPerPage": {
+        "10": "10 artikelen/pagina",
+        "20": "20 artikelen/pagina",
+        "50": "50 stuks/pagina"
+      }
+    },
+    "stale": {
+      "reviewOverdue": "Beoordeling te laat"
+    },
+    "dialogs": {
+      "archive": {
+        "title": "Artikel archiveren",
+        "message": "Weet u zeker dat u \"{{title}}\" wilt archiveren? Hierdoor wordt het verwijderd uit de zichtbaarheid van de klant."
+      }
+    },
+    "feedback": {
+      "archiveError": "Kan het artikel niet archiveren",
+      "archiveSuccess": "Artikel gearchiveerd"
+    }
+  },
+  "editor": {
+    "header": {
+      "untitled": "Naamloos artikel",
+      "back": "Terug"
+    },
+    "actions": {
+      "submitForReview": "Ter beoordeling indienen",
+      "publish": "Publiceren",
+      "archive": "Archiveren",
+      "saveMetadata": "Metagegevens opslaan",
+      "saving": "Opslaan..."
+    },
+    "feedback": {
+      "permissionDenied": "Toestemming geweigerd",
+      "notFound": "Artikel niet gevonden",
+      "loadError": "Kan artikel niet laden",
+      "noChanges": "Geen wijzigingen om op te slaan",
+      "saveError": "Kan artikel niet opslaan",
+      "saveSuccess": "Metagegevens van artikel opgeslagen",
+      "publishError": "Kan artikel niet publiceren",
+      "publishSuccess": "Artikel gepubliceerd",
+      "statusChangeError": "Kan de artikelstatus niet wijzigen",
+      "submitForReviewSuccess": "Artikel ter beoordeling ingediend",
+      "archiveSuccess": "Artikel gearchiveerd"
+    },
+    "badges": {
+      "reviewOverdue": "Beoordeling te laat"
+    },
+    "stats": {
+      "title": "Statistieken",
+      "views": "Bekeken",
+      "helpful": "Behulpzaam",
+      "notHelpful": "Niet nuttig",
+      "published": "Gepubliceerd"
+    },
+    "metadata": {
+      "title": "Metagegevens",
+      "fields": {
+        "title": "Titel",
+        "slug": "URL-slak",
+        "articleType": "Artikeltype",
+        "audience": "Publiek",
+        "category": "Categorie",
+        "reviewCycle": "Beoordelingscyclus",
+        "nextReview": "Volgende recensie",
+        "noCategory": "Geen categorie"
+      }
+    },
+    "tags": {
+      "title": "Labels"
+    }
+  },
+  "filters": {
+    "title": "Filters",
+    "actions": {
+      "clear": "Duidelijk"
+    },
+    "labels": {
+      "search": "Zoekopdracht",
+      "status": "Status",
+      "audience": "Publiek",
+      "articleType": "Artikeltype",
+      "category": "Categorie",
+      "tags": "Labels"
+    },
+    "placeholders": {
+      "search": "Artikelen zoeken...",
+      "status": "Status selecteren...",
+      "audience": "Doelgroep selecteren...",
+      "articleType": "Selecteer soort...",
+      "category": "Categorie selecteren...",
+      "tags": "Filter op tags..."
+    },
+    "options": {
+      "status": {
+        "all": "Alle statussen"
+      },
+      "audience": {
+        "all": "Alle doelgroepen"
+      },
+      "articleType": {
+        "all": "Alle soorten"
+      },
+      "category": {
+        "all": "Alle categorieën"
+      }
+    }
+  },
+  "categoryTree": {
+    "allCategories": "Alle categorieën",
+    "empty": "Geen categorieën gedefinieerd"
+  },
+  "publishing": {
+    "title": "Publiceren",
+    "currentStatus": "Huidige status",
+    "actions": {
+      "submitForReview": "Ter beoordeling indienen",
+      "publish": "Publiceren",
+      "approveAndPublish": "Goedkeuren en publiceren",
+      "archive": "Archief",
+      "republish": "Opnieuw publiceren"
+    },
+    "flow": {
+      "draft": "Voorlopige versie",
+      "review": "Beoordeling",
+      "published": "Gepubliceerd"
+    },
+    "warnings": {
+      "audience": "Door publicatie wordt dit artikel zichtbaar voor {{audience}} gebruikers."
+    },
+    "dialogs": {
+      "publish": {
+        "title": "Artikel publiceren",
+        "message": "Weet u zeker dat u dit artikel wilt publiceren?",
+        "messageWithAudience": "Hierdoor wordt het artikel gepubliceerd en zichtbaar gemaakt voor {{audience}} gebruikers. Weet je het zeker?"
+      },
+      "archive": {
+        "title": "Archief artikel",
+        "message": "Hierdoor wordt het artikel gearchiveerd en uit de zichtbaarheid van de klant verwijderd. Weet je het zeker?"
+      }
+    },
+    "feedback": {
+      "publishError": "Kan artikel niet publiceren",
+      "publishSuccess": "Artikel succesvol gepubliceerd",
+      "archiveError": "Kan het artikel niet archiveren",
+      "archiveSuccess": "Artikel gearchiveerd"
+    }
+  },
+  "reviewDashboard": {
+    "summary": {
+      "awaitingReview": "In afwachting van beoordeling",
+      "overdueReviews": "Achterstallige beoordelingen"
+    },
+    "empty": "Allemaal ingehaald! Er zijn geen artikelen die beoordeeld moeten worden.",
+    "sections": {
+      "awaitingReview": "Artikelen die wachten op beoordeling",
+      "overdue": "Te laat voor beoordeling"
+    },
+    "labels": {
+      "submitted": "Ingediend",
+      "due": "Vanwege",
+      "lastReviewed": "Laatst beoordeeld",
+      "never": "Nooit"
+    },
+    "actions": {
+      "view": "Weergave",
+      "review": "Beoordeling",
+      "reviewNow": "Beoordeel nu"
+    },
+    "feedback": {
+      "loadError": "Kan recensiegegevens niet laden"
+    }
+  },
+  "importDialog": {
+    "title": "Artikelen importeren",
+    "dropzone": {
+      "title": "Zet hier bestanden neer of klik om te bladeren",
+      "formats": "Ondersteunt .md- en .html-bestanden"
+    },
+    "fields": {
+      "audience": "Publiek",
+      "articleType": "Artikeltype"
+    },
+    "actions": {
+      "import": "Importeer {{count}} bestand(en)",
+      "importing": "Importeren..."
+    },
+    "feedback": {
+      "unsupportedFileType": "{{fileName}}: niet-ondersteund bestandstype. Gebruik .md of .html",
+      "permissionDenied": "Toestemming geweigerd",
+      "importSuccess": "{{imported}} van {{total}} artikel(en) geïmporteerd",
+      "allFailed": "Alle import mislukt",
+      "importError": "Importeren is mislukt"
+    },
+    "results": {
+      "summary": "{{imported}} van {{total}} artikel(en) geïmporteerd",
+      "failedCount": "{{count}} mislukt:"
+    }
+  },
+  "staleness": {
+    "badges": {
+      "reviewOverdue": "Beoordeling te laat",
+      "reviewDueSoon": "Recensie binnenkort beschikbaar",
+      "overdueBy": "Te laat met {{count}} dagen",
+      "dueIn": "Vereist over {{count}} dagen"
+    },
+    "tooltips": {
+      "reviewOverdue": "Beoordeling moest {{date}} zijn",
+      "reviewDue": "Beoordeling gepland voor {{date}}"
+    }
+  },
+  "common": {
+    "done": "Klaar"
+  }
+}

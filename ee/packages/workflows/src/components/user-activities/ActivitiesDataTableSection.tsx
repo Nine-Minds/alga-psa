@@ -1,31 +1,57 @@
 'use client';
 
 
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Activity,
   ActivityFilters,
   ActivityType,
   ActivityResponse,
-  IPriority
+  IPriority,
+  IStatus,
+  ITag,
+  ProjectWithPhases,
 } from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { RefreshCw, Filter, XCircle } from 'lucide-react';
-import { fetchActivities } from '@alga-psa/workflows/actions';
+import { RefreshCw, List, LayoutList, Printer } from 'lucide-react';
+import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
+import './userActivitiesPrint.css';
+import { fetchActivities, getUserActivityGroups, type ActivityGroup } from '@alga-psa/workflows/actions';
 import { ActivitiesDataTable } from './ActivitiesDataTable';
-import { ActivitiesTableFilters, ActivitiesTableFiltersRef } from './filters/ActivitiesTableFilters';
+import { GroupedActivitiesView } from './GroupedActivitiesView';
+import { PrintableActivitiesView } from './PrintableActivitiesView';
+import { ActivitiesTableFilters } from './filters/ActivitiesTableFilters';
 import { useActivityDrawer } from './ActivityDrawerProvider';
+import { useActivityCrossFeature } from '@alga-psa/ui/context';
 import { useActivitiesCache } from '../../hooks/useActivitiesCache';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { ScheduleActivity } from '@alga-psa/types';
+
 import { ActivitiesTableSkeleton } from './ActivitiesTableSkeleton';
-import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getAllPriorities, getStatuses } from '@alga-psa/reference-data/actions';
+import { getAllBoards } from '@alga-psa/reference-data/actions';
+import { findAllTagsByType } from '@alga-psa/tags/actions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { DEFAULT_TABLE_TYPES } from './constants';
 
 interface ActivitiesDataTableSectionProps {
   title?: string;
   initialFilters?: ActivityFilters;
   id?: string;
 }
+
+const DEFAULT_FILTERS: ActivityFilters = {
+  types: DEFAULT_TABLE_TYPES,
+  isClosed: false,
+};
+
+type ListViewMode = 'flat' | 'grouped';
+
+const LIST_VIEW_OPTIONS: ViewSwitcherOption<ListViewMode>[] = [
+  { value: 'flat', label: 'Flat', icon: List },
+  { value: 'grouped', label: 'Grouped', icon: LayoutList },
+];
 
 export function ActivitiesDataTableSection({
   title = "All Activities",
@@ -34,9 +60,49 @@ export function ActivitiesDataTableSection({
 }: ActivitiesDataTableSectionProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<ActivityFilters>(initialFilters);
-  const filtersRef = useRef<ActivitiesTableFiltersRef>(null); // Create ref for ActivitiesTableFilters
   const { openActivityDrawer } = useActivityDrawer();
+  const ctx = useActivityCrossFeature();
+
+  // Flat vs grouped mode (persisted per user)
+  const { value: listViewMode, setValue: setListViewMode } = useUserPreference<ListViewMode>(
+    'activitiesListViewMode',
+    {
+      defaultValue: 'flat',
+      localStorageKey: 'activitiesListViewMode',
+      debounceMs: 300,
+    }
+  );
+
+  // Determine if explicit filters were passed (e.g., from "View All" in cards view)
+  const hasExplicitFilters = initialFilters.types && initialFilters.types.length > 0;
+
+  // Persist filters to user preferences
+  const {
+    value: savedFilters,
+    setValue: setSavedFilters,
+    hasLoadedInitial: filtersLoaded,
+  } = useUserPreference<ActivityFilters>(
+    'activitiesTableFilters',
+    {
+      defaultValue: DEFAULT_FILTERS,
+      localStorageKey: 'activitiesTableFilters',
+      debounceMs: 1000,
+    }
+  );
+
+  // Use explicit filters if provided, otherwise saved preferences
+  const [filters, setFilters] = useState<ActivityFilters>(
+    hasExplicitFilters ? initialFilters : DEFAULT_FILTERS
+  );
+  const [filtersInitialized, setFiltersInitialized] = useState(hasExplicitFilters);
+
+  // Once saved preferences load, apply them (unless explicit filters were provided)
+  useEffect(() => {
+    if (filtersLoaded && !hasExplicitFilters && !filtersInitialized) {
+      setFilters(savedFilters);
+      setFiltersInitialized(true);
+    }
+  }, [filtersLoaded, hasExplicitFilters, filtersInitialized, savedFilters]);
   
   // Use the enhanced cache hook with loading state
   const {
@@ -50,10 +116,56 @@ export function ActivitiesDataTableSection({
   // Priorities for the filter dropdown
   const [priorities, setPriorities] = useState<IPriority[]>([]);
 
+  // Projects (with phases + statuses) for the filter tree-select
+  const [projects, setProjects] = useState<ProjectWithPhases[]>([]);
+
+  // Boards and ticket statuses for ticket-specific filters
+  const [boards, setBoards] = useState<Array<{ board_id?: string; board_name?: string }>>([]);
+  const [ticketStatuses, setTicketStatuses] = useState<IStatus[]>([]);
+
+  // Tags for ticket and project task filters
+  const [ticketTags, setTicketTags] = useState<ITag[]>([]);
+  const [projectTaskTags, setProjectTaskTags] = useState<ITag[]>([]);
+
+  // Ungrouped collapse state (read here for print view, owned by UngroupedSection)
+  const { value: ungroupedCollapsed } = useUserPreference<boolean>(
+    'activitiesUngroupedCollapsed',
+    { defaultValue: false, localStorageKey: 'activitiesUngroupedCollapsed' }
+  );
+
+  // User-defined activity groups (shared between GroupedActivitiesView + PrintableActivitiesView)
+  const [activityGroups, setActivityGroups] = useState<ActivityGroup[]>([]);
+
+  const loadActivityGroups = useCallback(async () => {
+    try {
+      const groups = await getUserActivityGroups();
+      setActivityGroups(groups);
+    } catch (err) {
+      console.error('Error loading activity groups:', err);
+    }
+  }, []);
+
+  // Load groups when grouped mode is active
+  useEffect(() => {
+    if (listViewMode === 'grouped') {
+      loadActivityGroups();
+    }
+  }, [listViewMode, loadActivityGroups]);
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+
+  // Sort state (server-side)
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSortChange = useCallback((nextSortBy: string, nextDirection: 'asc' | 'desc') => {
+    setSortBy(nextSortBy);
+    setSortDirection(nextDirection);
+    setCurrentPage(1); // reset to first page on sort change
+  }, []);
 
   // Load priorities when a single prioritized activity type is selected
   useEffect(() => {
@@ -71,57 +183,74 @@ export function ActivitiesDataTableSection({
     setPriorities([]);
   }, [filters.types]);
 
-  // Check if any filters are active - memoized
-  const isFiltersActive = useCallback(() => {
-    // Check if any filter has a non-default value
-    const hasTypes = filters.types && filters.types.length > 0;
-    const hasStatus = filters.status && filters.status.length > 0;
-    const hasPriority = filters.priority && filters.priority.length > 0;
-    const hasPriorityIds = filters.priorityIds && filters.priorityIds.length > 0;
-    const hasAssignedTo = filters.assignedTo && filters.assignedTo.length > 0;
-    const hasDateRange = filters.dueDateStart || filters.dueDateEnd;
-    const isClosed = filters.isClosed === true; // Default is false
+  // Load projects with phases + statuses for the filter tree on mount
+  useEffect(() => {
+    ctx.getProjectsWithPhases()
+      .then((data: any) => {
+        if (!isActionPermissionError(data)) {
+          setProjects(data);
+        }
+      })
+      .catch((err: any) => console.error('Error loading projects with phases:', err));
+  }, [ctx]);
 
-    return hasTypes || hasStatus || hasPriority || hasPriorityIds || hasAssignedTo || hasDateRange || isClosed;
-  }, [filters]);
-
-  // Handle reset filters - memoized
-  const handleResetFilters = useCallback(() => {
-    // Reset to default filters
-    setFilters({});
-    setCurrentPage(1); // Reset to first page
+  // Load boards and ticket statuses on mount
+  useEffect(() => {
+    Promise.all([
+      getAllBoards(true),
+      getStatuses('ticket' as any),
+    ])
+      .then(([boardsData, statusesData]) => {
+        setBoards(boardsData || []);
+        setTicketStatuses(statusesData || []);
+      })
+      .catch((err) => console.error('Error loading boards/statuses:', err));
   }, []);
 
-  // Use useCallback to memoize loadActivities with cache
+  // Load tags on mount (for both ticket and project task filters)
+  useEffect(() => {
+    Promise.all([
+      findAllTagsByType('ticket' as any),
+      findAllTagsByType('project_task' as any),
+    ])
+      .then(([tt, pt]) => {
+        setTicketTags(tt || []);
+        setProjectTaskTags(pt || []);
+      })
+      .catch((err) => console.error('Error loading tags:', err));
+  }, []);
+
+  // Use useCallback to memoize loadActivities with cache.
+  // In grouped mode, we load ALL activities (no pagination) so DnD works across
+  // the full set. Uses a large page size as a practical upper bound.
   const loadActivities = useCallback(async () => {
     try {
-      // Prepare filter
-      const effectiveFilters = {
+      const effectiveFilters: ActivityFilters = {
         ...filters,
-        // If types array is empty, explicitly request all activity types
         types: filters.types && filters.types.length > 0
           ? filters.types
-          : Object.values(ActivityType) // Removed filter excluding WORKFLOW_TASK
+          : Object.values(ActivityType),
+        sortBy: sortBy as any,
+        sortDirection,
       };
 
-      console.log(`Loading activities page ${currentPage} with filters:`, effectiveFilters);
+      const effectivePage = listViewMode === 'grouped' ? 1 : currentPage;
+      const effectivePageSize = listViewMode === 'grouped' ? 500 : pageSize;
 
-      // Use the cache to fetch activities
       const result = await getActivities(
         effectiveFilters,
-        currentPage,
-        pageSize
+        effectivePage,
+        effectivePageSize
       );
 
-      console.log(`Loaded ${result.activities.length} activities, total: ${result.totalCount}`);
       setActivities(result.activities);
-      setTotalItems(result.totalCount); // Set total items count from response
+      setTotalItems(result.totalCount);
       setError(null);
     } catch (err) {
-      console.error(`Error loading activities (page ${currentPage}):`, err);
+      console.error(`Error loading activities:`, err);
       setError('Failed to load activities. Please try again later.');
     }
-  }, [filters, currentPage, pageSize, getActivities]); // Add getActivities to dependencies
+  }, [filters, currentPage, pageSize, getActivities, sortBy, sortDirection, listViewMode]);
 
   // useEffect to trigger loadActivities when filters or pagination changes
   useEffect(() => {
@@ -140,11 +269,21 @@ export function ActivitiesDataTableSection({
   }, [loadActivities, invalidateCache]);
 
   const handleFilterChange = useCallback((newFilters: ActivityFilters) => {
-    setFilters(prev => ({
-      ...prev,
-      ...newFilters
-    }));
+    setFilters(newFilters);
+    setSavedFilters(newFilters);
     setCurrentPage(1);
+  }, [setSavedFilters]);
+
+  const handlePrint = useCallback(() => {
+    const html = document.documentElement;
+    html.classList.add('ua-print-mode');
+    const cleanup = () => {
+      html.classList.remove('ua-print-mode');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    // Give the browser a tick to apply the class before opening the dialog
+    setTimeout(() => window.print(), 50);
   }, []);
 
   const handlePageChange = useCallback((newPage: number) => {
@@ -180,35 +319,18 @@ export function ActivitiesDataTableSection({
   }, [activities]);
  
   return (
-    <Card id={id}>
+    <>
+    <Card id={id} className="ua-print-hide">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle>{title}</CardTitle>
         <div className="flex items-center gap-2">
-          {isFiltersActive() ? (
-            <Button
-              id={`${id}-reset-filters-button`}
-              variant="outline"
-              size="sm"
-              onClick={handleResetFilters}
-              disabled={isLoading}
-            >
-              <XCircle className="h-4 w-4 mr-2" />
-              Reset
-            </Button>
-          ) : (
-            <Button
-              id={`${id}-filter-button`}
-              variant="outline"
-              size="sm"
-              onClick={() => filtersRef.current?.openDialog()}
-              disabled={isLoading}
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Filters
-            </Button>
-          )}
-          <Button 
-            id={`${id}-refresh-button`} 
+          <ViewSwitcher<ListViewMode>
+            options={LIST_VIEW_OPTIONS}
+            currentView={listViewMode}
+            onChange={(v) => setListViewMode(v)}
+          />
+          <Button
+            id={`${id}-refresh-button`}
             variant="outline"
             size="sm"
             onClick={handleRefresh}
@@ -217,16 +339,29 @@ export function ActivitiesDataTableSection({
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
+          <div className="w-px h-6 bg-border" />
+          <Button
+            id={`${id}-print-button`}
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+            disabled={isLoading || activities.length === 0}
+          >
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
-        {/* Render ActivitiesTableFilters always, pass the ref */}
-        {/* Visibility is handled internally by its Dialog */}
         <ActivitiesTableFilters
-          ref={filtersRef}
           filters={filters}
           onChange={handleFilterChange}
           priorities={priorities}
+          projects={projects}
+          boards={boards}
+          ticketStatuses={ticketStatuses}
+          ticketTags={ticketTags}
+          projectTaskTags={projectTaskTags}
         />
         {isInitialLoad || (isLoading && activities.length === 0) ? (
           <ActivitiesTableSkeleton rowCount={pageSize} />
@@ -242,6 +377,13 @@ export function ActivitiesDataTableSection({
           <div className="flex justify-center items-center h-40">
             <p className="text-gray-500">No activities found matching filters</p>
           </div>
+        ) : listViewMode === 'grouped' ? (
+          <GroupedActivitiesView
+            activities={filteredActivitiesForTable}
+            serverGroups={activityGroups}
+            onGroupsChange={loadActivityGroups}
+            onActionComplete={handleRefresh}
+          />
         ) : (
           <ActivitiesDataTable
             activities={filteredActivitiesForTable}
@@ -253,9 +395,20 @@ export function ActivitiesDataTableSection({
             totalItems={totalItems}
             onPageChange={handlePageChange}
             onItemsPerPageChange={handlePageSizeChange}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            onSortChange={handleSortChange}
           />
         )}
       </CardContent>
     </Card>
+    <PrintableActivitiesView
+      activities={filteredActivitiesForTable}
+      grouped={listViewMode === 'grouped'}
+      serverGroups={activityGroups}
+      ungroupedCollapsed={ungroupedCollapsed}
+      title={title}
+    />
+    </>
   );
 }

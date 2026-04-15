@@ -12,16 +12,16 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ContentCard } from '@alga-psa/ui/components';
-import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
+import AsyncSearchableSelect, { type SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type { ITicketMaterial, IServicePrice } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   listTicketMaterials,
   addTicketMaterial,
   deleteTicketMaterial,
   searchServiceCatalogForPicker,
   getServicePrices,
-  type CatalogPickerItem,
 } from '../../actions/materialCatalogActions';
 
 interface TicketMaterialsCardProps {
@@ -35,6 +35,7 @@ export default function TicketMaterialsCard({
   ticketId,
   clientId,
 }: TicketMaterialsCardProps) {
+  const { t } = useTranslation('features/tickets');
   const [materials, setMaterials] = useState<ITicketMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -42,13 +43,12 @@ export default function TicketMaterialsCard({
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Add form state
-  const [products, setProducts] = useState<CatalogPickerItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [selectedProductLabel, setSelectedProductLabel] = useState<string>('');
   const [productPrices, setProductPrices] = useState<IServicePrice[]>([]);
   const [selectedCurrency, setSelectedCurrency] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [description, setDescription] = useState<string>('');
-  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
 
   // Load materials
@@ -60,39 +60,36 @@ export default function TicketMaterialsCard({
       const data = await listTicketMaterials(ticketId);
       setMaterials(data);
     } catch (error) {
-      handleError(error, 'Failed to load materials');
+      handleError(error, t('errors.loadMaterials', 'Failed to load materials'));
     } finally {
       setIsLoading(false);
     }
-  }, [ticketId]);
+  }, [ticketId, t]);
 
   useEffect(() => {
     loadMaterials();
   }, [loadMaterials]);
 
-  // Load products when form opens
-  const loadProducts = useCallback(async () => {
-    setIsLoadingProducts(true);
-    try {
+  // Server-side search for products via AsyncSearchableSelect
+  const loadProductOptions = useCallback(
+    async ({ search, page, limit }: { search: string; page: number; limit: number }) => {
       const result = await searchServiceCatalogForPicker({
+        search,
+        page,
+        limit,
         item_kinds: ['product'],
         is_active: true,
-        limit: 100,
       });
-      setProducts(result.items);
-    } catch (error) {
-      handleError(error, 'Failed to load products');
-    } finally {
-      setIsLoadingProducts(false);
-    }
-  }, []);
 
-  // Load products when form opens
-  useEffect(() => {
-    if (showAddForm && products.length === 0) {
-      loadProducts();
-    }
-  }, [showAddForm, products.length, loadProducts]);
+      const options: SelectOption[] = result.items.map((item) => ({
+        value: item.service_id,
+        label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
+      }));
+
+      return { options, total: result.totalCount };
+    },
+    []
+  );
 
   // Load product prices when product is selected
   useEffect(() => {
@@ -131,17 +128,17 @@ export default function TicketMaterialsCard({
   // Handle add material
   const handleAddMaterial = async () => {
     if (!selectedProductId || !clientId) {
-      toast.error('Please select a product');
+      toast.error(t('validation.materials.productRequired', 'Please select a product'));
       return;
     }
 
     if (!selectedPrice) {
-      toast.error('Please select a currency');
+      toast.error(t('validation.materials.currencyRequired', 'Please select a currency'));
       return;
     }
 
     if (quantity < 1) {
-      toast.error('Quantity must be at least 1');
+      toast.error(t('validation.materials.quantityMin', 'Quantity must be at least 1'));
       return;
     }
 
@@ -157,16 +154,17 @@ export default function TicketMaterialsCard({
         description: description.trim() || null,
       });
 
-      toast.success('Material added');
+      toast.success(t('materials.addSuccess', 'Material added'));
       setShowAddForm(false);
       setSelectedProductId('');
+      setSelectedProductLabel('');
       setProductPrices([]);
       setSelectedCurrency('');
       setQuantity(1);
       setDescription('');
       await loadMaterials();
     } catch (error) {
-      handleError(error, 'Failed to add material');
+      handleError(error, t('errors.addMaterial', 'Failed to add material'));
     } finally {
       setIsAdding(false);
     }
@@ -175,12 +173,16 @@ export default function TicketMaterialsCard({
   // Handle delete material
   const handleDeleteMaterial = async (materialId: string) => {
     setDeletingId(materialId);
+    // Optimistically remove from UI
+    const previousMaterials = materials;
+    setMaterials(prev => prev.filter(m => m.ticket_material_id !== materialId));
     try {
       await deleteTicketMaterial(materialId);
-      toast.success('Material removed');
-      await loadMaterials();
+      toast.success(t('materials.removeSuccess', 'Material removed'));
     } catch (error) {
-      handleError(error, 'Failed to remove material');
+      // Revert on failure
+      setMaterials(previousMaterials);
+      handleError(error, t('errors.removeMaterial', 'Failed to remove material'));
     } finally {
       setDeletingId(null);
     }
@@ -199,61 +201,64 @@ export default function TicketMaterialsCard({
       return acc;
     }, {} as Record<string, number>);
 
-  const productOptions = products.map(p => ({
-    value: p.service_id,
-    label: p.sku ? `${p.service_name} (${p.sku})` : p.service_name,
-  }));
-
   const currencyOptions = productPrices.map(p => ({
     value: p.currency_code,
     label: `${p.currency_code} - ${formatCurrencyFromMinorUnits(p.rate, 'en-US', p.currency_code)}`,
   }));
 
   return (
-    <ReflectionContainer id={id} label="Ticket Materials">
+    <ReflectionContainer id={id} label={t('materials.title', 'Materials')}>
       <ContentCard
         id={id}
         collapsible
         defaultExpanded={false}
-        title="Materials"
+        title={t('materials.title', 'Materials')}
         headerIcon={<Package className="w-5 h-5" />}
         count={materials.length}
-        addButton={clientId && !showAddForm ? { id: `${id}-add-btn`, onClick: () => setShowAddForm(true) } : undefined}
+        addButton={clientId && !showAddForm ? {
+          id: `${id}-add-btn`,
+          label: t('materials.addMaterial', 'Add Material'),
+          onClick: () => setShowAddForm(true),
+        } : undefined}
       >
         {/* Add Form */}
         {showAddForm && clientId && (
           <div className="border rounded-md p-4 space-y-4 bg-gray-50">
             <div className="space-y-2">
-              <Label htmlFor={`${id}-product-select`}>Product</Label>
-              <SearchableSelect
+              <Label htmlFor={`${id}-product-select`}>{t('materials.product', 'Product')}</Label>
+              <AsyncSearchableSelect
                 id={`${id}-product-select`}
-                options={productOptions}
                 value={selectedProductId}
-                onChange={(value) => {
+                selectedLabel={selectedProductLabel}
+                onChange={(value, option) => {
                   setSelectedProductId(value);
+                  setSelectedProductLabel(option?.label ?? '');
                   setSelectedCurrency('');
                 }}
-                placeholder="Select a product..."
-                searchPlaceholder="Search products..."
-                emptyMessage={isLoadingProducts ? 'Loading products...' : 'No products found'}
+                loadOptions={loadProductOptions}
+                limit={10}
+                debounceMs={300}
+                placeholder={t('materials.selectProduct', 'Select a product...')}
+                searchPlaceholder={t('materials.searchProducts', 'Search products...')}
+                emptyMessage={t('materials.noProductsFound', 'No products found')}
                 dropdownMode="overlay"
                 maxListHeight="200px"
-                disabled={isLoadingProducts}
+                showMoreIndicator
               />
             </div>
 
             {/* Price/Currency selection */}
             {selectedProductId && (
               <div className="space-y-2">
-                <Label htmlFor={`${id}-currency-select`}>Price</Label>
+                <Label htmlFor={`${id}-currency-select`}>{t('materials.price', 'Price')}</Label>
                 {isLoadingPrices ? (
                   <div className="flex items-center text-sm text-gray-500">
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Loading prices...
+                    {t('materials.loadingPrices', 'Loading prices...')}
                   </div>
                 ) : productPrices.length === 0 ? (
                   <div className="text-sm text-amber-600">
-                    No prices configured for this product
+                    {t('materials.noPricesConfigured', 'No prices configured for this product')}
                   </div>
                 ) : productPrices.length === 1 ? (
                   <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
@@ -265,7 +270,7 @@ export default function TicketMaterialsCard({
                     options={currencyOptions}
                     value={selectedCurrency}
                     onValueChange={setSelectedCurrency}
-                    placeholder="Select currency..."
+                    placeholder={t('materials.selectCurrency', 'Select currency...')}
                   />
                 )}
               </div>
@@ -273,7 +278,7 @@ export default function TicketMaterialsCard({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor={`${id}-quantity`}>Quantity</Label>
+                <Label htmlFor={`${id}-quantity`}>{t('materials.quantity', 'Quantity')}</Label>
                 <Input
                   {...withDataAutomationId({ id: `${id}-quantity` })}
                   id={`${id}-quantity`}
@@ -284,7 +289,7 @@ export default function TicketMaterialsCard({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Total</Label>
+                <Label>{t('materials.total', 'Total')}</Label>
                 <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
                   {selectedPrice
                     ? formatCurrencyFromMinorUnits(selectedPrice.rate * quantity, 'en-US', selectedPrice.currency_code)
@@ -294,13 +299,15 @@ export default function TicketMaterialsCard({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`${id}-description`}>Description (optional)</Label>
+              <Label htmlFor={`${id}-description`}>
+                {t('materials.descriptionOptional', 'Description (optional)')}
+              </Label>
               <Input
                 {...withDataAutomationId({ id: `${id}-description` })}
                 id={`${id}-description`}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Additional notes..."
+                placeholder={t('materials.additionalNotes', 'Additional notes...')}
               />
             </div>
 
@@ -312,13 +319,14 @@ export default function TicketMaterialsCard({
                 onClick={() => {
                   setShowAddForm(false);
                   setSelectedProductId('');
+                  setSelectedProductLabel('');
                   setProductPrices([]);
                   setSelectedCurrency('');
                   setQuantity(1);
                   setDescription('');
                 }}
               >
-                Cancel
+                {t('actions.cancel', 'Cancel')}
               </Button>
               <Button
                 {...withDataAutomationId({ id: `${id}-save-add-btn` })}
@@ -329,10 +337,10 @@ export default function TicketMaterialsCard({
                 {isAdding ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                    Adding...
+                    {t('materials.adding', 'Adding...')}
                   </>
                 ) : (
-                  'Add Material'
+                  t('materials.addMaterial', 'Add Material')
                 )}
               </Button>
             </div>
@@ -343,11 +351,11 @@ export default function TicketMaterialsCard({
         {isLoading ? (
           <div className="flex items-center justify-center py-8 text-gray-500">
             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            Loading materials...
+            {t('materials.loading', 'Loading materials...')}
           </div>
         ) : materials.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            No materials added to this ticket.
+            {t('materials.empty', 'No materials added to this ticket.')}
           </div>
         ) : (
           <div className="space-y-2">
@@ -355,11 +363,11 @@ export default function TicketMaterialsCard({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="pb-2 font-medium">Product</th>
-                    <th className="pb-2 font-medium text-right">Qty</th>
-                    <th className="pb-2 font-medium text-right">Rate</th>
-                    <th className="pb-2 font-medium text-right">Total</th>
-                    <th className="pb-2 font-medium text-center">Status</th>
+                    <th className="pb-2 font-medium">{t('materials.product', 'Product')}</th>
+                    <th className="pb-2 font-medium text-right">{t('materials.qty', 'Qty')}</th>
+                    <th className="pb-2 font-medium text-right">{t('materials.rate', 'Rate')}</th>
+                    <th className="pb-2 font-medium text-right">{t('materials.total', 'Total')}</th>
+                    <th className="pb-2 font-medium text-center">{t('materials.status', 'Status')}</th>
                     <th className="pb-2 w-10"></th>
                   </tr>
                 </thead>
@@ -368,7 +376,9 @@ export default function TicketMaterialsCard({
                     <tr key={material.ticket_material_id} className="border-b last:border-0">
                       <td className="py-2">
                         <div>
-                          <span className="font-medium">{material.service_name || 'Unknown Product'}</span>
+                          <span className="font-medium">
+                            {material.service_name || t('materials.unknownProduct', 'Unknown Product')}
+                          </span>
                           {material.sku && (
                             <span className="text-gray-500 ml-1">({material.sku})</span>
                           )}
@@ -386,9 +396,9 @@ export default function TicketMaterialsCard({
                       </td>
                       <td className="py-2 text-center">
                         {material.is_billed ? (
-                          <Badge variant="default">Billed</Badge>
+                          <Badge variant="default">{t('materials.billed', 'Billed')}</Badge>
                         ) : (
-                          <Badge variant="outline">Pending</Badge>
+                          <Badge variant="outline">{t('materials.pending', 'Pending')}</Badge>
                         )}
                       </td>
                       <td className="py-2 text-right">
@@ -421,7 +431,9 @@ export default function TicketMaterialsCard({
                 <div className="text-sm space-y-1">
                   {Object.entries(unbilledByCurrency).map(([curr, total]) => (
                     <div key={curr} className="text-right">
-                      <span className="text-gray-500">Unbilled ({curr}): </span>
+                      <span className="text-gray-500">
+                        {t('materials.unbilled', 'Unbilled ({{currency}}):', { currency: curr })}{' '}
+                      </span>
                       <span className="font-semibold">
                         {formatCurrencyFromMinorUnits(total, 'en-US', curr)}
                       </span>
@@ -435,7 +447,10 @@ export default function TicketMaterialsCard({
 
         {!clientId && (
           <div className="text-center py-4 text-amber-600 text-sm">
-            A client must be assigned to this ticket before materials can be added.
+            {t(
+              'materials.clientRequired',
+              'A client must be assigned to this ticket before materials can be added.'
+            )}
           </div>
         )}
       </ContentCard>

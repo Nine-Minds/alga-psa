@@ -1,0 +1,410 @@
+[
+  {
+    "id": "F001",
+    "description": "Start every new Workflow V2 run as a Temporal interpreter workflow instead of a DB-scheduled runtime execution.",
+    "implemented": true,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F002",
+    "description": "Use the same Temporal-native workflow runtime semantics in hosted EE and appliance EE.",
+    "implemented": true,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F003",
+    "description": "Allocate a stable Alga `run_id` before Temporal start and deterministically map each Temporal execution to that run ID.",
+    "implemented": true,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F004",
+    "description": "Store pinned workflow definition identity on each run, including workflow ID, published version, definition hash, and runtime semantics version.",
+    "implemented": true,
+    "prdRefs": ["FR-2", "FR-4"]
+  },
+  {
+    "id": "F005",
+    "description": "Load the pinned published definition through a runtime activity at run start and execute only that version for the life of the run.",
+    "implemented": true,
+    "prdRefs": ["FR-2", "FR-4"]
+  },
+  {
+    "id": "F006",
+    "description": "Fail fast when the pinned workflow definition cannot be loaded or does not match the expected definition hash.",
+    "implemented": true,
+    "prdRefs": ["FR-2", "FR-4"]
+  },
+  {
+    "id": "F007",
+    "description": "Implement the Temporal-native runtime as an explicit frame-based interpreter rather than DB `node_path` resume authority.",
+    "implemented": true,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F008",
+    "description": "Support root sequence-frame execution for top-level workflow steps inside the interpreter.",
+    "implemented": true,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F009",
+    "description": "Represent workflow payload scope, persistent workflow scope, local lexical scopes, and system scope separately in interpreter state.",
+    "implemented": true,
+    "prdRefs": ["FR-3", "FR-4"]
+  },
+  {
+    "id": "F010",
+    "description": "Preserve current expression ergonomics for authors while resolving expressions against the normalized Temporal-native scope model.",
+    "implemented": true,
+    "prdRefs": ["FR-3", "FR-4"]
+  },
+  {
+    "id": "F011",
+    "description": "Persist enough serializable interpreter state to resume correctly after worker restart and Temporal replay.",
+    "implemented": true,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F012",
+    "description": "Support safe continue-as-new checkpoints for long-lived runs without losing interpreter state.",
+    "implemented": true,
+    "prdRefs": ["FR-3", "Non-functional Requirements"]
+  },
+  {
+    "id": "F013",
+    "description": "Version the interpreter contract with an explicit runtime semantics version stored on each run.",
+    "implemented": true,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F014",
+    "description": "Restrict workflow-code control decisions to deterministic inputs only and prevent direct mutable DB, network, or secret reads in workflow code.",
+    "implemented": true,
+    "prdRefs": ["FR-4", "Security / Permissions"]
+  },
+  {
+    "id": "F015",
+    "description": "Execute `action.call` through a dedicated Temporal activity boundary rather than in deterministic workflow code.",
+    "implemented": true,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F016",
+    "description": "Compute deterministic action idempotency keys from stable run, step, tenant, and input context.",
+    "implemented": true,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F017",
+    "description": "Retain a durable action invocation ledger that suppresses duplicate external side effects and can return cached successful outputs.",
+    "implemented": true,
+    "prdRefs": ["FR-5", "FR-11"]
+  },
+  {
+    "id": "F018",
+    "description": "Normalize action failures into structured runtime error categories that the interpreter can use for retry, catch, and projection behavior.",
+    "implemented": true,
+    "prdRefs": ["FR-5", "FR-6"]
+  },
+  {
+    "id": "F019",
+    "description": "Keep user-authored retry policy as the semantic retry owner for action steps rather than hiding behavior inside unrestricted Temporal activity retries.",
+    "implemented": true,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F020",
+    "description": "Preserve `action.call` on-error continue/fail semantics in the Temporal-native runtime.",
+    "implemented": true,
+    "prdRefs": ["FR-5", "FR-6"]
+  },
+  {
+    "id": "F021",
+    "description": "Evaluate `control.if` conditions deterministically and route execution to `then` or `else` branches inside the interpreter.",
+    "implemented": true,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F022",
+    "description": "Support `control.tryCatch` catch routing for catchable runtime failures and bind `captureErrorAs` into workflow scope.",
+    "implemented": true,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F023",
+    "description": "Ensure workflow cancellation and unrecoverable interpreter corruption are not swallowed by normal `control.tryCatch` behavior.",
+    "implemented": true,
+    "prdRefs": ["FR-6", "FR-12"]
+  },
+  {
+    "id": "F024",
+    "description": "Execute `control.forEach` sequentially in the first Temporal-native release with deterministic item and index progression.",
+    "implemented": true,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F025",
+    "description": "Provide lexical loop locals for `control.forEach`, including the current item and related iteration context.",
+    "implemented": true,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F026",
+    "description": "Preserve `control.forEach` `onItemError` continue/fail semantics when executing sequentially.",
+    "implemented": true,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F027",
+    "description": "Reject or hide `control.forEach` concurrency values greater than 1 in the first Temporal-native release.",
+    "implemented": true,
+    "prdRefs": ["FR-6", "Open Questions"]
+  },
+  {
+    "id": "F028",
+    "description": "Implement `control.return` as a successful workflow-terminal interpreter outcome.",
+    "implemented": true,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F029",
+    "description": "Execute `control.callWorkflow` as a Temporal child workflow rather than inline child execution inside the parent runtime.",
+    "implemented": true,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F030",
+    "description": "Assign deterministic child workflow and child run identifiers with root/parent linkage metadata for `control.callWorkflow`.",
+    "implemented": true,
+    "prdRefs": ["FR-7", "Data / API / Integrations"]
+  },
+  {
+    "id": "F031",
+    "description": "Map child workflow outputs back into the parent scope through the existing output-mapping semantics.",
+    "implemented": true,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F032",
+    "description": "Normalize child workflow failure into a structured parent-visible runtime error that can be retried or caught.",
+    "implemented": true,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F033",
+    "description": "Implement `time.wait` using native Temporal timers rather than DB due-wait polling.",
+    "implemented": true,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F034",
+    "description": "Fast-path `time.wait` when the computed due time is already in the past or present.",
+    "implemented": true,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F035",
+    "description": "Project `time.wait` lifecycle into `workflow_run_waits` for run-detail visibility without making that table the execution authority.",
+    "implemented": true,
+    "prdRefs": ["FR-8", "FR-11"]
+  },
+  {
+    "id": "F036",
+    "description": "Implement `event.wait` as a Temporal signal-backed wait instead of resolving DB wait rows directly.",
+    "implemented": true,
+    "prdRefs": ["FR-8", "FR-9"]
+  },
+  {
+    "id": "F037",
+    "description": "Evaluate and store `event.wait` event name, correlation key, filters, and timeout as part of the active wait descriptor when the wait begins.",
+    "implemented": true,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F038",
+    "description": "Resume `event.wait` only when a signaled event matches the run’s active wait contract, including filters and correlation key semantics.",
+    "implemented": true,
+    "prdRefs": ["FR-8", "FR-9"]
+  },
+  {
+    "id": "F039",
+    "description": "Preserve `event.wait` timeout behavior by raising a catchable timeout error when no matching signal arrives before the configured deadline.",
+    "implemented": true,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F040",
+    "description": "Project `event.wait` lifecycle and routing fields into `workflow_run_waits` for UI/debugging and candidate selection.",
+    "implemented": true,
+    "prdRefs": ["FR-8", "FR-11"]
+  },
+  {
+    "id": "F041",
+    "description": "Keep `human.task` as a signal-backed wait and associate it with its task identity in the Temporal-native runtime.",
+    "implemented": true,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F042",
+    "description": "Validate human-task responses before resume when runtime metadata requires form-schema or response-shape checking.",
+    "implemented": true,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F043",
+    "description": "Persist inbound workflow events to the database for audit and debugging before or during routing.",
+    "implemented": true,
+    "prdRefs": ["FR-9", "FR-11"]
+  },
+  {
+    "id": "F044",
+    "description": "Use tenant, event name, and correlation key fields from the wait projection to identify candidate waiting runs for an inbound event.",
+    "implemented": true,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F045",
+    "description": "Signal all candidate waiting runs for an inbound event instead of resuming a single first-matching DB wait row as the authority.",
+    "implemented": true,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F046",
+    "description": "Deduplicate repeated external event deliveries by `event_id` so the same event is not processed twice.",
+    "implemented": true,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F047",
+    "description": "Ignore late, duplicate, or unmatched event signals safely inside Temporal workflows without corrupting run state.",
+    "implemented": true,
+    "prdRefs": ["FR-9", "FR-12"]
+  },
+  {
+    "id": "F048",
+    "description": "Start manual and API-triggered workflow runs directly in Temporal while preserving existing run-launch concepts for the product.",
+    "implemented": true,
+    "prdRefs": ["FR-10"]
+  },
+  {
+    "id": "F049",
+    "description": "Start event-triggered workflow runs directly in Temporal from published trigger definitions and validated trigger payloads.",
+    "implemented": true,
+    "prdRefs": ["FR-10"]
+  },
+  {
+    "id": "F050",
+    "description": "Implement replay or re-run as a fresh Temporal-native execution from the pinned definition and original normalized input.",
+    "implemented": true,
+    "prdRefs": ["FR-10", "FR-12"]
+  },
+  {
+    "id": "F051",
+    "description": "Use a Temporal-native scheduling authority for one-time schedule triggers instead of DB polling.",
+    "implemented": true,
+    "prdRefs": ["FR-10", "Open Questions"]
+  },
+  {
+    "id": "F052",
+    "description": "Use Temporal Schedules or an equivalent Temporal-native recurring schedule model for recurring workflow triggers.",
+    "implemented": true,
+    "prdRefs": ["FR-10"]
+  },
+  {
+    "id": "F053",
+    "description": "Reconcile publish, unpublish, and update operations for scheduled workflows against Temporal schedule state.",
+    "implemented": true,
+    "prdRefs": ["FR-10", "Rollout / Migration"]
+  },
+  {
+    "id": "F054",
+    "description": "Convert `workflow_runs` into a Temporal-backed run summary projection with engine metadata and Temporal identifiers.",
+    "implemented": true,
+    "prdRefs": ["FR-11", "Data / API / Integrations"]
+  },
+  {
+    "id": "F055",
+    "description": "Convert `workflow_run_steps` into a step-execution timeline projection that records actual attempts, durations, and failures.",
+    "implemented": true,
+    "prdRefs": ["FR-11"]
+  },
+  {
+    "id": "F056",
+    "description": "Convert `workflow_run_waits` into a wait projection plus event-routing index rather than a scheduler truth source.",
+    "implemented": true,
+    "prdRefs": ["FR-11"]
+  },
+  {
+    "id": "F057",
+    "description": "Retain `workflow_action_invocations` as both a product-facing action timeline and the durable side-effect idempotency ledger.",
+    "implemented": true,
+    "prdRefs": ["FR-11", "FR-5"]
+  },
+  {
+    "id": "F058",
+    "description": "Retain `workflow_runtime_events` as the product-facing inbound-event audit surface for Temporal-native workflow routing.",
+    "implemented": true,
+    "prdRefs": ["FR-11"]
+  },
+  {
+    "id": "F059",
+    "description": "Reduce `workflow_run_snapshots` from execution-authority storage to optional debug-checkpoint storage if retained at all.",
+    "implemented": true,
+    "prdRefs": ["FR-11", "Open Questions"]
+  },
+  {
+    "id": "F060",
+    "description": "Keep run-list and run-detail product APIs usable by reading from the Temporal-backed projection model rather than directly from Temporal.",
+    "implemented": true,
+    "prdRefs": ["FR-11", "UX / UI Notes"]
+  },
+  {
+    "id": "F061",
+    "description": "Support run cancellation in the Temporal-native runtime and propagate cancellation appropriately to active child workflows.",
+    "implemented": true,
+    "prdRefs": ["FR-12"]
+  },
+  {
+    "id": "F062",
+    "description": "Expose operator-oriented Temporal workflow queries for current step, current wait, and interpreter summary.",
+    "implemented": true,
+    "prdRefs": ["FR-12", "Observability"]
+  },
+  {
+    "id": "F063",
+    "description": "Hard-cut all new Workflow V2 runs to the Temporal-native runtime with no DB-runtime fallback path for new executions.",
+    "implemented": true,
+    "prdRefs": ["FR-13", "Rollout / Migration"]
+  },
+  {
+    "id": "F064",
+    "description": "Retire lease-based runnable-run acquisition and due-wait polling as execution-authority mechanisms for new runs.",
+    "implemented": true,
+    "prdRefs": ["FR-13"]
+  },
+  {
+    "id": "F065",
+    "description": "Retire DB event-wait resolution as the authority for resuming runs, leaving DB rows as projection/index only.",
+    "implemented": true,
+    "prdRefs": ["FR-13", "FR-9"]
+  },
+  {
+    "id": "F066",
+    "description": "Provide a cleanup path for obsolete execution-authority columns, worker code paths, and schema assumptions left over from the DB-backed runtime.",
+    "implemented": true,
+    "prdRefs": ["FR-13", "Rollout / Migration"]
+  },
+  {
+    "id": "F067",
+    "description": "Add Temporal test-environment coverage for interpreter semantics including control flow, waits, signals, child workflows, and continue-as-new.",
+    "implemented": true,
+    "prdRefs": ["Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F068",
+    "description": "Add DB-backed integration coverage for projection correctness, idempotency behavior, trigger execution, and event-routing flows under the Temporal-native engine.",
+    "implemented": true,
+    "prdRefs": ["Acceptance Criteria (Definition of Done)"]
+  }
+]

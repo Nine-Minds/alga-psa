@@ -1,0 +1,30 @@
+{
+  "name": "@alga-samples/client-service-read-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "rimraf dist bundle.tar.zst bundle.tar.zst.sha256 ui/main.js ui/main.css",
+    "build:deps": "npm --prefix ../../../../sdk/alga-client-sdk run build && npm --prefix ../../../../sdk/alga-cli run build && npm --prefix ../../../../sdk/extension-runtime run build && npm --prefix ../../../../sdk/extension-iframe-sdk run build && npm --prefix ../../../../packages/ui-kit run build",
+    "build:backend": "esbuild src/index.ts --bundle --format=esm --platform=neutral --target=es2022 --external:alga:extension/* --outfile=dist/js/index.js",
+    "build:ui": "esbuild ui/main.tsx --bundle --format=esm --platform=browser --target=es2020 --minify --outfile=ui/main.js",
+    "prebuild": "npm run clean && npm run build:deps && npm run build:backend && npm run build:ui",
+    "build": "alga build --skip-install",
+    "postbuild": "node ./scripts/postbuild.mjs",
+    "pack": "alga pack",
+    "test": "npm run build:deps && vitest"
+  },
+  "dependencies": {
+    "@alga-psa/extension-iframe-sdk": "^0.1.0",
+    "@alga-psa/extension-runtime": "^0.3.0",
+    "@alga-psa/ui-kit": "^0.1.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@alga-psa/cli": "^0.2.0",
+    "@bytecodealliance/componentize-js": "^0.19.3",
+    "esbuild": "^0.27.3",
+    "rimraf": "^6.0.0",
+    "vitest": "^4.0.18"
+  }
+}

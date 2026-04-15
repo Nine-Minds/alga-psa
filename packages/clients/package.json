@@ -3,33 +3,42 @@
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "module": "./dist/index.js",
   "types": "./src/index.ts",
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.js",
       "require": "./dist/index.js"
     },
     "./actions": {
       "types": "./src/actions/index.ts",
-      "import": "./dist/actions/index.mjs",
+      "import": "./dist/actions/index.js",
       "require": "./dist/actions/index.js"
     },
     "./components": {
       "types": "./src/components/index.ts",
-      "import": "./dist/components/index.mjs",
+      "import": "./dist/components/index.js",
       "require": "./dist/components/index.js"
     },
     "./models": {
       "types": "./src/models/index.ts",
-      "import": "./dist/models/index.mjs",
+      "import": "./dist/models/index.js",
       "require": "./dist/models/index.js"
+    },
+    "./context/ClientCrossFeatureContext": {
+      "types": "./src/context/ClientCrossFeatureContext.tsx",
+      "import": "./dist/context/ClientCrossFeatureContext.js",
+      "require": "./dist/context/ClientCrossFeatureContext.js"
     },
     "./schemas": {
       "types": "./src/schemas/index.ts",
-      "import": "./dist/schemas/index.mjs",
+      "import": "./dist/schemas/index.js",
       "require": "./dist/schemas/index.js"
+    },
+    "./providers/*": {
+      "import": "./src/providers/*.tsx",
+      "types": "./src/providers/*.tsx"
     }
   },
   "scripts": {
@@ -37,13 +46,18 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga-psa/block-content": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/shared": "*",
+    "@alga-psa/storage": "*",
     "@alga-psa/types": "*",
+    "@alga-psa/ui": "*",
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
+    "@alga-psa/workflow-streams": "*",
+    "@alga-psa/workflows": "*",
     "zod": "^3.22.4"
   },
   "peerDependencies": {

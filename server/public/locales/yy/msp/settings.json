@@ -117,7 +117,7 @@
       "clientPortal": "55555"
     },
     "license": {
-      "usage": "55555 {{used}} {{limit}} 55555",
+      "usage": "55555 {{used}} 55555 {{limit}} 55555",
       "noLimit": "55555",
       "ofLimit": "55555 {{limit}} 55555",
       "addLicensePrompt": "55555",
@@ -526,11 +526,11 @@
         "conflictsTitle": "55555",
         "conflictsDescription": "55555",
         "nameConflict": "55555",
+        "orderConflict": "55555 {{order}} 55555",
         "skipItem": "55555",
         "importNewName": "55555",
-        "importWithResolutions": "55555",
-        "orderConflict": "55555 {{order}} 55555",
-        "importWithOrder": "55555 {{order}} 55555"
+        "importWithOrder": "55555 {{order}} 55555",
+        "importWithResolutions": "55555"
       },
       "importTable": {
         "active": "55555"
@@ -1126,8 +1126,8 @@
     },
     "sessions": {
       "title": "55555",
-      "subtitle": "55555 {{sessionCount}} {{userCount}} 55555",
-      "subtitle_plural": "55555 {{sessionCount}} {{userCount}} 55555",
+      "subtitle": "55555 {{sessionCount}} 55555 {{userCount}} 55555",
+      "subtitle_plural": "55555 {{sessionCount}} 55555 {{userCount}} 55555",
       "filters": {
         "search": "55555",
         "searchPlaceholder": "55555",
@@ -1160,7 +1160,7 @@
         "revoke": "55555",
         "revoking": "55555"
       },
-      "oauthWarning": "55555 {{provider}} {{provider}} 55555",
+      "oauthWarning": "55555 {{provider}} 55555 {{provider}} 55555",
       "confirmLogout": "55555",
       "messages": {
         "loggingOut": "55555",
@@ -1174,6 +1174,7 @@
     }
   },
   "profile": {
+    "pageTitle": "55555",
     "tabs": {
       "profile": "55555",
       "security": "55555",
@@ -1225,8 +1226,7 @@
     "validation": {
       "firstNameRequired": "55555",
       "lastNameRequired": "55555"
-    },
-    "pageTitle": "55555"
+    }
   },
   "password": {
     "changePassword": "55555",
@@ -1243,6 +1243,94 @@
         "mismatch": "55555",
         "tooShort": "55555",
         "changeFailed": "55555"
+      }
+    }
+  },
+  "integrations": {
+    "betaNotice": "55555",
+    "emptyCategory": "55555",
+    "rmmEnterpriseNote": "55555",
+    "categoryHeading": "55555 {{label}} 55555",
+    "loading": {
+      "payments": "55555"
+    },
+    "categories": {
+      "accounting": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "rmm": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "communication": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "calendar": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "providers": {
+        "label": "55555",
+        "description": {
+          "ee": "55555",
+          "oss": "55555"
+        }
+      },
+      "identity": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "payments": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "items": {
+      "accountingSetup": {
+        "name": "55555",
+        "description": "55555"
+      },
+      "rmmSetup": {
+        "name": "55555",
+        "description": "55555"
+      },
+      "email": {
+        "name": "55555",
+        "description": "55555",
+        "cardTitle": "55555",
+        "cardDescription": "55555"
+      },
+      "teams": {
+        "name": "55555",
+        "description": "55555",
+        "upgradeDescription": "55555"
+      },
+      "calendarSync": {
+        "name": "55555",
+        "description": "55555"
+      },
+      "google": {
+        "name": "55555",
+        "description": {
+          "ee": "55555",
+          "oss": "55555"
+        },
+        "cardTitle": "55555",
+        "cardDescription": {
+          "ee": "55555",
+          "oss": "55555"
+        }
+      },
+      "entra": {
+        "name": "55555",
+        "description": "55555",
+        "upgradeDescription": "55555"
+      },
+      "stripe": {
+        "name": "55555",
+        "description": "55555"
       }
     }
   },

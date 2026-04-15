@@ -5,6 +5,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition, IService, IServiceCategory } from '@alga-psa/types';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Pencil, Trash2, Check, X } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ServiceCatalogProps {
     services: IService[];
@@ -21,6 +22,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
     onDelete,
     onAdd
 }) => {
+    const { t } = useTranslation('msp/clients');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState<string>('');
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -57,7 +59,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
 
     const columns: ColumnDefinition<IService>[] = [
         {
-            title: 'Service Name',
+            title: t('serviceCatalog.serviceName', { defaultValue: 'Service Name' }),
             dataIndex: 'service_name',
             render: (value, record) => {
                 if (editingId === record.service_id) {
@@ -76,7 +78,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
             },
         },
         {
-            title: 'Default Rate',
+            title: t('serviceCatalog.defaultRate', { defaultValue: 'Default Rate' }),
             dataIndex: 'default_rate',
             render: (value) => (
                 <span className="text-[rgb(var(--color-text-700))]">
@@ -85,7 +87,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
             ),
         },
         {
-            title: 'Unit of Measure',
+            title: t('serviceCatalog.unitOfMeasure', { defaultValue: 'Unit of Measure' }),
             dataIndex: 'unit_of_measure',
             render: (value) => (
                 <span className="text-[rgb(var(--color-text-700))] capitalize">
@@ -94,7 +96,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
             ),
         },
         {
-            title: 'Category',
+            title: t('serviceCatalog.category', { defaultValue: 'Category' }),
             dataIndex: 'category_id',
             render: (value, record) => (
                 <span className="text-[rgb(var(--color-text-700))]">
@@ -103,7 +105,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
             ),
         },
         {
-            title: 'Actions',
+            title: t('serviceCatalog.actions', { defaultValue: 'Actions' }),
             dataIndex: 'service_id',
             width: '10%',
             render: (value, record) => (
@@ -163,7 +165,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
         <div className="space-y-4">
             <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
-                    Service Catalog
+                    {t('serviceCatalog.title', { defaultValue: 'Service Catalog' })}
                 </h3>
                 <Button 
                     id="add-new-service-button"
@@ -171,7 +173,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
                     size="2"
                     className="bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))]"
                 >
-                    Add New Service
+                    {t('serviceCatalog.addNewService', { defaultValue: 'Add New Service' })}
                 </Button>
             </div>
             <div className="rounded-lg border border-[rgb(var(--color-border-200))]">
@@ -196,9 +198,9 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
                   setServiceToDelete(null);
                 }
               }}
-              title="Delete Service"
-              message="Are you sure you want to delete this service? This action cannot be undone."
-              confirmLabel="Delete"
+              title={t('serviceCatalog.deleteTitle', { defaultValue: 'Delete Service' })}
+              message={t('serviceCatalog.deleteMessage', { defaultValue: 'Are you sure you want to delete this service? This action cannot be undone.' })}
+              confirmLabel={t('serviceCatalog.delete', { defaultValue: 'Delete' })}
             />
         </div>
     );

@@ -1,5 +1,6 @@
 // @ts-nocheck
 // TODO: This file needs refactoring - ScheduleEntry model method signatures have changed
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Calendar sync service - intentionally bridges integrations and scheduling to synchronize calendar entries */
 /**
  * Calendar Sync Service
  * Handles bidirectional synchronization between Alga schedule entries and external calendars

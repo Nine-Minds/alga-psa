@@ -1,0 +1,1100 @@
+{
+  "tabs": {
+    "general": "Generale",
+    "quoting": "Citando",
+    "tax": "Tassare",
+    "payments": "Pagamenti"
+  },
+  "general": {
+    "currency": {
+      "title": "Valuta predefinita",
+      "description": "Imposta la valuta predefinita per nuovi prodotti, servizi, contratti e preventivi. Questo può essere sovrascritto per ogni cliente nella configurazione di fatturazione.",
+      "fields": {
+        "currency": {
+          "label": "Valuta",
+          "placeholder": "Seleziona valuta"
+        }
+      },
+      "toast": {
+        "updated": "La valuta predefinita è stata aggiornata."
+      },
+      "errors": {
+        "load": "Impossibile caricare le impostazioni",
+        "save": "Impossibile salvare le impostazioni"
+      }
+    },
+    "invoiceNumbering": {
+      "title": "Numerazione delle fatture",
+      "description": "Personalizza il modo in cui i numeri delle fatture vengono generati e visualizzati."
+    },
+    "zeroDollar": {
+      "title": "Fatture a zero dollari",
+      "description": "Controlla come vengono gestite le fatture senza addebiti.",
+      "fields": {
+        "handling": {
+          "label": "Gestione delle fatture",
+          "placeholder": "Seleziona l'opzione di gestione",
+          "help": "Scegli come gestire le fatture da zero dollari una volta generate"
+        },
+        "suppress": {
+          "label": "Elimina le fatture vuote",
+          "help": "Salta la creazione di fatture senza voci"
+        }
+      },
+      "options": {
+        "draft": "Crea come bozza",
+        "finalized": "Crea e finalizza"
+      },
+      "toast": {
+        "updated": "Le impostazioni della fattura a zero dollari sono state aggiornate."
+      },
+      "errors": {
+        "load": "Impossibile caricare le impostazioni",
+        "save": "Impossibile salvare le impostazioni"
+      }
+    },
+    "creditExpiration": {
+      "title": "Scadenza del credito",
+      "description": "Configura quando e come scadono i crediti cliente.",
+      "fields": {
+        "enabled": {
+          "label": "Abilita scadenza credito",
+          "help": "Se abilitati, i crediti scadranno dopo il periodo specificato"
+        },
+        "expirationDays": {
+          "label": "Periodo di scadenza (giorni)",
+          "help": "Numero di giorni dopo i quali scadono i crediti"
+        },
+        "notificationDays": {
+          "label": "Giorni di notifica",
+          "placeholder": "ad esempio, 30, 7, 1",
+          "help": "Giorni prima della scadenza per l'invio delle notifiche (separati da virgole)"
+        }
+      },
+      "actions": {
+        "save": "Salva"
+      },
+      "toast": {
+        "updated": "Le impostazioni di scadenza del credito sono state aggiornate."
+      },
+      "errors": {
+        "load": "Impossibile caricare le impostazioni",
+        "save": "Impossibile salvare le impostazioni"
+      }
+    },
+    "renewal": {
+      "title": "Automazione del rinnovamento",
+      "description": "Configura il comportamento predefinito quando i contratti raggiungono la data di rinnovo.",
+      "fields": {
+        "dueDateAction": {
+          "label": "Azione della data di scadenza",
+          "help": "Scegli se le date di scadenza del rinnovo devono creare biglietti o rimanere solo in coda per impostazione predefinita."
+        },
+        "ticketBoard": {
+          "label": "Rinnovo biglietteria",
+          "placeholderLoading": "Caricamento schede...",
+          "placeholderSelect": "Seleziona scheda"
+        },
+        "ticketStatus": {
+          "label": "Stato del ticket di rinnovo",
+          "placeholderLoading": "Caricamento stati...",
+          "placeholderSelect": "Seleziona lo stato",
+          "placeholderSelectBoardFirst": "Seleziona prima una scheda",
+          "help": "Gli stati dei ticket di rinnovo riguardano la bacheca selezionata."
+        }
+      },
+      "options": {
+        "createTicket": "Crea biglietto",
+        "queueOnly": "Solo coda"
+      },
+      "states": {
+        "unnamedBoard": "Consiglio senza nome"
+      },
+      "actions": {
+        "save": "Salva",
+        "saving": "Risparmio..."
+      },
+      "toast": {
+        "updated": "Le impostazioni di automazione del rinnovo sono state aggiornate."
+      },
+      "errors": {
+        "load": "Impossibile caricare le impostazioni di automazione del rinnovo",
+        "loadStatuses": "Impossibile caricare gli stati dei biglietti di rinnovo",
+        "save": "Impossibile salvare le impostazioni di automazione del rinnovo"
+      }
+    }
+  },
+  "quoting": {
+    "quoteNumbering": {
+      "title": "Numerazione delle quote",
+      "description": "Personalizza il modo in cui i numeri dei preventivi vengono generati e visualizzati."
+    }
+  },
+  "tax": {
+    "taxRegions": {
+      "title": "Regioni fiscali",
+      "description": "Gestisci le regioni fiscali e le relative impostazioni."
+    },
+    "source": {
+      "title": "Fonte per il calcolo delle imposte",
+      "tooltip": "Scegli se le tasse vengono calcolate da Alga PSA o delegate al tuo sistema contabile esterno",
+      "description": "Configura il modo in cui vengono calcolati gli importi delle imposte per le fatture.",
+      "fields": {
+        "defaultMethod": {
+          "label": "Metodo di calcolo delle imposte predefinito"
+        }
+      },
+      "options": {
+        "internal": {
+          "label": "Interno (Alga PSA)",
+          "description": "Le tasse vengono calcolate automaticamente in base alle aliquote fiscali configurate in Alga PSA."
+        },
+        "external": {
+          "label": "Esterno (pacchetto contabilità)",
+          "description": "Le fatture vengono esportate senza imposte. L'imposta viene calcolata dal tuo sistema contabile e importata nuovamente."
+        }
+      },
+      "workflow": {
+        "title": "Flusso di lavoro per il calcolo delle imposte esterne",
+        "step1": "La fattura viene creata senza importi fiscali",
+        "step2": "La fattura viene esportata nel sistema contabile connesso (QuickBooks, Xero, ecc.)",
+        "step3": "L'imposta viene calcolata dal sistema contabile in base alle sue norme fiscali",
+        "step4": "Gli importi delle tasse vengono importati nuovamente in Alga PSA",
+        "step5": "I totali delle fatture vengono aggiornati con l'imposta importata",
+        "note": "Il sistema contabile utilizzato viene determinato automaticamente in base al sistema in cui si esporta la fattura."
+      },
+      "loading": "Caricamento impostazioni...",
+      "actions": {
+        "cancel": "Cancellare",
+        "save": "Salva impostazioni",
+        "saving": "Risparmio..."
+      },
+      "toast": {
+        "saved": "Impostazioni dell'origine fiscale salvate correttamente."
+      },
+      "errors": {
+        "load": "Impossibile caricare le impostazioni dell'origine fiscale.",
+        "save": "Impossibile salvare le impostazioni."
+      }
+    },
+    "regions": {
+      "title": "Gestire le regioni fiscali",
+      "loading": "Caricamento regioni...",
+      "fields": {
+        "code": {
+          "label": "Codice regionale",
+          "placeholder": "ad esempio, CA, NY, IVA-Regno Unito"
+        },
+        "name": {
+          "label": "Nome della regione",
+          "placeholder": "ad esempio, California, New York, Regno Unito IVA"
+        },
+        "active": {
+          "label": "Attivo"
+        }
+      },
+      "dialog": {
+        "addTitle": "Aggiungi nuova regione fiscale",
+        "editTitle": "Modifica regione fiscale"
+      },
+      "actions": {
+        "add": "Aggiungi regione fiscale",
+        "edit": "Modificare",
+        "activate": "Attivare",
+        "deactivate": "Disattivare",
+        "cancel": "Cancellare",
+        "save": "Salva modifiche",
+        "saving": "Risparmio..."
+      },
+      "toast": {
+        "created": "Regione fiscale creata con successo.",
+        "updated": "Regione fiscale aggiornata con successo.",
+        "activatePending": "Tentativo di attivazione di {{name}}...",
+        "deactivatePending": "Tentativo di disattivare {{name}}...",
+        "activated": "Regione fiscale {{name}} attivata con successo.",
+        "deactivated": "Regione fiscale {{name}} disattivata con successo."
+      },
+      "errors": {
+        "load": "Impossibile caricare le regioni fiscali.",
+        "create": "Impossibile creare la regione fiscale.",
+        "update": "Impossibile aggiornare la regione fiscale.",
+        "activate": "Impossibile attivare la regione fiscale.",
+        "deactivate": "Impossibile disattivare la regione fiscale."
+      }
+    },
+    "thresholds": {
+      "title": "Scaglioni fiscali progressivi",
+      "tooltip": "Definire scaglioni fiscali progressivi in ​​cui si applicano aliquote diverse a parti diverse dell'importo. Ciascuna fascia si applica solo all'importo compreso nel suo intervallo.",
+      "loading": "Caricamento parentesi...",
+      "empty": "Nessuna fascia fiscale definita. Aggiungi parentesi per utilizzare la tassazione progressiva.",
+      "noLimit": "Nessun limite",
+      "above": "Sopra",
+      "table": {
+        "minAmount": "Importo minimo",
+        "maxAmount": "Importo massimo"
+      },
+      "issuesTitle": "Problemi di configurazione della staffa:",
+      "issueNoMax": "La parentesi che inizia da {{from}} non ha un limite massimo ma non è l'ultima parentesi.",
+      "issueGap": "Divario tra {{from}} e {{to}}",
+      "issueOverlap": "Sovrapposizione tra parentesi in {{at}}",
+      "preview": {
+        "title": "Anteprima del calcolo",
+        "amount": "Quantità:",
+        "taxable": "{{amount}} imponibile = {{tax}}",
+        "totalTax": "Imposta totale:",
+        "effective": "Efficace: {{rate}}%"
+      },
+      "dialog": {
+        "addTitle": "Aggiungi fascia fiscale",
+        "editTitle": "Modifica fascia fiscale",
+        "deleteTitle": "Elimina fascia fiscale"
+      },
+      "fields": {
+        "minAmount": {
+          "label": "Importo minimo *",
+          "placeholder": "ad esempio, 0"
+        },
+        "maxAmount": {
+          "label": "Importo massimo (lascia vuoto per nessun limite)",
+          "placeholder": "ad esempio, 10000 o vuoto"
+        },
+        "rate": {
+          "label": "Valutare (%) *",
+          "placeholder": "ad esempio, 10"
+        }
+      },
+      "actions": {
+        "add": "Aggiungi parentesi",
+        "edit": "Modificare",
+        "delete": "Eliminare",
+        "cancel": "Cancellare",
+        "save": "Salva",
+        "saving": "Risparmio...",
+        "deleting": "Eliminazione..."
+      },
+      "delete": {
+        "message": "Vuoi eliminare la parentesi {{range}}? Questa azione non può essere annullata.",
+        "lastWarning": "Attenzione: questa è l'ultima parentesi. La sua eliminazione disabiliterà la tassazione progressiva per questa aliquota."
+      },
+      "toast": {
+        "created": "Fascia fiscale creata con successo.",
+        "updated": "Fascia fiscale aggiornata con successo.",
+        "deleted": "Fascia fiscale eliminata con successo."
+      },
+      "errors": {
+        "load": "Impossibile caricare gli scaglioni fiscali.",
+        "create": "Impossibile creare lo scaglione fiscale.",
+        "update": "Impossibile aggiornare lo scaglione fiscale.",
+        "delete": "Impossibile eliminare la fascia fiscale."
+      }
+    },
+    "components": {
+      "title": "Componenti fiscali",
+      "tooltip": "I componenti vengono applicati in ordine sequenziale. I componenti composti calcolano l'imposta sull'importo base più le imposte precedenti.",
+      "loading": "Caricamento componenti...",
+      "empty": "Nessuna componente fiscale definita. Aggiungi componenti per creare un'imposta composita.",
+      "preview": {
+        "title": "Anteprima del calcolo ({{amount}} base)",
+        "compoundSuffix": ", composto",
+        "totalTax": "Imposta totale:",
+        "effective": "Efficace: {{rate}}%"
+      },
+      "dialog": {
+        "addTitle": "Aggiungi componente fiscale",
+        "editTitle": "Modifica componente fiscale",
+        "deleteTitle": "Elimina componente fiscale"
+      },
+      "fields": {
+        "name": {
+          "label": "Nome *",
+          "placeholder": "ad esempio, imposta federale, imposta statale"
+        },
+        "rate": {
+          "label": "Valutare (%) *",
+          "placeholder": "ad esempio, 10"
+        },
+        "sequence": {
+          "label": "Sequenza *",
+          "placeholder": "ad esempio, 1"
+        },
+        "compound": {
+          "label": "Imposta composta",
+          "help": "Calcola su base + tasse pregresse"
+        },
+        "startDate": {
+          "label": "Data di inizio (facoltativo)"
+        },
+        "endDate": {
+          "label": "Data di fine (facoltativa)"
+        }
+      },
+      "dateRange": {
+        "always": "Sempre",
+        "any": "Qualunque",
+        "ongoing": "In corso"
+      },
+      "actions": {
+        "add": "Aggiungi componente",
+        "edit": "Modificare",
+        "delete": "Eliminare",
+        "cancel": "Cancellare",
+        "save": "Salva",
+        "saving": "Risparmio...",
+        "deleting": "Eliminazione..."
+      },
+      "delete": {
+        "message": "Sei sicuro di voler eliminare il componente \"{{name}}\"? Questa azione non può essere annullata."
+      },
+      "toast": {
+        "created": "Componente fiscale creato correttamente.",
+        "updated": "Componente fiscale aggiornato correttamente.",
+        "deleted": "Componente fiscale eliminato correttamente."
+      },
+      "errors": {
+        "load": "Impossibile caricare i componenti fiscali.",
+        "create": "Impossibile creare il componente fiscale.",
+        "update": "Impossibile aggiornare la componente fiscale.",
+        "delete": "Impossibile eliminare il componente fiscale."
+      }
+    },
+    "holidays": {
+      "title": "Esenzioni fiscali",
+      "titleWithName": "Esenzioni fiscali per {{name}}",
+      "tooltip": "Le esenzioni fiscali sono periodi temporanei in cui tale imposta non viene applicata. Usali per promozioni, esenzioni stagionali o esenzioni fiscali imposte dal governo.",
+      "loading": "Caricamento vacanze...",
+      "empty": "Nessuna esenzione fiscale definita. Add holidays to temporarily exempt this tax during specific periods.",
+      "summary": {
+        "active": "{{count}} attivo",
+        "upcoming": "{{count}} imminente",
+        "expired": "{{count}} scaduto"
+      },
+      "dialog": {
+        "addTitle": "Aggiungi esenzione fiscale",
+        "editTitle": "Modifica esenzione fiscale",
+        "deleteTitle": "Elimina ferie fiscali"
+      },
+      "fields": {
+        "startDate": {
+          "label": "Data di inizio *"
+        },
+        "endDate": {
+          "label": "Data di fine *"
+        },
+        "description": {
+          "label": "Descrizione (facoltativa)",
+          "placeholder": "ad esempio, saldi del Black Friday, festività fiscali governative"
+        }
+      },
+      "actions": {
+        "add": "Aggiungi festività",
+        "edit": "Modificare",
+        "delete": "Eliminare",
+        "cancel": "Cancellare",
+        "save": "Salva",
+        "saving": "Risparmio...",
+        "deleting": "Eliminazione..."
+      },
+      "delete": {
+        "message": "Vuoi eliminare la festività \"{{description}}\" ({{dateRange}})? Questa azione non può essere annullata.",
+        "untitled": "Senza titolo"
+      },
+      "toast": {
+        "created": "Esenzione fiscale creata con successo.",
+        "updated": "Esenzione fiscale aggiornata con successo.",
+        "deleted": "Esenzione fiscale eliminata correttamente."
+      },
+      "errors": {
+        "load": "Impossibile caricare le esenzioni fiscali.",
+        "create": "Impossibile creare un'esenzione fiscale.",
+        "update": "Impossibile aggiornare l'esenzione fiscale.",
+        "delete": "Impossibile eliminare l'esenzione fiscale."
+      }
+    }
+  },
+  "payments": {
+    "title": "Impostazioni di pagamento",
+    "description": "Configura il funzionamento dei collegamenti di pagamento con le tue fatture.",
+    "loading": "Caricamento delle impostazioni di pagamento..."
+  },
+  "serviceCategories": {
+    "title": "Categorie di servizi",
+    "dialog": {
+      "addTitle": "Aggiungi categoria di servizio",
+      "editTitle": "Modifica categoria di servizio",
+      "deleteTitle": "Elimina categoria di servizio"
+    },
+    "fields": {
+      "categoryName": {
+        "label": "Nome della categoria *",
+        "placeholder": "Inserisci il nome della categoria"
+      },
+      "description": {
+        "label": "Descrizione",
+        "placeholder": "Inserisci la descrizione"
+      },
+      "displayOrder": {
+        "label": "Visualizza ordine",
+        "placeholder": "Inserisci l'ordine di visualizzazione",
+        "help": "Controlla l'ordine in cui le categorie di servizi appaiono nei menu a discesa in tutta la piattaforma. I numeri più bassi vengono visualizzati per primi."
+      }
+    },
+    "actions": {
+      "add": "Aggiungi categoria di servizio",
+      "importFromStandard": "Importa da categorie standard",
+      "create": "Creare",
+      "update": "Aggiornamento"
+    },
+    "delete": {
+      "message": "Sei sicuro di voler eliminare \"{{name}}\"? Questa azione non può essere annullata."
+    },
+    "import": {
+      "title": "Importa categorie di servizi standard",
+      "empty": "Nessuna categoria di servizi standard disponibile per l'importazione.",
+      "description": "Seleziona le categorie di servizi standard da importare nella tua organizzazione:",
+      "fetchError": "Impossibile recuperare le categorie di servizi disponibili per l'importazione"
+    },
+    "conflicts": {
+      "description": "I seguenti elementi presentano conflitti. Scegli come risolverli:",
+      "nameExists": "Esiste già una categoria con questo nome.",
+      "rename": "Importa con nuovo nome:",
+      "orderInUse": "L'ordine di visualizzazione {{displayOrder}} è già in uso.",
+      "reorder": "Importa con ordine {{order}}"
+    },
+    "toast": {
+      "created": "Categoria di servizio creata correttamente",
+      "updated": "Categoria del servizio aggiornata correttamente",
+      "deleted": "Categoria di servizio eliminata correttamente",
+      "imported": "Categorie di servizi importate correttamente"
+    },
+    "errors": {
+      "fetch": "Impossibile recuperare le categorie di servizi",
+      "missingId": "Manca l'ID della categoria",
+      "nameRequired": "Il nome della categoria è obbligatorio",
+      "save": "Impossibile salvare la categoria del servizio",
+      "delete": "Impossibile eliminare la categoria del servizio",
+      "import": "Impossibile importare le categorie di servizi"
+    }
+  },
+  "serviceTypes": {
+    "title": "Tipi di servizi personalizzati",
+    "description": "Gestisci i tipi di servizi personalizzati della tua organizzazione.",
+    "loading": "Caricamento tipi di servizio...",
+    "dialog": {
+      "addTitle": "Aggiungi tipo di servizio personalizzato",
+      "editTitle": "Modifica tipo di servizio personalizzato",
+      "deleteTitle": "Elimina tipo di servizio"
+    },
+    "fields": {
+      "name": {
+        "label": "Nome *",
+        "placeholder": "ad esempio, Livello di supporto personalizzato *"
+      },
+      "description": {
+        "label": "Descrizione (facoltativa)",
+        "placeholder": "Descrivi questo tipo di servizio"
+      },
+      "billingMethod": {
+        "label": "Metodo di fatturazione *",
+        "placeholder": "Seleziona il metodo di fatturazione..."
+      },
+      "displayOrder": {
+        "label": "Visualizza ordine *",
+        "placeholder": "ad esempio, 1, 2, 3...",
+        "help": "Controlla l'ordine in cui i tipi di servizio appaiono nei menu a discesa in tutta la piattaforma. I numeri più bassi vengono visualizzati per primi.",
+        "usedOrders": "Ordini utilizzati: {{orders}}"
+      }
+    },
+    "actions": {
+      "add": "Aggiungi tipo personalizzato",
+      "importFromStandard": "Importa da tipi di servizio standard",
+      "save": "Salva",
+      "close": "Vicino"
+    },
+    "validation": {
+      "summary": "Si prega di compilare i campi richiesti:",
+      "name": "Nome del tipo di servizio",
+      "billingMethod": "Metodo di fatturazione",
+      "displayOrder": "Ordine di visualizzazione",
+      "orderInUse": "L'ordine {{order}} è già utilizzato da \"{{name}}\""
+    },
+    "delete": {
+      "message": "Vuoi eliminare il tipo di servizio \"{{name}}\"? Questa operazione non può essere annullata.",
+      "errorPrefix": "Errore: {{error}}"
+    },
+    "import": {
+      "title": "Importa tipi di servizio standard",
+      "empty": "Nessun tipo di servizio standard disponibile per l'importazione.",
+      "description": "Seleziona i tipi di servizi standard da importare nella tua organizzazione:"
+    },
+    "conflicts": {
+      "description": "I seguenti elementi presentano conflitti che devono essere risolti:",
+      "nameExists": "Conflitto: il nome esiste già",
+      "orderInUse": "Conflitto: l'ordine {{order}} è già in uso",
+      "rename": "Importa con nome diverso:",
+      "reorder": "Importa con ordine diverso:"
+    },
+    "toast": {
+      "importedCount": "Tipo di servizio {{count}} importato",
+      "importedCount_other": "Tipi di servizio {{count}} importati",
+      "skippedItem": "{{name}}: {{reason}}"
+    },
+    "errors": {
+      "fetch": "Impossibile recuperare i tipi di servizio",
+      "save": "Impossibile salvare il tipo di servizio",
+      "delete": "Impossibile eliminare il tipo di servizio",
+      "checkConflicts": "Impossibile controllare i conflitti",
+      "import": "Impossibile importare i tipi di servizio"
+    }
+  },
+  "serviceCatalog": {
+    "title": "Gestione del catalogo dei servizi",
+    "loading": "Caricamento servizi",
+    "dialog": {
+      "editTitle": "Modifica servizio"
+    },
+    "filters": {
+      "allServiceTypes": "Tutti i tipi di servizio",
+      "serviceTypePlaceholder": "Filtra per tipo di servizio...",
+      "allBillingMethods": "Tutti i metodi di fatturazione",
+      "billingMethodPlaceholder": "Filtra per metodo di fatturazione..."
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Nome del servizio",
+        "placeholder": "Nome del servizio"
+      },
+      "serviceType": {
+        "label": "Tipo di servizio",
+        "placeholder": "Seleziona il tipo di servizio..."
+      },
+      "billingMethod": {
+        "label": "Metodo di fatturazione",
+        "placeholder": "Seleziona il metodo di fatturazione..."
+      },
+      "description": {
+        "label": "Descrizione",
+        "placeholder": "Descrizione"
+      },
+      "pricing": {
+        "label": "Prezzo *",
+        "primaryRateHelp": "La prima valuta è il tasso primario.",
+        "multiCurrencyHelp": "Aggiungi prezzi in più valute. La prima valuta è il tasso primario.",
+        "placeholders": {
+          "currency": "Valuta",
+          "rate": "0,00"
+        },
+        "rateType": {
+          "monthly": "Mensile",
+          "perHour": "All'ora",
+          "usage": "Utilizzo",
+          "rate": "Valutare"
+        }
+      },
+      "unitOfMeasure": {
+        "label": "Unità di misura *",
+        "placeholder": "ad esempio GB, chiamata API, utente",
+        "help": "L'unità misurabile per la fatturazione (ad esempio GB, chiamata API, utente)"
+      },
+      "taxRate": {
+        "label": "Aliquota fiscale (facoltativa)",
+        "placeholder": "Seleziona l'aliquota fiscale (o lascia vuoto per non imponibile)",
+        "loading": "Caricamento tariffe..."
+      },
+      "sku": {
+        "label": "SKU",
+        "placeholder": "SKU"
+      },
+      "inventoryCount": {
+        "label": "Conteggio dell'inventario",
+        "placeholder": "Conteggio dell'inventario"
+      },
+      "seatLimit": {
+        "label": "Limite del posto",
+        "placeholder": "Limite del posto"
+      },
+      "licenseTerm": {
+        "label": "Durata della licenza",
+        "placeholder": "Seleziona la durata della licenza..."
+      }
+    },
+    "actions": {
+      "edit": "Modificare",
+      "delete": "Eliminare",
+      "addCurrency": "+ Aggiungi valuta",
+      "remove": "Rimuovere",
+      "cancel": "Cancellare",
+      "saveChanges": "Salva modifiche"
+    },
+    "table": {
+      "serviceName": "Nome del servizio",
+      "serviceType": "Tipo di servizio",
+      "billingMethod": "Metodo di fatturazione",
+      "pricing": "Prezzi",
+      "unit": "Unità",
+      "taxRate": "Aliquota fiscale",
+      "nonTaxable": "Non imponibile",
+      "thisService": "questo servizio"
+    },
+    "errors": {
+      "fetchServices": "Impossibile recuperare i servizi",
+      "fetchCategories": "Impossibile recuperare le categorie",
+      "fetchServiceTypesUnknown": "Si è verificato un errore sconosciuto durante il recupero dei tipi di servizio",
+      "fetchTaxRates": "Impossibile caricare le aliquote fiscali.",
+      "serviceTypeRequired": "Il tipo di servizio è obbligatorio",
+      "priceRequired": "È richiesto almeno un prezzo",
+      "missingId": "Impossibile aggiornare il servizio senza un ID.",
+      "update": "Impossibile aggiornare il servizio",
+      "validateDelete": "Impossibile convalidare l'eliminazione. Per favore riprova.",
+      "delete": "Impossibile eliminare il servizio",
+      "deactivate": "Impossibile disattivare il servizio"
+    }
+  },
+  "products": {
+    "title": "Prodotti",
+    "loading": "Caricamento prodotti",
+    "thisProduct": "questo prodotto",
+    "actions": {
+      "add": "Aggiungi prodotto",
+      "search": "Ricerca",
+      "edit": "Modificare",
+      "restore": "Ripristinare",
+      "archive": "Archivio",
+      "delete": "Eliminare"
+    },
+    "filters": {
+      "searchPlaceholder": "Cerca per nome, SKU, descrizione...",
+      "allStatuses": "Tutti gli stati",
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "allCategories": "Tutte le categorie",
+      "allTypes": "Tutti i tipi",
+      "loading": "Caricamento..."
+    },
+    "table": {
+      "product": "Prodotto",
+      "sku": "SKU",
+      "type": "Tipo",
+      "category": "Categoria",
+      "label": "Etichetta",
+      "pricing": "Prezzi",
+      "taxRate": "Aliquota fiscale",
+      "active": "Attivo",
+      "nonTaxable": "Non imponibile"
+    },
+    "archive": {
+      "title": "Archivio prodotto",
+      "message": "Archiviare {{name}}? Verrà nascosto ai selezionatori per impostazione predefinita e non potrà essere allegato a nuovi contratti/fatture finché non verrà ripristinato."
+    },
+    "permanentDelete": {
+      "title": "Elimina il prodotto in modo permanente",
+      "checking": "Verifica se è possibile eliminare il prodotto...",
+      "confirm": "Vuoi eliminare definitivamente \"{{name}}\"? Questa azione non può essere annullata.",
+      "blocked": "Impossibile eliminare \"{{name}}\" perché è associato a dati esistenti:",
+      "archiveInstead": "Per rimuovere questo prodotto, rimuovilo prima da tutti i record associati o utilizza invece l'Archivio."
+    },
+    "errors": {
+      "fetch": "Impossibile recuperare i prodotti",
+      "restore": "Impossibile ripristinare il prodotto",
+      "archive": "Impossibile archiviare il prodotto",
+      "checkAssociations": "Impossibile controllare le associazioni",
+      "delete": "Impossibile eliminare il prodotto"
+    }
+  },
+  "quickAddService": {
+    "dialog": {
+      "title": "Aggiungi nuovo servizio"
+    },
+    "actions": {
+      "trigger": "Aggiungi servizio",
+      "addCurrency": "+ Aggiungi valuta",
+      "remove": "Rimuovere",
+      "cancel": "Cancellare",
+      "save": "Salva servizio"
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Nome del servizio *",
+        "placeholder": "Nome del servizio"
+      },
+      "serviceType": {
+        "label": "Tipo di servizio *",
+        "placeholder": "Seleziona il tipo di servizio..."
+      },
+      "billingMethod": {
+        "label": "Metodo di fatturazione *",
+        "placeholder": "Seleziona il metodo di fatturazione..."
+      },
+      "description": {
+        "label": "Descrizione",
+        "placeholder": "Descrizione del servizio"
+      },
+      "pricing": {
+        "label": "Prezzo *",
+        "help": "Aggiungi prezzi in più valute. La prima valuta è il tasso primario.",
+        "placeholders": {
+          "currency": "Valuta",
+          "rate": "0,00"
+        },
+        "rateType": {
+          "monthly": "Mensile",
+          "perHour": "All'ora",
+          "usage": "Utilizzo",
+          "rate": "Valutare"
+        }
+      },
+      "unitOfMeasure": {
+        "label": "Unità di misura *",
+        "placeholder": "ad esempio GB, chiamata API, utente",
+        "help": "L'unità misurabile per la fatturazione (ad esempio GB, chiamata API, utente)"
+      },
+      "taxRate": {
+        "label": "Aliquota fiscale (facoltativa)",
+        "placeholder": "Seleziona aliquota fiscale (facoltativo)",
+        "loading": "Caricamento aliquote fiscali..."
+      },
+      "sku": {
+        "label": "SKU",
+        "placeholder": "SKU"
+      },
+      "inventoryCount": {
+        "label": "Conteggio dell'inventario",
+        "placeholder": "Conteggio dell'inventario"
+      },
+      "seatLimit": {
+        "label": "Limite del posto",
+        "placeholder": "Limite del posto"
+      },
+      "licenseTerm": {
+        "label": "Durata della licenza",
+        "placeholder": "Seleziona la durata della licenza..."
+      }
+    },
+    "validation": {
+      "summary": "Correggi i seguenti errori:",
+      "serviceNameRequired": "Il nome del servizio è obbligatorio",
+      "serviceTypeRequired": "Il tipo di servizio è obbligatorio",
+      "priceRequired": "È richiesto almeno un prezzo",
+      "billingMethodRequired": "Il metodo di fatturazione è obbligatorio",
+      "skuRequiredForHardware": "Lo SKU è richiesto per l'hardware",
+      "licenseTermRequired": "La durata della licenza è richiesta per le licenze software",
+      "selectedTypeNotFound": "Tipo di servizio selezionato non trovato"
+    },
+    "errors": {
+      "fetchCategories": "Impossibile recuperare le categorie",
+      "fetchTaxRates": "Impossibile caricare le aliquote fiscali.",
+      "create": "Impossibile creare il servizio"
+    }
+  },
+  "quickAddProduct": {
+    "dialog": {
+      "addTitle": "Aggiungi prodotto",
+      "editTitle": "Modifica prodotto"
+    },
+    "actions": {
+      "addCurrency": "+ Aggiungi valuta",
+      "remove": "Rimuovere",
+      "cancel": "Cancellare",
+      "create": "Creare",
+      "save": "Salva"
+    },
+    "fields": {
+      "productName": {
+        "label": "Nome del prodotto *"
+      },
+      "type": {
+        "label": "Tipo *",
+        "placeholder": "Seleziona tipo..."
+      },
+      "sku": {
+        "label": "SKU"
+      },
+      "category": {
+        "label": "Categoria",
+        "placeholder": "Senza categoria",
+        "loading": "Caricamento..."
+      },
+      "label": {
+        "label": "Etichetta",
+        "placeholder": "Etichetta a forma libera opzionale"
+      },
+      "vendor": {
+        "label": "Venditore"
+      },
+      "manufacturer": {
+        "label": "Produttore"
+      },
+      "cost": {
+        "label": "Costo",
+        "placeholder": "0,00"
+      },
+      "billingMethod": {
+        "label": "Metodo di fatturazione"
+      },
+      "pricing": {
+        "label": "Prezzo *",
+        "help": "Aggiungi prezzi in più valute. La prima valuta è il tasso primario.",
+        "rateType": {
+          "rate": "Valutare"
+        },
+        "placeholders": {
+          "currency": "Valuta",
+          "rate": "0,00"
+        }
+      },
+      "taxRate": {
+        "label": "Aliquota fiscale",
+        "placeholder": "Non imponibile",
+        "loading": "Caricamento..."
+      },
+      "active": {
+        "label": "Attivo"
+      },
+      "unitOfMeasure": {
+        "label": "Unità di misura *",
+        "placeholder": "ad esempio, ciascun articolo, licenza"
+      },
+      "license": {
+        "label": "Licenza?"
+      },
+      "licenseTerm": {
+        "label": "Durata della licenza"
+      },
+      "description": {
+        "label": "Descrizione"
+      }
+    },
+    "options": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "yes": "SÌ",
+      "no": "NO"
+    },
+    "validation": {
+      "productNameRequired": "Il nome del prodotto è obbligatorio",
+      "serviceTypeRequired": "Il tipo di servizio è obbligatorio",
+      "unitOfMeasureRequired": "L'unità di misura è obbligatoria",
+      "priceRequired": "È richiesto almeno un prezzo",
+      "currencyRequired": "Per ciascun prezzo è richiesta la valuta",
+      "currencyUnique": "Ogni valuta può essere utilizzata una sola volta",
+      "pricesNonNegative": "I prezzi devono essere non negativi",
+      "nonZeroPriceRequired": "È obbligatorio almeno un prezzo diverso da zero"
+    },
+    "errors": {
+      "create": "Impossibile creare il prodotto",
+      "update": "Impossibile aggiornare il prodotto"
+    }
+  },
+  "clientTaxSettings": {
+    "title": "Impostazioni fiscali del cliente",
+    "loading": "Caricamento delle impostazioni fiscali...",
+    "noSettingsFound": "Nessuna impostazione fiscale trovata per questo cliente.",
+    "createDefaultButton": "Crea impostazioni fiscali predefinite",
+    "alerts": {
+      "dismissError": "Ignora errore",
+      "dismissSuccess": "Ignora il messaggio di successo"
+    },
+    "messages": {
+      "defaultCreated": "Impostazioni fiscali predefinite create correttamente",
+      "createDefaultError": "Errore durante la creazione delle impostazioni fiscali predefinite",
+      "fetchError": "Errore durante il recupero delle impostazioni fiscali",
+      "updated": "Impostazioni fiscali aggiornate correttamente",
+      "updateError": "Errore durante l'aggiornamento delle impostazioni fiscali",
+      "taxExemptEnabled": "Cliente contrassegnato come esentasse.",
+      "taxExemptDisabled": "Stato di esenzione fiscale rimosso dal cliente.",
+      "taxExemptUpdateError": "Impossibile aggiornare lo stato di esenzione fiscale"
+    },
+    "validation": {
+      "thresholdNegativeMin": "La soglia {{index}} ha un importo minimo negativo",
+      "thresholdMaxLessThanMin": "La soglia {{index}} ha un importo massimo inferiore all'importo minimo",
+      "thresholdNegativeRate": "La soglia {{index}} ha un tasso negativo",
+      "holidayMissingDates": "Alla festività {{index}} manca la data di inizio o di fine",
+      "holidayEndBeforeStart": "La festività {{index}} ha una data di fine precedente alla data di inizio"
+    },
+    "taxExempt": {
+      "title": "Stato di esenzione fiscale",
+      "description": "Ai clienti esenti da imposte non verranno applicate imposte sulle loro fatture.",
+      "label": "Esente da tasse",
+      "tooltip": "Se abilitato, non verranno calcolate imposte per le fatture di questo cliente. Le modifiche vengono registrate a scopo di controllo.",
+      "status": {
+        "exempt": "Esonerare",
+        "notExempt": "Non esente"
+      },
+      "certificate": {
+        "label": "Numero del certificato di esenzione fiscale",
+        "placeholder": "Inserisci il numero del certificato (facoltativo)",
+        "help": "Facoltativo: archiviare il numero del certificato di esenzione fiscale del cliente come riferimento."
+      },
+      "alert": {
+        "title": "Cliente esentasse",
+        "description": "A questo cliente non verrà addebitata alcuna imposta sulle fatture. Assicurati di conservare il certificato di esenzione in archivio."
+      },
+      "actions": {
+        "cancel": "Cancellare",
+        "save": "Salva lo stato di esenzione fiscale",
+        "saving": "Risparmio..."
+      }
+    },
+    "advanced": {
+      "title": "Opzioni fiscali avanzate",
+      "description": "Configura una gestione fiscale speciale per questo cliente.",
+      "reverseCharge": {
+        "label": "Applicare l'inversione contabile",
+        "tooltip": "L’inversione contabile sposta il debito fiscale dal venditore all’acquirente. Comune nelle transazioni B2B transfrontaliere.",
+        "status": {
+          "enabled": "Abilitato",
+          "disabled": "Disabilitato"
+        }
+      },
+      "taxSourceOverride": {
+        "label": "Sostituzione della fonte fiscale",
+        "tooltip": "Sostituisci la fonte fiscale predefinita del tenant per questo cliente. \"Interno\" utilizza il calcolo fiscale di Alga. L'opzione \"Esterno\" delega il calcolo delle imposte al sistema contabile al momento dell'esportazione delle fatture.",
+        "placeholder": "Seleziona la fonte fiscale...",
+        "options": {
+          "default": "Utilizza impostazione predefinita del tenant",
+          "internal": "Alga PSA calcola le tasse",
+          "external": "Il pacchetto contabile calcola le imposte"
+        },
+        "effective": {
+          "label": "Fonte fiscale effettiva attuale:",
+          "pendingExternal": "In attesa di esterno",
+          "overridden": "(sostituito)"
+        },
+        "notAvailable": {
+          "messageStart": "La sostituzione della fonte fiscale non è disponibile. Questa funzione deve essere abilitata nel",
+          "link": "impostazioni di fatturazione",
+          "messageEnd": "per consentire la sostituzione della fonte fiscale per cliente."
+        }
+      },
+      "actions": {
+        "reset": "Reimposta modifiche",
+        "update": "Aggiorna le impostazioni fiscali",
+        "updating": "Aggiornamento..."
+      }
+    }
+  },
+  "common": {
+    "actions": {
+      "add": "Aggiungere",
+      "cancel": "Cancellare",
+      "close": "Vicino",
+      "create": "Creare",
+      "delete": "Eliminare",
+      "edit": "Modificare",
+      "importSelected": "Importa selezionato",
+      "importWithResolutions": "Importa con risoluzioni",
+      "remove": "Rimuovere",
+      "reset": "Reset",
+      "save": "Salva",
+      "update": "Aggiornamento"
+    },
+    "columns": {
+      "actions": "Azioni",
+      "name": "Nome",
+      "description": "Descrizione",
+      "order": "Ordine",
+      "code": "Codice",
+      "status": "Stato",
+      "billingMethod": "Metodo di fatturazione",
+      "rate": "Valutare",
+      "dateRange": "Intervallo di date",
+      "startDate": "Data di inizio",
+      "endDate": "Data di fine",
+      "sequence": "Seq"
+    },
+    "billingMethod": {
+      "fixed": "Fisso",
+      "fixedFee": "Tariffa fissa",
+      "hourly": "Ogni ora",
+      "usage": "Utilizzo",
+      "usageBased": "Basato sull'utilizzo"
+    },
+    "licenseTerm": {
+      "monthly": "Mensile",
+      "annual": "Annuale",
+      "perpetual": "Perpetuo"
+    },
+    "statuses": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "upcoming": "Prossimamente",
+      "expired": "Scaduto",
+      "enabled": "Abilitato",
+      "disabled": "Disabilitato",
+      "yes": "SÌ",
+      "no": "NO",
+      "nonTaxable": "Non imponibile"
+    },
+    "emptyValue": "-",
+    "notAvailable": "N / A",
+    "loading": "Caricamento...",
+    "a11y": {
+      "openMenu": "Apri il menu"
+    }
+  },
+  "import": {
+    "title": "Risolvi i conflitti di importazione",
+    "selectAll": "Seleziona tutto",
+    "skipItem": "Salta questo elemento",
+    "headers": {
+      "name": "Nome",
+      "description": "Descrizione",
+      "order": "Ordine",
+      "billingMethod": "Metodo di fatturazione"
+    }
+  },
+  "validation": {
+    "requiredFields": "Si prega di compilare i campi richiesti:"
+  },
+  "errors": {
+    "failedToLoadSettings": "Impossibile caricare le impostazioni",
+    "failedToSaveSettings": "Impossibile salvare le impostazioni"
+  },
+  "toast": {
+    "saved": "Salvato con successo"
+  },
+  "numbering": {
+    "section": {
+      "title": "Formato del numero",
+      "description": "Definisci il prefisso, il riempimento delle cifre e la sequenza corrente."
+    },
+    "fields": {
+      "prefix": {
+        "label": "Prefisso del numero",
+        "help": "Prefisso facoltativo per la sequenza di numeri. Lascia vuoto per non usare alcun prefisso o inserisci un prefisso personalizzato."
+      },
+      "minimumDigits": {
+        "label": "Cifre minime",
+        "help": "Numero minimo di cifre per il numero sequenziale. Ad esempio, 6 trasforma '1' in '000001'."
+      },
+      "initialValue": {
+        "label": "Valore iniziale",
+        "help": "Imposta il numero iniziale della sequenza. Può essere impostato una sola volta.",
+        "placeholder": "Inserisci valore"
+      },
+      "lastUsedNumber": {
+        "label": "Ultimo numero utilizzato",
+        "help": "L'ultimo numero assegnato. Il prossimo numero sarà di un'unità superiore a questo valore."
+      },
+      "nextPreview": {
+        "label": "Anteprima del prossimo numero",
+        "help": "Questo è il numero che verrà assegnato al prossimo record."
+      }
+    },
+    "actions": {
+      "save": "Salva modifiche",
+      "cancel": "Annulla"
+    },
+    "dialog": {
+      "title": "Aggiorna impostazioni di numerazione",
+      "message": "La modifica di queste impostazioni influirà sul modo in cui vengono generati i nuovi numeri. Questa modifica non influirà sui record esistenti. Vuoi davvero continuare?",
+      "confirm": "Aggiorna impostazioni"
+    },
+    "toast": {
+      "updated": "Impostazioni aggiornate correttamente."
+    },
+    "errors": {
+      "load": "Impossibile caricare le impostazioni di numerazione.",
+      "save": "Impossibile aggiornare le impostazioni."
+    }
+  }
+}

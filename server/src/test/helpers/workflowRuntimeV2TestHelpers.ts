@@ -7,7 +7,7 @@ import {
   type RetryPolicy,
   type Step,
   type WorkflowDefinition
-} from '@shared/workflow/runtime';
+} from '@alga-psa/workflows/runtime';
 
 export const TEST_SCHEMA_REF = 'payload.TestPayload.v1';
 export const TEST_SOURCE_SCHEMA_REF = 'payload.TestSourcePayload.v1';
@@ -228,6 +228,7 @@ export function stateSetStep(id: string, state: string): Step {
 export function eventWaitStep(id: string, params: {
   eventName: string;
   correlationKeyExpr: { $expr: string };
+  filters?: Array<{ path: string; op: string; value?: unknown }>;
   timeoutMs?: number;
   assign?: Record<string, { $expr: string }>;
 }): Step {
@@ -237,7 +238,26 @@ export function eventWaitStep(id: string, params: {
     config: {
       eventName: params.eventName,
       correlationKey: params.correlationKeyExpr,
+      filters: params.filters,
       timeoutMs: params.timeoutMs,
+      assign: params.assign
+    }
+  } as Step;
+}
+
+export function timeWaitStep(id: string, params: {
+  mode: 'duration' | 'until';
+  durationMs?: number;
+  untilExpr?: { $expr: string };
+  assign?: Record<string, { $expr: string }>;
+}): Step {
+  return {
+    id,
+    type: 'time.wait',
+    config: {
+      mode: params.mode,
+      durationMs: params.durationMs,
+      until: params.untilExpr,
       assign: params.assign
     }
   } as Step;

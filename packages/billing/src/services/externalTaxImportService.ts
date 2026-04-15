@@ -189,6 +189,9 @@ export class ExternalTaxImportService {
         };
       }
 
+      // Tax import stays invoice- and charge-amount-driven. Canonical recurring
+      // service periods may explain why a charge exists, but they do not change
+      // external tax matching or the imported amount basis.
       // 6. Get current invoice charges and their tax
       const charges = await knex('invoice_charges')
         .where({ invoice_id: invoiceId, tenant })
@@ -427,6 +430,9 @@ export class ExternalTaxImportService {
       throw new Error(`Invoice ${invoiceId} not found`);
     }
 
+    // Reconciliation is financial-tax-centric: compare stored internal and
+    // imported external tax amounts per invoice charge. Canonical recurring
+    // service periods stay explanatory context, not reconciliation inputs.
     // Get charges with both internal and external tax
     const charges = await knex('invoice_charges')
       .where({ invoice_id: invoiceId, tenant })

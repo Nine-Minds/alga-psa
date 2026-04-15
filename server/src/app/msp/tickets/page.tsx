@@ -4,6 +4,10 @@ import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDis
 import { getTeams } from '@alga-psa/teams/actions';
 import type { ITicketListFilters } from '@alga-psa/types';
 import { MspTicketsPageClient } from '@alga-psa/msp-composition/tickets';
+import {
+  isTicketStatusOpenFilter,
+  TICKET_STATUS_FILTER_OPEN,
+} from '@alga-psa/tickets/lib';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -145,7 +149,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     // Apply defaults for missing parameters
     const initialFilters: Partial<ITicketListFilters> = {
       boardFilterState: 'active',
-      statusId: 'open',
+      statusId: TICKET_STATUS_FILTER_OPEN,
       priorityId: 'all',
       bundleView: 'bundled',
       sortBy: filtersFromURL.sortBy ?? 'entered_at',
@@ -156,13 +160,13 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     // Create full filter object for data fetching
     const fetchFilters: ITicketListFilters = {
       boardId: initialFilters.boardId || undefined,
-      statusId: initialFilters.statusId || 'open',
+      statusId: initialFilters.statusId || TICKET_STATUS_FILTER_OPEN,
       priorityId: initialFilters.priorityId || 'all',
       categoryId: initialFilters.categoryId || undefined,
       clientId: initialFilters.clientId || undefined,
       searchQuery: initialFilters.searchQuery || '',
       boardFilterState: initialFilters.boardFilterState || 'active',
-      showOpenOnly: (initialFilters.statusId === 'open') || false,
+      showOpenOnly: isTicketStatusOpenFilter(initialFilters.statusId),
       tags: initialFilters.tags || undefined,
       assignedToIds: initialFilters.assignedToIds || undefined,
       assignedTeamIds: initialFilters.assignedTeamIds || undefined,

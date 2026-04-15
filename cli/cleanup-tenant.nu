@@ -308,6 +308,10 @@ def "main cleanup" [
         "project_template_task_resources" "project_template_status_mappings"
         "project_template_tasks" "project_template_phases" "project_templates"
 
+        # Quote details
+        "quote_activities" "quote_items" "quote_document_template_assignments"
+        "quote_document_templates" "standard_quote_document_templates" "quotes"
+
         # Invoice details
         "invoice_charges" "invoice_annotations" "invoice_time_entries" "invoice_usage_records"
         "invoice_charge_details" "invoice_charge_fixed_details" "invoice_items"
@@ -326,6 +330,7 @@ def "main cleanup" [
         "email_reply_tokens" "email_sending_logs" "email_rate_limits"
 
         # User related details
+        "user_activity_group_items" "user_activity_groups"
         "user_notification_preferences" "user_internal_notification_preferences" "user_preferences"
         "role_permissions" "user_roles" "user_auth_accounts"
 

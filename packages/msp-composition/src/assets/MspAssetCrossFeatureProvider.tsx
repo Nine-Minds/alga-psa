@@ -6,7 +6,7 @@ import type { AssetCrossFeatureCallbacks, AssetQuickAddTicketRenderProps, AssetT
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { createTicketFromAsset } from '@alga-psa/tickets/actions/ticketActions';
-import { getAllBoards } from '@alga-psa/tickets/actions';
+import { getAllBoards } from '@alga-psa/reference-data/actions';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { useDrawer } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';

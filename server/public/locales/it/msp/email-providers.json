@@ -1,0 +1,463 @@
+{
+  "configuration": {
+    "loading": "Caricamento provider di posta elettronica...",
+    "feedback": {
+      "testingConnection": "Testare la connessione per {{providerName}}...",
+      "connectionSuccess": "Connesso a {{providerName}}.",
+      "connectionError": "Il test di connessione è fallito",
+      "refreshWatchError": "Impossibile aggiornare l'abbonamento dell'orologio",
+      "renewalError": "Rinnovo fallito",
+      "initiateOauthError": "Impossibile avviare IMAP OAuth",
+      "resyncing": "Risincronizzazione {{providerName}} in corso...",
+      "resyncError": "Impossibile risincronizzare il provider IMAP",
+      "resyncStarted": "La risincronizzazione è iniziata per {{providerName}}.",
+      "enterpriseOnly": "La posta elettronica in entrata di Microsoft 365 è disponibile solo in Enterprise Edition."
+    },
+    "editDrawer": {
+      "title": "Modifica provider di posta elettronica",
+      "description": "Aggiorna la configurazione per {{providerName}}"
+    },
+    "header": {
+      "title": "Configurazione del provider di posta elettronica",
+      "description": {
+        "enterprise": "Configura Gmail, Microsoft 365 o i provider IMAP per ricevere ed elaborare le email in entrata come ticket",
+        "standard": "Configura i provider Gmail o IMAP per ricevere ed elaborare le email in entrata come ticket"
+      },
+      "counts": {
+        "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
+        "standard": "Gmail: {{gmail}} · IMAP: {{imap}}"
+      }
+    },
+    "actions": {
+      "addProvider": "Aggiungi fornitore di posta elettronica"
+    },
+    "nav": {
+      "providers": "Fornitori",
+      "defaults": "Predefiniti"
+    },
+    "setup": {
+      "title": "Istruzioni per l'installazione",
+      "microsoft": {
+        "title": "Installazione di Microsoft 365",
+        "steps": {
+          "registerApp": "Registra un'applicazione in Azure AD",
+          "permissions": "Configura le autorizzazioni API per Mail.Read",
+          "redirectUrl": "Imposta l'URL di reindirizzamento nella registrazione dell'app",
+          "credentials": "Utilizza l'ID cliente e il segreto cliente nel modulo sopra"
+        }
+      },
+      "gmail": {
+        "title": "Configurazione di Gmail",
+        "enterpriseSteps": {
+          "enterAddress": "Inserisci il tuo indirizzo Gmail e il nome del provider",
+          "connect": "Fai clic su \"Connetti Gmail\" per autorizzare l'accesso",
+          "preferences": "Configura le preferenze di elaborazione della posta elettronica",
+          "save": "Salva per completare la configurazione"
+        },
+        "standardSteps": {
+          "project": "Crea un progetto in Google Cloud Console",
+          "oauth": "Abilita l'API Gmail e crea credenziali OAuth2",
+          "pubsub": "Configura l'argomento Pub/Sub per le notifiche push",
+          "consent": "Configura la schermata di consenso OAuth e aggiungi utenti di prova"
+        }
+      }
+    }
+  },
+  "list": {
+    "header": {
+      "title": "Provider di posta elettronica ({{count}})"
+    },
+    "filters": {
+      "searchPlaceholder": "Cerca provider...",
+      "allProviders": "Tutti i fornitori"
+    },
+    "actions": {
+      "refresh": "Aggiorna"
+    }
+  },
+  "selector": {
+    "header": {
+      "title": "Scegli il tuo provider di posta elettronica",
+      "description": "Seleziona il servizio di posta elettronica che desideri utilizzare per l'elaborazione della posta elettronica in entrata. Puoi configurare più provider di posta elettronica per account."
+    },
+    "cards": {
+      "google": {
+        "title": "Gmail",
+        "description": "Integrazione Google Workspace/Gmail",
+        "features": {
+          "accounts": "✓ Account Gmail e Google Workspace",
+          "filtering": "✓ Filtraggio e-mail basato su etichette",
+          "processing": "✓ Elaborazione della posta elettronica in tempo reale",
+          "authentication": "✓ Autenticazione OAuth automatica"
+        },
+        "action": "Configura Gmail"
+      },
+      "microsoft": {
+        "title": "Microsoft 365",
+        "description": "Integrazione con Microsoft 365/Outlook",
+        "features": {
+          "accounts": "✓ Account Microsoft 365 e Outlook",
+          "filtering": "✓ Filtraggio e-mail basato su cartelle",
+          "processing": "✓ Elaborazione della posta elettronica in tempo reale",
+          "authentication": "✓ Integrazione OAuth di Azure AD"
+        },
+        "action": "Configura Microsoft 365"
+      },
+      "imap": {
+        "title": "IMAP",
+        "description": "Integrazione server IMAP personalizzata",
+        "features": {
+          "accounts": "✓ Qualsiasi casella di posta compatibile con IMAP",
+          "filtering": "✓ Filtraggio e-mail basato su cartelle",
+          "authentication": "✓ Autenticazione OAuth2 o password",
+          "listener": "✓ Ascoltatore IDLE in tempo reale"
+        },
+        "action": "Configura IMAP"
+      }
+    },
+    "actions": {
+      "cancel": "Annulla"
+    },
+    "help": {
+      "enterprise": "Scegli il provider già utilizzato dalla tua organizzazione. Se utilizzi Google Workspace, scegli Gmail; se utilizzi Microsoft 365, scegli Microsoft 365. Puoi modificare questa impostazione in un secondo momento rimuovendo e riconfigurando il tuo provider di posta elettronica.",
+      "standard": "Scegli il provider già utilizzato dalla tua organizzazione. Se utilizzi Google Workspace, scegli Gmail; altrimenti scegli IMAP. Puoi modificarlo in seguito rimuovendo e riconfigurando il tuo provider di posta elettronica."
+    }
+  },
+  "wizard": {
+    "title": {
+      "select": "Scegli il provider di posta elettronica",
+      "setup": "Configurazione {{provider}}"
+    },
+    "actions": {
+      "cancel": "Annulla",
+      "back": "Indietro",
+      "close": "Chiudi"
+    }
+  },
+  "providerCard": {
+    "subscription": {
+      "expired": "Scaduto",
+      "expiresInHours": "Scade tra {{count}}h",
+      "expiresInDays": "Scade tra {{count}}d"
+    },
+    "badges": {
+      "disabled": "Disabilitato",
+      "connected": "Collegato",
+      "disconnected": "Disconnesso",
+      "error": "Errore",
+      "configuring": "Configurazione",
+      "unknown": "Sconosciuto"
+    },
+    "lastSync": {
+      "never": "Mai",
+      "justNow": "Proprio adesso",
+      "minutesAgo": "{{count}}m fa",
+      "hoursAgo": "{{count}}h fa",
+      "daysAgo": "{{count}}d fa"
+    },
+    "actions": {
+      "edit": "Modifica configurazione",
+      "testing": "Test…",
+      "testConnection": "Prova connessione",
+      "refreshWatch": "Aggiorna Pub/Sub e guarda",
+      "retryRenewal": "Riprova rinnovo",
+      "runDiagnostics": "Esegui la diagnostica di Microsoft 365",
+      "reconnectOauth": "Riconnetti OAuth",
+      "resyncing": "Risincronizzazione in corso...",
+      "resyncMailbox": "Risincronizza casella di posta",
+      "delete": "Elimina fornitore"
+    },
+    "fields": {
+      "status": "Stato",
+      "lastSync": "Ultima sincronizzazione",
+      "created": "Creato",
+      "subscription": "Sottoscrizione",
+      "defaults": "Impostazioni predefinite dei ticket",
+      "error": "Errore:"
+    },
+    "values": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "disabled": "Disabilitato",
+      "error": "Errore"
+    },
+    "types": {
+      "google": "Gmail",
+      "microsoft": "Microsoft 365",
+      "imap": "IMAP"
+    },
+    "filters": {
+      "folders": "Cartelle: {{filters}}",
+      "labels": "Etichette: {{filters}}"
+    },
+    "warnings": {
+      "inboundDefaults": "Sono necessarie impostazioni predefinite per i ticket in entrata e le e-mail non verranno elaborate finché non ne viene selezionata una."
+    },
+    "defaults": {
+      "placeholder": "Seleziona valori predefiniti...",
+      "empty": "Nessuna impostazione predefinita disponibile"
+    },
+    "empty": {
+      "title": "Nessun provider di posta elettronica configurato",
+      "description": "Aggiungi un provider di posta elettronica per iniziare a ricevere ed elaborare le email in entrata come ticket.",
+      "action": "Aggiungi fornitore di posta elettronica"
+    }
+  },
+  "forms": {
+    "common": {
+      "actions": {
+        "cancel": "Annulla",
+        "saving": "Salvataggio...",
+        "updateProvider": "Aggiorna fornitore",
+        "addProvider": "Aggiungi fornitore",
+        "createProvider": "Crea fornitore",
+        "manageDefaults": "Gestisci le impostazioni predefinite",
+        "refreshList": "Aggiorna elenco",
+        "openProvidersSettings": "Apri le Impostazioni dei provider"
+      },
+      "validation": {
+        "requiredFieldsTitle": "Si prega di compilare i campi richiesti:",
+        "fixHighlightedFields": "Correggi i campi evidenziati e riprova."
+      },
+      "ticketDefaults": {
+        "title": "Impostazioni predefinite dei ticket",
+        "description": "Seleziona le impostazioni predefinite da applicare ai ticket creati via email",
+        "label": "Impostazioni predefinite dei ticket in entrata",
+        "placeholder": "Seleziona valori predefiniti (facoltativo)",
+        "empty": "Nessuna impostazione predefinita disponibile"
+      },
+      "oauth": {
+        "authorizing": "Autorizzazione in corso...",
+        "authorized": "Autorizzato",
+        "authorizeAccess": "Autorizza l'accesso"
+      }
+    },
+    "microsoft": {
+      "validation": {
+        "providerNameRequired": "Il nome del fornitore è obbligatorio",
+        "emailRequired": "È richiesto un indirizzo email valido",
+        "redirectRequired": "È richiesto un URI di reindirizzamento valido",
+        "authorizeRequiresValid": "Si prega di compilare tutti i campi obbligatori prima di autorizzare",
+        "oauthInitiateFailed": "Impossibile avviare OAuth",
+        "popupBlocked": "Impossibile aprire il popup OAuth. Si prega di consentire i popup per questo sito.",
+        "closedEarly": "Finestra di autorizzazione chiusa prima del completamento. Per favore riprova.",
+        "authorizationFailed": "Autorizzazione fallita"
+      },
+      "requiredFields": {
+        "providerName": "Nome del fornitore",
+        "emailAddress": "Indirizzo e-mail",
+        "redirectUri": "URI di reindirizzamento"
+      },
+      "basic": {
+        "title": "Configurazione di base",
+        "description": "Impostazioni di base per il provider di posta elettronica Microsoft 365",
+        "providerNameLabel": "Nome del fornitore *",
+        "providerNamePlaceholder": "ad esempio, e-mail di supporto",
+        "emailLabel": "Indirizzo e-mail *",
+        "emailPlaceholder": "support@client.com",
+        "enableProvider": "Abilita questo fornitore"
+      },
+      "oauth": {
+        "sectionTitle": "Configurazione Microsoft OAuth",
+        "sectionDescription": "Le credenziali dell'app Microsoft vengono configurate nelle impostazioni dei provider e riutilizzate qui.",
+        "setupLabel": "Microsoft Entra",
+        "notConfigured": "Le impostazioni del provider Microsoft non sono configurate.",
+        "setupHelp": "Configura prima i provider in Impostazioni → Integrazioni → Provider, quindi torna qui per autorizzare questa casella di posta.",
+        "redirectUriLabel": "URI di reindirizzamento *",
+        "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
+        "authorizationTitle": "Autorizzazione OAuth",
+        "authorizationDescription": "Completa il flusso OAuth per concedere l'accesso alla casella di posta"
+      },
+      "advanced": {
+        "title": "Impostazioni avanzate",
+        "description": "Configura le opzioni avanzate di elaborazione della posta elettronica",
+        "folderFiltersLabel": "Filtri delle cartelle",
+        "folderFiltersPlaceholder": "Posta in arrivo, Supporto, Cartella personalizzata",
+        "folderFiltersHelp": "Elenco separato da virgole di cartelle da monitorare (impostazione predefinita: Posta in arrivo)",
+        "maxEmailsPerSync": "Numero massimo di email per sincronizzazione"
+      }
+    },
+    "gmail": {
+      "validation": {
+        "providerNameRequired": "Il nome del fornitore è obbligatorio",
+        "gmailAddressRequired": "È richiesto un indirizzo Gmail valido",
+        "authorizeRequiresValid": "Si prega di compilare tutti i campi obbligatori prima di autorizzare",
+        "googleNotConfigured": "L'integrazione di Google non è configurata per questo tenant. Configura prima Google, poi riprova.",
+        "oauthInitiateFailed": "Impossibile avviare OAuth",
+        "popupBlocked": "Impossibile aprire il popup OAuth. Si prega di consentire i popup per questo sito.",
+        "closedEarly": "La finestra di autorizzazione è stata chiusa prima del completamento.",
+        "authorizationFailed": "Autorizzazione fallita",
+        "popupFailed": "Il popup OAuth non è riuscito"
+      },
+      "messages": {
+        "setupIncomplete": "Fornitore salvato ma configurazione incompleta: {{error}}",
+        "warningsTitle": "Configurazione completata con avvisi:",
+        "settingUp": "Configurazione delle notifiche di Gmail..."
+      },
+      "requiredFields": {
+        "providerName": "Nome del fornitore",
+        "gmailAddress": "Indirizzo Gmail"
+      },
+      "basic": {
+        "title": "Configurazione di base",
+        "description": "Impostazioni di base per il tuo provider di posta elettronica Gmail",
+        "providerNameLabel": "Nome del fornitore *",
+        "providerNamePlaceholder": "ad esempio, Supporta Gmail",
+        "mailboxLabel": "Indirizzo Gmail *",
+        "mailboxPlaceholder": "support@client.com",
+        "enableProvider": "Abilita questo fornitore"
+      },
+      "oauth": {
+        "sectionTitle": "Google OAuth",
+        "sectionDescription": "Utilizza l'app Google di proprietà del tenant configurata in Impostazioni → Integrazioni → Provider.",
+        "setupLabel": "Console Google Cloud",
+        "notConfigured": "L'integrazione di Google non è configurata per questo tenant.",
+        "setupHelp": "Configurare prima Google OAuth + Pub/Sub di proprietà del tenant: Impostazioni → Integrazioni → Provider.",
+        "openSettings": "Apri Impostazioni Google",
+        "requiredTitle": "Autorizzazione OAuth richiesta",
+        "stepTitle": "Passaggio 1: autorizzazione OAuth",
+        "stepDescription": "Completa il flusso OAuth per concedere l'accesso a Gmail",
+        "buttonSuccessSaving": "Autorizzato con successo! Salvataggio delle impostazioni...",
+        "requiredDescriptionAdd": "È necessario completare l'autorizzazione OAuth sopra prima di aggiungere il provider per abilitare le notifiche di Gmail.",
+        "requiredDescriptionUpdate": "È necessario completare l'autorizzazione OAuth sopra prima di aggiornare il provider per abilitare le notifiche di Gmail."
+      },
+      "advanced": {
+        "title": "Impostazioni avanzate",
+        "description": "Configura le opzioni avanzate di elaborazione della posta elettronica",
+        "completeSetupSuffix": "& Completa la configurazione"
+      },
+      "processing": {
+        "labelFiltersLabel": "Etichette Gmail da monitorare",
+        "labelFiltersPlaceholder": "POSTA IN ARRIVO, Supporto, Etichetta personalizzata",
+        "labelFiltersHelp": "Elenco separato da virgole di etichette Gmail da monitorare (impostazione predefinita: INBOX)"
+      }
+    },
+    "imap": {
+      "validation": {
+        "providerNameRequired": "Il nome del fornitore è obbligatorio",
+        "mailboxRequired": "La casella di posta è obbligatoria",
+        "mailboxInvalid": "È richiesta una casella di posta valida (ad esempio utente@dominio.com, utente@localhost, utente@test-server o utente)",
+        "hostRequired": "L'host IMAP è obbligatorio",
+        "usernameRequired": "Il nome utente IMAP è obbligatorio",
+        "oauthInitiateFailed": "Impossibile avviare IMAP OAuth"
+      },
+      "basic": {
+        "title": "Impostazioni di base",
+        "description": "Definisci i dettagli di connessione alla casella di posta IMAP.",
+        "providerName": "Nome del fornitore",
+        "mailboxAddress": "Indirizzo della casella di posta",
+        "host": "Host IMAP",
+        "port": "Porta",
+        "useTls": "Utilizza TLS/SSL",
+        "allowStarttls": "Consenti aggiornamento STARTTLS"
+      },
+      "auth": {
+        "title": "Autenticazione",
+        "description": "Scegli la password o l'autenticazione OAuth2.",
+        "typeLabel": "Tipo di autenticazione",
+        "passwordOption": "Password",
+        "oauth2Option": "OAuth2 (XOAUTH2)",
+        "username": "Nome utente",
+        "password": "Password/Password dell'app",
+        "passwordHelp": "Le password vengono archiviate in modo sicuro e non verranno visualizzate. Lascia vuoto per mantenere la password esistente.",
+        "oauthStatus": "Stato OAuth",
+        "connected": "Collegato",
+        "notConnected": "Non connesso",
+        "reconnectOauth": "Riconnetti OAuth",
+        "authorizeUrl": "Autorizza l'URL",
+        "tokenUrl": "URL del token",
+        "clientId": "ID cliente OAuth",
+        "clientSecret": "Segreto client OAuth",
+        "scopes": "Ambiti OAuth",
+        "scopesPlaceholder": "ambiti delimitati da spazi"
+      },
+      "processing": {
+        "title": "Impostazioni di elaborazione",
+        "description": "Scegli le cartelle e il comportamento di elaborazione.",
+        "folderFilters": "Filtri delle cartelle",
+        "folderFiltersPlaceholder": "Posta in arrivo, supporto, ticket",
+        "active": "Attivo"
+      }
+    }
+  },
+  "inboundDefaultsForm": {
+    "feedback": {
+      "loadOptionsError": "Impossibile caricare le opzioni del campo",
+      "loading": "Caricamento delle opzioni del modulo..."
+    },
+    "validation": {
+      "nameRequired": "Il nome breve e il nome visualizzato sono obbligatori",
+      "boardRequired": "La bacheca è obbligatoria",
+      "statusRequired": "Lo stato è obbligatorio",
+      "priorityRequired": "La priorità è obbligatoria",
+      "clientRequired": "Il cliente è obbligatorio"
+    },
+    "fields": {
+      "shortName": {
+        "label": "Nome breve *",
+        "placeholder": "email-generale",
+        "help": "Identificatore univoco (ad es. email generale, assistenza-fatturazione)"
+      },
+      "displayName": {
+        "label": "Nome da visualizzare *",
+        "placeholder": "Supporto e-mail generale"
+      },
+      "description": {
+        "label": "Descrizione",
+        "placeholder": "Descrizione facoltativa di quando vengono utilizzate queste impostazioni predefinite"
+      },
+      "active": {
+        "label": "Attivo"
+      },
+      "board": {
+        "label": "Bacheca *",
+        "placeholder": "Seleziona bacheca"
+      },
+      "status": {
+        "label": "Stato *",
+        "placeholder": "Seleziona lo stato",
+        "selectBoardFirst": "Seleziona prima la bacheca",
+        "loading": "Caricamento stati..."
+      },
+      "priority": {
+        "label": "Priorità *",
+        "placeholder": "Seleziona la priorità"
+      },
+      "client": {
+        "label": "Cliente *",
+        "placeholder": "Seleziona Cliente",
+        "help": "Obbligatorio: utilizzato come catch-all quando non è possibile abbinare alcun client dall'e-mail."
+      },
+      "category": {
+        "label": "Categoria",
+        "placeholder": "Seleziona categoria",
+        "placeholderNoBoard": "Seleziona prima la scheda",
+        "empty": "Nessuna categoria trovata per la bacheca selezionata."
+      },
+      "location": {
+        "label": "Posizione",
+        "placeholder": "Seleziona la posizione",
+        "placeholderNoClient": "Seleziona prima il cliente (facoltativo)",
+        "help": "Applicato solo quando viene utilizzato il client catch-all (nessuna corrispondenza tra maiuscole e minuscole)."
+      },
+      "enteredBy": {
+        "label": "Inserito da",
+        "placeholder": "Sistema (nullo)",
+        "help": "Utilizzato solo quando non è possibile abbinare un contatto o un cliente. I ticket di sistema mostreranno \"Sistema\" come creatore."
+      }
+    },
+    "section": {
+      "ticketDefaults": "Impostazioni predefinite dei ticket"
+    },
+    "optionSuffix": {
+      "default": "(Predefinito)"
+    },
+    "actions": {
+      "cancel": "Annulla",
+      "updating": "Aggiornamento in corso...",
+      "creating": "Creazione in corso...",
+      "update": "Aggiorna impostazioni predefinite",
+      "create": "Crea valori predefiniti"
+    }
+  }
+}

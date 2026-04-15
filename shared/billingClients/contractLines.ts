@@ -1,6 +1,8 @@
 import type { Knex } from 'knex';
 import type { IContractLine, IContractLineService } from '@alga-psa/types';
 
+import { normalizeLiveRecurringStorage } from './recurrenceStorageModel';
+
 async function findTemplateLine(trx: Knex | Knex.Transaction, tenant: string, contractLineId: string) {
   return trx('contract_template_lines').where({ tenant, template_line_id: contractLineId }).first();
 }
@@ -24,10 +26,7 @@ export async function getContractLines(
     .select('*')
     .orderBy('contract_line_name', 'asc');
 
-  return rows.map((row) => ({
-    ...row,
-    billing_timing: (row.billing_timing ?? 'arrears') as 'arrears' | 'advance',
-  }));
+  return rows.map((row) => normalizeLiveRecurringStorage(row));
 }
 
 export async function getContractLineServices(
@@ -49,4 +48,3 @@ export async function getContractLineServices(
 
   return services as IContractLineService[];
 }
-

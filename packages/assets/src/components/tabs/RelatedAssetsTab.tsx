@@ -13,12 +13,14 @@ import { createAssetRelationship, deleteAssetRelationship, getAssetRelationships
 import { Input } from '@alga-psa/ui/components/Input';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface RelatedAssetsTabProps {
   asset: Asset;
 }
 
 export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => {
+  const { t } = useTranslation('msp/assets');
   const { mutate } = useSWRConfig();
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,7 +77,9 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
 
   const handleCreateRelationship = useCallback(async () => {
     if (!selectedAssetId) {
-      toast.error('Select an asset to link');
+      toast.error(t('relatedAssetsTab.errors.selectAsset', {
+        defaultValue: 'Select an asset to link'
+      }));
       return;
     }
 
@@ -87,7 +91,7 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
         relationship_type: relationshipType || 'related'
       });
 
-      toast.success('Asset linked');
+      toast.success(t('relatedAssetsTab.success.linked', { defaultValue: 'Asset linked' }));
       setIsLinkDialogOpen(false);
 
       // Refresh relationships in this tab
@@ -95,32 +99,41 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
       // Best-effort: also refresh any cached asset fetches
       mutate(['asset', asset.asset_id]);
     } catch (error) {
-      handleError(error, 'Failed to link asset');
+      handleError(error, t('relatedAssetsTab.errors.linkFailed', {
+        defaultValue: 'Failed to link asset'
+      }));
     } finally {
       setIsSaving(false);
     }
-  }, [asset.asset_id, mutate, mutateRelationships, relationshipType, selectedAssetId]);
+  }, [asset.asset_id, mutate, mutateRelationships, relationshipType, selectedAssetId, t]);
 
   const handleUnlink = useCallback(async (parentId: string, childId: string) => {
     try {
       await deleteAssetRelationship(parentId, childId);
-      toast.success('Asset unlinked');
+      toast.success(t('relatedAssetsTab.success.unlinked', { defaultValue: 'Asset unlinked' }));
       await mutateRelationships();
       mutate(['asset', asset.asset_id]);
     } catch (error) {
-      handleError(error, 'Failed to unlink asset');
+      handleError(error, t('relatedAssetsTab.errors.unlinkFailed', {
+        defaultValue: 'Failed to unlink asset'
+      }));
     }
-  }, [asset.asset_id, mutate, mutateRelationships]);
+  }, [asset.asset_id, mutate, mutateRelationships, t]);
 
   const relsToRender = relationships ?? asset.relationships ?? [];
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-base font-semibold">Related Assets ({relsToRender.length})</CardTitle>
+        <CardTitle className="text-base font-semibold">
+          {t('relatedAssetsTab.title', {
+            defaultValue: 'Related Assets ({{count}})',
+            count: relsToRender.length
+          })}
+        </CardTitle>
         <Button id="link-asset-btn" variant="outline" size="xs" className="flex items-center gap-2" onClick={openLinkDialog}>
           <LinkIcon size={14} />
-          Link Asset
+          {t('relatedAssetsTab.actions.linkAsset', { defaultValue: 'Link Asset' })}
         </Button>
       </CardHeader>
       <CardContent>
@@ -128,17 +141,17 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Asset Name</TableHead>
-                <TableHead>Relationship</TableHead>
-                <TableHead>Linked Date</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t('relatedAssetsTab.table.assetName', { defaultValue: 'Asset Name' })}</TableHead>
+                <TableHead>{t('relatedAssetsTab.table.relationship', { defaultValue: 'Relationship' })}</TableHead>
+                <TableHead>{t('relatedAssetsTab.table.linkedDate', { defaultValue: 'Linked Date' })}</TableHead>
+                <TableHead>{t('relatedAssetsTab.table.actions', { defaultValue: 'Actions' })}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoadingRelationships ? (
                 <TableRow>
                   <TableCell colSpan={4} className="h-24 text-center text-gray-400">
-                    Loading related assets...
+                    {t('relatedAssetsTab.loading', { defaultValue: 'Loading related assets...' })}
                   </TableCell>
                 </TableRow>
               ) : relsToRender.length > 0 ? (
@@ -152,7 +165,9 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="bg-primary-50 text-primary-700 border-primary-100">
-                        {rel.relationship_type}
+                        {t(`relatedAssetsTab.relationshipTypes.${rel.relationship_type}`, {
+                          defaultValue: rel.relationship_type
+                        })}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-gray-500">
@@ -166,7 +181,7 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={() => handleUnlink(rel.parent_asset_id, rel.child_asset_id)}
                       >
-                        Unlink
+                        {t('relatedAssetsTab.actions.unlink', { defaultValue: 'Unlink' })}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -176,9 +191,11 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
                   <TableCell colSpan={4} className="h-32 text-center text-gray-500">
                     <div className="flex flex-col items-center gap-2">
                       <Network size={32} className="opacity-20" />
-                      <p className="text-sm">No related assets linked.</p>
+                      <p className="text-sm">
+                        {t('relatedAssetsTab.empty.linked', { defaultValue: 'No related assets linked.' })}
+                      </p>
                       <Button id="link-asset-empty-state-btn" variant="ghost" size="xs" onClick={openLinkDialog}>
-                        Link an asset
+                        {t('relatedAssetsTab.actions.linkEmptyState', { defaultValue: 'Link an asset' })}
                       </Button>
                     </div>
                   </TableCell>
@@ -191,28 +208,62 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
 
       <Dialog
         id="link-related-asset"
-        title="Link Asset"
+        title={t('relatedAssetsTab.dialog.title', { defaultValue: 'Link Asset' })}
         isOpen={isLinkDialogOpen}
         onClose={() => setIsLinkDialogOpen(false)}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-link-related-asset"
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsLinkDialogOpen(false)}
+              disabled={isSaving}
+            >
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="confirm-link-related-asset"
+              variant="default"
+              size="sm"
+              onClick={handleCreateRelationship}
+              disabled={isSaving || !selectedAssetId}
+            >
+              {isSaving
+                ? t('relatedAssetsTab.dialog.actions.linking', { defaultValue: 'Linking...' })
+                : t('relatedAssetsTab.dialog.actions.confirm', { defaultValue: 'Link asset' })}
+            </Button>
+          </div>
+        )}
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Search assets</label>
+            <label className="text-sm font-medium text-gray-700">
+              {t('relatedAssetsTab.dialog.search.label', { defaultValue: 'Search assets' })}
+            </label>
             <SearchInput
               id="link-related-asset-search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, tag, serial..."
+              placeholder={t('relatedAssetsTab.dialog.search.placeholder', {
+                defaultValue: 'Search by name, tag, serial...'
+              })}
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Relationship type</label>
+            <label className="text-sm font-medium text-gray-700">
+              {t('relatedAssetsTab.dialog.relationshipType.label', {
+                defaultValue: 'Relationship type'
+              })}
+            </label>
             <Input
               id="link-related-asset-relationship-type"
               value={relationshipType}
               onChange={(e) => setRelationshipType(e.target.value)}
-              placeholder="related"
+              placeholder={t('relatedAssetsTab.dialog.relationshipType.placeholder', {
+                defaultValue: 'related'
+              })}
             />
           </div>
 
@@ -221,15 +272,17 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Asset</TableHead>
-                    <TableHead className="w-[120px] text-right">Select</TableHead>
+                    <TableHead>{t('relatedAssetsTab.dialog.table.asset', { defaultValue: 'Asset' })}</TableHead>
+                    <TableHead className="w-[120px] text-right">
+                      {t('relatedAssetsTab.dialog.table.select', { defaultValue: 'Select' })}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoadingAssets ? (
                     <TableRow>
                       <TableCell colSpan={2} className="h-24 text-center text-gray-400">
-                        Loading assets...
+                        {t('relatedAssetsTab.dialog.loadingAssets', { defaultValue: 'Loading assets...' })}
                       </TableCell>
                     </TableRow>
                   ) : availableAssets.length > 0 ? (
@@ -248,7 +301,9 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
                             size="xs"
                             onClick={() => setSelectedAssetId(a.asset_id)}
                           >
-                            {selectedAssetId === a.asset_id ? 'Selected' : 'Select'}
+                            {selectedAssetId === a.asset_id
+                              ? t('relatedAssetsTab.dialog.actions.selected', { defaultValue: 'Selected' })
+                              : t('common.actions.select', { defaultValue: 'Select' })}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -256,7 +311,9 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
                   ) : (
                     <TableRow>
                       <TableCell colSpan={2} className="h-24 text-center text-gray-400">
-                        No available assets found.
+                        {t('relatedAssetsTab.dialog.empty', {
+                          defaultValue: 'No available assets found.'
+                        })}
                       </TableCell>
                     </TableRow>
                   )}
@@ -265,26 +322,6 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              id="cancel-link-related-asset"
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsLinkDialogOpen(false)}
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
-            <Button
-              id="confirm-link-related-asset"
-              variant="default"
-              size="sm"
-              onClick={handleCreateRelationship}
-              disabled={isSaving || !selectedAssetId}
-            >
-              {isSaving ? 'Linking...' : 'Link asset'}
-            </Button>
-          </div>
         </div>
       </Dialog>
     </Card>

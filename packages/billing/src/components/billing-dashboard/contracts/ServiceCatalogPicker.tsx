@@ -4,7 +4,7 @@ import React, { useCallback, useRef } from 'react';
 import AsyncSearchableSelect, { SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import { getServiceById, searchServiceCatalogForPicker, CatalogPickerItem } from '@alga-psa/billing/actions';
 
-type BillingMethod = 'fixed' | 'hourly' | 'usage' | 'per_unit';
+type BillingMethod = 'fixed' | 'hourly' | 'usage';
 type ItemKind = 'service' | 'product';
 
 export type ServiceCatalogPickerItem = CatalogPickerItem;
@@ -26,6 +26,7 @@ function getCacheKey(params: {
   is_active?: boolean;
   billing_methods?: BillingMethod[];
   item_kinds?: ItemKind[];
+  currency_code?: string;
 }): string {
   return JSON.stringify({
     search: params.search,
@@ -34,6 +35,7 @@ function getCacheKey(params: {
     is_active: params.is_active,
     billing_methods: params.billing_methods?.sort(),
     item_kinds: params.item_kinds?.sort(),
+    currency_code: params.currency_code,
   });
 }
 
@@ -44,6 +46,7 @@ function getCachedOrFetch(params: {
   is_active?: boolean;
   billing_methods?: BillingMethod[];
   item_kinds?: ItemKind[];
+  currency_code?: string;
 }): Promise<{ items: CatalogPickerItem[]; totalCount: number }> {
   const cacheKey = getCacheKey(params);
   const now = Date.now();
@@ -74,9 +77,13 @@ interface ServiceCatalogPickerProps {
   value: string;
   selectedLabel?: string;
   onSelect: (item: ServiceCatalogPickerItem) => void;
+  /** Called when user adds a custom line item via the dropdown footer. */
+  onAddCustom?: (description: string) => void;
   billingMethods?: BillingMethod[];
   itemKinds?: ItemKind[];
   isActive?: boolean;
+  /** When provided, the picker returns the currency-specific rate from service_prices alongside default_rate. */
+  currencyCode?: string;
   placeholder?: string;
   label?: string;
   id?: string;
@@ -89,9 +96,11 @@ export function ServiceCatalogPicker({
   value,
   selectedLabel,
   onSelect,
+  onAddCustom,
   billingMethods,
   itemKinds,
   isActive = true,
+  currencyCode,
   placeholder = 'Select item...',
   label,
   id,
@@ -111,6 +120,7 @@ export function ServiceCatalogPicker({
         is_active: isActive,
         billing_methods: billingMethods,
         item_kinds: itemKinds,
+        currency_code: currencyCode,
       });
 
       lastItemsByIdRef.current = result.items.reduce<Record<string, ServiceCatalogPickerItem>>((acc, item) => {
@@ -130,7 +140,7 @@ export function ServiceCatalogPicker({
 
       return { options, total: result.totalCount };
     },
-    [billingMethods, itemKinds, isActive]
+    [billingMethods, itemKinds, isActive, currencyCode]
   );
 
   const handleChange = useCallback(
@@ -185,6 +195,29 @@ export function ServiceCatalogPicker({
       emptyMessage="No matching items."
       disabled={disabled}
       showMoreIndicator
+      footerContent={onAddCustom ? ({ search, close }) => {
+        const trimmed = search.trim();
+        return (
+          <button
+            type="button"
+            className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors ${trimmed ? 'hover:bg-[rgb(var(--color-border-100))] cursor-pointer' : 'opacity-50 cursor-default'}`}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              if (!trimmed) return;
+              onAddCustom(trimmed);
+              close();
+            }}
+          >
+            <span className="inline-flex items-center rounded bg-[rgb(var(--color-border-100))] px-1.5 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))]">
+              Custom
+            </span>
+            {trimmed
+              ? <span>Add &ldquo;{trimmed}&rdquo; as custom item</span>
+              : <span className="text-[rgb(var(--color-text-400))]">Type a name to add a custom item</span>
+            }
+          </button>
+        );
+      } : undefined}
     />
   );
 }

@@ -7,6 +7,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
 import type { IClient, IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ITag, IUserWithRoles, ProjectStatus } from '@alga-psa/types';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from 'react-i18next';
 
 interface ProjectMetadata {
   project: IProject;
@@ -19,6 +20,7 @@ interface ProjectMetadata {
 }
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+  const { t } = useTranslation('features/projects');
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const taskIdFromUrl = searchParams?.get('taskId') ?? null;
@@ -139,13 +141,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   }, [pathname]);
 
   if (!projectMetadata) {
-    return <div>Loading...</div>;
+    return <div>{t('projectDetail.loading')}</div>;
   }
 
   return (
     <div>
       <ProjectInfo
         project={projectMetadata.project}
+        phases={projectMetadata.phases}
         contact={projectMetadata.contact}
         assignedUser={projectMetadata.assignedUser || undefined}
         users={projectMetadata.users}

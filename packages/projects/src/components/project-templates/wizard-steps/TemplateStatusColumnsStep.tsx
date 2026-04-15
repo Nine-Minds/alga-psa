@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Plus, Trash2, GripVertical, Circle } from 'lucide-react';
 import type { TemplateStatusMapping, TemplateWizardData } from '../../../types/templateWizard';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -11,6 +11,12 @@ import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
 import type { IStatus } from '@alga-psa/types';
 import { createTenantProjectStatus } from '../../../actions/projectTaskStatusActions';
+import {
+  getEffectiveTemplateStatusMappings,
+  getTemplateDefaultStatusMappings,
+  getTemplatePhaseStatusMappings,
+  TEMPLATE_DEFAULT_SCOPE,
+} from '../../../lib/templateStatusMappingUtils';
 
 interface TemplateStatusColumnsStepProps {
   data: TemplateWizardData;
@@ -27,303 +33,414 @@ export function TemplateStatusColumnsStep({
   isLoadingStatuses,
   onStatusCreated,
 }: TemplateStatusColumnsStepProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [showQuickAddStatus, setShowQuickAddStatus] = useState(false);
+  const [selectedScope, setSelectedScope] = useState<string>(TEMPLATE_DEFAULT_SCOPE);
 
-  console.log('[TemplateStatusColumnsStep] availableStatuses:', availableStatuses);
-  console.log('[TemplateStatusColumnsStep] availableStatuses.length:', availableStatuses.length);
-  console.log('[TemplateStatusColumnsStep] isLoadingStatuses:', isLoadingStatuses);
+  const selectedPhaseTempId = selectedScope === TEMPLATE_DEFAULT_SCOPE ? null : selectedScope;
+  const defaultStatusMappings = useMemo(
+    () => getTemplateDefaultStatusMappings(data.status_mappings),
+    [data.status_mappings]
+  );
+  const phaseStatusMappings = useMemo(
+    () => getTemplatePhaseStatusMappings(data.status_mappings, selectedPhaseTempId),
+    [data.status_mappings, selectedPhaseTempId]
+  );
+  const sortedMappings = useMemo(
+    () => getEffectiveTemplateStatusMappings(data.status_mappings, selectedPhaseTempId),
+    [data.status_mappings, selectedPhaseTempId]
+  );
+  const hasPhaseSpecificStatuses = selectedPhaseTempId !== null && phaseStatusMappings.length > 0;
+  const isUsingTemplateDefaults = selectedPhaseTempId !== null && !hasPhaseSpecificStatuses;
+  const editableMappings = hasPhaseSpecificStatuses || selectedPhaseTempId === null;
 
-  // Get IDs of statuses already selected in the template
-  const selectedStatusIds = new Set(
-    data.status_mappings
-      .filter(m => m.status_id)
-      .map(m => m.status_id)
+  const scopeSelectedStatusIds = new Set(
+    (hasPhaseSpecificStatuses ? phaseStatusMappings : defaultStatusMappings)
+      .filter((mapping) => mapping.status_id)
+      .map((mapping) => mapping.status_id as string)
   );
 
-  // Filter out already-selected statuses from dropdown options
-  const getAvailableOptionsForMapping = (currentMappingStatusId?: string) => {
-    return availableStatuses.filter(status => {
-      // Always include the currently selected status for this mapping
-      if (status.status_id === currentMappingStatusId) return true;
-      // Exclude statuses that are already selected in other mappings
-      return !selectedStatusIds.has(status.status_id);
+  const getStatusColor = (mapping: TemplateStatusMapping): string => {
+    if (mapping.status_id) {
+      const status = availableStatuses.find((candidate) => candidate.status_id === mapping.status_id);
+      return status?.color || mapping.custom_status_color || '#6B7280';
+    }
+
+    return mapping.custom_status_color || '#6B7280';
+  };
+
+  const replaceScopedMappings = (nextScopedMappings: TemplateStatusMapping[]) => {
+    const otherMappings = data.status_mappings.filter((mapping) =>
+      selectedPhaseTempId
+        ? mapping.template_phase_id !== selectedPhaseTempId
+        : !!mapping.template_phase_id
+    );
+
+    updateData({
+      status_mappings: [...otherMappings, ...nextScopedMappings],
     });
   };
 
+  const clearTasksUsingMappings = (mappingIds: string[], phaseTempId?: string | null) => {
+    if (mappingIds.length === 0) {
+      return;
+    }
+
+    updateData({
+      tasks: data.tasks.map((task) => {
+        const isTargetPhase = phaseTempId ? task.phase_temp_id === phaseTempId : true;
+        if (!isTargetPhase || !task.template_status_mapping_id || !mappingIds.includes(task.template_status_mapping_id)) {
+          return task;
+        }
+
+        return {
+          ...task,
+          template_status_mapping_id: undefined,
+        };
+      }),
+    });
+  };
+
+  const getAvailableOptionsForMapping = (currentMappingStatusId?: string) =>
+    availableStatuses.filter((status) => {
+      if (status.status_id === currentMappingStatusId) {
+        return true;
+      }
+
+      return !scopeSelectedStatusIds.has(status.status_id);
+    });
+
   const addStatusMapping = (statusId?: string) => {
-    const status = statusId ? availableStatuses.find(s => s.status_id === statusId) : null;
+    if (!editableMappings) {
+      return;
+    }
+
+    const scopedMappings = hasPhaseSpecificStatuses ? phaseStatusMappings : defaultStatusMappings;
+    const status = statusId ? availableStatuses.find((candidate) => candidate.status_id === statusId) : null;
 
     const newMapping: TemplateStatusMapping = {
-      temp_id: `temp_${Date.now()}`,
+      temp_id: `temp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      template_phase_id: selectedPhaseTempId || undefined,
       status_id: statusId || '',
       custom_status_name: '',
       custom_status_color: status?.color || '#6B7280',
-      display_order: data.status_mappings.length,
+      display_order: scopedMappings.length,
     };
-    updateData({
-      status_mappings: [...data.status_mappings, newMapping],
-    });
+
+    replaceScopedMappings([...scopedMappings, newMapping]);
   };
 
-  const removeStatusMapping = (index: number) => {
-    const updated = data.status_mappings.filter((_, i) => i !== index);
-    // Reorder display_order
-    updated.forEach((mapping, i) => {
-      mapping.display_order = i;
-    });
-    updateData({ status_mappings: updated });
-  };
-
-  const updateStatusMapping = (index: number, updates: Partial<TemplateStatusMapping>) => {
-    const updated = [...data.status_mappings];
-    updated[index] = { ...updated[index], ...updates };
-
-    // If selecting a status from dropdown, also update the color
-    if (updates.status_id) {
-      const status = availableStatuses.find(s => s.status_id === updates.status_id);
-      if (status?.color) {
-        updated[index].custom_status_color = status.color;
-      }
+  const copyDefaultsToPhase = () => {
+    if (!selectedPhaseTempId || hasPhaseSpecificStatuses) {
+      return;
     }
 
-    updateData({ status_mappings: updated });
+    const copiedMappings = defaultStatusMappings.map((mapping, index) => ({
+      ...mapping,
+      temp_id: `temp_${Date.now()}_${index}_${Math.random().toString(36).slice(2, 7)}`,
+      template_phase_id: selectedPhaseTempId,
+      display_order: index,
+    }));
+
+    replaceScopedMappings(copiedMappings);
+  };
+
+  const resetPhaseToDefaults = () => {
+    if (!selectedPhaseTempId) {
+      return;
+    }
+
+    const removedMappingIds = phaseStatusMappings.map((mapping) => mapping.temp_id);
+    replaceScopedMappings([]);
+    clearTasksUsingMappings(removedMappingIds, selectedPhaseTempId);
+  };
+
+  const removeStatusMapping = (mappingId: string) => {
+    const scopedMappings = (hasPhaseSpecificStatuses ? phaseStatusMappings : defaultStatusMappings)
+      .filter((mapping) => mapping.temp_id !== mappingId)
+      .map((mapping, index) => ({
+        ...mapping,
+        display_order: index,
+      }));
+
+    replaceScopedMappings(scopedMappings);
+    clearTasksUsingMappings([mappingId], selectedPhaseTempId);
+  };
+
+  const updateStatusMapping = (mappingId: string, updates: Partial<TemplateStatusMapping>) => {
+    const scopedMappings = (hasPhaseSpecificStatuses ? phaseStatusMappings : defaultStatusMappings).map((mapping) => {
+      if (mapping.temp_id !== mappingId) {
+        return mapping;
+      }
+
+      const nextMapping = { ...mapping, ...updates };
+      if (updates.status_id) {
+        const status = availableStatuses.find((candidate) => candidate.status_id === updates.status_id);
+        if (status?.color) {
+          nextMapping.custom_status_color = status.color;
+        }
+      }
+
+      return nextMapping;
+    });
+
+    replaceScopedMappings(scopedMappings);
   };
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
   };
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
+  const handleDragOver = (e: React.DragEvent, targetIndex: number) => {
     e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index) return;
+    if (!editableMappings || draggedIndex === null || draggedIndex === targetIndex) {
+      return;
+    }
 
-    const items = [...data.status_mappings];
+    const items = [...sortedMappings];
     const draggedItem = items[draggedIndex];
     items.splice(draggedIndex, 1);
-    items.splice(index, 0, draggedItem);
+    items.splice(targetIndex, 0, draggedItem);
 
-    // Update display_order
-    items.forEach((item, i) => {
-      item.display_order = i;
-    });
-
-    updateData({ status_mappings: items });
-    setDraggedIndex(index);
+    replaceScopedMappings(
+      items.map((item, index) => ({
+        ...item,
+        display_order: index,
+      }))
+    );
+    setDraggedIndex(targetIndex);
   };
 
   const handleDragEnd = () => {
     setDraggedIndex(null);
   };
 
-  const getStatusColor = (mapping: TemplateStatusMapping): string => {
-    if (mapping.status_id) {
-      const status = availableStatuses.find(s => s.status_id === mapping.status_id);
-      return status?.color || mapping.custom_status_color || '#6B7280';
-    }
-    return mapping.custom_status_color || '#6B7280';
-  };
-
   const handleNewStatusCreated = (newStatus: IStatus) => {
-    // Notify parent to refresh the available statuses list
     onStatusCreated?.(newStatus);
-
-    // Add the new status to the template mappings
-    addStatusMapping(newStatus.status_id);
+    if (editableMappings) {
+      addStatusMapping(newStatus.status_id);
+    }
   };
 
-  // Check if all available statuses are already selected
-  const allStatusesSelected = availableStatuses.length > 0 &&
-    availableStatuses.every(s => selectedStatusIds.has(s.status_id));
+  const selectedScopeLabel = selectedPhaseTempId
+    ? data.phases.find((phase) => phase.temp_id === selectedPhaseTempId)?.phase_name || 'Phase'
+    : t('templates.statuses.template_defaults');
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold">Status Columns</h3>
-        <p className="text-sm text-gray-600">
-          Define the status columns that will appear on your project board. These represent
-          the workflow stages for tasks (e.g., To Do, In Progress, Done).
+        <h3 className="text-lg font-semibold">{t('settings.statuses.project.title')}</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          {t('templates.statuses.manage_description')}
         </p>
       </div>
 
+      {data.phases.length > 0 && (
+      <div className="space-y-2">
+        <Label>{t('settings.statuses.scope_label')}</Label>
+        <CustomSelect
+          value={selectedScope}
+          onValueChange={setSelectedScope}
+          options={[
+            { value: TEMPLATE_DEFAULT_SCOPE, label: t('templates.statuses.template_defaults') },
+            ...data.phases
+              .sort((a, b) => a.order_number - b.order_number)
+              .map((phase) => ({
+                value: phase.temp_id,
+                label: phase.phase_name,
+              })),
+          ]}
+        />
+      </div>
+      )}
+
+      {selectedPhaseTempId && (
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <Button
+              variant={isUsingTemplateDefaults ? 'default' : 'outline'}
+              size="sm"
+              onClick={resetPhaseToDefaults}
+              disabled={isUsingTemplateDefaults}
+              id="wizard-use-default-statuses"
+            >
+              {t('settings.statuses.use_project_defaults')}
+            </Button>
+            <Button
+              variant={!isUsingTemplateDefaults ? 'default' : 'outline'}
+              size="sm"
+              onClick={copyDefaultsToPhase}
+              disabled={hasPhaseSpecificStatuses || defaultStatusMappings.length === 0}
+              id="wizard-copy-default-statuses"
+            >
+              {t('settings.statuses.custom_statuses')}
+            </Button>
+          </div>
+          {isUsingTemplateDefaults && (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {t('settings.statuses.phase_uses_defaults')}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="space-y-3">
-        {data.status_mappings.length === 0 ? (
+        {sortedMappings.length === 0 ? (
           <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
             <Circle className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-            <p className="text-gray-600 mb-4">No status columns added yet</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">{t('templates.statuses.empty')}</p>
             <div className="flex justify-center gap-2">
               {availableStatuses.length > 0 ? (
                 <CustomSelect
                   value=""
                   onValueChange={(value) => {
-                    if (value) addStatusMapping(value);
+                    if (value) {
+                      addStatusMapping(value);
+                    }
                   }}
                   options={[
-                    { value: '', label: 'Select a status to add...' },
-                    ...availableStatuses.map((s) => ({
-                      value: s.status_id,
-                      label: `${s.name}${s.is_closed ? ' (Closed)' : ''}`,
+                    { value: '', label: t('templates.statuses.select_placeholder') },
+                    ...availableStatuses.map((status) => ({
+                      value: status.status_id,
+                      label: `${status.name}${status.is_closed ? ` (${t('settings.statuses.closed')})` : ''}`,
                     })),
                   ]}
-                  disabled={isLoadingStatuses}
+                  disabled={isLoadingStatuses || !editableMappings}
                   className="w-64"
                 />
               ) : (
-                <p className="text-sm text-gray-500">No statuses available</p>
+                <p className="text-sm text-gray-500">{t('templates.statuses.all_in_use')}</p>
               )}
               <Button
                 id="add-new-status-empty"
                 variant="outline"
                 onClick={() => setShowQuickAddStatus(true)}
+                disabled={!editableMappings}
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Create New
+                {t('templates.statuses.create_new')}
               </Button>
             </div>
           </div>
         ) : (
           <>
-            {data.status_mappings
-              .sort((a, b) => a.display_order - b.display_order)
-              .map((mapping, index) => {
-                const availableOptions = getAvailableOptionsForMapping(mapping.status_id);
+            {sortedMappings.map((mapping, index) => {
+              const availableOptions = getAvailableOptionsForMapping(mapping.status_id);
 
-                return (
-                  <div
-                    key={mapping.temp_id}
-                    draggable
-                    onDragStart={() => handleDragStart(index)}
-                    onDragOver={(e) => handleDragOver(e, index)}
-                    onDragEnd={handleDragEnd}
-                    className={`flex items-center gap-3 p-4 bg-white border rounded-lg ${
-                      draggedIndex === index ? 'opacity-50' : ''
-                    }`}
-                  >
-                    <div className="cursor-move">
-                      <GripVertical className="w-5 h-5 text-gray-400" />
-                    </div>
+              return (
+                <div
+                  key={mapping.temp_id}
+                  draggable={editableMappings}
+                  onDragStart={() => editableMappings && handleDragStart(index)}
+                  onDragOver={(e) => editableMappings && handleDragOver(e, index)}
+                  onDragEnd={editableMappings ? handleDragEnd : undefined}
+                  className={`flex items-center gap-3 p-4 bg-white border rounded-lg ${
+                    draggedIndex === index ? 'opacity-50' : ''
+                  }`}
+                >
+                  <div className={`cursor-move ${!editableMappings ? 'opacity-40' : ''}`}>
+                    <GripVertical className="w-5 h-5 text-gray-400" />
+                  </div>
 
-                    <div className="flex items-center gap-2">
-                      {/* Only show color picker for new statuses (no status_id selected) */}
-                      {!mapping.status_id ? (
-                        <ColorPicker
-                          currentBackgroundColor={getStatusColor(mapping)}
-                          currentTextColor={null}
-                          onSave={(backgroundColor) =>
-                            updateStatusMapping(index, { custom_status_color: backgroundColor || '#6B7280' })
-                          }
-                          showTextColor={false}
-                          previewType="circle"
-                          colorMode="solid"
-                          trigger={
-                            <Button
-                              id={`color-picker-trigger-${index}`}
-                              variant="ghost"
-                              size="sm"
-                              className="p-0 hover:opacity-80 transition-opacity"
-                              title="Click to change color"
-                            >
-                              <Circle
-                                className="w-6 h-6"
-                                fill={getStatusColor(mapping)}
-                                stroke={getStatusColor(mapping)}
-                              />
-                            </Button>
-                          }
-                        />
-                      ) : (
-                        /* For existing statuses, just display the color without editing */
-                        <Circle
-                          className="w-6 h-6"
-                          fill={getStatusColor(mapping)}
-                          stroke={getStatusColor(mapping)}
-                        />
-                      )}
-                      <span className="font-medium text-gray-500 w-6">{index + 1}.</span>
-                    </div>
-
-                    <div className="flex-1">
-                      <Label className="text-xs text-gray-500 mb-1 block">Task Status</Label>
-                      <CustomSelect
-                        value={mapping.status_id || ''}
-                        onValueChange={(value) =>
-                          updateStatusMapping(index, {
-                            status_id: value,
-                            custom_status_name: ''
+                  <div className="flex items-center gap-2">
+                    {!mapping.status_id ? (
+                      <ColorPicker
+                        currentBackgroundColor={getStatusColor(mapping)}
+                        currentTextColor={null}
+                        onSave={(backgroundColor) =>
+                          updateStatusMapping(mapping.temp_id, {
+                            custom_status_color: backgroundColor || '#6B7280',
                           })
                         }
-                        options={[
-                          { value: '', label: 'Select a status...' },
-                          ...availableOptions.map((s) => ({
-                            value: s.status_id,
-                            label: `${s.name}${s.is_closed ? ' (Closed)' : ''}`,
-                          })),
-                        ]}
-                        disabled={isLoadingStatuses}
+                        showTextColor={false}
+                        previewType="circle"
+                        colorMode="solid"
+                        trigger={
+                          <Button
+                            id={`color-picker-trigger-${index}`}
+                            variant="ghost"
+                            size="sm"
+                            className="p-0 hover:opacity-80 transition-opacity"
+                            title="Click to change color"
+                            disabled={!editableMappings}
+                          >
+                            <Circle
+                              className="w-6 h-6"
+                              fill={getStatusColor(mapping)}
+                              stroke={getStatusColor(mapping)}
+                            />
+                          </Button>
+                        }
                       />
-                    </div>
-
-                    <Button
-                      id={`remove-status-${index}`}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeStatusMapping(index)}
-                      title="Remove status column"
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+                    ) : (
+                      <Circle
+                        className="w-6 h-6"
+                        fill={getStatusColor(mapping)}
+                        stroke={getStatusColor(mapping)}
+                      />
+                    )}
+                    <span className="font-medium text-gray-500 w-6">{index + 1}.</span>
                   </div>
-                );
-              })}
 
-            {/* Add Status Row */}
-            <div className="flex gap-2">
-              {!allStatusesSelected && availableStatuses.length > 0 && (
-                <CustomSelect
-                  value=""
-                  onValueChange={(value) => {
-                    if (value) addStatusMapping(value);
-                  }}
-                  options={[
-                    { value: '', label: 'Add existing status...' },
-                    ...availableStatuses
-                      .filter(s => !selectedStatusIds.has(s.status_id))
-                      .map((s) => ({
-                        value: s.status_id,
-                        label: `${s.name}${s.is_closed ? ' (Closed)' : ''}`,
-                      })),
-                  ]}
-                  disabled={isLoadingStatuses}
-                  className="flex-1"
-                />
-              )}
+                  <div className="flex-1">
+                    <Label className="text-xs text-gray-500 mb-1 block">Task Status</Label>
+                    <CustomSelect
+                      value={mapping.status_id || ''}
+                      onValueChange={(value) =>
+                        updateStatusMapping(mapping.temp_id, {
+                          status_id: value,
+                          custom_status_name: '',
+                        })
+                      }
+                      options={[
+                        { value: '', label: t('templates.statuses.select_placeholder') },
+                        ...availableOptions.map((status) => ({
+                          value: status.status_id,
+                          label: `${status.name}${status.is_closed ? ` (${t('settings.statuses.closed')})` : ''}`,
+                        })),
+                      ]}
+                      disabled={isLoadingStatuses || !editableMappings}
+                    />
+                  </div>
+
+                  <Button
+                    id={`remove-status-mapping-${index}`}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeStatusMapping(mapping.temp_id)}
+                    disabled={!editableMappings || sortedMappings.length === 1}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              );
+            })}
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                id="add-existing-status"
+                variant="outline"
+                onClick={() => addStatusMapping()}
+                disabled={isLoadingStatuses || !editableMappings}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {t('templates.statuses.add_title')}
+              </Button>
               <Button
                 id="add-new-status"
                 variant="outline"
                 onClick={() => setShowQuickAddStatus(true)}
-                className={allStatusesSelected ? 'w-full' : ''}
+                disabled={!editableMappings}
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Create New Status
+                {t('templates.statuses.create_new')}
               </Button>
             </div>
           </>
         )}
       </div>
 
-      <Alert variant="info">
-        <AlertTitle>How it works</AlertTitle>
-        <AlertDescription>
-          <ul className="space-y-1">
-            <li>Select existing statuses from your tenant's status library</li>
-            <li>Click "Create New Status" to add a new status to your library</li>
-            <li>Drag to reorder columns as they should appear on the board (left to right)</li>
-            <li>Each status can only be used once per template</li>
-          </ul>
-        </AlertDescription>
-      </Alert>
-
-      {/* Quick Add Status Dialog */}
       <QuickAddStatus
         open={showQuickAddStatus}
         onOpenChange={setShowQuickAddStatus}

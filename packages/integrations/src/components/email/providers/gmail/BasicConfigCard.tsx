@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface Props {
   form: any; // react-hook-form UseFormReturn of either CE or EE types
@@ -14,6 +15,8 @@ interface Props {
 }
 
 export function BasicConfigCard({ form, hasAttemptedSubmit, title, description }: Props) {
+  const { t } = useTranslation('msp/email-providers');
+
   return (
     <Card>
       <CardHeader>
@@ -23,11 +26,15 @@ export function BasicConfigCard({ form, hasAttemptedSubmit, title, description }
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="providerName">Provider Name *</Label>
+            <Label htmlFor="providerName">{t('forms.gmail.basic.providerNameLabel', {
+              defaultValue: 'Provider Name *',
+            })}</Label>
             <Input
               id="providerName"
               {...form.register('providerName')}
-              placeholder="e.g., Support Gmail"
+              placeholder={t('forms.gmail.basic.providerNamePlaceholder', {
+                defaultValue: 'e.g., Support Gmail',
+              })}
               className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-red-500' : ''}
             />
             {form.formState.errors.providerName && (
@@ -36,12 +43,16 @@ export function BasicConfigCard({ form, hasAttemptedSubmit, title, description }
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="mailbox">Gmail Address *</Label>
+            <Label htmlFor="mailbox">{t('forms.gmail.basic.mailboxLabel', {
+              defaultValue: 'Gmail Address *',
+            })}</Label>
             <Input
               id="mailbox"
               type="email"
               {...form.register('mailbox')}
-              placeholder="support@client.com"
+              placeholder={t('forms.gmail.basic.mailboxPlaceholder', {
+                defaultValue: 'support@client.com',
+              })}
               className={hasAttemptedSubmit && form.formState.errors.mailbox ? 'border-red-500' : ''}
             />
             {form.formState.errors.mailbox && (
@@ -56,10 +67,11 @@ export function BasicConfigCard({ form, hasAttemptedSubmit, title, description }
             checked={form.watch('isActive')}
             onCheckedChange={(checked: boolean) => form.setValue('isActive', checked)}
           />
-          <Label htmlFor="isActive">Enable this provider</Label>
+          <Label htmlFor="isActive">{t('forms.gmail.basic.enableProvider', {
+            defaultValue: 'Enable this provider',
+          })}</Label>
         </div>
       </CardContent>
     </Card>
   );
 }
-

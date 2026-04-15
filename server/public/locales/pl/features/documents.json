@@ -211,5 +211,15 @@
     "feedbackThanks": "Dziękujemy za opinię!",
     "feedbackError": "Nie udało się przesłać opinii",
     "filterByTags": "Filtruj po tagach..."
+  },
+  "visibility": {
+    "cascadeTitle": "Zaktualizuj widoczność dokumentów",
+    "cascadeMakeVisible": "Czy chcesz również udostępnić {{count}} dokument(ów) w \"{{name}}\" w portalu klienta?",
+    "cascadeMakeHidden": "Czy chcesz również ukryć {{count}} dokument(ów) w \"{{name}}\" w portalu klienta?",
+    "cascadeYes": "Tak, zaktualizuj dokumenty",
+    "cascadeNo": "Nie, tylko folder"
+  },
+  "empty": {
+    "default": "Nie znaleziono dokumentów"
   }
 }

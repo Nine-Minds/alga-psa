@@ -1,0 +1,259 @@
+{
+  "common": {
+    "actions": {
+      "save": "Instellingen opslaan",
+      "saving": "Bezig met opslaan...",
+      "reset": "Opnieuw instellen",
+      "refresh": "Vernieuwen",
+      "close": "Sluiten",
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "deleting": "Bezig met verwijderen…",
+      "verify": "Verifiëren"
+    },
+    "states": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "loading": "Laden..."
+    }
+  },
+  "telemetry": {
+    "loading": {
+      "title": "Telemetrie-instellingen van de organisatie",
+      "description": "Laden..."
+    },
+    "empty": {
+      "title": "Telemetrie-instellingen van de organisatie",
+      "description": "Fout bij het laden van de instellingen",
+      "body": "Kan telemetrie-instellingen niet laden"
+    },
+    "page": {
+      "title": "Telemetrie en analyses van de organisatie",
+      "description": "Configureer telemetrie-instellingen voor uw hele organisatie. Telemetrie is standaard ingeschakeld om het platform te verbeteren, maar gebruikers kunnen zich individueel afmelden tenzij u deze optie uitschakelt."
+    },
+    "toggles": {
+      "enableTelemetry": {
+        "title": "Telemetrie inschakelen",
+        "description": "Verzamel anonieme gebruiksgegevens om het platform te verbeteren (standaard ingeschakeld)"
+      },
+      "allowUserOptOut": {
+        "title": "Afmelden door gebruiker toestaan",
+        "description": "Individuele gebruikers toestaan zich af te melden voor telemetrieverzameling"
+      }
+    },
+    "alerts": {
+      "enabled": "✓ Telemetrie ingeschakeld. Alle categorieën zijn standaard ingeschakeld voor nieuwe gebruikers, maar zij kunnen zich individueel afmelden als dat gewenst is.",
+      "centralizedControl": "Gecentraliseerde controle: gebruikers kunnen zich niet individueel afmelden. Zorg ervoor dat u voldoet aan lokale privacyregels."
+    },
+    "anonymization": {
+      "title": "Niveau van gegevensanonimisering",
+      "description": "Kies hoeveel gegevens geanonimiseerd moeten worden vóór verzameling",
+      "options": {
+        "none": {
+          "title": "Geen anonimisering",
+          "description": "Gegevens ongewijzigd verzamelen (niet aanbevolen)"
+        },
+        "partial": {
+          "title": "Gedeeltelijke anonimisering",
+          "description": "PII verwijderen, correlatie-ID's behouden"
+        },
+        "full": {
+          "title": "Volledige anonimisering",
+          "description": "Maximale privacy, minimale correlatie"
+        }
+      }
+    },
+    "compliance": {
+      "title": "Nalevingsopmerkingen"
+    },
+    "privacy": {
+      "collectTitle": "Wat we verzamelen",
+      "collectItems": {
+        "errors": "• Foutinformatie (geen gevoelige gegevens)",
+        "performance": "• Prestatiemetrieken (laadtijden van pagina's, reactietijden van API's)",
+        "usage": "• Gebruikspatronen van functies (welke functies worden gebruikt)",
+        "system": "• Systeemmetriek (voor infrastructuuroptimalisatie)"
+      },
+      "excludeTitle": "Wat we NIET verzamelen",
+      "excludeItems": {
+        "personalInfo": "• Persoonlijke informatie (namen, e-mails, adressen)",
+        "clientData": "• Klantgegevens of bedrijfsinformatie",
+        "passwords": "• Wachtwoorden of authenticatietokens",
+        "files": "• Bestands- of documentinhoud"
+      }
+    },
+    "footer": {
+      "lastUpdated": "Laatst bijgewerkt: {{value}}",
+      "updatedBy": " door {{user}}"
+    },
+    "errors": {
+      "loadTenantTelemetrySettings": "Kan telemetrie-instellingen van de organisatie niet laden",
+      "loadSettings": "Kan instellingen niet laden",
+      "saveTelemetrySettings": "Kan telemetrie-instellingen niet opslaan",
+      "saveSettings": "Kan instellingen niet opslaan"
+    }
+  },
+  "email": {
+    "loading": "E-mailinstellingen worden geladen...",
+    "error": "Fout: {{error}}",
+    "tabs": {
+      "inbound": "Inkomende e-mail",
+      "outbound": "Uitgaande e-mail"
+    },
+    "descriptions": {
+      "outbound": "Configureer SMTP- of API-instellingen voor het verzenden van e-mails vanuit uw applicatie",
+      "inbound": "Configureer e-mailproviders om e-mails als tickets te ontvangen en te verwerken"
+    },
+    "providerConfig": {
+      "title": "Configuratie van e-mailprovider",
+      "providerLabel": "E-mailprovider",
+      "options": {
+        "smtp": "SMTP (traditionele e-mailserver)",
+        "resend": "Resend (moderne API-service)"
+      },
+      "placeholder": "Selecteer e-mailprovider",
+      "descriptions": {
+        "smtp": "Configureer traditionele SMTP-e-mailserverinstellingen",
+        "resend": "Configureer de Resend-API voor moderne e-mailbezorging"
+      },
+      "status": {
+        "provider": "{{provider}}-provider"
+      }
+    },
+    "smtp": {
+      "host": {
+        "label": "SMTP-host",
+        "placeholder": "smtp.example.com"
+      },
+      "port": {
+        "label": "Poort",
+        "placeholder": "587"
+      },
+      "username": {
+        "label": "Gebruikersnaam",
+        "placeholder": "uw-email@example.com"
+      },
+      "password": {
+        "label": "Wachtwoord",
+        "placeholder": "Voer wachtwoord in"
+      },
+      "fromAddress": {
+        "label": "Afzenderadres",
+        "placeholder": "noreply@example.com"
+      }
+    },
+    "resend": {
+      "apiKey": {
+        "label": "Resend API-sleutel",
+        "placeholder": "re_xxxxxxxxxxxxxxxxxx",
+        "helpPrefix": "Haal uw API-sleutel op via"
+      },
+      "fromAddress": {
+        "label": "Afzenderadres",
+        "placeholder": "noreply@yourdomain.com",
+        "help": "Moet van een geverifieerd domein komen. Gebruik het tabblad Domeinen om aangepaste domeinen toe te voegen."
+      }
+    },
+    "domains": {
+      "verified": "Geverifieerd",
+      "failed": "Mislukt",
+      "pending": "In behandeling",
+      "requiredDnsRecords": "Vereiste DNS-records:"
+    },
+    "general": {
+      "title": "Algemene instellingen",
+      "trackingEnabled": "E-mailtracking inschakelen",
+      "dailyLimit": "Dagelijkse e-maillimiet"
+    },
+    "errors": {
+      "loadEmailSettings": "Kan e-mailinstellingen niet laden",
+      "saveSettings": "Kan instellingen niet opslaan",
+      "addDomain": "Kan domein niet toevoegen",
+      "verifyDomain": "Kan domein niet verifiëren"
+    }
+  },
+  "microsoft365": {
+    "title": {
+      "microsoft": "Microsoft 365-diagnostiek",
+      "default": "Diagnostiek"
+    },
+    "description": "Voert een live Graph-controle uit (inclusief het maken en verwijderen van abonnementen) om mailbox-, map- en machtigingsproblemen te diagnosticeren.",
+    "note": {
+      "label": "Opmerking:",
+      "body": "De diagnostiek maakt een tijdelijk Microsoft Graph-abonnement en verwijdert dit daarna. Als verwijderen mislukt, moet u het abonnement mogelijk handmatig verwijderen in Microsoft 365."
+    },
+    "labels": {
+      "provider": "Provider:",
+      "mailbox": "Mailbox:",
+      "overall": "Algemeen:",
+      "resource": "Resource: {{resource}}",
+      "recommendations": "Aanbevelingen",
+      "error": "Fout"
+    },
+    "actions": {
+      "copySupportBundle": "Ondersteuningsbundel kopiëren",
+      "copied": "Gekopieerd"
+    },
+    "states": {
+      "running": "Diagnostiek wordt uitgevoerd...",
+      "diagnosticsFailed": "Diagnostiek mislukt"
+    },
+    "statuses": {
+      "pass": "Geslaagd",
+      "warn": "Waarschuwing",
+      "fail": "Mislukt",
+      "skip": "Overgeslagen"
+    }
+  },
+  "inboundDefaults": {
+    "loading": "Standaardwaarden voor tickets worden geladen...",
+    "header": {
+      "title": "Standaardwaarden voor inkomende tickets",
+      "description": "Configureer standaardwaarden voor tickets die via e-mailverwerking worden aangemaakt"
+    },
+    "actions": {
+      "addDefaults": "Standaardwaarden toevoegen"
+    },
+    "form": {
+      "editTitle": "Standaardwaarden voor ticket bewerken",
+      "createTitle": "Standaardwaarden voor ticket maken",
+      "description": "Configureer de standaardwaarden die worden toegepast op tickets die via e-mailverwerking worden aangemaakt"
+    },
+    "empty": {
+      "title": "Geen standaardwaarden voor tickets geconfigureerd",
+      "description": "Maak uw eerste configuratie om standaardwaarden voor via e-mail gegenereerde tickets te definiëren"
+    },
+    "badges": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "fields": {
+      "board": "Board:",
+      "status": "Status:",
+      "priority": "Prioriteit:",
+      "enteredBy": "Ingevoerd door:"
+    },
+    "fallbacks": {
+      "notSet": "Niet ingesteld",
+      "system": "Systeem"
+    },
+    "menu": {
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "deleting": "Bezig met verwijderen…"
+    },
+    "help": {
+      "title": "Hoe het werkt",
+      "items": {
+        "providerReference": "• Elke e-mailprovider kan verwijzen naar één configuratie met standaardwaarden voor tickets",
+        "requiredValues": "• Wanneer een e-mail een ticket aanmaakt, leveren deze standaardwaarden de vereiste veldwaarden",
+        "systemCreator": "• Door het systeem gegenereerde tickets tonen \"Systeem\" als maker wanneer entered_by null is",
+        "scenarios": "• U kunt verschillende standaardwaarden maken voor verschillende e-mailscenario's (support, facturatie, enz.)"
+      }
+    },
+    "errors": {
+      "load": "Kan standaardwaarden voor tickets niet laden",
+      "delete": "Kan standaardwaarden voor tickets niet verwijderen"
+    }
+  }
+}

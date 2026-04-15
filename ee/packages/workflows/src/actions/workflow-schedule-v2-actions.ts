@@ -2,25 +2,24 @@
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
-import type { WorkflowDefinition } from '@shared/workflow/runtime/types';
-import { getSchemaRegistry } from '@shared/workflow/runtime/registries/schemaRegistry';
-import { emailWorkflowPayloadSchema } from '@shared/workflow/runtime/schemas/emailWorkflowSchemas';
+import type { WorkflowDefinition } from '@alga-psa/workflows/runtime';
+import { getSchemaRegistry, emailWorkflowPayloadSchema } from '@alga-psa/workflows/runtime';
 import {
   emptyWorkflowPayloadSchema,
   EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF
-} from '@shared/workflow/runtime/schemas/emptyWorkflowPayloadSchema';
+} from '@alga-psa/workflows/runtime';
 import {
   workflowClockTriggerPayloadSchema,
   WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF
-} from '@shared/workflow/runtime/schemas/workflowClockTriggerSchema';
-import { workflowEventPayloadSchemas } from '@shared/workflow/runtime/schemas/workflowEventPayloadSchemas';
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowDefinitionVersionModelV2, {
-  type WorkflowDefinitionVersionRecord
-} from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import WorkflowScheduleStateModel, {
+} from '@alga-psa/workflows/runtime';
+import { workflowEventPayloadSchemas } from '@alga-psa/workflows/runtime';
+import {
+  WorkflowDefinitionModelV2,
+  WorkflowDefinitionVersionModelV2,
+  WorkflowScheduleStateModel,
+  type WorkflowDefinitionVersionRecord,
   type WorkflowScheduleStateRecord
-} from '@shared/workflow/persistence/workflowScheduleStateModel';
+} from '@alga-psa/workflows/persistence';
 import {
   createExternalWorkflowScheduleState,
   deleteWorkflowScheduleStateById,
@@ -28,6 +27,11 @@ import {
   updateExternalWorkflowScheduleState,
   type DesiredWorkflowSchedule
 } from '../lib/workflowScheduleLifecycle';
+import {
+  computeNextEligibleRecurringFireAt,
+  normalizeWorkflowDayTypeFilter,
+  resolveWorkflowBusinessDaySettings
+} from '../lib/workflowBusinessDayScheduling';
 import {
   CreateWorkflowScheduleInput,
   DeleteWorkflowScheduleInput,
@@ -89,7 +93,6 @@ const throwHttpError = (status: number, message: string): never => {
 
 const validateTimeTriggerTimezone = (timezone: string): boolean => {
   try {
-    // eslint-disable-next-line no-new
     new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(new Date());
     return true;
   } catch {
@@ -188,7 +191,27 @@ const toWorkflowScheduleValidationFailure = (
 const buildDesiredScheduleFromInput = (
   input: CreateWorkflowScheduleInputShape | UpdateWorkflowScheduleInputShape
 ): DesiredWorkflowSchedule | WorkflowScheduleValidationFailure => {
+  const dayTypeFilter = normalizeWorkflowDayTypeFilter(input.dayTypeFilter);
+  const businessHoursScheduleId = dayTypeFilter === 'any'
+    ? null
+    : (typeof input.businessHoursScheduleId === 'string' && input.businessHoursScheduleId.trim().length > 0
+      ? input.businessHoursScheduleId.trim()
+      : null);
+
   if (input.triggerType === 'schedule') {
+    if (dayTypeFilter !== 'any') {
+      return toWorkflowScheduleValidationFailure(
+        'DAY_FILTER_NOT_ALLOWED_FOR_ONE_TIME',
+        'One-time schedules only support "Any day".'
+      );
+    }
+    if (input.businessHoursScheduleId) {
+      return toWorkflowScheduleValidationFailure(
+        'DAY_FILTER_NOT_ALLOWED_FOR_ONE_TIME',
+        'One-time schedules cannot set a business-hours schedule override.'
+      );
+    }
+
     if (!input.runAt || !String(input.runAt).trim()) {
       return toWorkflowScheduleValidationFailure(
         'RUN_AT_REQUIRED',
@@ -212,6 +235,8 @@ const buildDesiredScheduleFromInput = (
     return {
       triggerType: 'schedule',
       workflowVersion: 0,
+      dayTypeFilter,
+      businessHoursScheduleId,
       runAt: runAt.toISOString(),
       enabled: input.enabled,
       status: input.enabled ? 'scheduled' : 'paused'
@@ -233,6 +258,8 @@ const buildDesiredScheduleFromInput = (
   return {
     triggerType: 'recurring',
     workflowVersion: 0,
+    dayTypeFilter,
+    businessHoursScheduleId,
     cron: cron.value,
     timezone: input.timezone,
     enabled: input.enabled,
@@ -313,19 +340,67 @@ const validateSchedulableWorkflow = async (
 
 const enrichScheduleRow = async (
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  tenant: string,
   schedule: WorkflowScheduleStateRecord
 ) => {
   const workflow = await WorkflowDefinitionModelV2.getById(knex, schedule.workflow_id);
+  const dayTypeFilter = normalizeWorkflowDayTypeFilter(schedule.day_type_filter);
+  const resolvedBusinessDaySettings = await resolveWorkflowBusinessDaySettings(knex, {
+    tenantId: tenant,
+    dayTypeFilter,
+    businessHoursScheduleId: schedule.business_hours_schedule_id ?? null
+  });
+  const effectiveResolution = resolvedBusinessDaySettings.ok ? resolvedBusinessDaySettings.value : null;
+
+  const nextEligibleFireAt = (
+    schedule.trigger_type === 'recurring'
+      ? computeNextEligibleRecurringFireAt({
+        cron: schedule.cron ?? '',
+        timezone: schedule.timezone ?? 'UTC',
+        dayTypeFilter,
+        resolution: effectiveResolution,
+        after: new Date()
+      })
+      : null
+  );
+
+  const calendarResolutionError = resolvedBusinessDaySettings.ok === false
+    ? resolvedBusinessDaySettings.issue.message
+    : null;
+
   return {
     ...schedule,
-    workflow_name: workflow?.name ?? null
+    workflow_name: workflow?.name ?? null,
+    effective_business_hours_schedule_id: effectiveResolution?.scheduleId ?? null,
+    effective_business_hours_schedule_name: effectiveResolution?.scheduleName ?? null,
+    business_hours_schedule_source: effectiveResolution?.source ?? null,
+    next_eligible_fire_at: nextEligibleFireAt,
+    calendar_resolution_error: calendarResolutionError
   };
 };
+
+export const listWorkflowScheduleBusinessHoursAction = withAuth(async (user) => {
+  const { knex, tenant } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+  if (!tenant) {
+    return throwHttpError(400, 'Tenant not found');
+  }
+
+  const items = await knex('business_hours_schedules')
+    .where({ tenant })
+    .select('schedule_id', 'schedule_name', 'timezone', 'is_default', 'is_24x7')
+    .orderBy([{ column: 'is_default', order: 'desc' }, { column: 'schedule_name', order: 'asc' }]);
+
+  return { items };
+});
 
 export const listWorkflowSchedulesAction = withAuth(async (user, _ctx, input: unknown) => {
   const parsed = ListWorkflowSchedulesInput.parse(input);
   const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
+  if (!tenant) {
+    return throwHttpError(400, 'Tenant not found');
+  }
 
   const query = knex('tenant_workflow_schedule as tws')
     .leftJoin('workflow_definitions as wd', 'wd.workflow_id', 'tws.workflow_id')
@@ -347,20 +422,26 @@ export const listWorkflowSchedulesAction = withAuth(async (user, _ctx, input: un
   }
 
   const rows = await query.orderBy('tws.updated_at', 'desc').orderBy('tws.id', 'asc');
-  return { items: rows };
+  const items = await Promise.all(
+    rows.map((row) => enrichScheduleRow(knex, tenant, row as WorkflowScheduleStateRecord))
+  );
+  return { items };
 });
 
 export const getWorkflowScheduleAction = withAuth(async (user, _ctx, input: unknown) => {
   const parsed = GetWorkflowScheduleInput.parse(input);
   const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
+  if (!tenant) {
+    return throwHttpError(400, 'Tenant not found');
+  }
 
   const row = await WorkflowScheduleStateModel.getById(knex, parsed.scheduleId);
   if (!row || row.tenant_id !== tenant) {
     return throwHttpError(404, 'Not found');
   }
 
-  return enrichScheduleRow(knex, row);
+  return enrichScheduleRow(knex, tenant, row);
 });
 
 async function mutateWorkflowSchedule(
@@ -372,6 +453,19 @@ async function mutateWorkflowSchedule(
   const desired = buildDesiredScheduleFromInput(input);
   if (isValidationFailure(desired)) {
     return desired;
+  }
+
+  const resolvedBusinessDaySettings = await resolveWorkflowBusinessDaySettings(knex, {
+    tenantId: tenant,
+    dayTypeFilter: desired.dayTypeFilter,
+    businessHoursScheduleId: desired.businessHoursScheduleId ?? null
+  });
+  if (resolvedBusinessDaySettings.ok === false) {
+    const { issue } = resolvedBusinessDaySettings;
+    return toWorkflowScheduleValidationFailure(
+      issue.code,
+      issue.message
+    );
   }
 
   const schedulable = await validateSchedulableWorkflow(knex, input.workflowId, input.payload);

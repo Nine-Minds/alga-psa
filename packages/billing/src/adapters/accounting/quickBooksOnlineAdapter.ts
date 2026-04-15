@@ -1,3 +1,4 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting export adapter - intentionally bridges billing and QuickBooks integration APIs */
 import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 import {
@@ -92,6 +93,17 @@ interface InvoiceDocumentPayload {
 
 export function buildQboPrivateNoteForPurchaseOrder(poNumber: string): string {
   return `PO: ${poNumber}`;
+}
+
+function resolveQboServiceDate(line: AccountingExportAdapterContext['lines'][number]): string | null {
+  if (line.payload?.service_period_source === 'financial_document_fallback') {
+    return null;
+  }
+
+  // QuickBooks line items can carry one service date, not a full service-period range.
+  // For canonical recurring ranges we pin that date to the first covered day; if only one
+  // boundary survives fallback shaping, export whichever boundary remains.
+  return line.service_period_start ?? line.service_period_end ?? null;
 }
 
 export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
@@ -231,7 +243,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           salesDetail.UnitPrice = centsToAmount(charge.unit_price);
         }
 
-        const serviceDate = line.service_period_start ?? line.service_period_end;
+        const serviceDate = resolveQboServiceDate(line);
         if (serviceDate) {
           const formatted = formatDate(serviceDate);
           if (formatted) {

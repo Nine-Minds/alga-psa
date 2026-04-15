@@ -18,15 +18,22 @@ import {
   EmbeddedCheckoutProvider,
   EmbeddedCheckout,
 } from '@stripe/react-stripe-js';
-import { AlertCircle, ShoppingCart, CreditCard, Calendar } from 'lucide-react';
+import { AlertCircle, ShoppingCart, CreditCard, Calendar, ArrowRight } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTier } from 'server/src/context/TierContext';
 
 interface LicensePurchaseFormProps {
   className?: string;
 }
 
 export default function LicensePurchaseForm({ className }: LicensePurchaseFormProps) {
+  const { t } = useTranslation('msp/licensing');
+  const { t: tCommon } = useTranslation('common');
+  const { formatCurrency, formatDate } = useFormatters();
+  const { isSolo, isLoading: isTierLoading } = useTier();
+
   // State
   const [quantity, setQuantity] = useState<number>(1);
   const [pricing, setPricing] = useState<{
@@ -70,7 +77,7 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
         if (pricingResult.success && pricingResult.data) {
           setPricing(pricingResult.data);
         } else {
-          setError(pricingResult.error || 'Failed to load pricing');
+          setError(pricingResult.error || t('subscriptionForm.errors.loadPricing', { defaultValue: 'Failed to load pricing' }));
         }
 
         // Get current license usage
@@ -91,12 +98,36 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
         }
       } catch (err) {
         console.error('Error loading data:', err);
-        setError('Failed to load license information');
+        setError(t('subscriptionForm.errors.loadLicenseInformation', { defaultValue: 'Failed to load license information' }));
       }
     };
 
     loadData();
-  }, []);
+  }, [t]);
+
+  const getLicenseLabel = (count: number) =>
+    t(count === 1 ? 'shared.licenseSingular' : 'shared.licensePlural', {
+      defaultValue: count === 1 ? 'license' : 'licenses',
+    });
+
+  const getIntervalLabel = (interval?: string) => {
+    switch ((interval || '').toLowerCase()) {
+      case 'year':
+        return t('shared.intervals.year', { defaultValue: 'year' });
+      case 'month':
+      default:
+        return t('shared.intervals.month', { defaultValue: 'month' });
+    }
+  };
+
+  const getPerIntervalText = (amount: number, currency: string | undefined, interval?: string) =>
+    t('shared.perInterval', {
+      defaultValue: '{{amount}}/{{interval}}',
+      amount: formatCurrency(amount, (currency || 'USD').toUpperCase()),
+      interval: getIntervalLabel(interval),
+    });
+
+  const getNoneLabel = () => t('shared.none', { defaultValue: 'None' });
 
   // Calculate total price
   const totalPrice = pricing ? (pricing.unitAmount * quantity) / 100 : 0;
@@ -140,7 +171,13 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
       }
     } catch (err) {
       console.error('Error preparing confirmation:', err);
-      setError(err instanceof Error ? err.message : 'Failed to prepare license update');
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('subscriptionForm.errors.prepareUpdate', {
+              defaultValue: 'Failed to prepare license update',
+            })
+      );
       setLoading(false);
     }
   };
@@ -155,7 +192,12 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
       const result = await createLicenseCheckoutSessionAction(quantity);
 
       if (!result.success || !result.data) {
-        throw new Error(result.error || 'Failed to process license update');
+        throw new Error(
+          result.error
+          || t('subscriptionForm.errors.processUpdate', {
+            defaultValue: 'Failed to process license update',
+          })
+        );
       }
 
       if (result.data.type === 'updated') {
@@ -174,7 +216,11 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
       const { clientSecret, publishableKey } = result.data;
 
       if (!clientSecret || !publishableKey) {
-        throw new Error('Missing checkout session data');
+        throw new Error(
+          t('subscriptionForm.errors.missingCheckoutSessionData', {
+            defaultValue: 'Missing checkout session data',
+          })
+        );
       }
 
       // Initialize Stripe
@@ -186,7 +232,13 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
       setConfirmLoading(false);
     } catch (err) {
       console.error('Error processing license update:', err);
-      setError(err instanceof Error ? err.message : 'Failed to process license update');
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('subscriptionForm.errors.processUpdate', {
+              defaultValue: 'Failed to process license update',
+            })
+      );
       setConfirmLoading(false);
       setLoading(false);
     }
@@ -198,17 +250,27 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
       <div className={className}>
         <Card>
           <CardHeader>
-            <CardTitle>Complete Your Purchase</CardTitle>
+            <CardTitle>
+              {t('subscriptionForm.checkout.title', { defaultValue: 'Complete Your Purchase' })}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="mb-4">
               <p className="text-sm text-gray-600">
-                You are purchasing <strong>{quantity}</strong> license{quantity > 1 ? 's' : ''} at{' '}
-                <strong>${pricing ? (pricing.unitAmount / 100).toFixed(2) : '0.00'}</strong> per license per{' '}
-                {pricing?.interval || 'month'}.
+                {t('subscriptionForm.checkout.summary', {
+                  defaultValue: 'You are purchasing {{quantity}} {{licenseLabel}} at {{price}} per license per {{interval}}.',
+                  quantity,
+                  licenseLabel: getLicenseLabel(quantity),
+                  price: formatCurrency(pricing ? pricing.unitAmount / 100 : 0, (pricing?.currency || 'USD').toUpperCase()),
+                  interval: getIntervalLabel(pricing?.interval),
+                })}
               </p>
               <p className="text-lg font-semibold mt-2">
-                Total: ${totalPrice.toFixed(2)}/{pricing?.interval || 'month'}
+                {t('subscriptionForm.checkout.total', {
+                  defaultValue: 'Total: {{total}}/{{interval}}',
+                  total: formatCurrency(totalPrice, (pricing?.currency || 'USD').toUpperCase()),
+                  interval: getIntervalLabel(pricing?.interval),
+                })}
               </p>
             </div>
 
@@ -226,9 +288,56 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
                   setLoading(false);
                 }}
               >
-                Cancel
+                {t('subscriptionForm.checkout.cancel', { defaultValue: 'Cancel' })}
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Solo plans are single-seat by design and have no per-user pricing — buying
+  // additional licenses requires upgrading to Pro. Redirect the user to the
+  // account management screen where the upgrade flow lives.
+  if (!isTierLoading && isSolo) {
+    return (
+      <div className={className}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              {t('subscriptionForm.title', { defaultValue: 'Manage License Subscription' })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert variant="info" className="mb-4">
+              <AlertDescription>
+                <p className="text-sm font-medium mb-1">
+                  {t('subscriptionForm.solo.title', {
+                    defaultValue: 'Solo includes one user',
+                  })}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {t('subscriptionForm.solo.description', {
+                    defaultValue:
+                      'The Solo plan is designed for a single user and does not support adding licenses. Upgrade to Pro to add more users to your team.',
+                  })}
+                </p>
+              </AlertDescription>
+            </Alert>
+            <Button
+              id="upgrade-to-pro-button"
+              className="w-full"
+              onClick={() => {
+                window.location.href = '/msp/settings?tab=account';
+              }}
+            >
+              {t('subscriptionForm.solo.upgradeCta', {
+                defaultValue: 'Upgrade to Pro',
+              })}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -259,46 +368,102 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
 
     console.log('[renderConfirmationModal] Rendering Dialog component');
 
+    const footer = (
+      <div className="flex justify-end space-x-2">
+        <Button
+          id="cancel-confirmation-button"
+          variant="outline"
+          onClick={() => {
+            setShowConfirmModal(false);
+            setLoading(false);
+          }}
+          disabled={confirmLoading}
+        >
+          {t('subscriptionForm.confirmation.cancel', { defaultValue: 'Cancel' })}
+        </Button>
+        <Button
+          id="confirm-license-update-button"
+          onClick={processLicenseUpdate}
+          disabled={confirmLoading}
+        >
+          {confirmLoading
+            ? tCommon('status.processing', { defaultValue: 'Processing...' })
+            : isIncrease
+              ? t('subscriptionForm.confirmation.confirmPayNow', { defaultValue: 'Confirm & Pay Now' })
+              : t('subscriptionForm.confirmation.confirmSchedule', { defaultValue: 'Confirm Schedule' })}
+        </Button>
+      </div>
+    );
+
     return (
       <Dialog
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
-        title="Confirm License Update"
+        title={t('subscriptionForm.confirmation.title', { defaultValue: 'Confirm License Update' })}
+        footer={footer}
       >
           <p className="text-sm text-gray-600 mb-4">
             {isIncrease
-              ? 'Review the details of your license increase before confirming.'
-              : 'Review the details of your license decrease. Changes will take effect at the end of your billing period.'}
+              ? t('subscriptionForm.confirmation.increaseDescription', {
+                  defaultValue: 'Review the details of your license increase before confirming.',
+                })
+              : t('subscriptionForm.confirmation.decreaseDescription', {
+                  defaultValue: 'Review the details of your license decrease. Changes will take effect at the end of your billing period.',
+                })}
           </p>
 
           <div className="space-y-4">
             {/* Cost Breakdown */}
             <div className="rounded-lg border p-4 bg-muted/50 space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Current Monthly Cost</span>
-                <span className="font-semibold">${currentMonthlyCost.toFixed(2)}/month</span>
+                <span className="text-sm text-muted-foreground">
+                  {t('subscriptionForm.confirmation.currentMonthlyCost', { defaultValue: 'Current Monthly Cost' })}
+                </span>
+                <span className="font-semibold">
+                  {getPerIntervalText(currentMonthlyCost, pricing?.currency, pricing?.interval)}
+                </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Current License Count</span>
-                <span className="font-semibold">{invoicePreview.currentQuantity} licenses</span>
+                <span className="text-sm text-muted-foreground">
+                  {t('subscriptionForm.confirmation.currentLicenseCount', { defaultValue: 'Current License Count' })}
+                </span>
+                <span className="font-semibold">
+                  {t('shared.licenseCount', {
+                    defaultValue: '{{count}} {{licenseLabel}}',
+                    count: invoicePreview.currentQuantity,
+                    licenseLabel: getLicenseLabel(invoicePreview.currentQuantity),
+                  })}
+                </span>
               </div>
               <div className="border-t pt-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">New Monthly Cost</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t('subscriptionForm.confirmation.newMonthlyCost', { defaultValue: 'New Monthly Cost' })}
+                  </span>
                   <span className="text-lg font-bold" style={{ color: isIncrease ? 'rgb(var(--color-primary-600))' : 'rgb(var(--color-secondary-600))' }}>
-                    ${newMonthlyCost.toFixed(2)}/month
+                    {getPerIntervalText(newMonthlyCost, pricing?.currency, pricing?.interval)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center mt-2">
-                  <span className="text-sm text-muted-foreground">New License Count</span>
-                  <span className="font-semibold">{invoicePreview.newQuantity} licenses</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t('subscriptionForm.confirmation.newLicenseCount', { defaultValue: 'New License Count' })}
+                  </span>
+                  <span className="font-semibold">
+                    {t('shared.licenseCount', {
+                      defaultValue: '{{count}} {{licenseLabel}}',
+                      count: invoicePreview.newQuantity,
+                      licenseLabel: getLicenseLabel(invoicePreview.newQuantity),
+                    })}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center mt-2">
                   <span className="text-sm font-semibold">
-                    {isIncrease ? 'Monthly Increase' : 'Monthly Savings'}
+                    {isIncrease
+                      ? t('subscriptionForm.confirmation.monthlyIncrease', { defaultValue: 'Monthly Increase' })
+                      : t('subscriptionForm.confirmation.monthlySavings', { defaultValue: 'Monthly Savings' })}
                   </span>
                   <span className="font-bold" style={{ color: isIncrease ? 'rgb(var(--color-primary-600))' : 'rgb(var(--color-secondary-600))' }}>
-                    {isIncrease ? '+' : ''}${Math.abs(monthlyDifference).toFixed(2)}/month
+                    {`${isIncrease ? '+' : ''}${getPerIntervalText(Math.abs(monthlyDifference), pricing?.currency, pricing?.interval)}`}
                   </span>
                 </div>
               </div>
@@ -309,7 +474,9 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
               <div className="flex items-center gap-3 p-3 border rounded-lg">
                 <CreditCard className="h-5 w-5 text-gray-500" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Payment Method</p>
+                  <p className="text-sm font-medium">
+                    {t('subscriptionForm.confirmation.paymentMethod', { defaultValue: 'Payment Method' })}
+                  </p>
                   <p className="text-xs text-gray-500">
                     {paymentMethod.card_brand.toUpperCase()} •••• {paymentMethod.card_last4}
                   </p>
@@ -324,7 +491,7 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
                   }}
                   className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
                 >
-                  Change
+                  {t('subscriptionForm.confirmation.changePaymentMethod', { defaultValue: 'Change' })}
                 </button>
               </div>
             )}
@@ -336,14 +503,22 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
                   <div className="flex items-start gap-2 text-sm">
                     <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5" />
                     <div>
-                      <p className="font-medium">Immediate charge</p>
+                      <p className="font-medium">
+                        {t('subscriptionForm.confirmation.immediateChargeTitle', { defaultValue: 'Immediate charge' })}
+                      </p>
                       <p className="text-gray-600">
-                        You will be charged ${invoicePreview.amountDue.toFixed(2)} {invoicePreview.currency.toUpperCase()} now for the prorated amount.
+                        {t('subscriptionForm.confirmation.immediateChargeDescription', {
+                          defaultValue: 'You will be charged {{amountDue}} now for the prorated amount.',
+                          amountDue: formatCurrency(invoicePreview.amountDue, invoicePreview.currency.toUpperCase()),
+                        })}
                       </p>
                     </div>
                   </div>
                   <div className="text-xs text-gray-500 ml-6">
-                    Proration: ${invoicePreview.prorationAmount.toFixed(2)} for the remainder of this billing period
+                    {t('subscriptionForm.confirmation.prorationDescription', {
+                      defaultValue: 'Proration: {{amount}} for the remainder of this billing period',
+                      amount: formatCurrency(invoicePreview.prorationAmount, invoicePreview.currency.toUpperCase()),
+                    })}
                   </div>
                 </>
               ) : (
@@ -351,40 +526,28 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
                   <div className="flex items-start gap-2 text-sm">
                     <Calendar className="h-4 w-4 text-orange-500 mt-0.5" />
                     <div>
-                      <p className="font-medium">Scheduled for period end</p>
+                      <p className="font-medium">
+                        {t('subscriptionForm.confirmation.scheduledTitle', { defaultValue: 'Scheduled for period end' })}
+                      </p>
                       <p className="text-gray-600">
-                        License decrease will take effect on {periodEnd.toLocaleDateString()} at the end of your current billing period.
+                        {t('subscriptionForm.confirmation.scheduledDescription', {
+                          defaultValue: 'License decrease will take effect on {{date}} at the end of your current billing period.',
+                          date: formatDate(periodEnd, { dateStyle: 'medium' }),
+                        })}
                       </p>
                     </div>
                   </div>
                   <div className="text-xs text-gray-500 ml-6">
-                    You'll keep access to all {invoicePreview.currentQuantity} licenses until then.
+                    {t('subscriptionForm.confirmation.scheduledKeepAccess', {
+                      defaultValue: "You'll keep access to all {{count}} licenses until then.",
+                      count: invoicePreview.currentQuantity,
+                    })}
                   </div>
                 </>
               )}
             </div>
           </div>
 
-          <div className="mt-6 flex gap-2 justify-end">
-            <Button
-              id="cancel-confirmation-button"
-              variant="outline"
-              onClick={() => {
-                setShowConfirmModal(false);
-                setLoading(false);
-              }}
-              disabled={confirmLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              id="confirm-license-update-button"
-              onClick={processLicenseUpdate}
-              disabled={confirmLoading}
-            >
-              {confirmLoading ? 'Processing...' : isIncrease ? 'Confirm & Pay Now' : 'Confirm Schedule'}
-            </Button>
-          </div>
       </Dialog>
     );
   };
@@ -397,7 +560,7 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
-            Manage License Subscription
+            {t('subscriptionForm.title', { defaultValue: 'Manage License Subscription' })}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -406,7 +569,7 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
             <Alert variant="info" showIcon={false} className="mb-6">
               <AlertDescription>
                 <h3 className="text-sm font-medium mb-2">
-                  Current License Usage
+                  {t('subscriptionForm.usage.title', { defaultValue: 'Current License Usage' })}
                 </h3>
                 <div className="flex items-center gap-2">
                   <div className="text-2xl font-bold">
@@ -416,7 +579,9 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
                   <div className="text-2xl font-bold">
                     {currentUsage.total !== null ? currentUsage.total : '∞'}
                   </div>
-                  <span className="text-sm">licenses used</span>
+                  <span className="text-sm">
+                    {t('subscriptionForm.usage.licensesUsed', { defaultValue: 'licenses used' })}
+                  </span>
                 </div>
               </AlertDescription>
             </Alert>
@@ -426,7 +591,9 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
           {error && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
-                <p className="text-sm font-medium">Error</p>
+                <p className="text-sm font-medium">
+                  {tCommon('status.error', { defaultValue: 'Error' })}
+                </p>
                 <p className="text-sm">{error}</p>
               </AlertDescription>
             </Alert>
@@ -435,7 +602,9 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
           {/* Quantity Selection */}
           <div className="space-y-4">
             <div>
-              <Label htmlFor="quantity">Total License Count</Label>
+              <Label htmlFor="quantity">
+                {t('subscriptionForm.fields.totalLicenseCount', { defaultValue: 'Total License Count' })}
+              </Label>
               <Input
                 id="quantity"
                 type="number"
@@ -456,17 +625,30 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
                 className="max-w-xs"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Enter the new total number of licenses (minimum: {currentUsage?.total || 1}). Currently: {currentUsage?.total !== null && currentUsage?.total !== undefined ? currentUsage.total : 'None'}
+                {t('subscriptionForm.help.totalLicenseCount', {
+                  defaultValue: 'Enter the new total number of licenses (minimum: {{minimum}}). Currently: {{current}}',
+                  minimum: currentUsage?.total || 1,
+                  current:
+                    currentUsage?.total !== null && currentUsage?.total !== undefined
+                      ? currentUsage.total
+                      : getNoneLabel(),
+                })}
               </p>
               {currentUsage && currentUsage.total !== null && (
                 <p className="text-xs text-blue-600 mt-1">
-                  To reduce licenses, visit Account Management
+                  {t('subscriptionForm.help.reduceViaAccount', {
+                    defaultValue: 'To reduce licenses, visit Account Management',
+                  })}
                 </p>
               )}
               {currentUsage && currentUsage.total !== null && currentUsage.used > quantity && (
                 <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
-                  Warning: You have {currentUsage.used} users but setting total to {quantity}
+                  {t('subscriptionForm.help.quantityWarning', {
+                    defaultValue: 'Warning: You have {{used}} users but are setting the total to {{quantity}}',
+                    used: currentUsage.used,
+                    quantity,
+                  })}
                 </p>
               )}
             </div>
@@ -475,19 +657,25 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
             {pricing && (
               <div className="p-4 bg-gray-50 rounded-lg space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Price per license:</span>
+                  <span className="text-gray-600">
+                    {t('subscriptionForm.pricing.pricePerLicense', { defaultValue: 'Price per license:' })}
+                  </span>
                   <span className="font-medium">
-                    ${(pricing.unitAmount / 100).toFixed(2)}/{pricing.interval}
+                    {getPerIntervalText(pricing.unitAmount / 100, pricing.currency, pricing.interval)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Quantity:</span>
+                  <span className="text-gray-600">
+                    {t('subscriptionForm.pricing.quantity', { defaultValue: 'Quantity:' })}
+                  </span>
                   <span className="font-medium">{quantity}</span>
                 </div>
                 <div className="border-t border-gray-200 pt-2 flex justify-between">
-                  <span className="font-semibold">Total:</span>
+                  <span className="font-semibold">
+                    {t('subscriptionForm.pricing.total', { defaultValue: 'Total:' })}
+                  </span>
                   <span className="text-xl font-bold text-blue-600">
-                    ${totalPrice.toFixed(2)}/{pricing.interval}
+                    {getPerIntervalText(totalPrice, pricing.currency, pricing.interval)}
                   </span>
                 </div>
               </div>
@@ -500,8 +688,10 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
               disabled={loading || !pricing || quantity === currentUsage?.total}
               className="w-full"
             >
-              {loading ? 'Creating Checkout...' : (() => {
-                if (quantity === currentUsage?.total) return 'No Change';
+              {loading ? t('subscriptionForm.actions.creatingCheckout', { defaultValue: 'Creating Checkout...' }) : (() => {
+                if (quantity === currentUsage?.total) {
+                  return t('subscriptionForm.actions.noChange', { defaultValue: 'No Change' });
+                }
 
                 const current = currentUsage?.total || 0;
                 const difference = quantity - current;
@@ -509,15 +699,32 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
                   ? `+${difference}`
                   : `${difference}`;
 
-                return `Update to ${quantity} Total (${diffText} license${Math.abs(difference) > 1 ? 's' : ''})`;
+                return t('subscriptionForm.actions.updateToTotal', {
+                  defaultValue: 'Update to {{quantity}} Total ({{difference}} {{licenseLabel}})',
+                  quantity,
+                  difference: diffText,
+                  licenseLabel: getLicenseLabel(Math.abs(difference) || 1),
+                });
               })()}
             </Button>
 
             {/* Information */}
             <div className="text-xs text-gray-500 space-y-1">
-              <p>• This sets your total subscription quantity (not an addition to current licenses)</p>
-              <p>• Increasing licenses: Immediate access with prorated charge</p>
-              <p>• Licenses are billed monthly and can be canceled anytime</p>
+              <p>
+                • {t('subscriptionForm.info.totalQuantity', {
+                  defaultValue: 'This sets your total subscription quantity (not an addition to current licenses)',
+                })}
+              </p>
+              <p>
+                • {t('subscriptionForm.info.increasingImmediate', {
+                  defaultValue: 'Increasing licenses: Immediate access with prorated charge',
+                })}
+              </p>
+              <p>
+                • {t('subscriptionForm.info.billedMonthly', {
+                  defaultValue: 'Licenses are billed monthly and can be canceled anytime',
+                })}
+              </p>
             </div>
           </div>
         </CardContent>

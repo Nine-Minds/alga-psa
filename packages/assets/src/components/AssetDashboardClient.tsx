@@ -22,6 +22,7 @@ import type { Asset, AssetListResponse, ClientMaintenanceSummary, ColumnDefiniti
 import { getClientMaintenanceSummaries, listAssets } from '../actions/assetActions';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
 import { getAllClientsForAssets } from '../actions/clientLookupActions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
@@ -70,17 +71,28 @@ type ColumnKey =
 const STATUS_OPTIONS: string[] = ['active', 'inactive', 'maintenance'];
 const TYPE_OPTIONS: string[] = ['workstation', 'server', 'network_device', 'mobile_device', 'printer'];
 const AGENT_STATUS_OPTIONS = RMM_AGENT_STATUS_OPTIONS;
-const RMM_MANAGED_OPTIONS: { value: string; label: string }[] = [
-  { value: 'managed', label: 'RMM Managed' },
-  { value: 'unmanaged', label: 'Not Managed' },
-];
 
 export default function AssetDashboardClient({ initialAssets }: AssetDashboardClientProps) {
+  const { t } = useTranslation('msp/assets');
   const clientDrawer = useClientDrawer();
+  const rmmManagedOptions = useMemo(() => [
+    {
+      value: 'managed',
+      label: t('assetDashboardClient.filters.rmmManaged.managed', {
+        defaultValue: 'RMM Managed'
+      })
+    },
+    {
+      value: 'unmanaged',
+      label: t('assetDashboardClient.filters.rmmManaged.unmanaged', {
+        defaultValue: 'Not Managed'
+      })
+    }
+  ], [t]);
   useRegisterUIComponent({
     id: 'asset-dashboard',
     type: 'container',
-    label: 'Asset Dashboard'
+    label: t('assetDashboardClient.reflection.label', { defaultValue: 'Asset Dashboard' })
   });
 
   const [assets, setAssets] = useState<Asset[]>(initialAssets.assets);
@@ -155,13 +167,15 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       }
       console.error('Failed to load asset drawer data', error);
       setDrawerData({ asset: null });
-      setDrawerError('Unable to load asset details right now. Please try again.');
+      setDrawerError(t('assetDashboardClient.errors.loadDrawerFailed', {
+        defaultValue: 'Unable to load asset details right now. Please try again.'
+      }));
     } finally {
       if (lastRequestIdRef.current === requestId) {
         setDrawerLoading(false);
       }
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     return () => {
@@ -474,7 +488,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       return `${asset.workstation.os_type} - ${asset.workstation.cpu_model} - ${asset.workstation.ram_gb}GB RAM`;
     }
     if (asset.network_device) {
-      return `${asset.network_device.device_type} - ${asset.network_device.management_ip || 'No IP'}`;
+      return `${asset.network_device.device_type} - ${asset.network_device.management_ip || t('assetDashboardClient.details.noIp', { defaultValue: 'No IP' })}`;
     }
     if (asset.server) {
       return `${asset.server.os_type} - ${asset.server.cpu_model} - ${asset.server.ram_gb}GB RAM`;
@@ -483,10 +497,28 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       return `${asset.mobile_device.os_type} - ${asset.mobile_device.model}`;
     }
     if (asset.printer) {
-      return `${asset.printer.model} - ${asset.printer.is_network_printer ? 'Network' : 'Local'}`;
+      return `${asset.printer.model} - ${asset.printer.is_network_printer ? t('assetDashboardClient.details.network', { defaultValue: 'Network' }) : t('assetDashboardClient.details.local', { defaultValue: 'Local' })}`;
     }
-    return 'No details available';
-  }, []);
+    return t('assetDashboardClient.details.noDetails', { defaultValue: 'No details available' });
+  }, [t]);
+
+  const getAssetStatusLabel = useCallback((status: string) => {
+    return t(`assetDashboardClient.statuses.${status}`, {
+      defaultValue: status.charAt(0).toUpperCase() + status.slice(1)
+    });
+  }, [t]);
+
+  const getAssetTypeLabel = useCallback((type: string) => {
+    return t(`assetDashboardClient.types.${type}`, {
+      defaultValue: type.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+    });
+  }, [t]);
+
+  const getAgentStatusLabel = useCallback((status: string) => {
+    return t(`assetDashboardClient.filters.agentStatuses.${status}`, {
+      defaultValue: status.charAt(0).toUpperCase() + status.slice(1)
+    });
+  }, [t]);
 
   const toggleColumn = useCallback((key: ColumnKey) => {
     setVisibleColumnIds(prev => {
@@ -514,7 +546,9 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
           id="asset-select-all"
           checked={isAllSelected}
           onChange={toggleSelectAll}
-          aria-label="Select all visible assets"
+          aria-label={t('assetDashboardClient.selection.selectAllVisibleAssets', {
+            defaultValue: 'Select all visible assets'
+          })}
           className="translate-y-0.5"
           indeterminate={isIndeterminate}
           containerClassName="m-0 flex items-center justify-center"
@@ -526,7 +560,10 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
           id={`asset-select-${record.asset_id}`}
           checked={selectedAssetIds.includes(record.asset_id)}
           onChange={() => toggleAssetSelection(record.asset_id)}
-          aria-label={`Select asset ${record.name}`}
+          aria-label={t('assetDashboardClient.selection.selectAsset', {
+            defaultValue: 'Select asset {{name}}',
+            name: record.name
+          })}
           className="translate-y-0.5"
           onClick={(event) => event.stopPropagation()}
           containerClassName="m-0 flex items-center justify-center"
@@ -537,7 +574,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     },
     name: {
       dataIndex: 'name',
-      title: 'Name',
+      title: t('assetDashboardClient.table.name', { defaultValue: 'Name' }),
       render: (_value: unknown, record: Asset) => (
         <div className="max-w-[240px] truncate" title={record.name}>
           <button
@@ -567,28 +604,28 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     },
     asset_tag: {
       dataIndex: 'asset_tag',
-      title: 'Tag',
+      title: t('assetDashboardClient.table.tag', { defaultValue: 'Tag' }),
       render: (value: unknown) => (
         <span className="font-mono text-sm text-gray-600">{value as string}</span>
       )
     },
     asset_type: {
       dataIndex: 'asset_type',
-      title: 'Type',
+      title: t('assetDashboardClient.table.type', { defaultValue: 'Type' }),
       render: (value: string) => (
         <div className="flex items-center gap-2">
           <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-100">
             {getAssetTypeIcon(value)}
           </div>
           <span className="text-sm font-medium text-gray-700">
-            {value.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+            {getAssetTypeLabel(value)}
           </span>
         </div>
       )
     },
     details: {
       dataIndex: 'details',
-      title: 'Details',
+      title: t('assetDashboardClient.table.details', { defaultValue: 'Details' }),
       sortable: false,
       render: (_: unknown, record: Asset) => (
         <span className="text-sm text-gray-600">{renderAssetDetails(record)}</span>
@@ -596,7 +633,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     },
     status: {
       dataIndex: 'status',
-      title: 'Status',
+      title: t('assetDashboardClient.table.status', { defaultValue: 'Status' }),
       render: (value: unknown) => {
         const status = value as string;
         return (
@@ -614,27 +651,27 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 status === 'active' ? 'bg-[rgb(var(--badge-success-text))]' : status === 'inactive' ? 'bg-[rgb(var(--badge-default-text))]' : 'bg-[rgb(var(--badge-warning-text))]'
               }`}
             ></span>
-            {status.charAt(0).toUpperCase() + status.slice(1)}
+            {getAssetStatusLabel(status)}
           </span>
         );
       }
     },
     agent_status: {
       dataIndex: 'agent_status',
-      title: 'Agent',
+      title: t('assetDashboardClient.table.agent', { defaultValue: 'Agent' }),
       render: (_: unknown, record: Asset) => {
         // Only show for RMM-managed assets
         if (!record.rmm_provider || !record.rmm_device_id) {
-          return <span className="text-xs text-gray-400">—</span>;
+          return <span className="text-xs text-gray-400">{t('common.states.none', { defaultValue: 'None' })}</span>;
         }
         return <RmmStatusIndicator asset={record} size="sm" />;
       }
     },
     client_name: {
       dataIndex: 'client_name',
-      title: 'Client',
+      title: t('assetDashboardClient.table.client', { defaultValue: 'Client' }),
       render: (_: unknown, record: Asset) => {
-        const name = record.client?.client_name || 'Unassigned';
+        const name = record.client?.client_name || t('assetDashboardClient.details.unassigned', { defaultValue: 'Unassigned' });
         if (record.client_id && clientDrawer) {
           return (
             <button
@@ -654,14 +691,14 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     },
     location: {
       dataIndex: 'location',
-      title: 'Location',
+      title: t('assetDashboardClient.table.location', { defaultValue: 'Location' }),
       render: (value: unknown) => (
-        <span className="text-sm font-medium text-gray-700">{(value as string) || '—'}</span>
+        <span className="text-sm font-medium text-gray-700">{(value as string) || t('common.states.none', { defaultValue: 'None' })}</span>
       )
     },
     actions: {
       dataIndex: 'actions',
-      title: 'Actions',
+      title: t('assetDashboardClient.table.actions', { defaultValue: 'Actions' }),
       sortable: false,
       render: (_: unknown, record: Asset) => (
         <DropdownMenu>
@@ -671,7 +708,10 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              aria-label={`Open actions for asset ${record.name}`}
+              aria-label={t('assetDashboardClient.actions.openActionsForAsset', {
+                defaultValue: 'Open actions for asset {{name}}',
+                name: record.name
+              })}
               onClick={(event) => event.stopPropagation()}
               onKeyDown={(event) => event.stopPropagation()}
             >
@@ -687,7 +727,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 }
               }}
             >
-              View details
+              {t('assetDashboardClient.actions.viewDetails', { defaultValue: 'View details' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`edit-asset-${record.asset_id}`}
@@ -697,7 +737,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 }
               }}
             >
-              Edit asset
+              {t('assetDashboardClient.actions.editAsset', { defaultValue: 'Edit asset' })}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -708,13 +748,14 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 }
               }}
             >
-              Create ticket
+              {t('assetDashboardClient.actions.createTicket', { defaultValue: 'Create ticket' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )
     }
   }), [
+    t,
     isAllSelected,
     isIndeterminate,
     selectedAssetIds,
@@ -722,8 +763,10 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     toggleAssetSelection,
     getAssetTypeIcon,
     renderAssetDetails,
-    openDrawerForAsset,
-    openAssetRecordPage
+    openAssetRecordPage,
+    clientDrawer,
+    getAssetStatusLabel,
+    getAssetTypeLabel,
   ]);
 
   const columns: ColumnDefinition<Asset>[] = useMemo(() => {
@@ -735,8 +778,14 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       <div className="space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Asset Workspace</h1>
-              <p className="text-sm text-gray-500">Operate at scale with filters, saved views, and bulk actions.</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {t('assetDashboardClient.title', { defaultValue: 'Asset Workspace' })}
+              </h1>
+              <p className="text-sm text-gray-500">
+                {t('assetDashboardClient.description', {
+                  defaultValue: 'Operate at scale with filters, saved views, and bulk actions.'
+                })}
+              </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -746,7 +795,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               className="gap-2"
               onClick={() => { void handleAssetAdded(); }}
             >
-                <RefreshCw className="h-4 w-4" /> Refresh data
+                <RefreshCw className="h-4 w-4" />
+                {t('assetDashboardClient.actions.refreshData', { defaultValue: 'Refresh data' })}
               </Button>
               <QuickAddAsset onAssetAdded={() => { void handleAssetAdded(); }} />
             </div>
@@ -754,24 +804,54 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="p-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total assets</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                {t('assetDashboardClient.metrics.totalAssets.title', { defaultValue: 'Total assets' })}
+              </p>
               <p className="text-3xl font-semibold text-gray-900 mt-2">{systemTotalAssets}</p>
-              <p className="text-xs text-gray-500 mt-1">Across all clients</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {t('assetDashboardClient.metrics.totalAssets.helper', {
+                  defaultValue: 'Across all clients'
+                })}
+              </p>
             </Card>
             <Card className="p-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Filtered view</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                {t('assetDashboardClient.metrics.filteredView.title', { defaultValue: 'Filtered view' })}
+              </p>
               <p className="text-3xl font-semibold text-gray-900 mt-2">{filteredCount}</p>
-              <p className="text-xs text-gray-500 mt-1">Matching active filters</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {t('assetDashboardClient.metrics.filteredView.helper', {
+                  defaultValue: 'Matching active filters'
+                })}
+              </p>
             </Card>
             <Card className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Automation ready</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  {t('assetDashboardClient.metrics.automationReady.title', {
+                    defaultValue: 'Automation ready'
+                  })}
+                </p>
                 <p className="text-3xl font-semibold text-gray-900 mt-2">{maintenanceStats.totalSchedules}</p>
-                <p className="text-xs text-gray-500 mt-1">Active maintenance schedules</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {t('assetDashboardClient.metrics.automationReady.helper', {
+                    defaultValue: 'Active maintenance schedules'
+                  })}
+                </p>
               </div>
               <div className="flex flex-col gap-1 text-right text-xs text-gray-500">
-                <span className="font-medium text-emerald-600">Upcoming: {maintenanceStats.upcomingMaintenances}</span>
-                <span className="font-medium text-amber-600">Overdue: {maintenanceStats.overdueMaintenances}</span>
+                <span className="font-medium text-emerald-600">
+                  {t('assetDashboardClient.metrics.automationReady.upcoming', {
+                    defaultValue: 'Upcoming: {{count}}',
+                    count: maintenanceStats.upcomingMaintenances
+                  })}
+                </span>
+                <span className="font-medium text-amber-600">
+                  {t('assetDashboardClient.metrics.automationReady.overdue', {
+                    defaultValue: 'Overdue: {{count}}',
+                    count: maintenanceStats.overdueMaintenances
+                  })}
+                </span>
               </div>
             </Card>
           </div>
@@ -783,27 +863,30 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     id="asset-search-input"
-                    placeholder="Search by name, tag, or serial number"
+                    placeholder={t('assetDashboardClient.filters.searchPlaceholder', {
+                      defaultValue: 'Search by name, tag, or serial number'
+                    })}
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                     className="pl-9"
                   />
                 </div>
-                <Button
-                  id="asset-filters-clear-button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  disabled={!searchTerm && statusFilters.length === 0 && typeFilters.length === 0 && clientFilters.length === 0}
-                >
-                  Reset
-                </Button>
-              </div>
+                  <Button
+                    id="asset-filters-clear-button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFilters}
+                    disabled={!searchTerm && statusFilters.length === 0 && typeFilters.length === 0 && clientFilters.length === 0}
+                  >
+                  {t('assetDashboardClient.filters.reset', { defaultValue: 'Reset' })}
+                  </Button>
+                </div>
               <div className="flex flex-wrap items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button id="status-filter-button" variant="ghost" size="sm" className="gap-1">
-                      <Filter className="h-4 w-4" /> Status
+                      <Filter className="h-4 w-4" />
+                      {t('assetDashboardClient.filters.status', { defaultValue: 'Status' })}
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -817,7 +900,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                           className="mr-2"
                           containerClassName="m-0"
                         />
-                        <span className="capitalize">{status.replace('_', ' ')}</span>
+                        <span className="capitalize">{getAssetStatusLabel(status)}</span>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
@@ -826,7 +909,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button id="type-filter-button" variant="ghost" size="sm" className="gap-1">
-                      <Filter className="h-4 w-4" /> Type
+                      <Filter className="h-4 w-4" />
+                      {t('assetDashboardClient.filters.type', { defaultValue: 'Type' })}
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -840,7 +924,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                           className="mr-2"
                           containerClassName="m-0"
                         />
-                        <span className="capitalize">{type.replace('_', ' ')}</span>
+                        <span className="capitalize">{getAssetTypeLabel(type)}</span>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
@@ -849,12 +933,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button id="agent-status-filter-button" variant="ghost" size="sm" className="gap-1">
-                      <Monitor className="h-4 w-4" /> Agent
+                      <Monitor className="h-4 w-4" />
+                      {t('assetDashboardClient.filters.agent', { defaultValue: 'Agent' })}
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-48">
-                    {AGENT_STATUS_OPTIONS.map(({ value, label }) => (
+                    {AGENT_STATUS_OPTIONS.map(({ value }) => (
                       <DropdownMenuItem key={value} id={`filter-agent-${value}`} onSelect={(event) => event.preventDefault()}>
                         <Checkbox
                           id={`agent-checkbox-${value}`}
@@ -863,11 +948,11 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                           className="mr-2"
                           containerClassName="m-0"
                         />
-                        <span>{label}</span>
+                        <span>{getAgentStatusLabel(value)}</span>
                       </DropdownMenuItem>
                     ))}
                     <DropdownMenuSeparator />
-                    {RMM_MANAGED_OPTIONS.map(({ value, label }) => (
+                    {rmmManagedOptions.map(({ value, label }) => (
                       <DropdownMenuItem key={value} id={`filter-rmm-${value}`} onSelect={(event) => event.preventDefault()}>
                         <Checkbox
                           id={`rmm-checkbox-${value}`}
@@ -885,7 +970,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button id="column-chooser-button" variant="ghost" size="sm" className="gap-1">
-                      Columns
+                      {t('assetDashboardClient.filters.columns', { defaultValue: 'Columns' })}
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -899,7 +984,11 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                           className="mr-2"
                           containerClassName="m-0"
                         />
-                        <span className="capitalize">{key.replace('_', ' ')}</span>
+                        <span className="capitalize">
+                          {t(`assetDashboardClient.columns.${key}`, {
+                            defaultValue: key.replace('_', ' ')
+                          })}
+                        </span>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
@@ -915,7 +1004,9 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                     onFilterStateChange={setClientFilterState}
                     clientTypeFilter={clientTypeFilter}
                     onClientTypeFilterChange={setClientTypeFilter}
-                    placeholder={clientsLoading ? 'Loading clients…' : 'Client'}
+                    placeholder={clientsLoading
+                      ? t('assetDashboardClient.filters.client.loading', { defaultValue: 'Loading clients…' })
+                      : t('assetDashboardClient.filters.client.placeholder', { defaultValue: 'Client' })}
                     fitContent
                     triggerVariant="ghost"
                     triggerSize="sm"
@@ -928,7 +1019,9 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                       variant="ghost"
                       size="sm"
                       className="px-0 w-9"
-                      aria-label="Clear client filter"
+                      aria-label={t('assetDashboardClient.filters.client.clear', {
+                        defaultValue: 'Clear client filter'
+                      })}
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -946,7 +1039,10 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               <div className="flex flex-wrap gap-2" {...withDataAutomationId({ id: 'active-filters-bar' })}>
                 {statusFilters.map((status) => (
                   <Badge key={`status-pill-${status}`} variant="outline" className="flex items-center gap-2">
-                    Status: {status}
+                    {t('assetDashboardClient.activeFilters.status', {
+                      defaultValue: 'Status: {{value}}',
+                      value: getAssetStatusLabel(status)
+                    })}
                     <Button
                       id={`remove-status-${status}`}
                       variant="ghost"
@@ -960,7 +1056,10 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 ))}
                 {typeFilters.map((type) => (
                   <Badge key={`type-pill-${type}`} variant="outline" className="flex items-center gap-2">
-                    Type: {type.replace('_', ' ')}
+                    {t('assetDashboardClient.activeFilters.type', {
+                      defaultValue: 'Type: {{value}}',
+                      value: getAssetTypeLabel(type)
+                    })}
                     <Button
                       id={`remove-type-${type}`}
                       variant="ghost"
@@ -973,10 +1072,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                   </Badge>
                 ))}
                 {clientFilters.map((clientId) => {
-                  const label = clientNameById.get(clientId) ?? 'Client';
+                  const label = clientNameById.get(clientId) ?? t('assetDashboardClient.filters.client.placeholder', { defaultValue: 'Client' });
                   return (
                     <Badge key={`client-pill-${clientId}`} variant="outline" className="flex items-center gap-2">
-                      Client: {label}
+                      {t('assetDashboardClient.activeFilters.client', {
+                        defaultValue: 'Client: {{value}}',
+                        value: label
+                      })}
                       <Button
                         id={`remove-client-${clientId}`}
                         variant="ghost"
@@ -990,10 +1092,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                   );
                 })}
                 {agentStatusFilters.map((status) => {
-                  const label = AGENT_STATUS_OPTIONS.find(opt => opt.value === status)?.label || status;
+                  const label = getAgentStatusLabel(status);
                   return (
                     <Badge key={`agent-pill-${status}`} variant="outline" className="flex items-center gap-2">
-                      Agent: {label}
+                      {t('assetDashboardClient.activeFilters.agent', {
+                        defaultValue: 'Agent: {{value}}',
+                        value: label
+                      })}
                       <Button
                         id={`remove-agent-${status}`}
                         variant="ghost"
@@ -1007,7 +1112,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                   );
                 })}
                 {rmmManagedFilter.map((filter) => {
-                  const label = RMM_MANAGED_OPTIONS.find(opt => opt.value === filter)?.label || filter;
+                  const label = rmmManagedOptions.find(opt => opt.value === filter)?.label || filter;
                   return (
                     <Badge key={`rmm-pill-${filter}`} variant="outline" className="flex items-center gap-2">
                       {label}
@@ -1030,7 +1135,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 className="flex flex-col gap-2 rounded-lg border border-primary-200 bg-primary-50 p-3 text-sm text-primary-900 md:flex-row md:items-center md:justify-between"
                 {...withDataAutomationId({ id: 'bulk-selection-banner' })}
               >
-                <span className="font-medium">{selectedAssetIds.length} asset{selectedAssetIds.length === 1 ? '' : 's'} selected</span>
+                <span className="font-medium">
+                  {t('assetDashboardClient.selection.selectedAssets', {
+                    defaultValue: '{{count}} asset{{suffix}} selected',
+                    count: selectedAssetIds.length,
+                    suffix: selectedAssetIds.length === 1 ? '' : 's'
+                  })}
+                </span>
                 <div className="flex items-center gap-2">
                   <Button
                     id="bulk-selection-clear-button"
@@ -1038,7 +1149,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                     size="sm"
                     onClick={() => setSelectedAssetIds([])}
                   >
-                    Clear selection
+                    {t('assetDashboardClient.selection.clearSelection', { defaultValue: 'Clear selection' })}
                   </Button>
                   <Button
                     id="bulk-selection-placeholder-button"
@@ -1047,7 +1158,9 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                     className="gap-2"
                     disabled
                   >
-                    Bulk actions coming soon
+                    {t('assetDashboardClient.selection.bulkActionsComingSoon', {
+                      defaultValue: 'Bulk actions coming soon'
+                    })}
                   </Button>
                 </div>
               </div>
@@ -1058,32 +1171,32 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-4" {...withDataAutomationId({ id: 'asset-metrics-strip' })}>
               <SummaryTile
                 id="metric-total-assets"
-                title="Total Assets"
-                helper="Across all clients"
+                title={t('assetDashboardClient.metrics.totalAssets.title', { defaultValue: 'Total Assets' })}
+                helper={t('assetDashboardClient.metrics.totalAssets.helper', { defaultValue: 'Across all clients' })}
                 icon={<Boxes className="h-4 w-4 text-blue-500" />}
                 value={totalAssets}
                 isLoading={loading}
               />
               <SummaryTile
                 id="metric-active-schedules"
-                title="Active Schedules"
-                helper="Lifecycle automation"
+                title={t('assetDashboardClient.metrics.activeSchedules.title', { defaultValue: 'Active Schedules' })}
+                helper={t('assetDashboardClient.metrics.activeSchedules.helper', { defaultValue: 'Lifecycle automation' })}
                 icon={<TrendingUp className="h-4 w-4 text-emerald-500" />}
                 value={maintenanceStats.totalSchedules}
                 isLoading={loading}
               />
               <SummaryTile
                 id="metric-overdue-maintenance"
-                title="Maintenance Overdue"
-                helper="Needs attention"
+                title={t('assetDashboardClient.metrics.overdueMaintenance.title', { defaultValue: 'Maintenance Overdue' })}
+                helper={t('assetDashboardClient.metrics.overdueMaintenance.helper', { defaultValue: 'Needs attention' })}
                 icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
                 value={maintenanceStats.overdueMaintenances}
                 isLoading={loading}
               />
               <SummaryTile
                 id="metric-upcoming-maintenance"
-                title="Upcoming Maintenance"
-                helper="Next 30 days"
+                title={t('assetDashboardClient.metrics.upcomingMaintenance.title', { defaultValue: 'Upcoming Maintenance' })}
+                helper={t('assetDashboardClient.metrics.upcomingMaintenance.helper', { defaultValue: 'Next 30 days' })}
                 icon={<Clock className="h-4 w-4 text-violet-500" />}
                 value={maintenanceStats.upcomingMaintenances}
                 isLoading={loading}

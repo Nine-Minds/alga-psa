@@ -47,11 +47,21 @@ import { withAuth } from '@alga-psa/auth';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
+import { updateTicketWithCache } from './optimizedTicketActions';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
 } from '../lib/workflowTicketSlaStageEvents';
-import { SlaBackendFactory } from '@alga-psa/sla/services';
+import {
+  parseTicketStatusFilterValue,
+  shouldApplyOpenOnlyStatusFilter,
+} from '../lib/ticketStatusFilter';
+// SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
+let _cancelSlaFn: ((ticketId: string) => Promise<void>) | null = null;
+
+export async function registerSlaCancellation(fn: (ticketId: string) => Promise<void>): Promise<void> {
+  _cancelSlaFn = fn;
+}
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -482,6 +492,14 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       // Check if we're updating the assigned_to field
       const isChangingAssignment = 'assigned_to' in updateData &&
                                   updateData.assigned_to !== currentTicket.assigned_to;
+      const isBoardChange =
+        'board_id' in updateData &&
+        !!updateData.board_id &&
+        updateData.board_id !== currentTicket.board_id;
+
+      if (isBoardChange && !updateData.status_id) {
+        throw new Error('Changing the board requires selecting a status for the destination board');
+      }
 
       // If updating category or subcategory, ensure they are compatible
       if ('subcategory_id' in updateData || 'category_id' in updateData) {
@@ -497,6 +515,25 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           if (subcategory && subcategory.parent_category !== newCategoryId) {
             throw new Error('Invalid category combination: subcategory must belong to the selected parent category');
           }
+        }
+      }
+
+      if ('status_id' in updateData && updateData.status_id && updateData.status_id !== currentTicket.status_id) {
+        const effectiveBoardId = updateData.board_id || currentTicket.board_id;
+        const statusResult = effectiveBoardId
+          ? await TicketModel.validateStatusBelongsToBoard(
+            updateData.status_id,
+            effectiveBoardId,
+            tenant,
+            trx
+          )
+          : {
+            valid: false,
+            error: 'Invalid status: board_id is required when selecting a ticket status'
+          };
+
+        if (!statusResult.valid && statusResult.error) {
+          throw new Error(statusResult.error);
         }
       }
 
@@ -687,6 +724,15 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           old: currentTicket.due_date,
           new: updateData.due_date
         };
+      }
+
+      // Keep the ticket row's denormalized close flag aligned with the selected status.
+      if (updateData.status_id !== undefined && updateData.status_id !== currentTicket.status_id) {
+        const nextIsClosed = !!newStatus?.is_closed;
+        await trx('tickets')
+          .where({ ticket_id: id, tenant: tenant })
+          .update({ is_closed: nextIsClosed });
+        updatedTicket.is_closed = nextIsClosed;
       }
 
       // Record closed_at / closed_by when transitioning to/from closed status
@@ -887,6 +933,7 @@ export const getTickets = withAuth(async (user, { tenant }): Promise<ITicket[]> 
 export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITicketListFilters): Promise<ITicketListItem[]> => {
   try {
     const validatedFilters = validateData(ticketListFiltersSchema, filters) as ITicketListFilters;
+    const parsedStatusFilter = parseTicketStatusFilterValue(validatedFilters.statusId);
     const {knex: db} = await createTenantKnex();
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -949,7 +996,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       query = query.whereIn('t.board_id', boardSubquery);
     }
 
-    if (validatedFilters.showOpenOnly) {
+    if (shouldApplyOpenOnlyStatusFilter(validatedFilters.statusId, validatedFilters.showOpenOnly)) {
       query = query.whereExists(function() {
         this.select('*')
             .from('statuses')
@@ -957,8 +1004,10 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
             .andWhere('statuses.is_closed', false)
             .andWhere('statuses.tenant', tenant);
       });
-    } else if (validatedFilters.statusId && validatedFilters.statusId !== 'all') {
-      query = query.where('t.status_id', validatedFilters.statusId);
+    } else if (parsedStatusFilter.kind === 'name') {
+      query = query.where('s.name', parsedStatusFilter.statusName);
+    } else if (parsedStatusFilter.kind === 'id') {
+      query = query.where('t.status_id', parsedStatusFilter.statusId);
     }
 
     if (validatedFilters.priorityId && validatedFilters.priorityId !== 'all') {
@@ -1254,8 +1303,9 @@ export const deleteTicket = withAuth(async (
 
     if (result.deleted) {
       try {
-        const backend = await SlaBackendFactory.getBackend();
-        await backend.cancelSla(ticketId);
+        if (_cancelSlaFn) {
+          await _cancelSlaFn(ticketId);
+        }
       } catch (error) {
         console.warn('[deleteTicket] Failed to cancel SLA backend workflow:', error);
       }
@@ -1303,8 +1353,9 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
 
       if (result.deleted) {
         try {
-          const backend = await SlaBackendFactory.getBackend();
-          await backend.cancelSla(ticketId);
+          if (_cancelSlaFn) {
+            await _cancelSlaFn(ticketId);
+          }
         } catch (error) {
           console.warn('[deleteTickets] Failed to cancel SLA backend workflow:', error);
         }
@@ -1329,6 +1380,97 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
   }
 
   return { deletedIds, failed };
+});
+
+export const moveTicketsToBoard = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[],
+  destinationBoardId: string,
+  destinationStatusId: string
+): Promise<{
+  movedIds: string[];
+  failed: Array<{ ticketId: string; message: string }>;
+}> => {
+  const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
+
+  if (uniqueIds.length === 0) {
+    return { movedIds: [], failed: [] };
+  }
+
+  const { knex: ticketKnex } = await createTenantKnex();
+
+  const { tenant: tenantAlias } = { tenant };
+  const movedIds: string[] = [];
+  const failed: Array<{ ticketId: string; message: string }> = [];
+
+  let resolvedStatusId = destinationStatusId;
+
+  try {
+    resolvedStatusId = await withTransaction(ticketKnex, async (trx: Knex.Transaction) => {
+      if (!destinationStatusId) {
+        const defaultStatusId = await TicketModel.getDefaultStatusId(tenantAlias, trx, destinationBoardId);
+        if (!defaultStatusId) {
+          throw new Error('No default ticket status configured for the selected board');
+        }
+        return defaultStatusId;
+      }
+
+      const statusValidation = await TicketModel.validateStatusBelongsToBoard(
+        destinationStatusId,
+        destinationBoardId,
+        tenantAlias,
+        trx
+      );
+
+      if (!statusValidation.valid) {
+        throw new Error(statusValidation.error || 'Invalid destination status');
+      }
+
+      return destinationStatusId;
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Destination board or status is invalid';
+    return {
+      movedIds: [],
+      failed: uniqueIds.map((ticketId) => ({ ticketId, message })),
+    };
+  }
+
+  for (const ticketId of uniqueIds) {
+    try {
+      const currentTicket = await withTransaction(ticketKnex, async (trx: Knex.Transaction) => (
+        trx('tickets')
+          .where({ ticket_id: ticketId, tenant: tenantAlias })
+          .first()
+      ));
+
+      if (!currentTicket) {
+        throw new Error('Ticket not found');
+      }
+
+      const updateData: Partial<ITicket> = {
+        board_id: destinationBoardId,
+        status_id: resolvedStatusId,
+      };
+
+      if (currentTicket.board_id !== destinationBoardId) {
+        updateData.category_id = null;
+        updateData.subcategory_id = null;
+      }
+
+      await updateTicketWithCache(ticketId, updateData);
+
+      movedIds.push(ticketId);
+    } catch (error: unknown) {
+      failed.push({
+        ticketId,
+        message: error instanceof Error ? error.message : 'Failed to move ticket',
+      });
+    }
+  }
+
+  return { movedIds, failed };
 });
 
 export const getScheduledHoursForTicket = withAuth(async (user, { tenant }, ticketId: string): Promise<IAgentSchedule[]> => {

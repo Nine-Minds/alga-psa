@@ -1,0 +1,581 @@
+{
+  "common": {
+    "actions": {
+      "add": "Toevoegen",
+      "back": "Terug",
+      "cancel": "Annuleren",
+      "close": "Sluiten",
+      "create": "Maken",
+      "delete": "Verwijderen",
+      "downloadCsv": "CSV downloaden",
+      "edit": "Bewerken",
+      "import": "Importeren",
+      "reactivate": "Opnieuw activeren",
+      "remove": "Verwijderen",
+      "retry": "Opnieuw proberen",
+      "save": "Opslaan",
+      "saving": "Opslaan...",
+      "search": "Zoeken",
+      "select": "Selecteren",
+      "update": "Bijwerken",
+      "uploadCsv": "CSV uploaden",
+      "view": "Bekijken"
+    },
+    "states": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "loading": "Laden...",
+      "na": "N/B",
+      "none": "Geen"
+    },
+    "no": "Nee",
+    "yes": "Ja"
+  },
+  "contactsPage": {
+    "title": "Contactenpagina",
+    "description": "Hoofdpagina voor contactbeheer met zoeken, filters, lijstweergave en bulkacties",
+    "heading": "Contacten",
+    "addContact": "+ Contact toevoegen",
+    "actions": "Acties",
+    "searchPlaceholder": "Zoek contacten",
+    "resetFilters": "Opnieuw instellen",
+    "unknownClient": "Onbekende klant",
+    "noClient": "Geen klant",
+    "thisContact": "deze contactpersoon",
+    "actionsMenuSrOnly": "Menu openen",
+    "quickView": "Snelle weergave",
+    "deleteValidationError": "Verwijderen kon niet worden gevalideerd. Probeer het opnieuw.",
+    "deleteSuccess": "{{name}} is succesvol verwijderd.",
+    "deleteError": "Contact kon niet worden verwijderd. Probeer het opnieuw.",
+    "markInactiveSuccess": "{{name}} is succesvol als inactief gemarkeerd.",
+    "markInactiveError": "Er is een fout opgetreden bij het markeren van het contact als inactief. Probeer het opnieuw.",
+    "statusOptions": {
+      "all": "Alle contacten",
+      "active": "Actieve contacten",
+      "inactive": "Inactieve contacten"
+    },
+    "table": {
+      "name": "Naam",
+      "created": "Aangemaakt",
+      "email": "E-mail",
+      "phoneNumber": "Telefoonnummer",
+      "client": "Klant",
+      "tags": "Tags",
+      "actions": "Acties"
+    },
+    "lastPhoneTypeUsage": {
+      "title": "Laatste gebruik van telefoonsoort",
+      "message": "De volgende aangepaste telefoonsoort{{suffix}} wordt niet langer door een contact gebruikt: {{labels}}. Wil je de soortdefinitie verwijderen{{definitionSuffix}} of behouden voor toekomstig gebruik?",
+      "deleteType": "Soort verwijderen",
+      "keepType": "Soort behouden"
+    }
+  },
+  "contactDetails": {
+    "title": "Contactdetails",
+    "description": "Detailweergave van contact met tabbladen, inline bewerken, portaaltoegang, tags en notities",
+    "backToContacts": "Terug naar contacten",
+    "inactiveBadge": "inactief",
+    "actions": {
+      "goToContact": "Ga naar contact",
+      "saveChanges": "Wijzigingen opslaan"
+    },
+    "tabs": {
+      "details": "Details",
+      "tickets": "Tickets",
+      "documents": "Documenten",
+      "interactions": "Interactie",
+      "notes": "Notities",
+      "portal": "Portaal"
+    },
+    "fields": {
+      "fullName": "Volledige naam",
+      "client": "Klant",
+      "email": "E-mail",
+      "role": "Rol",
+      "inboundTicketDestinationOverride": "Overschrijving inkomende ticketbestemming",
+      "useClientDestination": "Gebruik klantbestemming",
+      "inboundTicketDestinationHelp": "Indien ingesteld, overschrijft dit de klantbestemming voor precies deze afzender. Voorrang: contactoverschrijving -> klantbestemming -> standaard van provider.",
+      "tags": "Tags",
+      "notes": "Notities"
+    },
+    "status": {
+      "label": "Status",
+      "helper": "Stel de contactstatus in op actief of inactief",
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "loading": {
+      "destinations": "Bestemmingen laden...",
+      "ticketFilters": "Ticketfilters laden..."
+    },
+    "empty": {
+      "notSet": "Niet ingesteld",
+      "unknownClient": "Onbekende klant"
+    },
+    "client": {
+      "noClientAssigned": "Geen klant toegewezen"
+    },
+    "delete": {
+      "successTitle": "Contact verwijderd",
+      "successDescription": "Het contact is succesvol verwijderd.",
+      "validationFailed": "Verwijderen kon niet worden gevalideerd. Probeer het opnieuw.",
+      "failed": "Contact kon niet worden verwijderd. Probeer het opnieuw."
+    },
+    "deactivate": {
+      "successTitle": "Contact gedeactiveerd",
+      "successDescription": "Het contact is succesvol als inactief gemarkeerd."
+    },
+    "reactivate": {
+      "successTitle": "Contact opnieuw geactiveerd",
+      "successDescription": "Het contact is succesvol opnieuw geactiveerd."
+    },
+    "update": {
+      "successTitle": "Contact bijgewerkt",
+      "successDescription": "De contactgegevens zijn succesvol opgeslagen."
+    },
+    "saveFailed": {
+      "title": "Opslaan mislukt",
+      "description": "De contactgegevens konden niet worden opgeslagen. Probeer het opnieuw."
+    },
+    "error": {
+      "title": "Fout"
+    },
+    "errors": {
+      "permissionDenied": "Toegang geweigerd. Neem contact op met je beheerder als je extra toegang nodig hebt.",
+      "markInactiveFailed": "Er is een fout opgetreden bij het markeren van het contact als inactief. Probeer het opnieuw.",
+      "reactivateFailed": "Er is een fout opgetreden bij het opnieuw activeren van het contact. Probeer het opnieuw."
+    }
+  },
+  "contactsImportDialog": {
+    "title": "Contacten importeren",
+    "description": "CSV-importdialoog voor veldkoppeling, voorbeeld, validatie en resultaten",
+    "fields": {
+      "name": "Naam *",
+      "email": "E-mail *",
+      "defaultPhoneNumber": "Standaard telefoonnummer",
+      "client": "Klant",
+      "tags": "Tags",
+      "role": "Rol",
+      "notes": "Notities",
+      "primaryEmailLabel": "Label primaire e-mail",
+      "additionalEmails": "Aanvullende e-mailadressen"
+    },
+    "unassigned": "Veld selecteren",
+    "errors": {
+      "emptyCsv": "CSV-bestand is leeg of ongeldig",
+      "readingCsv": "Fout bij het lezen van het CSV-bestand: {{message}}",
+      "unknownError": "Onbekende fout",
+      "requiredFieldNotMapped": "Verplicht veld \"{{field}}\" is niet gekoppeld",
+      "nameRequired": "Naam is verplicht",
+      "emailRequired": "E-mailadres is verplicht",
+      "invalidEmail": "Ongeldig e-mailformaat",
+      "processingCsv": "Fout bij het verwerken van CSV-gegevens",
+      "importFailed": "Importeren mislukt"
+    },
+    "importOptions": {
+      "updateExisting": {
+        "title": "Bestaande contacten bijwerken",
+        "description": "Vervang gegevens van bestaande contacten"
+      },
+      "skipInvalid": {
+        "title": "Ongeldige records overslaan",
+        "description": "Ga verder met importeren, ook als sommige records validatiefouten hebben"
+      }
+    },
+    "results": {
+      "title": "Importresultaten",
+      "downloadFailedRecords": "Mislukte records downloaden"
+    },
+    "table": {
+      "status": "Status",
+      "name": "Naam",
+      "email": "E-mail",
+      "message": "Bericht",
+      "exists": "Bestaat",
+      "issues": "Problemen"
+    },
+    "tooltips": {
+      "importSuccessful": "Import geslaagd",
+      "importFailed": "Import mislukt",
+      "validReady": "Geldig - klaar om te importeren",
+      "invalidHasErrors": "Ongeldig - bevat fouten"
+    },
+    "upload": {
+      "help": "Upload een CSV-bestand met contactgegevens",
+      "requiredLabel": "Verplicht:",
+      "contactFieldsLabel": "Contactvelden:",
+      "contactFieldsDescription": "phone_number (wordt geïmporteerd als standaard werktelefoon), role, notes, tags",
+      "clientFieldLabel": "Klantveld:",
+      "clientFieldDescription": "client (komt overeen met bestaande klanten op naam)",
+      "noteLabel": "Opmerking:",
+      "noteDescription": "CSV-import/export in v1 ondersteunt één standaard telefoonnummer per contact. Tags moeten komma-gescheiden waarden zijn.",
+      "downloadTemplate": "CSV-sjabloon downloaden",
+      "emailFieldsLabel": "E-mailvelden:",
+      "emailFieldsDescription": "primary_email_type (work/personal/billing/other of een aangepast label), additional_email_addresses (gebruik `label:email@example.com | label:email@example.com`)",
+      "hybridEmailNote": "CSV-import/-export behoudt `email` als primair/standaard contact-e-mailadres. Labels moeten door komma's gescheiden waarden zijn."
+    },
+    "mapping": {
+      "title": "Contactvelden koppelen aan CSV-kolommen",
+      "description": "Selecteer welke CSV-kolom de gegevens voor elk contactveld bevat. Velden met * zijn verplicht.",
+      "contactFieldHeader": "Contactveld",
+      "csvColumnHeader": "CSV-kolom selecteren",
+      "notMapped": "Niet gekoppeld",
+      "requiredFieldsNote": "* Verplichte velden moeten worden gekoppeld voordat de import kan doorgaan",
+      "largeImportWarning": "Je importeert {{count}} records. Het verwerken kan even duren.",
+      "processing": "Bezig met verwerken...",
+      "preview": "Voorbeeld"
+    },
+    "preview": {
+      "title": "Importvoorbeeld",
+      "totalRecords": "Totaal records:",
+      "valid": "Geldig:",
+      "invalid": "Ongeldig:"
+    },
+    "importing": {
+      "title": "Contacten importeren",
+      "processing": "Bezig met verwerken: {{current}} van {{total}}",
+      "currentItem": "Momenteel verwerken: {{item}}"
+    },
+    "complete": {
+      "title": "Import voltooid",
+      "successMessage": "Succesvol {{count}} contacten geïmporteerd"
+    },
+    "confirmUpdate": {
+      "title": "Bestaande contacten bijwerken",
+      "message": "{{count}} contacten bestaan al. Wil je ze bijwerken met de nieuwe gegevens?"
+    }
+  },
+  "contactPhoneNumbersEditor": {
+    "title": "Telefoonnummers",
+    "description": "Telefoonnummer-editor met typebeheer, validatie, standaardwaarden en extensieondersteuning",
+    "actions": {
+      "addPhone": "Telefoon toevoegen"
+    },
+    "empty": "Nog geen telefoonnummers.",
+    "phoneTypes": {
+      "work": "Werk",
+      "mobile": "Mobiel",
+      "home": "Thuis",
+      "fax": "Fax",
+      "other": "Overig",
+      "custom": "Aangepast"
+    },
+    "row": {
+      "title": "Telefoon {{number}}",
+      "defaultDescription": "Standaard telefoonnummer",
+      "secondaryDescription": "Tweede telefoonnummer",
+      "defaultLabel": "Standaard",
+      "moveUp": "Telefoon {{number}} omhoog verplaatsen",
+      "moveDown": "Telefoon {{number}} omlaag verplaatsen",
+      "remove": "Telefoon {{number}} verwijderen"
+    },
+    "fields": {
+      "phoneNumber": "Telefoonnummer",
+      "phoneType": "Telefoontype",
+      "customPhoneType": "Aangepast telefoontype",
+      "customTypePlaceholder": "Selecteer of voer een aangepast telefoontype in",
+      "customTypeSearchPlaceholder": "Zoek of voer een aangepast telefoontype in...",
+      "customTypeEmpty": "Geen overeenkomende aangepaste telefoontypen.",
+      "customTypeUseValue": "Gebruik \"{{value}}\""
+    },
+    "validation": {
+      "selectExactlyOneDefault": "Selecteer precies één standaard telefoonnummer.",
+      "phoneRow": "Telefoon {{number}}",
+      "enterCompletePhoneNumber": "Voer een volledig telefoonnummer in.",
+      "enterCustomPhoneType": "Voer een aangepast telefoontype in.",
+      "customTypesUnique": "Labels van aangepaste telefoontypen moeten uniek zijn."
+    },
+    "lastTypeUsage": {
+      "title": "Laatste gebruik van telefoontype",
+      "message": "Dit is het laatste gebruik van het aangepaste telefoontype \"{{label}}\". Wil je de type-definitie verwijderen of behouden voor toekomstig gebruik?",
+      "removeAndDelete": "Verwijderen en type verwijderen",
+      "removeAndKeep": "Verwijderen en type behouden"
+    }
+  },
+  "contactPortalTab": {
+    "title": "Portaaltoegang",
+    "description": "Beheer van toegang tot het klantportaal voor een contact, inclusief uitnodigingen en rolupdates",
+    "loadingDescription": "Portaalinformatie laden...",
+    "information": "Uitnodigingsmails worden verzonden via het e-mailsysteem van je organisatie. Antwoorden gaan naar het standaard e-mailadres van de klantlocatie.",
+    "activeAccess": "Portaaltoegang actief",
+    "noAccess": {
+      "title": "Geen portaaltoegang",
+      "description": "Dit contact heeft nog geen toegang tot het klantportaal"
+    },
+    "portalAdmin": {
+      "label": "Portaalbeheerder",
+      "helper": "Wanneer ingeschakeld, wordt de gebruiker aangemaakt met de rol Klantbeheerder. Wanneer uitgeschakeld, krijgt die de rol Klantgebruiker."
+    },
+    "roles": {
+      "label": "Portaalrollen",
+      "none": "Geen rollen toegewezen",
+      "placeholder": "Selecteer een rol om toe te voegen",
+      "addButton": "Rol toevoegen"
+    },
+    "userStatus": {
+      "label": "Gebruikersstatus",
+      "active": "Gebruiker is momenteel actief",
+      "inactive": "Gebruiker is momenteel inactief"
+    },
+    "lastLogin": {
+      "label": "Laatste aanmelding",
+      "via": "via {{method}}"
+    },
+    "history": {
+      "title": "Uitnodigingsgeschiedenis",
+      "description": "Recente portaaluitnodigingen die naar dit contact zijn verzonden",
+      "empty": "Er zijn nog geen portaaluitnodigingen naar dit contact verzonden.",
+      "sentPrefix": "Verzonden:",
+      "expiresPrefix": "Verloopt:",
+      "usedPrefix": "Gebruikt:",
+      "status": {
+        "pending": "In behandeling",
+        "used": "Gebruikt",
+        "expired": "Verlopen",
+        "revoked": "Ingetrokken"
+      }
+    },
+    "actions": {
+      "sendInvitation": "Portaaluitnodiging verzenden",
+      "sending": "Verzenden...",
+      "refresh": "Vernieuwen",
+      "refreshing": "Bezig met vernieuwen...",
+      "resend": "Opnieuw verzenden",
+      "resending": "Opnieuw verzenden...",
+      "revoke": "Intrekken"
+    },
+    "toast": {
+      "successTitle": "Succes",
+      "errorTitle": "Fout",
+      "permissionDeniedTitle": "Toegang geweigerd",
+      "loadError": "Portaalinformatie kon niet worden geladen",
+      "refreshHistoryError": "Uitnodigingsgeschiedenis kon niet worden vernieuwd",
+      "sendInvitePermissionDenied": "Je hebt geen toestemming om uitnodigingen te verzenden",
+      "sendInviteSuccess": "Portaaluitnodiging succesvol verzonden!",
+      "sendInviteFailed": "Uitnodiging verzenden mislukt",
+      "revokeInviteSuccess": "Uitnodiging succesvol ingetrokken",
+      "revokeInviteFailed": "Uitnodiging intrekken mislukt",
+      "resendInviteSuccess": "Portaaluitnodiging succesvol opnieuw verzonden!",
+      "resendInviteFailed": "Opnieuw verzenden van uitnodiging mislukt",
+      "updatePortalSettingsPermissionDenied": "Je hebt geen toestemming om klantinstellingen bij te werken",
+      "portalAdminEnabled": "Contactpersoon gemarkeerd als beheerder van het klantportaal",
+      "portalAdminDisabled": "Contactpersoon niet langer gemarkeerd als beheerder van het klantportaal",
+      "updatePortalAdminFailed": "Status kon niet worden bijgewerkt",
+      "updateAdminFailed": "Beheerdersvlag kon niet worden bijgewerkt",
+      "updateRolesPermissionDenied": "Je hebt geen toestemming om gebruikersrollen bij te werken",
+      "roleAdded": "Rol succesvol toegevoegd",
+      "addRoleFailed": "Rol toevoegen mislukt",
+      "roleRemoved": "Rol succesvol verwijderd",
+      "removeRoleFailed": "Rol verwijderen mislukt",
+      "updateStatusPermissionDenied": "Je hebt geen toestemming om gebruikersstatus bij te werken",
+      "userActivated": "Gebruiker succesvol geactiveerd",
+      "userDeactivated": "Gebruiker succesvol gedeactiveerd",
+      "updateUserStatusFailed": "Gebruikersstatus kon niet worden bijgewerkt"
+    }
+  },
+  "quickAddContact": {
+    "title": "Nieuwe contactpersoon toevoegen",
+    "description": "Snelformulier om een contactpersoon aan te maken met klant-, rol-, telefoon- en tagvelden",
+    "dialog": {
+      "title": "Nieuwe contactpersoon toevoegen"
+    },
+    "errorFallback": {
+      "title": "Er is iets misgegaan:",
+      "tryAgain": "Opnieuw proberen"
+    },
+    "actions": {
+      "submit": "Contact toevoegen"
+    },
+    "fields": {
+      "fullName": "Volledige naam *",
+      "email": "E-mail *",
+      "clientOptional": "Klant (optioneel)",
+      "role": "Rol",
+      "rolePlaceholder": "bijv. Manager, Developer, enz.",
+      "notes": "Notities",
+      "notesPlaceholder": "Voeg eventuele extra notities over het contact toe..."
+    },
+    "status": {
+      "label": "Status",
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "validation": {
+      "alertIntro": "Corrigeer de volgende fouten:",
+      "fullNameRequired": "Volledige naam is verplicht",
+      "fullNameEmpty": "Volledige naam mag niet leeg zijn",
+      "fullNameSpaces": "Volledige naam mag niet alleen uit spaties bestaan",
+      "emailRequired": "E-mailadres is verplicht",
+      "emailSpaces": "E-mailadres mag niet alleen uit spaties bestaan",
+      "roleSpaces": "Rol mag niet alleen uit spaties bestaan",
+      "roleLength": "Rol mag maximaal 100 tekens bevatten",
+      "roleCharacters": "Rol moet letters of cijfers bevatten",
+      "notesSpaces": "Notities mogen niet alleen uit spaties bestaan"
+    },
+    "toasts": {
+      "warningTitle": "Waarschuwing",
+      "tagsFailed": "{{count}} tag(s) konden niet worden aangemaakt",
+      "contactCreated": "Contact aangemaakt",
+      "contactAdded": "{{name}} is succesvol toegevoegd."
+    },
+    "errors": {
+      "createContactTitle": "Fout bij het aanmaken van contact",
+      "unexpected": "Er is een onverwachte fout opgetreden. Probeer het opnieuw.",
+      "validationTitle": "Validatiefout",
+      "emailExistsTitle": "E-mail bestaat al",
+      "invalidReferenceTitle": "Ongeldige verwijzing",
+      "systemTitle": "Systeemfout",
+      "genericTitle": "Fout",
+      "closeMessage": "Foutmelding sluiten",
+      "createContactHeading": "Fout bij het aanmaken van contact:",
+      "validationPrefix": "Corrigeer het volgende:",
+      "emailExistsPrefix": "E-mail bestaat al:",
+      "invalidReferencePrefix": "Ongeldige verwijzing:",
+      "systemPrefix": "Systeemfout:"
+    }
+  },
+  "contactDetailsEdit": {
+    "title": "Contact bewerken - {{name}}",
+    "heading": "Contact bewerken: {{name}}",
+    "inactiveBadge": "inactief",
+    "description": "Bewerkbaar contactformulier dat wordt gebruikt vanuit de detailweergave en drawerflows",
+    "validation": {
+      "fullNameRequired": "Volledige naam is verplicht",
+      "emailRequired": "E-mailadres is verplicht",
+      "invalidEmail": "Voer een geldig e-mailadres in"
+    },
+    "errors": {
+      "validationPrefix": "Corrigeer het volgende:",
+      "emailExists": "E-mail bestaat al: er bestaat al een contactpersoon met dit e-mailadres in het systeem",
+      "invalidReferencePrefix": "Ongeldige verwijzing:",
+      "systemPrefix": "Systeemfout:",
+      "saveFailed": "Er is een fout opgetreden bij het opslaan. Probeer het opnieuw.",
+      "unexpected": "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
+    },
+    "fields": {
+      "fullName": "Volledige naam",
+      "email": "E-mail",
+      "role": "Rol",
+      "rolePlaceholder": "bijv. Manager, Developer, enz.",
+      "phoneNumbers": "Telefoonnummers:",
+      "inboundTicketDestinationOverride": "Overschrijving inkomende ticketbestemming:",
+      "inboundTicketDestinationHelp": "Voorrang: contactoverschrijving -> klantbestemming -> standaard van provider.",
+      "useClientDestination": "Gebruik klantbestemming",
+      "client": "Klant:",
+      "status": "Status:",
+      "notes": "Notities:",
+      "notesPlaceholder": "Voeg eventuele extra notities over het contact toe...",
+      "tags": "Tags:",
+      "emailAddresses": "E-mailadressen:"
+    },
+    "loading": {
+      "destinations": "Bestemmingen laden..."
+    },
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    }
+  },
+  "contactDetailsView": {
+    "title": "Contactdetails - {{name}}",
+    "description": "Leesgerichte contactsamenvatting met gekoppelde klant, telefoons en metadata",
+    "actions": {
+      "goToContact": "Ga naar contact"
+    },
+    "empty": {
+      "notSet": "Niet ingesteld",
+      "unknownClient": "Onbekende klant"
+    },
+    "phoneTypes": {
+      "work": "Werk",
+      "mobile": "Mobiel",
+      "home": "Thuis",
+      "fax": "Fax",
+      "other": "Overig"
+    },
+    "fields": {
+      "fullName": "Volledige naam",
+      "email": "E-mail",
+      "phone": "Telefoon:",
+      "defaultPhone": "Standaard",
+      "client": "Klant:",
+      "noClientAssigned": "Geen klant toegewezen",
+      "role": "Rol",
+      "status": "Status",
+      "createdAt": "Aangemaakt op",
+      "updatedAt": "Bijgewerkt op",
+      "notes": "Notities:",
+      "tags": "Tags:",
+      "emailAddresses": "E-mailadressen:",
+      "defaultEmail": "Standaard"
+    },
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "sections": {
+      "documents": "Documenten"
+    },
+    "errors": {
+      "loadTagsSystem": "Er is een onverwachte fout opgetreden bij het laden van tags. Probeer het opnieuw of neem contact op met support.",
+      "loadTagsFailed": "Tags konden niet worden geladen. Probeer de pagina opnieuw te laden.",
+      "unexpected": "Er is een onverwachte fout opgetreden. Probeer het opnieuw.",
+      "clientNotFound": "Klant niet gevonden. De klant is mogelijk verwijderd.",
+      "loadClientSystem": "Er is een onverwachte fout opgetreden bij het laden van klantdetails. Probeer het opnieuw of neem contact op met support.",
+      "clientMissing": "De klant bestaat niet langer in het systeem.",
+      "loadClientFailed": "Klantdetails konden niet worden geladen. Probeer het opnieuw.",
+      "updateClientFailedWithMessage": "Klant bijwerken mislukt: {{message}}",
+      "updateClientFailed": "Klant bijwerken mislukt. Probeer het opnieuw."
+    }
+  },
+  "clientContactsList": {
+    "title": "Klantcontacten",
+    "description": "Ingesloten contactspecifieke lijst per klant met filters en rijacties",
+    "table": {
+      "name": "Naam",
+      "email": "E-mail",
+      "phoneNumber": "Telefoonnummer",
+      "actions": "Acties"
+    },
+    "filter": {
+      "show": "Toon:",
+      "active": "Actieve contacten",
+      "inactive": "Inactieve contacten",
+      "all": "Alle contacten"
+    },
+    "actions": {
+      "openMenu": "Menu openen",
+      "quickView": "Snelle weergave",
+      "addNewContact": "Nieuwe contactpersoon toevoegen"
+    },
+    "errors": {
+      "loadFailed": "Contacten konden niet worden geladen.",
+      "loadingTitle": "Fout bij laden van contacten",
+      "retryFailed": "Contacten konden niet worden geladen. Probeer het opnieuw."
+    }
+  },
+  "contactsLayout": {
+    "title": "Contactenlay-out",
+    "description": "Route-shell en paginacontainer voor contacten"
+  },
+  "contactsSkeleton": {
+    "title": "Laadstatus voor contacten",
+    "description": "Laadplaceholders voor contactlijst- en detailweergaven"
+  },
+  "contactAvatarUpload": {
+    "title": "Contactavatar uploaden",
+    "description": "Uploadmogelijkheid voor profielfoto's van contacten"
+  },
+  "contactNotesPanel": {
+    "title": "Notities en snelle info",
+    "description": "Rich-text notitiepaneel met weergave van oude notitie en opslaan/opnieuw proberen-acties",
+    "legacy": {
+      "initialNote": "Initiële notitie"
+    },
+    "errors": {
+      "loadTitle": "Notities konden niet worden geladen",
+      "unknown": "Onbekende fout"
+    },
+    "lastUpdated": "Laatst bijgewerkt: {{date}}"
+  }
+}

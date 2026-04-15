@@ -1,0 +1,1192 @@
+{
+  "common": {
+    "actions": {
+      "add": "Dodaj",
+      "back": "Wstecz",
+      "cancel": "Anuluj",
+      "close": "Zamknij",
+      "copy": "Kopiuj",
+      "create": "Utwórz",
+      "delete": "Usuń",
+      "download": "Pobierz",
+      "edit": "Edytuj",
+      "refresh": "Odśwież",
+      "remove": "Usuń",
+      "retry": "Spróbuj ponownie",
+      "save": "Zapisz",
+      "saving": "Zapisywanie...",
+      "search": "Szukaj",
+      "select": "Wybierz",
+      "update": "Aktualizuj",
+      "view": "Podgląd"
+    },
+    "states": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "loading": "Ładowanie...",
+      "na": "n/d",
+      "none": "Brak"
+    },
+    "no": "Nie",
+    "yes": "Tak"
+  },
+  "assetAlertsSection": {
+    "title": "Sekcja alertów dotyczących zasobów",
+    "description": "Opakowanie sekcji alertów przedsiębiorstwa dla alertów RMM dotyczących konkretnych zasobów i działań zaradczych"
+  },
+  "assetCommandPalette": {
+    "title": "Paleta poleceń",
+    "description": "Paleta poleceń do wyszukiwania zasobów i uruchamiania działań na zasobach",
+    "register": {
+      "label": "Paleta poleceń zasobów",
+      "title": "Paleta poleceń zasobów"
+    },
+    "actions": {
+      "createAsset": {
+        "label": "Utwórz zasób",
+        "description": "Otwórz szybkie dodawanie, aby zarejestrować nowy zasób"
+      },
+      "refreshData": {
+        "label": "Odśwież dane",
+        "description": "Ponownie pobierz zasoby z serwera"
+      },
+      "reset": {
+        "label": "Resetuj",
+        "description": "Usuń wszystkie aktywne filtry i wyszukiwane hasła"
+      }
+    },
+    "searchPlaceholder": "Szukaj zasobów, klientów, biletów…",
+    "empty": "Brak dopasowań. Spróbuj innego słowa kluczowego.",
+    "groups": {
+      "quickActions": "Szybkie działania",
+      "assets": "Zasoby",
+      "hints": "Wskazówki"
+    },
+    "hint": {
+      "body": "Pisz dalej, aby przeszukać pełną listę zasobów. Bilety i wyszukiwanie klientów pojawią się później.",
+      "badge": "Już wkrótce"
+    },
+    "values": {
+      "unassigned": "Nieprzypisany"
+    }
+  },
+  "assetDashboard": {
+    "title": "Panel zasobów",
+    "description": "Opakowanie pulpitu nawigacyjnego zasobów najwyższego poziomu, które renderuje środowisko zasobów klienta"
+  },
+  "assetDashboardClient": {
+    "title": "Klient panelu zasobów",
+    "description": "Główna strona listy zasobów z filtrami, widokami tabeli i siatki, działaniami zbiorczymi i przepływami szuflad",
+    "reflection": {
+      "label": "Panel zasobów"
+    },
+    "errors": {
+      "loadDrawerFailed": "Nie można teraz wczytać szczegółów zasobu. Spróbuj ponownie."
+    },
+    "details": {
+      "noIp": "Brak adresu IP",
+      "network": "Sieć",
+      "local": "Lokalny",
+      "noDetails": "Brak dostępnych szczegółów",
+      "unassigned": "Nieprzypisany"
+    },
+    "selection": {
+      "selectAllVisibleAssets": "Wybierz wszystkie widoczne zasoby",
+      "selectAsset": "Wybierz zasób {{name}}",
+      "selectedAssets": "Wybrano {{count}} zasób{{suffix}}",
+      "clearSelection": "Wyczyść wybór",
+      "bulkActionsComingSoon": "Działania zbiorcze już wkrótce"
+    },
+    "actions": {
+      "openActionsForAsset": "Otwórz działania dla zasobu {{name}}",
+      "viewDetails": "Zobacz szczegóły",
+      "editAsset": "Edytuj zasób",
+      "createTicket": "Utwórz bilet",
+      "refreshData": "Odśwież dane"
+    },
+    "table": {
+      "name": "Nazwa",
+      "tag": "Etykietka",
+      "type": "Typ",
+      "details": "Szczegóły",
+      "status": "Status",
+      "agent": "Agent",
+      "client": "Klient",
+      "location": "Lokalizacja",
+      "actions": "Działania"
+    },
+    "metrics": {
+      "totalAssets": {
+        "title": "Zasoby ogółem",
+        "helper": "We wszystkich klientach"
+      },
+      "filteredView": {
+        "title": "Filtrowany widok",
+        "helper": "Pasujące aktywne filtry"
+      },
+      "automationReady": {
+        "title": "Automatyka gotowa",
+        "helper": "Aktywne harmonogramy konserwacji",
+        "upcoming": "Nadchodzące: {{count}}",
+        "overdue": "Zaległe: {{count}}"
+      },
+      "activeSchedules": {
+        "title": "Aktywne harmonogramy",
+        "helper": "Automatyzacja cyklu życia"
+      },
+      "overdueMaintenance": {
+        "title": "Zaległa konserwacja",
+        "helper": "Potrzebuje uwagi"
+      },
+      "upcomingMaintenance": {
+        "title": "Nadchodząca konserwacja",
+        "helper": "Następne 30 dni"
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "Szukaj według nazwy, znacznika lub numeru seryjnego",
+      "reset": "Resetuj",
+      "status": "Status",
+      "type": "Typ",
+      "agent": "Agent",
+      "columns": "Kolumny",
+      "client": {
+        "loading": "Ładowanie klientów…",
+        "placeholder": "Klient",
+        "clear": "Wyczyść filtr klienta"
+      },
+      "rmmManaged": {
+        "managed": "Zarządzane RMM",
+        "unmanaged": "Nie zarządzane"
+      },
+      "agentStatuses": {
+        "online": "Online",
+        "offline": "Offline",
+        "overdue": "Zaległy",
+        "unknown": "Nieznany"
+      }
+    },
+    "activeFilters": {
+      "status": "Status: {{value}}",
+      "type": "Typ: {{value}}",
+      "client": "Klient: {{value}}",
+      "agent": "Agent: {{value}}"
+    },
+    "statuses": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "maintenance": "Konserwacja"
+    },
+    "types": {
+      "workstation": "Stacja robocza",
+      "server": "Serwer",
+      "network_device": "Urządzenie sieciowe",
+      "mobile_device": "Urządzenie mobilne",
+      "printer": "Drukarka"
+    },
+    "columns": {
+      "select": "wybierz",
+      "name": "nazwa",
+      "asset_tag": "znacznik zasobu",
+      "asset_type": "typ zasobu",
+      "details": "szczegóły",
+      "status": "status",
+      "agent_status": "status agenta",
+      "client_name": "nazwa klienta",
+      "location": "lokalizacja",
+      "actions": "działania"
+    }
+  },
+  "assetDashboardGrid": {
+    "title": "Siatka panelu zasobów",
+    "description": "Złożony układ siatki dla kart szczegółów zasobów, paneli RMM i powiązanych widżetów stanu"
+  },
+  "assetDetailDrawer": {
+    "title": "Szuflada szczegółów zasobów",
+    "description": "Szybki podgląd zasobów oparty na szufladzie z działaniami, danymi podsumowującymi i nawigacją do pełnego rekordu",
+    "label": "Szuflada szczegółów zasobów",
+    "header": {
+      "title": "Szczegóły zasobu",
+      "subtitle": "Zachowaj kontekst podczas przeglądania cyklu życia i konfiguracji"
+    },
+    "tabs": {
+      "overview": "Przegląd",
+      "maintenance": "Konserwacja",
+      "tickets": "Bilety",
+      "configuration": "Konfiguracja",
+      "documents": "Dokumenty"
+    },
+    "helper": {
+      "awaitingSelection": "Oczekiwanie na wybór zasobu",
+      "selectedAsset": "{{name}} • {{tab}}"
+    },
+    "statuses": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "maintenance": "Konserwacja"
+    },
+    "empty": {
+      "selectAsset": "Wybierz zasób, aby wyświetlić szczegóły",
+      "nothingToDisplay": "Nic do wyświetlenia"
+    },
+    "actions": {
+      "openAssetRecord": "Otwórz rekord zasobu",
+      "delete": "Usuń"
+    },
+    "overview": {
+      "assetTag": "Znacznik zasobu {{tag}} • {{type}}",
+      "client": "Klient: {{name}}",
+      "activeSchedules": "Aktywne harmonogramy",
+      "upcomingMaintenance": "Nadchodząca konserwacja",
+      "nextOn": "Następny w {{date}}",
+      "completedMaintenance": "Zakończona konserwacja",
+      "compliance": "Zgodność {{percent}}%",
+      "lastMaintenance": "Ostatnia konserwacja",
+      "noHistory": "Żadnej historii",
+      "maintenanceDataPending": "Dane konserwacyjne pojawią się po skonfigurowaniu harmonogramów.",
+      "assetSummary": "Podsumowanie zasobu",
+      "recentLifecycleEvents": "Ostatnie wydarzenia z cyklu życia"
+    },
+    "maintenance": {
+      "noSchedules": "Nie znaleziono jeszcze harmonogramów konserwacji dla tego zasobu.",
+      "totalSchedules": "Łączne harmonogramy",
+      "active": "Aktywny",
+      "complianceRate": "Wskaźnik zgodności",
+      "history": "Historia konserwacji",
+      "loggedBy": "Zalogowane przez {{name}}",
+      "system": "system",
+      "noLogs": "Dzienniki konserwacji pojawią się tutaj po pierwszym wpisie serwisowym."
+    },
+    "tickets": {
+      "empty": "Żadne bilety nie są jeszcze powiązane z tym zasobem. Użyj szybkiej akcji, aby ją utworzyć.",
+      "linked": "Połączono {{date}}",
+      "client": "Klient: {{name}}",
+      "assignee": "Osoba przypisana: {{name}}",
+      "openTicket": "Otwórz bilet"
+    },
+    "configuration": {
+      "coreAttributes": "Podstawowe atrybuty",
+      "serialNumber": "Numer seryjny",
+      "location": "Lokalizacja",
+      "purchaseDate": "Data zakupu",
+      "warrantyEnd": "Koniec gwarancji",
+      "notProvided": "Nie podano"
+    },
+    "info": {
+      "client": "Klient",
+      "unassigned": "Nieprzypisany",
+      "assetTag": "Etykieta zasobu",
+      "status": "Status",
+      "created": "Utworzono",
+      "updated": "Zaktualizowano",
+      "tenant": "Tenant"
+    },
+    "typeDetails": {
+      "workstation": "Szczegóły stacji roboczej",
+      "networkDevice": "Szczegóły urządzenia sieciowego",
+      "server": "Szczegóły serwera",
+      "mobileDevice": "Szczegóły urządzenia mobilnego",
+      "printer": "Szczegóły drukarki",
+      "operatingSystem": "System operacyjny",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Pamięć masowa",
+      "gpu": "GPU",
+      "notProvided": "Nie podano",
+      "never": "Nigdy",
+      "deviceType": "Typ urządzenia",
+      "managementIp": "Zarządzanie IP",
+      "portCount": "Liczba portów",
+      "firmwareVersion": "Wersja oprogramowania",
+      "poeSupport": "Obsługa PoE",
+      "powerDraw": "Pobór mocy",
+      "virtualized": "Zwirtualizowany",
+      "primaryIp": "Podstawowy adres IP",
+      "hypervisor": "Hiperwizor",
+      "os": "OS",
+      "model": "Model",
+      "imei": "IMEI",
+      "phoneNumber": "Numer telefonu",
+      "carrier": "Operator",
+      "lastLogin": "Ostatnie logowanie",
+      "lastCheckIn": "Ostatnie sprawdzenie",
+      "notReported": "Nie zgłoszono",
+      "networkPrinter": "Drukarka sieciowa",
+      "ipAddress": "Adres IP",
+      "supportsColor": "Obsługuje kolor",
+      "supportsDuplex": "Obsługuje dupleks",
+      "monthlyDutyCycle": "Miesięczny cykl pracy",
+      "monthlyDutyCycleValue": "{{count}} stron"
+    },
+    "relative": {
+      "momentsAgo": "chwilę temu",
+      "minutesAgo": "{{count}} min{{suffix}} temu",
+      "hoursAgo": "{{count}} godz{{suffix}} temu",
+      "daysAgo": "{{count}} dni{{suffix}} temu"
+    }
+  },
+  "assetDetailHeader": {
+    "title": "Nagłówek szczegółów zasobu",
+    "description": "Chrome nagłówka, aby wyświetlić szczegółowe informacje o zasobach, w tym tożsamość, plakietki i akcje odświeżania",
+    "backToAssets": "Powrót do zasobów",
+    "assetTag": "Etykieta zasobu: {{tag}}",
+    "actions": {
+      "createTicket": "Utwórz bilet",
+      "menu": "Działania",
+      "refreshing": "Odświeżanie...",
+      "refreshData": "Odśwież dane",
+      "rebootDevice": "Uruchom ponownie urządzenie",
+      "editAsset": "Edytuj zasób",
+      "deleteAsset": "Usuń zasób"
+    },
+    "values": {
+      "unknownClient": "Nieznany klient"
+    }
+  },
+  "assetDetailTabs": {
+    "title": "Zakładki szczegółów zasobu",
+    "description": "Nawigacja po szczegółach zasobu w kartach umożliwiająca przegląd, konserwację, dokumenty, historię i powiązane zapisy",
+    "tabs": {
+      "serviceHistory": "Historia serwisowa",
+      "software": "Oprogramowanie",
+      "maintenance": "Konserwacja",
+      "relatedAssets": "Powiązane zasoby",
+      "documentsPasswords": "Dokumenty i hasła",
+      "auditLog": "Dziennik audytu"
+    }
+  },
+  "assetDetailView": {
+    "title": "Widok szczegółów zasobu",
+    "description": "Kompozycja szczegółów zasobu z ładowaniem, błędami, metrykami, panelami siatki i zakładkami szczegółów",
+    "loading": "Ładowanie szczegółów zasobu...",
+    "errors": {
+      "title": "Błąd",
+      "notFound": "Nie znaleziono zasobu lub nie masz uprawnień, aby go wyświetlić."
+    }
+  },
+  "assetDetails": {
+    "title": "Szczegóły zasobu",
+    "description": "Strona z pełnymi szczegółami zasobu z kartami podsumowań, powiązaniami, dokumentami i działaniami operacyjnymi",
+    "assetTag": "Etykieta zasobu: {{tag}}",
+    "loading": {
+      "details": "Ładowanie szczegółów..."
+    },
+    "fields": {
+      "status": "Status",
+      "serialNumber": "Numer seryjny",
+      "location": "Lokalizacja",
+      "client": "Klient",
+      "purchaseDate": "Data zakupu",
+      "warrantyEnd": "Koniec gwarancji",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Pamięć masowa",
+      "gpu": "GPU",
+      "lastLogin": "Ostatnie logowanie",
+      "managementIp": "Zarządzanie IP",
+      "portCount": "Liczba portów",
+      "powerDraw": "Pobór mocy",
+      "firmwareVersion": "Wersja oprogramowania",
+      "poeSupport": "Obsługa PoE",
+      "type": "Typ",
+      "hypervisor": "Hiperwizor",
+      "primaryIp": "Podstawowy adres IP",
+      "operatingSystem": "System operacyjny",
+      "imei": "IMEI",
+      "phoneNumber": "Numer telefonu",
+      "carrier": "Operator",
+      "supervisionStatus": "Status nadzoru",
+      "ipAddress": "Adres IP",
+      "networkPrinter": "Drukarka sieciowa",
+      "colorSupport": "Wsparcie kolorów",
+      "duplexSupport": "Wsparcie dupleksowe",
+      "monthlyDutyCycle": "Miesięczny cykl pracy"
+    },
+    "sections": {
+      "basicInformation": "Podstawowe informacje",
+      "workstation": "Szczegóły stacji roboczej",
+      "networkDevice": "Szczegóły urządzenia sieciowego",
+      "server": "Szczegóły serwera",
+      "mobileDevice": "Szczegóły urządzenia mobilnego",
+      "printer": "Szczegóły drukarki",
+      "relatedAssets": "Powiązane zasoby"
+    },
+    "maintenance": {
+      "activeSchedules": "Aktywne harmonogramy",
+      "overdue": "Zaległe",
+      "upcoming": "Nadchodzące"
+    },
+    "tabs": {
+      "details": "Szczegóły",
+      "relatedAssets": "Powiązane zasoby",
+      "documents": "Dokumenty"
+    },
+    "relationships": {
+      "parentOf": "Rodzic",
+      "childOf": "Potomek"
+    },
+    "empty": {
+      "notSpecified": "Nie określono",
+      "unassigned": "Nieprzypisany",
+      "never": "Nigdy",
+      "noAdditionalDetails": "Brak dodatkowych szczegółów",
+      "noRelatedAssets": "Nie znaleziono powiązanych zasobów"
+    },
+    "values": {
+      "virtual": "Wirtualny",
+      "physical": "Fizyczny",
+      "supervised": "Nadzorowany",
+      "unsupervised": "Bez nadzoru",
+      "pagesUnit": "strony"
+    },
+    "statuses": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "maintenance": "Konserwacja"
+    },
+    "deviceTypes": {
+      "switch": "Przełącznik",
+      "router": "Router",
+      "firewall": "Zapora sieciowa",
+      "access_point": "Punkt dostępu",
+      "load_balancer": "Moduł równoważenia obciążenia"
+    },
+    "relationshipTypes": {
+      "affected": "Dotknięty",
+      "related": "Powiązany"
+    }
+  },
+  "assetDocuments": {
+    "title": "Dokumenty zasobu",
+    "description": "Lista dokumentów zasobu i powierzchnia załączników dla plików skojarzonych z zasobem"
+  },
+  "assetForm": {
+    "title": "Formularz zasobu",
+    "description": "Formularz tworzenia i edytowania podstawowego zasobu z polami tożsamości, cyklu życia, umowy i metadanych",
+    "heading": "Edytuj zasób",
+    "loading": {
+      "assetDetails": "Ładowanie szczegółów zasobu..."
+    },
+    "errors": {
+      "assetNotFound": "Nie znaleziono zasobu",
+      "loadFailed": "Nie udało się wczytać szczegółów zasobu",
+      "clientsLoadFailed": "Nie można załadować klientów",
+      "locationsLoadFailed": "Nie można załadować lokalizacji dla tego klienta",
+      "updateFailed": "Nie udało się zaktualizować zasobu"
+    },
+    "actions": {
+      "viewClient": "Zobacz klienta",
+      "manageClientLocations": "Zarządzaj lokalizacjami klientów",
+      "saveChanges": "Zapisz zmiany"
+    },
+    "alerts": {
+      "noLocationsSaved": "Ten klient nie ma jeszcze żadnych zapisanych lokalizacji. Użyj wpisu niestandardowego lub utwórz go na podstawie rekordu klienta."
+    },
+    "sections": {
+      "basicInformation": "Podstawowe informacje",
+      "clientAndLocation": "Klient i lokalizacja",
+      "assetBasics": "Podstawy zasobu"
+    },
+    "fields": {
+      "customLocationOption": "Niestandardowa lokalizacja",
+      "osType": "Typ systemu operacyjnego",
+      "osVersion": "Wersja systemu operacyjnego",
+      "cpuModel": "Model procesora",
+      "cpuCores": "Rdzenie procesora",
+      "ramGb": "RAM (GB)",
+      "storageType": "Typ pamięci masowej",
+      "storageCapacityGb": "Pojemność pamięci (GB)",
+      "gpuModel": "Model GPU",
+      "deviceType": "Typ urządzenia",
+      "managementIp": "Zarządzanie IP",
+      "portCount": "Liczba portów",
+      "firmwareVersion": "Wersja oprogramowania",
+      "powerDrawWatts": "Pobór mocy (W)",
+      "supportsPoe": "Obsługuje PoE",
+      "primaryIp": "Podstawowy adres IP",
+      "raidConfig": "Konfiguracja RAID",
+      "virtualMachine": "Maszyna wirtualna",
+      "hypervisor": "Hiperwizor",
+      "model": "Model",
+      "imei": "IMEI",
+      "phoneNumber": "Numer telefonu",
+      "carrier": "Operator",
+      "supervisedDevice": "Urządzenie nadzorowane",
+      "ipAddress": "Adres IP",
+      "monthlyDutyCycle": "Miesięczny cykl pracy",
+      "networkPrinter": "Drukarka sieciowa",
+      "colorSupport": "Wsparcie kolorów",
+      "duplexSupport": "Wsparcie dupleksowe",
+      "client": "Klient",
+      "primaryLocation": "Główna lokalizacja",
+      "name": "Nazwa",
+      "assetTag": "Etykieta zasobu",
+      "serialNumber": "Numer seryjny",
+      "status": "Status",
+      "purchaseDate": "Data zakupu",
+      "warrantyEndDate": "Data zakończenia gwarancji"
+    },
+    "placeholders": {
+      "loadingClients": "Ładowanie klientów…",
+      "selectClient": "Wybierz klienta",
+      "loadingLocations": "Ładowanie lokalizacji…",
+      "selectLocation": "Wybierz lokalizację",
+      "selectClientFirst": "Najpierw wybierz klienta",
+      "customLocation": "Wprowadź niestandardową lokalizację lub obszar",
+      "selectPurchaseDate": "Wybierz datę zakupu",
+      "selectWarrantyEndDate": "Wybierz datę zakończenia gwarancji"
+    },
+    "statusOptions": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "maintenance": "Konserwacja"
+    },
+    "networkDeviceTypes": {
+      "switch": "Przełącznik",
+      "router": "Router",
+      "firewall": "Zapora sieciowa",
+      "access_point": "Punkt dostępu",
+      "load_balancer": "Moduł równoważenia obciążenia"
+    },
+    "storageTypes": {
+      "ssd": "SSD",
+      "hdd": "HDD",
+      "nvme": "NVMe"
+    },
+    "osTypes": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Android"
+    },
+    "typeDetails": {
+      "workstation": "Szczegóły stacji roboczej",
+      "networkDevice": "Szczegóły urządzenia sieciowego",
+      "server": "Szczegóły serwera",
+      "mobileDevice": "Szczegóły urządzenia mobilnego",
+      "printer": "Szczegóły drukarki"
+    }
+  },
+  "assetFormClient": {
+    "title": "Klient formularza zasobu",
+    "description": "Dynamiczne opakowanie dostępne tylko dla klienta dla formularza zasobu i edycji szkieletu",
+    "loadingTitle": "Edytuj zasób"
+  },
+  "assetMetricsBanner": {
+    "title": "Baner metryk zasobów",
+    "description": "Karty metryk i zestawienia wskaźników dotyczące zgłoszeń, konserwacji, czasu pracy i stanu zasobów",
+    "labels": {
+      "healthStatus": "Stan zdrowia",
+      "openTickets": "Bilety otwarte",
+      "securityStatus": "Stan zabezpieczeń",
+      "warranty": "Gwarancja"
+    },
+    "healthStatuses": {
+      "healthy": "Zdrowy",
+      "warning": "Ostrzeżenie",
+      "critical": "Krytyczny",
+      "unknown": "Nieznany"
+    },
+    "securityStatuses": {
+      "secure": "Bezpieczny",
+      "missingPatches": "{{count}} Brakujące poprawki",
+      "critical": "Krytyczny",
+      "unknown": "Nieznany"
+    },
+    "openTickets": {
+      "active": "[{{count}} Aktywnych]"
+    },
+    "warrantyStatuses": {
+      "expiresIn": "Wygasa za {{count}} dni",
+      "expired": "Wygasły",
+      "unknown": "Nieznany"
+    }
+  },
+  "assetPatchStatusSection": {
+    "title": "Sekcja stanu aktualizacji zasobów",
+    "description": "Opakowanie łatki korporacyjnej i stanu programu antywirusowego wyświetlane w oknie szczegółów zasobu"
+  },
+  "assetSoftwareInventory": {
+    "title": "Inwentaryzacja oprogramowania",
+    "description": "Opakowanie inwentarza oprogramowania dla przedsiębiorstw dotyczące zainstalowanego oprogramowania i danych wersji"
+  },
+  "associatedAssets": {
+    "title": "Powiązane zasoby",
+    "description": "Zarządzanie relacjami zasobów nadrzędnych i podrzędnych z połączonymi działaniami dotyczącymi zasobów",
+    "loading": {
+      "assets": "Ładowanie zasobów..."
+    },
+    "actions": {
+      "addAsset": "Dodaj zasób",
+      "showLess": "Pokaż mniej",
+      "moreAssets": "{{count}} więcej zasobów{{suffix}}"
+    },
+    "errors": {
+      "loadAvailableAssets": "Nie udało się załadować dostępnych zasobów",
+      "loadDrawerFailed": "Nie można teraz wczytać szczegółów zasobu. Spróbuj ponownie.",
+      "loadAssociatedAssets": "Nie udało się załadować powiązanych zasobów",
+      "selectAtLeastOneAsset": "Wybierz co najmniej jeden zasób",
+      "associateFailed": "Nie udało się powiązać zasobów – mogły być już powiązane",
+      "associationFailed": "Nie udało się powiązać zasobów",
+      "removeFailed": "Nie udało się usunąć powiązania z zasobami"
+    },
+    "success": {
+      "associated": "{{count}} zasób{{suffix}} powiązano pomyślnie",
+      "associatedPartial": "{{count}} zasób{{suffix}} powiązano pomyślnie, {{failed}} nie powiodło się (może już zostać powiązany)",
+      "removed": "Usunięto powiązanie z zasobami"
+    },
+    "empty": {
+      "noneAssociated": "Żadne zasoby nie są powiązane z tym biletem.",
+      "unknownAsset": "Nieznany zasób"
+    },
+    "dialog": {
+      "title": "Dodaj zasób",
+      "loadingAssets": "Ładowanie zasobów...",
+      "selectedAssetsLabel": "Wybrany:",
+      "search": {
+        "label": "Wyszukaj zasoby",
+        "placeholder": "Szukaj według nazwy, tagu lub numeru seryjnego..."
+      },
+      "empty": {
+        "search": "Nie znaleziono zasobów pasujących do Twojego wyszukiwania",
+        "available": "Brak dostępnych zasobów dla tego klienta"
+      },
+      "relationship": {
+        "placeholder": "Typ..."
+      },
+      "actions": {
+        "addAssets": "Dodaj zasób{{suffix}}"
+      }
+    },
+    "table": {
+      "name": "Nazwa",
+      "assetTag": "Etykieta zasobu",
+      "type": "Typ",
+      "status": "Status"
+    },
+    "assetStatuses": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "maintenance": "Konserwacja"
+    },
+    "assetTypes": {
+      "workstation": "Stacja robocza",
+      "server": "Serwer",
+      "network_device": "Urządzenie sieciowe",
+      "mobile_device": "Urządzenie mobilne",
+      "printer": "Drukarka"
+    },
+    "relationshipTypes": {
+      "affected": "Dotknięty",
+      "related": "Powiązany"
+    }
+  },
+  "createTicketFromAssetButton": {
+    "title": "Utwórz bilet z zasobu",
+    "description": "Proces tworzenia biletów uruchamiany z zasobu z wyborem tablicy, statusu i kategorii",
+    "register": {
+      "label": "Utwórz bilet z zasobu",
+      "title": "Utwórz bilet z zasobu"
+    },
+    "defaultTitle": "Problem z {{name}}",
+    "actions": {
+      "open": "Utwórz bilet",
+      "create": "Utwórz bilet",
+      "creating": "Tworzenie..."
+    },
+    "fields": {
+      "title": "Tytuł",
+      "description": "Opis",
+      "board": "Tablica",
+      "status": "Status",
+      "priority": "Priorytet"
+    },
+    "placeholders": {
+      "title": "Wpisz tytuł biletu",
+      "description": "Opisz problem...",
+      "loadingBoards": "Ładowanie tablic...",
+      "selectBoard": "Wybierz tablicę...",
+      "selectBoardFirst": "Najpierw wybierz tablicę...",
+      "loadingStatuses": "Ładowanie statusów...",
+      "selectStatus": "Wybierz stan...",
+      "loadingPriorities": "Ładowanie priorytetów...",
+      "selectPriority": "Wybierz priorytet..."
+    },
+    "errors": {
+      "loadPriorities": "Nie udało się załadować priorytetów",
+      "loadBoards": "Nie udało się załadować tablic",
+      "loadStatuses": "Nie udało się załadować statusów",
+      "requiredFields": "Podaj tytuł, tablicę, status i priorytet",
+      "createFailed": "Nie udało się utworzyć biletu"
+    },
+    "success": {
+      "created": "Utworzono bilet"
+    }
+  },
+  "deleteAssetButton": {
+    "title": "Przycisk Usuń zasób",
+    "description": "Usuń przepływ potwierdzenia usunięcia rekordu zasobu",
+    "actions": {
+      "removing": "Usuwam…"
+    },
+    "entityNameFallback": "ten zasób",
+    "errors": {
+      "validationFailed": "Nie udało się potwierdzić usunięcia. Spróbuj ponownie.",
+      "deleteFailed": "Nie udało się usunąć zasobu. Spróbuj ponownie."
+    }
+  },
+  "quickAddAsset": {
+    "title": "Szybkie dodawanie zasobu",
+    "description": "Szybko twórz przepływ zasobów za pomocą niezbędnych pól do dodawania nowego rekordu zasobów",
+    "actions": {
+      "addAsset": "Dodaj zasób",
+      "creating": "Tworzenie...",
+      "createAsset": "Utwórz zasób"
+    },
+    "errors": {
+      "fetchClientsFailed": "Nie udało się pobrać klientów",
+      "createFailed": "Nie udało się utworzyć zasobu"
+    },
+    "validation": {
+      "client": "Klient",
+      "assetName": "Nazwa zasobu",
+      "assetTag": "Etykieta zasobu",
+      "assetType": "Typ zasobu",
+      "requiredFields": "Proszę wypełnić wymagane pola:"
+    },
+    "fields": {
+      "osType": "Typ systemu operacyjnego",
+      "osVersion": "Wersja systemu operacyjnego",
+      "deviceType": "Typ urządzenia",
+      "managementIp": "Zarządzanie IP",
+      "model": "Model",
+      "clientRequired": "Klient *",
+      "assetNameRequired": "Nazwa zasobu *",
+      "assetTagRequired": "Etykieta zasobu *",
+      "typeRequired": "Typ *",
+      "status": "Status",
+      "serialNumber": "Numer seryjny"
+    },
+    "placeholders": {
+      "workstationOsType": "np. Windows, macOS, Linux",
+      "workstationOsVersion": "np. 11, Monterey, Ubuntu 22.04",
+      "selectDeviceType": "Wybierz typ urządzenia",
+      "managementIp": "np. 192.168.1.1",
+      "serverOsType": "np. Windows Server, Ubuntu Server",
+      "serverOsVersion": "np. 2022, 22.04 LTS",
+      "selectOsType": "Wybierz typ systemu operacyjnego",
+      "mobileModel": "np. iPhone 14 Pro, Galaxy S23",
+      "printerModel": "np. HP LaserJet Pro M404n",
+      "assetName": "Wpisz nazwę zasobu",
+      "assetTag": "Wprowadź tag zasobu",
+      "selectType": "Wybierz typ",
+      "selectStatus": "Wybierz stan",
+      "serialNumber": "Wprowadź numer seryjny"
+    },
+    "sections": {
+      "typeSpecificDetails": "Szczegóły specyficzne dla typu"
+    },
+    "statusOptions": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "maintenance": "Konserwacja"
+    },
+    "assetTypes": {
+      "workstation": "Stacja robocza",
+      "network_device": "Urządzenie sieciowe",
+      "server": "Serwer",
+      "mobile_device": "Urządzenie mobilne",
+      "printer": "Drukarka"
+    },
+    "networkDeviceTypes": {
+      "switch": "Przełącznik",
+      "router": "Routera",
+      "firewall": "Zapora sieciowa",
+      "accessPoint": "Punkt dostępu",
+      "loadBalancer": "Moduł równoważenia obciążenia"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Android"
+    }
+  },
+  "remoteAccessButton": {
+    "title": "Przycisk zdalnego dostępu",
+    "description": "Program uruchamiający dostęp zdalny dla zasobów z obsługiwaną integracją połączeń"
+  },
+  "rmmStatusIndicator": {
+    "title": "Wskaźnik statusu RMM",
+    "description": "Podłączony/odłączony układ statusu RMM i obsługujące etykiety statusu",
+    "titles": {
+      "unknown": "Status agenta nieznany",
+      "status": "{{status}}{{suffix}}",
+      "lastSeen": " - Ostatnio widziany: {{value}}"
+    },
+    "statuses": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Zaległy",
+      "unknown": "Nieznany"
+    },
+    "relative": {
+      "justNow": "Właśnie teraz",
+      "minutesAgo": "{{count}}m temu",
+      "hoursAgo": "{{count}}h temu",
+      "daysAgo": "{{count}}d temu"
+    }
+  },
+  "assetInfoPanel": {
+    "title": "Informacje o zasobach i ich cykl życia",
+    "description": "Panel ogólnych informacji o zasobach, zawierający szczegóły dotyczące identyfikacji, właściciela i cyklu życia",
+    "actions": {
+      "copy": "Kopiuj",
+      "copied": "Skopiowano"
+    },
+    "fields": {
+      "client": "Klient",
+      "location": "Lokalizacja",
+      "model": "Model",
+      "serialNumber": "Numer seryjny",
+      "purchaseDate": "Data zakupu",
+      "warrantyEnd": "Koniec gwarancji"
+    },
+    "values": {
+      "unknownClient": "Nieznany klient",
+      "unassigned": "Nieprzypisany",
+      "unknownModel": "Nieznany model"
+    }
+  },
+  "assetNotesPanel": {
+    "title": "Notatki i krótkie informacje",
+    "description": "Panel notatek z bogatym tekstem, zawierający notatki dotyczące konkretnych zasobów i szybki kontekst operacyjny",
+    "errors": {
+      "loadTitle": "Nie udało się wczytać notatek",
+      "unknown": "Nieznany błąd"
+    },
+    "lastUpdated": "Ostatnia aktualizacja: {{value}}"
+  },
+  "hardwareSpecsPanel": {
+    "title": "Specyfikacje sprzętu",
+    "description": "Panel specyfikacji sprzętu obejmujący procesor, pamięć, pamięć masową i metadane urządzenia",
+    "fields": {
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Pamięć masowa",
+      "utilization": "Wykorzystanie"
+    },
+    "values": {
+      "unknownCpu": "Nieznany procesor",
+      "unknown": "Nieznany",
+      "unifiedMemory": "{{size}}GB Pamięci zunifikowanej",
+      "memoryUsed": " ({{size}}GB używane)",
+      "freeStorage": "{{size}} GB wolnego miejsca"
+    },
+    "empty": "Brak dostępnych danych sprzętowych",
+    "emptyStorage": "Nie wykryto dysków pamięci masowej"
+  },
+  "rmmVitalsPanel": {
+    "title": "Parametry RMM i łączność",
+    "description": "Panel RMM Vitals zawierający informacje o pulsie, monitorowaniu i stanie punktów końcowych",
+    "actions": {
+      "refresh": "Odśwież"
+    },
+    "fields": {
+      "agentStatus": "Status agenta",
+      "currentUser": "Bieżący użytkownik",
+      "lastCheckIn": "(Ostatnie sprawdzenie: {{value}})",
+      "uptime": "Czas pracy",
+      "lastSync": "Ostatnia synchronizacja RMM",
+      "network": "Sieć",
+      "networkValue": "Adres IP sieci LAN: {{lan}} | IP sieci WAN: {{wan}}"
+    },
+    "values": {
+      "never": "Nigdy"
+    },
+    "empty": {
+      "title": "Najważniejsze elementy RMM",
+      "notConnected": "Brak połączenia z RMM"
+    },
+    "uptime": "{{days}} dni, {{hours}} godzin, {{minutes}} minut"
+  },
+  "securityPatchingPanel": {
+    "title": "Bezpieczeństwo i aktualizacje",
+    "description": "Panel stanu zabezpieczeń i łatania dla wskaźników podatności i stanu aktualizacji",
+    "fields": {
+      "osVersion": "Wersja systemu operacyjnego",
+      "antivirus": "Program antywirusowy",
+      "patchStatus": "Status aktualizacji",
+      "firewall": "Zapora sieciowa"
+    },
+    "values": {
+      "unknown": "Nieznany"
+    },
+    "antivirus": {
+      "running": "✔ Zainstalowany i uruchomiony",
+      "inactive": "Nieaktywny",
+      "lastScan": "| Ostatnie skanowanie: dzisiaj, 3:00"
+    },
+    "patchStatus": {
+      "critical": "Krytyczny",
+      "atRisk": "Zagrożony",
+      "missingPatches": "- Brakuje {{count}} krytycznych poprawek systemu operacyjnego.",
+      "upToDate": "✔ Aktualne"
+    },
+    "firewall": {
+      "on": "✔ Włączone"
+    }
+  },
+  "copyableField": {
+    "title": "Pole kopiowalne",
+    "description": "Wspólne pole kopiowania do schowka używane w formularzach zasobów i panelach szczegółów",
+    "actions": {
+      "copy": "Kopiuj",
+      "copied": "Skopiowano"
+    }
+  },
+  "statusBadge": {
+    "title": "Odznaka statusu",
+    "description": "Udostępniony moduł renderujący identyfikatory dla cyklu życia zasobów i statusów monitorowania",
+    "statuses": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Zaległy",
+      "healthy": "Zdrowy",
+      "warning": "Ostrzeżenie",
+      "critical": "Krytyczny",
+      "unknown": "Nieznany",
+      "secure": "Bezpieczny",
+      "at_risk": "Zagrożony",
+      "active": "Aktywny",
+      "expiring_soon": "Wygasa wkrótce",
+      "expired": "Wygasły"
+    }
+  },
+  "utilizationBar": {
+    "title": "Pasek wykorzystania",
+    "description": "Udostępniony komponent paska postępu do pomiaru wykorzystania i procentowych wskaźników zasobów"
+  },
+  "auditLogTab": {
+    "title": "Dziennik audytu",
+    "description": "Karta historii audytu zasobów zawierająca zdarzenia na osi czasu i zmiany rekordów",
+    "changedBy": "Zmienione przez {{name}}",
+    "userFallback": "użytkownik {{id}}",
+    "empty": "Brak dostępnej historii audytów.",
+    "changeTypes": {
+      "created": "Utworzono",
+      "updated": "Zaktualizowano"
+    }
+  },
+  "createMaintenanceScheduleDialog": {
+    "title": "Utwórz harmonogram konserwacji",
+    "description": "Okno umożliwiające definiowanie harmonogramów konserwacji i reguł powtarzania dla zasobu",
+    "titles": {
+      "create": "Zaplanuj konserwację",
+      "edit": "Edytuj harmonogram konserwacji"
+    },
+    "actions": {
+      "create": "Utwórz harmonogram",
+      "creating": "Tworzenie...",
+      "update": "Aktualizuj harmonogram",
+      "updating": "Aktualizowanie..."
+    },
+    "fields": {
+      "scheduleName": "Nazwa harmonogramu *",
+      "description": "Opis",
+      "maintenanceType": "Rodzaj konserwacji *",
+      "frequency": "Częstotliwość *",
+      "interval": "Interwał *",
+      "nextMaintenanceDate": "Data następnej konserwacji *",
+      "active": "Aktywny"
+    },
+    "placeholders": {
+      "scheduleName": "np. comiesięczna konserwacja serwera",
+      "description": "Opcjonalny opis...",
+      "maintenanceType": "Wybierz rodzaj konserwacji",
+      "frequency": "Wybierz częstotliwość",
+      "interval": "1",
+      "nextMaintenanceDate": "Wybierz datę"
+    },
+    "frequencyOptions": {
+      "daily": "Codziennie",
+      "weekly": "Co tydzień",
+      "monthly": "Co miesiąc",
+      "quarterly": "Kwartalnie",
+      "yearly": "Co rok"
+    },
+    "errors": {
+      "scheduleNameRequired": "Nazwa harmonogramu jest wymagana",
+      "maintenanceTypeRequired": "Wymagany jest typ konserwacji",
+      "frequencyRequired": "Częstotliwość jest wymagana",
+      "nextMaintenanceRequired": "Wymagany jest następny termin konserwacji",
+      "frequencyIntervalMin": "Przedział częstotliwości musi wynosić co najmniej 1",
+      "saveFailed": "Nie udało się utworzyć harmonogramu konserwacji"
+    }
+  },
+  "documentsPasswordsTab": {
+    "title": "Dokumenty i hasła",
+    "description": "Połączona karta zawierająca dokumenty zasobów, dane uwierzytelniające i powiązane bezpieczne zapisy",
+    "passwords": {
+      "title": "Hasła i tajemnice",
+      "comingSoon": "Już wkrótce bezpieczne zarządzanie hasłami."
+    }
+  },
+  "maintenanceSchedulesTab": {
+    "title": "Harmonogramy konserwacji",
+    "description": "Zakładka zarządzania harmonogramem konserwacji dla planowanych usług i prac cyklicznych",
+    "summary": {
+      "complianceRate": "Wskaźnik zgodności",
+      "nextMaintenance": "Następna konserwacja",
+      "noneScheduled": "Brak zaplanowanych"
+    },
+    "actions": {
+      "scheduleMaintenance": "Zaplanuj konserwację"
+    },
+    "errors": {
+      "deleteFailed": "Nie udało się usunąć harmonogramu konserwacji"
+    },
+    "table": {
+      "scheduleName": "Nazwa harmonogramu",
+      "type": "Typ",
+      "frequency": "Częstotliwość",
+      "nextMaintenance": "Następna konserwacja",
+      "lastMaintenance": "Ostatnia konserwacja",
+      "status": "Status",
+      "actions": "Działania"
+    },
+    "frequency": {
+      "every": "Co {{count}} {{frequency}}{{suffix}}",
+      "units": {
+        "daily": "dzień",
+        "weekly": "tydzień",
+        "monthly": "miesiąc",
+        "quarterly": "kwartał",
+        "yearly": "rok"
+      }
+    },
+    "status": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny"
+    },
+    "types": {
+      "preventive": "Zapobiegawczy",
+      "inspection": "Kontrola",
+      "calibration": "Kalibrowanie",
+      "replacement": "Wymiana"
+    },
+    "empty": {
+      "schedules": "Nie znaleziono harmonogramów konserwacji. Kliknij „Zaplanuj konserwację”, aby ją utworzyć."
+    },
+    "history": {
+      "title": "Historia konserwacji",
+      "performedAt": "Wykonane dnia",
+      "performedBy": "Wykonane przez",
+      "notes": "Notatki",
+      "empty": "Nie zapisano historii konserwacji."
+    },
+    "dialog": {
+      "delete": {
+        "title": "Usuń harmonogram konserwacji",
+        "message": "Czy na pewno chcesz usunąć „{{name}}”? Tej akcji nie można cofnąć."
+      }
+    }
+  },
+  "relatedAssetsTab": {
+    "title": "Powiązane zasoby ({{count}})",
+    "description": "Zakładka do przeglądania i zarządzania powiązanymi relacjami zasobów",
+    "loading": "Ładowanie powiązanych zasobów...",
+    "actions": {
+      "linkAsset": "Połącz zasób",
+      "unlink": "Odłącz",
+      "linkEmptyState": "Połącz zasób"
+    },
+    "success": {
+      "linked": "Zasób połączony",
+      "unlinked": "Zasób odłączony"
+    },
+    "errors": {
+      "selectAsset": "Wybierz zasób, który chcesz połączyć",
+      "linkFailed": "Nie udało się połączyć zasobu",
+      "unlinkFailed": "Nie udało się odłączyć zasobu"
+    },
+    "table": {
+      "assetName": "Nazwa zasobu",
+      "relationship": "Relacja",
+      "linkedDate": "Data połączenia",
+      "actions": "Działania"
+    },
+    "empty": {
+      "linked": "Brak powiązanych zasobów."
+    },
+    "dialog": {
+      "title": "Połącz zasób",
+      "loadingAssets": "Ładowanie zasobów...",
+      "empty": "Nie znaleziono dostępnych zasobów.",
+      "search": {
+        "label": "Wyszukaj zasoby",
+        "placeholder": "Szukaj według nazwy, tagu, numeru seryjnego..."
+      },
+      "relationshipType": {
+        "label": "Typ relacji",
+        "placeholder": "powiązany"
+      },
+      "table": {
+        "asset": "Zasób",
+        "select": "Wybierz"
+      },
+      "actions": {
+        "selected": "Wybrany",
+        "linking": "Łączenie...",
+        "confirm": "Połącz zasób"
+      }
+    },
+    "relationshipTypes": {
+      "related": "Powiązany",
+      "affected": "Dotknięty"
+    }
+  },
+  "serviceHistoryTab": {
+    "title": "Historia serwisowa",
+    "description": "Karta historii usług podsumowująca czynności konserwacyjne i zgłoszenia dotyczące zasobu",
+    "actions": {
+      "createTicket": "Utwórz bilet"
+    },
+    "table": {
+      "ticketId": "Identyfikator biletu",
+      "subject": "Temat",
+      "status": "Status",
+      "priority": "Priorytet",
+      "dateLinked": "Data połączona"
+    },
+    "empty": "Brak biletów powiązanych z tym zasobem.",
+    "clientFallback": "Nieznany klient"
+  },
+  "softwareInventoryTab": {
+    "title": "Inwentarz oprogramowania",
+    "description": "Karta spisu oprogramowania zawierająca zainstalowane oprogramowanie, wersje i metadane wykrywania",
+    "searchPlaceholder": "Wyszukaj oprogramowanie...",
+    "category": {
+      "placeholder": "Kategoria",
+      "options": {
+        "all": "Wszystkie",
+        "browser": "Przeglądarka",
+        "security": "Bezpieczeństwo",
+        "productivity": "Produktywność",
+        "development": "Rozwój"
+      }
+    },
+    "table": {
+      "name": "Nazwa",
+      "version": "Wersja",
+      "publisher": "Wydawca",
+      "installDate": "Data instalacji"
+    },
+    "empty": "Nie znaleziono oprogramowania odpowiadającego Twojemu wyszukiwaniu.",
+    "totalItems": "Łączna liczba elementów: {{count}}",
+    "values": {
+      "unknown": "Nieznany"
+    }
+  }
+}

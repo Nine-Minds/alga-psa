@@ -1,0 +1,33 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: workflow-worker
+  namespace: alga-system
+spec:
+  interval: 10m
+  timeout: 30m
+  dependsOn:
+    - name: alga-core
+    - name: pgbouncer
+  releaseName: workflow-worker
+  targetNamespace: msp
+  install:
+    createNamespace: true
+    remediation:
+      retries: 0
+  upgrade:
+    remediation:
+      retries: 0
+  chart:
+    spec:
+      chart: ./ee/helm/workflow-worker
+      interval: 10m
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: alga-appliance
+        namespace: flux-system
+  valuesFrom:
+    - kind: ConfigMap
+      name: appliance-values-workflow-worker
+      valuesKey: workflow-worker.talos-single-node.yaml

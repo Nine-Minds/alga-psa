@@ -3,13 +3,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { createCategory, getAllBoards } from '@alga-psa/tickets/actions';
 import type { IBoard, ITicketCategory } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export interface QuickAddCategoryProps {
   isOpen: boolean;
@@ -40,6 +41,7 @@ export default function QuickAddCategory({
   categories = [],
   boards,
 }: QuickAddCategoryProps) {
+  const { t } = useTranslation('features/tickets');
   const [formData, setFormData] = useState<QuickAddCategoryFormData>(defaultFormData(preselectedBoardId));
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,14 +75,14 @@ export default function QuickAddCategory({
         setFetchedBoards(Array.isArray(allBoards) ? allBoards : []);
       } catch (loadError) {
         console.error('Error fetching boards for QuickAddCategory:', loadError);
-        setError('Failed to load boards');
+        setError(t('errors.loadBoardsFailed', 'Failed to load boards'));
       } finally {
         setIsLoadingBoards(false);
       }
     };
 
     void loadBoards();
-  }, [boards, isOpen]);
+  }, [boards, isOpen, t]);
 
   const availableBoards = useMemo(() => {
     const sourceBoards = boards || fetchedBoards;
@@ -96,15 +98,15 @@ export default function QuickAddCategory({
       : topLevelCategories;
 
     return [
-      { value: 'none', label: 'None (Top-level category)' },
+      { value: 'none', label: t('settings.categories.noneTopLevelCategory', 'None (Top-level category)') },
       ...matchingCategories.map((category) => ({
         value: category.category_id,
         label: resolvedBoardId
           ? category.category_name
-          : `${category.category_name} (${availableBoards.find((board) => board.board_id === category.board_id)?.board_name || 'No board'})`,
+          : `${category.category_name} (${availableBoards.find((board) => board.board_id === category.board_id)?.board_name || t('settings.categories.noBoard', 'No board')})`,
       })),
     ];
-  }, [availableBoards, categories, resolvedBoardId]);
+  }, [availableBoards, categories, resolvedBoardId, t]);
 
   useEffect(() => {
     if (!formData.parent_category) {
@@ -147,7 +149,7 @@ export default function QuickAddCategory({
   const handleSubmit = async () => {
     const trimmedName = formData.category_name.trim();
     if (!trimmedName) {
-      setError('Category name is required');
+      setError(t('validation.category.nameRequired', 'Category name is required'));
       return;
     }
 
@@ -157,7 +159,7 @@ export default function QuickAddCategory({
     const boardId = preselectedBoardId || parentCategory?.board_id || formData.board_id;
 
     if (!boardId) {
-      setError('Board is required for top-level categories');
+      setError(t('validation.category.boardRequiredForTopLevel', 'Board is required for top-level categories'));
       return;
     }
 
@@ -170,12 +172,12 @@ export default function QuickAddCategory({
         board_id: boardId,
         parent_category: formData.parent_category || undefined,
       });
-      toast.success('Category created successfully');
+      toast.success(t('settings.categories.createSuccess', 'Category created successfully'));
       onCategoryCreated(createdCategory);
       handleClose();
     } catch (submitError) {
       console.error('Error creating category:', submitError);
-      setError(submitError instanceof Error ? submitError.message : 'Failed to create category');
+      setError(submitError instanceof Error ? submitError.message : t('errors.createCategoryFailed', 'Failed to create category'));
     } finally {
       setIsSubmitting(false);
     }
@@ -183,8 +185,21 @@ export default function QuickAddCategory({
 
   const shouldShowBoardSelector = !preselectedBoardId && !formData.parent_category;
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button id="quick-add-category-cancel" type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
+        {t('actions.cancel', 'Cancel')}
+      </Button>
+      <Button id="quick-add-category-submit" type="button" onClick={() => void handleSubmit()} disabled={isSubmitting}>
+        {isSubmitting
+          ? t('settings.categories.creating', 'Creating...')
+          : t('actions.create', 'Create')}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog isOpen={isOpen} onClose={handleClose} title="Add Category">
+    <Dialog isOpen={isOpen} onClose={handleClose} title={t('settings.categories.addCategory', 'Add Category')} footer={footer}>
       <DialogContent>
         <div className="space-y-4">
           {error && (
@@ -194,7 +209,9 @@ export default function QuickAddCategory({
           )}
 
           <div>
-            <Label htmlFor="quick-add-category-name">Category Name *</Label>
+            <Label htmlFor="quick-add-category-name">
+              {t('settings.categories.categoryName', 'Category Name *')}
+            </Label>
             <Input
               id="quick-add-category-name"
               value={formData.category_name}
@@ -204,13 +221,13 @@ export default function QuickAddCategory({
                   category_name: event.target.value,
                 }));
               }}
-              placeholder="Enter category name"
+              placeholder={t('settings.categories.enterCategoryName', 'Enter category name')}
             />
           </div>
 
           {shouldShowBoardSelector && (
             <div>
-              <Label htmlFor="quick-add-category-board">Board *</Label>
+              <Label htmlFor="quick-add-category-board">{t('fields.board', 'Board')} *</Label>
               <CustomSelect
                 value={formData.board_id}
                 onValueChange={(value) => {
@@ -228,15 +245,21 @@ export default function QuickAddCategory({
                   value: board.board_id || '',
                   label: board.board_name || '',
                 }))}
-                placeholder={isLoadingBoards ? 'Loading boards…' : 'Select a board'}
+                placeholder={isLoadingBoards
+                  ? t('settings.categories.loadingBoards', 'Loading boards…')
+                  : t('settings.categories.selectBoard', 'Select a board')}
                 className="w-full"
               />
-              <p className="text-xs text-muted-foreground mt-1">Required for top-level categories</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('settings.categories.boardRequiredHelp', 'Required for top-level categories')}
+              </p>
             </div>
           )}
 
           <div>
-            <Label htmlFor="quick-add-category-parent">Parent Category (Optional)</Label>
+            <Label htmlFor="quick-add-category-parent">
+              {t('settings.categories.parentCategoryOptional', 'Parent Category (Optional)')}
+            </Label>
             <CustomSelect
               value={formData.parent_category || 'none'}
               onValueChange={(value) => {
@@ -249,25 +272,23 @@ export default function QuickAddCategory({
                 }));
               }}
               options={parentCategoryOptions}
-              placeholder="Select parent category"
+              placeholder={t('settings.categories.selectParentCategory', 'Select parent category')}
               className="w-full"
             />
             <p className="text-xs text-muted-foreground mt-1">
               {resolvedBoardId
-                ? 'Select a parent to create a subcategory, or leave empty for top-level'
-                : 'Select a board first, or pick a parent category to inherit its board'}
+                ? t(
+                    'settings.categories.parentHelpWithBoard',
+                    'Select a parent to create a subcategory, or leave empty for top-level'
+                  )
+                : t(
+                    'settings.categories.parentHelpWithoutBoard',
+                    'Select a board first, or pick a parent category to inherit its board'
+                  )}
             </p>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button id="quick-add-category-cancel" type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button id="quick-add-category-submit" type="button" onClick={() => void handleSubmit()} disabled={isSubmitting}>
-            {isSubmitting ? 'Creating...' : 'Create'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

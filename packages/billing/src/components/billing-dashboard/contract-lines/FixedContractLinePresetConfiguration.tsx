@@ -20,8 +20,10 @@ import {
 } from '@alga-psa/billing/actions/contractLinePresetActions';
 import { IService, IContractLinePreset } from '@alga-psa/types';
 import FixedContractLinePresetServicesList from '../FixedContractLinePresetServicesList'; // Import the preset-specific component
-import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
+import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface FixedPresetConfigurationProps {
   presetId: string;
@@ -29,11 +31,25 @@ interface FixedPresetConfigurationProps {
 }
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
+const BILLING_TIMING_OPTIONS = [
+  {
+    value: 'arrears',
+    labelKey: 'preset.fixed.settings.billingTiming.options.arrears',
+    defaultLabel: 'Arrears - invoice after the period closes',
+  },
+  {
+    value: 'advance',
+    labelKey: 'preset.fixed.settings.billingTiming.options.advance',
+    defaultLabel: 'Advance - invoice at the start of the period',
+  },
+] as const;
 
 export function FixedPresetConfiguration({
   presetId,
   className = '',
 }: FixedPresetConfigurationProps) {
+  const { t } = useTranslation('msp/contract-lines');
+  const billingFrequencyOptions = useBillingFrequencyOptions();
   const [plan, setPlan] = useState<IContractLinePreset | null>(null);
   const [services, setServices] = useState<IService[]>([]);
   const [planLoading, setPlanLoading] = useState(true);
@@ -44,6 +60,7 @@ export function FixedPresetConfiguration({
   const [planName, setPlanName] = useState('');
   const [planType, setPlanType] = useState<PlanType>('Fixed');
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
+  const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('arrears');
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
   const [baseRateInput, setBaseRateInput] = useState<string>('');
   const [enableProration, setEnableProration] = useState<boolean>(false);
@@ -68,6 +85,7 @@ export function FixedPresetConfiguration({
         setPlanName(fetchedPlan.preset_name);
         setBillingFrequency(fetchedPlan.billing_frequency);
         setPlanType(fetchedPlan.contract_line_type as PlanType);
+        setBillingTiming(fetchedPlan.billing_timing ?? 'arrears');
 
         // Fetch fixed config
         if (fetchedPlan.preset_id) {
@@ -78,20 +96,29 @@ export function FixedPresetConfiguration({
               setBaseRateInput((cfg.base_rate / 100).toFixed(2));
             }
             setEnableProration(!!cfg.enable_proration);
-            setBillingCycleAlignment((cfg.billing_cycle_alignment ?? 'start') as any);
+            setBillingCycleAlignment(
+              resolveBillingCycleAlignmentForCompatibility({
+                billingCycleAlignment: cfg.billing_cycle_alignment,
+                enableProration: cfg.enable_proration,
+              }) as any,
+            );
           }
         }
         setIsDirty(false);
       } else {
-        setError('Invalid contract line preset type or contract line preset not found.');
+        setError(t('preset.fixed.errors.invalidContractLinePresetTypeOrNotFound', {
+          defaultValue: 'Invalid contract line preset type or contract line preset not found.',
+        }));
       }
     } catch (err) {
       console.error('Error fetching contract line preset data:', err);
-      setError('Failed to load contract line preset configuration. Please try again.');
+      setError(t('preset.fixed.errors.failedToLoadContractLinePresetConfiguration', {
+        defaultValue: 'Failed to load contract line preset configuration. Please try again.',
+      }));
     } finally {
       setPlanLoading(false);
     }
-  }, [presetId]);
+  }, [presetId, t]);
 
   useEffect(() => {
     fetchPlanData();
@@ -99,9 +126,21 @@ export function FixedPresetConfiguration({
 
   const validateForm = (): string[] => {
     const errors: string[] = [];
-    if (!planName.trim()) errors.push('Contract line name');
-    if (!billingFrequency) errors.push('Billing frequency');
-    if (!planType) errors.push('Contract line type');
+    if (!planName.trim()) {
+      errors.push(t('preset.fixed.validation.contractLinePresetName', {
+        defaultValue: 'Contract line preset name',
+      }));
+    }
+    if (!billingFrequency) {
+      errors.push(t('preset.fixed.validation.billingFrequency', {
+        defaultValue: 'Billing frequency',
+      }));
+    }
+    if (!planType) {
+      errors.push(t('preset.fixed.validation.contractLineType', {
+        defaultValue: 'Contract line type',
+      }));
+    }
     // Base rate is now optional for presets - it can be set when creating actual contracts
     return errors;
   };
@@ -120,6 +159,8 @@ export function FixedPresetConfiguration({
         preset_name: planName,
         billing_frequency: billingFrequency,
         contract_line_type: planType!,
+        billing_timing: billingTiming,
+        cadence_owner: plan?.cadence_owner ?? 'client',
         tenant,
       };
 
@@ -130,7 +171,10 @@ export function FixedPresetConfiguration({
           await updateContractLinePresetFixedConfig(plan.preset_id, {
             base_rate: baseRate ?? null,
             enable_proration: enableProration,
-            billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start',
+            billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+              billingCycleAlignment: billingCycleAlignment,
+              enableProration: enableProration,
+            }),
           });
         }
       }
@@ -139,7 +183,11 @@ export function FixedPresetConfiguration({
       setIsDirty(false);
     } catch (error) {
       console.error('Error saving contract line preset:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save contract line preset';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('preset.fixed.errors.failedToSaveContractLinePreset', {
+            defaultValue: 'Failed to save contract line preset',
+          });
       setValidationErrors([errorMessage]);
     } finally {
       setIsSaving(false);
@@ -166,20 +214,35 @@ export function FixedPresetConfiguration({
   }
 
   if (!plan) {
-      return <div className="p-4">Contract line not found or invalid type.</div>; // Should not happen if error handling is correct
+      return (
+        <div className="p-4">
+          {t('preset.fixed.errors.contractLineNotFoundOrInvalidType', {
+            defaultValue: 'Contract line not found or invalid type.',
+          })}
+        </div>
+      ); // Should not happen if error handling is correct
   }
 
   return (
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader>
-          <CardTitle>Edit Contract Line Preset: {plan?.preset_name || '...'} (Fixed)</CardTitle>
+          <CardTitle>
+            {t('preset.fixed.cardTitle', {
+              defaultValue: 'Edit Contract Line Preset: {{name}} (Fixed)',
+              name: plan?.preset_name || '...',
+            })}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {validationErrors.length > 0 && (
             <Alert variant="destructive">
               <AlertDescription>
-                <p className="font-medium mb-2">Please correct the following:</p>
+                <p className="font-medium mb-2">
+                  {t('common.validation.prefix', {
+                    defaultValue: 'Please correct the following:',
+                  })}
+                </p>
                 <ul className="list-disc list-inside space-y-1">
                   {validationErrors.map((err, idx) => (
                     <li key={idx}>{err}</li>
@@ -191,14 +254,20 @@ export function FixedPresetConfiguration({
 
           <section className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">Contract Line Preset Basics</h3>
+              <h3 className="text-lg font-semibold">
+                {t('preset.fixed.basics.heading', { defaultValue: 'Contract Line Preset Basics' })}
+              </h3>
               <p className="text-sm text-muted-foreground">
-                Name the contract line preset and choose how it should bill by default.
+                {t('preset.fixed.basics.description', {
+                  defaultValue: 'Name the contract line preset and choose how it should bill by default.',
+                })}
               </p>
             </div>
             <div className="space-y-3">
               <div>
-                <Label htmlFor="name">Contract Line Preset Name *</Label>
+                <Label htmlFor="name">
+                  {t('preset.fixed.basics.nameLabel', { defaultValue: 'Contract Line Preset Name *' })}
+                </Label>
                 <Input
                   id="name"
                   value={planName}
@@ -206,12 +275,16 @@ export function FixedPresetConfiguration({
                     setPlanName(e.target.value);
                     markDirty();
                   }}
-                  placeholder="e.g. Managed Support – Gold"
+                  placeholder={t('preset.fixed.basics.namePlaceholder', {
+                    defaultValue: 'e.g. Managed Support - Gold',
+                  })}
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="frequency">Billing Frequency *</Label>
+                <Label htmlFor="frequency">
+                  {t('preset.fixed.basics.billingFrequencyLabel', { defaultValue: 'Billing Frequency *' })}
+                </Label>
                 <CustomSelect
                   id="frequency"
                   value={billingFrequency}
@@ -219,8 +292,10 @@ export function FixedPresetConfiguration({
                     setBillingFrequency(value);
                     markDirty();
                   }}
-                  options={BILLING_FREQUENCY_OPTIONS}
-                  placeholder="Select billing frequency"
+                  options={billingFrequencyOptions}
+                  placeholder={t('preset.fixed.basics.billingFrequencyPlaceholder', {
+                    defaultValue: 'Select billing frequency',
+                  })}
                 />
               </div>
             </div>
@@ -228,14 +303,23 @@ export function FixedPresetConfiguration({
 
           <section className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">Fixed Fee Settings</h3>
+              <h3 className="text-lg font-semibold">
+                {t('preset.fixed.settings.heading', { defaultValue: 'Fixed Fee Settings' })}
+              </h3>
               <p className="text-sm text-muted-foreground">
-                Define the recurring base rate and optional proration behavior. Service allocations can be tuned once the line is active.
+                {t('preset.fixed.settings.description', {
+                  defaultValue:
+                    'Define the recurring base rate and whether partial-period coverage should adjust the charge. Service allocations can be tuned once the line is active.',
+                })}
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label htmlFor="base-rate">Recurring Base Rate (Optional)</Label>
+                <Label htmlFor="base-rate">
+                  {t('preset.fixed.settings.baseRateLabel', {
+                    defaultValue: 'Recurring Base Rate (Optional)',
+                  })}
+                </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                   <Input
@@ -262,30 +346,96 @@ export function FixedPresetConfiguration({
                         setBaseRateInput((cents / 100).toFixed(2));
                       }
                     }}
-                    placeholder="0.00"
+                    placeholder={t('common.moneyPlaceholder', { defaultValue: '0.00' })}
                     className="pl-10"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Suggested recurring fee for all fixed services. Can be overridden when adding this preset to a contract.
+                  {t('preset.fixed.settings.baseRateHelp', {
+                    defaultValue:
+                      'Suggested recurring fee for all fixed services. Can be overridden when adding this preset to a contract.',
+                  })}
                 </p>
               </div>
               <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="enable-proration" className="font-medium text-[rgb(var(--color-text-800))]">
-                    Enable Proration
+                    {t('preset.fixed.settings.adjustForPartialPeriodsLabel', {
+                      defaultValue: 'Adjust for Partial Periods',
+                    })}
                   </Label>
                   <Switch
                     id="enable-proration"
                     checked={enableProration}
                     onCheckedChange={(checked) => {
                       setEnableProration(checked);
+                      setBillingCycleAlignment((currentAlignment) =>
+                        checked
+                          ? currentAlignment === 'start'
+                            ? 'prorated'
+                            : currentAlignment
+                          : 'start',
+                      );
                       markDirty();
                     }}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Toggle this on if you want the base rate to be prorated when the contract starts mid-cycle.
+                  {t('preset.fixed.settings.adjustForPartialPeriodsHelp', {
+                    defaultValue:
+                      'Enable this when the recurring fee should scale to the covered portion of a service period if the contract starts or ends inside that period.',
+                  })}
+                </p>
+                {enableProration && (
+                  <div>
+                    <Label htmlFor="billing-cycle-alignment">
+                      {t('preset.fixed.settings.billingCycleAlignmentLabel', {
+                        defaultValue: 'Billing Cycle Alignment',
+                      })}
+                    </Label>
+                    <CustomSelect
+                      id="billing-cycle-alignment"
+                      value={billingCycleAlignment}
+                      onValueChange={(value: string) => {
+                        setBillingCycleAlignment(value as 'start' | 'end' | 'prorated');
+                        markDirty();
+                      }}
+                      options={[
+                        { value: 'start', label: t('preset.fixed.settings.billingCycleAlignment.options.start', { defaultValue: 'Start of Billing Cycle' }) },
+                        { value: 'end', label: t('preset.fixed.settings.billingCycleAlignment.options.end', { defaultValue: 'End of Billing Cycle' }) },
+                        { value: 'prorated', label: t('preset.fixed.settings.billingCycleAlignment.options.prorated', { defaultValue: 'Proportional Coverage' }) },
+                      ]}
+                      placeholder={t('preset.fixed.settings.billingCycleAlignmentPlaceholder', {
+                        defaultValue: 'Select alignment',
+                      })}
+                    />
+                  </div>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="billing-timing">
+                  {t('preset.fixed.settings.billingTimingLabel', { defaultValue: 'Billing Timing' })}
+                </Label>
+                <CustomSelect
+                  id="billing-timing"
+                  value={billingTiming}
+                  onValueChange={(value) => {
+                    setBillingTiming(value as 'arrears' | 'advance');
+                    markDirty();
+                  }}
+                  options={BILLING_TIMING_OPTIONS.map((option) => ({
+                    value: option.value,
+                    label: t(option.labelKey, { defaultValue: option.defaultLabel }),
+                  }))}
+                  placeholder={t('preset.fixed.settings.billingTimingPlaceholder', {
+                    defaultValue: 'Select billing timing',
+                  })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('preset.fixed.settings.billingTimingHelp', {
+                    defaultValue:
+                      'This preset keeps its cadence owner explicit when it is copied to a recurring line. Billing timing still controls whether the copied recurring line bills at the start or end of each covered period.',
+                  })}
                 </p>
               </div>
             </div>
@@ -298,14 +448,16 @@ export function FixedPresetConfiguration({
               onClick={handleReset}
               disabled={isSaving || !isDirty}
             >
-              Reset
+              {t('common.actions.reset', { defaultValue: 'Reset' })}
             </Button>
             <Button
               id="save-plan-basics"
               onClick={handleSave}
               disabled={isSaving || !isDirty}
             >
-              {isSaving ? 'Saving…' : 'Save Changes'}
+              {isSaving
+                ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
             </Button>
           </div>
         </CardContent>
@@ -314,7 +466,9 @@ export function FixedPresetConfiguration({
       {/* Services List */}
       <Card>
           <CardHeader>
-              <CardTitle>Associated Services</CardTitle>
+              <CardTitle>
+                {t('preset.fixed.services.associatedCardTitle', { defaultValue: 'Associated Services' })}
+              </CardTitle>
           </CardHeader>
           <CardContent>
               <FixedContractLinePresetServicesList

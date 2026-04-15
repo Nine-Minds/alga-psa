@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import { useInvoiceDesignerStore } from '../invoice-designer/state/designerStore';
 import type { DesignerWorkspaceSnapshot } from '../invoice-designer/state/designerStore';
-import { exportWorkspaceToInvoiceTemplateAst } from '../invoice-designer/ast/workspaceAst';
+import { exportWorkspaceToTemplateAst } from '../invoice-designer/ast/workspaceAst';
 
 const pushMock = vi.fn();
 const getInvoiceTemplateMock = vi.fn();
@@ -173,7 +173,26 @@ const buildTransformedTemplateAst = () => {
     ] as any,
   };
 
-  return exportWorkspaceToInvoiceTemplateAst(workspace);
+  return exportWorkspaceToTemplateAst(workspace);
+};
+
+const findLayoutNodeById = (node: any, id: string): any | null => {
+  if (!node || typeof node !== 'object') {
+    return null;
+  }
+  if (node.id === id) {
+    return node;
+  }
+  if (!Array.isArray(node.children)) {
+    return null;
+  }
+  for (const child of node.children) {
+    const match = findLayoutNodeById(child, id);
+    if (match) {
+      return match;
+    }
+  }
+  return null;
 };
 
 const installLocalStorageMock = () => {
@@ -299,7 +318,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
 
   it('hydrates workspace from persisted templateAst payload', async () => {
     const workspace = createWorkspaceWithFieldAndDynamicTable('ast-field');
-    const astPayload = exportWorkspaceToInvoiceTemplateAst(workspace);
+    const astPayload = exportWorkspaceToTemplateAst(workspace);
     getInvoiceTemplateMock.mockResolvedValueOnce({
       template_id: 'tpl-ast',
       name: 'Template AST',
@@ -312,6 +331,104 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     await waitFor(() => {
       expect(useInvoiceDesignerStore.getState().nodes.some((node) => node.type === 'dynamic-table')).toBe(true);
       expect(useInvoiceDesignerStore.getState().nodes.some((node) => node.id === 'ast-field')).toBe(true);
+    });
+  });
+
+  it('materializes missing field border styles as none when reopening and saving a legacy template', async () => {
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-legacy-border',
+      name: 'Legacy Border Template',
+      templateAst: {
+        kind: 'invoice-template-ast',
+        version: 1,
+        bindings: {
+          values: {
+            invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
+          },
+          collections: {},
+        },
+        layout: {
+          id: 'root',
+          type: 'document',
+          children: [
+            {
+              id: 'legacy-border-field',
+              type: 'field',
+              label: 'Invoice #',
+              binding: { bindingId: 'invoiceNumber' },
+            },
+          ],
+        },
+      },
+      isStandard: false,
+    });
+
+    render(<InvoiceTemplateEditor templateId="tpl-legacy-border" />);
+
+    await waitFor(() => {
+      const fieldNode = useInvoiceDesignerStore.getState().nodesById['legacy-border-field'];
+      expect((fieldNode?.props as any)?.metadata?.fieldBorderStyle).toBe('none');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
+
+    const savedAst = saveInvoiceTemplateMock.mock.calls[0]?.[0]?.templateAst;
+    const savedField = findLayoutNodeById(savedAst.layout, 'legacy-border-field');
+    expect(savedField?.type).toBe('field');
+    if (!savedField || savedField.type !== 'field') return;
+    expect(savedField.borderStyle).toBe('none');
+  });
+
+  it('persists edited field designer placeholders through save and reopen', async () => {
+    const workspace = createWorkspaceWithField('placeholder-field');
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-placeholder',
+      name: 'Template Placeholder',
+      templateAst: exportWorkspaceToTemplateAst(workspace as any),
+      isStandard: false,
+    });
+
+    const rendered = render(<InvoiceTemplateEditor templateId="tpl-placeholder" />);
+
+    await waitFor(() => {
+      const fieldNode = useInvoiceDesignerStore.getState().nodesById['placeholder-field'];
+      expect(fieldNode).toBeTruthy();
+      expect((fieldNode?.props as any)?.metadata?.placeholder).toBe('Invoice Number');
+    });
+
+    act(() => {
+      useInvoiceDesignerStore.getState().setNodeProp(
+        'placeholder-field',
+        'metadata.placeholder',
+        'Invoice Reference',
+        true
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
+
+    const savedAst = saveInvoiceTemplateMock.mock.calls[0]?.[0]?.templateAst;
+    const savedField = findLayoutNodeById(savedAst.layout, 'placeholder-field');
+    expect(savedField?.type).toBe('field');
+    if (!savedField || savedField.type !== 'field') return;
+    expect(savedField.placeholder).toBe('Invoice Reference');
+
+    rendered.unmount();
+    useInvoiceDesignerStore.getState().resetWorkspace();
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-placeholder',
+      name: 'Template Placeholder',
+      templateAst: savedAst,
+      isStandard: false,
+    });
+
+    render(<InvoiceTemplateEditor templateId="tpl-placeholder" />);
+
+    await waitFor(() => {
+      const fieldNode = useInvoiceDesignerStore.getState().nodesById['placeholder-field'];
+      expect((fieldNode?.props as any)?.metadata?.placeholder).toBe('Invoice Reference');
     });
   });
 
@@ -591,6 +708,13 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
         'aggregate-total',
       ])
     );
+    expect(
+      (
+        useInvoiceDesignerStore.getState().nodesById['grouped-table']?.props as
+          | { metadata?: { collectionBindingKey?: string } }
+          | undefined
+      )?.metadata?.collectionBindingKey
+    ).toBe('lineItems.grouped');
 
     fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
     await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
@@ -618,6 +742,82 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
       ])
     );
     expect(useInvoiceDesignerStore.getState().transforms.outputBindingId).toBe('lineItems.grouped');
+    expect(
+      (
+        useInvoiceDesignerStore.getState().nodesById['grouped-table']?.props as
+          | { metadata?: { collectionBindingKey?: string } }
+          | undefined
+      )?.metadata?.collectionBindingKey
+    ).toBe('lineItems.grouped');
+  });
+
+  it('persists edited grouped-table aggregate column bindings through save and reopen', async () => {
+    const transformedAst = JSON.parse(JSON.stringify(buildTransformedTemplateAst()));
+    const groupedTable = findLayoutNodeById(transformedAst.layout, 'grouped-table');
+    expect(groupedTable?.type).toBe('dynamic-table');
+    if (!groupedTable || groupedTable.type !== 'dynamic-table') return;
+    groupedTable.columns = groupedTable.columns.map((column: { id: string; value: unknown }) =>
+      column.id === 'col-total'
+        ? {
+            ...column,
+            value: { type: 'path', path: 'total' },
+          }
+        : column
+    );
+
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-column-roundtrip',
+      name: 'Template Column Roundtrip',
+      templateAst: transformedAst,
+      isStandard: false,
+    });
+
+    const rendered = render(<InvoiceTemplateEditor templateId="tpl-column-roundtrip" />);
+
+    await waitFor(() => {
+      const groupedTableNode = useInvoiceDesignerStore.getState().nodesById['grouped-table'];
+      expect(groupedTableNode).toBeTruthy();
+      expect((groupedTableNode?.props as any)?.metadata?.columns?.find((column: { id: string }) => column.id === 'col-total')?.key).toBe('item.total');
+    });
+
+    act(() => {
+      useInvoiceDesignerStore.getState().setNodeProp(
+        'grouped-table',
+        'metadata.columns.1.key',
+        'item.aggregates.sumTotal',
+        true
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
+
+    const savedAst = saveInvoiceTemplateMock.mock.calls[0]?.[0]?.templateAst;
+    const savedGroupedTable = findLayoutNodeById(savedAst.layout, 'grouped-table');
+    expect(savedGroupedTable?.type).toBe('dynamic-table');
+    if (!savedGroupedTable || savedGroupedTable.type !== 'dynamic-table') return;
+    expect(savedGroupedTable.columns.find((column: { id: string }) => column.id === 'col-total')?.value).toEqual({
+      type: 'path',
+      path: 'aggregates.sumTotal',
+    });
+
+    rendered.unmount();
+    useInvoiceDesignerStore.getState().resetWorkspace();
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-column-roundtrip',
+      name: 'Template Column Roundtrip',
+      templateAst: savedAst,
+      isStandard: false,
+    });
+
+    render(<InvoiceTemplateEditor templateId="tpl-column-roundtrip" />);
+
+    await waitFor(() => {
+      const groupedTableNode = useInvoiceDesignerStore.getState().nodesById['grouped-table'];
+      expect((groupedTableNode?.props as any)?.metadata?.columns?.find((column: { id: string }) => column.id === 'col-total')?.key).toBe(
+        'item.aggregates.sumTotal'
+      );
+    });
   });
 
   it('preserves reordered transform order through save and reopen', async () => {

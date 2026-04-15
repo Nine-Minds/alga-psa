@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import * as workspaceAstModule from '../components/invoice-designer/ast/workspaceAst';
 import {
   createEmptyDesignerTransformWorkspace,
@@ -71,7 +71,7 @@ const invoiceData = {
 
 const astFixture = {
   kind: 'invoice-template-ast',
-  version: INVOICE_TEMPLATE_AST_VERSION,
+  version: TEMPLATE_AST_VERSION,
   bindings: {
     values: {
       invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
@@ -153,7 +153,7 @@ const astFixture = {
 describe('preview/pdf AST parity integration', () => {
   it('produces equivalent HTML/CSS semantics for shared AST + invoice payload', async () => {
     const astSpy = vi
-      .spyOn(workspaceAstModule, 'exportWorkspaceToInvoiceTemplateAst')
+      .spyOn(workspaceAstModule, 'exportWorkspaceToTemplateAst')
       .mockReturnValueOnce(astFixture as any);
 
     getAllTemplatesMock.mockResolvedValueOnce([

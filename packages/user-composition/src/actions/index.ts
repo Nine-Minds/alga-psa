@@ -7,3 +7,4 @@ export * from './userQueryActions';
 export * from './searchUsersForMentions';
 export * from './localeActions';
 export * from './themeActions';
+export * from './contactQueryActions';

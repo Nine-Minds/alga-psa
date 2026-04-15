@@ -6,14 +6,11 @@
   "tags": ["scope:db", "type:horizontal"],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/dist"],
       "options": {
-        "outputPath": "dist/packages/db",
-        "tsConfig": "packages/db/tsconfig.json",
-        "packageJson": "packages/db/package.json",
-        "main": "packages/db/src/index.ts",
-        "assets": []
+        "command": "tsc -b",
+        "cwd": "packages/db"
       }
     },
     "test": {

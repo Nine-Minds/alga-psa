@@ -22,4 +22,18 @@ describe('workflow expression persistence contract', () => {
       $expr: 'payload.ready',
     });
   });
+
+  it('rejects control.forEach concurrency values greater than 1', () => {
+    const result = stepSchema.safeParse({
+      id: 'for-1',
+      type: 'control.forEach',
+      items: { $expr: 'payload.items' },
+      itemVar: 'item',
+      concurrency: 2,
+      body: [],
+    });
+
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues ?? [])).toContain('concurrency > 1');
+  });
 });

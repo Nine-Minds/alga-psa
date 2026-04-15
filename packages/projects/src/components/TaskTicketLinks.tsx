@@ -9,7 +9,7 @@ import {
 } from '../actions/projectTaskActions';
 import { ITicketListFilters } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
-import { ITicketListItem, ITicket, ITicketCategory } from '@alga-psa/types';
+import { ITicketListItem, ITicket, ITicketCategory, IStatus } from '@alga-psa/types';
 import { IProjectTicketLinkWithDetails } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -29,6 +29,7 @@ import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import TicketSelect from './TicketSelect';
 import { getProject } from '../actions/projectActions';
 import { mapTaskToTicketPrefill } from '../lib/taskTicketMapping';
+import { useTranslation } from 'react-i18next';
 
 interface TaskTicketLinksProps {
   taskId?: string;
@@ -81,6 +82,9 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
   onTicketCreated,
   taskData
 }, ref) {
+  const { t } = useTranslation(['features/projects', 'common']);
+  const linkT = (key: string, fallback: string, options?: Record<string, unknown>) =>
+    t(`taskTicketLinks.${key}`, { defaultValue: fallback, ...(options ?? {}) });
 
   const [taskTicketLinks, setTaskTicketLinks] = useState<IProjectTicketLinkWithDetails[] | undefined>(initialLinks);
   const [availableTickets, setAvailableTickets] = useState<ITicketListItem[]>([]);
@@ -109,10 +113,10 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [statusOptions, setStatusOptions] = useState<SelectOption[]>([
-    { value: 'all', label: 'All Statuses' }
+    { value: 'all', label: linkT('allStatuses', 'All Statuses') }
   ]);
   const [priorityOptions, setPriorityOptions] = useState<SelectOption[]>([
-    { value: 'all', label: 'All Priorities' }
+    { value: 'all', label: linkT('allPriorities', 'All Priorities') }
   ]);
   const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>('all');
   const [clientOptions, setClientOptions] = useState<SelectOption[]>([]);
@@ -191,8 +195,8 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
   };
 
   // Find the default status from the list of statuses
-  const findDefaultStatus = (statuses: any[]) => {
-    const defaultStatus = statuses.find(status => status.is_default === true);
+  const findDefaultStatus = (statuses: IStatus[]) => {
+    const defaultStatus = statuses.find((status: IStatus) => status.is_default === true);
     if (defaultStatus) {
       setDefaultStatus({
         status_id: defaultStatus.status_id,
@@ -214,28 +218,29 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       ] = await Promise.all([
         getTicketCategories().catch(() => []),
         getAllBoards().catch(() => []),
-        getTicketStatuses().catch(() => []),
+        getTicketStatuses().catch(() => [] as IStatus[]),
         getAllPriorities('ticket').catch(() => [])
       ]);
 
       setCategories(fetchedCategories || []);
       setBoards(fetchedBoards || []);
+      const fetchedStatuses: IStatus[] = statuses || [];
       
       // Find the default status
-      if (statuses && statuses.length > 0) {
-        findDefaultStatus(statuses);
+      if (fetchedStatuses.length > 0) {
+        findDefaultStatus(fetchedStatuses);
       }
       
-      const defaultStatus = { value: 'all', label: 'All Statuses' };
+      const defaultStatus = { value: 'all', label: linkT('allStatuses', 'All Statuses') };
       setStatusOptions([
         defaultStatus,
-        ...(statuses || []).map((status): SelectOption => ({
+        ...fetchedStatuses.map((status: IStatus): SelectOption => ({
           value: status.status_id!,
           label: status.name ?? ""
         }))
       ]);
 
-      const defaultPriority = { value: 'all', label: 'All Priorities' };
+      const defaultPriority = { value: 'all', label: linkT('allPriorities', 'All Priorities') };
       setPriorityOptions([
         defaultPriority,
         ...(priorities || []).map((priority): SelectOption => ({
@@ -249,8 +254,8 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       console.error('Error fetching filter options:', error);
       setCategories([]);
       setBoards([]);
-      setStatusOptions([{ value: 'all', label: 'All Statuses' }]);
-      setPriorityOptions([{ value: 'all', label: 'All Priorities' }]);
+      setStatusOptions([{ value: 'all', label: linkT('allStatuses', 'All Statuses') }]);
+      setPriorityOptions([{ value: 'all', label: linkT('allPriorities', 'All Priorities') }]);
     }
   };
 
@@ -332,7 +337,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
 
     const isAlreadyLinked = (taskTicketLinks || []).some(link => link.ticket_id === ticketDetails.ticket_id);
     if (isAlreadyLinked) {
-      toast.error('This ticket is already linked to this task');
+      toast.error(linkT('duplicateError', 'This ticket is already linked to this task'));
       return null;
     }
 
@@ -345,7 +350,9 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       created_at: new Date(),
       project_id: projectId,
       phase_id: phaseId,
-      status_name: 'status_name' in ticketDetails ? ticketDetails.status_name || 'New' : 'New',
+      status_name: 'status_name' in ticketDetails
+        ? ticketDetails.status_name || linkT('defaultNewStatus', 'New')
+        : linkT('defaultNewStatus', 'New'),
       is_closed: 'closed_at' in ticketDetails ? ticketDetails.closed_at !== null : false
     };
     const newLinks = [...taskTicketLinks || [], tempLink];
@@ -375,14 +382,14 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
             created_at: new Date(),
             project_id: projectId,
             phase_id: phaseId,
-            status_name: selectedTicketDetails.status_name || 'New',
+            status_name: selectedTicketDetails.status_name || linkT('defaultNewStatus', 'New'),
             is_closed: false
           };
           
           const updatedLinks = [...taskTicketLinks || [], newLink];
           setTaskTicketLinks(updatedLinks);
           onLinksChange?.(updatedLinks);
-          toast.success('Ticket linked successfully');
+          toast.success(linkT('linkedSuccess', 'Ticket linked successfully'));
         }
       } else {
         // For new tasks, store the link temporarily
@@ -390,14 +397,14 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
         if (selectedTicketDetails) {
           const link = addTempTicketLink(selectedTicketDetails);
           if (link) {
-            toast.success('Ticket linked successfully');
+            toast.success(linkT('linkedSuccess', 'Ticket linked successfully'));
           }
         }
       }
       setShowLinkTicketDialog(false);
       setSelectedTicketId('');
     } catch (error) {
-      handleError(error, 'Failed to link ticket');
+      handleError(error, linkT('linkFailed', 'Failed to link ticket'));
     }
   };
 
@@ -414,7 +421,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       if (project?.client_id) {
         setPrefilledClient({
           id: project.client_id,
-          name: project.client_name || 'Client'
+          name: project.client_name || linkT('clientFallback', 'Client')
         });
       } else {
         setPrefilledClient(undefined);
@@ -448,9 +455,9 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
         setTaskTicketLinks(newLinks);
         onLinksChange?.(newLinks);
       }
-      toast.success('Ticket link removed');
+      toast.success(linkT('removedSuccess', 'Ticket link removed'));
     } catch (error) {
-      handleError(error, 'Failed to remove ticket link');
+      handleError(error, linkT('removeFailed', 'Failed to remove ticket link'));
     }
   };
 
@@ -461,7 +468,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
 
   const onNewTicketCreated = async (ticket: ITicket) => {
     if (!ticket.ticket_id) {
-      toast.error('Invalid ticket ID');
+      toast.error(linkT('invalidTicketId', 'Invalid ticket ID'));
       return;
     }
     try {
@@ -478,7 +485,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
           created_at: new Date(),
           project_id: projectId,
           phase_id: phaseId,
-          status_name: defaultStatus?.name || 'New',
+          status_name: defaultStatus?.name || linkT('defaultNewStatus', 'New'),
           is_closed: false
         };
 
@@ -489,10 +496,10 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
         // For new tasks, add to temporary list
         const link = addTempTicketLink(ticket);
         if (link) {
-          toast.success('Ticket created and linked successfully');
+          toast.success(linkT('createdAndLinkedSuccess', 'Ticket created and linked successfully'));
         }
       } else {
-        toast.success('Ticket created successfully');
+        toast.success(linkT('createdSuccess', 'Ticket created successfully'));
       }
       
       // Notify parent that a new ticket was created (for cleanup tracking)
@@ -510,7 +517,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
             ticket_id: ticket.ticket_id,
             ticket_number: ticket.ticket_number || `#${Date.now()}`,
             title: ticket.title,
-            status_name: defaultStatus?.name || 'New',
+            status_name: defaultStatus?.name || linkT('defaultNewStatus', 'New'),
             // Use type assertion to handle potential property differences
             status_id: defaultStatus?.status_id,
             category_id: ticket.category_id,
@@ -523,14 +530,14 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       
       setShowCreateDialog(false);
     } catch (error) {
-      handleError(error, 'Failed to link new ticket');
+      handleError(error, linkT('linkNewFailed', 'Failed to link new ticket'));
     }
   };
 
   return (
     <div className="mt-6">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold">Associated Tickets</h3>
+        <h3 className="font-semibold">{linkT('title', 'Associated Tickets')}</h3>
         <div className="flex space-x-2">
           <Button
             id="show-link-dialog-button"
@@ -545,7 +552,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
             className="flex items-center"
           >
             <Link className="h-4 w-4 mr-1" />
-            Link Ticket
+            {linkT('linkTicket', 'Link Ticket')}
           </Button>
           <Button
             id="show-create-dialog-button"
@@ -555,7 +562,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
             className="flex items-center"
           >
             <Plus className="h-4 w-4 mr-1" />
-            Create Ticket
+            {linkT('createTicket', 'Create Ticket')}
           </Button>
         </div>
       </div>
@@ -597,11 +604,21 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       </div>
 
       {showLinkTicketDialog && (
-        <Dialog 
-          isOpen={showLinkTicketDialog} 
+        <Dialog
+          isOpen={showLinkTicketDialog}
           onClose={() => setShowLinkTicketDialog(false)}
-          title="Link Existing Ticket"
+          title={linkT('linkExistingTitle', 'Link Existing Ticket')}
           className="max-w-xl"
+          footer={
+            <div className="flex justify-end space-x-2">
+              <Button id="cancel-link-dialog-button" variant="ghost" onClick={() => setShowLinkTicketDialog(false)}>
+                {t('common:actions.cancel', 'Cancel')}
+              </Button>
+              <Button id="confirm-link-button" onClick={onLinkTicket} disabled={!selectedTicketId}>
+                {linkT('linkTicket', 'Link Ticket')}
+              </Button>
+            </div>
+          }
         >
           <DialogContent>
             <div className="relative">
@@ -611,7 +628,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                     <div className="flex gap-4">
                       <div className="flex-1">
                         <Input
-                          placeholder="Search tickets..."
+                          placeholder={linkT('searchTicketsPlaceholder', 'Search tickets...')}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           className="w-full"
@@ -623,7 +640,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                           categories,
                           selectedCategories,
                           onSelect: setSelectedCategories,
-                          placeholder: 'Category',
+                          placeholder: linkT('categoryPlaceholder', 'Category'),
                           multiSelect: false,
                         })}
                       </div>
@@ -634,7 +651,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Assigned To
+                            {linkT('assignedToLabel', 'Assigned To')}
                           </label>
                           <UserPicker
                             value={selectedUser}
@@ -646,7 +663,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Board
+                            {linkT('boardLabel', 'Board')}
                           </label>
                           <BoardPicker
                             id='board-picker'
@@ -662,24 +679,24 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Status
+                            {linkT('statusLabel', 'Status')}
                           </label>
                           <CustomSelect
                             value={selectedTicketStatus}
                             onValueChange={setSelectedTicketStatus}
                             options={statusOptions}
-                            placeholder="All Statuses"
+                            placeholder={linkT('allStatuses', 'All Statuses')}
                           />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Priority
+                            {linkT('priorityLabel', 'Priority')}
                           </label>
                           <CustomSelect
                             value={selectedPriority}
                             onValueChange={setSelectedPriority}
                             options={priorityOptions}
-                            placeholder="All Priorities"
+                            placeholder={linkT('allPriorities', 'All Priorities')}
                           />
                         </div>
                       </div>
@@ -693,7 +710,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                         <div className="flex flex-wrap gap-2 mb-4">
                           {searchTerm && (
                             <span className="inline-flex items-center gap-1 text-sm bg-gray-100 px-2 py-1 rounded">
-                              Search: {searchTerm}
+                              {linkT('searchFilterLabel', 'Search: {{value}}', { value: searchTerm })}
                               <button onClick={() => removeFilter('search')} className="text-gray-500 hover:text-gray-700">
                                 <X className="h-3 w-3" />
                               </button>
@@ -701,7 +718,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                           )}
                           {selectedCategories.length > 0 && (
                             <span className="inline-flex items-center gap-1 text-sm bg-gray-100 px-2 py-1 rounded">
-                              Categories: {selectedCategories.length}
+                              {linkT('categoriesFilterLabel', 'Categories: {{count}}', { count: selectedCategories.length })}
                               <button onClick={() => removeFilter('category')} className="text-gray-500 hover:text-gray-700">
                                 <X className="h-3 w-3" />
                               </button>
@@ -709,7 +726,9 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                           )}
                           {selectedUser && (
                             <span className="inline-flex items-center gap-1 text-sm bg-gray-100 px-2 py-1 rounded">
-                              Assigned: {users.find(u => u.user_id === selectedUser)?.first_name}
+                              {linkT('assignedFilterLabel', 'Assigned: {{name}}', {
+                                name: users.find(u => u.user_id === selectedUser)?.first_name || '',
+                              })}
                               <button onClick={() => removeFilter('user')} className="text-gray-500 hover:text-gray-700">
                                 <X className="h-3 w-3" />
                               </button>
@@ -717,7 +736,9 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                           )}
                           {selectedBoard && (
                             <span className="inline-flex items-center gap-1 text-sm bg-gray-100 px-2 py-1 rounded">
-                              Board: {boards.find(c => c.board_id === selectedBoard)?.board_name}
+                              {linkT('boardFilterLabel', 'Board: {{name}}', {
+                                name: boards.find(c => c.board_id === selectedBoard)?.board_name || '',
+                              })}
                               <button onClick={() => removeFilter('board')} className="text-gray-500 hover:text-gray-700">
                                 <X className="h-3 w-3" />
                               </button>
@@ -725,7 +746,9 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                           )}
                           {selectedPriority && selectedPriority !== 'all' && (
                             <span className="inline-flex items-center gap-1 text-sm bg-gray-100 px-2 py-1 rounded">
-                              Priority: {priorityOptions.find(p => p.value === selectedPriority)?.label}
+                              {linkT('priorityFilterLabel', 'Priority: {{label}}', {
+                                label: priorityOptions.find(p => p.value === selectedPriority)?.label || '',
+                              })}
                               <button onClick={() => removeFilter('priority')} className="text-gray-500 hover:text-gray-700">
                                 <X className="h-3 w-3" />
                               </button>
@@ -733,7 +756,9 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                           )}
                           {selectedTicketStatus !== 'all' && (
                             <span className="inline-flex items-center gap-1 text-sm bg-gray-100 px-2 py-1 rounded">
-                              Status: {statusOptions.find(s => s.value === selectedTicketStatus)?.label}
+                              {linkT('statusFilterLabel', 'Status: {{label}}', {
+                                label: statusOptions.find(s => s.value === selectedTicketStatus)?.label || '',
+                              })}
                               <button onClick={() => removeFilter('status')} className="text-gray-500 hover:text-gray-700">
                                 <X className="h-3 w-3" />
                               </button>
@@ -746,7 +771,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                             onClick={clearAllFilters}
                             className="text-sm text-gray-500"
                           >
-                            Reset
+                            {t('resetFilters', 'Reset')}
                           </Button>
                         </div>
                       )}
@@ -755,27 +780,19 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                     {/* Tickets Dropdown */}
                     <div className="mt-6">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Select Ticket
+                        {linkT('selectTicket', 'Select Ticket')}
                       </label>
                       <TicketSelect
                         value={selectedTicketId}
                         onValueChange={setSelectedTicketId}
                         options={filteredTicketOptions}
-                        placeholder="Select a ticket"
+                        placeholder={linkT('selectTicketPlaceholder', 'Select a ticket')}
                         className="w-full"
                         searchValue={searchTerm}
                         onSearchChange={setSearchTerm}
                       />
                     </div>
 
-                    <div className="flex justify-end space-x-2 mt-6">
-                      <Button id="cancel-link-dialog-button" variant="ghost" onClick={() => setShowLinkTicketDialog(false)}>
-                        Cancel
-                      </Button>
-                      <Button id="confirm-link-button" onClick={onLinkTicket} disabled={!selectedTicketId}>
-                        Link Ticket
-                      </Button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -803,7 +820,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
             id="link-new-ticket-checkbox"
             checked={shouldLinkNewTicket}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setShouldLinkNewTicket(e.target.checked)}
-            label="Link this ticket to the task"
+            label={linkT('linkToTaskLabel', 'Link this ticket to the task')}
             containerClassName="mb-0 mt-2"
           />
         ),

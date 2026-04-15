@@ -1,5 +1,3 @@
-import { isFeatureFlagEnabled } from '@alga-psa/core';
-
 export const TEAMS_INTEGRATION_UI_FLAG = 'teams-integration-ui';
 
 export type TeamsAvailabilityDisabledReason =
@@ -29,7 +27,6 @@ export interface ResolveTeamsAvailabilityInput {
 }
 
 export interface GetTeamsAvailabilityInput {
-  evaluateFlag?: typeof isFeatureFlagEnabled;
   isEnterpriseEdition?: boolean;
   requireTenantContext?: boolean;
   tenantId?: string | null;
@@ -58,6 +55,9 @@ function disabledAvailability(reason: TeamsAvailabilityDisabledReason): TeamsAva
   };
 }
 
+// Client-side callers pass `flagEnabled` from useFeatureFlag('teams-integration-ui')
+// to drive their own UI gating. Server-side callers should use getTeamsAvailability
+// below, which no longer consults any feature flag.
 export function resolveTeamsAvailability(input: ResolveTeamsAvailabilityInput = {}): TeamsAvailability {
   const enterpriseEnabled = input.isEnterpriseEdition ?? isTeamsEnterpriseEdition();
   if (!enterpriseEnabled) {
@@ -68,7 +68,7 @@ export function resolveTeamsAvailability(input: ResolveTeamsAvailabilityInput = 
     return disabledAvailability('tenant_not_configured');
   }
 
-  if (!input.flagEnabled) {
+  if (input.flagEnabled === false) {
     return disabledAvailability('flag_disabled');
   }
 
@@ -79,6 +79,13 @@ export function resolveTeamsAvailability(input: ResolveTeamsAvailabilityInput = 
   };
 }
 
+// Server-side Teams availability. Previously gated by a PostHog flag on top of
+// edition + tenant context, but that gate produced false negatives in routes
+// whose bundled module graph imported a copy of @alga-psa/core whose module-
+// level feature-flag checker had never been registered (registration runs in
+// server/src/lib/initializeApp.ts against whichever copy that file imports).
+// Tenant-level rollout control is now handled by the client-side UI flag plus
+// tier gating in IntegrationsSettingsPage; auth + RBAC still enforce access.
 export async function getTeamsAvailability(input: GetTeamsAvailabilityInput = {}): Promise<TeamsAvailability> {
   const enterpriseEnabled = input.isEnterpriseEdition ?? isTeamsEnterpriseEdition();
   const tenantId = (input.tenantId || '').trim();
@@ -91,21 +98,9 @@ export async function getTeamsAvailability(input: GetTeamsAvailabilityInput = {}
     return disabledAvailability('tenant_not_configured');
   }
 
-  const evaluateFlag = input.evaluateFlag ?? isFeatureFlagEnabled;
-
-  try {
-    const flagEnabled = await evaluateFlag(TEAMS_INTEGRATION_UI_FLAG, {
-      tenantId: tenantId || undefined,
-      userId: (input.userId || '').trim() || undefined,
-    });
-
-    return resolveTeamsAvailability({
-      flagEnabled,
-      isEnterpriseEdition: enterpriseEnabled,
-      requireTenantContext: input.requireTenantContext,
-      tenantId,
-    });
-  } catch {
-    return disabledAvailability('flag_disabled');
-  }
+  return {
+    enabled: true,
+    reason: 'enabled',
+    flagKey: TEAMS_INTEGRATION_UI_FLAG,
+  };
 }

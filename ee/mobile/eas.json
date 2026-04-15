@@ -3,12 +3,40 @@
     "version": ">= 8.0.0"
   },
   "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_PHASE2_NOTIFICATIONS": "true"
+      }
+    },
     "testflight": {
+      "env": {
+        "EXPO_PUBLIC_ALGA_ENV": "prod"
+      },
       "ios": {
         "distribution": "store"
       }
     },
     "playInternal": {
+      "env": {
+        "EXPO_PUBLIC_ALGA_ENV": "prod"
+      },
+      "android": {
+        "distribution": "store"
+      }
+    },
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_ALGA_ENV": "prod",
+        "EXPO_PUBLIC_ANALYTICS_ENABLED": "true"
+      },
+      "ios": {
+        "distribution": "store"
+      },
       "android": {
         "distribution": "store"
       }
@@ -22,7 +50,19 @@
     },
     "playInternal": {
       "android": {
-        "track": "internal"
+        "track": "internal",
+        "releaseStatus": "draft",
+        "serviceAccountKeyPath": "./google-service-account.json"
+      }
+    },
+    "production": {
+      "ios": {
+        "ascAppId": "6760326836"
+      },
+      "android": {
+        "track": "production",
+        "releaseStatus": "draft",
+        "serviceAccountKeyPath": "./google-service-account.json"
       }
     }
   }

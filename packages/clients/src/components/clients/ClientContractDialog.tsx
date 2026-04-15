@@ -1,13 +1,14 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel'; // Import SwitchWithLabel
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export interface ClientContractDialogSubmission {
   startDate: string;
@@ -45,6 +46,7 @@ export function ClientContractDialog({
   initialUseTenantRenewalDefaults,
   contractLineNames
 }: ClientContractDialogProps) {
+  const { t } = useTranslation('msp/clients');
   const normalizeRenewalMode = (
     value?: 'none' | 'manual' | 'auto' | null
   ): 'none' | 'manual' | 'auto' => {
@@ -121,17 +123,17 @@ export function ClientContractDialog({
     setError(null); // Clear previous errors
 
     if (!startDate) {
-      setError('Start date is required');
+      setError(t('clientContractDialog.startDateRequired', { defaultValue: 'Start date is required' }));
       return;
     }
 
     if (!isOngoing && !endDate) {
-      setError('End date is required when not ongoing');
+      setError(t('clientContractDialog.endDateRequired', { defaultValue: 'End date is required when not ongoing' }));
       return;
     }
 
     if (!isOngoing && endDate && new Date(endDate) <= new Date(startDate)) {
-      setError('End date must be after start date');
+      setError(t('clientContractDialog.endDateAfterStart', { defaultValue: 'End date must be after start date' }));
       return;
     }
 
@@ -143,7 +145,7 @@ export function ClientContractDialog({
       parsedNoticePeriodDays !== undefined &&
       (!Number.isFinite(parsedNoticePeriodDays) || parsedNoticePeriodDays < 0)
     ) {
-      setError('Notice period days must be a non-negative whole number');
+      setError(t('clientContractDialog.noticePeriodInvalid', { defaultValue: 'Notice period days must be a non-negative whole number' }));
       return;
     }
 
@@ -156,7 +158,7 @@ export function ClientContractDialog({
         !Number.isFinite(parsedRenewalTermMonths) ||
         parsedRenewalTermMonths <= 0
       ) {
-        setError('Renewal term months must be a positive whole number for auto-renew contracts');
+        setError(t('clientContractDialog.renewalTermInvalid', { defaultValue: 'Renewal term months must be a positive whole number for auto-renew contracts' }));
         return;
       }
     }
@@ -181,7 +183,7 @@ export function ClientContractDialog({
       if (err instanceof Error) {
         setError(err.message); // Set error state with backend message
       } else {
-        setError('An unexpected error occurred.'); // Generic fallback
+        setError(t('clientContractDialog.unexpectedError', { defaultValue: 'An unexpected error occurred.' })); // Generic fallback
       }
     }
   };
@@ -193,6 +195,26 @@ export function ClientContractDialog({
     }
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="cancel-contract-assignment-btn"
+        type="button"
+        variant="secondary"
+        onClick={handleClose}
+      >
+        {t('clientContractDialog.cancel', { defaultValue: 'Cancel' })}
+      </Button>
+      <Button
+        id="save-contract-assignment-btn"
+        type="button"
+        onClick={() => (document.getElementById('client-contract-dialog-form') as HTMLFormElement | null)?.requestSubmit()}
+      >
+        {initialStartDate ? t('clientContractDialog.updateAssignment', { defaultValue: 'Update Assignment' }) : t('clientContractDialog.assignContract', { defaultValue: 'Assign Contract' })}
+      </Button>
+    </div>
+  );
+
   return (
     <>
       {triggerButton && (
@@ -203,15 +225,16 @@ export function ClientContractDialog({
       <Dialog
         isOpen={open}
         onClose={handleClose}
-        title={initialStartDate ? 'Edit Contract Assignment' : 'Assign Contract to Client'}
+        title={initialStartDate ? t('clientContractDialog.editTitle', { defaultValue: 'Edit Contract Assignment' }) : t('clientContractDialog.assignTitle', { defaultValue: 'Assign Contract to Client' })}
         className="max-w-md"
+        footer={footer}
       >
         <DialogContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form id="client-contract-dialog-form" onSubmit={handleSubmit} className="space-y-4">
             {/* Display Contract Line Names if provided (likely in edit mode) */}
             {contractLineNames && contractLineNames.length > 0 && (
               <div className="mb-4 border-b pb-4">
-                <h4 className="font-semibold mb-2 text-sm text-gray-700">Included Contract Lines:</h4>
+                <h4 className="font-semibold mb-2 text-sm text-gray-700">{t('clientContractDialog.includedContractLines', { defaultValue: 'Included Contract Lines:' })}</h4>
                 <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
                   {contractLineNames.map((contractLineName: string, index: number) => (
                     <li key={index}>{contractLineName}</li>
@@ -226,7 +249,7 @@ export function ClientContractDialog({
             )}
             
             <div>
-              <Label htmlFor="start-date">Start Date</Label>
+              <Label htmlFor="start-date">{t('clientContractDialog.startDate', { defaultValue: 'Start Date' })}</Label>
               <Input
                 id="start-date"
                 type="date"
@@ -237,7 +260,7 @@ export function ClientContractDialog({
             </div>
             
             <SwitchWithLabel
-              label="Ongoing (no end date)"
+              label={t('clientContractDialog.ongoing', { defaultValue: 'Ongoing (no end date)' })}
               checked={isOngoing}
               onCheckedChange={(checked) => {
                 setIsOngoing(checked);
@@ -250,7 +273,7 @@ export function ClientContractDialog({
             {!isOngoing && (
               <>
                 <div>
-                  <Label htmlFor="end-date">End Date</Label>
+                  <Label htmlFor="end-date">{t('clientContractDialog.endDate', { defaultValue: 'End Date' })}</Label>
                   <Input
                     id="end-date"
                     type="date"
@@ -263,27 +286,27 @@ export function ClientContractDialog({
 
                 <div className="border rounded-md p-3 space-y-3 bg-[rgb(var(--color-surface-50))]">
                   <div>
-                    <h4 className="text-sm font-semibold">Renewal Settings</h4>
+                    <h4 className="text-sm font-semibold">{t('clientContractDialog.renewalSettings', { defaultValue: 'Renewal Settings' })}</h4>
                     <p className="text-xs text-[rgb(var(--color-text-500))]">
-                      Set how this fixed-term assignment should be handled at renewal.
+                      {t('clientContractDialog.renewalSettingsHelp', { defaultValue: 'Set how this fixed-term assignment should be handled at renewal.' })}
                     </p>
                   </div>
 
                   <SwitchWithLabel
-                    label="Use tenant renewal defaults"
+                    label={t('clientContractDialog.useTenantRenewalDefaults', { defaultValue: 'Use tenant renewal defaults' })}
                     checked={useTenantRenewalDefaults}
                     onCheckedChange={setUseTenantRenewalDefaults}
                   />
 
                   {!useTenantRenewalDefaults && (
                     <div>
-                      <Label htmlFor="client-contract-renewal-mode">Renewal Mode</Label>
+                      <Label htmlFor="client-contract-renewal-mode">{t('clientContractDialog.renewalMode', { defaultValue: 'Renewal Mode' })}</Label>
                       <CustomSelect
                         id="client-contract-renewal-mode"
                         options={[
-                          { value: 'manual', label: 'Manual renewal' },
-                          { value: 'auto', label: 'Auto-renew' },
-                          { value: 'none', label: 'Non-renewing' },
+                          { value: 'manual', label: t('clientContractDialog.manualRenewal', { defaultValue: 'Manual renewal' }) },
+                          { value: 'auto', label: t('clientContractDialog.autoRenew', { defaultValue: 'Auto-renew' }) },
+                          { value: 'none', label: t('clientContractDialog.nonRenewing', { defaultValue: 'Non-renewing' }) },
                         ]}
                         value={renewalMode}
                         onValueChange={(value: string) =>
@@ -296,7 +319,7 @@ export function ClientContractDialog({
 
                   {!useTenantRenewalDefaults && renewalMode !== 'none' && (
                     <div>
-                      <Label htmlFor="client-contract-notice-period-days">Notice Period (Days)</Label>
+                      <Label htmlFor="client-contract-notice-period-days">{t('clientContractDialog.noticePeriodDays', { defaultValue: 'Notice Period (Days)' })}</Label>
                       <Input
                         id="client-contract-notice-period-days"
                         type="number"
@@ -304,14 +327,14 @@ export function ClientContractDialog({
                         step={1}
                         value={noticePeriodDays}
                         onChange={(e) => setNoticePeriodDays(e.target.value)}
-                        placeholder="e.g., 30"
+                        placeholder={t('clientContractDialog.noticePeriodPlaceholder', { defaultValue: 'e.g., 30' })}
                       />
                     </div>
                   )}
 
                   {!useTenantRenewalDefaults && renewalMode === 'auto' && (
                     <div>
-                      <Label htmlFor="client-contract-renewal-term-months">Renewal Term (Months)</Label>
+                      <Label htmlFor="client-contract-renewal-term-months">{t('clientContractDialog.renewalTermMonths', { defaultValue: 'Renewal Term (Months)' })}</Label>
                       <Input
                         id="client-contract-renewal-term-months"
                         type="number"
@@ -319,14 +342,14 @@ export function ClientContractDialog({
                         step={1}
                         value={renewalTermMonths}
                         onChange={(e) => setRenewalTermMonths(e.target.value)}
-                        placeholder="e.g., 12"
+                        placeholder={t('clientContractDialog.renewalTermPlaceholder', { defaultValue: 'e.g., 12' })}
                       />
                     </div>
                   )}
 
                   {useTenantRenewalDefaults && (
                     <p className="text-xs text-[rgb(var(--color-text-500))]">
-                      Renewal mode and notice period will follow your organization billing defaults.
+                      {t('clientContractDialog.tenantDefaultsHelp', { defaultValue: 'Renewal mode and notice period will follow your organization billing defaults.' })}
                     </p>
                   )}
                 </div>
@@ -335,26 +358,9 @@ export function ClientContractDialog({
 
             {isOngoing && (
               <p className="text-xs text-[rgb(var(--color-text-500))]">
-                Renewal settings appear for fixed-term assignments with an end date.
+                {t('clientContractDialog.renewalSettingsSubtext', { defaultValue: 'Renewal settings appear for fixed-term assignments with an end date.' })}
               </p>
             )}
-            
-            <DialogFooter>
-              <Button
-                id="cancel-contract-assignment-btn"
-                type="button"
-                variant="secondary"
-                onClick={handleClose}
-              >
-                Cancel
-              </Button>
-              <Button
-                id="save-contract-assignment-btn"
-                type="submit"
-              >
-                {initialStartDate ? 'Update Assignment' : 'Assign Contract'}
-              </Button>
-            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

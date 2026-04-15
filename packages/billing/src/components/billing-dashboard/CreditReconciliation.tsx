@@ -15,6 +15,7 @@ import { parseISO } from 'date-fns';
 import { ColumnDefinition } from '@alga-psa/types';
 import { ICreditReconciliationReport, ReconciliationStatus } from '@alga-psa/types';
 import { validateClientCredit } from '@alga-psa/billing/actions/creditReconciliationActions';
+import { toast } from 'react-hot-toast';
 
 import {
   fetchReconciliationReports,
@@ -258,7 +259,9 @@ const CreditReconciliation: React.FC = () => {
 
       // In a real implementation, we would refresh the data after validation
       // For now, just show a success message
-      alert(`Validation completed: Found ${result.balanceDiscrepancyCount} balance discrepancies and ${result.missingTrackingCount + result.inconsistentTrackingCount} tracking issues.`);
+      toast.success(
+        `Validation completed: Found ${result.balanceDiscrepancyCount} balance discrepancies and ${result.missingTrackingCount + result.inconsistentTrackingCount} tracking issues.`,
+      );
 
       setRunningValidation(false);
     } catch (error) {

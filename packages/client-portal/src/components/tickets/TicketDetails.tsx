@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket details intentionally compose ticket feature UI for customer-facing support workflows. */
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -673,38 +675,19 @@ export function TicketDetails({
               <label className="font-bold text-gray-900 block mb-2">
                 {t('fields.description', 'Description')}
               </label>
-              <div className="flex-1">
-                <div className="font-bold text-gray-700 break-words">
-                  {ticket.attributes?.description ? (
+              <div className="prose max-w-none break-words overflow-hidden min-w-0" style={{overflowWrap: 'break-word', wordBreak: 'break-word'}}>
+                {(() => {
+                  const description = ticket.attributes?.description;
+                  if (!description) {
+                    return t('messages.noDescription', 'No description found.');
+                  }
+                  return (
                     <RichTextViewer
-                      content={(() => {
-                        // JSONB columns are already parsed by PostgreSQL - no need for JSON.parse
-                        const description = ticket.attributes?.description;
-                        if (Array.isArray(description) && description.length > 0) {
-                          // Valid BlockNote content
-                          return description;
-                        }
-                        // Fallback to default empty block if invalid
-                        return [{
-                          type: "paragraph",
-                          props: {
-                            textAlignment: "left",
-                            backgroundColor: "default",
-                            textColor: "default"
-                          },
-                          content: [{
-                            type: "text",
-                            text: (ticket.attributes?.description as string) || "",
-                            styles: {}
-                          }]
-                        }];
-                      })()}
-                      className="break-words max-w-full"
+                      content={description as string | PartialBlock[]}
+                      className="break-words max-w-full min-w-0"
                     />
-                  ) : (
-                    t('messages.noDescription', 'No description found.')
-                  )}
-                </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

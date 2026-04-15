@@ -8,6 +8,7 @@ import type { Asset } from '@alga-psa/types';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { cn } from '@alga-psa/ui/lib/utils';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface QuickAction {
   id: string;
@@ -42,14 +43,15 @@ export function AssetCommandPalette({
   onRefreshData,
   onClearFilters
 }: AssetCommandPaletteProps) {
+  const { t } = useTranslation('msp/assets');
   const [searchQuery, setSearchQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const registerPalette = useRegisterUIComponent({
     id: 'asset-command-palette',
     type: 'dialog',
-    label: 'Asset Command Palette',
-    title: 'Asset Command Palette',
+    label: t('assetCommandPalette.register.label', { defaultValue: 'Asset Command Palette' }),
+    title: t('assetCommandPalette.register.title', { defaultValue: 'Asset Command Palette' }),
     open: isOpen
   });
 
@@ -80,8 +82,10 @@ export function AssetCommandPalette({
   const quickActions: QuickAction[] = useMemo(() => [
     {
       id: 'create-asset',
-      label: 'Create asset',
-      description: 'Open quick add to register a new asset',
+      label: t('assetCommandPalette.actions.createAsset.label', { defaultValue: 'Create asset' }),
+      description: t('assetCommandPalette.actions.createAsset.description', {
+        defaultValue: 'Open quick add to register a new asset'
+      }),
       icon: <Plus className="h-4 w-4" />,
       shortcut: 'N',
       onSelect: () => {
@@ -91,8 +95,10 @@ export function AssetCommandPalette({
     },
     {
       id: 'refresh-assets',
-      label: 'Refresh data',
-      description: 'Re-fetch assets from the server',
+      label: t('assetCommandPalette.actions.refreshData.label', { defaultValue: 'Refresh data' }),
+      description: t('assetCommandPalette.actions.refreshData.description', {
+        defaultValue: 'Re-fetch assets from the server'
+      }),
       icon: <RefreshCw className="h-4 w-4" />,
       shortcut: 'R',
       onSelect: () => {
@@ -102,8 +108,10 @@ export function AssetCommandPalette({
     },
     {
       id: 'clear-filters',
-      label: 'Reset',
-      description: 'Remove all active filters and search terms',
+      label: t('assetCommandPalette.actions.reset.label', { defaultValue: 'Reset' }),
+      description: t('assetCommandPalette.actions.reset.description', {
+        defaultValue: 'Remove all active filters and search terms'
+      }),
       icon: <XCircle className="h-4 w-4" />,
       shortcut: 'Shift+⌘+K',
       disabled: !hasActiveFilters,
@@ -114,7 +122,7 @@ export function AssetCommandPalette({
         handleClose();
       }
     }
-  ], [onCreateAsset, onRefreshData, onClearFilters, hasActiveFilters, handleClose]);
+  ], [onCreateAsset, onRefreshData, onClearFilters, hasActiveFilters, handleClose, t]);
 
   const searchableAssets = useMemo(() => {
     const baseAssets = searchQuery
@@ -138,7 +146,7 @@ export function AssetCommandPalette({
       hideCloseButton
       draggable={false}
       className="max-w-2xl"
-      title="Command Palette"
+      title={t('assetCommandPalette.title', { defaultValue: 'Command Palette' })}
     >
       <div
         className="flex flex-col gap-4"
@@ -153,7 +161,9 @@ export function AssetCommandPalette({
             <Search className="h-4 w-4 text-gray-400" />
             <Command.Input
               ref={inputRef}
-              placeholder="Search assets, clients, tickets…"
+              placeholder={t('assetCommandPalette.searchPlaceholder', {
+                defaultValue: 'Search assets, clients, tickets…'
+              })}
               className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
             />
             <kbd className="hidden sm:inline-flex select-none items-center gap-1 rounded border border-gray-200 bg-white px-2 text-[10px] font-medium text-gray-500">
@@ -163,10 +173,15 @@ export function AssetCommandPalette({
 
           <Command.List className="max-h-80 overflow-y-auto px-3 py-2">
             <Command.Empty className="py-6 text-center text-sm text-gray-500">
-              No matches yet. Try a different keyword.
+              {t('assetCommandPalette.empty', {
+                defaultValue: 'No matches yet. Try a different keyword.'
+              })}
             </Command.Empty>
 
-            <Command.Group heading="Quick actions" className="space-y-1 py-2">
+            <Command.Group
+              heading={t('assetCommandPalette.groups.quickActions', { defaultValue: 'Quick actions' })}
+              className="space-y-1 py-2"
+            >
               {quickActions.map(action => (
                 <Command.Item
                   key={action.id}
@@ -204,7 +219,10 @@ export function AssetCommandPalette({
 
             <Command.Separator className="my-2 border-t border-gray-100" />
 
-            <Command.Group heading="Assets" className="space-y-1 py-2">
+            <Command.Group
+              heading={t('assetCommandPalette.groups.assets', { defaultValue: 'Assets' })}
+              className="space-y-1 py-2"
+            >
               {searchableAssets.map(asset => (
                 <Command.Item
                   key={asset.asset_id}
@@ -220,12 +238,16 @@ export function AssetCommandPalette({
                     <span className="font-medium">{asset.name}</span>
                     <span className="text-xs text-gray-500">
                       {asset.asset_tag ? `${asset.asset_tag} • ` : ''}
-                      {asset.client?.client_name || 'Unassigned'}
+                      {asset.client?.client_name || t('assetCommandPalette.values.unassigned', {
+                        defaultValue: 'Unassigned'
+                      })}
                     </span>
                   </span>
                   <span className="flex items-center gap-2 text-xs text-gray-400">
                     <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-600">
-                      {asset.asset_type.replace('_', ' ')}
+                      {t(`assetCommandPalette.assetTypes.${asset.asset_type}`, {
+                        defaultValue: asset.asset_type.replace('_', ' ')
+                      })}
                     </span>
                     <ArrowUpRight className="h-4 w-4" />
                   </span>
@@ -235,14 +257,19 @@ export function AssetCommandPalette({
 
             <Command.Separator className="my-2 border-t border-gray-100" />
 
-            <Command.Group heading="Hints" className="space-y-1 py-2 text-xs text-gray-500">
+            <Command.Group
+              heading={t('assetCommandPalette.groups.hints', { defaultValue: 'Hints' })}
+              className="space-y-1 py-2 text-xs text-gray-500"
+            >
               <div className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2">
                 <span className="flex items-center gap-2">
                   <ChevronsRight className="h-3.5 w-3.5" />
-                  Keep typing to search across the full asset list. Tickets and client lookup will arrive in a later drop.
+                  {t('assetCommandPalette.hint.body', {
+                    defaultValue: 'Keep typing to search across the full asset list. Tickets and client lookup will arrive in a later drop.'
+                  })}
                 </span>
                 <kbd className="inline-flex select-none items-center gap-1 rounded border border-gray-200 bg-white px-2 text-[10px] font-medium text-gray-500">
-                  Coming soon
+                  {t('assetCommandPalette.hint.badge', { defaultValue: 'Coming soon' })}
                 </kbd>
               </div>
             </Command.Group>

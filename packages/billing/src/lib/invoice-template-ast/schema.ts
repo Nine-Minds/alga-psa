@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import type { InvoiceTemplateAst } from '@alga-psa/types';
+import type { TemplateAst } from '@alga-psa/types';
 import {
   INVOICE_PRINT_MARGIN_MM_RANGE,
   INVOICE_PAPER_PRESET_IDS,
-  INVOICE_TEMPLATE_AST_VERSION,
+  TEMPLATE_AST_VERSION,
 } from '@alga-psa/types';
 
 // Conservative allowlist for any identifier we emit into CSS selectors or custom property names.
@@ -15,6 +15,8 @@ const cssIdentifierSchema = z
   .regex(CSS_SAFE_IDENTIFIER_REGEX, { message: 'Invalid CSS identifier.' });
 
 const valueFormatSchema = z.enum(['text', 'number', 'currency', 'date']);
+const fieldDisplayFormatSchema = z.enum(['single-line', 'multiline', 'raw']);
+const fieldBorderStyleSchema = z.enum(['underline', 'box', 'none']);
 const paperPresetSchema = z.enum(INVOICE_PAPER_PRESET_IDS);
 const printSettingsSchema = z.object({
   paperPreset: paperPresetSchema,
@@ -43,13 +45,17 @@ const styleDeclarationSchema = z.object({
   gridTemplateColumns: z.string().optional(),
   gridTemplateRows: z.string().optional(),
   gridAutoFlow: z.string().optional(),
+  flex: z.string().optional(),
   aspectRatio: z.string().optional(),
   objectFit: z.string().optional(),
+  objectPosition: z.string().optional(),
   color: z.string().optional(),
   backgroundColor: z.string().optional(),
+  borderColor: z.string().optional(),
   fontSize: z.string().optional(),
   fontWeight: z.union([z.string(), z.number()]).optional(),
   fontFamily: z.string().optional(),
+  fontStyle: z.string().optional(),
   lineHeight: z.union([z.string(), z.number()]).optional(),
   textAlign: z.enum(['left', 'center', 'right', 'justify']).optional(),
 }).strict();
@@ -269,7 +275,10 @@ type NodeInput =
       binding: z.infer<typeof bindingRefSchema>;
       label?: string;
       emptyValue?: string;
+      placeholder?: string;
       format?: z.infer<typeof valueFormatSchema>;
+      displayFormat?: z.infer<typeof fieldDisplayFormatSchema>;
+      borderStyle?: z.infer<typeof fieldBorderStyleSchema>;
     }
   | {
       id: string;
@@ -365,7 +374,10 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       binding: bindingRefSchema,
       label: z.string().optional(),
       emptyValue: z.string().optional(),
+      placeholder: z.string().optional(),
       format: valueFormatSchema.optional(),
+      displayFormat: fieldDisplayFormatSchema.optional(),
+      borderStyle: fieldBorderStyleSchema.optional(),
     }).strict(),
     z.object({
       id: z.string().min(1),
@@ -383,6 +395,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       id: z.string().min(1),
       type: z.literal('table'),
       style: nodeStyleRefSchema.optional(),
+      headerStyle: nodeStyleRefSchema.optional(),
       sourceBinding: bindingRefSchema,
       rowBinding: z.string().min(1),
       columns: z.array(z.object({
@@ -398,6 +411,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       id: z.string().min(1),
       type: z.literal('dynamic-table'),
       style: nodeStyleRefSchema.optional(),
+      headerStyle: nodeStyleRefSchema.optional(),
       repeat: z.object({
         sourceBinding: bindingRefSchema,
         itemBinding: z.string().min(1),
@@ -423,14 +437,15 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
         value: valueExpressionSchema,
         format: valueFormatSchema.optional(),
         emphasize: z.boolean().optional(),
+        style: nodeStyleRefSchema.optional(),
       }).strict()).min(1),
     }).strict(),
   ])
 );
 
-export const invoiceTemplateAstSchema = z.object({
+export const templateAstSchema = z.object({
   kind: z.literal('invoice-template-ast'),
-  version: z.literal(INVOICE_TEMPLATE_AST_VERSION),
+  version: z.literal(TEMPLATE_AST_VERSION),
   metadata: z.object({
     templateName: z.string().optional(),
     description: z.string().optional(),
@@ -457,32 +472,32 @@ export const invoiceTemplateAstSchema = z.object({
   layout: nodeSchema,
 }).strict();
 
-export interface InvoiceTemplateAstValidationError {
+export interface TemplateAstValidationError {
   code: string;
   path: string;
   message: string;
 }
 
-export type InvoiceTemplateAstValidationResult =
+export type TemplateAstValidationResult =
   | {
       success: true;
-      ast: InvoiceTemplateAst;
+      ast: TemplateAst;
     }
   | {
       success: false;
-      errors: InvoiceTemplateAstValidationError[];
+      errors: TemplateAstValidationError[];
     };
 
 const issuePathToString = (path: (string | number)[]): string => path.map(String).join('.');
 
-const toValidationError = (issue: z.ZodIssue): InvoiceTemplateAstValidationError => ({
+const toValidationError = (issue: z.ZodIssue): TemplateAstValidationError => ({
   code: issue.code,
   path: issuePathToString(issue.path),
   message: issue.message,
 });
 
-export const validateInvoiceTemplateAst = (input: unknown): InvoiceTemplateAstValidationResult => {
-  const parsed = invoiceTemplateAstSchema.safeParse(input);
+export const validateTemplateAst = (input: unknown): TemplateAstValidationResult => {
+  const parsed = templateAstSchema.safeParse(input);
   if (!parsed.success) {
     return {
       success: false,
@@ -492,12 +507,12 @@ export const validateInvoiceTemplateAst = (input: unknown): InvoiceTemplateAstVa
 
   return {
     success: true,
-    ast: parsed.data as InvoiceTemplateAst,
+    ast: parsed.data as TemplateAst,
   };
 };
 
-export const parseInvoiceTemplateAst = (input: unknown): InvoiceTemplateAst => {
-  const result = validateInvoiceTemplateAst(input);
+export const parseTemplateAst = (input: unknown): TemplateAst => {
+  const result = validateTemplateAst(input);
   if (!result.success) {
     const validationErrors = 'errors' in result ? result.errors : [];
     const message = validationErrors.map((error) =>

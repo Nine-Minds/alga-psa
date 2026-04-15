@@ -1,3 +1,4 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting export adapter - intentionally bridges billing and Xero integration APIs */
 import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 import {
@@ -31,6 +32,28 @@ import { AppError } from '@alga-psa/core';
 export function buildXeroInvoiceReference(baseReference: string, poNumber?: string | null): string {
   const reference = poNumber ? `${baseReference} | PO ${poNumber}` : baseReference;
   return reference.length > 255 ? reference.slice(0, 255) : reference;
+}
+
+function resolveXeroLineServicePeriod(
+  line: AccountingExportAdapterContext['lines'][number]
+): {
+  servicePeriodStart: string | null;
+  servicePeriodEnd: string | null;
+} {
+  if (line.payload?.service_period_source === 'financial_document_fallback') {
+    return {
+      servicePeriodStart: null,
+      servicePeriodEnd: null
+    };
+  }
+
+  // Xero can represent both boundaries, so keep the compatibility summary range on the
+  // line payload and let the downstream client flatten that range into description copy
+  // only when the external API cannot represent the period semantics directly.
+  return {
+    servicePeriodStart: line.service_period_start ?? null,
+    servicePeriodEnd: line.service_period_end ?? null
+  };
 }
 
 type DbInvoice = {
@@ -276,6 +299,8 @@ export class XeroAdapter implements AccountingExportAdapter {
         const unitAmountCents =
           typeof charge.unit_price === 'number' ? Math.round(charge.unit_price) : null;
 
+        const servicePeriod = resolveXeroLineServicePeriod(line);
+
         const payload: XeroInvoiceLinePayload = {
           lineId: line.line_id,
           amountCents: Math.round(line.amount_cents),
@@ -292,8 +317,8 @@ export class XeroAdapter implements AccountingExportAdapter {
           taxAmountCents,
           taxComponents: taxComponents ?? null,
           tracking: tracking ?? null,
-          servicePeriodStart: line.service_period_start ?? null,
-          servicePeriodEnd: line.service_period_end ?? null
+          servicePeriodStart: servicePeriod.servicePeriodStart,
+          servicePeriodEnd: servicePeriod.servicePeriodEnd
         };
 
         lineItems.push(payload);

@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Label } from '@alga-psa/ui/components/Label';
-import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
+import AsyncSearchableSelect, { type SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -19,9 +19,9 @@ import {
   addProjectMaterial,
   getServicePrices,
   deleteProjectMaterial,
-  type CatalogPickerItem,
 } from '../actions/materialCatalogActions';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { useTranslation } from 'react-i18next';
 
 interface ProjectMaterialsDrawerProps {
   id?: string;
@@ -34,12 +34,14 @@ export default function ProjectMaterialsDrawer({
   projectId,
   clientId,
 }: ProjectMaterialsDrawerProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
+  const materialsT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
+    t(`materials.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [materials, setMaterials] = useState<IProjectMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [products, setProducts] = useState<CatalogPickerItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
-  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [selectedProductLabel, setSelectedProductLabel] = useState<string>('');
   const [productPrices, setProductPrices] = useState<IServicePrice[]>([]);
   const [selectedCurrency, setSelectedCurrency] = useState<string>('');
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
@@ -55,37 +57,36 @@ export default function ProjectMaterialsDrawer({
       const data = await listProjectMaterials(projectId);
       setMaterials(data);
     } catch (error) {
-      handleError(error, 'Failed to load materials');
+      handleError(error, materialsT('loadFailed', 'Failed to load materials'));
     } finally {
       setIsLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, materialsT]);
 
   useEffect(() => {
     loadMaterials();
   }, [loadMaterials]);
 
-  const loadProducts = useCallback(async () => {
-    setIsLoadingProducts(true);
-    try {
+  // Server-side search for products via AsyncSearchableSelect
+  const loadProductOptions = useCallback(
+    async ({ search, page, limit }: { search: string; page: number; limit: number }) => {
       const result = await searchServiceCatalogForPicker({
+        search,
+        page,
+        limit,
         item_kinds: ['product'],
         is_active: true,
-        limit: 100,
       });
-      setProducts(result.items);
-    } catch (error) {
-      handleError(error, 'Failed to load products');
-    } finally {
-      setIsLoadingProducts(false);
-    }
-  }, []);
 
-  useEffect(() => {
-    if (showAddForm && products.length === 0) {
-      loadProducts();
-    }
-  }, [showAddForm, products.length, loadProducts]);
+      const options: SelectOption[] = result.items.map((item) => ({
+        value: item.service_id,
+        label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
+      }));
+
+      return { options, total: result.totalCount };
+    },
+    []
+  );
 
   useEffect(() => {
     if (!selectedProductId) {
@@ -132,6 +133,7 @@ export default function ProjectMaterialsDrawer({
   const resetAddForm = () => {
     setShowAddForm(false);
     setSelectedProductId('');
+    setSelectedProductLabel('');
     setProductPrices([]);
     setSelectedCurrency('');
     setQuantity(1);
@@ -140,17 +142,17 @@ export default function ProjectMaterialsDrawer({
 
   const handleAddMaterial = async () => {
     if (!clientId || !selectedProductId) {
-      toast.error('Please select a product');
+      toast.error(materialsT('selectProductError', 'Please select a product'));
       return;
     }
 
     if (!selectedPrice) {
-      toast.error('Please select a currency');
+      toast.error(materialsT('selectCurrencyError', 'Please select a currency'));
       return;
     }
 
     if (quantity < 1) {
-      toast.error('Quantity must be at least 1');
+      toast.error(materialsT('quantityMinError', 'Quantity must be at least 1'));
       return;
     }
 
@@ -166,11 +168,11 @@ export default function ProjectMaterialsDrawer({
         description: description.trim() || null,
       });
 
-      toast.success('Material added');
+      toast.success(materialsT('addedSuccess', 'Material added'));
       resetAddForm();
       await loadMaterials();
     } catch (error) {
-      handleError(error, 'Failed to add material');
+      handleError(error, materialsT('addFailed', 'Failed to add material'));
     } finally {
       setIsAdding(false);
     }
@@ -178,24 +180,28 @@ export default function ProjectMaterialsDrawer({
 
   const handleDeleteMaterial = async (materialId: string) => {
     setDeletingId(materialId);
+    // Optimistically remove from UI
+    const previousMaterials = materials;
+    setMaterials(prev => prev.filter(m => m.project_material_id !== materialId));
     try {
       await deleteProjectMaterial(materialId);
-      toast.success('Material removed');
-      await loadMaterials();
+      toast.success(materialsT('removedSuccess', 'Material removed'));
     } catch (error) {
-      handleError(error, 'Failed to remove material');
+      // Revert on failure
+      setMaterials(previousMaterials);
+      handleError(error, materialsT('removeFailed', 'Failed to remove material'));
     } finally {
       setDeletingId(null);
     }
   };
 
   return (
-    <ReflectionContainer id={id} label="Project Materials">
+    <ReflectionContainer id={id} label={materialsT('title', 'Project Materials')}>
       <div {...withDataAutomationId({ id })} className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Package className="w-5 h-5" />
-            Materials
+            {materialsT('title', 'Project Materials')}
           </h2>
           {clientId && !showAddForm && (
             <Button
@@ -205,7 +211,7 @@ export default function ProjectMaterialsDrawer({
               onClick={() => setShowAddForm(true)}
             >
               <Plus className="w-4 h-4 mr-1" />
-              Add
+              {t('common:actions.add', 'Add')}
             </Button>
           )}
         </div>
@@ -213,38 +219,39 @@ export default function ProjectMaterialsDrawer({
         {showAddForm && clientId && (
           <div className="border rounded-md p-4 space-y-4 bg-gray-50">
             <div className="space-y-2">
-              <Label htmlFor="project-materials-product-select">Product</Label>
-              <SearchableSelect
+              <Label htmlFor="project-materials-product-select">{materialsT('product', 'Product')}</Label>
+              <AsyncSearchableSelect
                 id="project-materials-product-select"
-                options={products.map((product) => ({
-                  value: product.service_id,
-                  label: product.sku ? `${product.service_name} (${product.sku})` : product.service_name,
-                }))}
                 value={selectedProductId}
-                onChange={(value) => {
+                selectedLabel={selectedProductLabel}
+                onChange={(value, option) => {
                   setSelectedProductId(value);
+                  setSelectedProductLabel(option?.label ?? '');
                   setSelectedCurrency('');
                 }}
-                placeholder="Select a product..."
-                searchPlaceholder="Search products..."
-                emptyMessage={isLoadingProducts ? 'Loading products...' : 'No products found'}
+                loadOptions={loadProductOptions}
+                limit={10}
+                debounceMs={300}
+                placeholder={materialsT('selectProductPlaceholder', 'Select a product...')}
+                searchPlaceholder={materialsT('searchProductsPlaceholder', 'Search products...')}
+                emptyMessage={materialsT('noProductsFound', 'No products found')}
                 dropdownMode="overlay"
                 maxListHeight="200px"
-                disabled={isLoadingProducts}
+                showMoreIndicator
               />
             </div>
 
             {selectedProductId && (
               <div className="space-y-2">
-                <Label htmlFor="project-materials-currency-select">Price</Label>
+                <Label htmlFor="project-materials-currency-select">{materialsT('price', 'Price')}</Label>
                 {isLoadingPrices ? (
                   <div className="flex items-center text-sm text-gray-500">
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Loading prices...
+                    {materialsT('loadingPrices', 'Loading prices...')}
                   </div>
                 ) : productPrices.length === 0 ? (
                   <div className="text-sm text-amber-600">
-                    No prices configured for this product
+                    {materialsT('noPricesConfigured', 'No prices configured for this product')}
                   </div>
                 ) : productPrices.length === 1 ? (
                   <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
@@ -263,7 +270,7 @@ export default function ProjectMaterialsDrawer({
                     }))}
                     value={selectedCurrency}
                     onValueChange={setSelectedCurrency}
-                    placeholder="Select currency..."
+                    placeholder={materialsT('selectCurrencyPlaceholder', 'Select currency...')}
                   />
                 )}
               </div>
@@ -271,7 +278,7 @@ export default function ProjectMaterialsDrawer({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="project-materials-quantity">Quantity</Label>
+                <Label htmlFor="project-materials-quantity">{materialsT('quantity', 'Quantity')}</Label>
                 <Input
                   {...withDataAutomationId({ id: `${id}-quantity` })}
                   id="project-materials-quantity"
@@ -282,7 +289,7 @@ export default function ProjectMaterialsDrawer({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Total</Label>
+                <Label>{materialsT('total', 'Total')}</Label>
                 <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
                   {selectedPrice
                     ? formatCurrencyFromMinorUnits(
@@ -296,13 +303,13 @@ export default function ProjectMaterialsDrawer({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="project-materials-description">Description (optional)</Label>
+              <Label htmlFor="project-materials-description">{materialsT('descriptionOptional', 'Description (optional)')}</Label>
               <Input
                 {...withDataAutomationId({ id: `${id}-description` })}
                 id="project-materials-description"
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="Additional notes..."
+                placeholder={materialsT('notesPlaceholder', 'Additional notes...')}
               />
             </div>
 
@@ -313,7 +320,7 @@ export default function ProjectMaterialsDrawer({
                 size="sm"
                 onClick={resetAddForm}
               >
-                Cancel
+                {t('common:actions.cancel', 'Cancel')}
               </Button>
               <Button
                 {...withDataAutomationId({ id: `${id}-save-add-btn` })}
@@ -324,10 +331,10 @@ export default function ProjectMaterialsDrawer({
                 {isAdding ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                    Adding...
+                    {materialsT('adding', 'Adding...')}
                   </>
                 ) : (
-                  'Add Material'
+                  materialsT('addMaterial', 'Add Material')
                 )}
               </Button>
             </div>
@@ -337,11 +344,11 @@ export default function ProjectMaterialsDrawer({
         {isLoading ? (
           <div className="flex items-center justify-center py-6 text-gray-500">
             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            Loading materials...
+            {materialsT('loadingMaterials', 'Loading materials...')}
           </div>
         ) : materials.length === 0 ? (
           <div className="text-center py-6 text-gray-500">
-            No materials added to this project.
+            {materialsT('noMaterials', 'No materials added to this project.')}
           </div>
         ) : (
           <div className="space-y-2">
@@ -349,11 +356,11 @@ export default function ProjectMaterialsDrawer({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="pb-2 font-medium">Product</th>
-                    <th className="pb-2 font-medium text-right">Qty</th>
-                    <th className="pb-2 font-medium text-right">Rate</th>
-                    <th className="pb-2 font-medium text-right">Total</th>
-                    <th className="pb-2 font-medium text-center">Status</th>
+                    <th className="pb-2 font-medium">{materialsT('productColumn', 'Product')}</th>
+                    <th className="pb-2 font-medium text-right">{materialsT('qtyColumn', 'Qty')}</th>
+                    <th className="pb-2 font-medium text-right">{materialsT('rateColumn', 'Rate')}</th>
+                    <th className="pb-2 font-medium text-right">{materialsT('totalColumn', 'Total')}</th>
+                    <th className="pb-2 font-medium text-center">{materialsT('statusColumn', 'Status')}</th>
                     <th className="pb-2 w-10"></th>
                   </tr>
                 </thead>
@@ -362,7 +369,7 @@ export default function ProjectMaterialsDrawer({
                     <tr key={material.project_material_id} className="border-b last:border-0">
                       <td className="py-2">
                         <div>
-                          <span className="font-medium">{material.service_name || 'Unknown Product'}</span>
+                          <span className="font-medium">{material.service_name || materialsT('unknownProduct', 'Unknown Product')}</span>
                           {material.sku && (
                             <span className="text-gray-500 ml-1">({material.sku})</span>
                           )}
@@ -380,9 +387,9 @@ export default function ProjectMaterialsDrawer({
                       </td>
                       <td className="py-2 text-center">
                         {material.is_billed ? (
-                          <Badge variant="default">Billed</Badge>
+                          <Badge variant="default">{materialsT('billed', 'Billed')}</Badge>
                         ) : (
-                          <Badge variant="outline">Pending</Badge>
+                          <Badge variant="outline">{materialsT('pending', 'Pending')}</Badge>
                         )}
                       </td>
                       <td className="py-2 text-right">
@@ -413,7 +420,7 @@ export default function ProjectMaterialsDrawer({
                 <div className="text-sm space-y-1">
                   {Object.entries(unbilledByCurrency).map(([currency, total]) => (
                     <div key={currency} className="text-right">
-                      <span className="text-gray-500">Unbilled ({currency}): </span>
+                      <span className="text-gray-500">{materialsT('unbilledTotal', 'Unbilled ({{currency}}): ', { currency })}</span>
                       <span className="font-semibold">
                         {formatCurrencyFromMinorUnits(total, 'en-US', currency)}
                       </span>
@@ -427,7 +434,7 @@ export default function ProjectMaterialsDrawer({
 
         {!clientId && (
           <div className="text-center py-4 text-amber-600 text-sm">
-            A client must be assigned to this project before materials can be added.
+            {materialsT('noClientAssigned', 'A client must be assigned to this project before materials can be added.')}
           </div>
         )}
       </div>

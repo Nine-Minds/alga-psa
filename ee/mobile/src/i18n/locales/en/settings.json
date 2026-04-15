@@ -2,10 +2,11 @@
   "title": "Settings",
   "sections": {
     "account": "Account",
-    "diagnostics": "Diagnostics",
+    "about": "About",
     "security": "Security",
     "data": "Data",
-    "about": "About"
+    "legal": "Legal",
+    "notifications": "Notifications"
   },
   "account": {
     "status": "Status",
@@ -21,7 +22,8 @@
     "signOutFailed": "Logout failed",
     "signOutFailedMessage": "Unable to sign out. Please try again."
   },
-  "diagnostics": {
+  "about": {
+    "appName": "Alga PSA Mobile",
     "appVersion": "App version",
     "platform": "Platform",
     "environment": "Environment",
@@ -35,6 +37,13 @@
     "hideSensitiveNotifications": "Hide sensitive notifications",
     "hideSensitiveHint": "Applies to future push notifications."
   },
+  "notifications": {
+    "pushNotifications": "Push Notifications",
+    "pushHint": "Receive alerts when tickets are assigned, commented on, or updated.",
+    "permissionDeniedTitle": "Notifications Disabled",
+    "permissionDeniedMessage": "Enable notifications in your device settings to receive ticket alerts.",
+    "openSettings": "Open Settings"
+  },
   "data": {
     "clearCache": "Clear cache",
     "clearCacheConfirmTitle": "Clear cache?",
@@ -42,21 +51,8 @@
     "cleared": "Cleared",
     "clearedMessage": "Cache cleared."
   },
-  "aboutModal": {
-    "title": "About",
-    "app": "App",
-    "appName": "Alga PSA Mobile",
-    "version": "Version",
-    "versionValue": "{{version}} ({{build}})",
-    "baseUrl": "Base URL",
-    "closeAccessibility": "Close about"
-  },
-  "legalModal": {
-    "title": "Legal",
-    "subtitle": "Privacy policy and terms are currently hosted on the Alga web app.",
+  "legal": {
     "privacyPolicy": "Privacy policy",
-    "termsOfService": "Terms of service",
-    "closeAccessibility": "Close legal"
-  },
-  "legal": "Legal"
+    "termsOfService": "Terms of service"
+  }
 }

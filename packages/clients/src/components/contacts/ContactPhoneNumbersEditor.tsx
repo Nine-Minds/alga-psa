@@ -19,6 +19,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { validatePhoneNumber } from '@alga-psa/validation';
 import type { ICountry } from '@alga-psa/clients/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type EditablePhoneRow = ContactPhoneNumberInput & {
   _localId?: string;
@@ -26,18 +27,9 @@ type EditablePhoneRow = ContactPhoneNumberInput & {
 
 type ContactPhoneRowInput = ContactPhoneNumberInput | IContactPhoneNumber;
 
-const CANONICAL_PHONE_TYPE_OPTIONS = CONTACT_PHONE_CANONICAL_TYPES.map((value) => ({
-  value,
-  label: value.charAt(0).toUpperCase() + value.slice(1),
-}));
-
-const PHONE_TYPE_OPTIONS = [
-  ...CANONICAL_PHONE_TYPE_OPTIONS,
-  { value: 'custom', label: 'Custom' },
-];
-
 const COUNTRY_CODE_ONLY_PATTERN = /^\+\d{1,4}\s*$/;
 const PHONE_ROW_ERROR_PATTERN = /^Phone (\d+):/;
+const PHONE_ROW_DETAIL_PATTERN = /^Phone (\d+):\s*(.+)$/;
 
 function normalizeCustomTypeLabel(label: string | null | undefined): string {
   return (label ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -155,6 +147,51 @@ export function validateContactPhoneNumbers(
   return Array.from(new Set(errors));
 }
 
+export function translateContactPhoneValidationErrors(
+  errors: string[],
+  t: (key: string, options?: Record<string, unknown>) => string
+): string[] {
+  return errors.map((error) => {
+    if (error === 'Select exactly one default phone number.') {
+      return t('contactPhoneNumbersEditor.validation.selectExactlyOneDefault', {
+        defaultValue: 'Select exactly one default phone number.'
+      });
+    }
+
+    const detailMatch = PHONE_ROW_DETAIL_PATTERN.exec(error);
+    if (!detailMatch) {
+      return error;
+    }
+
+    const rowNumber = Number.parseInt(detailMatch[1] ?? '', 10);
+    const detail = detailMatch[2] ?? '';
+    const rowPrefix = t('contactPhoneNumbersEditor.validation.phoneRow', {
+      defaultValue: 'Phone {{number}}',
+      number: rowNumber
+    });
+
+    if (detail === 'Enter a complete phone number.') {
+      return `${rowPrefix}: ${t('contactPhoneNumbersEditor.validation.enterCompletePhoneNumber', {
+        defaultValue: 'Enter a complete phone number.'
+      })}`;
+    }
+
+    if (detail === 'Enter a custom phone type.') {
+      return `${rowPrefix}: ${t('contactPhoneNumbersEditor.validation.enterCustomPhoneType', {
+        defaultValue: 'Enter a custom phone type.'
+      })}`;
+    }
+
+    if (detail === 'Custom phone type labels must be unique.') {
+      return `${rowPrefix}: ${t('contactPhoneNumbersEditor.validation.customTypesUnique', {
+        defaultValue: 'Custom phone type labels must be unique.'
+      })}`;
+    }
+
+    return `${rowPrefix}: ${detail}`;
+  });
+}
+
 function buildEditablePhoneRows(
   rows: Array<ContactPhoneNumberInput | IContactPhoneNumber>,
   previousRows: EditablePhoneRow[] = []
@@ -265,6 +302,7 @@ interface ContactPhoneRowProps {
   canMoveUp: boolean;
   canMoveDown: boolean;
   canRemove: boolean;
+  showReorderControls: boolean;
   onChange: (updates: Partial<EditablePhoneRow>) => void;
   onBlur: () => void;
   onSetDefault: () => void;
@@ -283,6 +321,7 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
   canMoveUp,
   canMoveDown,
   canRemove,
+  showReorderControls,
   onChange,
   onBlur,
   onSetDefault,
@@ -290,10 +329,26 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
   onMoveDown,
   onRemove,
 }) => {
+  const { t } = useTranslation('msp/contacts');
   const rowKey = row.contact_phone_number_id ?? row._localId ?? `${index}`;
   const [countryCode, setCountryCode] = useState(() => inferCountryCode(row.phone_number ?? '', countries));
   const phoneCode = countries.find((country) => country.code === countryCode)?.phone_code;
   const typeValue = row.canonical_type === null ? 'custom' : row.canonical_type ?? 'work';
+  const phoneTypeOptions = useMemo(
+    () => [
+      ...CONTACT_PHONE_CANONICAL_TYPES.map((value) => ({
+        value,
+        label: t(`contactPhoneNumbersEditor.phoneTypes.${value}`, {
+          defaultValue: value.charAt(0).toUpperCase() + value.slice(1),
+        }),
+      })),
+      {
+        value: 'custom',
+        label: t('contactPhoneNumbersEditor.phoneTypes.custom', { defaultValue: 'Custom' }),
+      },
+    ],
+    [t]
+  );
   const customTypeOptions = useMemo(
     () => Array.from(
       new Map(
@@ -326,67 +381,95 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
     >
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div>
-          <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">Phone {index + 1}</div>
+          <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+            {t('contactPhoneNumbersEditor.row.title', {
+              defaultValue: 'Phone {{number}}',
+              number: index + 1,
+            })}
+          </div>
           <div className="text-xs text-muted-foreground">
-            {row.is_default ? 'Default phone number' : 'Secondary phone number'}
+            {row.is_default
+              ? t('contactPhoneNumbersEditor.row.defaultDescription', {
+                defaultValue: 'Default phone number',
+              })
+              : t('contactPhoneNumbersEditor.row.secondaryDescription', {
+                defaultValue: 'Secondary phone number',
+              })}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-          <RadioGroup
-            id={`${id}-default-${index}`}
-            name={`${id}-default-phone`}
-            value={row.is_default ? `phone-${index}` : undefined}
-            onChange={() => onSetDefault()}
-            options={[
-              {
-                value: `phone-${index}`,
-                label: 'Default',
-              },
-            ]}
-            orientation="horizontal"
-            className="gap-2"
-            disabled={disabled}
-          />
-          <Button
-            id={`${id}-move-up-${index}`}
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onMoveUp}
-            disabled={disabled || !canMoveUp}
-            aria-label={`Move phone ${index + 1} up`}
-          >
-            <ArrowUp className="h-4 w-4" />
-          </Button>
-          <Button
-            id={`${id}-move-down-${index}`}
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onMoveDown}
-            disabled={disabled || !canMoveDown}
-            aria-label={`Move phone ${index + 1} down`}
-          >
-            <ArrowDown className="h-4 w-4" />
-          </Button>
-          <Button
-            id={`${id}-remove-${index}`}
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onRemove}
-            disabled={disabled || !canRemove}
-            aria-label={`Remove phone ${index + 1}`}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {showReorderControls && (
+            <RadioGroup
+              id={`${id}-default-${index}`}
+              name={`${id}-default-phone`}
+              value={row.is_default ? `phone-${index}` : undefined}
+              onChange={() => onSetDefault()}
+              options={[
+                {
+                  value: `phone-${index}`,
+                  label: t('contactPhoneNumbersEditor.row.defaultLabel', { defaultValue: 'Default' }),
+                },
+              ]}
+              orientation="horizontal"
+              className="gap-2"
+              disabled={disabled}
+            />
+          )}
+          {showReorderControls && (
+            <>
+              <Button
+                id={`${id}-move-up-${index}`}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onMoveUp}
+                disabled={disabled || !canMoveUp}
+                aria-label={t('contactPhoneNumbersEditor.row.moveUp', {
+                  defaultValue: 'Move phone {{number}} up',
+                  number: index + 1,
+                })}
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+              <Button
+                id={`${id}-move-down-${index}`}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onMoveDown}
+                disabled={disabled || !canMoveDown}
+                aria-label={t('contactPhoneNumbersEditor.row.moveDown', {
+                  defaultValue: 'Move phone {{number}} down',
+                  number: index + 1,
+                })}
+              >
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+              <Button
+                id={`${id}-remove-${index}`}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onRemove}
+                disabled={disabled || !canRemove}
+                aria-label={t('contactPhoneNumbersEditor.row.remove', {
+                  defaultValue: 'Remove phone {{number}}',
+                  number: index + 1,
+                })}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(240px,0.9fr)] xl:items-start">
         <PhoneInput
           id={`${id}-phone-${index}`}
-          label="Phone Number"
+          label={t('contactPhoneNumbersEditor.fields.phoneNumber', {
+            defaultValue: 'Phone Number',
+          })}
           value={row.phone_number ?? ''}
           onChange={(value) => onChange({ phone_number: value })}
           onBlur={onBlur}
@@ -404,7 +487,7 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
             htmlFor={`${id}-type-${index}`}
             className="block text-gray-700"
           >
-            Phone Type
+            {t('contactPhoneNumbersEditor.fields.phoneType', { defaultValue: 'Phone Type' })}
           </Label>
           <CustomSelect
             id={`${id}-type-${index}`}
@@ -420,7 +503,7 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
                 custom_type: null,
               });
             }}
-            options={PHONE_TYPE_OPTIONS}
+            options={phoneTypeOptions}
             disabled={disabled}
             className="h-[42px] rounded-md"
           />
@@ -430,7 +513,9 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
                 htmlFor={`${id}-custom-type-${index}`}
                 className="block text-[rgb(var(--color-text-700))]"
               >
-                Custom Phone Type
+                {t('contactPhoneNumbersEditor.fields.customPhoneType', {
+                  defaultValue: 'Custom Phone Type',
+                })}
               </Label>
               <SearchableSelect
                 id={`${id}-custom-type-${index}`}
@@ -440,11 +525,20 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
                   custom_type: value,
                 })}
                 options={customTypeOptions}
-                placeholder="Select or enter a custom phone type"
-                searchPlaceholder="Search or enter a custom phone type..."
-                emptyMessage="No matching custom phone types."
+                placeholder={t('contactPhoneNumbersEditor.fields.customTypePlaceholder', {
+                  defaultValue: 'Select or enter a custom phone type',
+                })}
+                searchPlaceholder={t('contactPhoneNumbersEditor.fields.customTypeSearchPlaceholder', {
+                  defaultValue: 'Search or enter a custom phone type...',
+                })}
+                emptyMessage={t('contactPhoneNumbersEditor.fields.customTypeEmpty', {
+                  defaultValue: 'No matching custom phone types.',
+                })}
                 allowCustomValue={true}
-                customValueLabel={(value) => `Use "${value}"`}
+                customValueLabel={(value) => t('contactPhoneNumbersEditor.fields.customTypeUseValue', {
+                  defaultValue: 'Use "{{value}}"',
+                  value,
+                })}
                 disabled={disabled}
                 className="h-[42px] rounded-md"
                 dropdownMode="overlay"
@@ -485,6 +579,7 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
   onCheckCustomTypeUsage,
   onDeleteOrphanedPhoneTypes,
 }) => {
+  const { t } = useTranslation('msp/contacts');
   const createDraftRowsFromValue = useCallback((incomingValue: Array<ContactPhoneNumberInput | IContactPhoneNumber>) => {
     const existingRows = buildEditablePhoneRows(incomingValue);
     if (existingRows.length > 0 || allowEmpty) {
@@ -522,7 +617,10 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
     });
   }, [allowEmpty, draftSignature, externalSignature, value]);
 
-  const validationErrors = useMemo(() => validateContactPhoneNumbers(draftRows), [draftRows]);
+  const validationErrors = useMemo(
+    () => translateContactPhoneValidationErrors(validateContactPhoneNumbers(draftRows), t),
+    [draftRows, t]
+  );
   const visibleValidationErrors = useMemo(
     () => getVisibleValidationErrors(validationErrors, draftRows, touchedRowKeys),
     [draftRows, touchedRowKeys, validationErrors]
@@ -673,9 +771,13 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
     <div className="space-y-4" data-testid={id}>
       <div className="flex items-center justify-between gap-3">
         <div>
-          <Label className="text-sm font-medium text-gray-900">Phone Numbers</Label>
+          <Label className="text-sm font-medium text-gray-900">
+            {t('contactPhoneNumbersEditor.title', { defaultValue: 'Phone Numbers' })}
+          </Label>
           <p className="text-xs text-gray-500">
-            Add one or more phone numbers and choose exactly one default.
+            {t('contactPhoneNumbersEditor.description', {
+              defaultValue: 'Add one or more phone numbers and choose exactly one default.',
+            })}
           </p>
         </div>
         <Button
@@ -687,13 +789,13 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
           id={`${id}-add-phone`}
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add phone
+          {t('contactPhoneNumbersEditor.actions.addPhone', { defaultValue: 'Add phone' })}
         </Button>
       </div>
 
       {draftRows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 bg-white p-4 text-sm text-gray-500">
-          No phone numbers yet.
+          {t('contactPhoneNumbersEditor.empty', { defaultValue: 'No phone numbers yet.' })}
         </div>
       ) : (
         <div className="space-y-3">
@@ -709,6 +811,7 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
               canMoveUp={index > 0}
               canMoveDown={index < draftRows.length - 1}
               canRemove={draftRows.length > 0}
+              showReorderControls={draftRows.length > 1}
               onChange={(updates) => handleRowChange(index, updates)}
               onBlur={() => handleRowBlur(index)}
               onSetDefault={() => handleSetDefault(index)}
@@ -742,11 +845,20 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
         }}
         onConfirm={handleConfirmRemoveAndDeleteType}
         onCancel={handleRemoveAndKeepType}
-        title="Last Phone Type Usage"
-        message={`This is the last use of custom phone type "${pendingRemoveTypeLabel}". Delete the type definition, or keep it for future use?`}
-        confirmLabel="Remove & Delete Type"
-        thirdButtonLabel="Remove & Keep Type"
-        cancelLabel="Cancel"
+        title={t('contactPhoneNumbersEditor.lastTypeUsage.title', {
+          defaultValue: 'Last Phone Type Usage',
+        })}
+        message={t('contactPhoneNumbersEditor.lastTypeUsage.message', {
+          defaultValue: 'This is the last use of custom phone type "{{label}}". Delete the type definition, or keep it for future use?',
+          label: pendingRemoveTypeLabel,
+        })}
+        confirmLabel={t('contactPhoneNumbersEditor.lastTypeUsage.removeAndDelete', {
+          defaultValue: 'Remove & Delete Type',
+        })}
+        thirdButtonLabel={t('contactPhoneNumbersEditor.lastTypeUsage.removeAndKeep', {
+          defaultValue: 'Remove & Keep Type',
+        })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
       />
     </div>
   );

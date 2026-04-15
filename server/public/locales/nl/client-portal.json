@@ -14,7 +14,8 @@
     "portal": "Portal",
     "notifications": "Meldingen",
     "documents": "Documenten",
-    "knowledgeBase": "Kennisbank"
+    "knowledgeBase": "Kennisbank",
+    "requestServices": "Services aanvragen"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -137,7 +138,9 @@
         "description": "Bekijk gedeelde documenten en bronnen"
       }
     },
-    "forgotPassword": "Wachtwoord vergeten?"
+    "forgotPassword": "Wachtwoord vergeten?",
+    "sessionEndedTitle": "Sessie beëindigd",
+    "sessionEndedMessage": "Uw sessie is beëindigd. Log opnieuw in."
   },
   "account": {
     "title": "Account",
@@ -339,7 +342,9 @@
       "uploadError": "Uploaden is mislukt. Probeer het opnieuw.",
       "deleteSuccess": "Succesvol verwijderd.",
       "deleteError": "Verwijderen is mislukt.",
-      "deleteConfirm": "Weet je zeker dat je dit wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+      "deleteConfirm": "Weet je zeker dat je dit wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "linking": "Koppelen...",
+      "linkDocument": "Document koppelen"
     },
     "validation": {
       "clientNameRequired": "Bedrijfsnaam is verplicht",

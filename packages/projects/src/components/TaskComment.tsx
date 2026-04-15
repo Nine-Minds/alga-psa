@@ -216,7 +216,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsEditing(true)}
-                  aria-label="Edit comment"
+                  aria-label={t('common.editComment', 'Edit comment')}
                 >
                   <Pencil className="w-4 h-4" />
                 </Button>
@@ -225,7 +225,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsDeleteDialogOpen(true)}
-                  aria-label="Delete comment"
+                  aria-label={t('common.deleteCommentAriaLabel', 'Delete comment')}
                 >
                   <Trash className="w-4 h-4" />
                 </Button>

@@ -1,0 +1,330 @@
+[
+  {
+    "id": "T001",
+    "description": "Integration: starting a manual or API workflow run creates a Temporal interpreter execution and a `workflow_runs` projection row with pinned workflow version, definition hash, runtime semantics version, and Temporal identifiers.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F004",
+      "F048",
+      "F054"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Temporal interpreter: a straight-line workflow with `action.call` and `control.return` executes deterministically and projects run/step/action completion correctly.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F015",
+      "F017",
+      "F028",
+      "F055",
+      "F057"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Temporal interpreter: `control.if` evaluates its condition against runtime scopes and takes the correct branch while preserving deterministic replay semantics.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010",
+      "F021"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Temporal interpreter: `control.tryCatch` catches a catchable step failure, binds `captureErrorAs`, and continues through the catch branch with the expected projection output.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F022",
+      "F055"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Temporal interpreter: workflow cancellation is not swallowed by `control.tryCatch` and marks the run canceled.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Temporal interpreter: sequential `control.forEach` iterates items in order, exposes lexical loop locals, and honors `onItemError` continue versus fail behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F025",
+      "F026"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Publish validation or designer smoke: `control.forEach` concurrency greater than 1 is rejected or unavailable in the first Temporal-native release.",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Integration: `control.callWorkflow` starts a Temporal child workflow with deterministic linkage, maps child outputs back to the parent, and records parent/root relationships in projections.",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F030",
+      "F031",
+      "F054"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Integration: a failing child workflow surfaces a structured child-workflow error that can be retried or caught by the parent interpreter.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019",
+      "F032"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Temporal integration: `time.wait` uses a native Temporal timer, projects the active wait, and resumes without any DB polling worker involvement.",
+    "implemented": true,
+    "featureIds": [
+      "F033",
+      "F035",
+      "F064"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Temporal integration: `time.wait` fast-paths immediately when the computed due time is already due and does not suspend the workflow.",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Temporal integration: `event.wait` resumes only when the active wait matches event name, correlation key, and payload filters, and times out with a catchable timeout error when no matching signal arrives.",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F037",
+      "F038",
+      "F039",
+      "F040"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Integration: inbound event routing records the event, selects candidate waiting runs from the wait projection, signals all candidates, and resumes every matching run rather than an arbitrary first DB wait row.",
+    "implemented": true,
+    "featureIds": [
+      "F043",
+      "F044",
+      "F045",
+      "F056",
+      "F058",
+      "F065"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Integration: duplicate inbound delivery of the same external `event_id` is deduplicated so the event is only processed once, and late duplicate signals do not corrupt run state.",
+    "implemented": true,
+    "featureIds": [
+      "F046",
+      "F047",
+      "F058"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Integration: `human.task` waits until a valid response signal arrives, rejects invalid responses, and resumes with the expected assigned values once validation passes.",
+    "implemented": true,
+    "featureIds": [
+      "F041",
+      "F042"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Integration: action idempotency suppresses duplicate side effects across Temporal activity retry, interpreter retry, and worker restart while preserving cached output behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F017",
+      "F019",
+      "F057"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Integration: user-authored retry policy controls visible step attempts and backoff semantics for action failures, and on-error continue behavior still advances the workflow correctly.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019",
+      "F020"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Integration: event-triggered workflows start new Temporal runs directly from published trigger metadata and validated payloads.",
+    "implemented": true,
+    "featureIds": [
+      "F043",
+      "F049"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Integration: one-time and recurring schedule triggers reconcile correctly to Temporal-native schedule state across publish, update, and unpublish operations.",
+    "implemented": true,
+    "featureIds": [
+      "F051",
+      "F052",
+      "F053"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "DB-backed integration: run, step, wait, action, and event projection tables reflect the Temporal-native lifecycle accurately enough to power existing run-list and run-detail product APIs.",
+    "implemented": true,
+    "featureIds": [
+      "F054",
+      "F055",
+      "F056",
+      "F057",
+      "F058",
+      "F060"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Determinism/replay: a run continues to replay successfully after the workflow definition is edited later because the run remains pinned to its original definition version, hash, and runtime semantics version.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F006",
+      "F013",
+      "F014"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Temporal integration: a long-running workflow performs continue-as-new at a safe checkpoint and resumes with equivalent interpreter state, current wait semantics, and projection continuity.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F067"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "API integration: replay or re-run starts a fresh Temporal-native run from the original normalized input and pinned definition rather than attempting DB snapshot resume.",
+    "implemented": true,
+    "featureIds": [
+      "F050",
+      "F060",
+      "F063"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Cutover integration: new runs no longer depend on lease-based runnable-run acquisition, due-wait polling, or DB wait-resolution worker behavior to make progress.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F063",
+      "F064",
+      "F065",
+      "F066"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Temporal interpreter: workflow cancellation propagates to active child execution when present and terminal run state remains canceled.",
+    "implemented": true,
+    "featureIds": [
+      "F061",
+      "F029"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Temporal interpreter: `control.callWorkflow` launches a Temporal child execution from a child run record with deterministic child workflow ID and parent/root linkage metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F030"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Temporal interpreter: `control.callWorkflow` output mapping evaluates against child-run scopes and writes mapped values into parent workflow scope.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Temporal interpreter: `time.wait` projects wait start/resolution, sleeps only when dueAt is in the future, and fast-paths immediate continuation when already due.",
+    "implemented": true,
+    "featureIds": [
+      "F033",
+      "F034",
+      "F035"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Temporal interpreter: `event.wait` uses workflow signals, resumes only on matching event-name/correlation/filter contracts, and throws a catchable timeout error when no match arrives before deadline.",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F037",
+      "F038",
+      "F039",
+      "F040"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Temporal interpreter: `human.task` waits for a matching task signal, validates response payloads through runtime form validation, and fails with catchable validation errors for invalid responses.",
+    "implemented": true,
+    "featureIds": [
+      "F041",
+      "F042"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Event ingress worker: inbound events are persisted once, candidate waits are selected from projection indexes, and all candidates are signaled while duplicate `event_id` deliveries are skipped.",
+    "implemented": true,
+    "featureIds": [
+      "F043",
+      "F044",
+      "F045",
+      "F046",
+      "F047"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Temporal interpreter workflow registers operator query handlers that return current step, current wait, and interpreter-summary snapshots for support tooling.",
+    "implemented": true,
+    "featureIds": [
+      "F062"
+    ]
+  }
+]

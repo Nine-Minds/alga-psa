@@ -14,7 +14,8 @@
     "portal": "55555",
     "notifications": "55555",
     "documents": "55555",
-    "knowledgeBase": "55555"
+    "knowledgeBase": "55555",
+    "requestServices": "55555"
   },
   "dashboard": {
     "title": "55555",
@@ -137,7 +138,9 @@
         "description": "55555"
       }
     },
-    "forgotPassword": "55555"
+    "forgotPassword": "55555",
+    "sessionEndedTitle": "55555",
+    "sessionEndedMessage": "55555"
   },
   "account": {
     "title": "55555",
@@ -339,7 +342,9 @@
       "uploadError": "55555",
       "deleteSuccess": "55555",
       "deleteError": "55555",
-      "deleteConfirm": "55555"
+      "deleteConfirm": "55555",
+      "linking": "55555",
+      "linkDocument": "55555"
     },
     "validation": {
       "clientNameRequired": "55555",

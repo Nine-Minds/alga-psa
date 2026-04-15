@@ -3,7 +3,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -24,6 +24,9 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
+import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextEditor } from '@alga-psa/ui/editor';
 import { toast } from 'react-hot-toast';
@@ -47,9 +50,11 @@ import { useSession } from 'next-auth/react';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import QuickAddCategory from './QuickAddCategory';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../lib/ticketRichText';
 import { removeTicketRichTextImageUrls, replaceTicketRichTextImageUrls } from '../lib/ticketRichTextImages';
 import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSession';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -60,7 +65,7 @@ function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; on
 }
 
 // Helper function to format location display
-const formatLocationDisplay = (location: IClientLocation): string => {
+const formatLocationDisplay = (location: IClientLocation, unnamedFallback = 'Unnamed Location'): string => {
   const parts: string[] = [];
   
   if (location.location_name) {
@@ -83,19 +88,7 @@ const formatLocationDisplay = (location: IClientLocation): string => {
     parts.push(location.postal_code);
   }
   
-  return parts.join(' - ') || 'Unnamed Location';
-};
-
-const getDefaultBoard = (availableBoards: IBoard[]): IBoard | null => {
-  const activeBoards = availableBoards.filter(board => !board.is_inactive);
-
-  return (
-    activeBoards.find(board => board.is_default) ||
-    activeBoards[0] ||
-    availableBoards.find(board => board.is_default) ||
-    availableBoards[0] ||
-    null
-  );
+  return parts.join(' - ') || unnamedFallback;
 };
 
 const getDefaultStatus = (availableStatuses: ITicketStatus[]): ITicketStatus | null => {
@@ -183,6 +176,7 @@ export function QuickAddTicket({
   const router = useRouter();
   const { data: session } = useSession();
   const { renderQuickAddClient, renderQuickAddContact } = useQuickAddClient();
+  const { t } = useTranslation('features/tickets');
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -195,6 +189,23 @@ export function QuickAddTicket({
   const [descriptionEditorInstanceKey, setDescriptionEditorInstanceKey] = useState(0);
   const [assignedTo, setAssignedTo] = useState(prefilledAssignedTo || '');
   const [assignedTeamId, setAssignedTeamId] = useState<string | null>(null);
+  const [tempAdditionalAgents, setTempAdditionalAgents] = useState<
+    { user_id: string; first_name: string; last_name: string; temp_id: string }[]
+  >(() => {
+    if (prefilledAdditionalAgents?.length) {
+      return prefilledAdditionalAgents.map(agent => {
+        const nameParts = (agent.name || '').split(' ');
+        return {
+          user_id: agent.user_id,
+          first_name: nameParts[0] || '',
+          last_name: nameParts.slice(1).join(' ') || '',
+          temp_id: `temp-${Date.now()}-${agent.user_id}`,
+        };
+      });
+    }
+    return [];
+  });
+  const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [boardId, setBoardId] = useState('');
   const [statusId, setStatusId] = useState('');
@@ -215,6 +226,7 @@ export function QuickAddTicket({
   const [users, setUsers] = useState<IUser[]>([]);
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [statuses, setStatuses] = useState<ITicketStatus[]>([]);
+  const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -250,21 +262,21 @@ export function QuickAddTicket({
   }, [itilImpact, itilUrgency]);
 
   // ITIL options for selects
-  const itilImpactOptions: SelectOption[] = [
-    { value: '1', label: '1 - High (Critical business function affected)' },
-    { value: '2', label: '2 - Medium-High (Important function affected)' },
-    { value: '3', label: '3 - Medium (Minor function affected)' },
-    { value: '4', label: '4 - Medium-Low (Minimal impact)' },
-    { value: '5', label: '5 - Low (No business impact)' }
-  ];
+  const itilImpactOptions = useMemo<SelectOption[]>(() => [
+    { value: '1', label: t('itil.impactLevels.1', '1 - High (Critical business function affected)') },
+    { value: '2', label: t('itil.impactLevels.2', '2 - Medium-High (Important function affected)') },
+    { value: '3', label: t('itil.impactLevels.3', '3 - Medium (Minor function affected)') },
+    { value: '4', label: t('itil.impactLevels.4', '4 - Medium-Low (Minimal impact)') },
+    { value: '5', label: t('itil.impactLevels.5', '5 - Low (No business impact)') }
+  ], [t]);
 
-  const itilUrgencyOptions: SelectOption[] = [
-    { value: '1', label: '1 - High (Work cannot continue)' },
-    { value: '2', label: '2 - Medium-High (Work severely impaired)' },
-    { value: '3', label: '3 - Medium (Work continues with limitations)' },
-    { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
-    { value: '5', label: '5 - Low (Work continues normally)' }
-  ];
+  const itilUrgencyOptions = useMemo<SelectOption[]>(() => [
+    { value: '1', label: t('itil.urgencyLevels.1', '1 - High (Work cannot continue)') },
+    { value: '2', label: t('itil.urgencyLevels.2', '2 - Medium-High (Work severely impaired)') },
+    { value: '3', label: t('itil.urgencyLevels.3', '3 - Medium (Work continues with limitations)') },
+    { value: '4', label: t('itil.urgencyLevels.4', '4 - Medium-Low (Minor inconvenience)') },
+    { value: '5', label: t('itil.urgencyLevels.5', '5 - Low (Work continues normally)') }
+  ], [t]);
 
   // NOTE: Categories are now unified - no need for separate ITIL category filtering
 
@@ -275,9 +287,9 @@ export function QuickAddTicket({
   const { automationIdProps: dialogProps, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: 'quick-add-ticket-dialog',
     type: 'dialog',
-    label: 'Quick Add Ticket Dialog',
+    label: t('quickAdd.dialogLabel', 'Quick Add Ticket Dialog'),
     helperText: "",
-    title: 'Quick Add Ticket',
+    title: t('quickAdd.dialogTitle', 'Quick Add Ticket'),
   });
 
   const descriptionUploadSession = useQuickAddRichTextUploadSession({
@@ -307,46 +319,8 @@ export function QuickAddTicket({
         setPriorities(formData.priorities);
         setClients(formData.clients);
 
-        if (Array.isArray(formData.statuses) && formData.statuses.length > 0) {
-          setStatuses(formData.statuses);
-        }
-
         const availableBoards = formData.boards || [];
-        const availableStatuses = Array.isArray(formData.statuses) ? formData.statuses : [];
         const availablePriorities = formData.priorities || [];
-
-        const defaultBoard = getDefaultBoard(availableBoards);
-        const defaultStatus = getDefaultStatus(availableStatuses);
-        const defaultPriorityType = defaultBoard?.priority_type || 'custom';
-        const defaultPriorityId = getBoardDefaultPriorityId(defaultBoard || undefined, availablePriorities);
-
-        if (defaultBoard?.board_id) {
-          setBoardId(defaultBoard.board_id);
-
-          // If no prefilled assignee was provided, prefer board-level defaults.
-          if (!prefilledAssignedTo) {
-            if (defaultBoard.default_assigned_team_id) {
-              setAssignedTeamId(defaultBoard.default_assigned_team_id);
-            }
-            if (defaultBoard.default_assigned_to) {
-              setAssignedTo(defaultBoard.default_assigned_to);
-            }
-          }
-        }
-
-        if (defaultStatus?.status_id) {
-          setStatusId(defaultStatus.status_id);
-        }
-
-        if (defaultPriorityId) {
-          setPriorityId(defaultPriorityId);
-        }
-
-        if (defaultPriorityType === 'itil') {
-          // Default ITIL tickets to medium impact/urgency for quick entry.
-          setItilImpact(3);
-          setItilUrgency(3);
-        }
 
         if (formData.selectedClient) {
           setIsPrefilledClient(true);
@@ -450,6 +424,63 @@ export function QuickAddTicket({
   }, [clientId, isPrefilledClient]);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const fetchStatusesForBoard = async () => {
+      if (!boardId) {
+        if (isMounted) {
+          setStatuses([]);
+          setStatusId('');
+          setIsLoadingStatuses(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setIsLoadingStatuses(true);
+      }
+      try {
+        const boardStatuses = await getTicketStatuses(boardId);
+        if (isMounted) {
+          setStatuses(boardStatuses);
+        }
+      } catch (error) {
+        console.error('Error fetching board statuses:', error);
+        if (isMounted) {
+          setStatuses([]);
+          setStatusId('');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingStatuses(false);
+        }
+      }
+    };
+
+    fetchStatusesForBoard();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [boardId]);
+
+  useEffect(() => {
+    if (!boardId || isLoadingStatuses) {
+      return;
+    }
+
+    const currentStatusIsValid = statuses.some((status) => status.status_id === statusId);
+    if (currentStatusIsValid) {
+      return;
+    }
+
+    const nextStatusId = getDefaultStatus(statuses)?.status_id || '';
+    if (nextStatusId !== statusId) {
+      setStatusId(nextStatusId);
+    }
+  }, [boardId, statuses, statusId, isLoadingStatuses]);
+
+  useEffect(() => {
     const fetchCategories = async () => {
       if (boardId) {
         try {
@@ -528,6 +559,8 @@ export function QuickAddTicket({
 
   const handleBoardChange = (newBoardId: string) => {
     setBoardId(newBoardId);
+    setStatuses([]);
+    setStatusId('');
     setSelectedCategories([]);
     setShowPriorityMatrix(false);
     setPriorityId('');
@@ -569,6 +602,25 @@ export function QuickAddTicket({
     }
   };
 
+  // Fetch team avatar URL when assigned team changes
+  useEffect(() => {
+    if (!assignedTeamId) {
+      setTeamAvatarUrl(null);
+      return;
+    }
+    const team = teams.find(t => t.team_id === assignedTeamId);
+    if (!team?.tenant) return;
+
+    getTeamAvatarUrlsBatchAction([assignedTeamId], team.tenant)
+      .then(result => {
+        if (result instanceof Map) {
+          setTeamAvatarUrl(result.get(assignedTeamId) ?? null);
+        } else {
+          setTeamAvatarUrl((result as Record<string, string | null>)[assignedTeamId] ?? null);
+        }
+      })
+      .catch(() => setTeamAvatarUrl(null));
+  }, [assignedTeamId, teams]);
 
   function resetForm() {
     setTitle(prefilledTitle || '');
@@ -576,7 +628,22 @@ export function QuickAddTicket({
     setDescriptionEditorInstanceKey((current) => current + 1);
     setAssignedTo(prefilledAssignedTo || '');
     setAssignedTeamId(null);
+    setTempAdditionalAgents(
+      prefilledAdditionalAgents?.length
+        ? prefilledAdditionalAgents.map(agent => {
+            const nameParts = (agent.name || '').split(' ');
+            return {
+              user_id: agent.user_id,
+              first_name: nameParts[0] || '',
+              last_name: nameParts.slice(1).join(' ') || '',
+              temp_id: `temp-${Date.now()}-${agent.user_id}`,
+            };
+          })
+        : []
+    );
+    setTeamAvatarUrl(null);
     setBoardId('');
+    setStatuses([]);
     setStatusId('');
     setPriorityId('');
     setClientId(prefilledClient?.id || '');
@@ -618,28 +685,28 @@ export function QuickAddTicket({
 
   const validateForm = () => {
     const validationErrors: string[] = [];
-    if (!title.trim()) validationErrors.push('Title');
-    if (!boardId) validationErrors.push('Board');
-    if (!statusId) validationErrors.push('Status');
+    if (!title.trim()) validationErrors.push(t('create.errors.titleRequired', 'Title is required'));
+    if (!boardId) validationErrors.push(t('validation.quickAdd.boardRequired', 'Please select a board'));
+    if (!statusId) validationErrors.push(t('validation.quickAdd.statusRequired', 'Please select a status'));
 
     // Validate priority based on board type
     if (boardConfig.priority_type === 'custom') {
       // Custom priority boards require priority_id
       if (!priorityId) {
-        validationErrors.push('Priority');
+        validationErrors.push(t('validation.quickAdd.priorityRequired', 'Please select a priority'));
       }
     } else if (boardConfig.priority_type === 'itil') {
       // ITIL priority boards require impact and urgency
-      if (!itilImpact) validationErrors.push('Impact');
-      if (!itilUrgency) validationErrors.push('Urgency');
+      if (!itilImpact) validationErrors.push(t('validation.quickAdd.impactRequired', 'Please select an impact'));
+      if (!itilUrgency) validationErrors.push(t('validation.quickAdd.urgencyRequired', 'Please select an urgency'));
     } else {
       // Default to custom behavior if priority_type is undefined
       if (!priorityId) {
-        validationErrors.push('Priority');
+        validationErrors.push(t('validation.quickAdd.priorityRequired', 'Please select a priority'));
       }
     }
 
-    if (!clientId) validationErrors.push('Client');
+    if (!clientId) validationErrors.push(t('validation.quickAdd.clientRequired', 'Please select a client'));
     return validationErrors;
   };
 
@@ -652,7 +719,7 @@ export function QuickAddTicket({
       session?.user?.id || (await getCurrentUser())?.user_id;
 
     if (!effectiveUserId) {
-      throw new Error('User session is required for clipboard image upload.');
+      throw new Error(t('quickAdd.clipboardUploadSessionRequired', 'User session is required for clipboard image upload.'));
     }
 
     const replacementUrls = new Map<string, string>();
@@ -668,11 +735,11 @@ export function QuickAddTicket({
       });
 
       if (isActionPermissionError(uploadResult)) {
-        throw new Error(uploadResult.permissionError || 'Clipboard image upload failed.');
+        throw new Error(uploadResult.permissionError || t('quickAdd.clipboardUploadFailed', 'Clipboard image upload failed.'));
       }
 
       if (!uploadResult.success) {
-        throw new Error(uploadResult.error || 'Clipboard image upload failed.');
+        throw new Error(uploadResult.error || t('quickAdd.clipboardUploadFailed', 'Clipboard image upload failed.'));
       }
 
       const uploadedDocument = uploadResult.document;
@@ -784,7 +851,7 @@ export function QuickAddTicket({
 
       const newTicket = await addTicket(formData);
       if (!newTicket) {
-        throw new Error('Failed to create ticket');
+        throw new Error(t('errors.createTicketFailed', 'Failed to create ticket. Please try again.'));
       }
 
       let finalizedDescription = serializeTicketRichTextContent(descriptionForCreate);
@@ -792,7 +859,7 @@ export function QuickAddTicket({
         finalizedDescription = await finalizeDescriptionForCreatedTicket(newTicket);
       } catch (descriptionFinalizeError) {
         console.error('Failed to finalize quick add description:', descriptionFinalizeError);
-        toast.error('Ticket created, but pasted images could not be attached to the description.');
+        toast.error(t('quickAdd.clipboardUploadPartialFailure', 'Ticket created, but pasted images could not be attached to the description.'));
       }
 
       // Assign team if selected
@@ -801,13 +868,13 @@ export function QuickAddTicket({
           await assignTeamToTicket(newTicket.ticket_id, assignedTeamId);
         } catch (teamError) {
           console.error('Failed to assign team:', teamError);
-          toast.error('Ticket created but team assignment failed');
+          toast.error(t('quickAdd.teamAssignmentPartialFailure', 'Ticket created but team assignment failed'));
         }
       }
 
       // Add additional agents as ticket resources
-      if (prefilledAdditionalAgents?.length && newTicket.ticket_id) {
-        for (const agent of prefilledAdditionalAgents) {
+      if (tempAdditionalAgents.length > 0 && newTicket.ticket_id) {
+        for (const agent of tempAdditionalAgents) {
           try {
             await addTicketResource(newTicket.ticket_id, agent.user_id, 'support');
           } catch (agentError) {
@@ -822,10 +889,18 @@ export function QuickAddTicket({
         try {
           createdTags = await createTagsForEntity(newTicket.ticket_id, 'ticket', pendingTags);
           if (createdTags.length < pendingTags.length) {
-            toast.error(`${pendingTags.length - createdTags.length} tag(s) could not be created`);
+            const failedCount = pendingTags.length - createdTags.length;
+            toast.error(t('quickAdd.tagCreatePartialFailure', {
+              count: failedCount,
+              defaultValue: failedCount === 1 ? '{{count}} tag could not be created' : '{{count}} tags could not be created',
+            }));
           }
         } catch (tagError) {
           console.error("Error creating ticket tags:", tagError);
+          toast.error(t('quickAdd.tagCreatePartialFailure', {
+            count: pendingTags.length,
+            defaultValue: pendingTags.length === 1 ? '{{count}} tag could not be created' : '{{count}} tags could not be created',
+          }));
         }
       }
 
@@ -839,6 +914,7 @@ export function QuickAddTicket({
         tags: createdTags,
       });
       resetForm();
+
       onOpenChange(false);
 
       if (openAfterCreate && newTicket.ticket_id) {
@@ -846,7 +922,7 @@ export function QuickAddTicket({
       }
     } catch (error) {
       console.error('Error creating ticket:', error);
-      setError(error instanceof Error ? error.message : 'Failed to create ticket. Please try again.');
+      setError(error instanceof Error ? error.message : t('errors.createTicketFailed', 'Failed to create ticket. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -898,6 +974,45 @@ export function QuickAddTicket({
     [priorities]
   );
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id={`${id}-cancel-btn`}
+        type="button"
+        variant="outline"
+        onClick={handleClose}
+      >
+        {t('actions.cancel', 'Cancel')}
+      </Button>
+      <Button
+        id={`${id}-create-open-btn`}
+        type="button"
+        variant="secondary"
+        disabled={isSubmitting}
+        onClick={() => {
+          void handleCreateTicket({ openAfterCreate: true });
+        }}
+        className={hasRequiredFieldErrors ? 'opacity-50' : ''}
+      >
+        {isSubmitting
+          ? t('quickAdd.submitting', 'Adding...')
+          : t('quickAdd.createAndView', 'Create + View Ticket')}
+      </Button>
+      <Button
+        id={`${id}-submit-btn`}
+        type="button"
+        variant="default"
+        disabled={isSubmitting}
+        onClick={() => { void handleCreateTicket(); }}
+        className={hasRequiredFieldErrors ? 'opacity-50' : ''}
+      >
+        {isSubmitting
+          ? t('quickAdd.submitting', 'Adding...')
+          : t('actions.create', 'Create')}
+      </Button>
+    </div>
+  );
+
   return (
     <div>
       <Dialog
@@ -905,8 +1020,9 @@ export function QuickAddTicket({
         isOpen={open}
         onClose={handleClose}
         className="w-full max-w-2xl max-h-[90vh]"
-        title="Add Ticket"
+        title={t('quickAdd.dialogTitle', 'Quick Add Ticket')}
         disableFocusTrap
+        footer={footer}
       >
         <DialogContent>
           {isLoading ? (
@@ -915,10 +1031,10 @@ export function QuickAddTicket({
             </div>
           ) : (
             <>
-              {hasAttemptedSubmit && error && (
+                  {hasAttemptedSubmit && error && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertDescription>
-                    <p className="font-medium mb-2">Please fill in the required fields:</p>
+                    <p className="font-medium mb-2">{t('quickAdd.requiredFieldsHeading', 'Please fill in the required fields:')}</p>
                     <ul className="list-disc list-inside space-y-1">
                       {error.split('\n').map((err, index) => (
                         <li key={index}>{err}</li>
@@ -928,7 +1044,7 @@ export function QuickAddTicket({
                 </Alert>
               )}
 
-              <ReflectionContainer id={`${id}-form`} label="Quick Add Ticket Form">
+              <ReflectionContainer id={`${id}-form`} label={t('quickAdd.formLabel', 'Quick Add Ticket Form')}>
                 {/* Use a div instead of form when embedded to avoid nested <form> tags */}
                 <FormOrDiv isEmbedded={isEmbedded} onSubmit={handleSubmit}>
 
@@ -939,11 +1055,11 @@ export function QuickAddTicket({
                       setTitle(e.target.value);
                       clearErrorIfSubmitted();
                     }}
-                    placeholder="Ticket Title *"
+                    placeholder={t('quickAdd.titlePlaceholder', 'Ticket Title *')}
                     className={hasAttemptedSubmit && !title.trim() ? 'border-red-500' : ''}
                   />
                   <div className="space-y-2">
-                    <div className="text-sm font-medium text-gray-700">Description</div>
+                    <div className="text-sm font-medium text-gray-700">{t('quickAdd.descriptionLabel', 'Description')}</div>
                     <div className="min-w-0 w-full">
                       <TextEditor
                         key={`${id}-description-editor-${open ? descriptionEditorInstanceKey : 'closed'}`}
@@ -953,7 +1069,7 @@ export function QuickAddTicket({
                           setDescriptionContent(content);
                           clearErrorIfSubmitted();
                         }}
-                        placeholder="Description"
+                        placeholder={t('quickAdd.descriptionPlaceholder', 'Description')}
                         searchMentions={searchUsersForMentions}
                         uploadFile={descriptionUploadSession.uploadFile}
                       />
@@ -970,7 +1086,7 @@ export function QuickAddTicket({
                       onFilterStateChange={setClientFilterState}
                       clientTypeFilter={clientTypeFilter}
                       onClientTypeFilterChange={setClientTypeFilter}
-                      placeholder="Select Client *"
+                      placeholder={t('quickAdd.clientPlaceholder', 'Select Client *')}
                       onAddNew={() => setIsQuickAddClientOpen(true)}
                     />
                   </div>
@@ -987,8 +1103,8 @@ export function QuickAddTicket({
                       clientId={clientId}
                       placeholder={
                         contacts.length === 0
-                          ? "No contacts for selected client"
-                          : "Select contact"
+                          ? t('quickAdd.noContactsForClient', 'No contacts for selected client')
+                          : t('quickAdd.selectContact', 'Select contact')
                       }
                       buttonWidth="full"
                       onAddNew={() => setIsQuickAddContactOpen(true)}
@@ -1003,61 +1119,19 @@ export function QuickAddTicket({
                         clearErrorIfSubmitted();
                       }}
                       options={[
-                        ...(locations.length > 0 ? [{ value: 'none', label: 'None' }] : []),
+                        ...(locations.length > 0 ? [{ value: 'none', label: t('quickAdd.none', 'None') }] : []),
                         ...locations.map(location => ({
                           value: location.location_id,
-                          label: formatLocationDisplay(location) + (location.is_default ? ' (Default)' : '')
+                          label: formatLocationDisplay(location, t('quickAdd.unnamedLocation', 'Unnamed Location')) +
+                            (location.is_default ? ` ${t('quickAdd.defaultSuffix', '(Default)')}` : '')
                         }))
                       ]}
-                      placeholder={locations.length === 0 ? "No locations for selected client" : "Select location"}
+                      placeholder={locations.length === 0
+                        ? t('quickAdd.noLocationsForClient', 'No locations for selected client')
+                        : t('quickAdd.selectLocation', 'Select location')}
                       showPlaceholderInDropdown={false}
                     />
                   )}
-                  {teamsV2Enabled ? (
-                    <UserAndTeamPicker
-                      value={assignedTo}
-                      onValueChange={(value) => {
-                        setAssignedTo(value);
-                        setAssignedTeamId(null);
-                        clearErrorIfSubmitted();
-                      }}
-                      onTeamSelect={(teamId) => {
-                        const team = teams.find(t => t.team_id === teamId);
-                        if (team?.manager_id) {
-                          setAssignedTo(team.manager_id);
-                        }
-                        setAssignedTeamId(teamId);
-                        clearErrorIfSubmitted();
-                      }}
-                      users={users.map(user => ({
-                        ...user,
-                        roles: []
-                      }))}
-                      teams={teams}
-                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                      getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-                      buttonWidth="full"
-                      size="sm"
-                      placeholder="Assign To"
-                    />
-                  ) : (
-                    <UserPicker
-                      value={assignedTo}
-                      onValueChange={(value) => {
-                        setAssignedTo(value);
-                        clearErrorIfSubmitted();
-                      }}
-                      users={users.map(user => ({
-                        ...user,
-                        roles: []
-                      }))}
-                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                      buttonWidth="full"
-                      size="sm"
-                      placeholder="Assign To"
-                    />
-                  )}
-
                   <div className={hasAttemptedSubmit && !boardId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                     <BoardPicker
                       id={`${id}-board-picker`}
@@ -1066,8 +1140,168 @@ export function QuickAddTicket({
                       selectedBoardId={boardId}
                       onFilterStateChange={setQuickAddBoardFilterState}
                       filterState={quickAddBoardFilterState}
-                      placeholder="Select Board *"
+                      placeholder={t('quickAdd.boardPlaceholder', 'Select Board *')}
                     />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('quickAdd.assignedTo', 'Assigned To')}</label>
+                      {teamsV2Enabled ? (
+                        <UserAndTeamPicker
+                          value={assignedTo}
+                          onValueChange={(value) => {
+                            setAssignedTo(value);
+                            setAssignedTeamId(null);
+                            clearErrorIfSubmitted();
+                          }}
+                          onTeamSelect={(teamId) => {
+                            const team = teams.find(t => t.team_id === teamId);
+                            if (team?.manager_id) {
+                              setAssignedTo(team.manager_id);
+                            }
+                            setAssignedTeamId(teamId);
+                            // Expand team members into additional agents
+                            const members = team?.members || [];
+                            const managerId = team?.manager_id || '';
+                            const newAgents = members
+                              .filter(m => m.user_id !== managerId)
+                              .filter(m => !tempAdditionalAgents.some(a => a.user_id === m.user_id))
+                              .map(m => ({
+                                user_id: m.user_id,
+                                first_name: m.first_name || '',
+                                last_name: m.last_name || '',
+                                temp_id: `temp-${Date.now()}-${m.user_id}`,
+                              }));
+                            if (newAgents.length > 0) {
+                              setTempAdditionalAgents(prev => [...prev, ...newAgents]);
+                            }
+                            clearErrorIfSubmitted();
+                          }}
+                          users={users
+                            .filter(u => !tempAdditionalAgents.some(a => a.user_id === u.user_id))
+                            .map(user => ({ ...user, roles: [] }))}
+                          teams={teams}
+                          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                          getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                          buttonWidth="full"
+                          size="sm"
+                          placeholder={t('quickAdd.assignTo', 'Assign To')}
+                        />
+                      ) : (
+                        <UserPicker
+                          value={assignedTo}
+                          onValueChange={(value) => {
+                            setAssignedTo(value);
+                            clearErrorIfSubmitted();
+                          }}
+                          users={users
+                            .filter(u => !tempAdditionalAgents.some(a => a.user_id === u.user_id))
+                            .map(user => ({ ...user, roles: [] }))}
+                          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                          buttonWidth="full"
+                          size="sm"
+                          placeholder={t('quickAdd.assignTo', 'Assign To')}
+                        />
+                      )}
+                      {assignedTeamId && (() => {
+                        const assignedTeam = teams.find(t => t.team_id === assignedTeamId);
+                        return assignedTeam ? (
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            <TeamAvatar
+                              teamId={assignedTeam.team_id}
+                              teamName={assignedTeam.team_name}
+                              avatarUrl={teamAvatarUrl}
+                              size="xs"
+                            />
+                            <span className="text-xs text-gray-500 truncate">{assignedTeam.team_name}</span>
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('quickAdd.additionalAgents', 'Additional Agents')}</label>
+                      {teamsV2Enabled ? (
+                        <MultiUserAndTeamPicker
+                          id={`${id}-additional-agents`}
+                          values={tempAdditionalAgents.map(a => a.user_id)}
+                          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                          getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                          teams={teams}
+                          teamSectionLabel={t('quickAdd.addTeamMembers', 'Add Team Members')}
+                          onTeamValuesChange={(selectedTeamIds) => {
+                            for (const teamId of selectedTeamIds) {
+                              const team = teams.find(t => t.team_id === teamId);
+                              if (team?.manager_id) {
+                                setAssignedTo(team.manager_id);
+                              }
+                              setAssignedTeamId(teamId);
+                              const members = team?.members || [];
+                              const newAgents = members
+                                .filter(m => m.user_id !== (team?.manager_id || assignedTo))
+                                .filter(m => !tempAdditionalAgents.some(a => a.user_id === m.user_id))
+                                .map(m => ({
+                                  user_id: m.user_id,
+                                  first_name: m.first_name || '',
+                                  last_name: m.last_name || '',
+                                  temp_id: `temp-${Date.now()}-${m.user_id}`,
+                                }));
+                              if (newAgents.length > 0) {
+                                setTempAdditionalAgents(prev => [...prev, ...newAgents]);
+                              }
+                            }
+                          }}
+                          onValuesChange={(newUserIds) => {
+                            const currentUserIds = tempAdditionalAgents.map(a => a.user_id);
+                            const addedUserIds = newUserIds.filter(uid => !currentUserIds.includes(uid));
+                            const newAgents = addedUserIds.map(uid => {
+                              const user = users.find(u => u.user_id === uid);
+                              return {
+                                user_id: uid,
+                                first_name: user?.first_name || '',
+                                last_name: user?.last_name || '',
+                                temp_id: `temp-${Date.now()}-${uid}`,
+                              };
+                            });
+                            const removedUserIds = currentUserIds.filter(uid => !newUserIds.includes(uid));
+                            setTempAdditionalAgents(prev => [
+                              ...prev.filter(a => !removedUserIds.includes(a.user_id)),
+                              ...newAgents,
+                            ]);
+                          }}
+                          users={users.filter(u => u.user_id !== assignedTo)}
+                          size="sm"
+                          placeholder={t('quickAdd.additionalAgentsPlaceholder', 'Additional agents...')}
+                        />
+                      ) : (
+                        <MultiUserPicker
+                          id={`${id}-additional-agents`}
+                          values={tempAdditionalAgents.map(a => a.user_id)}
+                          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                          onValuesChange={(newUserIds) => {
+                            const currentUserIds = tempAdditionalAgents.map(a => a.user_id);
+                            const addedUserIds = newUserIds.filter(uid => !currentUserIds.includes(uid));
+                            const newAgents = addedUserIds.map(uid => {
+                              const user = users.find(u => u.user_id === uid);
+                              return {
+                                user_id: uid,
+                                first_name: user?.first_name || '',
+                                last_name: user?.last_name || '',
+                                temp_id: `temp-${Date.now()}-${uid}`,
+                              };
+                            });
+                            const removedUserIds = currentUserIds.filter(uid => !newUserIds.includes(uid));
+                            setTempAdditionalAgents(prev => [
+                              ...prev.filter(a => !removedUserIds.includes(a.user_id)),
+                              ...newAgents,
+                            ]);
+                          }}
+                          users={users.filter(u => u.user_id !== assignedTo)}
+                          size="sm"
+                          placeholder={t('quickAdd.additionalAgentsPlaceholder', 'Additional agents...')}
+                        />
+                      )}
+                    </div>
                   </div>
 
                   {boardId && boardConfig.category_type && (
@@ -1079,7 +1313,9 @@ export function QuickAddTicket({
                         setSelectedCategories(categoryIds);
                         clearErrorIfSubmitted();
                       }}
-                      placeholder={boardConfig.category_type === 'custom' ? "Select category" : "Select ITIL category"}
+                      placeholder={boardConfig.category_type === 'custom'
+                        ? t('quickAdd.selectCategory', 'Select category')
+                        : t('quickAdd.selectItilCategory', 'Select ITIL category')}
                       multiSelect={false}
                       className="w-full"
                       onAddNew={() => setIsQuickAddCategoryOpen(true)}
@@ -1094,8 +1330,9 @@ export function QuickAddTicket({
                       clearErrorIfSubmitted();
                     }}
                     options={memoizedStatusOptions}
-                    placeholder="Select Status *"
+                    placeholder={t('quickAdd.statusPlaceholder', 'Select Status *')}
                     className={hasAttemptedSubmit && !statusId ? 'border-red-500' : ''}
+                    disabled={!boardId || isLoadingStatuses}
                   />
 
                   {/* Priority Section - Show different UI based on board priority type */}
@@ -1111,7 +1348,7 @@ export function QuickAddTicket({
                             clearErrorIfSubmitted();
                           }}
                           options={memoizedPriorityOptions}
-                          placeholder="Select Priority *"
+                          placeholder={t('quickAdd.selectPriority', 'Select Priority *')}
                           className={hasAttemptedSubmit && !priorityId ? 'border-red-500' : ''}
                         />
                       )}
@@ -1120,7 +1357,7 @@ export function QuickAddTicket({
                       {boardConfig.priority_type === 'itil' && (
                         <>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Impact *</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('itil.impact', 'Impact')} *</label>
                             <CustomSelect
                               options={itilImpactOptions}
                               value={itilImpact?.toString() || null}
@@ -1128,13 +1365,13 @@ export function QuickAddTicket({
                                 setItilImpact(value ? parseInt(value) : undefined);
                                 clearErrorIfSubmitted();
                               }}
-                              placeholder="Select Impact"
+                              placeholder={t('itil.selectImpact', 'Select Impact')}
                               className={hasAttemptedSubmit && !itilImpact ? 'border-red-500' : ''}
                             />
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Urgency *</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('itil.urgency', 'Urgency')} *</label>
                             <CustomSelect
                               options={itilUrgencyOptions}
                               value={itilUrgency?.toString() || null}
@@ -1142,7 +1379,7 @@ export function QuickAddTicket({
                                 setItilUrgency(value ? parseInt(value) : undefined);
                                 clearErrorIfSubmitted();
                               }}
-                              placeholder="Select Urgency"
+                              placeholder={t('itil.selectUrgency', 'Select Urgency')}
                               className={hasAttemptedSubmit && !itilUrgency ? 'border-red-500' : ''}
                             />
                           </div>
@@ -1150,12 +1387,12 @@ export function QuickAddTicket({
                           {/* Read-only Priority field showing calculated value */}
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <label className="block text-sm font-medium text-gray-700">Priority (Calculated)</label>
+                              <label className="block text-sm font-medium text-gray-700">{t('quickAdd.priorityCalculated', 'Priority (Calculated)')}</label>
                               <button
                                 type="button"
                                 onClick={() => setShowPriorityMatrix(!showPriorityMatrix)}
                                 className="text-gray-400 hover:text-gray-600 transition-colors"
-                                title="Show ITIL Priority Matrix"
+                                title={t('quickAdd.showPriorityMatrix', 'Show ITIL Priority Matrix')}
                               >
                                 <HelpCircle className="w-4 h-4" />
                               </button>
@@ -1176,80 +1413,80 @@ export function QuickAddTicket({
                                     }}
                                   />
                                   <span className="text-gray-900">
-                                    {ItilLabels.priority[calculatedItilPriority]}
+                                    {t(`itil.priorityLevels.${calculatedItilPriority}` as const, ItilLabels.priority[calculatedItilPriority])}
                                   </span>
                                   <span className="text-sm text-gray-500">
-                                    (Impact {itilImpact} × Urgency {itilUrgency})
+                                    ({t('itil.impact', 'Impact')} {itilImpact} × {t('itil.urgency', 'Urgency')} {itilUrgency})
                                   </span>
                                 </div>
                               ) : (
-                                <span className="text-gray-500">Select Impact and Urgency to calculate priority</span>
+                                <span className="text-gray-500">{t('itil.calculatePrompt', 'Select Impact and Urgency to calculate priority')}</span>
                               )}
                             </div>
 
                             {/* ITIL Priority Matrix - Show when help icon is clicked */}
                             {showPriorityMatrix && (
                               <div className="mt-3 p-4 bg-gray-500/10 border rounded-lg">
-                                <h4 className="text-sm font-medium mb-3">ITIL Priority Matrix (Impact × Urgency)</h4>
+                                <h4 className="text-sm font-medium mb-3">{t('itil.matrixTitle', 'ITIL Priority Matrix (Impact × Urgency)')}</h4>
                                 <div className="overflow-x-auto">
                                   <table className="min-w-full text-xs">
                                     <thead>
                                       <tr>
                                         <th className="px-2 py-1 text-left text-gray-600 border-b"></th>
-                                        <th className="px-2 py-1 text-center text-gray-600 border-b">High<br/>Urgency (1)</th>
-                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-High<br/>Urgency (2)</th>
-                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Medium<br/>Urgency (3)</th>
-                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-Low<br/>Urgency (4)</th>
-                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Low<br/>Urgency (5)</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">{t('itil.urgencyAxis.1', 'High\nUrgency (1)').split('\n').map((line, index) => <React.Fragment key={`urgency-1-${index}`}>{index > 0 && <br />}{line}</React.Fragment>)}</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">{t('itil.urgencyAxis.2', 'Medium-High\nUrgency (2)').split('\n').map((line, index) => <React.Fragment key={`urgency-2-${index}`}>{index > 0 && <br />}{line}</React.Fragment>)}</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">{t('itil.urgencyAxis.3', 'Medium\nUrgency (3)').split('\n').map((line, index) => <React.Fragment key={`urgency-3-${index}`}>{index > 0 && <br />}{line}</React.Fragment>)}</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">{t('itil.urgencyAxis.4', 'Medium-Low\nUrgency (4)').split('\n').map((line, index) => <React.Fragment key={`urgency-4-${index}`}>{index > 0 && <br />}{line}</React.Fragment>)}</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">{t('itil.urgencyAxis.5', 'Low\nUrgency (5)').split('\n').map((line, index) => <React.Fragment key={`urgency-5-${index}`}>{index > 0 && <br />}{line}</React.Fragment>)}</th>
                                       </tr>
                                     </thead>
                                     <tbody>
                                       <tr>
-                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">High Impact (1)</td>
-                                        <td className="px-2 py-1 text-center bg-red-500/15 text-red-600 dark:text-red-400 font-semibold">Critical (1)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.1', 'High Impact (1)')}</td>
+                                        <td className="px-2 py-1 text-center bg-red-500/15 text-red-600 dark:text-red-400 font-semibold">{t('itil.priorityLevels.1', 'Critical (1)')}</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
                                       </tr>
                                       <tr>
-                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-High Impact (2)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.2', 'Medium-High Impact (2)')}</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
                                       </tr>
                                       <tr>
-                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium Impact (3)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.3', 'Medium Impact (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
                                       </tr>
                                       <tr>
-                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-Low Impact (4)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 dark:text-gray-400 font-semibold">Planning (5)</td>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.4', 'Medium-Low Impact (4)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 dark:text-gray-400 font-semibold">{t('itil.priorityLevels.5', 'Planning (5)')}</td>
                                       </tr>
                                       <tr>
-                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Low Impact (5)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 dark:text-gray-400 font-semibold">Planning (5)</td>
-                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 dark:text-gray-400 font-semibold">Planning (5)</td>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.5', 'Low Impact (5)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 dark:text-gray-400 font-semibold">{t('itil.priorityLevels.5', 'Planning (5)')}</td>
+                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 dark:text-gray-400 font-semibold">{t('itil.priorityLevels.5', 'Planning (5)')}</td>
                                       </tr>
                                     </tbody>
                                   </table>
                                 </div>
                                 <div className="mt-2 text-xs text-gray-600">
-                                  <p><strong>Impact:</strong> How many users/business functions are affected?</p>
-                                  <p><strong>Urgency:</strong> How quickly does this need to be resolved?</p>
+                                  <p><strong>{t('itil.impact', 'Impact')}:</strong> {t('itil.impactHelp', 'How many users/business functions are affected?')}</p>
+                                  <p><strong>{t('itil.urgency', 'Urgency')}:</strong> {t('itil.urgencyHelp', 'How quickly does this need to be resolved?')}</p>
                                 </div>
                               </div>
                             )}
@@ -1263,14 +1500,14 @@ export function QuickAddTicket({
 
                   {/* Due Date */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('quickAdd.dueDate', 'Due Date')}</label>
                     <div className="flex items-center gap-2 w-fit">
                       <div className="w-fit">
                         <DatePicker
                           id={`${id}-due-date`}
                           value={dueDateDate}
                           onChange={(date) => setDueDateDate(date)}
-                          placeholder="Select date"
+                          placeholder={t('quickAdd.selectDate', 'Select date')}
                         />
                       </div>
                       <div className="w-fit">
@@ -1278,7 +1515,7 @@ export function QuickAddTicket({
                           id={`${id}-due-time`}
                           value={dueDateTime}
                           onChange={(time) => setDueDateTime(time)}
-                          placeholder="Time"
+                          placeholder={t('quickAdd.timePlaceholder', 'Time')}
                           disabled={!dueDateDate}
                         />
                       </div>
@@ -1299,7 +1536,7 @@ export function QuickAddTicket({
                       )}
                     </div>
                     {dueDateDate && !dueDateTime && (
-                      <p className="text-xs text-gray-500 mt-1">No time set - defaults to 12:00 AM</p>
+                      <p className="text-xs text-gray-500 mt-1">{t('quickAdd.noTimeDefault', 'No time set - defaults to 12:00 AM')}</p>
                     )}
                   </div>
 
@@ -1312,38 +1549,6 @@ export function QuickAddTicket({
                   />
 
                   {renderBeforeFooter?.()}
-                  <DialogFooter>
-                    <Button
-                      id={`${id}-cancel-btn`}
-                      type="button"
-                      variant="outline"
-                      onClick={handleClose}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      id={`${id}-create-open-btn`}
-                      type="button"
-                      variant="default"
-                      disabled={isSubmitting}
-                      onClick={() => {
-                        void handleCreateTicket({ openAfterCreate: true });
-                      }}
-                      className={hasRequiredFieldErrors ? 'opacity-50' : ''}
-                    >
-                      {isSubmitting ? 'Saving...' : 'Save + Open'}
-                    </Button>
-                    <Button
-                      id={`${id}-submit-btn`}
-                      type={isEmbedded ? "button" : "submit"}
-                      variant="default"
-                      disabled={isSubmitting}
-                      onClick={isEmbedded ? () => { void handleCreateTicket(); } : undefined}
-                      className={hasRequiredFieldErrors ? 'opacity-50' : ''}
-                    >
-                      {isSubmitting ? 'Saving...' : 'Save Ticket'}
-                    </Button>
-                  </DialogFooter>
                 </FormOrDiv>
               </ReflectionContainer>
             </>
@@ -1403,10 +1608,10 @@ export function QuickAddTicket({
         isOpen={descriptionUploadSession.showDraftCancelDialog}
         onClose={() => descriptionUploadSession.setShowDraftCancelDialog(false)}
         onConfirm={descriptionUploadSession.deleteTrackedDraftClipboardImages}
-        title="Pasted Images Detected"
-        message="This quick-add description includes pasted images that have not been attached to a saved ticket yet. Continue editing, or delete the staged images and close?"
-        confirmLabel="Delete Images"
-        cancelLabel="Continue Editing"
+        title={t('conversation.clipboardDraftCancelTitle', 'Pasted Images Detected')}
+        message={t('quickAdd.clipboardDraftMessage', 'This quick-add description includes pasted images that have not been attached to a saved ticket yet. Continue editing, or delete the staged images and close?')}
+        confirmLabel={t('conversation.deleteUploadedImages', 'Delete Images')}
+        cancelLabel={t('quickAdd.continueEditing', 'Continue Editing')}
         isConfirming={descriptionUploadSession.isDeletingDraftImages}
       />
     </div>

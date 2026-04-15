@@ -41,7 +41,38 @@ describe('contact phone API schemas', () => {
     expect(validUpdate.success).toBe(true);
   });
 
-  it('T015/T030: contact response schema accepts ordered normalized phone rows and derived defaults', () => {
+  it('T040: create/update schemas accept primary email label metadata and additional email rows', () => {
+    const validCreate = createContactSchema.safeParse({
+      full_name: 'Jane Doe',
+      email: 'jane@example.com',
+      primary_email_canonical_type: 'work',
+      additional_email_addresses: [
+        {
+          email_address: 'billing@example.com',
+          canonical_type: 'billing',
+          display_order: 0,
+        },
+      ],
+    });
+
+    expect(validCreate.success).toBe(true);
+
+    const validUpdate = updateContactSchema.safeParse({
+      primary_email_canonical_type: null,
+      primary_email_custom_type: 'Escalations',
+      additional_email_addresses: [
+        {
+          email_address: 'afterhours@example.com',
+          custom_type: 'After Hours',
+          display_order: 0,
+        },
+      ],
+    });
+
+    expect(validUpdate.success).toBe(true);
+  });
+
+  it('T015/T030/T041: contact response schema accepts ordered normalized phone rows plus hybrid email metadata', () => {
     const parsed = contactResponseSchema.safeParse({
       contact_name_id: '11111111-1111-4111-8111-111111111111',
       full_name: 'Jane Doe',
@@ -69,6 +100,28 @@ describe('contact phone API schemas', () => {
       default_phone_number: '555-0101',
       default_phone_type: 'mobile',
       email: 'jane@example.com',
+      primary_email_canonical_type: null,
+      primary_email_custom_type_id: '55555555-5555-4555-8555-555555555555',
+      primary_email_type: 'Escalations',
+      additional_email_addresses: [
+        {
+          contact_additional_email_address_id: '66666666-6666-4666-8666-666666666666',
+          email_address: 'billing@example.com',
+          normalized_email_address: 'billing@example.com',
+          canonical_type: 'billing',
+          custom_type: null,
+          display_order: 0,
+        },
+        {
+          contact_additional_email_address_id: '77777777-7777-4777-8777-777777777777',
+          email_address: 'alerts@example.com',
+          normalized_email_address: 'alerts@example.com',
+          canonical_type: null,
+          custom_email_type_id: '88888888-8888-4888-8888-888888888888',
+          custom_type: 'Alerts',
+          display_order: 1,
+        },
+      ],
       role: null,
       created_at: '2026-03-09T00:00:00.000Z',
       updated_at: '2026-03-09T00:00:00.000Z',

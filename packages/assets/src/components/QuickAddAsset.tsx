@@ -12,6 +12,7 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { getAllClientsForAssets } from '../actions/clientLookupActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface QuickAddAssetProps {
   clientId?: string;
@@ -24,19 +25,8 @@ type NetworkDeviceType = 'switch' | 'router' | 'firewall' | 'access_point' | 'lo
 type AssetStatus = 'active' | 'inactive' | 'maintenance';
 type AssetType = 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer';
 
-const STATUS_OPTIONS: SelectOption[] = [
-  { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' },
-  { value: 'maintenance', label: 'Maintenance' }
-];
-
-const ASSET_TYPE_OPTIONS: SelectOption[] = [
-  { value: 'workstation', label: 'Workstation' },
-  { value: 'network_device', label: 'Network Device' },
-  { value: 'server', label: 'Server' },
-  { value: 'mobile_device', label: 'Mobile Device' },
-  { value: 'printer', label: 'Printer' }
-];
+const STATUS_OPTION_VALUES: AssetStatus[] = ['active', 'inactive', 'maintenance'];
+const ASSET_TYPE_OPTION_VALUES: AssetType[] = ['workstation', 'network_device', 'server', 'mobile_device', 'printer'];
 
 interface FormData {
   name: string;
@@ -67,6 +57,7 @@ interface FormData {
 }
 
 export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = false }: QuickAddAssetProps) {
+  const { t } = useTranslation('msp/assets');
   const { renderQuickAddClient } = useQuickAddClient();
   const [open, setOpen] = useState(defaultOpen);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +68,18 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
+  const statusOptions: SelectOption[] = STATUS_OPTION_VALUES.map((value) => ({
+    value,
+    label: t(`quickAddAsset.statusOptions.${value}`, {
+      defaultValue: value.charAt(0).toUpperCase() + value.slice(1)
+    })
+  }));
+  const assetTypeOptions: SelectOption[] = ASSET_TYPE_OPTION_VALUES.map((value) => ({
+    value,
+    label: t(`quickAddAsset.assetTypes.${value}`, {
+      defaultValue: value.split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
+    })
+  }));
 
   const handleClose = () => {
     setOpen(false);
@@ -128,21 +131,23 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         }
       } catch (error) {
         console.error('Error fetching clients:', error);
-        setError('Failed to fetch clients');
+        setError(t('quickAddAsset.errors.fetchClientsFailed', {
+          defaultValue: 'Failed to fetch clients'
+        }));
       }
     };
     if (open) {
       fetchClients();
     }
-  }, [open, clientId]);
+  }, [open, clientId, t]);
 
   const validateForm = () => {
     const validationErrors: string[] = [];
     const effectiveClientId = clientId || selectedClientId;
-    if (!effectiveClientId) validationErrors.push('Client');
-    if (!formData.name.trim()) validationErrors.push('Asset Name');
-    if (!formData.asset_tag.trim()) validationErrors.push('Asset Tag');
-    if (!formData.asset_type) validationErrors.push('Asset Type');
+    if (!effectiveClientId) validationErrors.push(t('quickAddAsset.validation.client', { defaultValue: 'Client' }));
+    if (!formData.name.trim()) validationErrors.push(t('quickAddAsset.validation.assetName', { defaultValue: 'Asset Name' }));
+    if (!formData.asset_tag.trim()) validationErrors.push(t('quickAddAsset.validation.assetTag', { defaultValue: 'Asset Tag' }));
+    if (!formData.asset_type) validationErrors.push(t('quickAddAsset.validation.assetType', { defaultValue: 'Asset Type' }));
     return validationErrors;
   };
 
@@ -267,7 +272,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
       setHasAttemptedSubmit(false);
     } catch (error) {
       console.error('Error creating asset:', error);
-      setError(error instanceof Error ? error.message : 'Failed to create asset');
+      setError(error instanceof Error
+        ? error.message
+        : t('quickAddAsset.errors.createFailed', { defaultValue: 'Failed to create asset' }));
     } finally {
       setIsSubmitting(false);
     }
@@ -281,7 +288,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         return (
           <>
             <div {...withDataAutomationId({ id: 'workstation-os-type-container' })}>
-              <label className="block text-sm font-medium text-gray-700">OS Type</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.osType', { defaultValue: 'OS Type' })}
+              </label>
               <Input
                 {...withDataAutomationId({ id: 'workstation-os-type-input' })}
                 value={formData.workstation.os_type}
@@ -289,11 +298,15 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   ...prev,
                   workstation: { ...prev.workstation, os_type: e.target.value }
                 }))}
-                placeholder="e.g., Windows, macOS, Linux"
+                placeholder={t('quickAddAsset.placeholders.workstationOsType', {
+                  defaultValue: 'e.g., Windows, macOS, Linux'
+                })}
               />
             </div>
             <div {...withDataAutomationId({ id: 'workstation-os-version-container' })}>
-              <label className="block text-sm font-medium text-gray-700">OS Version</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.osVersion', { defaultValue: 'OS Version' })}
+              </label>
               <Input
                 {...withDataAutomationId({ id: 'workstation-os-version-input' })}
                 value={formData.workstation.os_version}
@@ -301,7 +314,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   ...prev,
                   workstation: { ...prev.workstation, os_version: e.target.value }
                 }))}
-                placeholder="e.g., 11, Monterey, Ubuntu 22.04"
+                placeholder={t('quickAddAsset.placeholders.workstationOsVersion', {
+                  defaultValue: 'e.g., 11, Monterey, Ubuntu 22.04'
+                })}
               />
             </div>
           </>
@@ -311,26 +326,32 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         return (
           <>
             <div {...withDataAutomationId({ id: 'network-device-type-container' })}>
-              <label className="block text-sm font-medium text-gray-700">Device Type</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.deviceType', { defaultValue: 'Device Type' })}
+              </label>
               <CustomSelect
                 {...withDataAutomationId({ id: 'network-device-type-select' })}
                 options={[
-                  { value: 'switch', label: 'Switch' },
-                  { value: 'router', label: 'Router' },
-                  { value: 'firewall', label: 'Firewall' },
-                  { value: 'access_point', label: 'Access Point' },
-                  { value: 'load_balancer', label: 'Load Balancer' }
+                  { value: 'switch', label: t('quickAddAsset.networkDeviceTypes.switch', { defaultValue: 'Switch' }) },
+                  { value: 'router', label: t('quickAddAsset.networkDeviceTypes.router', { defaultValue: 'Router' }) },
+                  { value: 'firewall', label: t('quickAddAsset.networkDeviceTypes.firewall', { defaultValue: 'Firewall' }) },
+                  { value: 'access_point', label: t('quickAddAsset.networkDeviceTypes.accessPoint', { defaultValue: 'Access Point' }) },
+                  { value: 'load_balancer', label: t('quickAddAsset.networkDeviceTypes.loadBalancer', { defaultValue: 'Load Balancer' }) }
                 ]}
                 value={formData.network_device.device_type}
                 onValueChange={(value) => setFormData(prev => ({
                   ...prev,
                   network_device: { ...prev.network_device, device_type: value as NetworkDeviceType }
                 }))}
-                placeholder="Select device type"
+                placeholder={t('quickAddAsset.placeholders.selectDeviceType', {
+                  defaultValue: 'Select device type'
+                })}
               />
             </div>
             <div {...withDataAutomationId({ id: 'network-device-ip-container' })}>
-              <label className="block text-sm font-medium text-gray-700">Management IP</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.managementIp', { defaultValue: 'Management IP' })}
+              </label>
               <Input
                 {...withDataAutomationId({ id: 'network-device-ip-input' })}
                 value={formData.network_device.management_ip}
@@ -338,7 +359,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   ...prev,
                   network_device: { ...prev.network_device, management_ip: e.target.value }
                 }))}
-                placeholder="e.g., 192.168.1.1"
+                placeholder={t('quickAddAsset.placeholders.managementIp', {
+                  defaultValue: 'e.g., 192.168.1.1'
+                })}
               />
             </div>
           </>
@@ -348,7 +371,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         return (
           <>
             <div {...withDataAutomationId({ id: 'server-os-type-container' })}>
-              <label className="block text-sm font-medium text-gray-700">OS Type</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.osType', { defaultValue: 'OS Type' })}
+              </label>
               <Input
                 {...withDataAutomationId({ id: 'server-os-type-input' })}
                 value={formData.server.os_type}
@@ -356,11 +381,15 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   ...prev,
                   server: { ...prev.server, os_type: e.target.value }
                 }))}
-                placeholder="e.g., Windows Server, Ubuntu Server"
+                placeholder={t('quickAddAsset.placeholders.serverOsType', {
+                  defaultValue: 'e.g., Windows Server, Ubuntu Server'
+                })}
               />
             </div>
             <div {...withDataAutomationId({ id: 'server-os-version-container' })}>
-              <label className="block text-sm font-medium text-gray-700">OS Version</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.osVersion', { defaultValue: 'OS Version' })}
+              </label>
               <Input
                 {...withDataAutomationId({ id: 'server-os-version-input' })}
                 value={formData.server.os_version}
@@ -368,7 +397,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   ...prev,
                   server: { ...prev.server, os_version: e.target.value }
                 }))}
-                placeholder="e.g., 2022, 22.04 LTS"
+                placeholder={t('quickAddAsset.placeholders.serverOsVersion', {
+                  defaultValue: 'e.g., 2022, 22.04 LTS'
+                })}
               />
             </div>
           </>
@@ -378,23 +409,29 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         return (
           <>
             <div {...withDataAutomationId({ id: 'mobile-device-os-type-container' })}>
-              <label className="block text-sm font-medium text-gray-700">OS Type</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.osType', { defaultValue: 'OS Type' })}
+              </label>
               <CustomSelect
                 {...withDataAutomationId({ id: 'mobile-device-os-type-select' })}
                 options={[
-                  { value: 'ios', label: 'iOS' },
-                  { value: 'android', label: 'Android' }
+                  { value: 'ios', label: t('quickAddAsset.mobileOsTypes.ios', { defaultValue: 'iOS' }) },
+                  { value: 'android', label: t('quickAddAsset.mobileOsTypes.android', { defaultValue: 'Android' }) }
                 ]}
                 value={formData.mobile_device.os_type}
                 onValueChange={(value) => setFormData(prev => ({
                   ...prev,
                   mobile_device: { ...prev.mobile_device, os_type: value }
                 }))}
-                placeholder="Select OS type"
+                placeholder={t('quickAddAsset.placeholders.selectOsType', {
+                  defaultValue: 'Select OS type'
+                })}
               />
             </div>
             <div {...withDataAutomationId({ id: 'mobile-device-model-container' })}>
-              <label className="block text-sm font-medium text-gray-700">Model</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.model', { defaultValue: 'Model' })}
+              </label>
               <Input
                 {...withDataAutomationId({ id: 'mobile-device-model-input' })}
                 value={formData.mobile_device.model}
@@ -402,7 +439,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   ...prev,
                   mobile_device: { ...prev.mobile_device, model: e.target.value }
                 }))}
-                placeholder="e.g., iPhone 14 Pro, Galaxy S23"
+                placeholder={t('quickAddAsset.placeholders.mobileModel', {
+                  defaultValue: 'e.g., iPhone 14 Pro, Galaxy S23'
+                })}
               />
             </div>
           </>
@@ -411,7 +450,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
       case 'printer':
         return (
           <div {...withDataAutomationId({ id: 'printer-model-container' })}>
-            <label className="block text-sm font-medium text-gray-700">Model</label>
+            <label className="block text-sm font-medium text-gray-700">
+              {t('quickAddAsset.fields.model', { defaultValue: 'Model' })}
+            </label>
             <Input
               {...withDataAutomationId({ id: 'printer-model-input' })}
               value={formData.printer.model}
@@ -419,7 +460,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                 ...prev,
                 printer: { ...prev.printer, model: e.target.value }
               }))}
-              placeholder="e.g., HP LaserJet Pro M404n"
+              placeholder={t('quickAddAsset.placeholders.printerModel', {
+                defaultValue: 'e.g., HP LaserJet Pro M404n'
+              })}
             />
           </div>
         );
@@ -429,25 +472,49 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     }
   };
 
+  const quickAddAssetFooter = (
+    <div {...withDataAutomationId({ id: 'form-actions' })} className="flex justify-end space-x-2">
+      <Button {...withDataAutomationId({ id: 'cancel-button' })} type="button" variant="outline" onClick={handleClose}>
+        {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+      </Button>
+      <Button
+        {...withDataAutomationId({ id: 'submit-button' })}
+        type="button"
+        onClick={() => (document.getElementById('quick-add-asset-form') as HTMLFormElement | null)?.requestSubmit()}
+        disabled={isSubmitting}
+        className={(!formData.name.trim() || !formData.asset_tag.trim() || !formData.asset_type || (!clientId && !selectedClientId)) && !isSubmitting ? 'opacity-50' : ''}
+      >
+        {isSubmitting
+          ? t('quickAddAsset.actions.creating', { defaultValue: 'Creating...' })
+          : t('quickAddAsset.actions.createAsset', { defaultValue: 'Create Asset' })}
+      </Button>
+    </div>
+  );
+
   return (
     <>
       <Button {...withDataAutomationId({ id: 'quick-add-asset-button' })} onClick={() => setOpen(true)}>
-        Add Asset
+        {t('quickAddAsset.actions.addAsset', { defaultValue: 'Add Asset' })}
       </Button>
-      
+
       <Dialog
         isOpen={open}
         onClose={handleClose}
-        title="Add New Asset"
-        className="max-w-[480px] max-h-[90vh] overflow-y-auto"
+        title={t('quickAddAsset.title', { defaultValue: 'Add New Asset' })}
+        className="max-w-[480px]"
         id="quick-add-asset"
         disableFocusTrap
+        footer={quickAddAssetFooter}
       >
         <DialogContent>
           {hasAttemptedSubmit && error && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
-                <p className="font-medium mb-2">Please fill in the required fields:</p>
+                <p className="font-medium mb-2">
+                  {t('quickAddAsset.validation.requiredFields', {
+                    defaultValue: 'Please fill in the required fields:'
+                  })}
+                </p>
                 <ul className="list-disc list-inside space-y-1">
                   {error.split('\n').map((err, index) => (
                     <li key={index}>{err}</li>
@@ -457,10 +524,12 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
             </Alert>
           )}
           
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form id="quick-add-asset-form" onSubmit={handleSubmit} className="space-y-4">
             {!clientId && (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Client *</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  {t('quickAddAsset.fields.clientRequired', { defaultValue: 'Client *' })}
+                </label>
                 <div className={hasAttemptedSubmit && !selectedClientId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                   <ClientPicker
                     {...withDataAutomationId({ id: 'client-picker' })}
@@ -481,7 +550,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
             )}
 
             <div {...withDataAutomationId({ id: 'asset-name-container' })}>
-              <label className="block text-sm font-medium text-gray-700">Asset Name *</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.assetNameRequired', { defaultValue: 'Asset Name *' })}
+              </label>
               <Input
                 {...withDataAutomationId({ id: 'asset-name-input' })}
                 value={formData.name}
@@ -489,14 +560,18 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   setFormData(prev => ({ ...prev, name: e.target.value }));
                   clearErrorIfSubmitted();
                 }}
-                placeholder="Enter asset name"
+                placeholder={t('quickAddAsset.placeholders.assetName', {
+                  defaultValue: 'Enter asset name'
+                })}
                 className={hasAttemptedSubmit && !formData.name.trim() ? 'border-red-500' : ''}
                 required
               />
             </div>
 
             <div {...withDataAutomationId({ id: 'asset-tag-container' })}>
-              <label className="block text-sm font-medium text-gray-700">Asset Tag *</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.assetTagRequired', { defaultValue: 'Asset Tag *' })}
+              </label>
               <Input
                 {...withDataAutomationId({ id: 'asset-tag-input' })}
                 value={formData.asset_tag}
@@ -504,17 +579,21 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   setFormData(prev => ({ ...prev, asset_tag: e.target.value }));
                   clearErrorIfSubmitted();
                 }}
-                placeholder="Enter asset tag"
+                placeholder={t('quickAddAsset.placeholders.assetTag', {
+                  defaultValue: 'Enter asset tag'
+                })}
                 className={hasAttemptedSubmit && !formData.asset_tag.trim() ? 'border-red-500' : ''}
                 required
               />
             </div>
 
             <div {...withDataAutomationId({ id: 'asset-type-container' })}>
-              <label className="block text-sm font-medium text-gray-700">Type *</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.typeRequired', { defaultValue: 'Type *' })}
+              </label>
               <CustomSelect
                 {...withDataAutomationId({ id: 'asset-type-select' })}
-                options={ASSET_TYPE_OPTIONS}
+                options={assetTypeOptions}
                 value={formData.asset_type}
                 onValueChange={(value) => {
                   setFormData(prev => ({ 
@@ -523,52 +602,52 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   }));
                   clearErrorIfSubmitted();
                 }}
-                placeholder="Select type"
+                placeholder={t('quickAddAsset.placeholders.selectType', {
+                  defaultValue: 'Select type'
+                })}
                 className={hasAttemptedSubmit && !formData.asset_type ? 'border-red-500' : ''}
               />
             </div>
 
             <div {...withDataAutomationId({ id: 'asset-status-container' })}>
-              <label className="block text-sm font-medium text-gray-700">Status</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.status', { defaultValue: 'Status' })}
+              </label>
               <CustomSelect
                 {...withDataAutomationId({ id: 'asset-status-select' })}
-                options={STATUS_OPTIONS}
+                options={statusOptions}
                 value={formData.status}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as AssetStatus }))}
-                placeholder="Select status"
+                placeholder={t('quickAddAsset.placeholders.selectStatus', {
+                  defaultValue: 'Select status'
+                })}
               />
             </div>
 
             <div {...withDataAutomationId({ id: 'serial-number-container' })}>
-              <label className="block text-sm font-medium text-gray-700">Serial Number</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.serialNumber', { defaultValue: 'Serial Number' })}
+              </label>
               <Input
                 {...withDataAutomationId({ id: 'serial-number-input' })}
                 value={formData.serial_number}
                 onChange={(e) => setFormData(prev => ({ ...prev, serial_number: e.target.value }))}
-                placeholder="Enter serial number"
+                placeholder={t('quickAddAsset.placeholders.serialNumber', {
+                  defaultValue: 'Enter serial number'
+                })}
               />
             </div>
 
             {formData.asset_type && (
               <div {...withDataAutomationId({ id: 'type-specific-details' })} className="border-t pt-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-4">Type-specific Details</h3>
+                <h3 className="text-sm font-medium text-gray-700 mb-4">
+                  {t('quickAddAsset.sections.typeSpecificDetails', {
+                    defaultValue: 'Type-specific Details'
+                  })}
+                </h3>
                 {renderTypeSpecificFields()}
               </div>
             )}
-
-            <div {...withDataAutomationId({ id: 'form-actions' })} className="flex justify-end space-x-2 pt-4">
-              <Button {...withDataAutomationId({ id: 'cancel-button' })} type="button" variant="outline" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button 
-                {...withDataAutomationId({ id: 'submit-button' })} 
-                type="submit" 
-                disabled={isSubmitting}
-                className={(!formData.name.trim() || !formData.asset_tag.trim() || !formData.asset_type || (!clientId && !selectedClientId)) && !isSubmitting ? 'opacity-50' : ''}
-              >
-                {isSubmitting ? 'Creating...' : 'Create Asset'}
-              </Button>
-            </div>
           </form>
         </DialogContent>
       </Dialog>

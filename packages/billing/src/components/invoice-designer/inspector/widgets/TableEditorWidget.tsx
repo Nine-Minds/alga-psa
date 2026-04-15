@@ -2,14 +2,14 @@ import React, { useCallback, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { exportWorkspaceToInvoiceTemplateAst } from '../../ast/workspaceAst';
+import { exportWorkspaceToTemplateAst } from '../../ast/workspaceAst';
 import type { DesignerNode } from '../../state/designerStore';
 import { createEmptyDesignerTransformWorkspace, useInvoiceDesignerStore } from '../../state/designerStore';
 import { hasDesignerTransforms } from '../../transforms/transformWorkspace';
 import { getNodeMetadata } from '../../utils/nodeProps';
+import { generateUUID } from '@alga-psa/core';
 
-const createLocalId = () =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+const createLocalId = () => generateUUID();
 
 type Props = {
   node: DesignerNode;
@@ -22,6 +22,20 @@ type ColumnModel = {
   type?: string;
   width?: number;
 } & Record<string, unknown>;
+
+const COLLECTION_BINDING_LABELS: Record<string, string> = {
+  lineItems: 'All Line Items',
+  phases: 'Phases',
+  recurringItems: 'Recurring Items',
+  onetimeItems: 'One-time Items',
+  serviceItems: 'Service Items',
+  productItems: 'Product Items',
+  items: 'Items',
+};
+
+const humanizeCollectionBindingLabel = (bindingId: string, _path: string): string => {
+  return COLLECTION_BINDING_LABELS[bindingId] ?? bindingId;
+};
 
 type BorderPreset = 'list' | 'boxed' | 'grid' | 'none' | 'custom';
 
@@ -133,6 +147,13 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
 
   const metadata = useMemo(() => getNodeMetadata(node), [node]);
   const sourceBindingId = useMemo(() => resolveTableSourceBindingId(metadata), [metadata]);
+  const isGroupedTransformsOutput = useMemo(() => {
+    if (sourceBindingId !== transforms.outputBindingId || !hasDesignerTransforms(transforms)) {
+      return false;
+    }
+
+    return transforms.operations.some((operation) => operation.type === 'group');
+  }, [sourceBindingId, transforms]);
 
   const columns: ColumnModel[] = useMemo(() => {
     const raw = (metadata as { columns?: unknown }).columns;
@@ -161,7 +182,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       canvasScale,
     };
 
-    const baseAst = exportWorkspaceToInvoiceTemplateAst(workspaceWithoutTransforms);
+    const baseAst = exportWorkspaceToTemplateAst(workspaceWithoutTransforms);
     const options: Array<{ value: string; label: string }> = [];
 
     if (hasDesignerTransforms(transforms)) {
@@ -178,14 +199,14 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
     options.push(
       ...Object.entries(baseAst.bindings?.collections ?? {}).map(([bindingId, binding]) => ({
         value: bindingId,
-        label: `${bindingId} (${binding.path})`,
+        label: humanizeCollectionBindingLabel(bindingId, binding.path),
       }))
     );
 
     if (!options.some((option) => option.value === sourceBindingId)) {
       options.unshift({
         value: sourceBindingId,
-        label: `${sourceBindingId} (current)`,
+        label: humanizeCollectionBindingLabel(sourceBindingId, sourceBindingId),
       });
     }
 
@@ -207,15 +228,13 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
   const bindingKeySuggestions = useMemo(() => {
     const rawSuggestions = getUniqueStrings([
       ...COLUMN_PRESETS.map((preset) => preset.key),
+      'item.servicePeriodStart',
+      'item.servicePeriodEnd',
+      'item.billingTiming',
       ...columns.map((column) => asTrimmedString(column.key)),
     ]);
 
-    if (sourceBindingId !== transforms.outputBindingId || !hasDesignerTransforms(transforms)) {
-      return rawSuggestions;
-    }
-
-    const isGroupedOutput = transforms.operations.some((operation) => operation.type === 'group');
-    if (!isGroupedOutput) {
+    if (!isGroupedTransformsOutput) {
       return rawSuggestions;
     }
 
@@ -227,9 +246,8 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       'item.key',
       'item.items',
       ...aggregateSuggestions,
-      ...columns.map((column) => asTrimmedString(column.key)),
     ]);
-  }, [columns, sourceBindingId, transforms]);
+  }, [columns, isGroupedTransformsOutput, transforms]);
 
   const resolvedBorderPreset: BorderPreset = useMemo(() => {
     const preset = (metadata as { tableBorderPreset?: unknown }).tableBorderPreset;
@@ -382,16 +400,16 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       ? tableHeaderFontWeight
       : 'semibold';
 
-  const panelClass = 'rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm space-y-2';
+  const panelClass = 'rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2.5 shadow-sm space-y-2';
 
   return (
     <div className="space-y-3">
       {/* Header with quick-add */}
       <div className="space-y-2">
-        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm space-y-2">
+        <div className="rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2.5 shadow-sm space-y-2">
           <div>
-            <p className="text-xs font-semibold text-slate-700">Source Binding</p>
-            <p className="text-[11px] text-slate-500">Bind this table to a raw collection or the authored transforms output.</p>
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Source Binding</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">Bind this table to a raw collection or the authored transforms output.</p>
           </div>
           <CustomSelect
             id="designer-table-source-binding"
@@ -403,33 +421,35 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
         </div>
 
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-slate-800">Table Columns</p>
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Table Columns</p>
           <Button id="designer-add-column" variant="outline" size="xs" onClick={handleAddColumn}>
             + Column
           </Button>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] text-slate-400 shrink-0">Quick add:</span>
-          {COLUMN_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              id={`designer-add-column-preset-${preset.id}`}
-              type="button"
-              className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-[11px] font-medium text-slate-600 hover:bg-slate-100 hover:border-slate-300 transition-colors"
-              onClick={() => handleAddPresetColumn(preset.id)}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
+        {!isGroupedTransformsOutput && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">Quick add:</span>
+            {COLUMN_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                id={`designer-add-column-preset-${preset.id}`}
+                type="button"
+                className="inline-flex h-6 items-center rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
+                onClick={() => handleAddPresetColumn(preset.id)}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Table style */}
       <div className={panelClass}>
-        <p className="text-xs font-semibold text-slate-700">Table Style</p>
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Table Style</p>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Border preset</label>
+            <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Border preset</label>
             <CustomSelect
               id="designer-table-border-preset"
               options={[
@@ -445,7 +465,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
             />
           </div>
           <div>
-            <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Header weight</label>
+            <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Header weight</label>
             <CustomSelect
               id="designer-table-header-weight"
               options={[
@@ -461,11 +481,11 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer">
+          <label className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer">
             <input
               id="designer-table-border-outer"
               type="checkbox"
-              className="rounded border-slate-300"
+              className="rounded border-slate-300 dark:border-slate-600"
               checked={tableBorderConfig.outer}
               onChange={(event) => {
                 setNodeProp(node.id, 'metadata.tableBorderPreset', 'custom', false);
@@ -474,11 +494,11 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
             />
             Outer
           </label>
-          <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer">
+          <label className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer">
             <input
               id="designer-table-border-rows"
               type="checkbox"
-              className="rounded border-slate-300"
+              className="rounded border-slate-300 dark:border-slate-600"
               checked={tableBorderConfig.rowDividers}
               onChange={(event) => {
                 setNodeProp(node.id, 'metadata.tableBorderPreset', 'custom', false);
@@ -487,11 +507,11 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
             />
             Rows
           </label>
-          <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer">
+          <label className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer">
             <input
               id="designer-table-border-columns"
               type="checkbox"
-              className="rounded border-slate-300"
+              className="rounded border-slate-300 dark:border-slate-600"
               checked={tableBorderConfig.columnDividers}
               onChange={(event) => {
                 setNodeProp(node.id, 'metadata.tableBorderPreset', 'custom', false);
@@ -505,20 +525,20 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
 
       {/* Column list */}
       {columns.length === 0 && (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-center text-xs text-slate-500">
+        <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-[rgb(var(--color-background))] px-3 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
           No columns defined. Add at least one column.
         </div>
       )}
 
       <div className="space-y-2">
         {columns.map((column, index) => (
-          <div key={column.id} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm space-y-1.5">
+          <div key={column.id} className="rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2.5 shadow-sm space-y-1.5">
             <div className="flex items-center justify-between">
               <div className="inline-flex items-center gap-1.5">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-slate-100 text-[10px] font-medium text-slate-500 tabular-nums shrink-0">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-medium text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
                   {index + 1}
                 </span>
-                <span className="text-[11px] font-medium text-slate-500">Column</span>
+                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Column</span>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <Button
@@ -527,7 +547,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                   size="icon"
                   aria-label={`Move ${column.id} up`}
                   disabled={index === 0}
-                  className="h-6 w-6 text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                  className="h-6 w-6 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                   onClick={() => handleMoveColumn(column.id, -1)}
                 >
                   ↑
@@ -538,7 +558,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                   size="icon"
                   aria-label={`Move ${column.id} down`}
                   disabled={index === columns.length - 1}
-                  className="h-6 w-6 text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                  className="h-6 w-6 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                   onClick={() => handleMoveColumn(column.id, 1)}
                 >
                   ↓
@@ -556,7 +576,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
               </div>
             </div>
             <div>
-              <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Header</label>
+              <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Header</label>
               <Input
                 id={`column-header-${column.id}`}
                 size="sm"
@@ -569,7 +589,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
               />
             </div>
             <div>
-              <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Binding key</label>
+              <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Binding key</label>
               <Input
                 id={`column-key-${column.id}`}
                 size="sm"
@@ -586,7 +606,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                     <button
                       key={`${column.id}-${suggestion}`}
                       type="button"
-                      className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-600 hover:border-slate-300 hover:bg-slate-100"
+                      className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-1.5 py-0.5 text-[10px] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
                       onClick={() => updateColumn(column.id, { key: suggestion }, true)}
                     >
                       {suggestion}
@@ -597,7 +617,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
             </div>
             <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-1.5">
               <div>
-                <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Type</label>
+                <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Type</label>
                 <CustomSelect
                   id={`column-type-${column.id}`}
                   options={[
@@ -612,7 +632,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Width</label>
+                <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Width</label>
                 <Input
                   id={`column-width-${column.id}`}
                   size="sm"
@@ -631,17 +651,17 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
 
       {/* Collapsible key reference */}
       <details className="text-[11px]">
-        <summary className="text-slate-500 cursor-pointer select-none hover:text-slate-700 py-1">
+        <summary className="text-slate-500 dark:text-slate-400 cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-300 py-1">
           Field key reference
         </summary>
         <div className="mt-1 space-y-0.5">
           {bindingKeySuggestions.map((suggestion) => (
             <div
               key={`binding-${suggestion}`}
-              className="flex items-center justify-between rounded px-2 py-0.5 bg-slate-50"
+              className="flex items-center justify-between rounded px-2 py-0.5 bg-slate-50 dark:bg-[rgb(var(--color-background))]"
             >
-              <code className="text-[11px] text-slate-600">{suggestion}</code>
-              <span className="text-[10px] text-slate-400">
+              <code className="text-[11px] text-slate-600 dark:text-slate-400">{suggestion}</code>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500">
                 {suggestion.startsWith('item.aggregates.')
                   ? 'Transform aggregate'
                   : suggestion === 'item.key'
@@ -652,12 +672,13 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
               </span>
             </div>
           ))}
-          {COLUMN_PRESETS.map((preset) => (
-            <div key={`legend-${preset.id}`} className="flex items-center justify-between rounded px-2 py-0.5 bg-slate-50">
-              <code className="text-[11px] text-slate-600">{preset.key}</code>
-              <span className="text-[10px] text-slate-400">{preset.description}</span>
-            </div>
-          ))}
+          {!isGroupedTransformsOutput &&
+            COLUMN_PRESETS.map((preset) => (
+              <div key={`legend-${preset.id}`} className="flex items-center justify-between rounded px-2 py-0.5 bg-slate-50 dark:bg-[rgb(var(--color-background))]">
+                <code className="text-[11px] text-slate-600 dark:text-slate-400">{preset.key}</code>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500">{preset.description}</span>
+              </div>
+            ))}
         </div>
       </details>
     </div>

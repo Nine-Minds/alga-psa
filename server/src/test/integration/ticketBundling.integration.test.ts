@@ -10,6 +10,7 @@ vi.mock('server/src/lib/utils/getSecret', () => ({
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
+  getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
   getSecretProviderInstance: vi.fn(async () => ({
     getAppSecret: async () => '',
   })),
@@ -290,11 +291,10 @@ describe('Ticket bundling integration', () => {
     expect(settings?.mode).toBe('sync_updates');
 
     // Cannot add an already-bundled ticket to a bundle
-    await expect(
-      runWithTenant(tenantId, async () => {
-        await addChildrenToBundleAction({ masterTicketId: masterId, childTicketIds: [child1Id] }, internalUser as any);
-      })
-    ).rejects.toThrow(/already bundled/i);
+    const alreadyBundledResult = await runWithTenant(tenantId, async () => {
+      return addChildrenToBundleAction({ masterTicketId: masterId, childTicketIds: [child1Id] }, internalUser as any);
+    });
+    expect(alreadyBundledResult).toMatchObject({ actionError: expect.stringMatching(/already bundled/i) });
 
     // Cannot add a bundle master as a child (no nesting)
     const otherMasterId = uuidv4();
@@ -305,11 +305,10 @@ describe('Ticket bundling integration', () => {
       await bundleTicketsAction({ masterTicketId: otherMasterId, childTicketIds: [nestedChildId], mode: 'link_only' }, internalUser as any);
     });
 
-    await expect(
-      runWithTenant(tenantId, async () => {
-        await addChildrenToBundleAction({ masterTicketId: masterId, childTicketIds: [otherMasterId] }, internalUser as any);
-      })
-    ).rejects.toThrow(/cannot be added as children/i);
+    const nestingResult = await runWithTenant(tenantId, async () => {
+      return addChildrenToBundleAction({ masterTicketId: masterId, childTicketIds: [otherMasterId] }, internalUser as any);
+    });
+    expect(nestingResult).toMatchObject({ actionError: expect.stringMatching(/already (a bundle master|bundle masters)/i) });
 
     // Cross-tenant bundle attempts fail because foreign-tenant ticket ids won't resolve
     const foreignClient = await createClient(db, otherTenantId, `Other Client ${uuidv4().slice(0, 6)}`);
@@ -327,11 +326,10 @@ describe('Ticket bundling integration', () => {
       boardId: otherTenantRefs.boardId,
     });
 
-    await expect(
-      runWithTenant(tenantId, async () => {
-        await addChildrenToBundleAction({ masterTicketId: masterId, childTicketIds: [foreignTicketId] }, internalUser as any);
-      })
-    ).rejects.toThrow(/not found/i);
+    const crossTenantResult = await runWithTenant(tenantId, async () => {
+      return addChildrenToBundleAction({ masterTicketId: masterId, childTicketIds: [foreignTicketId] }, internalUser as any);
+    });
+    expect(crossTenantResult).toMatchObject({ actionError: expect.stringMatching(/not found/i) });
 
     // Remove a child only unlinks that ticket.
     await runWithTenant(tenantId, async () => {
@@ -478,6 +476,7 @@ describe('Ticket bundling integration', () => {
 
     const closedMaster = await db('tickets').where({ tenant: tenantId, ticket_id: masterId }).first();
     expect(closedMaster?.status_id).toBe(statusClosedId);
+    expect(closedMaster?.is_closed).toBe(true);
 
     const replyContent = JSON.stringify([
       {
@@ -499,6 +498,7 @@ describe('Ticket bundling integration', () => {
     const reopenedMaster = await db('tickets').where({ tenant: tenantId, ticket_id: masterId }).first();
     expect(reopenedMaster?.status_id).toBe(statusOpenId);
     expect(reopenedMaster?.closed_at).toBeNull();
+    expect(reopenedMaster?.is_closed).toBe(false);
   });
 
   it('surfaces inbound child public replies on the master as aggregated view-only items', async () => {

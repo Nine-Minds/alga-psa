@@ -1246,6 +1246,94 @@
       }
     }
   },
+  "integrations": {
+    "betaNotice": "Some integrations are still in development. Please work in a sandbox environment when evaluating, and share your feedback to help us improve.",
+    "emptyCategory": "No integrations available in this category.",
+    "rmmEnterpriseNote": "RMM integrations are available in the Enterprise edition.",
+    "categoryHeading": "{{label}} Integrations",
+    "loading": {
+      "payments": "Loading payment settings..."
+    },
+    "categories": {
+      "accounting": {
+        "label": "Accounting",
+        "description": "Select an accounting package to configure synchronization for invoices, payments, and tax data."
+      },
+      "rmm": {
+        "label": "RMM",
+        "description": "Connect remote monitoring and management tools"
+      },
+      "communication": {
+        "label": "Communication",
+        "description": "Connect inbox and collaboration surfaces for ticket processing, operator workflows, and Microsoft Teams access."
+      },
+      "calendar": {
+        "label": "Calendar",
+        "description": "Enterprise-only calendar sync for Google and Outlook keeps dispatch and client appointments aligned."
+      },
+      "providers": {
+        "label": "Providers",
+        "description": {
+          "ee": "Configure shared provider credentials used by email, calendar, MSP SSO, and other integrations.",
+          "oss": "Configure shared provider credentials used by email, MSP SSO, and other integrations."
+        }
+      },
+      "identity": {
+        "label": "Identity",
+        "description": "Connect identity providers for tenant discovery and contact synchronization."
+      },
+      "payments": {
+        "label": "Payments",
+        "description": "Accept online payments for invoices"
+      }
+    },
+    "items": {
+      "accountingSetup": {
+        "name": "Accounting Integrations",
+        "description": "Configure accounting synchronization and exports"
+      },
+      "rmmSetup": {
+        "name": "RMM Integrations",
+        "description": "Select and configure your RMM provider"
+      },
+      "email": {
+        "name": "Inbound Email",
+        "description": "Process incoming emails into tickets",
+        "cardTitle": "Inbound Email Integration",
+        "cardDescription": "Configure email providers to automatically process incoming emails into tickets"
+      },
+      "teams": {
+        "name": "Microsoft Teams",
+        "description": "Configure Teams collaboration surfaces for MSP technicians",
+        "upgradeDescription": "Configure Microsoft Teams collaboration surfaces for MSP technicians. Upgrade to Premium to unlock this feature."
+      },
+      "calendarSync": {
+        "name": "Calendar Sync",
+        "description": "Sync schedule entries with Google or Microsoft calendars"
+      },
+      "google": {
+        "name": "Google",
+        "description": {
+          "ee": "Tenant-owned Google Cloud credentials for Gmail and Calendar",
+          "oss": "Tenant-owned Google Cloud credentials for Gmail and MSP SSO support flows"
+        },
+        "cardTitle": "Provider Credentials",
+        "cardDescription": {
+          "ee": "Configure Google and Microsoft first, then connect provider accounts from the Inbound Email and Calendar integration screens. MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings.",
+          "oss": "Configure Google and Microsoft first, then connect provider accounts from the Inbound Email integration screen. MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings."
+        }
+      },
+      "entra": {
+        "name": "Microsoft Entra",
+        "description": "Discover managed Microsoft tenants and sync users to contacts",
+        "upgradeDescription": "Discover managed Microsoft Entra tenants and sync users to contacts. Upgrade to Premium to unlock this feature."
+      },
+      "stripe": {
+        "name": "Stripe",
+        "description": "Accept credit card payments for invoices via Stripe"
+      }
+    }
+  },
   "orgChart": {
     "emptyState": "No users available.",
     "roles": {

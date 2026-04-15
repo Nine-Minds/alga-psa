@@ -4,9 +4,12 @@ import type { Knex } from 'knex';
 import fs from 'fs';
 import path from 'path';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
-import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import {
+  ensureWorkflowScheduleStateTable,
+  resetWorkflowRuntimeTables
+} from '../helpers/workflowRuntimeV2TestUtils';
+import { createTenantKnex, getCurrentTenantId } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth';
 import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction,
@@ -16,12 +19,10 @@ import {
   cancelWorkflowRunAction,
   resumeWorkflowRunAction
 } from '@alga-psa/workflows/actions';
-import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
-import WorkflowRunSnapshotModelV2 from '@shared/workflow/persistence/workflowRunSnapshotModelV2';
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import { WorkflowRuntimeV2Worker } from '@shared/workflow/workers';
-import { getActionRegistryV2, getSchemaRegistry } from '@shared/workflow/runtime';
+import WorkflowRunModelV2 from '@alga-psa/workflows/persistence/workflowRunModelV2';
+import WorkflowRunSnapshotModelV2 from '@alga-psa/workflows/persistence/workflowRunSnapshotModelV2';
+import { WorkflowRuntimeV2Worker } from '@alga-psa/workflows/workers';
+import { getActionRegistryV2, getSchemaRegistry } from '@alga-psa/workflows/runtime';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
   buildWorkflowDefinition,
@@ -31,23 +32,64 @@ import {
   actionCallStep,
   stateSetStep,
   eventWaitStep,
+  timeWaitStep,
   tryCatchStep,
   resetTestActionState,
   getSideEffectCount
 } from '../helpers/workflowRuntimeV2TestHelpers';
 
-vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn(),
-  getCurrentTenantId: vi.fn()
-}));
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(),
+    getCurrentTenantId: vi.fn(),
+    auditLog: vi.fn().mockResolvedValue(undefined)
+  };
+});
 
-vi.mock('@alga-psa/users/actions', () => ({
-  getCurrentUser: vi.fn()
-}));
+vi.mock('@alga-psa/auth', () => {
+  const withAuth = (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      { tenant: tenantId },
+      ...args
+    );
+  const withOptionalAuth = (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      { tenant: tenantId },
+      ...args
+    );
+  const withAuthCheck = (action: (user: any, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      ...args
+    );
 
-vi.mock('server/src/lib/auth/rbac', () => ({
-  hasPermission: vi.fn().mockResolvedValue(true)
-}));
+  return {
+    withAuth,
+    withOptionalAuth,
+    withAuthCheck,
+    AuthenticationError: class AuthenticationError extends Error {},
+    hasPermission: vi.fn().mockResolvedValue(true),
+    checkMultiplePermissions: vi.fn().mockResolvedValue(true),
+    getCurrentUser: vi.fn(),
+    preCheckDeletion: vi.fn()
+  };
+});
 
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
 const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
@@ -56,8 +98,6 @@ const mockedGetCurrentUser = vi.mocked(getCurrentUser);
 let db: Knex;
 let tenantId: string;
 let userId: string;
-
-const EMAIL_WORKFLOW_ID = '00000000-0000-0000-0000-00000000e001';
 
 const actionRestores: Array<() => void> = [];
 
@@ -92,27 +132,31 @@ async function publishWorkflow(workflowId: string, version: number, definition?:
 
 async function seedEmailWorkflow() {
   const filePath = path.resolve(__dirname, '../../../../shared/workflow/runtime/workflows/email-processing-workflow.v2.json');
-  const definition = { ...JSON.parse(fs.readFileSync(filePath, 'utf8')), id: EMAIL_WORKFLOW_ID };
-  await WorkflowDefinitionModelV2.create(db, {
-    workflow_id: definition.id,
-    name: definition.name,
-    description: definition.description,
-    payload_schema_ref: definition.payloadSchemaRef,
-    trigger: definition.trigger,
-    draft_definition: definition,
-    draft_version: definition.version,
-    status: 'published'
-  });
-  const payloadSchemaJson = getSchemaRegistry().toJsonSchema(definition.payloadSchemaRef);
-  await WorkflowDefinitionVersionModelV2.create(db, {
-    workflow_id: definition.id,
+  const rawDefinition = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  const createResult = await createWorkflowDefinitionAction({ definition: rawDefinition });
+  const workflowId = createResult.workflowId;
+  const definition = {
+    ...rawDefinition,
+    id: workflowId,
+    trigger: {
+      ...rawDefinition.trigger,
+      sourcePayloadSchemaRef: 'payload.InboundEmailReceived.v1',
+      payloadMapping: {
+        emailData: { $expr: 'event.payload.emailData' },
+        providerId: { $expr: 'event.payload.providerId' },
+        tenantId: { $expr: 'event.payload.tenantId' }
+      }
+    }
+  };
+  const publishResult = await publishWorkflowDefinitionAction({
+    workflowId,
     version: definition.version,
-    definition_json: definition,
-    payload_schema_json: payloadSchemaJson as Record<string, unknown>,
-    published_by: userId,
-    published_at: new Date().toISOString()
+    definition
   });
-  return definition.id as string;
+  if (!publishResult.ok) {
+    throw new Error(`Failed to publish seeded email workflow: ${JSON.stringify(publishResult.errors ?? [])}`);
+  }
+  return { workflowId, workflowVersion: definition.version as number };
 }
 
 const baseEmailPayload = (overrides: Partial<any> = {}) => ({
@@ -137,15 +181,24 @@ const baseEmailPayload = (overrides: Partial<any> = {}) => ({
 beforeAll(async () => {
   ensureWorkflowRuntimeV2TestRegistrations();
   db = await createTestDbConnection();
+  await ensureWorkflowScheduleStateTable(db);
 });
 
 beforeEach(async () => {
+  await ensureWorkflowScheduleStateTable(db);
   await resetWorkflowRuntimeTables(db);
   tenantId = uuidv4();
   userId = uuidv4();
   mockedCreateTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
   mockedGetCurrentTenantId.mockReturnValue(tenantId);
-  mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
+  mockedGetCurrentUser.mockResolvedValue({ user_id: userId, tenant: tenantId, roles: [] } as any);
+  await db('tenants').insert({
+    tenant: tenantId,
+    client_name: `Workflow E2E ${tenantId}`,
+    email: `workflow-e2e+${tenantId}@example.com`,
+    created_at: new Date(),
+    updated_at: new Date()
+  });
   resetTestActionState();
 });
 
@@ -303,6 +356,143 @@ describe('workflow runtime v2 E2E tests', () => {
     expect(resumed?.status).toBe('SUCCEEDED');
   });
 
+  it('T001: event.wait filters require matching event name, correlation key, and all filter clauses. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        eventWaitStep('wait-1', {
+          eventName: 'PROJECT_STATUS_CHANGED',
+          correlationKeyExpr: { $expr: '"project-1"' },
+          filters: [
+            { path: 'newStatus', op: '=', value: 'Live' },
+            { path: 'priority', op: '>=', value: 2 }
+          ]
+        }),
+        stateSetStep('state-1', 'DONE')
+      ]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'OTHER_EVENT',
+      correlationKey: 'project-1',
+      payload: { newStatus: 'Live', priority: 2 }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'PROJECT_STATUS_CHANGED',
+      correlationKey: 'project-2',
+      payload: { newStatus: 'Live', priority: 2 }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'PROJECT_STATUS_CHANGED',
+      correlationKey: 'project-1',
+      payload: { newStatus: 'Live', priority: 1 }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'PROJECT_STATUS_CHANGED',
+      correlationKey: 'project-1',
+      payload: { newStatus: 'Live', priority: 2 }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('SUCCEEDED');
+  });
+
+  it('T002: event.wait supports in/not_in filters with array literals. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        eventWaitStep('wait-1', {
+          eventName: 'PROJECT_STATUS_CHANGED',
+          correlationKeyExpr: { $expr: '"project-2"' },
+          filters: [
+            { path: 'newStatus', op: 'in', value: ['Live', 'Complete'] }
+          ]
+        }),
+        stateSetStep('state-1', 'DONE')
+      ]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'PROJECT_STATUS_CHANGED',
+      correlationKey: 'project-2',
+      payload: { newStatus: 'Pending' }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'PROJECT_STATUS_CHANGED',
+      correlationKey: 'project-2',
+      payload: { newStatus: 'Live' }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('SUCCEEDED');
+  });
+
+  it('T003: legacy event.wait without filters remains backward compatible. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        eventWaitStep('wait-1', { eventName: 'LEGACY_WAIT', correlationKeyExpr: { $expr: '"legacy-key"' } }),
+        stateSetStep('state-1', 'DONE')
+      ]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({ eventName: 'LEGACY_WAIT', correlationKey: 'legacy-key', payload: { ok: true } });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('SUCCEEDED');
+  });
+
+  it('T008: onboarding-style event.wait resumes only on first matching event and runs downstream path once. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        eventWaitStep('wait-1', {
+          eventName: 'project.status.changed',
+          correlationKeyExpr: { $expr: '"project-008"' },
+          filters: [{ path: 'newStatus', op: 'in', value: ['Live', 'Complete'] }]
+        }),
+        actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })
+      ]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'project.status.changed',
+      correlationKey: 'project-008',
+      payload: { newStatus: 'Pending' }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+    expect(getSideEffectCount()).toBe(0);
+
+    await submitWorkflowEventAction({
+      eventName: 'project.status.changed',
+      correlationKey: 'project-008',
+      payload: { newStatus: 'Live' }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('SUCCEEDED');
+    expect(getSideEffectCount()).toBe(1);
+
+    await submitWorkflowEventAction({
+      eventName: 'project.status.changed',
+      correlationKey: 'project-008',
+      payload: { newStatus: 'Complete' }
+    });
+    expect(getSideEffectCount()).toBe(1);
+  });
+
   it('E2E: timeout on event.wait routes to catch pipe and completes with handled error. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [tryCatchStep('try-1', { trySteps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' }, timeoutMs: 1 })], catchSteps: [stateSetStep('state-1', 'TIMEOUT_HANDLED')] })]
@@ -317,6 +507,75 @@ describe('workflow runtime v2 E2E tests', () => {
     const snapshots = await WorkflowRunSnapshotModelV2.listByRun(db, run.runId);
     const last = snapshots[snapshots.length - 1].envelope_json as any;
     expect(last.meta.state).toBe('TIMEOUT_HANDLED');
+  });
+
+  it('T004: filtered event.wait timeout still propagates through try/catch. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [tryCatchStep('try-1', {
+        trySteps: [eventWaitStep('wait-1', {
+          eventName: 'FILTER_TIMEOUT',
+          correlationKeyExpr: { $expr: '"timeout-key"' },
+          filters: [{ path: 'newStatus', op: '=', value: 'Live' }],
+          timeoutMs: 1
+        })],
+        catchSteps: [stateSetStep('state-1', 'FILTER_TIMEOUT_HANDLED')]
+      })]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    await db('workflow_run_waits').where({ run_id: run.runId }).update({ timeout_at: new Date(Date.now() - 1000).toISOString() });
+    const worker = new WorkflowRuntimeV2Worker('worker');
+    await worker.tick();
+
+    const snapshots = await WorkflowRunSnapshotModelV2.listByRun(db, run.runId);
+    const last = snapshots[snapshots.length - 1].envelope_json as any;
+    expect(last.meta.state).toBe('FILTER_TIMEOUT_HANDLED');
+  });
+
+  it('T005: time.wait duration mode resumes due waits through worker pickup. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [timeWaitStep('wait-1', { mode: 'duration', durationMs: 60_000 }), stateSetStep('state-1', 'DONE')]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    const waitRow = await db('workflow_run_waits').where({ run_id: run.runId, wait_type: 'time' }).first();
+    expect(waitRow).toBeTruthy();
+
+    await db('workflow_run_waits')
+      .where({ run_id: run.runId, wait_type: 'time' })
+      .update({ timeout_at: new Date(Date.now() - 1000).toISOString() });
+    const worker = new WorkflowRuntimeV2Worker('worker');
+    await worker.tick();
+
+    const record = await WorkflowRunModelV2.getById(db, run.runId);
+    expect(record?.status).toBe('SUCCEEDED');
+  });
+
+  it('T006: time.wait until mode validates malformed config and resumes valid waits. Mocks: non-target dependencies.', async () => {
+    const invalidWorkflowId = await createDraftWorkflow({
+      steps: [timeWaitStep('wait-1', { mode: 'until' })]
+    });
+    const invalidPublish = await publishWorkflow(invalidWorkflowId, 1);
+    expect((invalidPublish as any)?.ok).toBe(false);
+    expect(((invalidPublish as any)?.errors ?? []).some((err: any) => err.code === 'INVALID_CONFIG')).toBe(true);
+
+    const workflowId = await createDraftWorkflow({
+      steps: [timeWaitStep('wait-1', { mode: 'until', untilExpr: { $expr: '"2099-01-01T00:00:00.000Z"' } }), stateSetStep('state-1', 'DONE')]
+    });
+    const publish = await publishWorkflow(workflowId, 1);
+    expect((publish as any)?.ok).toBe(true);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    await db('workflow_run_waits')
+      .where({ run_id: run.runId, wait_type: 'time' })
+      .update({ timeout_at: new Date(Date.now() - 1000).toISOString() });
+    const worker = new WorkflowRuntimeV2Worker('worker');
+    await worker.tick();
+
+    const record = await WorkflowRunModelV2.getById(db, run.runId);
+    expect(record?.status).toBe('SUCCEEDED');
   });
 
   it('E2E: retryable action failure schedules retry and eventually succeeds. Mocks: non-target dependencies.', async () => {
@@ -375,7 +634,7 @@ describe('workflow runtime v2 E2E tests', () => {
   });
 
   it('E2E: email workflow processes new ticket path end-to-end (ticket + comment + attachments). Mocks: non-target dependencies.', async () => {
-    const workflowId = await seedEmailWorkflow();
+    const { workflowId, workflowVersion } = await seedEmailWorkflow();
 
     stubAction('parse_email_reply', 1, vi.fn().mockResolvedValue({ success: true, parsed: { sanitizedText: 'Body', confidence: 'high', tokens: {} } }));
     stubAction('resolve_existing_ticket_from_email', 1, vi.fn().mockResolvedValue({ success: false, ticket: null, source: null }));
@@ -393,7 +652,7 @@ describe('workflow runtime v2 E2E tests', () => {
     stubAction('send_ticket_acknowledgement_email', 1, vi.fn().mockResolvedValue({ success: true }));
     stubAction('create_human_task_for_email_processing_failure', 1, vi.fn().mockResolvedValue({ task_id: 'task-1' }));
 
-    const result = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: baseEmailPayload() });
+    const result = await startWorkflowRunAction({ workflowId, workflowVersion, payload: baseEmailPayload() });
     const record = await WorkflowRunModelV2.getById(db, result.runId);
 
     expect(record?.status).toBe('SUCCEEDED');
@@ -402,7 +661,7 @@ describe('workflow runtime v2 E2E tests', () => {
   });
 
   it('E2E: email workflow processes reply path end-to-end (comment + attachments). Mocks: non-target dependencies.', async () => {
-    const workflowId = await seedEmailWorkflow();
+    const { workflowId, workflowVersion } = await seedEmailWorkflow();
 
     stubAction('parse_email_reply', 1, vi.fn().mockResolvedValue({ success: true, parsed: { sanitizedText: 'Sanitized', confidence: 'high', tokens: { conversationToken: 'reply-token' } } }));
     const resolveExistingSpy = vi.fn().mockResolvedValue({ success: true, ticket: { ticketId: 'ticket-123' }, source: 'replyToken' });
@@ -417,7 +676,7 @@ describe('workflow runtime v2 E2E tests', () => {
     stubAction('send_ticket_acknowledgement_email', 1, vi.fn().mockResolvedValue({ success: true }));
     stubAction('create_human_task_for_email_processing_failure', 1, vi.fn().mockResolvedValue({ task_id: 'task-1' }));
 
-    const result = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: baseEmailPayload() });
+    const result = await startWorkflowRunAction({ workflowId, workflowVersion, payload: baseEmailPayload() });
     const record = await WorkflowRunModelV2.getById(db, result.runId);
 
     expect(record?.status).toBe('SUCCEEDED');
@@ -427,7 +686,7 @@ describe('workflow runtime v2 E2E tests', () => {
   });
 
   it('E2E: email workflow failure creates human task and sets error states. Mocks: non-target dependencies.', async () => {
-    const workflowId = await seedEmailWorkflow();
+    const { workflowId, workflowVersion } = await seedEmailWorkflow();
 
     const humanSpy = vi.fn().mockResolvedValue({ task_id: 'task-1' });
     stubAction('parse_email_reply', 1, vi.fn().mockResolvedValue({ success: true, parsed: { sanitizedText: 'Body', confidence: 'high', tokens: {} } }));
@@ -442,7 +701,7 @@ describe('workflow runtime v2 E2E tests', () => {
     stubAction('create_ticket_with_initial_comment', 1, vi.fn().mockRejectedValue(new Error('boom')));
     stubAction('create_human_task_for_email_processing_failure', 1, humanSpy);
 
-    const result = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: baseEmailPayload() });
+    const result = await startWorkflowRunAction({ workflowId, workflowVersion, payload: baseEmailPayload() });
     const snapshots = await WorkflowRunSnapshotModelV2.listByRun(db, result.runId);
     const last = snapshots[snapshots.length - 1].envelope_json as any;
 

@@ -23,11 +23,12 @@ import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { ProjectTaskStatusEditor } from './ProjectTaskStatusEditor';
+import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
 import { DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface ProjectDetailsEditProps {
   initialProject: IProject;
@@ -43,6 +44,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   onSave,
   onCancel,
 }) => {
+  const { t } = useTranslation(['features/projects', 'common']);
   const { getContactsByClient, getAllContacts } = useClientIntegration();
   // Initialize tag permissions for project tags
   useTagPermissions(['project']);
@@ -125,13 +127,13 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
     // Validate required fields
     const errors: string[] = [];
     if (!project.project_name?.trim()) {
-      errors.push('Project name');
+      errors.push(t('fields.projectName', 'Project Name'));
     }
     if (!project.status) {
-      errors.push('Status');
+      errors.push(t('fields.status', 'Status'));
     }
     if (!project.client_id) {
-      errors.push('Client');
+      errors.push(t('projectList.columns.client', 'Client'));
     }
 
     if (errors.length > 0) {
@@ -167,12 +169,14 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
       // Log for debugging
       console.log('Updated project with budgeted hours:', budgetedHours);
 
-      toast.success('Project updated successfully');
+      toast.success(t('projectEdit.updatedSuccess', 'Project updated successfully'));
       onSave(updatedProject);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update project';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('projectEdit.updateError', 'Failed to update project');
       setValidationErrors([errorMessage]);
-      handleError(error, 'Failed to update project');
+      handleError(error, t('projectEdit.updateError', 'Failed to update project'));
     } finally {
       setIsSubmitting(false);
     }
@@ -206,7 +210,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
         {hasAttemptedSubmit && validationErrors.length > 0 && (
           <Alert variant="destructive">
             <AlertDescription>
-              <p className="font-medium mb-2">Please fill in the required fields:</p>
+              <p className="font-medium mb-2">{t('projectEdit.validationTitle', 'Please fill in the required fields:')}</p>
               <ul className="list-disc list-inside space-y-1">
                 {validationErrors.map((err, index) => (
                   <li key={index}>{err}</li>
@@ -218,14 +222,14 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
         <div className="space-y-3">
           <div>
             <label htmlFor="project_name" className="block text-sm font-medium text-gray-700 mb-1">
-              Project Name *
+              {t('projectEdit.projectNameLabel', 'Project Name *')}
             </label>
             <TextArea
               id="project_name"
               name="project_name"
               value={project.project_name}
               onChange={handleInputChange}
-              placeholder="Enter project name..."
+              placeholder={t('projectEdit.projectNamePlaceholder', 'Enter project name...')}
               className={`w-full text-base font-medium p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                 hasAttemptedSubmit && !project.project_name?.trim() ? 'border-destructive' : 'border-gray-300'
               }`}
@@ -236,21 +240,21 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
 
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-              Description
+              {t('fields.description', 'Description')}
             </label>
             <TextArea
               id="description"
               name="description"
               value={project.description || ''}
               onChange={handleInputChange}
-              placeholder="Enter project description..."
+              placeholder={t('projectEdit.descriptionPlaceholder', 'Enter project description...')}
               className="w-full text-sm p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
               rows={3}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('projectEdit.statusLabel', 'Status *')}</label>
             <CustomSelect
               value={project.status}
               onValueChange={(value) => {
@@ -262,14 +266,14 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                 value: status.status_id,
                 label: status.name
               }))}
-              placeholder="Select Status"
+              placeholder={t('projectEdit.statusPlaceholder', 'Select Status')}
               className={hasAttemptedSubmit && !project.status ? 'ring-1 ring-red-500' : ''}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Client *
+              {t('quickAdd.clientLabel', 'Client *')}
             </label>
             <ClientPicker
               id='client-picker'
@@ -285,7 +289,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contact</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('projectEdit.contactLabel', 'Contact')}</label>
             <CustomSelect
               value={project.contact_name_id || ''}
               onValueChange={(value) => {
@@ -294,13 +298,13 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                 clearErrorIfSubmitted();
               }}
               options={contacts}
-              placeholder="Select Contact"
+              placeholder={t('projectEdit.contactPlaceholder', 'Select Contact')}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Project Manager
+              {t('fields.projectManager', 'Project Manager')}
             </label>
             <UserPicker
               value={project.assigned_to || ''}
@@ -319,7 +323,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
 
           <div>
             <label htmlFor="budgeted_hours" className="block text-sm font-medium text-gray-700 mb-1">
-              Budgeted Hours
+              {t('projectEdit.budgetedHoursLabel', 'Budgeted Hours')}
             </label>
             <Input
               id="budgeted_hours"
@@ -350,12 +354,12 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               }}
               min="0"
               step="0.25" // Allow quarter-hour increments
-              placeholder="Enter budgeted hours"
+              placeholder={t('projectEdit.budgetedHoursPlaceholder', 'Enter budgeted hours')}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('projectEdit.tagsLabel', 'Tags')}</label>
             <TagManager
               id="project-tags-edit"
               entityId={project.project_id}
@@ -373,7 +377,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date
+                {t('fields.startDate', 'Start Date')}
               </label>
               <DatePicker
                 id="start_date"
@@ -386,13 +390,13 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                   setHasChanges(true);
                   clearErrorIfSubmitted();
                 }}
-                placeholder="Select start date"
+                placeholder={t('projectEdit.startDatePlaceholder', 'Select start date')}
               />
             </div>
 
             <div>
               <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-1">
-                End Date
+                {t('fields.endDate', 'End Date')}
               </label>
               <DatePicker
                 id="end_date"
@@ -405,14 +409,16 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                   setHasChanges(true);
                   clearErrorIfSubmitted();
                 }}
-                placeholder="Select end date"
+                placeholder={t('projectEdit.endDatePlaceholder', 'Select end date')}
               />
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
             <span className={`px-2 py-1 rounded text-sm ${project.is_inactive ? 'text-gray-800' : 'text-gray-800'}`}>
-              {project.is_inactive ? 'Inactive' : 'Active'}
+              {project.is_inactive
+                ? t('common:status.inactive', 'Inactive')
+                : t('common:status.active', 'Active')}
             </span>
             <Switch
               id="is_inactive"
@@ -426,9 +432,8 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           </div>
 
           <div>
-            <ProjectTaskStatusEditor
+            <ProjectTaskStatusSettings
               projectId={project.project_id}
-              onChange={() => setHasChanges(true)}
             />
           </div>
 
@@ -445,7 +450,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                 <ChevronRight className="h-4 w-4" />
               )}
               <Settings className="h-4 w-4" />
-              <span>Client Portal Visibility</span>
+              <span>{t('projectEdit.clientPortalVisibility', 'Client Portal Visibility')}</span>
             </button>
             {showClientPortalConfig && (
               <div className="mt-3">
@@ -466,63 +471,67 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           <Dialog
             isOpen={showCancelConfirm}
             onClose={() => setShowCancelConfirm(false)}
-            title="Unsaved Changes"
+            title={t('projectEdit.unsavedTitle', 'Unsaved Changes')}
             id="cancel-confirm-dialog"
             className="max-w-md"
             draggable={false}
+            footer={
+              <div className="flex justify-end space-x-3">
+                <Button
+                  id="cancel-button"
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCancelConfirm(false)}
+                >
+                  {t('projectEdit.continueEditing', 'Continue Editing')}
+                </Button>
+                <Button
+                  id="discard-button"
+                  type="button"
+                  onClick={() => {
+                    setShowCancelConfirm(false);
+                    onCancel();
+                  }}
+                >
+                  {t('projectEdit.discardChanges', 'Discard Changes')}
+                </Button>
+              </div>
+            }
           >
-            <p className="mb-4">You have unsaved changes. Are you sure you want to cancel?</p>
-            <div className="flex justify-end space-x-3">
-              <Button
-                id="cancel-button"
-                type="button"
-                variant="outline"
-                onClick={() => setShowCancelConfirm(false)}
-              >
-                Continue Editing
-              </Button>
-              <Button
-                id="discard-button"
-                type="button"
-                onClick={() => {
-                  setShowCancelConfirm(false);
-                  onCancel();
-                }}
-              >
-                Discard Changes
-              </Button>
-            </div>
+            <p className="mb-4">{t('projectEdit.unsavedMessage', 'You have unsaved changes. Are you sure you want to cancel?')}</p>
           </Dialog>
 
           <Dialog
             isOpen={showSaveConfirm}
             onClose={() => setShowSaveConfirm(false)}
-            title="Save Changes"
+            title={t('projectEdit.saveTitle', 'Save Changes')}
             id="save-confirm-dialog"
             className="max-w-md"
             draggable={false}
+            footer={
+              <div className="flex justify-end space-x-3">
+                <Button
+                  id="continue-button"
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowSaveConfirm(false)}
+                >
+                  {t('projectEdit.continueEditing', 'Continue Editing')}
+                </Button>
+                <Button
+                  id="save-and-close-button"
+                  type="button"
+                  onClick={(e) => {
+                    setShowSaveConfirm(false);
+                    handleSubmit(e);
+                  }}
+                >
+                  {t('projectEdit.saveAndClose', 'Save and Close')}
+                </Button>
+              </div>
+            }
           >
-            <p className="mb-4">Are you sure you want to save your changes and close the drawer?</p>
-            <div className="flex justify-end space-x-3">
-              <Button
-                id="continue-button"
-                type="button"
-                variant="outline"
-                onClick={() => setShowSaveConfirm(false)}
-              >
-                Continue Editing
-              </Button>
-              <Button
-                id="save-and-close-button"
-                type="button"
-                onClick={(e) => {
-                  setShowSaveConfirm(false);
-                  handleSubmit(e);
-                }}
-              >
-                Save and Close
-              </Button>
-            </div>
+            <p className="mb-4">{t('projectEdit.saveMessage', 'Are you sure you want to save your changes and close the drawer?')}</p>
           </Dialog>
 
           <Button
@@ -538,7 +547,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             }}
             disabled={isSubmitting}
           >
-            Cancel
+            {t('common:actions.cancel', 'Cancel')}
           </Button>
           <Button
             id='save-button'
@@ -547,7 +556,9 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             disabled={isSubmitting}
             className={!project.project_name?.trim() || !project.status || !project.client_id ? 'opacity-50' : ''}
           >
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
+            {isSubmitting
+              ? t('projectEdit.saving', 'Saving...')
+              : t('projectEdit.saveTitle', 'Save Changes')}
           </Button>
         </div>
       </form>

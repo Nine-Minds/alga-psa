@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_INVOICE_PRINT_SETTINGS,
   INVOICE_PRINT_MARGIN_MM_RANGE,
-  INVOICE_TEMPLATE_AST_VERSION,
+  TEMPLATE_AST_VERSION,
 } from '@alga-psa/types';
-import { validateInvoiceTemplateAst } from './schema';
+import { validateTemplateAst } from './schema';
 
-describe('invoiceTemplateAstSchema', () => {
+describe('templateAstSchema', () => {
   const createMinimalAst = (metadata?: Record<string, unknown>) => ({
     kind: 'invoice-template-ast',
-    version: INVOICE_TEMPLATE_AST_VERSION,
+    version: TEMPLATE_AST_VERSION,
     ...(metadata ? { metadata } : {}),
     layout: {
       id: 'root',
@@ -19,13 +19,13 @@ describe('invoiceTemplateAstSchema', () => {
   });
 
   it('validates a minimal AST document', () => {
-    const result = validateInvoiceTemplateAst(createMinimalAst());
+    const result = validateTemplateAst(createMinimalAst());
 
     expect(result.success).toBe(true);
   });
 
   it('returns structured validation errors for invalid AST payloads', () => {
-    const result = validateInvoiceTemplateAst({
+    const result = validateTemplateAst({
       ...createMinimalAst(),
       layout: {
         id: 'root',
@@ -49,9 +49,9 @@ describe('invoiceTemplateAstSchema', () => {
   });
 
   it('requires repeat binding metadata for dynamic-table nodes', () => {
-    const invalidResult = validateInvoiceTemplateAst({
+    const invalidResult = validateTemplateAst({
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       layout: {
         id: 'root',
         type: 'document',
@@ -79,9 +79,9 @@ describe('invoiceTemplateAstSchema', () => {
     }
     expect(invalidResult.errors.some((error) => error.path.includes('repeat.itemBinding'))).toBe(true);
 
-    const validResult = validateInvoiceTemplateAst({
+    const validResult = validateTemplateAst({
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       layout: {
         id: 'root',
         type: 'document',
@@ -108,9 +108,9 @@ describe('invoiceTemplateAstSchema', () => {
   });
 
   it('enforces transform payload shapes for filter/sort/group/aggregate/computed workflows', () => {
-    const invalidTransformPayload = validateInvoiceTemplateAst({
+    const invalidTransformPayload = validateTemplateAst({
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       transforms: {
         sourceBindingId: 'invoice.items',
         outputBindingId: 'invoice.items.shaped',
@@ -135,9 +135,9 @@ describe('invoiceTemplateAstSchema', () => {
     }
     expect(invalidTransformPayload.errors.some((error) => error.path.includes('transforms.operations.0.keys'))).toBe(true);
 
-    const validTransformPayload = validateInvoiceTemplateAst({
+    const validTransformPayload = validateTemplateAst({
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       transforms: {
         sourceBindingId: 'invoice.items',
         outputBindingId: 'invoice.items.shaped',
@@ -206,7 +206,7 @@ describe('invoiceTemplateAstSchema', () => {
   });
 
   it('accepts optional strategyId on transform operations', () => {
-    const result = validateInvoiceTemplateAst({
+    const result = validateTemplateAst({
       ...createMinimalAst(),
       transforms: {
         sourceBindingId: 'invoice.items',
@@ -243,7 +243,7 @@ describe('invoiceTemplateAstSchema', () => {
   });
 
   it('accepts valid explicit print metadata with a supported paper preset and positive uniform margin', () => {
-    const result = validateInvoiceTemplateAst(
+    const result = validateTemplateAst(
       createMinimalAst({
         printSettings: {
           paperPreset: DEFAULT_INVOICE_PRINT_SETTINGS.paperPreset,
@@ -256,7 +256,7 @@ describe('invoiceTemplateAstSchema', () => {
   });
 
   it('rejects unknown paper preset values', () => {
-    const result = validateInvoiceTemplateAst(
+    const result = validateTemplateAst(
       createMinimalAst({
         printSettings: {
           paperPreset: 'Tabloid',
@@ -274,7 +274,7 @@ describe('invoiceTemplateAstSchema', () => {
   });
 
   it('rejects uniform margin values outside the supported range', () => {
-    const result = validateInvoiceTemplateAst(
+    const result = validateTemplateAst(
       createMinimalAst({
         printSettings: {
           paperPreset: 'Letter',
@@ -292,9 +292,9 @@ describe('invoiceTemplateAstSchema', () => {
   });
 
   it('rejects invalid CSS identifiers in styles.classes keys', () => {
-    const result = validateInvoiceTemplateAst({
+    const result = validateTemplateAst({
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       styles: {
         classes: {
           // `.` is not allowed by the safe identifier rule.
@@ -314,9 +314,9 @@ describe('invoiceTemplateAstSchema', () => {
   });
 
   it('rejects invalid CSS identifiers in token ids and node.style.tokenIds', () => {
-    const invalidTokenId = validateInvoiceTemplateAst({
+    const invalidTokenId = validateTemplateAst({
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       styles: {
         tokens: {
           ok: { id: 'bad.id', value: 'red' },
@@ -330,9 +330,9 @@ describe('invoiceTemplateAstSchema', () => {
     });
     expect(invalidTokenId.success).toBe(false);
 
-    const invalidNodeTokenIds = validateInvoiceTemplateAst({
+    const invalidNodeTokenIds = validateTemplateAst({
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       layout: {
         id: 'root',
         type: 'document',

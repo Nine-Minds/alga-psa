@@ -1,0 +1,533 @@
+{
+  "page": {
+    "title": "Programma",
+    "actions": {
+      "configureAvailability": "Configura disponibilità",
+      "appointmentRequests": "Richieste di appuntamento"
+    }
+  },
+  "sidebar": {
+    "actions": {
+      "compareAll": "Confronta tutto",
+      "clearAll": "Cancella tutto",
+      "viewWeek": "Visualizza settimana",
+      "compare": "Confronta",
+      "stopComparing": "Smetti di confrontare"
+    },
+    "labels": {
+      "inactive": "(Inattivo)"
+    },
+    "aria": {
+      "viewWeek": "Visualizza settimana per {{name}}",
+      "compare": "Confronta {{name}}"
+    }
+  },
+  "agentView": {
+    "loading": "Caricamento...",
+    "errors": {
+      "loadPermissions": "Impossibile caricare le autorizzazioni utente",
+      "forbidden": "Non hai l'autorizzazione per visualizzare questa pianificazione."
+    }
+  },
+  "calendar": {
+    "legend": {
+      "types": {
+        "ticket": "Biglietto",
+        "projectTask": "Compito del progetto",
+        "nonBillableCategory": "Categoria non fatturabile",
+        "adHoc": "Inserimento ad hoc",
+        "interaction": "Interazione",
+        "appointmentRequest": "Richiesta di appuntamento"
+      },
+      "showInactiveUsers": "Mostra utenti inattivi"
+    },
+    "loading": {
+      "initial": "Caricamento programma...",
+      "overlay": "Caricamento..."
+    },
+    "errors": {
+      "validateDeletion": "Impossibile convalidare l'eliminazione. Per favore riprova.",
+      "loadPermissions": "Impossibile caricare le autorizzazioni.",
+      "loadCurrentUser": "Impossibile caricare l'utente corrente.",
+      "unknown": "Si è verificato un errore sconosciuto",
+      "deleteFailed": "Impossibile eliminare la voce di pianificazione",
+      "deleteUnexpected": "Si è verificato un errore durante l'eliminazione della voce del programma",
+      "updateFailed": "Impossibile aggiornare la voce di pianificazione: {{error}}",
+      "createFailed": "Impossibile aggiungere la voce di pianificazione: {{error}}",
+      "saveUnexpected": "Si è verificato un errore durante il salvataggio della voce del programma"
+    },
+    "toolbar": {
+      "previousAria": "Precedente {{view}}",
+      "previous": "< Prec",
+      "today": "Oggi",
+      "nextAria": "Successivo {{view}}",
+      "next": "Avanti >",
+      "views": {
+        "month": "Mese",
+        "week": "Settimana",
+        "day": "Giorno"
+      }
+    },
+    "event": {
+      "fallbacks": {
+        "unknownTechnician": "Sconosciuto",
+        "unassigned": "Non assegnato",
+        "untitled": "Senza titolo"
+      },
+      "tooltip": {
+        "scheduledFor": "Previsto per: {{technicians}}",
+        "start": "Inizio: {{dateTime}}",
+        "end": "Fine: {{dateTime}}",
+        "multiDay": "(Più giorni)"
+      }
+    },
+    "deleteDialog": {
+      "title": "Elimina voce di pianificazione",
+      "messageRecurring": "Seleziona quali eventi eliminare:",
+      "messageSingle": "Sei sicuro di voler eliminare questa voce di pianificazione? Questa azione non può essere annullata.",
+      "confirm": "Elimina",
+      "entityFallback": "questa voce di pianificazione",
+      "options": {
+        "single": "Solo questo evento",
+        "future": "Questo e gli eventi futuri",
+        "all": "Tutti gli eventi"
+      }
+    }
+  },
+  "weeklyEvent": {
+    "actions": {
+      "delete": "Elimina voce"
+    },
+    "continuation": {
+      "previousWeek": "Continua dalla settimana precedente"
+    }
+  },
+  "requests": {
+    "errors": {
+      "load": "Impossibile caricare le richieste di appuntamento",
+      "ticketNotFound": "Biglietto non trovato",
+      "loadTicket": "Impossibile caricare il biglietto",
+      "assignTechnicianRequired": "Si prega di assegnare un tecnico",
+      "approve": "Impossibile approvare la richiesta",
+      "declineReasonRequired": "Si prega di fornire un motivo per rifiutare",
+      "decline": "Impossibile rifiutare la richiesta"
+    },
+    "feedback": {
+      "approved": "Richiesta di appuntamento approvata",
+      "declined": "Richiesta di appuntamento rifiutata"
+    },
+    "filters": {
+      "statusLabel": "Filtra per stato",
+      "statusOptions": {
+        "all": "Tutto",
+        "pending": "In attesa di",
+        "approved": "Approvato",
+        "declined": "Rifiutato",
+        "cancelled": "Annullato"
+      }
+    },
+    "fallbacks": {
+      "invalidDateTime": "Data/ora non valida"
+    },
+    "list": {
+      "title": "Richieste di appuntamento",
+      "badgeTotal": "Totale",
+      "loading": "Caricamento richieste...",
+      "empty": "Nessuna richiesta {{status}} trovata",
+      "duration": "{{count}} minuti",
+      "ticketFallback": "Biglietto n.{{ticket}}",
+      "fallbacks": {
+        "publicRequest": "Richiesta pubblica"
+      }
+    },
+    "detail": {
+      "back": "← Torna all'elenco",
+      "title": "Richiedi dettagli",
+      "section": {
+        "requestInformation": "Richiedi informazioni"
+      },
+      "labels": {
+        "reference": "Riferimento",
+        "client": "Cliente",
+        "contact": "Contatto",
+        "email": "E-mail",
+        "phone": "Telefono",
+        "service": "Servizio",
+        "requestedTime": "Orario richiesto",
+        "duration": "Durata",
+        "status": "Stato",
+        "linkedTicket": "Biglietto collegato",
+        "description": "Descrizione"
+      }
+    },
+    "approval": {
+      "title": "Dettagli di approvazione",
+      "fields": {
+        "assignedTechnician": "Assegna Tecnico *",
+        "finalDateTime": "Data e ora finali",
+        "internalNotes": "Note interne (facoltativo)",
+        "linkedTicket": "Link al biglietto (facoltativo)"
+      },
+      "placeholders": {
+        "assignedTechnician": "Seleziona tecnico",
+        "internalNotes": "Aggiungi eventuali note interne...",
+        "linkedTicket": "Inserisci l'ID del ticket per collegare..."
+      },
+      "actions": {
+        "approve": "Approva",
+        "decline": "Rifiuta"
+      }
+    },
+    "decline": {
+      "title": "Rifiuta richiesta",
+      "fields": {
+        "reason": "Motivo del rifiuto *"
+      },
+      "placeholders": {
+        "reason": "Si prega di fornire un motivo per rifiutare questa richiesta..."
+      },
+      "actions": {
+        "confirm": "Conferma rifiuto",
+        "cancel": "Annulla"
+      }
+    }
+  },
+  "availabilitySettings": {
+    "dialog": {
+      "title": "Impostazioni di disponibilità"
+    },
+    "loading": "Caricamento impostazioni...",
+    "tabs": {
+      "general": "Impostazioni generali",
+      "userHours": "Orari utente",
+      "serviceRules": "Regole del servizio",
+      "exceptions": "Eccezioni"
+    },
+    "days": {
+      "sunday": "Domenica",
+      "monday": "Lunedi",
+      "tuesday": "Martedì",
+      "wednesday": "Mercoledì",
+      "thursday": "Giovedì",
+      "friday": "Venerdì",
+      "saturday": "Sabato"
+    },
+    "common": {
+      "yes": "Sì",
+      "no": "No",
+      "columns": {
+        "action": "Azione"
+      },
+      "actions": {
+        "edit": "Modifica"
+      },
+      "defaultApprover": {
+        "placeholder": "Seleziona un approvatore"
+      },
+      "teamSelect": {
+        "label": "Seleziona Squadra",
+        "placeholder": "Seleziona una squadra"
+      }
+    },
+    "feedback": {
+      "loadError": "Impossibile caricare le impostazioni"
+    },
+    "general": {
+      "autoApproval": {
+        "title": "Abilita l'approvazione automatica",
+        "description": "Approva automaticamente gli appuntamenti che soddisfano i criteri configurati di seguito",
+        "criteriaTitle": "Criteri di approvazione automatica:",
+        "criteria": {
+          "requireAvailability": "Il tecnico deve avere la disponibilità configurata per l'orario richiesto",
+          "requireContract": "Il cliente deve avere un contratto attivo (se il servizio lo richiede)",
+          "checkConflicts": "Nessun conflitto di pianificazione con gli appuntamenti esistenti",
+          "respectBuffers": "Rispettare i tempi di buffer prima/dopo gli appuntamenti"
+        }
+      },
+      "defaultApprover": {
+        "label": "Approvatore predefinito",
+        "help": "Approvatore predefinito a livello aziendale per le richieste di appuntamento che richiedono l'approvazione manuale. Questo può essere sovrascritto per tecnico nelle impostazioni Orario utente."
+      },
+      "advanceBookingDays": {
+        "label": "Prenotazione anticipata predefinita (giorni)"
+      },
+      "minimumNoticeHours": {
+        "label": "Preavviso minimo (ore)"
+      },
+      "actions": {
+        "save": "Salva le impostazioni generali"
+      },
+      "feedback": {
+        "saveSuccess": "Impostazioni generali salvate",
+        "saveError": "Impossibile salvare le impostazioni"
+      }
+    },
+    "userHours": {
+      "roleManager": {
+        "label": "Direttore della squadra:",
+        "description": "Puoi configurare le impostazioni di disponibilità per i membri dei tuoi team. La tabella \"Utenti configurati\" riportata di seguito mostra tutti gli utenti con impostazioni di disponibilità nel sistema."
+      },
+      "roleAdmin": {
+        "label": "Amministratore:",
+        "description": "È possibile configurare le impostazioni di disponibilità per qualsiasi utente nel sistema. La tabella \"Utenti configurati\" di seguito mostra tutti gli utenti con impostazioni di disponibilità."
+      },
+      "userSelect": {
+        "label": "Seleziona Utente da configurare",
+        "placeholderSelectTeamFirst": "Seleziona prima una squadra",
+        "placeholder": "Seleziona un utente da configurare"
+      },
+      "appointmentSettings": {
+        "title": "Impostazioni dell'appuntamento",
+        "defaultDuration": {
+          "label": "Durata predefinita dell'appuntamento (minuti)",
+          "help": "Sostituzione della durata specifica del tecnico. Lascia vuoto per utilizzare la durata specifica del servizio dalle Regole del servizio.",
+          "placeholder": "Lascia vuoto per utilizzare l'impostazione predefinita del servizio"
+        },
+        "bufferAfter": {
+          "label": "Tempo buffer tra gli appuntamenti (minuti)",
+          "placeholder": "15"
+        },
+        "defaultApprover": {
+          "label": "Approvatore predefinito",
+          "help": "Chi deve esaminare e approvare le richieste di appuntamento per questo tecnico che richiedono l'approvazione manuale"
+        },
+        "allowClientPreference": {
+          "label": "Consenti preferenza cliente",
+          "help": "Consenti ai clienti di richiedere specificamente questo tecnico"
+        }
+      },
+      "schedule": {
+        "timezoneNotice": "Gli orari sono nel tuo fuso orario locale ({{timeZone}})",
+        "columns": {
+          "day": "Giorno",
+          "available": "Disponibile",
+          "startTime": "Ora di inizio",
+          "endTime": "Ora di fine"
+        }
+      },
+      "configuredUsers": {
+        "title": "Utenti configurati",
+        "description": "Utenti con impostazioni di disponibilità configurate",
+        "empty": "Nessun utente ancora configurato",
+        "columns": {
+          "userName": "Nome utente",
+          "status": "Stato"
+        },
+        "status": {
+          "configured": "Configurato"
+        }
+      },
+      "actions": {
+        "save": "Salva ore utente"
+      },
+      "feedback": {
+        "selectUserError": "Seleziona un utente",
+        "saveSuccess": "Ore utente salvate",
+        "saveError": "Impossibile salvare le ore utente"
+      }
+    },
+    "serviceRules": {
+      "serviceSelect": {
+        "label": "Seleziona il servizio da configurare",
+        "placeholder": "Seleziona un servizio da configurare"
+      },
+      "editor": {
+        "title": "Modifica regole: {{serviceName}}",
+        "allowWithoutContract": {
+          "label": "Consenti prenotazione senza contratto"
+        },
+        "maxAppointmentsPerDay": {
+          "label": "Numero massimo di appuntamenti al giorno"
+        },
+        "defaultDuration": {
+          "label": "Durata predefinita dell'appuntamento (minuti)",
+          "help": "Durata predefinita per gli appuntamenti di questo tipo di servizio. Può essere sovrascritto dalle impostazioni specifiche del tecnico in Orari utente.",
+          "placeholder": "ad esempio, 60 (minuti)"
+        }
+      },
+      "configuredServices": {
+        "title": "Servizi configurati",
+        "description": "Servizi con regole di appuntamento configurate",
+        "empty": "Nessun servizio ancora configurato",
+        "columns": {
+          "serviceName": "Nome del servizio",
+          "duration": "Durata (min)",
+          "withoutContract": "Senza contratto",
+          "maxPerDay": "Massimo al giorno"
+        }
+      },
+      "common": {
+        "noLimit": "Nessun limite"
+      },
+      "actions": {
+        "save": "Salva regole di servizio"
+      },
+      "feedback": {
+        "selectServiceError": "Seleziona un servizio",
+        "saveSuccess": "Regole del servizio salvate",
+        "saveError": "Impossibile salvare le regole del servizio"
+      }
+    },
+    "exceptions": {
+      "form": {
+        "title": "Aggiungi eccezione",
+        "date": {
+          "label": "Seleziona Data"
+        },
+        "user": {
+          "label": "Utente (facoltativo: lasciare vuoto per tutta l'azienda)",
+          "placeholder": "Seleziona utente"
+        },
+        "isAvailable": {
+          "label": "Disponibile in questo giorno"
+        },
+        "reason": {
+          "label": "Motivo",
+          "placeholder": "Ferie, ferie, ecc."
+        }
+      },
+      "common": {
+        "companyWide": "A livello aziendale"
+      },
+      "actions": {
+        "add": "Aggiungi eccezione"
+      },
+      "list": {
+        "title": "Eccezioni esistenti",
+        "empty": "Nessuna eccezione configurata",
+        "status": {
+          "available": "Disponibile",
+          "unavailable": "Non disponibile"
+        }
+      },
+      "feedback": {
+        "selectDateError": "Seleziona una data",
+        "addSuccess": "Eccezione aggiunta",
+        "addError": "Impossibile aggiungere l'eccezione",
+        "deleteSuccess": "Eccezione eliminata",
+        "deleteError": "Impossibile eliminare l'eccezione"
+      }
+    }
+  },
+  "entryPopup": {
+    "title": {
+      "appointmentRequest": "Richiesta di appuntamento",
+      "view": "Visualizza voce",
+      "edit": "Modifica voce",
+      "new": "Nuova voce"
+    },
+    "alerts": {
+      "privateEntryOnlyCreator": "Questa è un'entrata privata. Solo il creatore può visualizzare o modificare i dettagli."
+    },
+    "validation": {
+      "summaryTitle": "Si prega di compilare i campi richiesti:",
+      "titleRequiredForAdHoc": "Il titolo è richiesto per le voci ad hoc",
+      "startRequired": "Data/ora di inizio",
+      "endRequired": "Data/ora di fine",
+      "assigneeRequired": "Almeno un utente assegnato",
+      "startInvalid": "La data di inizio non è valida",
+      "endInvalid": "La data di fine non è valida",
+      "endAfterStart": "La data di fine deve essere successiva alla data di inizio",
+      "recurrenceIntervalPositive": "L'intervallo di ricorrenza deve essere un numero intero positivo",
+      "recurrenceCountPositive": "Il numero di occorrenze deve essere un numero intero positivo",
+      "recurrenceEndInvalid": "La data di fine della ricorrenza non è valida",
+      "recurrenceEndAfterStart": "La data di fine della ricorrenza deve essere successiva alla data di inizio"
+    },
+    "fields": {
+      "title": "Titolo",
+      "assignedUsers": "Utenti Assegnati *",
+      "privateEntry": "Ingresso privato (non visibile agli altri utenti)",
+      "start": "Inizio *",
+      "end": "Fine *",
+      "notes": "Note"
+    },
+    "actions": {
+      "cancel": "Annulla",
+      "close": "Chiudi",
+      "save": "Salva",
+      "delete": "Elimina voce"
+    },
+    "workItem": {
+      "adHocFallback": "Voce ad hoc (nessun elemento di lavoro)",
+      "openDetails": "Dettagli"
+    },
+    "appointmentRequest": {
+      "approved": {
+        "title": "Appuntamento approvato",
+        "descriptionWithDate": "Questo appuntamento ha avuto origine da una richiesta del cliente ed è stato approvato il {{date}}.",
+        "description": "Questo appuntamento è nato da una richiesta del cliente."
+      },
+      "pending": {
+        "title": "Richiesta di appuntamento in sospeso",
+        "description": "Questa è una richiesta di appuntamento da parte di un cliente. Puoi approvarlo o rifiutarlo di seguito."
+      },
+      "declined": {
+        "title": "Richiesta di appuntamento rifiutata",
+        "descriptionWithReason": "Questa richiesta di appuntamento è stata rifiutata: {{reason}}",
+        "description": "Questa richiesta di appuntamento è stata rifiutata."
+      },
+      "cancelled": {
+        "title": "Richiesta di appuntamento annullata",
+        "description": "Questa richiesta di appuntamento è stata annullata dal cliente."
+      },
+      "requestedDateTimeLabel": "Data e ora richieste",
+      "assignTechnicianLabel": "Assegna Tecnico *",
+      "assignTechnicianPlaceholder": "Seleziona tecnico",
+      "scheduledDateTimeLabel": "Data e ora pianificate",
+      "noNotes": "Nessuna nota fornita",
+      "declineReasonLabel": "Motivo del rifiuto *",
+      "declineReasonPlaceholder": "Si prega di fornire un motivo per rifiutare questa richiesta...",
+      "actions": {
+        "approve": "Approva",
+        "decline": "Rifiuta",
+        "confirmDecline": "Conferma rifiuto"
+      },
+      "toasts": {
+        "assignTechnicianRequired": "Si prega di assegnare un tecnico",
+        "approved": "Richiesta di appuntamento approvata",
+        "approveFailed": "Impossibile approvare la richiesta",
+        "declineReasonRequired": "Si prega di fornire un motivo per rifiutare",
+        "declined": "Richiesta di appuntamento rifiutata",
+        "declineFailed": "Impossibile rifiutare la richiesta"
+      }
+    },
+    "recurrence": {
+      "label": "Ricorrenza",
+      "intervalLabel": "Intervallo",
+      "endLabel": "Fine",
+      "endDateLabel": "Data di fine",
+      "occurrencesLabel": "Occorrenze",
+      "workdaysOnly": "Solo giorni feriali (lun-ven, esclusi i festivi)",
+      "options": {
+        "none": "Nessuno",
+        "daily": "Quotidiano",
+        "weekly": "Settimanale",
+        "monthly": "Mensile",
+        "yearly": "Annuale"
+      },
+      "endOptions": {
+        "never": "Mai",
+        "date": "In data",
+        "count": "Dopo"
+      },
+      "applyDialog": {
+        "title": "Applica modifiche a",
+        "message": "Seleziona quali eventi aggiornare:"
+      }
+    },
+    "delete": {
+      "validationFailed": "Impossibile convalidare l'eliminazione. Per favore riprova.",
+      "entityFallback": "questa voce di pianificazione",
+      "scopeDialog": {
+        "title": "Elimina voce di pianificazione",
+        "message": "Seleziona quali eventi eliminare:",
+        "confirm": "Continua"
+      }
+    },
+    "scopeOptions": {
+      "single": "Solo questo evento",
+      "future": "Questo e gli eventi futuri",
+      "all": "Tutti gli eventi"
+    }
+  }
+}

@@ -3,6 +3,9 @@ import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 
 const BIOMETRIC_GATE_KEY = "alga.mobile.biometricGate.enabled";
 
+/** Grace period in ms before biometric re-lock is required after a successful unlock. */
+export const BIOMETRIC_GRACE_MS = 15 * 60 * 1000; // 15 minutes
+
 export async function getBiometricGateEnabled(): Promise<boolean> {
   return (await getSecureJson<boolean>(BIOMETRIC_GATE_KEY)) === true;
 }

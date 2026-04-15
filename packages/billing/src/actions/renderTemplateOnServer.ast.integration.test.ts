@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION as INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 const getAllTemplatesMock = vi.fn();
 
@@ -79,6 +79,7 @@ describe('renderTemplateOnServer AST integration', () => {
 
     expect(result.html).toContain('INV-AST-001');
     expect(result.html).toContain('110');
+    expect(result.html).not.toContain('border-bottom:1px solid #cbd5e1');
     expect(typeof result.css).toBe('string');
     expect(getAllTemplatesMock).not.toHaveBeenCalled();
   });

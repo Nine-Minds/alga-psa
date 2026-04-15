@@ -8,11 +8,16 @@ metadata:
     {{- include "sebastian.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.server.replicaCount }}
+  {{- if .Values.server.hostNetwork }}
+  strategy:
+    type: Recreate
+  {{- else }}
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 0
       maxSurge: 1
+  {{- end }}
   selector:
     matchLabels:
       {{- include "sebastian.selectorLabels" . | nindent 6 }}
@@ -62,10 +67,19 @@ spec:
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-    spec:    
-      {{- if .Values.server.image.is_private }}
+    spec:
+      {{- if .Values.server.hostNetwork }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
+      {{- if or .Values.server.image.is_private .Values.setup.image.is_private }}
       imagePullSecrets:
+        {{- if .Values.server.image.is_private }}
         - name: "{{ .Values.server.image.credentials }}"
+        {{- end }}
+        {{- if and .Values.setup.image.is_private (ne .Values.setup.image.credentials .Values.server.image.credentials) }}
+        - name: "{{ .Values.setup.image.credentials }}"
+        {{- end }}
       {{- end }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
@@ -81,6 +95,71 @@ spec:
             claimName: {{ include "sebastian.fullname" . }}-storage
           {{- end }}
         {{- end }}        
+      {{- if or .Values.setup.runMigrations .Values.setup.runSeeds }}
+      initContainers:
+        - name: wait-for-bootstrap
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.setup.image.name }}:{{ .Values.setup.image.tag }}"
+          imagePullPolicy: {{ .Values.setup.pullPolicy }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              if [ "${SETUP_RUN_SEEDS}" = "true" ]; then
+                if [ "${APPLIANCE_BOOTSTRAP_ENABLED}" = "true" ]; then
+                  echo "Waiting for appliance bootstrap migrations to finish..."
+                  until PGPASSWORD="${DB_PASSWORD_ADMIN}" psql -h "${DB_HOST_ADMIN}" -p "${DB_PORT_ADMIN}" -U "${DB_USER_ADMIN}" -d "${DB_NAME_SERVER}" -Atqc "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users');" 2>/dev/null | grep -q '^t$'; do
+                    sleep 2
+                  done
+                else
+                  echo "Waiting for bootstrap seeds to create initial data..."
+                  until PGPASSWORD="${DB_PASSWORD_ADMIN}" psql -h "${DB_HOST_ADMIN}" -p "${DB_PORT_ADMIN}" -U "${DB_USER_ADMIN}" -d "${DB_NAME_SERVER}" -Atqc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);" 2>/dev/null | grep -q '^t$'; do
+                    sleep 2
+                  done
+                fi
+              elif [ "${SETUP_RUN_MIGRATIONS}" = "true" ]; then
+                echo "Waiting for bootstrap job to create application databases..."
+                until PGPASSWORD="${DB_PASSWORD_ADMIN}" psql -h "${DB_HOST_ADMIN}" -p "${DB_PORT_ADMIN}" -U "${DB_USER_ADMIN}" -d postgres -Atqc "SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname='${DB_NAME_SERVER}');" 2>/dev/null | grep -q '^t$'; do
+                  sleep 2
+                done
+              fi
+          env:
+            - name: SETUP_RUN_MIGRATIONS
+              value: {{ ternary "true" "false" .Values.setup.runMigrations | quote }}
+            - name: SETUP_RUN_SEEDS
+              value: {{ ternary "true" "false" .Values.setup.runSeeds | quote }}
+            - name: DB_NAME_SERVER
+              value: "server"
+            - name: APPLIANCE_BOOTSTRAP_ENABLED
+              value: {{ ternary "true" "false" .Values.setup.applianceBootstrap.enabled | quote }}
+            - name: DB_USER_ADMIN
+              value: "postgres"
+            {{- if .Values.db.enabled }}
+            - name: DB_HOST_ADMIN
+              value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+            - name: DB_PORT_ADMIN
+              value: "5432"
+            - name: DB_PASSWORD_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_PASSWORD_SUPERUSER
+            {{- else }}
+            - name: DB_HOST_ADMIN
+              value: "{{ .Values.config.db.adminHost | default .Values.config.db.host }}"
+            - name: DB_PORT_ADMIN
+              value: "{{ .Values.config.db.adminPort | default .Values.config.db.port }}"
+            - name: DB_PASSWORD_ADMIN
+              {{- if and .Values.config.db.server_password_admin_secret.name .Values.config.db.server_password_admin_secret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_admin_secret.name | quote }}
+                  key: {{ .Values.config.db.server_password_admin_secret.key | quote }}
+              {{- else }}
+              value: {{ .Values.config.db.server_admin_password | quote }}
+              {{- end }}
+            {{- end }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -144,6 +223,13 @@ spec:
           {{- end }}
           {{- end }}
 
+          # ----------- AI Document Assist ----------------
+          - name: AI_DOCUMENT_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: AI_DOCUMENT_API_KEY
+
           # ----------- TEMPORAL ----------------
           - name: TEMPORAL_ADDRESS
             value: "{{ .Values.temporal.address }}"
@@ -184,7 +270,7 @@ spec:
           {{- end }}
 
           # ----------- HOCUSPOCUS ----------------
-          {{- if or .Values.hocuspocus.enabled (not (include "sebastian.hostedEnvEnabled" .)) }}
+          {{- if .Values.hocuspocus.enabled }}
           - name: REQUIRE_HOCUSPOCUS
             value: "true"
           - name: HOCUSPOCUS_HOST
@@ -200,11 +286,11 @@ spec:
           - name: DB_TYPE
             value: "postgres"
           - name: DB_HOST
-            value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+            value: "{{ include "sebastian.runtimeDbHost" . }}"
           - name: DB_USER_SERVER
             value: "app_user"
           - name: DB_PORT
-            value: "5432"
+            value: "{{ include "sebastian.runtimeDbPort" . }}"
           - name: DB_NAME_SERVER
             value: "server"
           - name: DB_USER_ADMIN
@@ -351,8 +437,10 @@ spec:
             value: "{{ .Values.logging.external.token }}"
 
           # ----------- HOCUSPOCUS ----------------
+          {{- if .Values.hocuspocus.enabled }}
           - name: HOCUSPOCUS_URL
             value: "ws://hocuspocus.{{ include "sebastian.namespace" . }}.svc.cluster.local:{{ .Values.hocuspocus.service.port }}"
+          {{- end }}
 
           # ----------- EMAIL ----------------
           - name: EMAIL_ENABLE
@@ -428,15 +516,16 @@ spec:
             value: "{{ .Values.token.expire }}"
 
           # ----------- AUTH ----------------
-          # NEXTAUTH_URL is configured via .env file to allow dynamic updates during port forwarding
+          {{- $rawAppUrl := .Values.appUrl | default (include "sebastian.resolveHost" .) }}
+          {{- $publicAppUrl := hasPrefix "http" $rawAppUrl | ternary $rawAppUrl (printf "https://%s" $rawAppUrl) }}
           - name: NEXTAUTH_URL
-            value: "https://{{ .Values.host }}"
+            value: "{{ $publicAppUrl }}"
           # Public base URL for links in emails and client-side code
           - name: NEXT_PUBLIC_BASE_URL
-            value: "https://{{ .Values.host }}"
+            value: "{{ $publicAppUrl }}"
           # App URL for Stripe redirects (can differ from host for blue/green testing)
           - name: NEXT_PUBLIC_APP_URL
-            value: "https://{{ .Values.appUrl | default .Values.host }}"
+            value: "{{ $publicAppUrl }}"
           - name: NEXTAUTH_SECRET
             valueFrom:
               secretKeyRef:
@@ -449,6 +538,15 @@ spec:
                 key: IMAP_WEBHOOK_SECRET
           - name: NEXTAUTH_SESSION_EXPIRES
             value: "{{ .Values.auth.nextauth_session_expires }}"
+          - name: AUTH_TRUST_HOST
+            value: "true"
+          {{- if .Values.server.teamsIframeSessionCookie }}
+          # Relax session cookie SameSite so the Alga PSA tab can read the
+          # session from inside the Microsoft Teams iframe. Off by default;
+          # enable only on deployments that host the Teams personal tab.
+          - name: TEAMS_IFRAME_SESSION_COOKIE
+            value: "true"
+          {{- end }}
 
           # ----------- EXTENSIONS ----------------
           {{- with .Values.config.extensions.domainRoot }}

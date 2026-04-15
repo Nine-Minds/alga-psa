@@ -145,6 +145,13 @@ export const creditNoteCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.
   amount: z.string().min(1),
   currency: currencySchema,
   status: z.string().min(1),
+  sourceDocumentKind: z.enum(['prepayment_invoice', 'negative_invoice']).optional(),
+  sourceInvoiceId: invoiceIdSchema.optional(),
+  sourceInvoiceNumber: z.string().min(1).optional(),
+  sourceInvoiceStatus: z.string().min(1).optional(),
+  sourceInvoiceDateBasis: z.enum(['financial_document_date', 'canonical_recurring_service_period']).optional(),
+  sourceServicePeriodStart: z.string().datetime().nullable().optional(),
+  sourceServicePeriodEnd: z.string().datetime().nullable().optional(),
 }).describe('Payload for CREDIT_NOTE_CREATED');
 
 export type CreditNoteCreatedEventPayload = z.infer<typeof creditNoteCreatedEventPayloadSchema>;
@@ -156,6 +163,11 @@ export const creditNoteAppliedEventPayloadSchema = BaseDomainEventPayloadSchema.
   appliedAt: z.string().datetime().optional(),
   amountApplied: z.string().min(1),
   currency: currencySchema,
+  appliedInvoiceNumber: z.string().min(1).optional(),
+  appliedInvoiceStatus: z.string().min(1).optional(),
+  appliedInvoiceDateBasis: z.enum(['financial_document_date', 'canonical_recurring_service_period']).optional(),
+  appliedServicePeriodStart: z.string().datetime().nullable().optional(),
+  appliedServicePeriodEnd: z.string().datetime().nullable().optional(),
 }).describe('Payload for CREDIT_NOTE_APPLIED');
 
 export type CreditNoteAppliedEventPayload = z.infer<typeof creditNoteAppliedEventPayloadSchema>;

@@ -40,13 +40,19 @@ import {
   getServiceTypesForSelection,
   getTaxRates,
   previewBillingPeriodsForSchedule,
+  previewBillingHistoryBootstrap,
   setClientTemplate,
   updateClientBillingSchedule,
   updateClientBillingSettings,
   updateClientTaxExemptStatus,
   updateClientTaxSettings,
   type BillingCycleAnchorSettingsInput,
+  type BillingCyclePeriodPreview,
+  type BillingCyclePeriodPreviewResult,
+  type ClientBillingCycleAnchorConfig,
+  type ClientCadenceScheduleContext,
   type BillingCycleCreationResult,
+  type BillingHistoryBootstrapPreview,
   type ClientBillingSettings,
   type ServiceListOptions,
   type PaginatedServicesResponse,
@@ -140,13 +146,9 @@ export const getClientBillingCycleAnchorAsync = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<{
-  billingCycle: BillingCycleType;
-  anchor: {
-    dayOfMonth: number | null;
-    monthOfYear: number | null;
-    dayOfWeek: number | null;
-    referenceDate: ISO8601String | null;
-  };
+  billingCycle: ClientBillingCycleAnchorConfig['billingCycle'];
+  anchor: ClientBillingCycleAnchorConfig['anchor'];
+  cadenceContext: ClientCadenceScheduleContext;
 }> => {
   const { knex } = await createTenantKnex();
 
@@ -160,8 +162,27 @@ export const previewBillingPeriodsForScheduleAsync = withAuthCheck(async (
   billingCycle: BillingCycleType,
   anchor: BillingCycleAnchorSettingsInput,
   options: { count?: number; referenceDate?: ISO8601String } = {}
-): Promise<Array<{ periodStartDate: ISO8601String; periodEndDate: ISO8601String }>> => {
+): Promise<{
+  cadenceContext: BillingCyclePeriodPreviewResult['cadenceContext'];
+  periods: BillingCyclePeriodPreview[];
+}> => {
   return previewBillingPeriodsForSchedule(billingCycle, anchor, options);
+});
+
+export const previewBillingHistoryBootstrapAsync = withAuth(async (
+  _user,
+  { tenant },
+  input: {
+    clientId: string;
+    billingCycle: BillingCycleType;
+    anchor: BillingCycleAnchorSettingsInput;
+    billingHistoryStartDate: ISO8601String;
+  },
+): Promise<BillingHistoryBootstrapPreview> => {
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return previewBillingHistoryBootstrap(trx, tenant, input);
+  });
 });
 
 export const addTaxRateAsync = withAuth(async (
@@ -333,7 +354,7 @@ export const getServiceTypesForSelectionAsync = withAuth(async (
   _user,
   { tenant }
 ): Promise<
-  Array<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }>
+  Array<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }>
 > => {
   const { knex } = await createTenantKnex();
 

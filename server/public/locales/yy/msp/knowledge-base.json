@@ -1,0 +1,292 @@
+{
+  "page": {
+    "title": "55555",
+    "subtitle": "55555",
+    "actions": {
+      "import": "55555",
+      "newArticle": "55555"
+    },
+    "tabs": {
+      "articles": "55555",
+      "reviewDashboard": "55555"
+    },
+    "feedback": {
+      "loadError": "55555",
+      "createError": "55555",
+      "userLoadError": "55555"
+    },
+    "newArticleTitle": "55555"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "55555",
+      "review": "55555",
+      "published": "55555",
+      "archived": "55555"
+    },
+    "audienceLabels": {
+      "internal": "55555",
+      "client": "55555",
+      "public": "55555"
+    },
+    "typeLabels": {
+      "how_to": "55555",
+      "faq": "55555",
+      "troubleshooting": "55555",
+      "reference": "55555"
+    },
+    "reviewCycleOptions": {
+      "30": "55555",
+      "60": "55555",
+      "90": "55555",
+      "180": "55555",
+      "365": "55555",
+      "none": "55555"
+    },
+    "fallbacks": {
+      "emptyDate": "55555"
+    }
+  },
+  "list": {
+    "title": "55555",
+    "countSummary": "55555 {{count}} 55555",
+    "itemLabel": "55555",
+    "empty": "55555",
+    "createFirst": "55555",
+    "table": {
+      "title": "55555",
+      "type": "55555",
+      "audience": "55555",
+      "status": "55555",
+      "tags": "55555",
+      "stats": "55555",
+      "updated": "55555",
+      "actions": "55555"
+    },
+    "stats": {
+      "views": "55555",
+      "helpful": "55555",
+      "notHelpful": "55555"
+    },
+    "actions": {
+      "edit": "55555",
+      "submitForReview": "55555",
+      "publish": "55555",
+      "archive": "55555"
+    },
+    "pagination": {
+      "itemsPerPage": {
+        "10": "55555",
+        "20": "55555",
+        "50": "55555"
+      }
+    },
+    "stale": {
+      "reviewOverdue": "55555"
+    },
+    "dialogs": {
+      "archive": {
+        "title": "55555",
+        "message": "55555 {{title}} 55555"
+      }
+    },
+    "feedback": {
+      "archiveError": "55555",
+      "archiveSuccess": "55555"
+    }
+  },
+  "editor": {
+    "header": {
+      "untitled": "55555",
+      "back": "55555"
+    },
+    "actions": {
+      "submitForReview": "55555",
+      "publish": "55555",
+      "archive": "55555",
+      "saveMetadata": "55555",
+      "saving": "55555"
+    },
+    "feedback": {
+      "permissionDenied": "55555",
+      "notFound": "55555",
+      "loadError": "55555",
+      "noChanges": "55555",
+      "saveError": "55555",
+      "saveSuccess": "55555",
+      "publishError": "55555",
+      "publishSuccess": "55555",
+      "statusChangeError": "55555",
+      "submitForReviewSuccess": "55555",
+      "archiveSuccess": "55555"
+    },
+    "badges": {
+      "reviewOverdue": "55555"
+    },
+    "stats": {
+      "title": "55555",
+      "views": "55555",
+      "helpful": "55555",
+      "notHelpful": "55555",
+      "published": "55555"
+    },
+    "metadata": {
+      "title": "55555",
+      "fields": {
+        "title": "55555",
+        "slug": "55555",
+        "articleType": "55555",
+        "audience": "55555",
+        "category": "55555",
+        "reviewCycle": "55555",
+        "nextReview": "55555",
+        "noCategory": "55555"
+      }
+    },
+    "tags": {
+      "title": "55555"
+    }
+  },
+  "filters": {
+    "title": "55555",
+    "actions": {
+      "clear": "55555"
+    },
+    "labels": {
+      "search": "55555",
+      "status": "55555",
+      "audience": "55555",
+      "articleType": "55555",
+      "category": "55555",
+      "tags": "55555"
+    },
+    "placeholders": {
+      "search": "55555",
+      "status": "55555",
+      "audience": "55555",
+      "articleType": "55555",
+      "category": "55555",
+      "tags": "55555"
+    },
+    "options": {
+      "status": {
+        "all": "55555"
+      },
+      "audience": {
+        "all": "55555"
+      },
+      "articleType": {
+        "all": "55555"
+      },
+      "category": {
+        "all": "55555"
+      }
+    }
+  },
+  "categoryTree": {
+    "allCategories": "55555",
+    "empty": "55555"
+  },
+  "publishing": {
+    "title": "55555",
+    "currentStatus": "55555",
+    "actions": {
+      "submitForReview": "55555",
+      "publish": "55555",
+      "approveAndPublish": "55555",
+      "archive": "55555",
+      "republish": "55555"
+    },
+    "flow": {
+      "draft": "55555",
+      "review": "55555",
+      "published": "55555"
+    },
+    "warnings": {
+      "audience": "55555 {{audience}} 55555"
+    },
+    "dialogs": {
+      "publish": {
+        "title": "55555",
+        "message": "55555",
+        "messageWithAudience": "55555 {{audience}} 55555"
+      },
+      "archive": {
+        "title": "55555",
+        "message": "55555"
+      }
+    },
+    "feedback": {
+      "publishError": "55555",
+      "publishSuccess": "55555",
+      "archiveError": "55555",
+      "archiveSuccess": "55555"
+    }
+  },
+  "reviewDashboard": {
+    "summary": {
+      "awaitingReview": "55555",
+      "overdueReviews": "55555"
+    },
+    "empty": "55555",
+    "sections": {
+      "awaitingReview": "55555",
+      "overdue": "55555"
+    },
+    "labels": {
+      "submitted": "55555",
+      "due": "55555",
+      "lastReviewed": "55555",
+      "never": "55555"
+    },
+    "actions": {
+      "view": "55555",
+      "review": "55555",
+      "reviewNow": "55555"
+    },
+    "feedback": {
+      "loadError": "55555"
+    }
+  },
+  "importDialog": {
+    "title": "55555",
+    "dropzone": {
+      "title": "55555",
+      "formats": "55555"
+    },
+    "fields": {
+      "audience": "55555",
+      "articleType": "55555"
+    },
+    "actions": {
+      "import": "55555 {{count}} 55555",
+      "importing": "55555"
+    },
+    "feedback": {
+      "unsupportedFileType": "55555 {{fileName}} 55555",
+      "permissionDenied": "55555",
+      "importSuccess": "55555 {{imported}} 55555 {{total}} 55555",
+      "allFailed": "55555",
+      "importError": "55555"
+    },
+    "results": {
+      "summary": "55555 {{imported}} 55555 {{total}} 55555",
+      "failedCount": "55555 {{count}} 55555"
+    }
+  },
+  "staleness": {
+    "badges": {
+      "reviewOverdue": "55555",
+      "reviewDueSoon": "55555",
+      "overdueBy": "55555 {{count}} 55555",
+      "dueIn": "55555 {{count}} 55555"
+    },
+    "tooltips": {
+      "reviewOverdue": "55555 {{date}} 55555",
+      "reviewDue": "55555 {{date}} 55555"
+    }
+  },
+  "common": {
+    "done": "55555"
+  }
+}

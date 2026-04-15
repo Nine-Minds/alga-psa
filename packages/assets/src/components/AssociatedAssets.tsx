@@ -19,6 +19,7 @@ import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Monitor, Server, Smartphone, Printer, Network, Boxes } from 'lucide-react';
 import { ContentCard } from '@alga-psa/ui/components';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
     ASSET_DRAWER_TABS,
     type AssetDrawerTab,
@@ -40,6 +41,7 @@ interface SelectedAsset {
 }
 
 export default function AssociatedAssets({ id, entityId, entityType, clientId, defaultBoardId }: AssociatedAssetsProps) {
+    const { t } = useTranslation('msp/assets');
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [associatedAssets, setAssociatedAssets] = useState<AssetAssociation[]>([]);
@@ -68,16 +70,59 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     const [drawerLoading, setDrawerLoading] = useState(false);
     const lastRequestIdRef = useRef<number>(0);
 
-    useEffect(() => {
-        loadAssociatedAssets();
-    }, [entityId, clientId]);
+    const getAssetStatusLabel = (status: string) =>
+        t(`associatedAssets.assetStatuses.${status}`, {
+            defaultValue: status.charAt(0).toUpperCase() + status.slice(1)
+        });
 
-    // Load available assets when dialog opens or search/pagination changes
-    useEffect(() => {
-        if (isAddDialogOpen) {
-            loadAvailableAssets();
+    const getAssetTypeLabel = (type: string) =>
+        t(`associatedAssets.assetTypes.${type}`, {
+            defaultValue: type
+                .split('_')
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ')
+        });
+
+    const getRelationshipTypeLabel = (type: string) =>
+        t(`associatedAssets.relationshipTypes.${type}`, {
+            defaultValue: type.charAt(0).toUpperCase() + type.slice(1)
+        });
+
+    const loadAssociatedAssets = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const assets = await listEntityAssets(entityId, entityType);
+
+            // Track associated asset IDs to filter them from available list
+            setAssociatedAssetIds(new Set(assets.map(a => a.asset_id)));
+
+            // Create associations with assets
+            const associations: AssetAssociation[] = await Promise.all(
+                assets.map(async (asset): Promise<AssetAssociation> => ({
+                    tenant: asset.tenant,
+                    asset_id: asset.asset_id,
+                    entity_id: entityId,
+                    entity_type: entityType,
+                    relationship_type: 'affected',
+                    created_by: 'system',
+                    created_at: new Date().toISOString(),
+                    asset: asset
+                }))
+            );
+
+            setAssociatedAssets(associations);
+        } catch (error) {
+            handleError(error, t('associatedAssets.errors.loadAssociatedAssets', {
+                defaultValue: 'Failed to load associated assets'
+            }));
+        } finally {
+            setIsLoading(false);
         }
-    }, [isAddDialogOpen, currentPage, searchTerm, clientId, associatedAssetIds]);
+    }, [entityId, entityType, t]);
+
+    useEffect(() => {
+        void loadAssociatedAssets();
+    }, [loadAssociatedAssets]);
 
     const loadAvailableAssets = useCallback(async () => {
         try {
@@ -94,14 +139,22 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
             );
             setAvailableAssets(filteredAssets);
             // Adjust total count (approximate - server-side filtering would be more accurate)
-            const alreadyAssociatedOnPage = response.assets.length - filteredAssets.length;
             setTotalAssets(Math.max(0, response.total - associatedAssetIds.size));
         } catch (error) {
-            handleError(error, 'Failed to load available assets');
+            handleError(error, t('associatedAssets.errors.loadAvailableAssets', {
+                defaultValue: 'Failed to load available assets'
+            }));
         } finally {
             setIsLoadingAssets(false);
         }
-    }, [clientId, currentPage, pageSize, searchTerm, associatedAssetIds]);
+    }, [clientId, currentPage, pageSize, searchTerm, associatedAssetIds, t]);
+
+    // Load available assets when dialog opens or search/pagination changes
+    useEffect(() => {
+        if (isAddDialogOpen) {
+            void loadAvailableAssets();
+        }
+    }, [isAddDialogOpen, loadAvailableAssets]);
 
     // Drawer data loading
     const loadDrawerData = useCallback(async (assetId: string, tab: AssetDrawerTab) => {
@@ -126,13 +179,15 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
             }
             console.error('Failed to load asset drawer data', error);
             setDrawerData({ asset: null });
-            setDrawerError('Unable to load asset details right now. Please try again.');
+            setDrawerError(t('associatedAssets.errors.loadDrawerFailed', {
+                defaultValue: 'Unable to load asset details right now. Please try again.'
+            }));
         } finally {
             if (lastRequestIdRef.current === requestId) {
                 setDrawerLoading(false);
             }
         }
-    }, []);
+    }, [t]);
 
     // Cleanup drawer fetch on unmount
     useEffect(() => {
@@ -172,39 +227,11 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
         }
     }, [activeDrawerTab, drawerAssetId, loadDrawerData]);
 
-    const loadAssociatedAssets = async () => {
-        try {
-            setIsLoading(true);
-            const assets = await listEntityAssets(entityId, entityType);
-
-            // Track associated asset IDs to filter them from available list
-            setAssociatedAssetIds(new Set(assets.map(a => a.asset_id)));
-
-            // Create associations with assets
-            const associations: AssetAssociation[] = await Promise.all(
-                assets.map(async (asset): Promise<AssetAssociation> => ({
-                    tenant: asset.tenant,
-                    asset_id: asset.asset_id,
-                    entity_id: entityId,
-                    entity_type: entityType,
-                    relationship_type: 'affected',
-                    created_by: 'system',
-                    created_at: new Date().toISOString(),
-                    asset: asset
-                }))
-            );
-
-            setAssociatedAssets(associations);
-        } catch (error) {
-            handleError(error, 'Failed to load associated assets');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     const handleAddAssets = async () => {
         if (selectedAssets.size === 0) {
-            toast.error('Please select at least one asset');
+            toast.error(t('associatedAssets.errors.selectAtLeastOneAsset', {
+                defaultValue: 'Please select at least one asset'
+            }));
             return;
         }
 
@@ -225,27 +252,44 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
             const failed = results.filter(r => r.status === 'rejected').length;
 
             if (succeeded > 0 && failed === 0) {
-                toast.success(`${succeeded} asset(s) associated successfully`);
+                toast.success(t('associatedAssets.success.associated', {
+                    defaultValue: '{{count}} asset{{suffix}} associated successfully',
+                    count: succeeded,
+                    suffix: succeeded === 1 ? '' : 's'
+                }));
             } else if (succeeded > 0 && failed > 0) {
-                toast.success(`${succeeded} asset(s) associated successfully, ${failed} failed (may already be associated)`);
+                toast.success(t('associatedAssets.success.associatedPartial', {
+                    defaultValue: '{{count}} asset{{suffix}} associated successfully, {{failed}} failed (may already be associated)',
+                    count: succeeded,
+                    suffix: succeeded === 1 ? '' : 's',
+                    failed
+                }));
             } else {
-                toast.error('Failed to associate assets - they may already be associated');
+                toast.error(t('associatedAssets.errors.associateFailed', {
+                    defaultValue: 'Failed to associate assets - they may already be associated'
+                }));
             }
 
             handleCloseDialog();
             loadAssociatedAssets();
         } catch (error) {
-            handleError(error, 'Failed to associate assets');
+            handleError(error, t('associatedAssets.errors.associationFailed', {
+                defaultValue: 'Failed to associate assets'
+            }));
         }
     };
 
     const handleRemoveAsset = async (assetId: string) => {
         try {
             await removeAssetAssociation(assetId, entityId, entityType);
-            toast.success('Asset association removed');
+            toast.success(t('associatedAssets.success.removed', {
+                defaultValue: 'Asset association removed'
+            }));
             loadAssociatedAssets();
         } catch (error) {
-            handleError(error, 'Failed to remove asset association');
+            handleError(error, t('associatedAssets.errors.removeFailed', {
+                defaultValue: 'Failed to remove asset association'
+            }));
         }
     };
 
@@ -327,8 +371,8 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     };
 
     const relationshipOptions: SelectOption[] = [
-        { label: 'Affected', value: 'affected' },
-        { label: 'Related', value: 'related' }
+        { label: getRelationshipTypeLabel('affected'), value: 'affected' },
+        { label: getRelationshipTypeLabel('related'), value: 'related' }
     ];
 
     const getSelectedAssetNames = () => {
@@ -362,20 +406,30 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     };
 
     return (
-        <ReflectionContainer id={id} label="Associated Assets">
+        <ReflectionContainer id={id} label={t('associatedAssets.title', { defaultValue: 'Associated Assets' })}>
             <ContentCard
                 id={id}
                 collapsible
                 defaultExpanded={false}
-                title="Associated Assets"
+                title={t('associatedAssets.title', { defaultValue: 'Associated Assets' })}
                 headerIcon={<Boxes className="w-5 h-5" />}
                 count={associatedAssets.length}
-                addButton={{ id: 'add-asset-button', onClick: handleOpenDialog }}
+                addButton={{
+                    id: 'add-asset-button',
+                    label: t('associatedAssets.actions.addAsset', { defaultValue: 'Add Asset' }),
+                    onClick: handleOpenDialog
+                }}
             >
                 {isLoading ? (
-                    <div className="text-gray-500 text-center py-8">Loading assets...</div>
+                    <div className="text-gray-500 text-center py-8">
+                        {t('associatedAssets.loading.assets', { defaultValue: 'Loading assets...' })}
+                    </div>
                 ) : associatedAssets.length === 0 ? (
-                    <div className="text-gray-500 text-center py-8">No assets associated with this ticket.</div>
+                    <div className="text-gray-500 text-center py-8">
+                        {t('associatedAssets.empty.noneAssociated', {
+                            defaultValue: 'No assets associated with this ticket.'
+                        })}
+                    </div>
                 ) : (
                     <div className="space-y-2">
                         {visibleAssets.map((association): React.JSX.Element => (
@@ -386,19 +440,26 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                 {/* Row 1: Name + Status + Remove */}
                                 <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2 min-w-0">
-                                        {association.asset ? (
-                                            <Button
-                                                id={`asset-name-${association.asset_id}`}
-                                                variant="link"
-                                                size="sm"
-                                                onClick={() => openDrawerForAsset(association.asset!)}
-                                                className="h-auto p-0 text-sm font-medium truncate text-left justify-start"
-                                            >
-                                                {association.asset.name}
-                                            </Button>
-                                        ) : (
-                                            <span className="text-sm font-medium text-gray-900 truncate">
-                                                Unknown Asset
+                                {association.asset ? (
+                                    (() => {
+                                        const asset = association.asset;
+                                        return (
+                                        <Button
+                                            id={`asset-name-${association.asset_id}`}
+                                            variant="link"
+                                            size="sm"
+                                            onClick={() => openDrawerForAsset(asset)}
+                                            className="h-auto p-0 text-sm font-medium truncate text-left justify-start"
+                                        >
+                                            {asset.name}
+                                        </Button>
+                                        );
+                                    })()
+                                ) : (
+                                    <span className="text-sm font-medium text-gray-900 truncate">
+                                        {t('associatedAssets.empty.unknownAsset', {
+                                            defaultValue: 'Unknown Asset'
+                                                })}
                                             </span>
                                         )}
                                         {association.asset && (
@@ -412,7 +473,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                 association.asset.status === 'maintenance' ? 'warning' :
                                                 'default-muted'
                                             }>
-                                                {association.asset.status}
+                                                {getAssetStatusLabel(association.asset.status)}
                                             </Badge>
                                         )}
                                         {association.asset && association.asset.rmm_provider && association.asset.rmm_device_id && (
@@ -429,7 +490,8 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             onClick={() => handleRemoveAsset(association.asset_id)}
                                             className="text-gray-600 hover:text-gray-900"
                                         >
-                                            <span className="mr-1">×</span> Remove
+                                            <span className="mr-1">×</span>
+                                            {t('common.actions.remove', { defaultValue: 'Remove' })}
                                         </Button>
                                     </div>
                                 </div>
@@ -438,11 +500,15 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                     {association.asset && (
                                         <span className="flex-shrink-0">{getAssetTypeIcon(association.asset.asset_type)}</span>
                                     )}
-                                    <span className="font-mono">{association.asset?.asset_tag || 'N/A'}</span>
+                                    <span className="font-mono">
+                                        {association.asset?.asset_tag || t('common.states.na', { defaultValue: 'N/A' })}
+                                    </span>
                                     <span>•</span>
-                                    <span>{association.asset?.asset_type.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
+                                    <span>{association.asset ? getAssetTypeLabel(association.asset.asset_type) : ''}</span>
                                     <span>•</span>
-                                    <span className="capitalize">{association.relationship_type}</span>
+                                    <span className="capitalize">
+                                        {getRelationshipTypeLabel(association.relationship_type)}
+                                    </span>
                                 </div>
                             </div>
                         ))}
@@ -457,7 +523,13 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                             >
                                 <span className="text-lg">+</span>
                                 <span className="underline">
-                                    {isExpanded ? 'Show less' : `${hiddenCount} more asset${hiddenCount !== 1 ? 's' : ''}`}
+                                    {isExpanded
+                                        ? t('associatedAssets.actions.showLess', { defaultValue: 'Show less' })
+                                        : t('associatedAssets.actions.moreAssets', {
+                                            defaultValue: '{{count}} more asset{{suffix}}',
+                                            count: hiddenCount,
+                                            suffix: hiddenCount !== 1 ? 's' : ''
+                                        })}
                                 </span>
                                 <svg
                                     className={`w-4 h-4 ml-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
@@ -476,19 +548,42 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                     id={`${id}-dialog`}
                     isOpen={isAddDialogOpen}
                     onClose={handleCloseDialog}
-                    title="Add Asset"
+                    title={t('associatedAssets.dialog.title', { defaultValue: 'Add Asset' })}
+                    footer={(
+                        <div className="flex justify-end space-x-3">
+                            <Button
+                                id='cancel-button'
+                                variant="outline"
+                                onClick={handleCloseDialog}
+                            >
+                                {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+                            </Button>
+                            <Button
+                                id='confirm-add-asset-button'
+                                onClick={handleAddAssets}
+                                disabled={selectedAssets.size === 0}
+                            >
+                                {t('associatedAssets.dialog.actions.addAssets', {
+                                    defaultValue: 'Add Asset{{suffix}}',
+                                    suffix: selectedAssets.size > 1 ? 's' : ''
+                                })}
+                            </Button>
+                        </div>
+                    )}
                 >
                     <div className="space-y-4" style={{ minWidth: '700px' }}>
                         {/* Search input */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Search Assets
+                                {t('associatedAssets.dialog.search.label', { defaultValue: 'Search Assets' })}
                             </label>
                             <SearchInput
                                 id={`${id}-search`}
                                 value={searchTerm}
                                 onChange={handleSearchChange}
-                                placeholder="Search by name, tag, or serial..."
+                                placeholder={t('associatedAssets.dialog.search.placeholder', {
+                                    defaultValue: 'Search by name, tag, or serial...'
+                                })}
                                 className="w-full"
                             />
                         </div>
@@ -497,11 +592,17 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                         <div className="border rounded-lg overflow-hidden">
                             {isLoadingAssets ? (
                                 <div className="p-8 text-center text-gray-500">
-                                    Loading assets...
+                                    {t('associatedAssets.dialog.loadingAssets', { defaultValue: 'Loading assets...' })}
                                 </div>
                             ) : availableAssets.length === 0 ? (
                                 <div className="p-8 text-center text-gray-500">
-                                    {searchTerm ? 'No assets found matching your search' : 'No assets available for this client'}
+                                    {searchTerm
+                                        ? t('associatedAssets.dialog.empty.search', {
+                                            defaultValue: 'No assets found matching your search'
+                                        })
+                                        : t('associatedAssets.dialog.empty.available', {
+                                            defaultValue: 'No assets available for this client'
+                                        })}
                                 </div>
                             ) : (
                                 <table className="min-w-full divide-y divide-gray-200">
@@ -517,16 +618,16 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                 />
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Name
+                                                {t('associatedAssets.table.name', { defaultValue: 'Name' })}
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Asset Tag
+                                                {t('associatedAssets.table.assetTag', { defaultValue: 'Asset Tag' })}
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Type
+                                                {t('associatedAssets.table.type', { defaultValue: 'Type' })}
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Status
+                                                {t('associatedAssets.table.status', { defaultValue: 'Status' })}
                                             </th>
                                         </tr>
                                     </thead>
@@ -558,7 +659,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                         {asset.asset_tag}
                                                     </td>
                                                     <td className="px-4 py-3 text-gray-600 capitalize">
-                                                        {asset.asset_type.replace('_', ' ')}
+                                                        {getAssetTypeLabel(asset.asset_type)}
                                                     </td>
                                                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                         {isSelected ? (
@@ -566,7 +667,9 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                                 options={relationshipOptions}
                                                                 value={selectedData?.relationshipType || 'affected'}
                                                                 onValueChange={(value) => handleRelationshipTypeChange(asset.asset_id, value as 'affected' | 'related')}
-                                                                placeholder="Type..."
+                                                                placeholder={t('associatedAssets.dialog.relationship.placeholder', {
+                                                                    defaultValue: 'Type...'
+                                                                })}
                                                             />
                                                         ) : (
                                                             <Badge variant={
@@ -574,7 +677,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                                 asset.status === 'maintenance' ? 'warning' :
                                                                 'default-muted'
                                                             }>
-                                                                {asset.status}
+                                                                {getAssetStatusLabel(asset.status)}
                                                             </Badge>
                                                         )}
                                                     </td>
@@ -601,27 +704,13 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                         {/* Selected assets indicator */}
                         {selectedAssets.size > 0 && (
                             <div className="p-3 bg-primary-50 rounded-lg text-sm text-primary-700">
-                                <span className="font-medium">Selected:</span> {getSelectedAssetNames()}
+                                <span className="font-medium">
+                                    {t('associatedAssets.dialog.selectedAssetsLabel', { defaultValue: 'Selected:' })}
+                                </span>{' '}
+                                {getSelectedAssetNames()}
                             </div>
                         )}
 
-                        {/* Action buttons */}
-                        <div className="flex justify-end space-x-3 pt-2">
-                            <Button
-                                id='cancel-button'
-                                variant="outline"
-                                onClick={handleCloseDialog}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                id='confirm-add-asset-button'
-                                onClick={handleAddAssets}
-                                disabled={selectedAssets.size === 0}
-                            >
-                                Add Asset{selectedAssets.size > 1 ? 's' : ''}
-                            </Button>
-                        </div>
                     </div>
                 </Dialog>
 

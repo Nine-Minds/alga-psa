@@ -176,6 +176,7 @@ export interface ValidationOptions {
   skipLocationValidation?: boolean;
   skipCategoryValidation?: boolean;
   skipSubcategoryValidation?: boolean;
+  skipStatusBoardValidation?: boolean;
   allowEmptyFields?: boolean;
 }
 
@@ -489,6 +490,41 @@ export class TicketModel {
   }
 
   /**
+   * Validates that a ticket status belongs to the selected board
+   */
+  static async validateStatusBelongsToBoard(
+    statusId: string,
+    boardId: string,
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<BusinessRuleResult> {
+    try {
+      const status = await trx('statuses')
+        .where({
+          status_id: statusId,
+          board_id: boardId,
+          tenant,
+          status_type: 'ticket'
+        })
+        .first();
+
+      if (!status) {
+        return {
+          valid: false,
+          error: 'Invalid status: selected status does not belong to the selected board'
+        };
+      }
+
+      return { valid: true };
+    } catch (error) {
+      return {
+        valid: false,
+        error: `Status validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
    * Performs comprehensive business rule validation for ticket creation
    */
   static async validateBusinessRules(
@@ -524,6 +560,20 @@ export class TicketModel {
         if (!categoryResult.valid && categoryResult.error) {
           errors.push(categoryResult.error);
         }
+      }
+
+      if (!options.skipStatusBoardValidation && input.status_id && input.board_id) {
+        const statusResult = await this.validateStatusBelongsToBoard(
+          input.status_id,
+          input.board_id,
+          tenant,
+          trx
+        );
+        if (!statusResult.valid && statusResult.error) {
+          errors.push(statusResult.error);
+        }
+      } else if (input.status_id && !input.board_id) {
+        errors.push('Invalid status: board_id is required when selecting a ticket status');
       }
 
       if (errors.length > 0) {
@@ -584,7 +634,21 @@ export class TicketModel {
       throw new Error(`Input validation failed: ${inputValidation.errors?.join('; ')}`);
     }
 
-    const cleanedInput = inputValidation.data || input;
+    const cleanedInput = {
+      ...(inputValidation.data || input)
+    };
+
+    if (!cleanedInput.status_id && cleanedInput.board_id) {
+      cleanedInput.status_id = await this.getDefaultStatusId(tenant, trx, cleanedInput.board_id);
+    }
+
+    if (!cleanedInput.status_id) {
+      throw new Error(
+        cleanedInput.board_id
+          ? 'No default ticket status configured for the selected board'
+          : 'Validation failed: status_id is required'
+      );
+    }
 
     // Perform business rule validation
     const businessRuleValidation = await this.validateBusinessRules(
@@ -825,6 +889,33 @@ export class TicketModel {
 
     // Clean up the data before update
     const updateData = cleanNullableFields({ ...validatedData });
+    const effectiveBoardId = updateData.board_id || currentTicket.board_id;
+    const isBoardChange =
+      'board_id' in updateData &&
+      !!updateData.board_id &&
+      updateData.board_id !== currentTicket.board_id;
+
+    if (isBoardChange && !updateData.status_id) {
+      throw new Error('Changing the board requires selecting a status for the destination board');
+    }
+
+    if (updateData.status_id) {
+      const statusResult = effectiveBoardId
+        ? await this.validateStatusBelongsToBoard(
+          updateData.status_id,
+          effectiveBoardId,
+          tenant,
+          trx
+        )
+        : {
+          valid: false,
+          error: 'Invalid status: board_id is required when selecting a ticket status'
+        };
+
+      if (!statusResult.valid && statusResult.error) {
+        throw new Error(statusResult.error);
+      }
+    }
 
     // Validate location belongs to the client if provided
     if (!validationOptions.skipLocationValidation && 'location_id' in updateData && updateData.location_id) {
@@ -1165,13 +1256,22 @@ export class TicketModel {
    * Get default status ID for tickets
    * Falls back to the first available ticket status if no default is explicitly set
    */
-  static async getDefaultStatusId(tenant: string, trx: Knex.Transaction): Promise<string | null> {
+  static async getDefaultStatusId(
+    tenant: string,
+    trx: Knex.Transaction,
+    boardId?: string | null
+  ): Promise<string | null> {
+    if (!boardId) {
+      return null;
+    }
+
     // First try to find an explicitly marked default status
     const defaultStatus = await trx('statuses')
       .where({
         tenant,
         is_default: true,
-        item_type: 'ticket'
+        status_type: 'ticket',
+        board_id: boardId
       })
       .first();
 
@@ -1183,7 +1283,8 @@ export class TicketModel {
     const firstStatus = await trx('statuses')
       .where({
         tenant,
-        item_type: 'ticket'
+        status_type: 'ticket',
+        board_id: boardId
       })
       .orderBy('order_number', 'asc')
       .first();

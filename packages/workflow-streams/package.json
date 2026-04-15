@@ -1,0 +1,40 @@
+{
+  "name": "@alga-psa/workflow-streams",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/streams/index.ts",
+  "types": "./src/streams/index.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "types": "./src/streams/index.ts"
+    },
+    "./eventBusSchema": {
+      "import": "./src/streams/eventBusSchema.ts",
+      "types": "./src/streams/eventBusSchema.ts"
+    },
+    "./workflowEventSchema": {
+      "import": "./src/streams/workflowEventSchema.ts",
+      "types": "./src/streams/workflowEventSchema.ts"
+    },
+    "./workflowEventPublishHelpers": {
+      "import": "./src/streams/workflowEventPublishHelpers.ts",
+      "types": "./src/streams/workflowEventPublishHelpers.ts"
+    },
+    "./domainEventBuilders/*": {
+      "import": "./src/streams/domainEventBuilders/*.ts",
+      "types": "./src/streams/domainEventBuilders/*.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@alga-psa/core": "*",
+    "@alga-psa/event-schemas": "*",
+    "@alga-psa/shared": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  }
+}

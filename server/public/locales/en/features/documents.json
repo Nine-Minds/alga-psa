@@ -211,5 +211,15 @@
     "feedbackThanks": "Thank you for your feedback!",
     "feedbackError": "Failed to submit feedback",
     "filterByTags": "Filter by tags..."
+  },
+  "visibility": {
+    "cascadeTitle": "Update document visibility",
+    "cascadeMakeVisible": "Would you also like to make all {{count}} document(s) in \"{{name}}\" visible to the client portal?",
+    "cascadeMakeHidden": "Would you also like to hide all {{count}} document(s) in \"{{name}}\" from the client portal?",
+    "cascadeYes": "Yes, update documents",
+    "cascadeNo": "No, folder only"
+  },
+  "empty": {
+    "default": "No documents found"
   }
 }

@@ -1,13 +1,17 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Invoice designer palette uses shared expression-authoring utilities to enumerate available template fields */
 import React, { useMemo, useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import {
   buildInvoiceExpressionPathOptions,
   type SharedExpressionPathOption,
-} from '@shared/workflow/expression-authoring';
+} from '@alga-psa/workflows/expression-authoring';
 import { COMPONENT_CATALOG, ComponentDefinition } from '../constants/componentCatalog';
 import { LAYOUT_PRESETS } from '../constants/presets';
 import { OutlineView } from './OutlineView';
 import clsx from 'clsx';
+import { useInvoiceDesignerStore } from '../state/designerStore';
+import { resolveDesignerDocumentKind } from '../utils/documentKind';
+import { getTemplateFieldDefinition, type InvoiceFieldCategory } from '../fields/fieldCatalog';
 
 interface PaletteProps {
   onSearch?: (query: string) => void;
@@ -28,8 +32,6 @@ const groupByCategory = (components: ComponentDefinition[]) => {
 
 const paletteGroups = groupByCategory(COMPONENT_CATALOG);
 
-type InvoiceFieldCategory = 'Invoice' | 'Customer' | 'Tenant' | 'Line Item';
-
 type TemplateVariableOption = {
   path: string;
   label: string;
@@ -40,6 +42,10 @@ type TemplateVariableOption = {
 const categoryLabelByRoot: Record<string, InvoiceFieldCategory> = {
   invoice: 'Invoice',
   customer: 'Customer',
+  quote: 'Quote',
+  quoteTotals: 'Quote Totals',
+  client: 'Client',
+  contact: 'Contact',
   tenant: 'Tenant',
   item: 'Line Item',
 };
@@ -53,6 +59,15 @@ const toTitleCase = (value: string) =>
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
 const toTemplateVariableOption = (option: SharedExpressionPathOption): TemplateVariableOption | null => {
+  const knownField = getTemplateFieldDefinition(option.path);
+  if (knownField) {
+    return {
+      path: knownField.path,
+      label: knownField.label,
+      category: knownField.category,
+      description: knownField.description,
+    };
+  }
   const category = categoryLabelByRoot[option.root];
   if (!category) return null;
   const pathSegments = option.path.split('.');
@@ -195,6 +210,8 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
   onInsertPreset,
   onInsertTemplateVariable,
 }) => {
+  const nodes = useInvoiceDesignerStore((state) => state.nodes);
+  const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
   const [activeTab, setActiveTab] = useState<'blocks' | 'presets' | 'fields' | 'outline'>('blocks');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -229,6 +246,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
     const pathOptions = buildInvoiceExpressionPathOptions({
       mode: 'template',
       includeRootPaths: false,
+      documentKind,
     });
 
     const variables = pathOptions
@@ -236,7 +254,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
       .filter((option): option is TemplateVariableOption => option !== null);
 
     return groupTemplateVariablesByCategory(variables);
-  }, []);
+  }, [documentKind]);
 
   const filteredTemplateVariableGroups = useMemo<Record<string, TemplateVariableOption[]>>(() => {
     if (!normalizedQuery) {

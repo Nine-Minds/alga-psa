@@ -184,6 +184,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     onItemsPerPageChange,
     itemsPerPageOptions,
   } = props;
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 
   // Reference to the table container for measuring available width
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -322,11 +323,11 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       enabled: pagination,
       currentPage,
       pageSize,
-      totalItems: totalItems ?? data.length,
-      totalPages: Math.ceil((totalItems ?? data.length) / pageSize)
+      totalItems: totalItems ?? safeData.length,
+      totalPages: Math.ceil((totalItems ?? safeData.length) / pageSize)
     },
-    rowCount: data.length,
-    visibleRows: data.slice(0, pageSize).map((row): { id: string; values: Record<string, unknown> } => ({
+    rowCount: safeData.length,
+    visibleRows: safeData.slice(0, pageSize).map((row): { id: string; values: Record<string, unknown> } => ({
       id: ('id' in row) ? (row as { id: string }).id : '',
       values: row as Record<string, unknown>
     })),
@@ -367,7 +368,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   }, [currentPage, pageSize]);
 
   // Calculate total pages based on totalItems if provided, otherwise use data length
-  const total = totalItems ?? data.length;
+  const total = totalItems ?? safeData.length;
   const totalPages = Math.ceil(total / currentPageSize);
 
   // Manage sorting state - filter to only include columns that exist
@@ -421,7 +422,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   );
 
   const table = useReactTable({
-    data,
+    data: safeData,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -470,7 +471,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     table,
     pageIndex,
     currentPageSize,
-    data,
+    safeData,
     sorting,
     visibleColumnIds,
   ]);
@@ -528,10 +529,10 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           enabled: pagination,
           currentPage: pageIndex + 1,
           pageSize: currentPageSize,
-          totalItems: totalItems ?? data.length,
-          totalPages: Math.ceil((totalItems ?? data.length) / currentPageSize)
+          totalItems: totalItems ?? safeData.length,
+          totalPages: Math.ceil((totalItems ?? safeData.length) / currentPageSize)
         },
-        rowCount: data.length,
+        rowCount: safeData.length,
         visibleRows: paginationRowModel.rows.slice(0, 10).map((row): { id: string; values: Record<string, unknown> } => ({
           id: ('id' in row.original) ? (row.original as { id: string }).id : '',
           values: row.original as Record<string, unknown>
@@ -545,7 +546,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     }, 100); // Debounce updates by 100ms
 
     return () => clearTimeout(timeoutId);
-  }, [pageIndex, currentPageSize, data.length, totalItems, pagination, updateMetadata, columnConfig]);
+  }, [pageIndex, currentPageSize, safeData.length, totalItems, pagination, updateMetadata, columnConfig]);
 
   return (
     <div
@@ -658,7 +659,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             </tbody>
           </table>
         </div>
-        {pagination && data.length > 0 && (totalPages > 1 || onItemsPerPageChange) && (
+        {pagination && safeData.length > 0 && (totalPages > 1 || onItemsPerPageChange) && (
           <div className="border-t border-[rgb(var(--color-border-100))]">
             <Pagination
               id={id ? `${id}-pagination` : 'datatable-pagination'}

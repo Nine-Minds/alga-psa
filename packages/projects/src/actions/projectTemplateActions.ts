@@ -28,6 +28,7 @@ import {
   applyTemplateSchema
 } from '../schemas/projectTemplate.schemas';
 import { OrderingService } from '../lib/orderingUtils';
+import { getTemplateDefaultStatusMappings } from '../lib/templateStatusMappingUtils';
 import { generateKeyBetween } from 'fractional-indexing';
 
 async function checkPermission(
@@ -40,6 +41,25 @@ async function checkPermission(
   if (!hasPermissionResult) {
     throw new Error(`Permission denied: Cannot ${action} ${resource}`);
   }
+}
+
+async function getScopedTemplateStatusMappings(
+  trx: Knex.Transaction,
+  tenant: string,
+  templateId: string,
+  templatePhaseId?: string | null
+) {
+  const query = trx('project_template_status_mappings')
+    .where({ tenant, template_id: templateId })
+    .orderBy('display_order');
+
+  if (templatePhaseId) {
+    query.andWhere('template_phase_id', templatePhaseId);
+  } else {
+    query.whereNull('template_phase_id');
+  }
+
+  return query;
 }
 
 /**
@@ -152,11 +172,16 @@ export const createTemplateFromProject = withAuth(async (
       .where({ project_id: projectId, tenant });
 
     for (const mapping of statusMappings) {
+      const templatePhaseId = mapping.phase_id
+        ? phaseMap.get(mapping.phase_id) ?? null
+        : null;
+
       const [templateStatusMapping] = await trx('project_template_status_mappings')
         .insert({
           tenant,
           template_id: template.template_id,
-          status_id: mapping.status_id,
+          template_phase_id: templatePhaseId,
+          status_id: mapping.status_id || mapping.standard_status_id,
           custom_status_name: mapping.custom_name,
           display_order: mapping.display_order
         })
@@ -207,7 +232,9 @@ export const createTemplateFromProject = withAuth(async (
           tenant,
           template_phase_id: templatePhaseId,
           task_name: task.task_name,
-          description: task.description,
+          // Preserve both description formats verbatim.
+          description: task.description || null,
+          description_rich_text: task.description_rich_text || null,
           estimated_hours: task.estimated_hours,
           task_type_key: task.task_type_key,
           priority_id: task.priority_id,
@@ -307,6 +334,7 @@ export const applyTemplate = withAuth(async (
   projectData: {
     project_name: string;
     client_id: string;
+    status_id?: string;
     start_date?: string;
     assigned_to?: string;
     options?: {
@@ -366,7 +394,15 @@ export const applyTemplate = withAuth(async (
     if (projectStatuses.length === 0) {
       throw new Error('No project statuses found');
     }
-    const defaultProjectStatus = projectStatuses[0];
+
+    // Use provided status_id or fall back to first available
+    let defaultProjectStatus = projectStatuses[0];
+    if (validatedData.status_id) {
+      const selectedStatus = projectStatuses.find(s => s.status_id === validatedData.status_id);
+      if (selectedStatus) {
+        defaultProjectStatus = selectedStatus;
+      }
+    }
 
     // Generate project number and WBS code
     const projectNumber = await SharedNumberingService.getNextNumber(
@@ -460,6 +496,19 @@ export const applyTemplate = withAuth(async (
     // 5. Handle status mappings BEFORE creating tasks (only if copyStatuses is enabled)
     let firstStatusMappingId: string | undefined;
     const templateStatusToProjectStatusMap = new Map<string, string>(); // template_status_mapping_id → project_status_mapping_id
+    const firstStatusMappingIdsByScope = new Map<string, string>();
+
+    const getScopeKey = (templatePhaseId?: string | null) => templatePhaseId ?? '__template_defaults__';
+    const getFallbackStatusMappingIdForPhase = (templatePhaseId?: string | null) => {
+      if (templatePhaseId) {
+        const phaseScopedFallback = firstStatusMappingIdsByScope.get(getScopeKey(templatePhaseId));
+        if (phaseScopedFallback) {
+          return phaseScopedFallback;
+        }
+      }
+
+      return firstStatusMappingIdsByScope.get(getScopeKey()) || firstStatusMappingId;
+    };
 
     if (options.copyStatuses && templateStatuses.length > 0) {
       // No need to delete - we passed empty array to createProject so no status mappings were created
@@ -525,6 +574,9 @@ export const applyTemplate = withAuth(async (
           .insert({
             tenant,
             project_id: newProjectId,
+            phase_id: templateStatus.template_phase_id
+              ? phaseMap.get(templateStatus.template_phase_id) ?? null
+              : null,
             status_id: statusIdToUse,
             custom_name: templateStatus.custom_status_name,
             display_order: templateStatus.display_order,
@@ -539,6 +591,11 @@ export const applyTemplate = withAuth(async (
           templateStatus.template_status_mapping_id,
           newMapping.project_status_mapping_id
         );
+
+        const scopeKey = getScopeKey(templateStatus.template_phase_id);
+        if (!firstStatusMappingIdsByScope.has(scopeKey)) {
+          firstStatusMappingIdsByScope.set(scopeKey, newMapping.project_status_mapping_id);
+        }
 
         // Track first status mapping as fallback
         if (!firstStatusMappingId) {
@@ -566,6 +623,10 @@ export const applyTemplate = withAuth(async (
             is_standard: false
           })
           .returning('*');
+
+        if (!firstStatusMappingIdsByScope.has(getScopeKey())) {
+          firstStatusMappingIdsByScope.set(getScopeKey(), newMapping.project_status_mapping_id);
+        }
 
         if (!firstStatusMappingId) {
           firstStatusMappingId = newMapping.project_status_mapping_id;
@@ -615,16 +676,16 @@ export const applyTemplate = withAuth(async (
         : null;
 
       // Determine which status mapping to use for this task
-      let taskStatusMappingId = firstStatusMappingId;
+      let taskStatusMappingId = getFallbackStatusMappingIdForPhase(templateTask.template_phase_id);
       if (templateTask.template_status_mapping_id) {
         // Try to map the template status to the project status
         const mappedStatusId = templateStatusToProjectStatusMap.get(templateTask.template_status_mapping_id);
-        console.log(`[applyTemplate] Task "${templateTask.task_name}": template_status_mapping_id=${templateTask.template_status_mapping_id}, mapped to project_status_mapping_id=${mappedStatusId || 'NOT FOUND'}, using ${mappedStatusId || firstStatusMappingId}`);
+        console.log(`[applyTemplate] Task "${templateTask.task_name}": template_status_mapping_id=${templateTask.template_status_mapping_id}, mapped to project_status_mapping_id=${mappedStatusId || 'NOT FOUND'}, using ${mappedStatusId || taskStatusMappingId}`);
         if (mappedStatusId) {
           taskStatusMappingId = mappedStatusId;
         }
       } else {
-        console.log(`[applyTemplate] Task "${templateTask.task_name}": No template_status_mapping_id, using first status ${firstStatusMappingId}`);
+        console.log(`[applyTemplate] Task "${templateTask.task_name}": No template_status_mapping_id, using first status ${taskStatusMappingId}`);
       }
 
       // Determine assigned_to and assigned_team_id based on assignmentOption
@@ -642,6 +703,7 @@ export const applyTemplate = withAuth(async (
           phase_id: newPhaseId,
           task_name: templateTask.task_name,
           description: templateTask.description,
+          description_rich_text: templateTask.description_rich_text,
           estimated_hours: templateTask.estimated_hours,
           task_type_key: templateTask.task_type_key || 'task',
           priority_id: templateTask.priority_id,
@@ -1165,6 +1227,9 @@ export const duplicateTemplate = withAuth(async (
         .insert({
           tenant,
           template_id: newTemplate.template_id,
+          template_phase_id: mapping.template_phase_id
+            ? phaseMap.get(mapping.template_phase_id) ?? null
+            : null,
           status_id: mapping.status_id,
           custom_status_name: mapping.custom_status_name,
           display_order: mapping.display_order
@@ -1653,6 +1718,7 @@ export const updateTemplateTask = withAuth(async (
   data: {
     task_name?: string;
     description?: string;
+    description_rich_text?: string;
     estimated_hours?: number;
     duration_days?: number;
     task_type_key?: string;
@@ -1885,7 +1951,8 @@ export const addTemplateStatusMapping = withAuth(async (
   templateId: string,
   data: {
     status_id: string;
-  }
+  },
+  templatePhaseId?: string | null
 ): Promise<any> => {
   const { knex } = await createTenantKnex();
 
@@ -1893,9 +1960,12 @@ export const addTemplateStatusMapping = withAuth(async (
     await checkPermission(user, 'project', 'update', trx);
 
     // Get existing mappings to determine display_order
-    const existingMappings = await trx('project_template_status_mappings')
-      .where({ template_id: templateId, tenant })
-      .orderBy('display_order');
+    const existingMappings = await getScopedTemplateStatusMappings(
+      trx,
+      tenant,
+      templateId,
+      templatePhaseId
+    );
 
     const maxOrder = existingMappings.length > 0
       ? Math.max(...existingMappings.map(m => m.display_order))
@@ -1905,6 +1975,7 @@ export const addTemplateStatusMapping = withAuth(async (
       .insert({
         tenant,
         template_id: templateId,
+        template_phase_id: templatePhaseId ?? null,
         status_id: data.status_id,
         display_order: maxOrder + 1
       })
@@ -1972,19 +2043,115 @@ export const reorderTemplateStatusMappings = withAuth(async (
   user,
   { tenant },
   templateId: string,
-  orderedMappingIds: string[]
+  orderedMappingIds: string[],
+  templatePhaseId?: string | null
 ): Promise<void> => {
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
+    const scopedMappings = await getScopedTemplateStatusMappings(
+      trx,
+      tenant,
+      templateId,
+      templatePhaseId
+    );
+    const scopedMappingIds = new Set(
+      scopedMappings.map((mapping) => mapping.template_status_mapping_id)
+    );
+
     // Update display_order for each mapping
     for (let i = 0; i < orderedMappingIds.length; i++) {
+      if (!scopedMappingIds.has(orderedMappingIds[i])) {
+        continue;
+      }
+
       await trx('project_template_status_mappings')
         .where({ template_status_mapping_id: orderedMappingIds[i], tenant })
         .update({ display_order: i });
     }
+
+    await trx('project_templates')
+      .where({ template_id: templateId, tenant })
+      .update({ updated_at: trx.fn.now() });
+  });
+});
+
+export const copyTemplateStatusesToPhase = withAuth(async (
+  user,
+  { tenant },
+  templateId: string,
+  templatePhaseId: string
+): Promise<any[]> => {
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(user, 'project', 'update', trx);
+
+    const existingPhaseMappings = await getScopedTemplateStatusMappings(
+      trx,
+      tenant,
+      templateId,
+      templatePhaseId
+    );
+
+    if (existingPhaseMappings.length > 0) {
+      return existingPhaseMappings;
+    }
+
+    const defaultMappings = getTemplateDefaultStatusMappings(
+      await getScopedTemplateStatusMappings(trx, tenant, templateId)
+    );
+
+    if (defaultMappings.length === 0) {
+      return [];
+    }
+
+    const copiedMappings: any[] = [];
+
+    for (const mapping of defaultMappings) {
+      const [copiedMapping] = await trx('project_template_status_mappings')
+        .insert({
+          tenant,
+          template_id: templateId,
+          template_phase_id: templatePhaseId,
+          status_id: mapping.status_id,
+          custom_status_name: mapping.custom_status_name,
+          custom_status_color: mapping.custom_status_color ?? null,
+          display_order: mapping.display_order,
+        })
+        .returning('*');
+
+      copiedMappings.push(copiedMapping);
+    }
+
+    await trx('project_templates')
+      .where({ template_id: templateId, tenant })
+      .update({ updated_at: trx.fn.now() });
+
+    return copiedMappings;
+  });
+});
+
+export const removeTemplatePhaseStatuses = withAuth(async (
+  user,
+  { tenant },
+  templateId: string,
+  templatePhaseId: string
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(user, 'project', 'update', trx);
+
+    await trx('project_template_status_mappings')
+      .where({
+        tenant,
+        template_id: templateId,
+        template_phase_id: templatePhaseId,
+      })
+      .delete();
 
     await trx('project_templates')
       .where({ template_id: templateId, tenant })

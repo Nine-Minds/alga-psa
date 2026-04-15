@@ -23,7 +23,7 @@ import DocumentListView from './DocumentListView';
 import ShareLinkDialog from './ShareLinkDialog';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import FolderSelectorModal from './FolderSelectorModal';
-import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, X, FolderInput, Trash2 } from 'lucide-react';
+import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, X, FolderInput, Trash2, Printer } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
 import toast from 'react-hot-toast';
@@ -35,6 +35,7 @@ import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { getCurrentUser, searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { getExperimentalFeatures } from '@alga-psa/tenancy/actions';
 import {
   getDocumentsByEntity,
   getDocumentsByFolder,
@@ -158,6 +159,7 @@ const Documents = ({
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const [visibilityUpdatingIds, setVisibilityUpdatingIds] = useState<Set<string>>(new Set());
   const [isClientUserContext, setIsClientUserContext] = useState(false);
+  const [aiAssistantEnabled, setAiAssistantEnabled] = useState(false);
   const [shareDialogDocument, setShareDialogDocument] = useState<IDocument | null>(null);
   const { enabled: documentFeaturesEnabled } = useFeatureFlag('document-folder-templates', { defaultValue: false });
 
@@ -276,7 +278,18 @@ const Documents = ({
       }
     };
 
+    const loadAiFeatureFlag = async () => {
+      try {
+        const features = await getExperimentalFeatures();
+        if (!mounted) return;
+        setAiAssistantEnabled(features.aiAssistant ?? false);
+      } catch {
+        // Feature flag not available — leave disabled
+      }
+    };
+
     void loadCurrentUser();
+    void loadAiFeatureFlag();
 
     return () => {
       mounted = false;
@@ -437,12 +450,28 @@ const Documents = ({
         setError(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
       }
     } else {
-      // Entity mode: trigger parent to refresh via router.refresh()
+      // Entity mode: directly fetch updated documents
+      if (entityId && entityType) {
+        try {
+          const response = await getDocumentsByEntity(entityId, entityType, filters, currentPage, pageSize);
+          if (isActionPermissionError(response)) {
+            handleError(response.permissionError);
+            return;
+          }
+          setDocumentsToDisplay(response.documents);
+          setTotalDocuments(response.totalCount);
+          setTotalPages(response.totalPages);
+        } catch (err) {
+          console.error('Error refreshing entity documents:', err);
+          setError(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
+        }
+      }
+      // Also notify parent in case it needs to update other state
       if (onDocumentCreated) {
         onDocumentCreated();
       }
     }
-  }, [inFolderMode, filters, currentFolder, currentPage, pageSize, onDocumentCreated, t]);
+  }, [inFolderMode, entityId, entityType, filters, currentFolder, currentPage, pageSize, onDocumentCreated, tDoc]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -1201,25 +1230,75 @@ const Documents = ({
              selectedDocument.type_name === 'text/markdown' ||
              (!selectedDocument.type_name && !selectedDocument.file_id)
             ) && (
-            <Button
-              id={`${id}-download-pdf-btn`}
-              onClick={async () => {
-                if (selectedDocument) {
-                  const downloadUrl = `/api/documents/download/${selectedDocument.document_id}?format=pdf`;
-                  const filename = `${selectedDocument.document_name || 'document'}.pdf`;
-                  try {
-                    await downloadDocument(downloadUrl, filename, true);
-                  } catch (error) {
-                    console.error('Download failed:', error);
+            <>
+              <Button
+                id={`${id}-download-pdf-btn`}
+                onClick={async () => {
+                  if (selectedDocument) {
+                    const downloadUrl = `/api/documents/download/${selectedDocument.document_id}?format=pdf`;
+                    const filename = `${selectedDocument.document_name || 'document'}.pdf`;
+                    try {
+                      await downloadDocument(downloadUrl, filename, true);
+                    } catch (error) {
+                      console.error('Download failed:', error);
+                    }
                   }
-                }
-              }}
-              variant="outline"
-              size="sm"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              PDF
-            </Button>
+                }}
+                variant="outline"
+                size="sm"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                PDF
+              </Button>
+              <Button
+                id={`${id}-download-md-btn`}
+                onClick={async () => {
+                  if (selectedDocument) {
+                    const downloadUrl = `/api/documents/download/${selectedDocument.document_id}?format=markdown`;
+                    const filename = `${selectedDocument.document_name || 'document'}.md`;
+                    try {
+                      await downloadDocument(downloadUrl, filename, true);
+                    } catch (error) {
+                      console.error('Markdown download failed:', error);
+                    }
+                  }
+                }}
+                variant="outline"
+                size="sm"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Markdown
+              </Button>
+              <Button
+                id={`${id}-print-document-btn`}
+                onClick={async () => {
+                  if (!selectedDocument) return;
+                  try {
+                    const res = await fetch(
+                      `/api/documents/download/${selectedDocument.document_id}?format=pdf`,
+                    );
+                    if (!res.ok) throw new Error(`Print fetch failed: ${res.status}`);
+                    const blob = await res.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    const printWindow = window.open(blobUrl, '_blank');
+                    if (printWindow) {
+                      printWindow.addEventListener('load', () => {
+                        printWindow.focus();
+                        printWindow.print();
+                      });
+                    }
+                    setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+                  } catch (error) {
+                    console.error('Print failed:', error);
+                  }
+                }}
+                variant="outline"
+                size="sm"
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                Print
+              </Button>
+            </>
           )}
           {!isCreatingNew && !isEditModeInDrawer && selectedDocument && (
             <Button
@@ -1310,6 +1389,7 @@ const Documents = ({
                   userName={currentUserName || userId}
                   editorRef={collabEditorRef}
                   searchMentions={searchUsersForMentions}
+                  aiAssistantEnabled={aiAssistantEnabled}
                   onConnectionStatusChange={handleCollabConnectionStatusChange}
                 />
               )
@@ -1890,6 +1970,19 @@ const Documents = ({
           {renderDrawerBody()}
           </Drawer>
         </div>
+
+        {/* Folder Selector Modal for New Documents (entity mode) */}
+        <FolderSelectorModal
+          isOpen={showDocumentFolderModal}
+          onClose={() => setShowDocumentFolderModal(false)}
+          onSelectFolder={handleDocumentFolderSelected}
+          title={tDoc('folderSelector.newDocumentTitle', 'Select Folder for New Document')}
+          description={tDoc('folderSelector.newDocumentDescription', 'Choose where to save this new document')}
+          namespace={namespace}
+          entityId={entityId}
+          entityType={entityType}
+          getFoldersFn={getFoldersFn}
+        />
 
         {/* Unsaved Changes Confirmation Dialog */}
         <ConfirmationDialog

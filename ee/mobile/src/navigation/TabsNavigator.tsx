@@ -1,5 +1,5 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import type { TabsParamList } from "./types";
 import { TicketsStackNavigator } from "./TicketsStackNavigator";
 import { SettingsScreen } from "../screens/SettingsScreen";
@@ -38,7 +38,7 @@ export function TabsNavigator() {
           title: tTickets("list.title", "Tickets"),
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="ticket-outline" size={size} color={color} />
+            <Feather name="tag" size={size} color={color} />
           ),
         }}
       />
@@ -48,7 +48,7 @@ export function TabsNavigator() {
         options={{
           title: tSettings("title", "Settings"),
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
+            <Feather name="settings" size={size} color={color} />
           ),
         }}
       />

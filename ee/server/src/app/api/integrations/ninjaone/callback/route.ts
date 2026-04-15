@@ -11,6 +11,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import axios from 'axios';
 import fs from 'fs';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import {
   NINJAONE_REGIONS,
@@ -23,8 +24,13 @@ import {
   registerNinjaOneWebhook,
   generateWebhookSecret,
 } from '../../../../../lib/integrations/ninjaone/webhooks/webhookRegistration';
+import {
+  clearNinjaOneReconnectRequiredState,
+  scheduleNinjaOneProactiveRefresh,
+} from '../../../../../lib/integrations/ninjaone/proactiveRefresh';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
-import { buildIntegrationConnectedPayload } from '@shared/workflow/streams/domainEventBuilders/integrationConnectionEventBuilders';
+import { assertTenantTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
+import { buildIntegrationConnectedPayload } from '@alga-psa/workflow-streams';
 
 // Secret names
 const NINJAONE_CLIENT_ID_SECRET = 'ninjaone_client_id';
@@ -183,6 +189,8 @@ export async function GET(request: NextRequest) {
       tenantId = decodedStatePayload.tenantId;
       region = decodedStatePayload.region;
 
+      await assertTenantTierAccess(tenantId, TIER_FEATURES.ADVANCED_ASSETS);
+
       // Check state timeout
       const stateAge = Date.now() - decodedStatePayload.timestamp;
       if (stateAge > STATE_TIMEOUT_MS) {
@@ -340,6 +348,18 @@ export async function GET(request: NextRequest) {
 
     // 7b. Emit workflow v2 integration connection event (best-effort)
     if (integrationId) {
+      try {
+        await clearNinjaOneReconnectRequiredState(tenantId, integrationId);
+        await scheduleNinjaOneProactiveRefresh({
+          tenantId,
+          integrationId,
+          expiresAtMs: expiresAt,
+          source: 'oauth_connected',
+        });
+      } catch (scheduleError) {
+        console.warn('[NinjaOne Callback] Failed to schedule proactive token refresh', scheduleError);
+      }
+
       try {
         await publishWorkflowEvent({
           eventType: 'INTEGRATION_CONNECTED',

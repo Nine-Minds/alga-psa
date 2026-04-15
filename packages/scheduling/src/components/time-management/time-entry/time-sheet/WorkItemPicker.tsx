@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { WorkItemList } from './WorkItemList';
 import { Filter, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -28,7 +29,9 @@ interface WorkItemPickerProps {
   timePeriod?: ITimePeriodView;
 }
 
-export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: WorkItemPickerProps) {
+export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId, timePeriod }: WorkItemPickerProps) {
+  const { t } = useTranslation('msp/time-entry');
+  const { formatDate } = useFormatters();
   const [searchTerm, setSearchTerm] = useState('');
   const [workItems, setWorkItems] = useState<WorkItemWithStatus[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -59,13 +62,32 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
     end?: string;
   }>({});
   const [searchType, setSearchType] = useState<WorkItemType | 'all'>('all');
+  const [selectedWorkItemId, setSelectedWorkItemId] = useState<string | null>(initialWorkItemId ?? null);
+
+  const initialWorkItem = useMemo(() => {
+    if (!initialWorkItemId) {
+      return null;
+    }
+
+    const match = availableWorkItems.find((item) => item.work_item_id === initialWorkItemId);
+    if (!match) {
+      return null;
+    }
+
+    return {
+      ...match,
+      status: 'Active',
+    } as WorkItemWithStatus;
+  }, [availableWorkItems, initialWorkItemId]);
 
   const validateDates = useCallback((start: Date, end: Date) => {
     const errors: { start?: string; end?: string } = {};
 
     // First check if end is after start
     if (end <= start) {
-      errors.end = 'End time must be after start time';
+      errors.end = t('timeEntryForm.validation.endAfterStartPicker', {
+        defaultValue: 'End time must be after start time'
+      });
     }
 
     // Then check time period constraints if provided
@@ -89,28 +111,34 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
       endDate.setHours(23, 59, 59, 999);
 
       // Format dates for display
-      const formatDate = (date: Date) => {
-        return date.toLocaleDateString(undefined, {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-      };
-
-      const periodRange = `${formatDate(periodStart)} - ${formatDate(periodEnd)}`;
+      const periodRange = `${formatDate(periodStart, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })} - ${formatDate(periodEnd, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })}`;
       
       if (startDate < periodStart || startDate > periodEnd) {
-        errors.start = `Date must be within the current period (${periodRange})`;
+        errors.start = t('timeEntryForm.validation.timePeriodRange', {
+          defaultValue: 'Date must be within the current period ({{periodRange}})',
+          periodRange
+        });
       }
 
       if (endDate < periodStart || endDate > periodEnd) {
-        errors.end = `Date must be within the current period (${periodRange})`;
+        errors.end = t('timeEntryForm.validation.timePeriodRange', {
+          defaultValue: 'Date must be within the current period ({{periodRange}})',
+          periodRange
+        });
       }
     }
 
     setDateErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [timePeriod]);
+  }, [formatDate, t, timePeriod]);
 
   // Validate dates whenever they change
   useEffect(() => {
@@ -230,6 +258,10 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
     debouncedSearch(searchTerm);
   }, [searchTerm, debouncedSearch]);
 
+  useEffect(() => {
+    setSelectedWorkItemId(initialWorkItemId ?? null);
+  }, [initialWorkItemId]);
+
   const handlePageChange = (newPage: number) => {
     if (!isSearching && newPage >= 1 && newPage <= Math.ceil(total / pageSize)) {
       setCurrentPage(newPage);
@@ -238,6 +270,15 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
   };
 
   const totalPages = Math.ceil(total / pageSize);
+
+  const handleSelectWorkItem = useCallback((workItem: IWorkItem | null) => {
+    if (!workItem) {
+      return;
+    }
+
+    setSelectedWorkItemId(workItem.work_item_id);
+    onSelect(workItem);
+  }, [onSelect]);
 
   return (
     <div className="flex flex-col h-auto max-h-[70vh] min-h-[200px] transition-all duration-300 ease-in-out">
@@ -250,7 +291,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
               className="text-sm"
               id="create-adhoc-entry-btn"
             >
-              Create Ad-hoc Entry
+              {t('workItemPicker.actions.createAdHocEntry', { defaultValue: 'Create Ad-hoc Entry' })}
             </Button>
           ) : (
             <div className="flex items-center gap-2">
@@ -258,7 +299,9 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                 <Input
                   value={adHocTitle}
                   onChange={(e) => setAdHocTitle(e.target.value)}
-                  placeholder="Enter title for ad-hoc entry"
+                  placeholder={t('workItemPicker.placeholders.adHocTitle', {
+                    defaultValue: 'Enter title for ad-hoc entry'
+                  })}
                   className="flex-1"
                   autoFocus
                 />
@@ -267,7 +310,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                     <DateTimePicker
                       value={startTime}
                       onChange={setStartTime}
-                      placeholder="Start time"
+                      placeholder={t('workItemPicker.placeholders.startTime', { defaultValue: 'Start time' })}
                       id="adhoc-start-time"
                       className={dateErrors.start ? 'border-red-500' : ''}
                     />
@@ -281,7 +324,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                     <DateTimePicker
                       value={endTime}
                       onChange={setEndTime}
-                      placeholder="End time"
+                      placeholder={t('workItemPicker.placeholders.endTime', { defaultValue: 'End time' })}
                       id="adhoc-end-time"
                       minDate={startTime}
                       className={dateErrors.end ? 'border-red-500' : ''}
@@ -335,7 +378,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                 disabled={!adHocTitle.trim() || Object.keys(dateErrors).length > 0}
                 id="save-adhoc-entry-btn"
               >
-                Save Entry
+                {t('common.actions.save', { defaultValue: 'Save Entry' })}
               </Button>
               <Button
                 onClick={() => {
@@ -346,7 +389,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                 className="text-sm"
                 id="cancel-adhoc-entry-btn"
               >
-                Cancel
+                {t('common.actions.cancel', { defaultValue: 'Cancel' })}
               </Button>
             </div>
           )}
@@ -356,7 +399,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search work items..."
+              placeholder={t('workItemPicker.placeholders.search', { defaultValue: 'Search work items...' })}
               className="pl-8 bg-white border-[rgb(var(--color-border-200))]"
             />
             <svg
@@ -380,7 +423,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
             )}
           </div>
           <SwitchWithLabel
-            label="Include inactive"
+            label={t('workItemPicker.filters.includeInactive', { defaultValue: 'Include inactive' })}
             checked={includeInactive}
             onCheckedChange={(checked) => {
               setIncludeInactive(checked);
@@ -396,7 +439,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
             className="flex items-center gap-2 bg-[rgb(var(--color-primary-100))] hover:bg-[rgb(var(--color-primary-100))]"
           >
             <Filter className="h-4 w-4" />
-            Filters
+            {t('workItemPicker.filters.filters', { defaultValue: 'Filters' })}
             <svg
               className={`h-4 w-4 transition-transform ${isFiltersExpanded ? 'rotate-180' : ''}`}
               fill="none"
@@ -413,7 +456,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-4">
                 <UserPicker
-                  label="Assigned to"
+                  label={t('workItemPicker.filters.assignedTo', { defaultValue: 'Assigned to' })}
                   value={assignedTo}
                   onValueChange={(value) => {
                     setAssignedTo(value);
@@ -425,7 +468,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                 />
                 <SwitchWithLabel
-                  label="Assigned to me"
+                  label={t('workItemPicker.filters.assignedToMe', { defaultValue: 'Assigned to me' })}
                   checked={assignedToMe}
                   onCheckedChange={handleAssignedToMeChange}
                   className="text-sm text-[rgb(var(--color-text-600))]"
@@ -452,7 +495,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                   id="reset-filters"
                 >
                   <XCircle className="h-4 w-4" />
-                  Reset
+                  {t('common.actions.reset', { defaultValue: 'Reset' })}
                 </Button>
               </div>
               </div>
@@ -483,38 +526,38 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                     loadWorkItems(searchTerm, 1);
                   }}
                   options={[
-                    { value: 'all', label: 'All Types' },
-                    { value: 'ticket', label: 'Tickets' },
-                    { value: 'project_task', label: 'Project Tasks' },
-                    { value: 'interaction', label: 'Interactions' },
-                    { value: 'ad_hoc', label: 'Ad-hoc Entries' }
+                    { value: 'all', label: t('common.types.all', { defaultValue: 'All Types' }) },
+                    { value: 'ticket', label: t('common.types.tickets', { defaultValue: 'Tickets' }) },
+                    { value: 'project_task', label: t('common.types.projectTasks', { defaultValue: 'Project Tasks' }) },
+                    { value: 'interaction', label: t('common.types.interactions', { defaultValue: 'Interactions' }) },
+                    { value: 'ad_hoc', label: t('common.types.adHocEntries', { defaultValue: 'Ad-hoc Entries' }) }
                   ]}
                 />
               </div>
               <div className="flex items-center">
                 <DatePicker
-                  label="Start date"
+                  label={t('workItemPicker.filters.startDate', { defaultValue: 'Start date' })}
                   value={startDate}
                   onChange={(date) => {
                     setStartDate(date);
                     setCurrentPage(1);
                     loadWorkItems(searchTerm, 1);
                   }}
-                  placeholder="Start date"
+                  placeholder={t('workItemPicker.filters.startDate', { defaultValue: 'Start date' })}
                   className="w-full"
                   clearable
                 />
               </div>
               <div className="flex items-center">
                 <DatePicker
-                  label="End date"
+                  label={t('workItemPicker.filters.endDate', { defaultValue: 'End date' })}
                   value={endDate}
                   onChange={(date) => {
                     setEndDate(date);
                     setCurrentPage(1);
                     loadWorkItems(searchTerm, 1);
                   }}
-                  placeholder="End date"
+                  placeholder={t('workItemPicker.filters.endDate', { defaultValue: 'End date' })}
                   className="w-full"
                   clearable
                 />
@@ -526,13 +569,15 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
 
       <WorkItemList
         items={workItems}
+        pinnedItem={initialWorkItem}
+        selectedWorkItemId={selectedWorkItemId}
         isSearching={isSearching}
         currentPage={currentPage}
         totalPages={totalPages}
         total={total}
         hasMore={hasMore}
         onPageChange={handlePageChange}
-        onSelect={onSelect}
+        onSelect={handleSelectWorkItem}
       />
     </div>
   );

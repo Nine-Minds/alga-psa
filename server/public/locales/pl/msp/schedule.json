@@ -1,0 +1,533 @@
+{
+  "page": {
+    "title": "Harmonogram",
+    "actions": {
+      "configureAvailability": "Skonfiguruj dostępność",
+      "appointmentRequests": "Prośby o spotkanie"
+    }
+  },
+  "sidebar": {
+    "actions": {
+      "compareAll": "Porównaj wszystko",
+      "clearAll": "Wyczyść wszystko",
+      "viewWeek": "Zobacz tydzień",
+      "compare": "Porównaj",
+      "stopComparing": "Przestań porównywać"
+    },
+    "labels": {
+      "inactive": "(Nieaktywny)"
+    },
+    "aria": {
+      "viewWeek": "Wyświetl tydzień dla {{name}}",
+      "compare": "Porównaj {{name}}"
+    }
+  },
+  "agentView": {
+    "loading": "Ładowanie...",
+    "errors": {
+      "loadPermissions": "Nie udało się załadować uprawnień użytkownika",
+      "forbidden": "Nie masz uprawnień do przeglądania tego harmonogramu."
+    }
+  },
+  "calendar": {
+    "legend": {
+      "types": {
+        "ticket": "Bilet",
+        "projectTask": "Zadanie projektowe",
+        "nonBillableCategory": "Kategoria niepodlegająca rozliczeniu",
+        "adHoc": "Wpis ad hoc",
+        "interaction": "Interakcja",
+        "appointmentRequest": "Zapytanie o spotkanie"
+      },
+      "showInactiveUsers": "Pokaż nieaktywnych użytkowników"
+    },
+    "loading": {
+      "initial": "Ładowanie harmonogramu...",
+      "overlay": "Ładowanie..."
+    },
+    "errors": {
+      "validateDeletion": "Nie udało się potwierdzić usunięcia. Spróbuj ponownie.",
+      "loadPermissions": "Nie udało się załadować uprawnień.",
+      "loadCurrentUser": "Nie udało się załadować bieżącego użytkownika.",
+      "unknown": "Wystąpił nieznany błąd",
+      "deleteFailed": "Nie udało się usunąć wpisu harmonogramu",
+      "deleteUnexpected": "Wystąpił błąd podczas usuwania wpisu harmonogramu",
+      "updateFailed": "Nie udało się zaktualizować wpisu harmonogramu: {{error}}",
+      "createFailed": "Nie udało się dodać wpisu do harmonogramu: {{error}}",
+      "saveUnexpected": "Wystąpił błąd podczas zapisywania wpisu harmonogramu"
+    },
+    "toolbar": {
+      "previousAria": "Poprzedni {{view}}",
+      "previous": "< Poprzednie",
+      "today": "Dzisiaj",
+      "nextAria": "Następny {{view}}",
+      "next": "Dalej >",
+      "views": {
+        "month": "Miesiąc",
+        "week": "Tydzień",
+        "day": "Dzień"
+      }
+    },
+    "event": {
+      "fallbacks": {
+        "unknownTechnician": "Nieznany",
+        "unassigned": "Nieprzypisany",
+        "untitled": "Bez tytułu"
+      },
+      "tooltip": {
+        "scheduledFor": "Zaplanowano na: {{technicians}}",
+        "start": "Początek: {{dateTime}}",
+        "end": "Koniec: {{dateTime}}",
+        "multiDay": "(Wielodniowe)"
+      }
+    },
+    "deleteDialog": {
+      "title": "Usuń wpis harmonogramu",
+      "messageRecurring": "Wybierz, które wydarzenia chcesz usunąć:",
+      "messageSingle": "Czy na pewno chcesz usunąć tę pozycję harmonogramu? Tej akcji nie można cofnąć.",
+      "confirm": "Usuń",
+      "entityFallback": "ten wpis harmonogramu",
+      "options": {
+        "single": "Tylko to wydarzenie",
+        "future": "To i przyszłe wydarzenia",
+        "all": "Wszystkie wydarzenia"
+      }
+    }
+  },
+  "weeklyEvent": {
+    "actions": {
+      "delete": "Usuń wpis"
+    },
+    "continuation": {
+      "previousWeek": "Kontynuacja z poprzedniego tygodnia"
+    }
+  },
+  "requests": {
+    "errors": {
+      "load": "Nie udało się załadować próśb o spotkanie",
+      "ticketNotFound": "Nie znaleziono biletu",
+      "loadTicket": "Nie udało się załadować biletu",
+      "assignTechnicianRequired": "Proszę przypisać technika",
+      "approve": "Nie udało się zatwierdzić prośby",
+      "declineReasonRequired": "Podaj powód odrzucenia",
+      "decline": "Nie udało się odrzucić prośby"
+    },
+    "feedback": {
+      "approved": "Prośba o spotkanie została zatwierdzona",
+      "declined": "Prośba o spotkanie została odrzucona"
+    },
+    "filters": {
+      "statusLabel": "Filtruj według stanu",
+      "statusOptions": {
+        "all": "Wszystkie",
+        "pending": "Oczekujące",
+        "approved": "Zatwierdzone",
+        "declined": "Odrzucone",
+        "cancelled": "Anulowane"
+      }
+    },
+    "fallbacks": {
+      "invalidDateTime": "Nieprawidłowa data/godzina"
+    },
+    "list": {
+      "title": "Prośby o spotkanie",
+      "badgeTotal": "Razem",
+      "loading": "Ładowanie żądań...",
+      "empty": "Nie znaleziono żądań {{status}}",
+      "duration": "{{count}} minut",
+      "ticketFallback": "Bilet #{{ticket}}",
+      "fallbacks": {
+        "publicRequest": "Żądanie publiczne"
+      }
+    },
+    "detail": {
+      "back": "← Powrót do listy",
+      "title": "Szczegóły żądania",
+      "section": {
+        "requestInformation": "Informacje o żądaniu"
+      },
+      "labels": {
+        "reference": "Odniesienie",
+        "client": "Klient",
+        "contact": "Kontakt",
+        "email": "E-mail",
+        "phone": "Telefon",
+        "service": "Usługa",
+        "requestedTime": "Żądany czas",
+        "duration": "Czas trwania",
+        "status": "Status",
+        "linkedTicket": "Połączony bilet",
+        "description": "Opis"
+      }
+    },
+    "approval": {
+      "title": "Szczegóły zatwierdzenia",
+      "fields": {
+        "assignedTechnician": "Przypisz technika *",
+        "finalDateTime": "Ostateczna data i godzina",
+        "internalNotes": "Notatki wewnętrzne (opcjonalnie)",
+        "linkedTicket": "Link do biletu (opcjonalnie)"
+      },
+      "placeholders": {
+        "assignedTechnician": "Wybierz technika",
+        "internalNotes": "Dodaj wszelkie notatki wewnętrzne...",
+        "linkedTicket": "Wprowadź identyfikator biletu, aby połączyć..."
+      },
+      "actions": {
+        "approve": "Zatwierdź",
+        "decline": "Odrzuć"
+      }
+    },
+    "decline": {
+      "title": "Odrzuć prośbę",
+      "fields": {
+        "reason": "Powód odrzucenia *"
+      },
+      "placeholders": {
+        "reason": "Podaj powód odrzucenia tej prośby..."
+      },
+      "actions": {
+        "confirm": "Potwierdź odrzucenie",
+        "cancel": "Anuluj"
+      }
+    }
+  },
+  "availabilitySettings": {
+    "dialog": {
+      "title": "Ustawienia dostępności"
+    },
+    "loading": "Ładowanie ustawień...",
+    "tabs": {
+      "general": "Ustawienia ogólne",
+      "userHours": "Godziny użytkownika",
+      "serviceRules": "Regulamin serwisu",
+      "exceptions": "Wyjątki"
+    },
+    "days": {
+      "sunday": "Niedziela",
+      "monday": "Poniedziałek",
+      "tuesday": "Wtorek",
+      "wednesday": "Środa",
+      "thursday": "Czwartek",
+      "friday": "Piątek",
+      "saturday": "Sobota"
+    },
+    "common": {
+      "yes": "Tak",
+      "no": "Nie",
+      "columns": {
+        "action": "Działanie"
+      },
+      "actions": {
+        "edit": "Edytuj"
+      },
+      "defaultApprover": {
+        "placeholder": "Wybierz osobę zatwierdzającą"
+      },
+      "teamSelect": {
+        "label": "Wybierz zespół",
+        "placeholder": "Wybierz zespół"
+      }
+    },
+    "feedback": {
+      "loadError": "Nie udało się załadować ustawień"
+    },
+    "general": {
+      "autoApproval": {
+        "title": "Włącz automatyczne zatwierdzanie",
+        "description": "Automatycznie zatwierdzaj spotkania spełniające kryteria skonfigurowane poniżej",
+        "criteriaTitle": "Kryteria automatycznego zatwierdzania:",
+        "criteria": {
+          "requireAvailability": "Technik musi mieć skonfigurowaną dostępność na żądany czas",
+          "requireContract": "Klient musi posiadać aktywną umowę (jeśli usługa tego wymaga)",
+          "checkConflicts": "Żaden harmonogram nie koliduje z istniejącymi spotkaniami",
+          "respectBuffers": "Przestrzegaj czasów buforowania przed i po spotkaniach"
+        }
+      },
+      "defaultApprover": {
+        "label": "Domyślna osoba zatwierdzająca",
+        "help": "Domyślna osoba zatwierdzająca w całej firmie dla próśb o spotkanie, które wymagają ręcznego zatwierdzenia. Można to zmienić dla każdego technika w ustawieniach godzin użytkownika."
+      },
+      "advanceBookingDays": {
+        "label": "Domyślna rezerwacja z wyprzedzeniem (dni)"
+      },
+      "minimumNoticeHours": {
+        "label": "Minimalne powiadomienie (godziny)"
+      },
+      "actions": {
+        "save": "Zapisz ustawienia ogólne"
+      },
+      "feedback": {
+        "saveSuccess": "Ustawienia ogólne zostały zapisane",
+        "saveError": "Nie udało się zapisać ustawień"
+      }
+    },
+    "userHours": {
+      "roleManager": {
+        "label": "Menedżer zespołu:",
+        "description": "Możesz skonfigurować ustawienia dostępności dla członków swojego zespołu(ów). Poniższa tabela „Skonfigurowani użytkownicy” przedstawia wszystkich użytkowników z ustawieniami dostępności w całym systemie."
+      },
+      "roleAdmin": {
+        "label": "Administrator:",
+        "description": "Możesz skonfigurować ustawienia dostępności dla dowolnego użytkownika w systemie. Poniższa tabela „Skonfigurowani użytkownicy” przedstawia wszystkich użytkowników z ustawieniami dostępności."
+      },
+      "userSelect": {
+        "label": "Wybierz użytkownika do skonfigurowania",
+        "placeholderSelectTeamFirst": "Najpierw wybierz zespół",
+        "placeholder": "Wybierz użytkownika do skonfigurowania"
+      },
+      "appointmentSettings": {
+        "title": "Ustawienia spotkania",
+        "defaultDuration": {
+          "label": "Domyślny czas trwania spotkania (w minutach)",
+          "help": "Zastąpienie czasu trwania specyficzne dla technika. Pozostaw puste, aby użyć czasu trwania określonej usługi z Regulaminu usługi.",
+          "placeholder": "Pozostaw puste, aby użyć ustawień domyślnych usługi"
+        },
+        "bufferAfter": {
+          "label": "Czas buforowania pomiędzy spotkaniami (minuty)",
+          "placeholder": "15"
+        },
+        "defaultApprover": {
+          "label": "Domyślna osoba zatwierdzająca",
+          "help": "Kto powinien przeglądać i zatwierdzać prośby o spotkanie dla tego technika, które wymagają ręcznego zatwierdzenia"
+        },
+        "allowClientPreference": {
+          "label": "Zezwalaj na preferencje klienta",
+          "help": "Pozwól klientom poprosić o konkretnego technika"
+        }
+      },
+      "schedule": {
+        "timezoneNotice": "Godziny podano w Twojej lokalnej strefie czasowej ({{timeZone}})",
+        "columns": {
+          "day": "Dzień",
+          "available": "Dostępny",
+          "startTime": "Czas rozpoczęcia",
+          "endTime": "Czas zakończenia"
+        }
+      },
+      "configuredUsers": {
+        "title": "Skonfigurowani Użytkownicy",
+        "description": "Użytkownicy ze skonfigurowanymi ustawieniami dostępności",
+        "empty": "Żaden użytkownik nie został jeszcze skonfigurowany",
+        "columns": {
+          "userName": "Nazwa użytkownika",
+          "status": "Status"
+        },
+        "status": {
+          "configured": "Skonfigurowane"
+        }
+      },
+      "actions": {
+        "save": "Zapisz godziny użytkownika"
+      },
+      "feedback": {
+        "selectUserError": "Wybierz użytkownika",
+        "saveSuccess": "Zapisano godziny użytkownika",
+        "saveError": "Nie udało się zapisać godzin użytkownika"
+      }
+    },
+    "serviceRules": {
+      "serviceSelect": {
+        "label": "Wybierz usługę do skonfigurowania",
+        "placeholder": "Wybierz usługę do skonfigurowania"
+      },
+      "editor": {
+        "title": "Edytuj reguły: {{serviceName}}",
+        "allowWithoutContract": {
+          "label": "Zezwalaj na rezerwację bez umowy"
+        },
+        "maxAppointmentsPerDay": {
+          "label": "Maksymalna liczba spotkań dziennie"
+        },
+        "defaultDuration": {
+          "label": "Domyślny czas trwania spotkania (w minutach)",
+          "help": "Domyślny czas trwania spotkań tego typu usługi. Można je zastąpić ustawieniami specyficznymi dla technika w godzinach pracy.",
+          "placeholder": "np. 60 (minut)"
+        }
+      },
+      "configuredServices": {
+        "title": "Skonfigurowane usługi",
+        "description": "Usługi ze skonfigurowanymi regułami spotkań",
+        "empty": "Nie skonfigurowano jeszcze żadnych usług",
+        "columns": {
+          "serviceName": "Nazwa usługi",
+          "duration": "Czas trwania (min)",
+          "withoutContract": "Bez umowy",
+          "maxPerDay": "Maks. dziennie"
+        }
+      },
+      "common": {
+        "noLimit": "Bez limitu"
+      },
+      "actions": {
+        "save": "Zapisz Regulamin usługi"
+      },
+      "feedback": {
+        "selectServiceError": "Wybierz usługę",
+        "saveSuccess": "Regulamin usługi został zapisany",
+        "saveError": "Nie udało się zapisać reguł usługi"
+      }
+    },
+    "exceptions": {
+      "form": {
+        "title": "Dodaj wyjątek",
+        "date": {
+          "label": "Wybierz datę"
+        },
+        "user": {
+          "label": "Użytkownik (opcjonalnie — pozostaw puste dla całej firmy)",
+          "placeholder": "Wybierz użytkownika"
+        },
+        "isAvailable": {
+          "label": "Dostępne w tym dniu"
+        },
+        "reason": {
+          "label": "Powód",
+          "placeholder": "Urlop, czas wolny itp."
+        }
+      },
+      "common": {
+        "companyWide": "W całej firmie"
+      },
+      "actions": {
+        "add": "Dodaj wyjątek"
+      },
+      "list": {
+        "title": "Istniejące wyjątki",
+        "empty": "Nie skonfigurowano żadnych wyjątków",
+        "status": {
+          "available": "Dostępny",
+          "unavailable": "Niedostępny"
+        }
+      },
+      "feedback": {
+        "selectDateError": "Proszę wybrać datę",
+        "addSuccess": "Dodano wyjątek",
+        "addError": "Nie udało się dodać wyjątku",
+        "deleteSuccess": "Wyjątek został usunięty",
+        "deleteError": "Nie udało się usunąć wyjątku"
+      }
+    }
+  },
+  "entryPopup": {
+    "title": {
+      "appointmentRequest": "Zapytanie o spotkanie",
+      "view": "Zobacz wpis",
+      "edit": "Edytuj wpis",
+      "new": "Nowy wpis"
+    },
+    "alerts": {
+      "privateEntryOnlyCreator": "To jest wpis prywatny. Tylko twórca może przeglądać i edytować szczegóły."
+    },
+    "validation": {
+      "summaryTitle": "Proszę wypełnić wymagane pola:",
+      "titleRequiredForAdHoc": "Tytuł jest wymagany w przypadku wpisów ad hoc",
+      "startRequired": "Data/godzina rozpoczęcia",
+      "endRequired": "Data/godzina zakończenia",
+      "assigneeRequired": "Co najmniej jeden przypisany użytkownik",
+      "startInvalid": "Data rozpoczęcia jest nieprawidłowa",
+      "endInvalid": "Data zakończenia jest nieprawidłowa",
+      "endAfterStart": "Data zakończenia musi być późniejsza niż data rozpoczęcia",
+      "recurrenceIntervalPositive": "Przedział powtarzania musi być dodatnią liczbą całkowitą",
+      "recurrenceCountPositive": "Liczba wystąpień musi być dodatnią liczbą całkowitą",
+      "recurrenceEndInvalid": "Data zakończenia cyklu jest nieprawidłowa",
+      "recurrenceEndAfterStart": "Data zakończenia powtarzania musi być późniejsza niż data rozpoczęcia"
+    },
+    "fields": {
+      "title": "Tytuł",
+      "assignedUsers": "Przydzieleni użytkownicy *",
+      "privateEntry": "Wpis prywatny (niewidoczny dla innych użytkowników)",
+      "start": "Rozpocznij *",
+      "end": "Koniec *",
+      "notes": "Notatki"
+    },
+    "actions": {
+      "cancel": "Anuluj",
+      "close": "Zamknij",
+      "save": "Zapisz",
+      "delete": "Usuń wpis"
+    },
+    "workItem": {
+      "adHocFallback": "Wpis ad-hoc (brak elementu roboczego)",
+      "openDetails": "Szczegóły"
+    },
+    "appointmentRequest": {
+      "approved": {
+        "title": "Zatwierdzone spotkanie",
+        "descriptionWithDate": "To spotkanie powstało na prośbę klienta i zostało zatwierdzone {{date}}.",
+        "description": "Spotkanie to powstało na prośbę klienta."
+      },
+      "pending": {
+        "title": "Oczekujące żądanie spotkania",
+        "description": "To jest prośba o spotkanie od klienta. Możesz to zatwierdzić lub odrzucić poniżej."
+      },
+      "declined": {
+        "title": "Odrzucona prośba o spotkanie",
+        "descriptionWithReason": "To zaproszenie na spotkanie zostało odrzucone: {{reason}}",
+        "description": "Ta prośba o spotkanie została odrzucona."
+      },
+      "cancelled": {
+        "title": "Anulowane żądanie spotkania",
+        "description": "To zaproszenie na spotkanie zostało anulowane przez klienta."
+      },
+      "requestedDateTimeLabel": "Żądana data i godzina",
+      "assignTechnicianLabel": "Przypisz technika *",
+      "assignTechnicianPlaceholder": "Wybierz technika",
+      "scheduledDateTimeLabel": "Zaplanowana data i godzina",
+      "noNotes": "Brak notatek",
+      "declineReasonLabel": "Powód odrzucenia *",
+      "declineReasonPlaceholder": "Podaj powód odrzucenia tej prośby...",
+      "actions": {
+        "approve": "Zatwierdź",
+        "decline": "Odrzuć",
+        "confirmDecline": "Potwierdź odrzucenie"
+      },
+      "toasts": {
+        "assignTechnicianRequired": "Proszę przypisać technika",
+        "approved": "Prośba o spotkanie została zatwierdzona",
+        "approveFailed": "Nie udało się zatwierdzić prośby",
+        "declineReasonRequired": "Podaj powód odrzucenia",
+        "declined": "Prośba o spotkanie została odrzucona",
+        "declineFailed": "Nie udało się odrzucić prośby"
+      }
+    },
+    "recurrence": {
+      "label": "Powtarzanie",
+      "intervalLabel": "Interwał",
+      "endLabel": "Koniec",
+      "endDateLabel": "Data zakończenia",
+      "occurrencesLabel": "Wystąpienia",
+      "workdaysOnly": "Tylko w dni robocze (od poniedziałku do piątku, z wyłączeniem świąt)",
+      "options": {
+        "none": "Brak",
+        "daily": "Codziennie",
+        "weekly": "Co tydzień",
+        "monthly": "Co miesiąc",
+        "yearly": "Co rok"
+      },
+      "endOptions": {
+        "never": "Nigdy",
+        "date": "W dniu",
+        "count": "Po"
+      },
+      "applyDialog": {
+        "title": "Zastosuj zmiany do",
+        "message": "Wybierz, które zdarzenia chcesz zaktualizować:"
+      }
+    },
+    "delete": {
+      "validationFailed": "Nie udało się potwierdzić usunięcia. Spróbuj ponownie.",
+      "entityFallback": "ten wpis harmonogramu",
+      "scopeDialog": {
+        "title": "Usuń wpis harmonogramu",
+        "message": "Wybierz, które wydarzenia chcesz usunąć:",
+        "confirm": "Kontynuuj"
+      }
+    },
+    "scopeOptions": {
+      "single": "Tylko to wydarzenie",
+      "future": "To i przyszłe wydarzenia",
+      "all": "Wszystkie wydarzenia"
+    }
+  }
+}

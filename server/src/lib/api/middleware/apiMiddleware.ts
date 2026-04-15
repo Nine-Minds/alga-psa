@@ -4,8 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { applyFieldRangeRequests } from '../utils/fieldRange';
 import { ZodSchema, ZodError } from 'zod';
-import { ApiKeyService } from '../../services/apiKeyService';
+import { ApiKeyService } from '@alga-psa/auth';
 import { hasPermission } from '../../auth/rbac';
 import { findUserById } from '@alga-psa/user-composition/actions';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -305,6 +306,7 @@ export function handleApiError(error: any): NextResponse {
   console.error('API Error:', {
     name: error.name,
     message: error.message,
+    details: error.details,
     stack: error.stack,
     timestamp: new Date().toISOString()
   });
@@ -363,16 +365,27 @@ export function handleApiError(error: any): NextResponse {
 /**
  * Success response helper
  */
-export function createSuccessResponse(data: any, status: number = 200, metadata?: any): NextResponse {
+export function createSuccessResponse(
+  data: any,
+  status: number = 200,
+  metadata?: any,
+  request?: NextRequest | URL | string,
+): NextResponse {
   // For 204 No Content, return empty response
   if (status === 204) {
     return new NextResponse(null, { status: 204 });
   }
 
-  const response: any = { data };
+  const ranged = applyFieldRangeRequests(data, request);
+  const response: any = { data: ranged.data };
+  const mergedMetadata = metadata ? { ...metadata } : undefined;
 
-  if (metadata) {
-    response.meta = metadata;
+  if (ranged.truncatedFields) {
+    const nextMeta = mergedMetadata ?? {};
+    nextMeta.truncated_fields = ranged.truncatedFields;
+    response.meta = nextMeta;
+  } else if (mergedMetadata) {
+    response.meta = mergedMetadata;
   }
 
   const headers: HeadersInit = {
@@ -399,9 +412,20 @@ export function createPaginatedResponse(
   total: number,
   page: number,
   limit: number,
-  metadata?: any
+  metadata?: any,
+  request?: NextRequest | URL | string,
 ): NextResponse {
   const totalPages = Math.ceil(total / limit);
+  const ranged = applyFieldRangeRequests(data, request);
+  const mergedMetadata = metadata ? { ...metadata } : undefined;
+
+  if (ranged.truncatedFields) {
+    const nextMeta = mergedMetadata ?? {};
+    nextMeta.truncated_fields = ranged.truncatedFields;
+    metadata = nextMeta;
+  } else {
+    metadata = mergedMetadata;
+  }
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json'
@@ -417,7 +441,7 @@ export function createPaginatedResponse(
   }
 
   return NextResponse.json({
-    data,
+    data: ranged.data,
     pagination: {
       page,
       limit,

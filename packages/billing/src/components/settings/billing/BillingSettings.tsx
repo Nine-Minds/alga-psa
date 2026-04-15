@@ -8,13 +8,19 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import { NumberingSettings } from '@alga-psa/reference-data/components';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import DefaultCurrencySettings from './DefaultCurrencySettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
+import RenewalAutomationSettings from './RenewalAutomationSettings';
 import { TaxSourceSettings } from '../tax/TaxSourceSettings';
 import { TaxRegionsManager } from '../tax/TaxRegionsManager';
 
 // Payment Settings Skeleton Component
 const PaymentSettingsSkeleton: React.FC = () => {
+  const { t } = useTranslation('msp/billing-settings');
+
   return (
     <div className="space-y-6">
       {/* Form Fields Skeleton */}
@@ -41,7 +47,9 @@ const PaymentSettingsSkeleton: React.FC = () => {
       {/* Loading Indicator */}
       <div className="flex flex-col items-center justify-center py-4">
         <Spinner size="md" />
-        <p className="mt-2 text-muted-foreground">Loading payment settings...</p>
+        <p className="mt-2 text-muted-foreground">
+          {t('payments.loading', { defaultValue: 'Loading payment settings...' })}
+        </p>
       </div>
     </div>
   );
@@ -73,17 +81,22 @@ const PaymentSettingsConfig = dynamic(
   }
 );
 
-const BILLING_SECTION_IDS = ['general', 'tax', 'payments'] as const;
 const DEFAULT_BILLING_SECTION = 'general';
 
 const BillingSettings: React.FC = () => {
+  const { t } = useTranslation('msp/billing-settings');
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
+  const { enabled: isQuotingEnabled } = useFeatureFlag('quoting-enabled', { defaultValue: false });
+
+  const billingSectionIds: readonly string[] = isQuotingEnabled
+    ? ['general', 'quoting', 'tax', 'payments']
+    : ['general', 'tax', 'payments'];
 
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
     const requestedTab = sectionParam?.toLowerCase();
-    return requestedTab && BILLING_SECTION_IDS.includes(requestedTab as typeof BILLING_SECTION_IDS[number])
+    return requestedTab && billingSectionIds.includes(requestedTab)
       ? requestedTab
       : DEFAULT_BILLING_SECTION;
   });
@@ -91,13 +104,13 @@ const BillingSettings: React.FC = () => {
   // Update active tab when URL parameter changes
   useEffect(() => {
     const requestedTab = sectionParam?.toLowerCase();
-    const targetTab = requestedTab && BILLING_SECTION_IDS.includes(requestedTab as typeof BILLING_SECTION_IDS[number])
+    const targetTab = requestedTab && billingSectionIds.includes(requestedTab)
       ? requestedTab
       : DEFAULT_BILLING_SECTION;
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
     }
-  }, [sectionParam, activeTab]);
+  }, [sectionParam, activeTab, billingSectionIds]);
 
   const updateURL = (tabId: string) => {
     // Build new URL with tab and section parameters
@@ -120,15 +133,30 @@ const BillingSettings: React.FC = () => {
   const tabContent: TabContent[] = [
     {
       id: 'general',
-      label: 'General',
+      label: t('tabs.general', { defaultValue: 'General' }),
       content: (
         <div className="space-y-6">
-          {/* Invoice Numbering Card */}
           <Card>
             <CardHeader>
-              <CardTitle>Invoice Numbering</CardTitle>
+              <CardTitle>{t('general.currency.title', { defaultValue: 'Default Currency' })}</CardTitle>
               <CardDescription>
-                Customize how invoice numbers are generated and displayed.
+                {t('general.currency.description', {
+                  defaultValue: 'Set the default currency for new products, services, contracts, and quotes. This can be overridden per client in their billing configuration.'
+                })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DefaultCurrencySettings />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('general.invoiceNumbering.title', { defaultValue: 'Invoice Numbering' })}</CardTitle>
+              <CardDescription>
+                {t('general.invoiceNumbering.description', {
+                  defaultValue: 'Customize how invoice numbers are generated and displayed.'
+                })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -136,21 +164,85 @@ const BillingSettings: React.FC = () => {
             </CardContent>
           </Card>
 
-          <ZeroDollarInvoiceSettings />
-          <CreditExpirationSettings />
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('general.zeroDollar.title', { defaultValue: 'Zero-Dollar Invoices' })}</CardTitle>
+              <CardDescription>
+                {t('general.zeroDollar.description', {
+                  defaultValue: 'Control how invoices with no charges are handled.'
+                })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ZeroDollarInvoiceSettings />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('general.creditExpiration.title', { defaultValue: 'Credit Expiration' })}</CardTitle>
+              <CardDescription>
+                {t('general.creditExpiration.description', {
+                  defaultValue: 'Configure when and how client credits expire.'
+                })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CreditExpirationSettings />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('general.renewal.title', { defaultValue: 'Renewal Automation' })}</CardTitle>
+              <CardDescription>
+                {t('general.renewal.description', {
+                  defaultValue: 'Configure default behavior when contracts reach their renewal date.'
+                })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RenewalAutomationSettings />
+            </CardContent>
+          </Card>
         </div>
       ),
     },
+    ...(isQuotingEnabled ? [{
+      id: 'quoting',
+      label: t('tabs.quoting', { defaultValue: 'Quoting' }),
+      content: (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('quoting.quoteNumbering.title', { defaultValue: 'Quote Numbering' })}</CardTitle>
+              <CardDescription>
+                {t('quoting.quoteNumbering.description', {
+                  defaultValue: 'Customize how quote numbers are generated and displayed.'
+                })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <NumberingSettings entityType="QUOTE" />
+            </CardContent>
+          </Card>
+        </div>
+      ),
+    }] : []),
     {
       id: 'tax',
-      label: 'Tax',
+      label: t('tabs.tax', { defaultValue: 'Tax' }),
       content: (
         <div className="space-y-6">
           <TaxSourceSettings />
           <Card>
             <CardHeader>
-              <CardTitle>Tax Regions</CardTitle>
-              <CardDescription>Manage tax regions and related settings</CardDescription>
+              <CardTitle>{t('tax.taxRegions.title', { defaultValue: 'Tax Regions' })}</CardTitle>
+              <CardDescription>
+                {t('tax.taxRegions.description', {
+                  defaultValue: 'Manage tax regions and related settings'
+                })}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <TaxRegionsManager />
@@ -161,13 +253,15 @@ const BillingSettings: React.FC = () => {
     },
     {
       id: 'payments',
-      label: 'Payments',
+      label: t('tabs.payments', { defaultValue: 'Payments' }),
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Payment Settings</CardTitle>
+            <CardTitle>{t('payments.title', { defaultValue: 'Payment Settings' })}</CardTitle>
             <CardDescription>
-              Configure how payment links work with your invoices.
+              {t('payments.description', {
+                defaultValue: 'Configure how payment links work with your invoices.'
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent>

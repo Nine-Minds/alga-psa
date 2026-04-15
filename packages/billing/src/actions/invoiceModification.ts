@@ -15,12 +15,12 @@ import { BillingEngine } from '../lib/billing/billingEngine';
 import { persistInvoiceCharges, persistManualInvoiceCharges } from '../services/invoiceService'; // Import persistManualInvoiceCharges
 import Invoice from '@alga-psa/billing/models/invoice';
 import { v4 as uuidv4 } from 'uuid';
-// import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient'; // No longer directly used here
+// import { getRedisStreamClient } from '@alga-psa/workflow-streams'; // No longer directly used here
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildCreditNoteCreatedPayload,
   buildCreditNoteVoidedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 import { validateInvoiceFinalization } from './taxSourceActions';
 import { withAuth } from '@alga-psa/auth';
@@ -47,6 +47,190 @@ interface ManualItemsUpdate {
   invoice_number?: string; // Added based on usage in updateManualInvoiceItems
 }
 
+type InvoiceCreditHandlingKind = 'prepayment' | 'negative_total' | 'standard';
+
+function classifyInvoiceCreditHandling(invoice: {
+  is_prepayment?: boolean | null;
+  total_amount?: number | null;
+} | null | undefined): InvoiceCreditHandlingKind {
+  if (invoice?.is_prepayment) {
+    return 'prepayment';
+  }
+
+  if (Number(invoice?.total_amount ?? 0) < 0) {
+    return 'negative_total';
+  }
+
+  return 'standard';
+}
+
+async function hasCanonicalRecurringDetailPeriodsForInvoice(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+): Promise<boolean> {
+  const detailRow = await trx('invoice_charge_details as iid')
+    .join('invoice_charges as ic', function(this: Knex.JoinClause) {
+      this.on('iid.item_id', '=', 'ic.item_id')
+        .andOn('iid.tenant', '=', 'ic.tenant');
+    })
+    .where('iid.tenant', tenant)
+    .andWhere('ic.invoice_id', invoiceId)
+    .whereNotNull('iid.service_period_start')
+    .whereNotNull('iid.service_period_end')
+    .first('iid.item_detail_id');
+
+  return Boolean(detailRow);
+}
+
+async function hasLinkedRecurringServicePeriodsForInvoice(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+): Promise<boolean> {
+  const linkedRow = await trx('recurring_service_periods')
+    .where({
+      tenant,
+      invoice_id: invoiceId,
+    })
+    .first('record_id');
+
+  return Boolean(linkedRow);
+}
+
+async function releaseRecurringServicePeriodInvoiceLinkageForInvoice(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  releasedAt: string,
+) {
+  return trx('recurring_service_periods')
+    .where({
+      tenant,
+      invoice_id: invoiceId,
+    })
+    .update({
+      lifecycle_state: 'locked',
+      invoice_id: null,
+      invoice_charge_id: null,
+      invoice_charge_detail_id: null,
+      invoice_linked_at: null,
+      updated_at: releasedAt,
+    });
+}
+
+export interface DraftInvoicePropertiesUpdateInput {
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string | null;
+}
+
+export interface DraftInvoicePropertiesUpdateResult {
+  invoiceId: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string | null;
+}
+
+export const updateDraftInvoiceProperties = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string,
+  input: DraftInvoicePropertiesUpdateInput
+): Promise<DraftInvoicePropertiesUpdateResult> => {
+  const trimmedInvoiceNumber = input.invoiceNumber?.trim();
+
+  if (!trimmedInvoiceNumber) {
+    throw new Error('Invoice number is required');
+  }
+
+  if (!input.invoiceDate) {
+    throw new Error('Invoice date is required');
+  }
+
+  let normalizedInvoiceDate: string;
+  let normalizedDueDate: string | null = null;
+
+  try {
+    normalizedInvoiceDate = toISODate(Temporal.PlainDate.from(input.invoiceDate));
+  } catch {
+    throw new Error('Invoice date is invalid');
+  }
+
+  if (input.dueDate) {
+    try {
+      normalizedDueDate = toISODate(Temporal.PlainDate.from(input.dueDate));
+    } catch {
+      throw new Error('Due date is invalid');
+    }
+  }
+
+  const currentDate = Temporal.Now.plainDateISO().toString();
+  const { knex } = await createTenantKnex();
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const invoice = await trx('invoices')
+      .where({
+        invoice_id: invoiceId,
+        tenant,
+      })
+      .first();
+
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    if (invoice.finalized_at || invoice.status !== 'draft') {
+      throw new Error('Only draft invoices can be edited');
+    }
+
+    const duplicateInvoice = await trx('invoices')
+      .where({
+        tenant,
+        invoice_number: trimmedInvoiceNumber,
+      })
+      .whereNot({ invoice_id: invoiceId })
+      .first('invoice_id');
+
+    if (duplicateInvoice) {
+      throw new Error('Invoice number already exists. Choose a different number.');
+    }
+
+    try {
+      await trx('invoices')
+        .where({
+          invoice_id: invoiceId,
+          tenant,
+        })
+        .update({
+          invoice_number: trimmedInvoiceNumber,
+          invoice_date: normalizedInvoiceDate,
+          due_date: normalizedDueDate,
+          updated_at: currentDate,
+        });
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === '23505' &&
+        'constraint' in error &&
+        error.constraint === 'unique_invoice_number_per_tenant'
+      ) {
+        throw new Error('Invoice number already exists. Choose a different number.');
+      }
+
+      throw error;
+    }
+  });
+
+  return {
+    invoiceId,
+    invoiceNumber: trimmedInvoiceNumber,
+    invoiceDate: normalizedInvoiceDate,
+    dueDate: normalizedDueDate,
+  };
+});
 
 export const finalizeInvoice = withAuth(async (
   user,
@@ -72,6 +256,13 @@ export async function finalizeInvoiceWithKnex(
     createdByUserId: string;
     amount: number;
     currency: string;
+    sourceDocumentKind: 'prepayment_invoice' | 'negative_invoice';
+    sourceInvoiceId: string;
+    sourceInvoiceNumber: string | null;
+    sourceInvoiceStatus: string | null;
+    sourceInvoiceDateBasis: 'financial_document_date' | 'canonical_recurring_service_period';
+    sourceServicePeriodStart: string | null;
+    sourceServicePeriodEnd: string | null;
   } | null = null;
 
   // Validate tax source before finalization
@@ -123,8 +314,10 @@ export async function finalizeInvoiceWithKnex(
     // );
   });
 
-  // Check if this is a prepayment invoice (no billing_cycle_id)
-  if (invoice && !invoice.billing_cycle_id) {
+  // Prepayments and negative invoices use explicit financial-document classification.
+  const invoiceCreditHandlingKind = classifyInvoiceCreditHandling(invoice);
+
+  if (invoice && invoiceCreditHandlingKind === 'prepayment') {
     // For prepayment invoices, update the client's credit balance
     await ClientContractLine.updateClientCredit(invoice.client_id, invoice.subtotal);
 
@@ -132,7 +325,7 @@ export async function finalizeInvoiceWithKnex(
     console.log(`Updated credit balance for client ${invoice.client_id} by ${invoice.subtotal} from prepayment invoice ${invoiceId}`);
   }
   // Handle regular invoices with negative totals
-  else if (invoice && invoice.total_amount < 0) {
+  else if (invoice && invoiceCreditHandlingKind === 'negative_total') {
     // Get absolute value of negative total
     const creditAmount = Math.abs(invoice.total_amount);
 
@@ -229,6 +422,13 @@ export async function finalizeInvoiceWithKnex(
         createdByUserId: userId,
         amount: creditAmount,
         currency: String(invoice.currency_code ?? 'USD'),
+        sourceDocumentKind: 'negative_invoice',
+        sourceInvoiceId: invoiceId,
+        sourceInvoiceNumber: invoice.invoice_number ?? null,
+        sourceInvoiceStatus: invoice.status ?? null,
+        sourceInvoiceDateBasis: 'financial_document_date',
+        sourceServicePeriodStart: null,
+        sourceServicePeriodEnd: null,
       };
 
       // Log audit
@@ -281,6 +481,33 @@ export async function finalizeInvoiceWithKnex(
   }
 
   if (createdCreditNote) {
+    if (createdCreditNote.sourceDocumentKind === 'negative_invoice') {
+      // Negative-invoice credit notes inherit date meaning from the source
+      // invoice when canonical recurring detail rows exist; otherwise they
+      // fall back to the source document date as a financial artifact.
+      const sourceInvoice = await Invoice.getById(knex as any, tenant, createdCreditNote.sourceInvoiceId);
+      const servicePeriodStarts = (sourceInvoice?.invoice_charges ?? [])
+        .map((charge) => charge.service_period_start)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .sort();
+      const servicePeriodEnds = (sourceInvoice?.invoice_charges ?? [])
+        .map((charge) => charge.service_period_end)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .sort();
+
+      createdCreditNote = {
+        ...createdCreditNote,
+        sourceInvoiceNumber: sourceInvoice?.invoice_number ?? createdCreditNote.sourceInvoiceNumber,
+        sourceInvoiceStatus: sourceInvoice?.status ?? createdCreditNote.sourceInvoiceStatus,
+        sourceInvoiceDateBasis:
+          servicePeriodStarts.length > 0 || servicePeriodEnds.length > 0
+            ? 'canonical_recurring_service_period'
+            : 'financial_document_date',
+        sourceServicePeriodStart: servicePeriodStarts[0] ?? null,
+        sourceServicePeriodEnd: servicePeriodEnds[servicePeriodEnds.length - 1] ?? null,
+      };
+    }
+
     await publishWorkflowEvent({
       eventType: 'CREDIT_NOTE_CREATED',
       payload: buildCreditNoteCreatedPayload({
@@ -291,6 +518,13 @@ export async function finalizeInvoiceWithKnex(
         amount: createdCreditNote.amount,
         currency: createdCreditNote.currency,
         status: 'issued',
+        sourceDocumentKind: createdCreditNote.sourceDocumentKind,
+        sourceInvoiceId: createdCreditNote.sourceInvoiceId,
+        sourceInvoiceNumber: createdCreditNote.sourceInvoiceNumber,
+        sourceInvoiceStatus: createdCreditNote.sourceInvoiceStatus,
+        sourceInvoiceDateBasis: createdCreditNote.sourceInvoiceDateBasis,
+        sourceServicePeriodStart: createdCreditNote.sourceServicePeriodStart,
+        sourceServicePeriodEnd: createdCreditNote.sourceServicePeriodEnd,
       }),
       ctx: {
         tenantId: tenant,
@@ -446,6 +680,41 @@ async function updateManualInvoiceItemsInternal(
   }
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const targetedItemIds = Array.from(
+      new Set([
+        ...(changes.removedItemIds ?? []),
+        ...((changes.updatedItems ?? []).map((item) => item.item_id).filter(Boolean)),
+      ])
+    );
+
+    if (targetedItemIds.length > 0) {
+      const nonManualTargets = await trx('invoice_charges as ic')
+        .leftJoin('invoice_charge_details as iid', function(this: Knex.JoinClause) {
+          this.on('iid.item_id', '=', 'ic.item_id')
+            .andOn('iid.tenant', '=', 'ic.tenant');
+        })
+        .where('ic.invoice_id', invoiceId)
+        .andWhere('ic.tenant', tenant)
+        .whereIn('ic.item_id', targetedItemIds)
+        .where(function(this: Knex.QueryBuilder) {
+          this.where('ic.is_manual', false).orWhereNull('ic.is_manual');
+        })
+        .select('ic.item_id', 'ic.description', 'iid.item_detail_id');
+
+      if (nonManualTargets.length > 0) {
+        const touchesRecurringDetailBackedCharge = nonManualTargets.some((row: any) => Boolean(row.item_detail_id));
+        if (touchesRecurringDetailBackedCharge) {
+          throw new Error(
+            'Cannot manually edit recurring invoice charges once canonical detail periods exist. Add an adjustment as a manual item or cancel and regenerate the invoice instead.'
+          );
+        }
+
+        throw new Error(
+          'Cannot manually edit non-manual invoice charges. Add an adjustment as a manual item instead.'
+        );
+      }
+    }
+
     // Process removals
     if (changes.removedItemIds && changes.removedItemIds.length > 0) {
       await trx('invoice_charges')
@@ -740,6 +1009,23 @@ export const hardDeleteInvoice = withAuth(async (
         return; // Exit if invoice doesn't exist
     }
 
+    const hasLinkedRecurringServicePeriods = await hasLinkedRecurringServicePeriodsForInvoice(
+      trx,
+      tenant,
+      invoiceId,
+    );
+
+    // Canonical recurring detail rows are authoritative historical coverage metadata.
+    // Preserve them by cancelling the invoice through the regular lifecycle instead of hard deletion.
+    if (
+      await hasCanonicalRecurringDetailPeriodsForInvoice(trx, tenant, invoiceId)
+      && !hasLinkedRecurringServicePeriods
+    ) {
+      throw new Error(
+        `Cannot delete invoice ${invoiceId}: canonical recurring detail periods already exist. Cancel the invoice instead of deleting it.`
+      );
+    }
+
     // 2. Handle payments
     const payments = await trx('transactions')
       .where({
@@ -906,6 +1192,15 @@ export const hardDeleteInvoice = withAuth(async (
         tenant
       })
       .delete();
+
+    if (hasLinkedRecurringServicePeriods) {
+      await releaseRecurringServicePeriodInvoiceLinkageForInvoice(
+        trx,
+        tenant,
+        invoiceId,
+        now,
+      );
+    }
 
     // 8. Delete invoice items
     await trx('invoice_charges')

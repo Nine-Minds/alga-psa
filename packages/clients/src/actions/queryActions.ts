@@ -329,21 +329,9 @@ export const findContactByEmailAddress = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const existingContact = await trx('contacts')
-        .select('contacts.contact_name_id')
-        .where({
-          'contacts.email': email.toLowerCase(),
-          'contacts.tenant': tenant
-        })
-        .first<{ contact_name_id: string }>();
-
-      if (!existingContact) {
-        return null;
-      }
-
-      return ContactModel.getContactById(existingContact.contact_name_id, tenant, trx);
-    });
+    const contact = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      ContactModel.getContactByEmail(email, tenant, trx)
+    );
 
     return contact || null;
   } catch (error) {

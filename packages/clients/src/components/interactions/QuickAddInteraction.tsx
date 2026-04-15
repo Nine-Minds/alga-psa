@@ -536,6 +536,34 @@ export function QuickAddInteraction({
     [interactionTypes]
   );
 
+  const footer = (
+    <div className="flex gap-2 w-full">
+      <Button
+        id="cancel-interaction-button"
+        type="button"
+        variant="outline"
+        className="flex-1"
+        onClick={() => {
+          setHasAttemptedSubmit(false);
+          setValidationErrors([]);
+          setEndTimeError('');
+          onClose();
+        }}
+      >
+        Cancel
+      </Button>
+      <Button
+        id="save-interaction-button"
+        type="button"
+        onClick={() => (document.getElementById('quick-add-interaction-form') as HTMLFormElement | null)?.requestSubmit()}
+        className={`flex-1 ${!typeId || !title.trim() ? 'opacity-50' : ''}`}
+        disabled={!typeId || !title.trim() || !!endTimeError}
+      >
+        {isEditMode ? 'Update Interaction' : 'Save Interaction'}
+      </Button>
+    </div>
+  );
+
   return (
     <ReflectionContainer id={id} label="Quick Add Interaction">
       <Dialog
@@ -550,10 +578,10 @@ export function QuickAddInteraction({
         title={isEditMode ? 'Edit Interaction' : 'Add New Interaction'}
         className="max-w-2xl"
         hideCloseButton={false}
-        contentClassName="max-h-[calc(90vh-6rem)]"
+        footer={footer}
       >
         <DialogContent>
-            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <form id="quick-add-interaction-form" onSubmit={handleSubmit} className="space-y-4" noValidate>
               {hasAttemptedSubmit && validationErrors.length > 0 && (
                 <Alert variant="destructive">
                   <AlertDescription>
@@ -783,30 +811,6 @@ export function QuickAddInteraction({
                     <span className="text-sm text-muted-foreground">minutes</span>
                   </div>
                 </div>
-              </div>
-              <div className="flex gap-2 pt-4 border-t border-gray-100">
-                <Button 
-                  id="cancel-interaction-button"
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setHasAttemptedSubmit(false);
-                    setValidationErrors([]);
-                    setEndTimeError('');
-                    onClose();
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  id="save-interaction-button"
-                  type="submit" 
-                  className={`flex-1 ${!typeId || !title.trim() ? 'opacity-50' : ''}`}
-                  disabled={!typeId || !title.trim() || !!endTimeError}
-                >
-                  {isEditMode ? 'Update Interaction' : 'Save Interaction'}
-                </Button>
               </div>
             </form>
         </DialogContent>

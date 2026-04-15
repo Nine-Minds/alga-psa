@@ -3,6 +3,7 @@ import { Redis } from '@hocuspocus/extension-redis'
 import { Database } from '@hocuspocus/extension-database'
 import { Logger } from '@hocuspocus/extension-logger'
 import { NotificationExtension } from './NotificationExtension.js'
+import { AiParticipantExtension } from './AiParticipantExtension.js'
 import { validateDocumentRoomAccess } from './tenantValidation.js'
 
 // Helper function to get required env var or fail in production
@@ -44,6 +45,10 @@ const server = Server.configure({
             redisUsername: process.env.REDIS_USERNAME || 'default',
             redisPassword: getEnvOrFail('REDIS_PASSWORD', 'sebastian123'),
             redisPrefix: process.env.REDIS_PREFIX || 'alga-psa:'
+        }),
+        new AiParticipantExtension({
+            aiApiUrl: process.env.AI_DOCUMENT_API_URL || 'http://localhost:3000/api/v1/ai/document-assist',
+            aiApiKey: process.env.AI_DOCUMENT_API_KEY || '',
         }),
         new Logger({
             level: 'debug', // Set to 'debug' for maximum verbosity

@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Calendar } from '@alga-psa/ui/components/Calendar';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from 'react-i18next';
 
 export type DeadlineFilterType = 'before' | 'after' | 'on' | 'between';
 
@@ -29,16 +30,17 @@ export const DeadlineFilter: React.FC<DeadlineFilterProps> = ({
   placeholder = 'Filter by deadline',
   id = 'deadline-filter'
 }) => {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [open, setOpen] = useState(false);
   const [filterType, setFilterType] = useState<DeadlineFilterType>(value?.type || 'before');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(value?.date);
   const [selectedEndDate, setSelectedEndDate] = useState<Date | undefined>(value?.endDate);
 
   const filterTypeOptions = [
-    { value: 'before', label: 'Before' },
-    { value: 'after', label: 'After' },
-    { value: 'on', label: 'On' },
-    { value: 'between', label: 'Between' }
+    { value: 'before', label: t('filters.deadline.before', 'Before') },
+    { value: 'after', label: t('filters.deadline.after', 'After') },
+    { value: 'on', label: t('filters.deadline.on', 'On') },
+    { value: 'between', label: t('filters.deadline.between', 'Between') }
   ];
 
   const handleApply = () => {
@@ -60,20 +62,25 @@ export const DeadlineFilter: React.FC<DeadlineFilterProps> = ({
   };
 
   const getDisplayText = () => {
-    if (!value || !value.date) return placeholder;
+    if (!value || !value.date) {
+      return t('filters.deadline.placeholder', placeholder);
+    }
     
     const dateStr = format(value.date, 'MM/dd/yyyy');
     switch (value.type) {
       case 'before':
-        return `Before ${dateStr}`;
+        return t('filters.deadline.beforeDate', 'Before {{date}}', { date: dateStr });
       case 'after':
-        return `After ${dateStr}`;
+        return t('filters.deadline.afterDate', 'After {{date}}', { date: dateStr });
       case 'on':
-        return `On ${dateStr}`;
+        return t('filters.deadline.onDate', 'On {{date}}', { date: dateStr });
       case 'between':
         return value.endDate 
-          ? `Between ${dateStr} - ${format(value.endDate, 'MM/dd/yyyy')}`
-          : `From ${dateStr}`;
+          ? t('filters.deadline.betweenDates', 'Between {{start}} - {{end}}', {
+              start: dateStr,
+              end: format(value.endDate, 'MM/dd/yyyy'),
+            })
+          : t('filters.deadline.fromDate', 'From {{date}}', { date: dateStr });
     }
   };
 
@@ -100,19 +107,21 @@ export const DeadlineFilter: React.FC<DeadlineFilterProps> = ({
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-1 block">
-                  Filter Type
+                  {t('filters.deadline.filterTypeLabel', 'Filter Type')}
                 </label>
                 <CustomSelect
                   options={filterTypeOptions}
                   value={filterType}
                   onValueChange={(value) => setFilterType(value as DeadlineFilterType)}
-                  placeholder="Select filter type"
+                  placeholder={t('filters.deadline.selectFilterType', 'Select filter type')}
                 />
               </div>
 
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-1 block">
-                  {filterType === 'between' ? 'Start Date' : 'Date'}
+                  {filterType === 'between'
+                    ? t('filters.deadline.startDate', 'Start Date')
+                    : t('filters.deadline.date', 'Date')}
                 </label>
                 <Calendar
                   mode="single"
@@ -125,7 +134,7 @@ export const DeadlineFilter: React.FC<DeadlineFilterProps> = ({
               {filterType === 'between' && (
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-1 block">
-                    End Date
+                    {t('filters.deadline.endDate', 'End Date')}
                   </label>
                   <Calendar
                     mode="single"
@@ -146,7 +155,7 @@ export const DeadlineFilter: React.FC<DeadlineFilterProps> = ({
                   className="flex items-center gap-1"
                 >
                   <X className="h-3 w-3" />
-                  Clear
+                  {t('filters.deadline.clear', 'Clear')}
                 </Button>
                 <Button
                   id={`${id}-apply`}
@@ -154,7 +163,7 @@ export const DeadlineFilter: React.FC<DeadlineFilterProps> = ({
                   onClick={handleApply}
                   disabled={!selectedDate || (filterType === 'between' && !selectedEndDate)}
                 >
-                  Apply Filter
+                  {t('filters.deadline.apply', 'Apply Filter')}
                 </Button>
               </div>
             </div>

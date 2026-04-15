@@ -18,6 +18,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import {
   extractSchemaFields,
   type ActionRegistryItem,
+  type JsonSchema,
   type SchemaField,
 } from './workflowDataContext';
 
@@ -244,8 +245,9 @@ const SchemaReferenceSection: React.FC<{
 export const ActionSchemaReference: React.FC<{
   action: ActionRegistryItem | undefined;
   saveAs?: string;
+  outputSchemaOverride?: JsonSchema | null;
   onCopyPath?: (path: string) => void;
-}> = ({ action, saveAs, onCopyPath }) => {
+}> = ({ action, saveAs, outputSchemaOverride, onCopyPath }) => {
   const [showSchemaDetails, setShowSchemaDetails] = useState(false);
   const [showRawSchema, setShowRawSchema] = useState(false);
 
@@ -263,8 +265,9 @@ export const ActionSchemaReference: React.FC<{
     );
   }
 
+  const resolvedOutputSchema = outputSchemaOverride ?? action.outputSchema;
   const inputFields = extractSchemaFields(action.inputSchema, action.inputSchema);
-  const outputFields = extractSchemaFields(action.outputSchema, action.outputSchema);
+  const outputFields = extractSchemaFields(resolvedOutputSchema, resolvedOutputSchema);
 
   return (
     <div className="space-y-3">
@@ -342,7 +345,7 @@ export const ActionSchemaReference: React.FC<{
                   actionId: action.id,
                   version: action.version,
                   inputSchema: action.inputSchema,
-                  outputSchema: action.outputSchema
+                  outputSchema: resolvedOutputSchema
                 };
                 const blob = new Blob([JSON.stringify(schema, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -365,7 +368,7 @@ export const ActionSchemaReference: React.FC<{
               <div className="text-gray-400 mb-1">{'// Input Schema'}</div>
               <pre>{JSON.stringify(action.inputSchema, null, 2)}</pre>
               <div className="text-gray-400 mt-2 mb-1">{'// Output Schema'}</div>
-              <pre>{JSON.stringify(action.outputSchema, null, 2)}</pre>
+              <pre>{JSON.stringify(resolvedOutputSchema, null, 2)}</pre>
             </div>
           )}
         </>

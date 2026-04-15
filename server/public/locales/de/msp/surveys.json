@@ -1,0 +1,427 @@
+{
+  "common": {
+    "loading": "Lädt..."
+  },
+  "moduleFrame": {
+    "title": "Kundenzufriedenheitsumfragen",
+    "description": "Überwachen Sie die Antwortqualität, analysieren Sie Zufriedenheitstrends und reagieren Sie auf Feedback.",
+    "badge": "Zufriedenheitsanalysen",
+    "nav": {
+      "dashboard": "Dashboard",
+      "responses": "Antworten",
+      "analytics": "Analysen",
+      "setup": "Einrichtung"
+    }
+  },
+  "settings": {
+    "tabLabel": "Umfragen",
+    "title": "Kundenzufriedenheitsumfragen",
+    "subtitle": "Konfigurieren Sie Vorlagen, Auslöser und Versand, um nach Tickets Feedback zu sammeln.",
+    "tabs": {
+      "templates": "Vorlagen",
+      "triggers": "Auslöser"
+    },
+    "templateList": {
+      "title": "Umfragevorlagen",
+      "description": "Verwalten Sie die Texte und Bewertungsskalen, die an Ihre Kunden gesendet werden.",
+      "createButton": "Neue Vorlage",
+      "emptyTitle": "Noch keine Umfragevorlagen",
+      "emptyDescription": "Erstellen Sie Ihre erste Vorlage, um Umfragetext und Bewertungsskala festzulegen.",
+      "defaultBadge": "Standard",
+      "table": {
+        "name": "Vorlage",
+        "rating": "Bewertungsskala",
+        "status": "Status",
+        "updated": "Aktualisiert",
+        "actions": "Aktionen"
+      },
+      "status": {
+        "enabled": "Aktiviert",
+        "disabled": "Deaktiviert"
+      },
+      "actions": {
+        "setDefault": "Als Standard festlegen"
+      },
+      "toasts": {
+        "created": "Vorlage erstellt",
+        "updated": "Vorlage aktualisiert",
+        "deleted": "Vorlage gelöscht",
+        "error": "Vorlage konnte nicht gespeichert werden",
+        "setDefault": "Standardvorlage aktualisiert"
+      },
+      "errors": {
+        "load": "Umfragevorlagen konnten nicht geladen werden."
+      },
+      "delete": {
+        "validationFailed": "Die Löschung konnte nicht validiert werden. Bitte versuchen Sie es erneut.",
+        "error": "Vorlage konnte nicht gelöscht werden",
+        "entityFallback": "diese Umfragevorlage"
+      },
+      "actionsMenuAria": "Aktionen für {{name}} öffnen"
+    },
+    "templateForm": {
+      "titleCreate": "Umfragevorlage erstellen",
+      "titleEdit": "Umfragevorlage bearbeiten",
+      "ratingTypes": {
+        "stars": "Sterne",
+        "numbers": "Zahlen",
+        "emojis": "Emojis"
+      },
+      "defaults": {
+        "promptText": "Umfragefrage",
+        "commentPrompt": "Zusätzliche Kommentare (optional)",
+        "thankYouText": "Danke!"
+      },
+      "labels": {
+        "name": "Vorlagenname",
+        "ratingType": "Bewertungstyp",
+        "ratingScale": "Bewertungsskala",
+        "ratingLabels": "Bewertungsbeschriftungen",
+        "preview": "Vorschau",
+        "promptText": "Umfragefrage",
+        "commentPrompt": "Kommentaraufforderung",
+        "thankYouText": "Dankesnachricht",
+        "isDefault": "Als Standardvorlage festlegen",
+        "enabled": "Vorlage aktiviert"
+      },
+      "placeholders": {
+        "ratingLabels": "Beispiel:\nSehr schlecht\nSchlecht\nDurchschnittlich\nGut\nAusgezeichnet"
+      },
+      "help": {
+        "ratingLabels": "Geben Sie eine Beschriftung pro Zeile in Reihenfolge von der niedrigsten bis zur höchsten Bewertung an."
+      },
+      "actions": {
+        "create": "Vorlage erstellen",
+        "save": "Änderungen speichern",
+        "delete": "Vorlage löschen"
+      },
+      "delete": {
+        "validationFailed": "Die Löschung konnte nicht validiert werden. Bitte versuchen Sie es erneut.",
+        "error": "Vorlage konnte nicht gelöscht werden",
+        "entityFallback": "diese Umfragevorlage"
+      }
+    },
+    "triggerList": {
+      "title": "Umfrageauslöser",
+      "description": "Senden Sie Einladungen automatisch, wenn Tickets oder Projekte abgeschlossen werden.",
+      "createButton": "Neuer Auslöser",
+      "emptyTitle": "Keine Umfrageauslöser konfiguriert",
+      "emptyDescription": "Erstellen Sie einen Auslöser, um Umfragen zu senden, wenn Tickets geschlossen oder Projekte abgeschlossen werden.",
+      "table": {
+        "template": "Vorlage",
+        "type": "Auslöser",
+        "conditions": "Bedingungen",
+        "status": "Status",
+        "updated": "Aktualisiert",
+        "actions": "Aktionen"
+      },
+      "status": {
+        "enabled": "Aktiviert",
+        "disabled": "Deaktiviert"
+      },
+      "conditions": {
+        "unrestricted": "Gilt für jedes Ticket und Projekt",
+        "boards": "Boards",
+        "statuses": "Status",
+        "priorities": "Prioritäten",
+        "any": "Beliebig"
+      },
+      "toasts": {
+        "created": "Auslöser erstellt",
+        "updated": "Auslöser aktualisiert",
+        "deleted": "Auslöser gelöscht",
+        "error": "Auslöser konnte nicht gespeichert werden",
+        "deleteError": "Auslöser konnte nicht gelöscht werden"
+      },
+      "errors": {
+        "load": "Umfrageauslöser konnten nicht geladen werden."
+      },
+      "deleteConfirm": "Diesen Auslöser löschen? Bereits eingeplante Einladungen werden weiterhin gesendet.",
+      "actionsMenuAria": "Aktionen für den auf {{target}} gerichteten Auslöser öffnen"
+    },
+    "triggerForm": {
+      "titleCreate": "Umfrageauslöser erstellen",
+      "titleEdit": "Umfrageauslöser bearbeiten",
+      "triggerTypes": {
+        "ticket_closed": "Ticket geschlossen",
+        "project_completed": "Projekt abgeschlossen"
+      },
+      "labels": {
+        "template": "Umfragevorlage",
+        "triggerType": "Auslösertyp",
+        "boardIds": "Boards",
+        "statusIds": "Status",
+        "priorities": "Prioritäten",
+        "enabled": "Auslöser aktiviert"
+      },
+      "placeholders": {
+        "boardIds": "Board auswählen",
+        "statusIds": "Status hinzufügen",
+        "priorities": "Priorität hinzufügen"
+      },
+      "boardFilters": {
+        "active": "Aktive Boards",
+        "inactive": "Inaktive Boards",
+        "all": "Alle Boards"
+      },
+      "help": {
+        "conditions": "Lassen Sie ein Feld leer, damit es auf jeden Wert passt."
+      },
+      "actions": {
+        "create": "Auslöser erstellen",
+        "save": "Änderungen speichern",
+        "delete": "Auslöser löschen"
+      },
+      "noTemplates": "Erstellen Sie eine Umfragevorlage, bevor Sie Auslöser hinzufügen.",
+      "prioritiesMixed": "Die ausgewählten Boards verwenden unterschiedliche Prioritätstypen. Es werden alle Prioritäten angezeigt.",
+      "errors": {
+        "reference": "Auslöseroptionen konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+      }
+    }
+  },
+  "response": {
+    "pageTitle": "Kundenzufriedenheitsumfrage",
+    "invalidTitle": "Umfrage nicht verfügbar",
+    "invalidMessage": "Dieser Feedback-Link ist nicht mehr gültig oder wurde bereits verwendet.",
+    "ratingPrompt": "Wie war Ihre Erfahrung?",
+    "ratingAssistive": "Wählen Sie eine Bewertung von 1 bis {{scale}}",
+    "commentLabel": "Zusätzliche Kommentare (optional)",
+    "submitButton": "Feedback senden",
+    "submitting": "Feedback wird gesendet...",
+    "submittedTitle": "Vielen Dank für Ihre Antwort!",
+    "submittedMessage": "{{thankYouText}}",
+    "ratingSubmitted": "Feedback gesendet",
+    "retryButton": "Erneut versuchen",
+    "selectRatingError": "Wählen Sie vor dem Senden eine Bewertung aus.",
+    "errorMessage": "Ihr Feedback konnte nicht erfasst werden. Bitte versuchen Sie es erneut.",
+    "supportMessage": "Wenn Sie Fragen haben, wenden Sie sich bitte an Ihren Techniker."
+  },
+  "rating": {
+    "buttonAriaWithLabel": "{{rating}} - {{label}}",
+    "buttonAria": "Bewertung {{rating}} von {{scale}}",
+    "defaults": {
+      "3": {
+        "1": "Schlecht",
+        "2": "Gut",
+        "3": "Ausgezeichnet"
+      },
+      "5": {
+        "1": "Sehr schlecht",
+        "2": "Schlecht",
+        "3": "Durchschnittlich",
+        "4": "Gut",
+        "5": "Ausgezeichnet"
+      },
+      "10": {
+        "1": "Schrecklich",
+        "2": "Sehr schlecht",
+        "3": "Schlecht",
+        "4": "Unterdurchschnittlich",
+        "5": "Durchschnittlich",
+        "6": "Überdurchschnittlich",
+        "7": "Gut",
+        "8": "Sehr gut",
+        "9": "Ausgezeichnet",
+        "10": "Perfekt"
+      }
+    }
+  },
+  "responses": {
+    "filters": {
+      "labels": {
+        "template": "Vorlage",
+        "technician": "Techniker",
+        "client": "Kunde",
+        "dateRange": "Datumsbereich"
+      },
+      "placeholders": {
+        "allTemplates": "Alle Vorlagen",
+        "allTechnicians": "Alle Techniker",
+        "allClients": "Alle Kunden"
+      },
+      "actions": {
+        "apply": "Anwenden",
+        "reset": "Zurücksetzen"
+      }
+    },
+    "page": {
+      "filterTitle": "Antworten filtern",
+      "loading": "Antworten werden aktualisiert...",
+      "error": "Umfrageantworten konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+      "pageSizeOptions": {
+        "10": "10 pro Seite",
+        "25": "25 pro Seite",
+        "50": "50 pro Seite"
+      },
+      "itemLabel": "Antworten"
+    },
+    "detail": {
+      "title": "Details der Umfrageantwort",
+      "empty": "Keine Antwort ausgewählt.",
+      "labels": {
+        "submittedAt": "Gesendet am",
+        "client": "Kunde",
+        "contact": "Kontakt",
+        "technician": "Techniker",
+        "ticket": "Ticket",
+        "rating": "Bewertung",
+        "comment": "Kommentar"
+      },
+      "fallbacks": {
+        "unknown": "Unbekannt",
+        "unassigned": "Nicht zugewiesen",
+        "none": "-",
+        "noComment": "Kein Kommentar angegeben."
+      }
+    }
+  },
+  "dashboard": {
+    "loadingInsights": "Umfrageeinblicke werden geladen...",
+    "responseMetrics": {
+      "cards": {
+        "sent": "Gesendete Einladungen",
+        "responses": "Erhaltene Antworten",
+        "responseRate": "Antwortquote",
+        "averageRating": "Durchschnittliche Bewertung",
+        "outstanding": "Ausstehende Einladungen",
+        "negative": "Negative Antworten (<= 2 Sterne)"
+      },
+      "badges": {
+        "awaitingResponses": "Antworten ausstehend",
+        "needsReview": "Muss geprüft werden"
+      }
+    },
+    "responseTrend": {
+      "title": "Antworttrend",
+      "emptyTitle": "Für den ausgewählten Zeitraum wurden keine Antworten erfasst.",
+      "emptyDescription": "Schauen Sie wieder vorbei, nachdem Kunden Feedback eingereicht haben.",
+      "tooltip": {
+        "averageRating": "Durchschnittliche Bewertung",
+        "responses": "Antworten",
+        "date": "Datum: {{label}}"
+      }
+    },
+    "responsesList": {
+      "title": "Neueste Antworten",
+      "emptyTitle": "Noch keine Umfrageantworten verfügbar.",
+      "emptyDescription": "Ermutigen Sie Kunden, Feedback zu geben, damit diese Ansicht gefüllt wird.",
+      "table": {
+        "submitted": "Gesendet",
+        "client": "Kunde",
+        "technician": "Techniker",
+        "rating": "Bewertung",
+        "comment": "Kommentar",
+        "ticket": "Ticket"
+      },
+      "fallbacks": {
+        "unknownClient": "Unbekannter Kunde",
+        "unassigned": "Nicht zugewiesen",
+        "noComment": "Kein Kommentar"
+      }
+    },
+    "satisfactionDistribution": {
+      "title": "Zufriedenheitsverteilung",
+      "emptyTitle": "Noch keine Umfragebewertungen erfasst.",
+      "emptyDescription": "Die Verteilung erscheint, sobald Feedback gesammelt wurde.",
+      "axes": {
+        "rating": "Bewertung",
+        "responses": "Antworten"
+      },
+      "tooltip": {
+        "percent": "Prozent",
+        "responses": "Antworten",
+        "rating": "Bewertung: {{label}}"
+      }
+    },
+    "topIssues": {
+      "title": "Häufigste Probleme",
+      "emptyTitle": "Für die ausgewählten Filter wurde kein negatives Feedback erfasst.",
+      "emptyDescription": "Das ist ein gutes Zeichen. Weiter so.",
+      "fallbacks": {
+        "unknownClient": "Unbekannter Kunde",
+        "ticket": "Ticket {{ticket}}",
+        "noComment": "Kein Kommentar hinterlassen.",
+        "assignedTo": "Zugewiesen an: {{name}}"
+      }
+    }
+  },
+  "analytics": {
+    "filters": {
+      "labels": {
+        "customerSegment": "Kundensegment",
+        "surveyTemplate": "Umfragevorlage",
+        "timeframe": "Zeitraum",
+        "calendarView": "Kalenderansicht"
+      },
+      "defaults": {
+        "segments": {
+          "all": "Alle Kunden",
+          "managed": "Verwaltete Kunden",
+          "project": "Nur Projektkunden"
+        },
+        "templates": {
+          "all": "Alle Vorlagen",
+          "default": "CSAT-Vorlage Phase 1"
+        },
+        "timeframes": {
+          "30d": "Letzte 30 Tage",
+          "90d": "Letzte 90 Tage",
+          "365d": "Seit Jahresbeginn"
+        }
+      },
+      "actions": {
+        "apply": "Filter anwenden",
+        "reset": "Zurücksetzen",
+        "calendar": "Demnächst verfügbar"
+      }
+    },
+    "page": {
+      "filtersTitle": "Analysefilter",
+      "overviewTitle": "Zufriedenheitsübersicht",
+      "overviewDescription": "Vergleichen Sie die durchschnittliche Zufriedenheit und die Antwortquoten im Zeitverlauf. Zusätzliche Segmentierung folgt in späteren Iterationen."
+    },
+    "chart": {
+      "empty": "Wählen Sie oben Filter aus, um erweiterte Analysen zu erkunden. (Demnächst verfügbar)",
+      "tooltip": {
+        "averageRating": "Durchschnittliche Bewertung",
+        "responseRate": "Antwortquote"
+      },
+      "legend": {
+        "averageRating": "Durchschnittliche Bewertung",
+        "responseRate": "Antwortquote"
+      }
+    },
+    "export": {
+      "csv": "CSV exportieren",
+      "shareSnapshot": "Momentaufnahme teilen",
+      "emailDigest": "E-Mail-Zusammenfassung"
+    }
+  },
+  "clientSummary": {
+    "title": "CSAT-Zusammenfassung",
+    "empty": "Für diesen Kunden sind noch keine Umfragedaten verfügbar. Nach Ticketabschlüssen gesendete Umfragen füllen diese Ansicht.",
+    "labels": {
+      "averageRating": "Durchschnittliche Bewertung",
+      "responseRate": "Antwortquote",
+      "totalResponses": "Gesamtantworten",
+      "lastResponse": "Letzte Antwort",
+      "rollingTrend": "Gleitender Trend"
+    },
+    "fallbacks": {
+      "none": "-",
+      "noResponsesYet": "Noch keine Antworten"
+    }
+  },
+  "ticketSummary": {
+    "title": "Kundenfeedback",
+    "empty": "Für dieses Ticket wurden noch keine Umfrageantworten erhalten.",
+    "labels": {
+      "latestRating": "Neueste Bewertung",
+      "comment": "Kommentar",
+      "totalResponses": "Gesamtantworten"
+    },
+    "fallbacks": {
+      "none": "-"
+    }
+  }
+}

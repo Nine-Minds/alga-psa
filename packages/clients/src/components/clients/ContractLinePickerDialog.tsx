@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { IContractLine, IServiceCategory } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface PlanPickerDialogProps {
     isOpen: boolean;
@@ -30,6 +31,7 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
     serviceCategories,
     initialValues
 }) => {
+    const { t } = useTranslation('msp/clients');
     const [selectedPlan, setSelectedPlan] = useState<IContractLine | null>(
         initialValues?.planId ? availablePlans.find(p => p.contract_line_id === initialValues.planId) || null : null
     );
@@ -58,18 +60,38 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
         }
     };
 
+    const footer = (
+        <div className="flex justify-end space-x-2">
+            <Button
+                id="plan-picker-cancel-btn"
+                variant="outline"
+                onClick={onClose}
+            >
+                {t('contractLinePickerDialog.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+                id="plan-picker-submit-btn"
+                onClick={handleSubmit}
+                disabled={!selectedPlan}
+            >
+                {initialValues ? t('contractLinePickerDialog.updatePlan', { defaultValue: 'Update Plan' }) : t('contractLinePickerDialog.addPlan', { defaultValue: 'Add Plan' })}
+            </Button>
+        </div>
+    );
+
     return (
-        <Dialog 
-          isOpen={isOpen} 
-          onClose={onClose} 
-          className="sm:max-w-4xl" 
-          title="Select a Contract Line"
+        <Dialog
+          isOpen={isOpen}
+          onClose={onClose}
+          className="sm:max-w-4xl"
+          title={t('contractLinePickerDialog.title', { defaultValue: 'Select a Contract Line' })}
+          footer={footer}
         >
             <DialogContent>
                 <div className="mt-4 space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Contract Line
+                            {t('contractLinePickerDialog.contractLine', { defaultValue: 'Contract Line' })}
                         </label>
                         <CustomSelect
                             value={selectedPlan?.contract_line_id || ''}
@@ -81,34 +103,34 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
                                 value: plan.contract_line_id || '',
                                 label: plan.contract_line_name
                             }))}
-                            placeholder="Select contract line..."
+                            placeholder={t('contractLinePickerDialog.selectContractLine', { defaultValue: 'Select contract line...' })}
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Service Category
+                                {t('contractLinePickerDialog.serviceCategory', { defaultValue: 'Service Category' })}
                             </label>
                             <CustomSelect
                                 value={selectedCategory}
                                 onValueChange={setSelectedCategory}
                                 options={[
-                                    { value: 'none', label: 'All Categories' },
+                                    { value: 'none', label: t('contractLinePickerDialog.allCategories', { defaultValue: 'All Categories' }) },
                                     ...serviceCategories.map((category): { value: string; label: string } => ({
                                         value: category.category_id || 'None',
                                         label: category.category_name
                                     }))
                                 ]}
-                                placeholder="Select category..."
+                                placeholder={t('contractLinePickerDialog.selectCategory', { defaultValue: 'Select category...' })}
                             />
                             <p className="mt-1 text-xs text-gray-500">
-                                Selecting 'All Categories' means this plan applies regardless of the service category.
+                                {t('contractLinePickerDialog.allCategoriesHelp', { defaultValue: "Selecting 'All Categories' means this plan applies regardless of the service category." })}
                             </p>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Start Date
+                                {t('contractLinePickerDialog.startDate', { defaultValue: 'Start Date' })}
                             </label>
                             <Input
                                 type="date"
@@ -118,12 +140,12 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                End Date
+                                {t('contractLinePickerDialog.endDate', { defaultValue: 'End Date' })}
                             </label>
                             <div className="flex items-center gap-2 [&>div]:mb-0">
                                 <Checkbox
                                     id="ongoing"
-                                    label="Ongoing"
+                                    label={t('contractLinePickerDialog.ongoing', { defaultValue: 'Ongoing' })}
                                     checked={isOngoing}
                                     onChange={(e) => {
                                         setIsOngoing((e.target as HTMLInputElement).checked);
@@ -154,24 +176,6 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
                     </div>
                 </div>
             </DialogContent>
-            <DialogFooter>
-                <div className="flex justify-end space-x-2">
-                    <Button 
-                        id="plan-picker-cancel-btn"
-                        variant="outline" 
-                        onClick={onClose}
-                    >
-                        Cancel
-                    </Button>
-                    <Button 
-                        id="plan-picker-submit-btn"
-                        onClick={handleSubmit}
-                        disabled={!selectedPlan}
-                    >
-                        {initialValues ? 'Update Plan' : 'Add Plan'}
-                    </Button>
-                </div>
-            </DialogFooter>
         </Dialog>
     );
 };

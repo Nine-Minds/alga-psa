@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { TicketInterval, TicketIntervalGroup } from '@alga-psa/types';
 import { IntervalTrackingService } from '@alga-psa/ui/services';
 import { IntervalItem } from './IntervalItem';
@@ -32,6 +33,7 @@ export function IntervalSection({
   timePeriod,
   onCreateTimeEntry
 }: IntervalSectionProps): React.JSX.Element {
+  const { t } = useTranslation('msp/time-entry');
   const [intervals, setIntervals] = useState<TicketInterval[]>([]);
   const [selectedIntervalIds, setSelectedIntervalIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -147,14 +149,18 @@ export function IntervalSection({
         setTimeSheet(sheet);
       } catch (error) {
         console.error('Error fetching/creating time sheet:', error);
-        alert('Cannot create time entry - could not find or create time sheet');
+        alert(t('intervals.messages.cannotFindTimeSheet', {
+          defaultValue: 'Cannot create time entry - could not find or create time sheet'
+        }));
         return;
       }
     }
     
     // Prevent creating time entries from multiple intervals
     if (selectedIntervalIds.length > 1) {
-      alert('Please merge intervals first before creating a time entry');
+      alert(t('intervals.messages.mergeFirst', {
+        defaultValue: 'Please merge intervals first before creating a time entry'
+      }));
       return;
     }
     
@@ -170,7 +176,9 @@ export function IntervalSection({
     const allSameTicket = selectedIntervals.every(interval => interval.ticketId === ticketId);
     
     if (!allSameTicket) {
-      alert('Can only create time entries from intervals of the same ticket');
+      alert(t('intervals.messages.sameTicketOnly', {
+        defaultValue: 'Can only create time entries from intervals of the same ticket'
+      }));
       return;
     }
     
@@ -255,7 +263,7 @@ export function IntervalSection({
     <div className="bg-white rounded-lg shadow p-4" id="timesheet-intervals-section">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold">Ticket Time Intervals</h2>
+          <h2 className="text-lg font-semibold">{t('intervals.title', { defaultValue: 'Ticket Time Intervals' })}</h2>
           <div className="flex gap-2">
             <Button 
               id="select-all-intervals-button"
@@ -271,15 +279,20 @@ export function IntervalSection({
                 }
               }}
             >
-              {selectedIntervalIds.length === intervals.length ? "Deselect All" : "Select All"}
+              {selectedIntervalIds.length === intervals.length
+                ? t('intervals.actions.deselectAll', { defaultValue: 'Deselect All' })
+                : t('intervals.actions.selectAll', { defaultValue: 'Select All' })}
             </Button>
           </div>
         </div>
         <div className="flex items-center">
           <span className="text-sm text-gray-600 mr-4">
-            Total time: <span className="font-mono">{formatDuration(totalDuration)}</span>
+            {t('intervals.totalTime', {
+              defaultValue: 'Total time: {{value}}',
+              value: formatDuration(totalDuration)
+            })}
           </span>
-          <Tooltip content="Create time entry from selected intervals">
+          <Tooltip content={t('intervals.tooltips.createTimeEntry', { defaultValue: 'Create time entry from selected intervals' })}>
             <Button
               disabled={selectedIntervalIds.length === 0}
               onClick={handleCreateTimeEntry}
@@ -297,7 +310,11 @@ export function IntervalSection({
         <Card className="p-3 bg-blue-50 dark:bg-blue-900/20 mb-4">
           <div className="flex items-center justify-between">
             <div>
-              <span className="font-medium">{selectedIntervalIds.length} interval{selectedIntervalIds.length !== 1 ? 's' : ''} selected</span>
+              <span className="font-medium">
+                {selectedIntervalIds.length === 1
+                  ? t('intervals.selectedOne', { defaultValue: '{{count}} interval selected', count: selectedIntervalIds.length })
+                  : t('intervals.selectedOther', { defaultValue: '{{count}} intervals selected', count: selectedIntervalIds.length })}
+              </span>
               <span className="ml-2 text-sm">
                 ({formatDuration(selectedDuration)})
               </span>
@@ -305,7 +322,7 @@ export function IntervalSection({
             
             <div className="flex flex-wrap gap-2 justify-end">
               {selectedIntervalIds.length >= 2 && (
-                <Tooltip content="Merge selected intervals">
+                <Tooltip content={t('intervals.tooltips.mergeSelected', { defaultValue: 'Merge selected intervals' })}>
                   <Button
                     variant="outline"
                     size="sm"
@@ -317,7 +334,9 @@ export function IntervalSection({
                         const allSameTicket = selectedIntervals.every(interval => interval.ticketId === firstTicketId);
                         
                         if (!allSameTicket) {
-                          alert('Can only merge intervals from the same ticket');
+                          alert(t('intervals.messages.mergeSameTicketOnly', {
+                            defaultValue: 'Can only merge intervals from the same ticket'
+                          }));
                           return;
                         }
                         
@@ -325,20 +344,20 @@ export function IntervalSection({
                         const merged = await intervalService.mergeIntervals(selectedIntervalIds);
                         if (merged) {
                           setSelectedIntervalIds([]);
-                          toast.success('Intervals merged successfully');
+                          toast.success(t('intervals.messages.mergeSuccess', { defaultValue: 'Intervals merged successfully' }));
                           await loadIntervals();
                         }
                       } catch (error) {
-                        handleError(error, 'Failed to merge intervals');
+                        handleError(error, t('intervals.messages.failedMerge', { defaultValue: 'Failed to merge intervals' }));
                       }
                     }}
                     id="timesheet-merge-intervals-button"
                   >
-                    Merge
+                    {t('intervals.actions.merge', { defaultValue: 'Merge' })}
                   </Button>
                 </Tooltip>
               )}
-              <Tooltip content="Delete selected intervals">
+              <Tooltip content={t('intervals.tooltips.deleteSelected', { defaultValue: 'Delete selected intervals' })}>
                 <Button
                   variant="outline"
                   size="sm"
@@ -356,7 +375,7 @@ export function IntervalSection({
       
       {/* Intervals list */}
       {isLoading ? (
-        <div className="text-center py-8">Loading intervals...</div>
+        <div className="text-center py-8">{t('intervals.states.loading', { defaultValue: 'Loading intervals...' })}</div>
       ) : groupedIntervals.length > 0 ? (
         <div className="space-y-4">
           {groupedIntervals.map(group => (
@@ -393,8 +412,8 @@ export function IntervalSection({
                   }}
                 >
                   {group.intervals.every(interval => selectedIntervalIds.includes(interval.id))
-                    ? "Deselect All"
-                    : "Select All"}
+                    ? t('intervals.actions.deselectAll', { defaultValue: 'Deselect All' })
+                    : t('intervals.actions.selectAll', { defaultValue: 'Select All' })}
                 </Button>
               </div>
               <div className="space-y-2 pl-1">
@@ -412,7 +431,7 @@ export function IntervalSection({
         </div>
       ) : (
         <div className="text-center py-8 text-gray-500">
-          No intervals found for this time period
+          {t('intervals.states.noIntervalsThisPeriod', { defaultValue: 'No intervals found for this time period' })}
         </div>
       )}
       
@@ -427,7 +446,7 @@ export function IntervalSection({
           workItem={(timeEntryData as any).workItem || {
             work_item_id: timeEntryData.work_item_id || '',
             type: timeEntryData.work_item_type || 'ticket',
-            name: 'Ticket Time Entry',
+            name: t('intervals.entryName', { defaultValue: 'Ticket Time Entry' }),
             description: timeEntryData.notes || '',
             is_billable: true
           }}

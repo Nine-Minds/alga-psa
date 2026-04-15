@@ -1,0 +1,337 @@
+[
+  {
+    "id": "F001",
+    "description": "Create server/public/locales/en/msp/contracts.json namespace with all keys organized into groups: common, status, renewal, billing, po, contractDetail, contractHeader, contractOverview, contractDialog, contractForm, contractLines, contractLineEdit, contractLineRate, addLines, createCustomLine, pricingSchedules, contractsList, clientContracts, templatesTab, detailSwitcher, templateDetail, quickStart, servicePicker, bucketOverlay, frequencyOverride, wizard, wizardBasics, wizardFixed, wizardProducts, wizardHourly, wizardUsage, wizardReview, templateWizard, templateBasics, templateFixed, templateProducts, templateHourly, templateUsage, templateReview, templatePreview (~800-1200 keys)",
+    "implemented": false
+  },
+  {
+    "id": "F002",
+    "description": "Generate fr/msp/contracts.json translations for all keys in F001",
+    "implemented": false
+  },
+  {
+    "id": "F003",
+    "description": "Generate es/msp/contracts.json translations for all keys",
+    "implemented": false
+  },
+  {
+    "id": "F004",
+    "description": "Generate de/msp/contracts.json translations for all keys",
+    "implemented": false
+  },
+  {
+    "id": "F005",
+    "description": "Generate nl/msp/contracts.json translations for all keys",
+    "implemented": false
+  },
+  {
+    "id": "F006",
+    "description": "Generate it/msp/contracts.json translations for all keys (with Italian accent audit)",
+    "implemented": false
+  },
+  {
+    "id": "F007",
+    "description": "Generate pl/msp/contracts.json translations for all keys",
+    "implemented": false
+  },
+  {
+    "id": "F008",
+    "description": "Run `node scripts/generate-pseudo-locales.cjs` to generate xx/msp/contracts.json and yy/msp/contracts.json pseudo-locale files from English source",
+    "implemented": false
+  },
+  {
+    "id": "F009",
+    "description": "Run `node scripts/validate-translations.cjs` and confirm exit code 0 (key parity, variable preservation, pseudo-locale patterns, Italian accents) for msp/contracts across all 9 locales",
+    "implemented": false
+  },
+  {
+    "id": "F010",
+    "description": "Add msp/contracts to the '/msp/billing' route in ROUTE_NAMESPACES in packages/core/src/lib/i18n/config.ts",
+    "implemented": false
+  },
+  {
+    "id": "F011",
+    "description": "Wire useTranslation('msp/contracts') in ContractDetail.tsx -- translate tab labels (Overview, Contract Lines, Pricing Schedules, Documents, Invoices), unsaved changes alert, save success alert, system-managed default alert, and validation error messages",
+    "implemented": false
+  },
+  {
+    "id": "F012",
+    "description": "Wire useTranslation('msp/contracts') in ContractDetail.tsx -- translate Contract Details card: contract name label, description label, edit/save/cancel buttons, 'No description' placeholder, 'System-managed default' badge",
+    "implemented": false
+  },
+  {
+    "id": "F013",
+    "description": "Wire useTranslation('msp/contracts') in ContractDetail.tsx -- translate Contract Header card: status labels (Active/Draft/Terminated/Expired), billing frequency label, currency label, created/updated labels, renewal section (Mode, Source, Notice, Decision Due), expired status note",
+    "implemented": false
+  },
+  {
+    "id": "F014",
+    "description": "Wire useTranslation('msp/contracts') in ContractDetail.tsx -- translate Client Ownership card and Client Assignment card: owner/assignment labels, status badges, date labels, PO fields, 'No client assigned' empty state, 'Ongoing' label, renewal handling section (use tenant defaults toggle, renewal mode, notice period, renewal term, ticket board/status labels)",
+    "implemented": false
+  },
+  {
+    "id": "F015",
+    "description": "Wire useTranslation('msp/contracts') in ContractDetail.tsx -- translate Quick Actions card (Manage Contract Lines, Manage Pricing Schedules, View Documents, View Invoices, Delete Contract), save/cancel buttons ('Save Changes', 'Save Changes *', 'Saving...', 'Cancel'), confirmation dialogs (Discard Changes, Unsaved Changes/Leave Page, Delete Contract), invoice tab (Contract Invoices title, refresh button, loading/empty states, column headers), and replace hardcoded 'en-US' locale in formatCurrencyFromMinorUnits calls with useFormatters()",
+    "implemented": false
+  },
+  {
+    "id": "F016",
+    "description": "Wire useTranslation('msp/contracts') in ContractDialog.tsx -- translate dialog title (Create/Edit Contract), form field labels (Contract Name, Description, Status, Client, Billing Frequency, Currency, Start/End Date), validation error messages, renewal section labels (Renewal Mode, Use Tenant Defaults, Notice Period, Renewal Term)",
+    "implemented": false
+  },
+  {
+    "id": "F017",
+    "description": "Wire useTranslation('msp/contracts') in ContractDialog.tsx -- translate PO section (PO Required, PO Number, PO Amount), contract line preset section (Contract Line Presets heading, search placeholder, type filter, preset details, rate overrides, service overrides), and save/cancel button labels",
+    "implemented": false
+  },
+  {
+    "id": "F018",
+    "description": "Wire useTranslation('msp/contracts') in ContractDialog.tsx -- translate preset service details (quantity, rate, hourly config labels), expanded preset info, and all tooltip/help text strings",
+    "implemented": false
+  },
+  {
+    "id": "F019",
+    "description": "Wire useTranslation('msp/contracts') in ContractTemplateDetail.tsx -- translate page header, back button, tab labels, template metadata section (name, description, billing frequency, currency, status, dates), and edit form labels",
+    "implemented": false
+  },
+  {
+    "id": "F020",
+    "description": "Wire useTranslation('msp/contracts') in ContractTemplateDetail.tsx -- translate contract lines section (columns, actions, empty state, inline editing fields), service configuration details, and confirmation dialogs",
+    "implemented": false
+  },
+  {
+    "id": "F021",
+    "description": "Wire useTranslation('msp/contracts') in ContractTemplateDetail.tsx -- translate pricing/scheduling section, billing timing options (In Arrears/In Advance), cadence owner options (Client schedule/Contract anniversary), and save/status feedback messages",
+    "implemented": false
+  },
+  {
+    "id": "F022",
+    "description": "Wire useTranslation('msp/contracts') in CreateCustomContractLineDialog.tsx -- translate dialog title, line type selector (Fixed/Hourly/Usage), service picker section, configuration fields per type (base rate, hourly rate, unit rate, unit of measure), and billing frequency override",
+    "implemented": false
+  },
+  {
+    "id": "F023",
+    "description": "Wire useTranslation('msp/contracts') in CreateCustomContractLineDialog.tsx -- translate bucket overlay section, proration toggle, minimum billable time, rounding settings, validation messages, and save/cancel buttons",
+    "implemented": false
+  },
+  {
+    "id": "F024",
+    "description": "Wire useTranslation('msp/contracts') in CreateCustomContractLineDialog.tsx -- translate service preview section, quantity fields, rate display, and all tooltip/help text",
+    "implemented": false
+  },
+  {
+    "id": "F025",
+    "description": "Wire useTranslation('msp/contracts') in ContractLines.tsx -- translate section header, Add Lines / Create Custom buttons, expand/collapse controls, line type badges, column labels (Name, Type, Frequency, Rate, Services, Actions), and empty state message",
+    "implemented": false
+  },
+  {
+    "id": "F026",
+    "description": "Wire useTranslation('msp/contracts') in ContractLines.tsx -- translate inline edit fields (rate, cadence owner, billing timing), service configuration details, bucket overlay display, save/cancel controls, delete confirmation, and loading/error states",
+    "implemented": false
+  },
+  {
+    "id": "F027",
+    "description": "Wire useTranslation('msp/contracts') in ContractLines.tsx -- translate service list within expanded lines (service name, rate, quantity, configuration type labels), and replace hardcoded locale in currency formatting",
+    "implemented": false
+  },
+  {
+    "id": "F028",
+    "description": "Wire useTranslation('msp/contracts') in AddContractLinesDialog.tsx -- translate dialog title, search placeholder, type filter options, preset list, rate override section, quantity fields, select/deselect controls, and save/cancel buttons",
+    "implemented": false
+  },
+  {
+    "id": "F029",
+    "description": "Wire useTranslation('msp/contracts') in AddContractLinesDialog.tsx -- translate expanded preset details (services, rates, configurations), empty search results, loading state, and validation messages",
+    "implemented": false
+  },
+  {
+    "id": "F030",
+    "description": "Wire useTranslation('msp/contracts') in Contracts.tsx -- translate sub-tab labels (Templates, Client Contracts, Drafts using values from contractsTabs.ts at point of use), New Contract/New Template buttons, search placeholders, draft badge count, and error alert",
+    "implemented": false
+  },
+  {
+    "id": "F031",
+    "description": "Wire useTranslation('msp/contracts') in Contracts.tsx -- translate row action menus (View, Edit, Delete, Resume Draft, Discard Draft), status badges, confirmation dialogs (delete contract, discard draft), and toast messages",
+    "implemented": false
+  },
+  {
+    "id": "F032",
+    "description": "Wire useTranslation('msp/contracts') in Contracts.tsx -- translate column headers for all three sub-tabs (template: Name/Description/Status/Frequency; client: Name/Client/Status/Start/End/Frequency; drafts: Name/Client/Created), empty states, and loading indicators",
+    "implemented": false
+  },
+  {
+    "id": "F033",
+    "description": "Wire useTranslation('msp/contracts') in ClientContractsTab.tsx -- translate column headers (Contract Name, Client, Status, Start Date, End Date, Billing Frequency, Actions), status badge labels, search placeholder, row action menus (View, Terminate), and terminate confirmation dialog",
+    "implemented": false
+  },
+  {
+    "id": "F034",
+    "description": "Wire useTranslation('msp/contracts') in ClientContractsTab.tsx -- translate empty state, loading indicator, error alert, PO indicator column, and pagination labels",
+    "implemented": false
+  },
+  {
+    "id": "F035",
+    "description": "Wire useTranslation('msp/contracts') in ContractWizard.tsx -- translate step labels (Contract Basics, Fixed Fee Services, Products, Hourly Services, Usage-Based Services, Review & Create), validation error messages, save/draft button labels, and unsaved changes confirmation dialog",
+    "implemented": false
+  },
+  {
+    "id": "F036",
+    "description": "Wire useTranslation('msp/contracts') in ContractWizard.tsx -- translate recurring authoring validation messages, template loading states, and draft resume/save status messages",
+    "implemented": false
+  },
+  {
+    "id": "F037",
+    "description": "Wire useTranslation('msp/contracts') in ContractOverview.tsx -- translate card title ('What\\'s Included'), stat cards (Est. Monthly Value, Contract Lines, Total Services), service type badges (Fixed, Hourly, Usage), 'View details' link, and '+variable' note",
+    "implemented": false
+  },
+  {
+    "id": "F038",
+    "description": "Wire useTranslation('msp/contracts') in ContractOverview.tsx -- translate contract line cards (frequency display, service count with interpolation, Included Services heading, 'No services configured'), empty state ('No contract lines yet', 'Add contract lines...'), and Expand/Collapse all toggle",
+    "implemented": false
+  },
+  {
+    "id": "F039",
+    "description": "Wire useTranslation('msp/contracts') in PricingScheduleDialog.tsx -- translate dialog title, form labels, date pickers, rate fields, validation messages, and save/cancel buttons",
+    "implemented": false
+  },
+  {
+    "id": "F040",
+    "description": "Wire useTranslation('msp/contracts') in PricingSchedules.tsx -- translate section title, column headers, actions menu, empty state, and loading indicator",
+    "implemented": false
+  },
+  {
+    "id": "F041",
+    "description": "Wire useTranslation('msp/contracts') in TemplatesTab.tsx -- translate column headers (Template Name, Description, Status, Billing Frequency, Actions), status badges, search placeholder, New Template button, row actions (View, Delete), and empty/loading/error states",
+    "implemented": false
+  },
+  {
+    "id": "F042",
+    "description": "Wire useTranslation('msp/contracts') in ServiceCatalogPicker.tsx -- translate search placeholder, category filter, empty results message, and selection controls",
+    "implemented": false
+  },
+  {
+    "id": "F043",
+    "description": "Wire useTranslation('msp/contracts') in ContractForm.tsx -- translate form heading ('Contract Details'), field labels (Contract Name, Description, Billing Frequency, Currency, Status), status options (Active/Draft/Terminated/Expired), validation messages ('Please fill in the required fields'), expired status note, placeholder texts, and Save Changes button (including 'Saving...' state)",
+    "implemented": false
+  },
+  {
+    "id": "F044",
+    "description": "Wire useTranslation('msp/contracts') in QuickStartGuide.tsx -- translate guide title, show/minimize/dismiss buttons, step headings (Create a Contract, Configure Billing, Review & Create), step descriptions, billing model labels (Fixed Fee, Hourly, Bucket Hours, Usage-Based), required fields note, best practices list, and 'Create Your First Contract' CTA button",
+    "implemented": false
+  },
+  {
+    "id": "F045",
+    "description": "Wire useTranslation('msp/contracts') in BucketOverlayFields.tsx -- translate 'Included {units}' label, tooltip text, 'Overage Rate' label with unit suffix, tooltip text, 'Allow unused {units} to roll over' checkbox label, and rollover description text",
+    "implemented": false
+  },
+  {
+    "id": "F046",
+    "description": "Wire useTranslation('msp/contracts') in ContractLineEditDialog.tsx -- translate dialog title with interpolation ('Edit Contract Line: {{name}}'), Pricing heading, Rate label, Billing Timing heading, timing question label, timing options (In Arrears/In Advance), timing descriptions, validation error, and Save/Cancel buttons (including 'Saving...' state)",
+    "implemented": false
+  },
+  {
+    "id": "F047",
+    "description": "Wire useTranslation('msp/contracts') in ContractHeader.tsx -- translate stat labels (Billing Frequency, Currency, Contract Lines, Start Date, End Date, Last Updated), status badges (Active/Draft/Terminated/Expired), Template badge, Client-owned badge, 'Ongoing' label, and PO required alert text",
+    "implemented": false
+  },
+  {
+    "id": "F048",
+    "description": "Wire useTranslation('msp/contracts') in ContractDetailSwitcher.tsx -- translate error messages ('Missing contract identifier', 'Contract not found', 'Unable to load contract details', 'No contract selected', 'Failed to load contract details'), and loading text ('Loading contract...')",
+    "implemented": false
+  },
+  {
+    "id": "F049",
+    "description": "Wire useTranslation('msp/contracts') in ContractLineRateDialog.tsx and ContractPlanRateDialog.tsx -- translate dialog title with interpolation ('Set Custom Rate for {{name}}'), Rate label, validation error, and Save Rate / Cancel buttons",
+    "implemented": false
+  },
+  {
+    "id": "F050",
+    "description": "Wire useTranslation('msp/contracts') in BillingFrequencyOverrideSelect.tsx -- translate label, description text with interpolation ('Override the contract\\'s billing frequency ({{frequency}})...'), placeholder with interpolation ('Use contract billing frequency ({{frequency}})'), and override confirmation text",
+    "implemented": false
+  },
+  {
+    "id": "F051",
+    "description": "Wire useTranslation('msp/contracts') in ServicePicker.tsx -- translate placeholder ('Select service...'), search placeholder ('Search services...'), and empty message ('No service found.')",
+    "implemented": false
+  },
+  {
+    "id": "F052",
+    "description": "Wire useTranslation('msp/contracts') in ContractBasicsStep.tsx -- translate step heading, description, template picker (Start From Template label, loading/error states, template details display), client picker (Client label, quick add), and contract name field",
+    "implemented": false
+  },
+  {
+    "id": "F053",
+    "description": "Wire useTranslation('msp/contracts') in ContractBasicsStep.tsx -- translate date fields (Start Date, End Date), renewal section (Renewal Mode options: No Renewal/Manual/Auto, Use Tenant Defaults toggle, Notice Period, Renewal Term), cadence owner radio options, billing timing, and PO section (PO Required toggle, PO Number, PO Amount)",
+    "implemented": false
+  },
+  {
+    "id": "F054",
+    "description": "Wire useTranslation('msp/contracts') in FixedFeeServicesStep.tsx -- translate step heading, description, service picker label, base rate field, proration toggle, billing frequency override, and 'No fixed services added' empty state",
+    "implemented": false
+  },
+  {
+    "id": "F055",
+    "description": "Wire useTranslation('msp/contracts') in ProductsStep.tsx -- translate step heading, description, service picker, quantity/rate fields, and empty state",
+    "implemented": false
+  },
+  {
+    "id": "F056",
+    "description": "Wire useTranslation('msp/contracts') in HourlyServicesStep.tsx -- translate step heading, description, service picker, hourly rate field, minimum billable time, round up to nearest, bucket overlay fields, and empty state",
+    "implemented": false
+  },
+  {
+    "id": "F057",
+    "description": "Wire useTranslation('msp/contracts') in UsageBasedServicesStep.tsx -- translate step heading, description, service picker, unit rate field, unit of measure field, bucket overlay fields, and empty state",
+    "implemented": false
+  },
+  {
+    "id": "F058",
+    "description": "Wire useTranslation('msp/contracts') in ReviewContractStep.tsx -- translate review heading, description, Contract Basics section labels (Client, Contract Name, Billing Frequency, Currency, Start/End Date, Renewal Mode, Notice Period), 'Not selected'/'Not specified'/'Ongoing'/'N/A' fallbacks",
+    "implemented": false
+  },
+  {
+    "id": "F059",
+    "description": "Wire useTranslation('msp/contracts') in ReviewContractStep.tsx -- translate service summary sections (Fixed Fee Services, Products, Hourly Services, Usage-Based Services), including table headers, rate display, bucket summary, quantity, total monthly estimate, PO section, and recurring authoring preview text",
+    "implemented": false
+  },
+  {
+    "id": "F060",
+    "description": "Wire useTranslation('msp/contracts') in TemplateWizard.tsx -- translate step labels (Template Basics, Fixed Fee Blocks, Products, Hourly Blocks, Usage-Based Blocks, Review & Publish), validation messages (Template name required, duplicate name error), save button labels, and recurring authoring validation errors",
+    "implemented": false
+  },
+  {
+    "id": "F061",
+    "description": "Wire useTranslation('msp/contracts') in TemplateContractBasicsStep.tsx -- translate step heading ('Template Basics'), description, Template Name label/placeholder/help text, Internal Notes label/placeholder/help text, Recommended Billing Frequency label/placeholder/help text, and name validation error",
+    "implemented": false
+  },
+  {
+    "id": "F062",
+    "description": "Wire useTranslation('msp/contracts') in TemplateFixedFeeServicesStep.tsx -- translate step heading, description, service picker, quantity field, preview section, and empty state",
+    "implemented": false
+  },
+  {
+    "id": "F063",
+    "description": "Wire useTranslation('msp/contracts') in TemplateProductsStep.tsx -- translate step heading, description, service picker, quantity field, preview section, and empty state",
+    "implemented": false
+  },
+  {
+    "id": "F064",
+    "description": "Wire useTranslation('msp/contracts') in TemplateHourlyServicesStep.tsx -- translate step heading, description, service picker, bucket overlay fields, minimum/rounding settings, preview section, and empty state",
+    "implemented": false
+  },
+  {
+    "id": "F065",
+    "description": "Wire useTranslation('msp/contracts') in TemplateUsageBasedServicesStep.tsx -- translate step heading, description, service picker, unit of measure field, bucket overlay fields, preview section, and empty state",
+    "implemented": false
+  },
+  {
+    "id": "F066",
+    "description": "Wire useTranslation('msp/contracts') in TemplateReviewContractStep.tsx -- translate review heading, description, Template Basics section labels, service sections (Fixed Fee/Products/Hourly/Usage), including column headers, quantity, bucket summary, and empty section indicators",
+    "implemented": false
+  },
+  {
+    "id": "F067",
+    "description": "Wire useTranslation('msp/contracts') in TemplateServicePreviewSection.tsx -- translate service type labels (Fixed Fee/Products/Hourly/Usage-Based), 'Selected {type} Services ({count})' heading with interpolation, Qty label, remove confirmation dialog (title, message with interpolation, confirm/cancel labels)",
+    "implemented": false
+  }
+]

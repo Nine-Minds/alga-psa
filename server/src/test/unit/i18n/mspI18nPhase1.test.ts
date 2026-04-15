@@ -119,9 +119,11 @@ function findDuplicateKeys(jsonText: string): string[] {
 }
 
 describe('MSP i18n Phase 1', () => {
-  it('T001: msp-i18n-enabled flag exists with default false', () => {
-    const src = readRepoFile('server/src/lib/feature-flags/featureFlags.ts');
-    expect(src).toContain("'msp-i18n-enabled': false");
+  it('T001: msp-i18n-enabled flag is consumed via useFeatureFlag with default false', () => {
+    const settings = readRepoFile('server/src/components/settings/SettingsPage.tsx');
+    expect(settings).toContain("useFeatureFlag('msp-i18n-enabled'");
+    const layout = readRepoFile('server/src/app/msp/layout.tsx');
+    expect(layout).toContain('isMspI18nEnabled');
   });
 
   it('T002/T003: standard MSP layout gates locale fetch and passes locale when enabled', () => {
@@ -134,9 +136,9 @@ describe('MSP i18n Phase 1', () => {
 
   it('T004/T005/T010: standard MspLayoutClient wraps with I18nWrapper and preserves onboarding guard', () => {
     const src = readRepoFile('server/src/app/msp/MspLayoutClient.tsx');
-    expect(src).toContain('if (!i18nEnabled)');
     expect(src).toContain('I18nWrapper');
     expect(src).toContain('portal="msp"');
+    expect(src).toContain('i18nEnabled');
     const guardIndex = src.indexOf('if (needsOnboarding && !isOnboardingPage)');
     const wrapperIndex = src.indexOf('<I18nWrapper');
     expect(guardIndex).toBeGreaterThan(-1);
@@ -157,7 +159,8 @@ describe('MSP i18n Phase 1', () => {
 
   it('T009: MSP pages can use translations when flag is on (I18nWrapper present)', () => {
     const client = readRepoFile('server/src/app/msp/MspLayoutClient.tsx');
-    expect(client).toContain('<I18nWrapper portal="msp"');
+    expect(client).toContain('<I18nWrapper');
+    expect(client).toContain('portal="msp"');
   });
 
   it('T011-T016: feature namespace files exist for all locales and are flattened', () => {
@@ -267,7 +270,7 @@ describe('MSP i18n Phase 1', () => {
     expect(nav.contacts).toBe('Contacts');
     expect(nav.documents).toBe('Documents');
     expect(nav.assets).toBe('Assets');
-    expect(nav.billing).toBe('Billing');
+    expect(nav.billing.label).toBe('Billing');
     expect(nav.extensions).toBe('Extensions');
 
     const settingsItems = settingsNavigationSections.flatMap((section) => section.items);
@@ -303,7 +306,7 @@ describe('MSP i18n Phase 1', () => {
   it('T042-T047: MSP language settings UI and persistence wiring are present', () => {
     const mspSettings = readRepoFile('server/src/components/settings/general/MspLanguageSettings.tsx');
     expect(mspSettings).toContain('CustomSelect');
-    expect(mspSettings).toContain('Available Languages');
+    expect(mspSettings).toContain("t('mspLanguage.fields.availableLanguages')");
     expect(mspSettings).toContain('updateTenantMspLocaleSettingsAction');
     expect(mspSettings).toContain('getTenantMspLocaleSettingsAction');
 
@@ -312,7 +315,7 @@ describe('MSP i18n Phase 1', () => {
     expect(settingsPage).toContain("useFeatureFlag('msp-i18n-enabled'");
 
     const sidebar = readRepoFile('server/src/components/layout/Sidebar.tsx');
-    expect(sidebar).toContain('item.name !== \'Language\'');
+    expect(sidebar).toContain("item.translationKey !== 'settings.tabs.language'");
   });
 
   it('T048-T049: MSP locale tenant actions read and write mspPortal settings', () => {

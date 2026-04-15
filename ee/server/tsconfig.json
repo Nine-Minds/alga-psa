@@ -31,6 +31,9 @@
       "@alga-psa/shared/*": [
         "shared/*"
       ],
+      "@alga-psa/block-content/actions": [
+        "packages/block-content/src/actions.ts"
+      ],
       "@main-test-utils": [
         "server/test-utils"
       ],
@@ -40,6 +43,9 @@
       "@/lib/*": [
         "ee/server/src/lib/*",
         "server/src/lib/*"
+      ],
+      "@/app/*": [
+        "server/src/app/*"
       ],
       "@/components/*": [
         "server/src/components/*"
@@ -117,6 +123,8 @@
       "@alga-psa/msp-composition/*": ["packages/msp-composition/src/*"],
       "@alga-psa/scheduling": ["packages/scheduling/src"],
       "@alga-psa/scheduling/*": ["packages/scheduling/src/*"],
+      "@alga-psa/workflow-streams": ["packages/workflow-streams/src/streams"],
+      "@alga-psa/workflow-streams/*": ["packages/workflow-streams/src/streams/*"],
       "@alga-psa/workflows": ["ee/packages/workflows/src"],
       "@alga-psa/workflows/*": ["ee/packages/workflows/src/*"],
       "@alga-psa/ee-stubs": ["ee/server/src/index.ts"],

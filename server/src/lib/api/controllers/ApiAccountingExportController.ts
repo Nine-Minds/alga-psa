@@ -227,7 +227,9 @@ export class ApiAccountingExportController extends ApiBaseController {
           amountCents: line.amountCents,
           currencyCode: line.currencyCode || 'USD',
           servicePeriodStart: line.servicePeriodStart ?? null,
-          servicePeriodEnd: line.servicePeriodEnd ?? null
+          servicePeriodEnd: line.servicePeriodEnd ?? null,
+          recurringDetailPeriods: line.recurringDetailPeriods ?? undefined,
+          servicePeriodSource: line.servicePeriodSource
         }));
 
         return NextResponse.json({

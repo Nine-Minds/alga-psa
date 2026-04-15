@@ -2,12 +2,13 @@
 
 import { withTransaction, getTenantContext } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
-import { ICreditReconciliationReport, ITransaction, ICreditTracking } from '@alga-psa/types';
+import { ICreditReconciliationReport, ITransaction, ICreditTracking, IInvoiceCharge } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
 import CreditReconciliationReport from '../models/creditReconciliationReport';
 import { auditLog } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import Invoice from '../models/invoice';
 
 /**
  * Helper to get tenant from context, throwing if not available
@@ -18,6 +19,47 @@ function requireTenant(): string {
         throw new Error('Tenant context is required. Ensure this function is called within runWithTenant() or from an authenticated server action.');
     }
     return tenant;
+}
+
+type CreditInvoicePeriodSummary = {
+    invoice_date_basis: 'financial_document_date' | 'canonical_recurring_service_period';
+    invoice_service_period_start: string | null;
+    invoice_service_period_end: string | null;
+};
+
+function summarizeCanonicalInvoiceServicePeriods(
+    invoiceCharges: IInvoiceCharge[] | undefined
+): CreditInvoicePeriodSummary {
+    const starts = (invoiceCharges ?? [])
+        .map((charge) => charge.service_period_start)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .sort();
+    const ends = (invoiceCharges ?? [])
+        .map((charge) => charge.service_period_end)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .sort();
+
+    return {
+        invoice_date_basis:
+            starts.length > 0 || ends.length > 0
+                ? 'canonical_recurring_service_period'
+                : 'financial_document_date',
+        invoice_service_period_start: starts[0] ?? null,
+        invoice_service_period_end: ends[ends.length - 1] ?? null,
+    };
+}
+
+async function loadCreditInvoiceContext(
+    trx: Knex.Transaction,
+    tenant: string,
+    invoiceId?: string
+): Promise<CreditInvoicePeriodSummary | null> {
+    if (!invoiceId) {
+        return null;
+    }
+
+    const invoice = await Invoice.getById(trx, tenant, invoiceId);
+    return summarizeCanonicalInvoiceServicePeriods(invoice?.invoice_charges);
 }
 
 /**
@@ -199,7 +241,12 @@ export async function validateCreditBalanceWithoutCorrection(
                 actual_balance: actualBalance,
                 difference,
                 detection_date: now,
-                status: 'open'
+                status: 'open',
+                metadata: {
+                    reconciliation_date_basis: 'financial_document_date',
+                    last_transaction_id: transactions.length > 0 ? transactions[transactions.length - 1].transaction_id : undefined,
+                    last_transaction_type: transactions.length > 0 ? transactions[transactions.length - 1].type : undefined,
+                }
             }, trx);
 
             reportId = report.report_id;
@@ -320,7 +367,8 @@ export async function validateCreditTrackingEntries(
                     transaction_id: tx.transaction_id,
                     transaction_type: tx.type,
                     transaction_amount: tx.amount,
-                    transaction_date: tx.created_at
+                    transaction_date: tx.created_at,
+                    reconciliation_date_basis: 'financial_document_date',
                 }
             }, trx);
 
@@ -434,6 +482,16 @@ export async function validateCreditTrackingRemainingAmounts(
                 .where('related_transaction_id', entry.transaction_id)
                 .orderBy('created_at', 'asc');
 
+            const originalInvoiceContext = await loadCreditInvoiceContext(trx, tenant, originalTransaction.invoice_id);
+            const applicationInvoiceContexts = new Map<string, CreditInvoicePeriodSummary | null>();
+
+            for (const application of applications) {
+                applicationInvoiceContexts.set(
+                    application.transaction_id,
+                    await loadCreditInvoiceContext(trx, tenant, application.invoice_id)
+                );
+            }
+
             // Calculate the expected remaining amount based on the original amount minus all applications
             let expectedRemainingAmount = Number(originalTransaction.amount);
 
@@ -477,13 +535,20 @@ export async function validateCreditTrackingRemainingAmounts(
                     // Store additional metadata about the inconsistent remaining amount
                     metadata: {
                         issue_type: 'inconsistent_credit_remaining_amount',
+                        reconciliation_date_basis: 'financial_document_date',
                         credit_id: entry.credit_id,
                         transaction_id: entry.transaction_id,
                         original_amount: originalTransaction.amount,
+                        source_invoice_date_basis: originalInvoiceContext?.invoice_date_basis,
+                        source_invoice_service_period_start: originalInvoiceContext?.invoice_service_period_start,
+                        source_invoice_service_period_end: originalInvoiceContext?.invoice_service_period_end,
                         applications: applications.map(app => ({
                             transaction_id: app.transaction_id,
                             amount: app.amount,
-                            created_at: app.created_at
+                            created_at: app.created_at,
+                            invoice_date_basis: applicationInvoiceContexts.get(app.transaction_id)?.invoice_date_basis,
+                            invoice_service_period_start: applicationInvoiceContexts.get(app.transaction_id)?.invoice_service_period_start,
+                            invoice_service_period_end: applicationInvoiceContexts.get(app.transaction_id)?.invoice_service_period_end,
                         }))
                     }
                 }, trx);

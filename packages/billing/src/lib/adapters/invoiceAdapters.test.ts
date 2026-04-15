@@ -194,4 +194,163 @@ describe('mapDbInvoiceToWasmViewModel', () => {
     expect(mapped).not.toBeNull();
     expect(mapped?.tenantClient).toBeNull();
   });
+
+  it('maps canonical recurring invoice header service period fields into the renderer model', () => {
+    const mapped = mapDbInvoiceToWasmViewModel({
+      invoice_number: 'INV-602A',
+      invoice_date: '2026-02-06',
+      due_date: '2026-02-20',
+      currency_code: 'USD',
+      recurring_service_period_start: '2026-01-01T00:00:00.000Z',
+      recurring_service_period_end: '2026-02-01T00:00:00.000Z',
+      client: {
+        name: 'Blue Harbor Dental',
+        address: '901 Harbor Ave',
+      },
+      invoice_charges: [],
+      subtotal: 0,
+      tax: 0,
+      total: 0,
+    });
+
+    expect(mapped).not.toBeNull();
+    expect(mapped?.recurringServicePeriodStart).toBe('2026-01-01T00:00:00.000Z');
+    expect(mapped?.recurringServicePeriodEnd).toBe('2026-02-01T00:00:00.000Z');
+    expect(mapped?.recurringServicePeriodLabel).toBe('Jan 1, 2026 - Feb 1, 2026');
+  });
+
+  it('leaves recurring invoice header service period fields null when canonical summary is incomplete', () => {
+    const mapped = mapDbInvoiceToWasmViewModel({
+      invoice_number: 'INV-602B',
+      invoice_date: '2026-02-06',
+      due_date: '2026-02-20',
+      currency_code: 'USD',
+      recurring_service_period_start: '2026-01-01T00:00:00.000Z',
+      client: {
+        name: 'Blue Harbor Dental',
+        address: '901 Harbor Ave',
+      },
+      invoice_charges: [],
+      subtotal: 0,
+      tax: 0,
+      total: 0,
+    });
+
+    expect(mapped).not.toBeNull();
+    expect(mapped?.recurringServicePeriodStart).toBe('2026-01-01T00:00:00.000Z');
+    expect(mapped?.recurringServicePeriodEnd).toBeNull();
+    expect(mapped?.recurringServicePeriodLabel).toBeNull();
+  });
+
+  it('T268: invoice rendering adapters produce stable output for invoices containing canonical recurring detail-backed charges', () => {
+    const mapped = mapDbInvoiceToWasmViewModel({
+      invoice_number: 'INV-603',
+      invoice_date: '2026-02-06',
+      due_date: '2026-02-20',
+      currency_code: 'USD',
+      client: {
+        name: 'Blue Harbor Dental',
+        address: '901 Harbor Ave',
+      },
+      invoice_charges: [
+        {
+          item_id: 'svc-bundle',
+          description: 'Managed Services Bundle',
+          quantity: 1,
+          unit_price: 10000,
+          total_price: 10000,
+          recurring_detail_periods: [
+            {
+              service_period_start: '2026-01-01',
+              service_period_end: '2026-02-01',
+              billing_timing: 'arrears',
+            },
+            {
+              service_period_start: '2026-02-01',
+              service_period_end: '2026-03-01',
+              billing_timing: 'arrears',
+            },
+          ],
+        },
+      ],
+      subtotal: 10000,
+      tax: 0,
+      total: 10000,
+    });
+
+    expect(mapped).not.toBeNull();
+    expect(mapped?.items[0]).toMatchObject({
+      servicePeriodStart: '2026-01-01',
+      servicePeriodEnd: '2026-03-01',
+      billingTiming: 'arrears',
+      recurringDetailPeriods: [
+        {
+          servicePeriodStart: '2026-01-01',
+          servicePeriodEnd: '2026-02-01',
+          billingTiming: 'arrears',
+        },
+        {
+          servicePeriodStart: '2026-02-01',
+          servicePeriodEnd: '2026-03-01',
+          billingTiming: 'arrears',
+        },
+      ],
+    });
+  });
+
+  it('T195: invoice rendering adapters flatten recurring summary ranges while preserving canonical detail periods for mixed timing detail rows', () => {
+    const mapped = mapDbInvoiceToWasmViewModel({
+      invoice_number: 'INV-604',
+      invoice_date: '2026-02-06',
+      due_date: '2026-02-20',
+      currency_code: 'USD',
+      client: {
+        name: 'Blue Harbor Dental',
+        address: '901 Harbor Ave',
+      },
+      invoice_charges: [
+        {
+          item_id: 'svc-bundle-mixed',
+          description: 'Managed Services Bundle',
+          quantity: 1,
+          unit_price: 10000,
+          total_price: 10000,
+          recurring_detail_periods: [
+            {
+              service_period_start: '2026-01-01',
+              service_period_end: '2026-02-01',
+              billing_timing: 'arrears',
+            },
+            {
+              service_period_start: '2026-02-01',
+              service_period_end: '2026-03-01',
+              billing_timing: 'advance',
+            },
+          ],
+        },
+      ],
+      subtotal: 10000,
+      tax: 0,
+      total: 10000,
+    });
+
+    expect(mapped).not.toBeNull();
+    expect(mapped?.items[0]).toMatchObject({
+      servicePeriodStart: '2026-01-01',
+      servicePeriodEnd: '2026-03-01',
+      billingTiming: null,
+      recurringDetailPeriods: [
+        {
+          servicePeriodStart: '2026-01-01',
+          servicePeriodEnd: '2026-02-01',
+          billingTiming: 'arrears',
+        },
+        {
+          servicePeriodStart: '2026-02-01',
+          servicePeriodEnd: '2026-03-01',
+          billingTiming: 'advance',
+        },
+      ],
+    });
+  });
 });

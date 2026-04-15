@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import {
   createEmptyDesignerTransformWorkspace,
   type DesignerWorkspaceSnapshot,
@@ -147,8 +147,104 @@ describe('invoiceTemplatePreview authoritative AST integration', () => {
     expect(actionResult.verification.status).toBe('pass');
   });
 
+  it('renders multiline address fields in authoritative preview when displayFormat is set', async () => {
+    const addressWorkspace: DesignerWorkspaceSnapshot = {
+      ...workspace,
+      nodesById: {
+        ...workspace.nodesById,
+        page: {
+          ...workspace.nodesById.page,
+          children: ['field-address'],
+        },
+        'field-address': {
+          id: 'field-address',
+          type: 'field',
+          props: {
+            name: 'Tenant Address',
+            metadata: {
+              bindingKey: 'tenant.address',
+              format: 'text',
+              displayFormat: 'multiline',
+            },
+            size: { width: 220, height: 48 },
+            position: { x: 24, y: 24 },
+          },
+          children: [],
+        },
+      },
+    };
+
+    const actionResult = await (runAuthoritativeInvoiceTemplatePreview as any)(
+      { id: 'test-user' },
+      { tenant: 'test-tenant' },
+      {
+        workspace: addressWorkspace,
+        invoiceData: {
+          ...invoiceData,
+          tenantClient: {
+            ...invoiceData.tenantClient,
+            address: '400 SW Main St, Portland, OR 97204',
+          },
+        },
+      }
+    );
+
+    expect(actionResult.render.status).toBe('success');
+    expect(actionResult.render.html).toContain('white-space:pre-line');
+    expect(actionResult.render.html).toContain('400 SW Main St');
+    expect(actionResult.render.html).toContain('Portland');
+  });
+
+  it('renders client.address bindings in authoritative preview via the customer alias', async () => {
+    const addressWorkspace: DesignerWorkspaceSnapshot = {
+      ...workspace,
+      nodesById: {
+        ...workspace.nodesById,
+        page: {
+          ...workspace.nodesById.page,
+          children: ['field-address'],
+        },
+        'field-address': {
+          id: 'field-address',
+          type: 'field',
+          props: {
+            name: 'Client Address',
+            metadata: {
+              bindingKey: 'client.address',
+              format: 'text',
+              displayFormat: 'multiline',
+            },
+            size: { width: 220, height: 48 },
+            position: { x: 24, y: 24 },
+          },
+          children: [],
+        },
+      },
+    };
+
+    const actionResult = await (runAuthoritativeInvoiceTemplatePreview as any)(
+      { id: 'test-user' },
+      { tenant: 'test-tenant' },
+      {
+        workspace: addressWorkspace,
+        invoiceData: {
+          ...invoiceData,
+          customer: {
+            ...invoiceData.customer,
+            address: '901 Harbor Ave, Seattle, WA 98104',
+          },
+        },
+      }
+    );
+
+    expect(actionResult.render.status).toBe('success');
+    expect(actionResult.render.html).toContain('white-space:pre-line');
+    expect(actionResult.render.html).toContain('901 Harbor Ave');
+    expect(actionResult.render.html).toContain('Seattle');
+  });
+
   it('surfaces structured schema diagnostics with AST context', async () => {
-    const schemaSpy = vi.spyOn(schemaModule, 'validateInvoiceTemplateAst').mockReturnValueOnce({
+    const schemaSpy = vi.spyOn(schemaModule, 'validateTemplateAst').mockReturnValueOnce({
       success: false,
       errors: [
         {
@@ -186,9 +282,9 @@ describe('invoiceTemplatePreview authoritative AST integration', () => {
 
   it('surfaces structured evaluator diagnostics with operation context', async () => {
     const evaluationSpy = vi
-      .spyOn(evaluatorModule, 'evaluateInvoiceTemplateAst')
+      .spyOn(evaluatorModule, 'evaluateTemplateAst')
       .mockImplementationOnce(() => {
-        throw new evaluatorModule.InvoiceTemplateEvaluationError(
+        throw new evaluatorModule.TemplateEvaluationError(
           'MISSING_BINDING',
           'Missing transform binding.',
           'op-filter-1',
@@ -230,10 +326,10 @@ describe('invoiceTemplatePreview authoritative AST integration', () => {
 
   it('rejects non-allowlisted strategy ids at runtime', async () => {
     const astExportSpy = vi
-      .spyOn(workspaceAstModule, 'exportWorkspaceToInvoiceTemplateAst')
+      .spyOn(workspaceAstModule, 'exportWorkspaceToTemplateAst')
       .mockReturnValueOnce({
         kind: 'invoice-template-ast',
-        version: INVOICE_TEMPLATE_AST_VERSION,
+        version: TEMPLATE_AST_VERSION,
         bindings: {
           values: {},
           collections: {

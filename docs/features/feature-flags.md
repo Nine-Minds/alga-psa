@@ -138,6 +138,42 @@ Controls which tenants are allowed to enable the AI Assistant from Settings → 
 - When disabled: The AI Assistant toggle is disabled and cannot be saved on for that tenant, even if the tenant previously had the experimental setting stored.
 - When enabled: The tenant may turn on the existing `experimentalFeatures.aiAssistant` setting, which continues to gate Quick Ask, chat sidebar access, and AI chat APIs.
 
+### 10. `quoting-enabled`
+Controls access to the quoting functionality in the billing area.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Billing sidebar: Quotes and Quote Layouts navigation items (hidden when disabled)
+  - Billing dashboard: Quotes and Quote Layouts tabs (hidden when disabled)
+  - Quote Approvals page at `/msp/quote-approvals` (shows construction placeholder when disabled)
+  - Quote Layouts page at `/msp/quote-document-templates` (shows construction placeholder when disabled)
+  - Billing Settings: Quoting tab with Quote Numbering settings (hidden when disabled)
+
+**Behavior:**
+- When disabled (default): Quote-related sidebar items and billing tabs are hidden. Standalone quote pages show construction placeholder if accessed directly.
+- When enabled: Full quoting UI is accessible. Backend (models, actions, migrations) is always available regardless of flag state.
+
+### 11. `service-requests`
+Controls access to the new service request definition and client portal request-services UI.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Service Requests sidebar navigation item (hidden when disabled)
+  - Service Requests management page at `/msp/service-requests`
+  - Service Request definition editor at `/msp/service-requests/:definitionId`
+
+- **Client Portal:**
+  - Request Services navigation link (hidden when disabled)
+  - Request Services catalog page at `/client-portal/request-services`
+  - Request Service detail/submit page at `/client-portal/request-services/:definitionId`
+  - My Requests page at `/client-portal/request-services/my-requests`
+  - Submission detail page at `/client-portal/request-services/my-requests/:submissionId`
+
+**Behavior:**
+- When disabled (default): MSP and client-portal navigation links are hidden. Direct page access shows the standard feature placeholder.
+- When enabled: The full service request UI is accessible.
+- Backend (tables, actions, provider execution, portal submission processing) remains active regardless of flag state.
+
 ## Implementation Details
 
 ### User Identification

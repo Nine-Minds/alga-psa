@@ -1,30 +1,32 @@
-import type { InvoiceTemplatePrintSettings } from './invoice-print-settings';
+import type { TemplatePrintSettings } from './invoice-print-settings';
 
-export const INVOICE_TEMPLATE_AST_VERSION = 1 as const;
+export const TEMPLATE_AST_VERSION = 1 as const;
 
-export type InvoiceTemplateAstVersion = typeof INVOICE_TEMPLATE_AST_VERSION;
+export type TemplateAstVersion = typeof TEMPLATE_AST_VERSION;
 
-export interface InvoiceTemplateAst {
+export interface TemplateAst {
   kind: 'invoice-template-ast';
-  version: InvoiceTemplateAstVersion;
-  metadata?: InvoiceTemplateAstMetadata;
-  styles?: InvoiceTemplateStyleCatalog;
-  bindings?: InvoiceTemplateBindingCatalog;
-  transforms?: InvoiceTemplateTransformPipeline;
-  layout: InvoiceTemplateNode;
+  version: TemplateAstVersion;
+  metadata?: TemplateAstMetadata;
+  styles?: TemplateStyleCatalog;
+  bindings?: TemplateBindingCatalog;
+  transforms?: TemplateTransformPipeline;
+  layout: TemplateNode;
 }
 
-export interface InvoiceTemplateAstMetadata {
+export interface TemplateAstMetadata {
   templateName?: string;
   description?: string;
   locale?: string;
   currencyCode?: string;
-  printSettings?: InvoiceTemplatePrintSettings;
+  printSettings?: TemplatePrintSettings;
 }
 
-export type InvoiceTemplateValueFormat = 'text' | 'number' | 'currency' | 'date';
+export type TemplateValueFormat = 'text' | 'number' | 'currency' | 'date';
+export type TemplateFieldDisplayFormat = 'single-line' | 'multiline' | 'raw';
+export type TemplateFieldBorderStyle = 'underline' | 'box' | 'none';
 
-export type InvoiceTemplateNodeType =
+export type TemplateNodeType =
   | 'document'
   | 'section'
   | 'stack'
@@ -36,131 +38,137 @@ export type InvoiceTemplateNodeType =
   | 'dynamic-table'
   | 'totals';
 
-export interface InvoiceTemplateNodeBase {
+export interface TemplateNodeBase {
   id: string;
-  type: InvoiceTemplateNodeType;
-  style?: InvoiceTemplateNodeStyleRef;
-  children?: InvoiceTemplateNode[];
+  type: TemplateNodeType;
+  style?: TemplateNodeStyleRef;
+  children?: TemplateNode[];
 }
 
-export interface InvoiceTemplateDocumentNode extends InvoiceTemplateNodeBase {
+export interface TemplateDocumentNode extends TemplateNodeBase {
   type: 'document';
-  children: InvoiceTemplateNode[];
+  children: TemplateNode[];
 }
 
-export interface InvoiceTemplateSectionNode extends InvoiceTemplateNodeBase {
+export interface TemplateSectionNode extends TemplateNodeBase {
   type: 'section';
   title?: string;
-  children: InvoiceTemplateNode[];
+  children: TemplateNode[];
 }
 
-export interface InvoiceTemplateStackNode extends InvoiceTemplateNodeBase {
+export interface TemplateStackNode extends TemplateNodeBase {
   type: 'stack';
   direction?: 'row' | 'column';
-  children: InvoiceTemplateNode[];
+  children: TemplateNode[];
 }
 
-export interface InvoiceTemplateTextNode extends InvoiceTemplateNodeBase {
+export interface TemplateTextNode extends TemplateNodeBase {
   type: 'text';
-  content: InvoiceTemplateValueExpression;
+  content: TemplateValueExpression;
   children?: never;
 }
 
-export interface InvoiceTemplateFieldNode extends InvoiceTemplateNodeBase {
+export interface TemplateFieldNode extends TemplateNodeBase {
   type: 'field';
-  binding: InvoiceTemplateBindingRef;
+  binding: TemplateBindingRef;
   label?: string;
   emptyValue?: string;
-  format?: InvoiceTemplateValueFormat;
+  placeholder?: string;
+  format?: TemplateValueFormat;
+  displayFormat?: TemplateFieldDisplayFormat;
+  borderStyle?: TemplateFieldBorderStyle;
   children?: never;
 }
 
-export interface InvoiceTemplateImageNode extends InvoiceTemplateNodeBase {
+export interface TemplateImageNode extends TemplateNodeBase {
   type: 'image';
-  src: InvoiceTemplateValueExpression;
-  alt?: InvoiceTemplateValueExpression;
+  src: TemplateValueExpression;
+  alt?: TemplateValueExpression;
   children?: never;
 }
 
-export interface InvoiceTemplateDividerNode extends InvoiceTemplateNodeBase {
+export interface TemplateDividerNode extends TemplateNodeBase {
   type: 'divider';
   children?: never;
 }
 
-export interface InvoiceTemplateTableColumn {
+export interface TemplateTableColumn {
   id: string;
   header?: string;
-  value: InvoiceTemplateValueExpression;
-  format?: InvoiceTemplateValueFormat;
-  style?: InvoiceTemplateNodeStyleRef;
+  value: TemplateValueExpression;
+  format?: TemplateValueFormat;
+  style?: TemplateNodeStyleRef;
 }
 
-export interface InvoiceTemplateTableNode extends InvoiceTemplateNodeBase {
+export interface TemplateTableNode extends TemplateNodeBase {
   type: 'table';
-  sourceBinding: InvoiceTemplateBindingRef;
+  sourceBinding: TemplateBindingRef;
   rowBinding: string;
-  columns: InvoiceTemplateTableColumn[];
+  columns: TemplateTableColumn[];
+  headerStyle?: TemplateNodeStyleRef;
   emptyStateText?: string;
   children?: never;
 }
 
-export interface InvoiceTemplateRepeatRegionBinding {
-  sourceBinding: InvoiceTemplateBindingRef;
+export interface TemplateRepeatRegionBinding {
+  sourceBinding: TemplateBindingRef;
   itemBinding: string;
   keyPath?: string;
 }
 
-export interface InvoiceTemplateDynamicTableNode extends InvoiceTemplateNodeBase {
+export interface TemplateDynamicTableNode extends TemplateNodeBase {
   type: 'dynamic-table';
-  repeat: InvoiceTemplateRepeatRegionBinding;
-  columns: InvoiceTemplateTableColumn[];
+  repeat: TemplateRepeatRegionBinding;
+  columns: TemplateTableColumn[];
+  headerStyle?: TemplateNodeStyleRef;
   emptyStateText?: string;
   children?: never;
 }
 
-export interface InvoiceTemplateTotalsNode extends InvoiceTemplateNodeBase {
+export interface TemplateTotalsNode extends TemplateNodeBase {
   type: 'totals';
-  sourceBinding: InvoiceTemplateBindingRef;
-  rows: InvoiceTemplateTotalsRow[];
+  sourceBinding: TemplateBindingRef;
+  rows: TemplateTotalsRow[];
   children?: never;
 }
 
-export interface InvoiceTemplateTotalsRow {
+export interface TemplateTotalsRow {
   id: string;
   label: string;
-  value: InvoiceTemplateValueExpression;
-  format?: InvoiceTemplateValueFormat;
+  value: TemplateValueExpression;
+  format?: TemplateValueFormat;
   emphasize?: boolean;
+  style?: TemplateNodeStyleRef;
 }
 
-export type InvoiceTemplateNode =
-  | InvoiceTemplateDocumentNode
-  | InvoiceTemplateSectionNode
-  | InvoiceTemplateStackNode
-  | InvoiceTemplateTextNode
-  | InvoiceTemplateFieldNode
-  | InvoiceTemplateImageNode
-  | InvoiceTemplateDividerNode
-  | InvoiceTemplateTableNode
-  | InvoiceTemplateDynamicTableNode
-  | InvoiceTemplateTotalsNode;
+export type TemplateNode =
+  | TemplateDocumentNode
+  | TemplateSectionNode
+  | TemplateStackNode
+  | TemplateTextNode
+  | TemplateFieldNode
+  | TemplateImageNode
+  | TemplateDividerNode
+  | TemplateTableNode
+  | TemplateDynamicTableNode
+  | TemplateTotalsNode;
 
-export interface InvoiceTemplateNodeStyleRef {
+export interface TemplateNodeStyleRef {
   tokenIds?: string[];
-  inline?: InvoiceTemplateStyleDeclaration;
+  inline?: TemplateStyleDeclaration;
 }
 
-export interface InvoiceTemplateStyleCatalog {
-  tokens?: Record<string, InvoiceTemplateStyleToken>;
-  classes?: Record<string, InvoiceTemplateStyleDeclaration>;
+export interface TemplateStyleCatalog {
+  tokens?: Record<string, TemplateStyleToken>;
+  classes?: Record<string, TemplateStyleDeclaration>;
 }
 
-export interface InvoiceTemplateStyleToken {
+export interface TemplateStyleToken {
   id: string;
   value: string | number;
 }
 
-export interface InvoiceTemplateStyleDeclaration {
+export interface TemplateStyleDeclaration {
   display?: string;
   width?: string;
   height?: string;
@@ -182,123 +190,129 @@ export interface InvoiceTemplateStyleDeclaration {
   fontFamily?: string;
   lineHeight?: string | number;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
+  flex?: string;
+  aspectRatio?: string;
+  objectFit?: string;
+  objectPosition?: string;
+  borderColor?: string;
+  fontStyle?: string;
 }
 
-export interface InvoiceTemplateBindingCatalog {
-  values?: Record<string, InvoiceTemplateValueBinding>;
-  collections?: Record<string, InvoiceTemplateCollectionBinding>;
+export interface TemplateBindingCatalog {
+  values?: Record<string, TemplateValueBinding>;
+  collections?: Record<string, TemplateCollectionBinding>;
 }
 
-export interface InvoiceTemplateValueBinding {
+export interface TemplateValueBinding {
   id: string;
   kind: 'value';
   path: string;
   fallback?: unknown;
 }
 
-export interface InvoiceTemplateCollectionBinding {
+export interface TemplateCollectionBinding {
   id: string;
   kind: 'collection';
   path: string;
 }
 
-export type InvoiceTemplateBinding = InvoiceTemplateValueBinding | InvoiceTemplateCollectionBinding;
+export type TemplateBinding = TemplateValueBinding | TemplateCollectionBinding;
 
-export interface InvoiceTemplateBindingRef {
+export interface TemplateBindingRef {
   bindingId: string;
 }
 
-export type InvoiceTemplateValueExpression =
+export type TemplateValueExpression =
   | { type: 'literal'; value: string | number | boolean | null }
   | { type: 'binding'; bindingId: string }
   | { type: 'path'; path: string }
-  | { type: 'template'; template: string; args?: Record<string, InvoiceTemplateValueExpression> };
+  | { type: 'template'; template: string; args?: Record<string, TemplateValueExpression> };
 
-export interface InvoiceTemplateTransformPipeline {
+export interface TemplateTransformPipeline {
   sourceBindingId: string;
   outputBindingId: string;
-  operations: InvoiceTemplateTransformOperation[];
+  operations: TemplateTransformOperation[];
 }
 
-export type InvoiceTemplateTransformOperation =
-  | InvoiceTemplateFilterTransform
-  | InvoiceTemplateSortTransform
-  | InvoiceTemplateGroupTransform
-  | InvoiceTemplateAggregateTransform
-  | InvoiceTemplateComputedFieldTransform
-  | InvoiceTemplateTotalsComposeTransform;
+export type TemplateTransformOperation =
+  | TemplateFilterTransform
+  | TemplateSortTransform
+  | TemplateGroupTransform
+  | TemplateAggregateTransform
+  | TemplateComputedFieldTransform
+  | TemplateTotalsComposeTransform;
 
-export interface InvoiceTemplateTransformBase {
+export interface TemplateTransformBase {
   id: string;
   strategyId?: string;
 }
 
-export interface InvoiceTemplateFilterTransform extends InvoiceTemplateTransformBase {
+export interface TemplateFilterTransform extends TemplateTransformBase {
   type: 'filter';
-  predicate: InvoiceTemplatePredicate;
+  predicate: TemplatePredicate;
 }
 
-export interface InvoiceTemplateSortTransform extends InvoiceTemplateTransformBase {
+export interface TemplateSortTransform extends TemplateTransformBase {
   type: 'sort';
-  keys: InvoiceTemplateSortKey[];
+  keys: TemplateSortKey[];
 }
 
-export interface InvoiceTemplateSortKey {
+export interface TemplateSortKey {
   path: string;
   direction?: 'asc' | 'desc';
   nulls?: 'first' | 'last';
 }
 
-export interface InvoiceTemplateGroupTransform extends InvoiceTemplateTransformBase {
+export interface TemplateGroupTransform extends TemplateTransformBase {
   type: 'group';
   key: string;
   label?: string;
 }
 
-export interface InvoiceTemplateAggregateTransform extends InvoiceTemplateTransformBase {
+export interface TemplateAggregateTransform extends TemplateTransformBase {
   type: 'aggregate';
-  aggregations: InvoiceTemplateAggregation[];
+  aggregations: TemplateAggregation[];
 }
 
-export interface InvoiceTemplateAggregation {
+export interface TemplateAggregation {
   id: string;
   op: 'sum' | 'count' | 'avg' | 'min' | 'max';
   path?: string;
 }
 
-export interface InvoiceTemplateComputedFieldTransform extends InvoiceTemplateTransformBase {
+export interface TemplateComputedFieldTransform extends TemplateTransformBase {
   type: 'computed-field';
-  fields: InvoiceTemplateComputedField[];
+  fields: TemplateComputedField[];
 }
 
-export interface InvoiceTemplateComputedField {
+export interface TemplateComputedField {
   id: string;
-  expression: InvoiceTemplateComputationExpression;
+  expression: TemplateComputationExpression;
 }
 
-export interface InvoiceTemplateTotalsComposeTransform extends InvoiceTemplateTransformBase {
+export interface TemplateTotalsComposeTransform extends TemplateTransformBase {
   type: 'totals-compose';
-  totals: InvoiceTemplateTotalsEntry[];
+  totals: TemplateTotalsEntry[];
 }
 
-export interface InvoiceTemplateTotalsEntry {
+export interface TemplateTotalsEntry {
   id: string;
   label: string;
-  value: InvoiceTemplateComputationExpression;
+  value: TemplateComputationExpression;
 }
 
-export type InvoiceTemplateComputationExpression =
+export type TemplateComputationExpression =
   | { type: 'literal'; value: number }
   | { type: 'path'; path: string }
   | { type: 'aggregate-ref'; aggregateId: string }
   | {
       type: 'binary';
       op: 'add' | 'subtract' | 'multiply' | 'divide';
-      left: InvoiceTemplateComputationExpression;
-      right: InvoiceTemplateComputationExpression;
+      left: TemplateComputationExpression;
+      right: TemplateComputationExpression;
     };
 
-export type InvoiceTemplatePredicate =
+export type TemplatePredicate =
   | {
       type: 'comparison';
       path: string;
@@ -308,9 +322,9 @@ export type InvoiceTemplatePredicate =
   | {
       type: 'logical';
       op: 'and' | 'or';
-      conditions: InvoiceTemplatePredicate[];
+      conditions: TemplatePredicate[];
     }
   | {
       type: 'not';
-      condition: InvoiceTemplatePredicate;
+      condition: TemplatePredicate;
     };

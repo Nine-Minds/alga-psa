@@ -17,13 +17,22 @@ const secretProviderMock = vi.hoisted(() => ({
   getAppSecret: vi.fn().mockResolvedValue(undefined)
 }));
 
-const getSecretProviderInstanceMock = vi.hoisted(() =>
-  vi.fn().mockResolvedValue(secretProviderMock)
-);
+const getSecretProviderInstanceMock = vi.hoisted(() => vi.fn().mockResolvedValue(secretProviderMock));
 
-vi.mock('@alga-psa/core', () => ({
-  getSecretProviderInstance: getSecretProviderInstanceMock
-}));
+vi.mock('@alga-psa/core', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/core')>('@alga-psa/core');
+  return {
+    ...actual
+  };
+});
+
+vi.mock('@alga-psa/core/secrets', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/core/secrets')>('@alga-psa/core/secrets');
+  return {
+    ...actual,
+    getSecretProviderInstance: getSecretProviderInstanceMock
+  };
+});
 
 const loggerMock = vi.hoisted(() => ({
   info: vi.fn(),
@@ -162,6 +171,92 @@ describe('XeroClientService – REST usage', () => {
       }
     ]);
 
+    expect(axiosMock.request).toHaveBeenCalledTimes(1);
+  });
+
+  it('flattens canonical service-period ranges into Xero line descriptions while keeping null-period lines unchanged', async () => {
+    const { service, payload } = createService({
+      lines: [
+        {
+          lineId: 'line-range',
+          description: 'Managed services',
+          amountCents: 25_000,
+          quantity: 5,
+          unitAmountCents: 5_000,
+          accountCode: '200',
+          taxType: 'OUTPUT',
+          servicePeriodStart: '2025-01-01T00:00:00.000Z',
+          servicePeriodEnd: '2025-03-01T00:00:00.000Z'
+        },
+        {
+          lineId: 'line-financial',
+          description: 'Manual adjustment',
+          amountCents: 4_000,
+          quantity: 1,
+          unitAmountCents: 4_000,
+          accountCode: '200',
+          taxType: 'OUTPUT',
+          servicePeriodStart: null,
+          servicePeriodEnd: null
+        }
+      ]
+    });
+
+    axiosMock.request.mockImplementation(async (config: AxiosRequestConfig) => {
+      const body = config.data.Invoices[0];
+      expect(body.LineItems[0]?.Description).toBe(
+        'Managed services — Service period: 2025-01-01 to 2025-03-01'
+      );
+      expect(body.LineItems[1]?.Description).toBe('Manual adjustment');
+      return {
+        data: {
+          Invoices: [
+            {
+              InvoiceID: 'guid-2',
+              InvoiceNumber: 'INV-2002'
+            }
+          ]
+        }
+      };
+    });
+
+    await service.createInvoices([payload]);
+    expect(axiosMock.request).toHaveBeenCalledTimes(1);
+  });
+
+  it('flattens single-day service periods into one Xero service-date description', async () => {
+    const { service, payload } = createService({
+      lines: [
+        {
+          lineId: 'line-date',
+          description: 'Onsite visit',
+          amountCents: 10_000,
+          quantity: 1,
+          unitAmountCents: 10_000,
+          accountCode: '200',
+          taxType: 'OUTPUT',
+          servicePeriodStart: '2025-02-10T00:00:00.000Z',
+          servicePeriodEnd: '2025-02-10T00:00:00.000Z'
+        }
+      ]
+    });
+
+    axiosMock.request.mockImplementation(async (config: AxiosRequestConfig) => {
+      const body = config.data.Invoices[0];
+      expect(body.LineItems[0]?.Description).toBe('Onsite visit — Service date: 2025-02-10');
+      return {
+        data: {
+          Invoices: [
+            {
+              InvoiceID: 'guid-3',
+              InvoiceNumber: 'INV-2003'
+            }
+          ]
+        }
+      };
+    });
+
+    await service.createInvoices([payload]);
     expect(axiosMock.request).toHaveBeenCalledTimes(1);
   });
 

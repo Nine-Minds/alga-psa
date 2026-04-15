@@ -11,6 +11,13 @@ export function buildCreditNoteCreatedPayload(params: {
   amount: number;
   currency: string;
   status: string;
+  sourceDocumentKind?: 'prepayment_invoice' | 'negative_invoice';
+  sourceInvoiceId?: string | null;
+  sourceInvoiceNumber?: string | null;
+  sourceInvoiceStatus?: string | null;
+  sourceInvoiceDateBasis?: 'financial_document_date' | 'canonical_recurring_service_period';
+  sourceServicePeriodStart?: string | null;
+  sourceServicePeriodEnd?: string | null;
 }) {
   return {
     creditNoteId: params.creditNoteId,
@@ -20,6 +27,13 @@ export function buildCreditNoteCreatedPayload(params: {
     amount: formatMoneyAmount(params.amount),
     currency: params.currency,
     status: params.status,
+    sourceDocumentKind: params.sourceDocumentKind,
+    sourceInvoiceId: params.sourceInvoiceId ?? undefined,
+    sourceInvoiceNumber: params.sourceInvoiceNumber ?? undefined,
+    sourceInvoiceStatus: params.sourceInvoiceStatus ?? undefined,
+    sourceInvoiceDateBasis: params.sourceInvoiceDateBasis,
+    sourceServicePeriodStart: params.sourceServicePeriodStart ?? undefined,
+    sourceServicePeriodEnd: params.sourceServicePeriodEnd ?? undefined,
   };
 }
 
@@ -30,6 +44,11 @@ export function buildCreditNoteAppliedPayload(params: {
   appliedAt?: string;
   amountApplied: number;
   currency: string;
+  appliedInvoiceNumber?: string | null;
+  appliedInvoiceStatus?: string | null;
+  appliedInvoiceDateBasis?: 'financial_document_date' | 'canonical_recurring_service_period';
+  appliedServicePeriodStart?: string | null;
+  appliedServicePeriodEnd?: string | null;
 }) {
   return {
     creditNoteId: params.creditNoteId,
@@ -38,6 +57,11 @@ export function buildCreditNoteAppliedPayload(params: {
     appliedAt: params.appliedAt,
     amountApplied: formatMoneyAmount(params.amountApplied),
     currency: params.currency,
+    appliedInvoiceNumber: params.appliedInvoiceNumber ?? undefined,
+    appliedInvoiceStatus: params.appliedInvoiceStatus ?? undefined,
+    appliedInvoiceDateBasis: params.appliedInvoiceDateBasis,
+    appliedServicePeriodStart: params.appliedServicePeriodStart ?? undefined,
+    appliedServicePeriodEnd: params.appliedServicePeriodEnd ?? undefined,
   };
 }
 
@@ -54,4 +78,3 @@ export function buildCreditNoteVoidedPayload(params: {
     reason: params.reason ?? undefined,
   };
 }
-

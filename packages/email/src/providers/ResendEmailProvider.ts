@@ -140,13 +140,14 @@ export class ResendEmailProvider implements IEmailProvider {
         return {
           success: true,
           messageId: response.data.id,
+          providerMessageId: response.data.id,
           providerId: this.providerId,
           providerType: this.providerType,
           metadata: {
             to: response.data.to,
             createdAt: response.data.created_at,
           },
-          sentAt: new Date(response.data.created_at),
+          sentAt: response.data.created_at ? new Date(response.data.created_at) : new Date(),
         };
       } catch (error: any) {
         logger.error(`[ResendEmailProvider:${this.providerId}] Failed to send email (attempt ${attempt + 1}):`, {
@@ -191,6 +192,7 @@ export class ResendEmailProvider implements IEmailProvider {
 
         results.push({
           success: false,
+          providerMessageId: undefined,
           providerId: this.providerId,
           providerType: this.providerType,
           error: error.message,

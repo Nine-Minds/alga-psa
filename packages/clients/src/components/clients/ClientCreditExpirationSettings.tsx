@@ -6,6 +6,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getClientContractLineSettingsAsync,
   updateClientContractLineSettingsAsync
@@ -25,6 +26,7 @@ interface ClientCreditExpirationSettingsProps {
 }
 
 const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsProps> = ({ clientId }) => {
+  const { t } = useTranslation('msp/clients');
   const [settings, setSettings] = useState<BillingSettings | null>(null);
   const [useDefault, setUseDefault] = useState(true);
   const [notificationDays, setNotificationDays] = useState<string>('');
@@ -41,12 +43,12 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
           setUseDefault(true);
         }
       } catch (error) {
-        handleError(error, "Failed to load settings");
+        handleError(error, t('clientCreditExpirationSettings.loadError', { defaultValue: 'Failed to load settings' }));
       }
     };
 
     loadSettings();
-  }, [clientId]);
+  }, [clientId, t]);
 
   const handleEnableChange = async (checked: boolean) => {
     if (!settings) return;
@@ -60,10 +62,10 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
       if (result.success) {
         setSettings(newSettings);
         setUseDefault(false);
-        toast.success("Credit expiration settings have been updated.");
+        toast.success(t('clientCreditExpirationSettings.updatedSuccess', { defaultValue: 'Credit expiration settings have been updated.' }));
       }
     } catch (error) {
-      handleError(error, "Failed to save settings");
+      handleError(error, t('clientCreditExpirationSettings.saveError', { defaultValue: 'Failed to save settings' }));
     }
   };
 
@@ -95,10 +97,10 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
       if (result.success) {
         setSettings(newSettings);
         setUseDefault(false);
-        toast.success("Credit expiration period has been updated.");
+        toast.success(t('clientCreditExpirationSettings.periodUpdatedSuccess', { defaultValue: 'Credit expiration period has been updated.' }));
       }
     } catch (error) {
-      handleError(error, "Failed to save settings");
+      handleError(error, t('clientCreditExpirationSettings.saveError', { defaultValue: 'Failed to save settings' }));
     }
   };
 
@@ -122,10 +124,10 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
       if (result.success) {
         setSettings(newSettings);
         setUseDefault(false);
-        toast.success("Notification days have been updated.");
+        toast.success(t('clientCreditExpirationSettings.notificationsUpdatedSuccess', { defaultValue: 'Notification days have been updated.' }));
       }
     } catch (error) {
-      handleError(error, "Failed to save settings");
+      handleError(error, t('clientCreditExpirationSettings.saveError', { defaultValue: 'Failed to save settings' }));
     }
   };
 
@@ -137,7 +139,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
         if (result.success) {
           setSettings(null);
           setUseDefault(true);
-          toast.success("Client will now use default credit expiration settings.");
+          toast.success(t('clientCreditExpirationSettings.useDefaultSuccess', { defaultValue: 'Client will now use default credit expiration settings.' }));
         }
       } else {
         // Create client override with current settings
@@ -154,11 +156,11 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
           setSettings(newSettings);
           setNotificationDays(newSettings.creditExpirationNotificationDays?.join(', ') || '');
           setUseDefault(false);
-          toast.success("Client-specific credit expiration settings enabled.");
+          toast.success(t('clientCreditExpirationSettings.clientSpecificEnabled', { defaultValue: 'Client-specific credit expiration settings enabled.' }));
         }
       }
     } catch (error) {
-      handleError(error, "Failed to update settings");
+      handleError(error, t('clientCreditExpirationSettings.updateError', { defaultValue: 'Failed to update settings' }));
     }
   };
 
@@ -166,7 +168,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
     <div className="mt-6">
       <div>
         <Text as="div" size="3" mb="4" weight="medium" className="text-gray-900">
-          Credit Expiration Settings
+          {t('clientCreditExpirationSettings.title', { defaultValue: 'Credit Expiration Settings' })}
         </Text>
         <div className="space-y-4">
           <div className="flex items-center space-x-2">
@@ -176,9 +178,9 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
               onCheckedChange={handleUseDefaultChange}
             />
             <div className="space-y-1">
-              <Label htmlFor="use-default-credit-expiration">Use Default Settings</Label>
+              <Label htmlFor="use-default-credit-expiration">{t('clientCreditExpirationSettings.useDefault', { defaultValue: 'Use Default Settings' })}</Label>
               <p className="text-sm text-muted-foreground">
-                Use the system-wide default settings for credit expiration
+                {t('clientCreditExpirationSettings.useDefaultHelp', { defaultValue: 'Use the system-wide default settings for credit expiration' })}
               </p>
             </div>
           </div>
@@ -192,9 +194,9 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
                 disabled={useDefault}
               />
               <div className="space-y-1">
-                <Label htmlFor="enable-credit-expiration">Enable Credit Expiration</Label>
+                <Label htmlFor="enable-credit-expiration">{t('clientCreditExpirationSettings.enable', { defaultValue: 'Enable Credit Expiration' })}</Label>
                 <p className="text-sm text-muted-foreground">
-                  When enabled, credits will expire after the specified period
+                  {t('clientCreditExpirationSettings.enabledHelp', { defaultValue: 'When enabled, credits will expire after the specified period' })}
                 </p>
               </div>
             </div>
@@ -202,7 +204,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
             {settings?.enableCreditExpiration && (
               <>
                 <div className="space-y-2 mb-4">
-                  <Label htmlFor="expiration-days">Expiration Period (Days)</Label>
+                  <Label htmlFor="expiration-days">{t('clientCreditExpirationSettings.expirationPeriodDays', { defaultValue: 'Expiration Period (Days)' })}</Label>
                   <div className="flex space-x-2 items-start">
                     <Input
                       id="expiration-days"
@@ -218,22 +220,22 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
                       id="save-expiration-days"
                       disabled={useDefault}
                     >
-                      Save
+                      {t('clientCreditExpirationSettings.save', { defaultValue: 'Save' })}
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Number of days after which credits will expire
+                    {t('clientCreditExpirationSettings.expirationPeriodHelp', { defaultValue: 'Number of days after which credits will expire' })}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="notification-days">Notification Days</Label>
+                  <Label htmlFor="notification-days">{t('clientCreditExpirationSettings.notificationDays', { defaultValue: 'Notification Days' })}</Label>
                   <div className="flex space-x-2 items-start">
                     <Input
                       id="notification-days"
                       value={notificationDays}
                       onChange={(e) => handleNotificationDaysChange(e.target.value)}
-                      placeholder="e.g., 30, 7, 1"
+                      placeholder={t('clientCreditExpirationSettings.placeholder', { defaultValue: 'e.g., 30, 7, 1' })}
                       className="max-w-xs"
                       disabled={useDefault}
                     />
@@ -242,11 +244,11 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
                       id="save-notification-days"
                       disabled={useDefault}
                     >
-                      Save
+                      {t('clientCreditExpirationSettings.save', { defaultValue: 'Save' })}
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Days before expiration to send notifications (comma-separated)
+                    {t('clientCreditExpirationSettings.notificationDaysHelp', { defaultValue: 'Days before expiration to send notifications (comma-separated)' })}
                   </p>
                 </div>
               </>

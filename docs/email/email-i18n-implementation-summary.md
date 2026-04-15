@@ -9,7 +9,7 @@ All email notifications in Alga PSA now support multiple languages with automati
 ## What Was Implemented
 
 ### 1. **Language Resolution System**
-**File:** `server/src/lib/notifications/emailLocaleResolver.ts`
+**File:** `packages/notifications/src/notifications/emailLocaleResolver.ts`
 
 Hierarchical language detection:
 1. User preference (from `user_preferences` table)
@@ -42,7 +42,7 @@ CREATE TABLE system_email_templates (
 
 - Reads existing English templates from database
 - Translates only text content (preserves HTML/styling)
-- Supports 5 languages: en, fr, es, de, nl
+- Supports 7 languages: en, fr, es, de, nl (full), it, pl (partial — see below)
 - Covers 12 email templates
 
 ### 4. **Updated SystemEmailService**
@@ -93,12 +93,16 @@ Added language support to ticket/invoice/payment notifications.
 11. `payment-overdue` - Overdue notice
 12. `credits-expiring` - Credits expiring soon
 
-### Languages:
+### Languages (client-facing email templates):
 - ✅ English (en) - default
 - ✅ French (fr)
 - ✅ Spanish (es)
 - ✅ German (de)
 - ✅ Dutch (nl)
+- ⚠️ Italian (it) — partial (18/36 templates; missing: projects, SLA, time entry, billing misc)
+- ⚠️ Polish (pl) — partial (17/36 templates; missing: emailVerification, projects, SLA, time entry, billing misc)
+
+**Note:** Email locale resolution currently serves **client portal users only**. MSP internal users always receive English emails regardless of their language preference.
 
 ---
 
@@ -208,8 +212,8 @@ npm run migrate
 
 1. **Update locale config:**
 ```typescript
-// server/src/lib/i18n/config.ts
-export const SUPPORTED_LOCALES = ['en', 'fr', 'es', 'de', 'nl', 'pt'] as const;
+// packages/core/src/lib/i18n/config.ts
+supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'] as const,
 ```
 
 2. **Add translations to migration:**
@@ -320,7 +324,7 @@ npm run migrate
 ## Future Enhancements
 
 **Potential additions:**
-- [ ] Add more languages (Portuguese, Italian, etc.)
+- [ ] Add more languages (Portuguese, etc.)
 - [ ] Support for conditional template logic (handlebars/mustache)
 - [ ] Template versioning (track changes over time)
 - [ ] A/B testing for email content
@@ -335,9 +339,9 @@ npm run migrate
 The email system now fully supports internationalization! 🎉
 
 **Key achievements:**
-- 12 email templates
-- 5 languages
-- Automatic language detection
+- 36 email templates (across auth, tickets, invoices, projects, SLA, time, surveys, appointments)
+- 5 fully translated languages (en, fr, es, de, nl), 2 partially translated (it, pl)
+- Automatic language detection for client portal users
 - Database-driven (no code changes for updates)
 - Emergency fallbacks for reliability
 - Unified architecture across both email systems

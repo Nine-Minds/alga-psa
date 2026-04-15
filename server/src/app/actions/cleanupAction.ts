@@ -1,6 +1,6 @@
 'use server'
 
-import { headers } from 'next/headers';
+import { headers } from 'next/headers.js';
 
 export async function cleanupDatabaseConnection() {
   const headersList = await headers();

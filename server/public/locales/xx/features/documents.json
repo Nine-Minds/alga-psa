@@ -211,5 +211,15 @@
     "feedbackThanks": "11111",
     "feedbackError": "11111",
     "filterByTags": "11111"
+  },
+  "visibility": {
+    "cascadeTitle": "11111",
+    "cascadeMakeVisible": "11111 {{count}} 11111 {{name}} 11111",
+    "cascadeMakeHidden": "11111 {{count}} 11111 {{name}} 11111",
+    "cascadeYes": "11111",
+    "cascadeNo": "11111"
+  },
+  "empty": {
+    "default": "11111"
   }
 }

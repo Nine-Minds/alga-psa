@@ -37,12 +37,18 @@ export async function getPurchaseOrderConsumedCents(params: {
     .andWhere((builder) => {
       builder.whereNotNull('finalized_at').orWhereIn('status', statuses as readonly string[]);
     })
-    .sum<{ sum?: string | number | null }>('total_amount as sum')
+    .select<{ sum?: string | number | null }[]>(
+      knex.raw('COALESCE(SUM(COALESCE(total_amount, 0) - COALESCE(credit_applied, 0)), 0) as sum')
+    )
     .first();
 
   const raw = row?.sum ?? 0;
   const numeric = typeof raw === 'string' ? Number(raw) : (raw ?? 0);
-  return Number.isFinite(numeric) ? Math.trunc(numeric) : 0;
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.trunc(numeric));
 }
 
 export async function getClientContractPurchaseOrderContext(params: {

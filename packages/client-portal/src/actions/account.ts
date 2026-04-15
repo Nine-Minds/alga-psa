@@ -458,22 +458,23 @@ export const getBillingCycles = withAuth(async (user, { tenant }): Promise<Billi
   if (!clientId) throw new Error('No client associated with user');
 
   const cycles = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_contract_lines')
+    return await trx('client_contracts')
       .where({
         client_id: clientId,
-        tenant
+        tenant,
+        is_active: true,
       })
       .orderBy('start_date', 'desc')
       .limit(12)
-      .select('*');
+      .select('client_contract_id', 'start_date', 'end_date');
   });
 
   return cycles.map((cycle: {
-    client_contract_line_id: string;
+    client_contract_id: string;
     start_date: string;
     end_date: string | null;
   }): BillingCycle => ({
-    id: cycle.client_contract_line_id,
+    id: cycle.client_contract_id,
     period: determineBillingPeriod(cycle.start_date, cycle.end_date),
     startDate: formatDate(cycle.start_date),
     endDate: formatDate(cycle.end_date),
@@ -490,10 +491,10 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
   const now = new Date().toISOString();
 
   const services = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_contract_lines as ccl')
+    return await trx('client_contracts as cc')
       .join('contract_lines as cl', function(this: Knex.JoinClause) {
-        this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
-            .andOn('ccl.tenant', '=', 'cl.tenant');
+        this.on('cc.contract_id', '=', 'cl.contract_id')
+            .andOn('cc.tenant', '=', 'cl.tenant');
       })
       .join('contract_line_services as ps', function(this: Knex.JoinClause) {
         this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
@@ -514,23 +515,24 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
             .andOn('psc.tenant', '=', 'psbc.tenant');
       })
       .where({
-        'ccl.client_id': clientId,
-        'ccl.tenant': tenant,
+        'cc.client_id': clientId,
+        'cc.is_active': true,
+        'cc.tenant': tenant,
         'cl.tenant': tenant,
         'ps.tenant': tenant,
         'sc.tenant': tenant
       })
       .whereIn('cl.contract_line_type', ['Fixed', 'Hourly', 'Usage'])
-      .andWhere('ccl.start_date', '<=', now)
+      .andWhere('cc.start_date', '<=', now)
       .andWhere(function(this: Knex.QueryBuilder) {
-        this.where('ccl.end_date', '>', now)
-            .orWhereNull('ccl.end_date');
+        this.where('cc.end_date', '>', now)
+            .orWhereNull('cc.end_date');
       })
       .select(
         'sc.service_id as id',
         'sc.service_name as name',
         'sc.description',
-        'sc.service_type',
+        'cl.contract_line_type as service_type',
         'sc.default_rate',
         'sc.unit_of_measure',
         'ps.custom_rate',
@@ -543,18 +545,18 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
         // 'bucket.overage_rate', // Removed old bucket field
         // 'bucket.billing_period as bucket_period', // Removed old bucket field
         'psc.config_id', // Added config_id
-        'psbc.total_hours as psbc_total_hours', // Added new bucket field
+        'psbc.total_minutes as psbc_total_minutes', // Added new bucket field
         'psbc.overage_rate as psbc_overage_rate', // Added new bucket field
         'psbc.allow_rollover as psbc_allow_rollover', // Added new bucket field
         trx.raw("'active' as status"),
-        'ccl.start_date',
-        'ccl.end_date'
+        'cc.start_date',
+        'cc.end_date'
       )
       .groupBy(
         'sc.service_id',
         'sc.service_name',
         'sc.description',
-        'sc.service_type',
+        'cl.contract_line_type',
         'sc.default_rate',
         'sc.unit_of_measure',
         'ps.custom_rate',
@@ -567,11 +569,11 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
         // 'bucket.overage_rate', // Removed old bucket field
         // 'bucket.billing_period', // Removed old bucket field
         'psc.config_id', // Added config_id
-        'psbc.total_hours', // Added new bucket field
+        'psbc.total_minutes', // Added new bucket field
         'psbc.overage_rate', // Added new bucket field
         'psbc.allow_rollover', // Added new bucket field
-        'ccl.start_date',
-        'ccl.end_date'
+        'cc.start_date',
+        'cc.end_date'
       );
   });
 
@@ -592,7 +594,7 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
     total_hours: number | null;
     overage_rate: number | null;
     // bucket_period: string | null; // Removed
-    psbc_total_hours: number | null; // Added from new join
+    psbc_total_minutes: number | null; // Added from new join
     psbc_overage_rate: number | null; // Added from new join
     psbc_allow_rollover: boolean | null; // Added from new join
     start_date: string;
@@ -600,7 +602,8 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
   }): Service => {
     const hasCustomRate = service.custom_rate !== null;
     const rate = hasCustomRate ? service.custom_rate : service.default_rate;
-    const isBucketPlan = Boolean(service.psbc_total_hours);
+    const isBucketPlan = Boolean(service.psbc_total_minutes);
+    const bucketHours = service.psbc_total_minutes ? service.psbc_total_minutes / 60 : null;
 
     // Determine base status
     const status = determineServiceStatus(service.start_date, service.end_date);
@@ -617,8 +620,8 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
       'N/A';
 
     // Format bucket display using new fields
-    const bucketDisplay = service.psbc_total_hours ? // Use new field
-      `${service.psbc_total_hours} hours${service.psbc_overage_rate ? ` (+${currencySymbol}${(service.psbc_overage_rate / 100).toFixed(2)}/hr overage)` : ''}` : // Use new field
+    const bucketDisplay = bucketHours ?
+      `${bucketHours} hours${service.psbc_overage_rate ? ` (+${currencySymbol}${(service.psbc_overage_rate / 100).toFixed(2)}/hr overage)` : ''}` :
       'N/A';
 
     // Format billing display
@@ -642,8 +645,8 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
         display: quantityDisplay
       } : undefined,
       // Update bucket object creation using new fields
-      bucket: isBucketPlan && service.psbc_total_hours ? { // Check new field
-        totalHours: service.psbc_total_hours.toString(), // Use new field
+      bucket: isBucketPlan && bucketHours ? {
+        totalHours: bucketHours.toString(),
         overageRate: service.psbc_overage_rate ? // Use new field
           `${currencySymbol}${(service.psbc_overage_rate / 100).toFixed(2)}` :
           'N/A',
@@ -698,10 +701,10 @@ export const getServiceUpgrades = withAuth(async (user, { tenant }, serviceId: s
 
   // Get current service details
   const currentService = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_contract_lines as ccl')
+    return await trx('client_contracts as cc')
       .join('contract_lines as cl', function(this: Knex.JoinClause) {
-        this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
-            .andOn('ccl.tenant', '=', 'cl.tenant');
+        this.on('cc.contract_id', '=', 'cl.contract_id')
+            .andOn('cc.tenant', '=', 'cl.tenant');
       })
       .join('contract_line_services as ps', function(this: Knex.JoinClause) {
         this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
@@ -709,8 +712,9 @@ export const getServiceUpgrades = withAuth(async (user, { tenant }, serviceId: s
       })
       .where({
         'ps.service_id': serviceId,
-        'ccl.client_id': clientId,
-        'ccl.tenant': tenant
+        'cc.client_id': clientId,
+        'cc.tenant': tenant,
+        'cc.is_active': true,
       })
       .first();
   });

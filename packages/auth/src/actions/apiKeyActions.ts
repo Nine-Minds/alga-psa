@@ -85,6 +85,8 @@ export const adminListApiKeys = withAuth(async (user, { tenant }) => {
     api_key_id: key.api_key_id,
     description: key.description,
     username: key.username,
+    first_name: key.first_name,
+    last_name: key.last_name,
     created_at: key.created_at,
     last_used_at: key.last_used_at,
     expires_at: key.expires_at,

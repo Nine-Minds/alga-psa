@@ -4,8 +4,14 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { getFormRegistry } from '@shared/task-inbox';
-import WorkflowTaskModel, { WorkflowTaskStatus } from '@shared/workflow/persistence/workflowTaskModel';
-import { TaskSubmissionParams, TaskDetails, TaskQueryParams, TaskQueryResult } from '@shared/workflow/persistence/taskInboxInterfaces';
+import {
+  WorkflowTaskModel,
+  WorkflowTaskStatus,
+  type TaskDetails,
+  type TaskQueryParams,
+  type TaskQueryResult,
+  type TaskSubmissionParams,
+} from '@alga-psa/workflows/persistence';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from "next/cache";

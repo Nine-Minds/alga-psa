@@ -31,7 +31,8 @@ import {
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
-import type { Step, IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@shared/workflow/runtime/client';
+import type { Step, IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@alga-psa/workflows/runtime';
+import { formatTimeWaitDuration } from '../timeWaitDuration';
 
 /**
  * Step type color configuration
@@ -117,6 +118,14 @@ export const getStepTypeColor = (stepType: string): {
         icon: 'text-indigo-500',
         badge: 'bg-indigo-500/15 text-indigo-600'
       };
+    case 'time.wait':
+      return {
+        border: 'border-l-sky-500',
+        bg: 'bg-sky-500/10',
+        text: 'text-sky-600',
+        icon: 'text-sky-500',
+        badge: 'bg-sky-500/15 text-sky-600'
+      };
     case 'human.task':
       return {
         border: 'border-l-pink-500',
@@ -161,6 +170,8 @@ export const getStepTypeIcon = (stepType: string): React.ReactNode => {
     case 'transform.assign':
       return <Settings className={iconClass} />;
     case 'event.wait':
+      return <Clock className={iconClass} />;
+    case 'time.wait':
       return <Clock className={iconClass} />;
     case 'human.task':
       return <User className={iconClass} />;
@@ -249,21 +260,11 @@ export const EmptyPipeline: React.FC<{
       <div className="text-gray-400 mb-3">
         <Plus className="h-8 w-8" />
       </div>
-      <p className="text-sm text-gray-500 text-center mb-3">
-        No steps yet. Add your first step to start building the workflow.
+      <p className="text-sm text-gray-500 text-center">
+        {disabled
+          ? 'No steps yet.'
+          : 'Select a step from the panel to get started.'}
       </p>
-      {onAddStep && !disabled && (
-        <Button
-          id="empty-pipeline-add-first-step"
-          variant="outline"
-          size="sm"
-          onClick={onAddStep}
-          data-testid="add-first-step-button"
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Add first step
-        </Button>
-      )}
     </div>
   );
 };
@@ -335,12 +336,26 @@ export const StepCardSummary: React.FC<{
   }
 
   if (step.type === 'event.wait') {
-    const config = (step as NodeStep).config as { eventName?: string } | undefined;
-    return config?.eventName ? (
-      <span className="text-xs text-gray-500 font-mono">
-        {config.eventName}
-      </span>
-    ) : null;
+    const config = (step as NodeStep).config as { eventName?: string; filters?: unknown[]; timeoutMs?: number } | undefined;
+    const filterCount = Array.isArray(config?.filters) ? config!.filters!.length : 0;
+    return (
+      <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500">
+        {config?.eventName && <span className="font-mono">{config.eventName}</span>}
+        {filterCount > 0 && <Badge variant="outline" className="text-[10px]">filters: {filterCount}</Badge>}
+        {typeof config?.timeoutMs === 'number' && <Badge variant="outline" className="text-[10px]">timeout: {config.timeoutMs}ms</Badge>}
+      </div>
+    );
+  }
+
+  if (step.type === 'time.wait') {
+    const config = (step as NodeStep).config as { mode?: string; durationMs?: number } | undefined;
+    if (config?.mode === 'duration' && typeof config.durationMs === 'number') {
+      return <span className="text-xs text-gray-500">for {formatTimeWaitDuration(config.durationMs)}</span>;
+    }
+    if (config?.mode === 'until') {
+      return <span className="text-xs text-gray-500">until expression</span>;
+    }
+    return null;
   }
 
   return null;

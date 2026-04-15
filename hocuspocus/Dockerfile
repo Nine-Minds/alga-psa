@@ -2,8 +2,11 @@ FROM node:22.5.1 AS builder
 
 WORKDIR /app/hocuspocus
 
-COPY package.json ./
-RUN npm install --omit=dev --no-package-lock
+# Hocuspocus is a standalone package with its own lockfile; installing from the
+# repo root pulls unrelated workspace deps and breaks the prebuilt CE path.
+COPY hocuspocus/package.json ./package.json
+COPY hocuspocus/package-lock.json ./package-lock.json
+RUN npm ci --omit=dev
 
 FROM node:22.5.1-slim
 
@@ -19,9 +22,9 @@ WORKDIR /app/hocuspocus
 # Create a non-root user
 RUN groupadd -r nodejs && useradd -r -g nodejs nodejs
 
-# Copy built node modules and source files
+# Copy built node modules and service source files only.
 COPY --from=builder /app/hocuspocus/node_modules ./node_modules
-COPY . ./
+COPY hocuspocus/ ./
 
 # Set up entrypoint script
 RUN chmod +x ./entrypoint.sh

@@ -243,11 +243,44 @@ export default function DocumentSelector({
         );
     }
 
+    const footer = (
+        <>
+            {isSaving && (
+                <div className="flex justify-center mb-3">
+                    <LoadingIndicator
+                        text={t('documents.selector.saving', 'Saving...')}
+                        spinnerProps={{ size: 'sm' }}
+                    />
+                </div>
+            )}
+            <div className="flex justify-end space-x-2">
+                <Button
+                    id="cancel-document-selection-button"
+                    variant="outline"
+                    onClick={onClose}
+                    disabled={isSaving}
+                >
+                    {t('common.cancel', 'Cancel')}
+                </Button>
+                <Button
+                    id="save-document-selection-button"
+                    onClick={handleSave}
+                    disabled={selectedDocuments.size === 0 || isSaving}
+                >
+                    {singleSelect
+                        ? t('documents.selector.selectDocument', 'Select Document')
+                        : t('documents.selector.associateSelected', 'Associate Selected')}
+                </Button>
+            </div>
+        </>
+    );
+
     return (
         <Dialog
           isOpen={isOpen}
           onClose={onClose}
           title={resolvedTitle}
+          footer={footer}
         >
             <DialogContent>
                 <ReflectionContainer
@@ -420,38 +453,6 @@ export default function DocumentSelector({
                             </div>
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="pt-4 border-t mt-4">
-                            {/* Loading State */}
-                            {isSaving && (
-                                <div className="flex justify-center mb-3">
-                                    <LoadingIndicator
-                                        text={t('documents.selector.saving', 'Saving...')}
-                                        spinnerProps={{ size: 'sm' }}
-                                    />
-                                </div>
-                            )}
-
-                            <div className="flex justify-end space-x-2">
-                                <Button
-                                    id="cancel-document-selection-button"
-                                    variant="outline"
-                                    onClick={onClose}
-                                    disabled={isSaving}
-                                >
-                                    {t('common.cancel', 'Cancel')}
-                                </Button>
-                                <Button
-                                    id="save-document-selection-button"
-                                    onClick={handleSave}
-                                    disabled={selectedDocuments.size === 0 || isSaving}
-                                >
-                                    {singleSelect
-                                        ? t('documents.selector.selectDocument', 'Select Document')
-                                        : t('documents.selector.associateSelected', 'Associate Selected')}
-                                </Button>
-                            </div>
-                        </div>
                     </div>
                 </ReflectionContainer>
             </DialogContent>

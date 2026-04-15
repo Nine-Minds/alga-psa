@@ -1,7 +1,8 @@
 import { useFocusEffect, type CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { EmptyState, ErrorState, LoadingState } from "../ui/states";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import type { RootStackParamList, TabsParamList, TicketsStackParamList } from "../navigation/types";
@@ -19,9 +20,12 @@ import { logger } from "../logging/logger";
 import { Badge } from "../ui/components/Badge";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { getCachedTicketDetail, getCachedTicketsList, setCachedTicketDetail, setCachedTicketsList } from "../cache/ticketsCache";
+import { getCachedTicketStatuses, setCachedTicketStatuses, getCachedTicketPriorities, setCachedTicketPriorities } from "../cache/referenceDataCache";
 import { formatDateShort, formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
+import { DatePickerField } from "../ui/components/DatePickerField";
+import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -34,7 +38,9 @@ type Props = CompositeScreenProps<
 type TicketListFilters = {
   status: "any" | "open" | "closed";
   statusIds: string[];
-  assignee: "any" | "me" | "unassigned";
+  assignee: "any" | "me" | "unassigned" | "agent";
+  assigneeUserId?: string;
+  assigneeName?: string;
   priorityName: string;
   updatedSinceDays: number | null;
   updatedSinceDate: string;
@@ -139,10 +145,21 @@ export function TicketsListScreen({ navigation }: Props) {
     void setSecureJson(`alga.mobile.tickets.filters.${userId}`, filters);
   }, [filters, filtersLoaded, session?.user?.id]);
 
-  useEffect(() => {
-    const handle = setTimeout(() => setSearch(searchInput.trim()), 350);
-    return () => clearTimeout(handle);
+  const commitSearch = useCallback(() => {
+    setSearch(searchInput.trim());
   }, [searchInput]);
+
+  const clearSearch = useCallback(() => {
+    setSearchInput("");
+    setSearch("");
+  }, []);
+
+  // If the user fully clears the input, drop the committed search immediately.
+  useEffect(() => {
+    if (searchInput === "" && search !== "") {
+      setSearch("");
+    }
+  }, [searchInput, search]);
 
   const apiFilters = useMemo(() => {
     if (!session) return undefined;
@@ -158,6 +175,9 @@ export function TicketsListScreen({ navigation }: Props) {
     if (filters.assignee === "me") {
       const me = session.user?.id;
       if (me) out.assigned_to = me;
+    }
+    if (filters.assignee === "agent" && filters.assigneeUserId) {
+      out.assigned_to = filters.assigneeUserId;
     }
     if (filters.assignee === "unassigned") out.has_assignment = false;
 
@@ -448,7 +468,12 @@ export function TicketsListScreen({ navigation }: Props) {
       <EmptyState
         title={t("list.noTickets")}
         description={t("list.noTicketsDescription")}
-        action={<PrimaryButton onPress={() => void refresh()}>{t("common:refresh")}</PrimaryButton>}
+        action={
+          <View style={{ gap: theme.spacing.sm }}>
+            <PrimaryButton onPress={() => navigation.navigate("CreateTicket")}>{t("list.createTicket")}</PrimaryButton>
+            <PrimaryButton onPress={() => void refresh()}>{t("common:refresh")}</PrimaryButton>
+          </View>
+        }
       />
     );
   }
@@ -459,24 +484,32 @@ export function TicketsListScreen({ navigation }: Props) {
         <View style={{ padding: theme.spacing.lg }}>
           <View style={{ flexDirection: "row" }}>
             <View style={{ flex: 1 }}>
-              <TextInput
+              <SearchField
+                theme={theme}
                 value={searchInput}
                 onChangeText={setSearchInput}
+                onSubmit={commitSearch}
+                onClear={clearSearch}
                 placeholder={t("list.searchPlaceholder")}
-                placeholderTextColor={theme.colors.placeholder}
-                autoCapitalize="none"
-                autoCorrect={false}
-                style={{
-                  paddingVertical: theme.spacing.sm,
-                  paddingHorizontal: theme.spacing.md,
-                  borderRadius: theme.borderRadius.lg,
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  backgroundColor: theme.colors.background,
-                  color: theme.colors.text,
-                }}
               />
             </View>
+            <View style={{ width: theme.spacing.sm }} />
+            <Pressable
+              onPress={commitSearch}
+              accessibilityRole="button"
+              accessibilityLabel={t("list.searchAccessibility")}
+              style={({ pressed }) => ({
+                paddingHorizontal: theme.spacing.md,
+                borderRadius: theme.borderRadius.lg,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.card,
+                justifyContent: "center",
+                opacity: pressed ? 0.95 : 1,
+              })}
+            >
+              <Feather name="search" size={16} color={theme.colors.text} />
+            </Pressable>
             <View style={{ width: theme.spacing.sm }} />
             <Pressable
               onPress={() => setFiltersOpen(true)}
@@ -501,7 +534,7 @@ export function TicketsListScreen({ navigation }: Props) {
             onPress={() => setFiltersOpen(true)}
             onClearAll={() => {
               setFilters({ ...DEFAULT_FILTERS });
-              setSearchInput("");
+              clearSearch();
             }}
           />
         </View>
@@ -522,9 +555,11 @@ export function TicketsListScreen({ navigation }: Props) {
           visible={filtersOpen}
           client={client}
           apiKey={session.accessToken}
+          tenantId={session.tenantId ?? null}
           filters={filters}
           setFilters={setFilters}
           canFilterMe={Boolean(session?.user?.id)}
+          baseUrl={config.ok ? config.baseUrl : null}
           onClose={() => setFiltersOpen(false)}
         />
       </View>
@@ -552,25 +587,33 @@ export function TicketsListScreen({ navigation }: Props) {
       ) : null}
       <View style={{ flexDirection: "row" }}>
         <View style={{ flex: 1 }}>
-          <TextInput
+          <SearchField
+            theme={theme}
             value={searchInput}
             onChangeText={setSearchInput}
+            onSubmit={commitSearch}
+            onClear={clearSearch}
             placeholder={t("list.searchPlaceholder")}
-            placeholderTextColor={theme.colors.placeholder}
-            autoCapitalize="none"
-            autoCorrect={false}
             accessibilityLabel={t("list.searchAccessibility")}
-            style={{
-              paddingVertical: theme.spacing.sm,
-              paddingHorizontal: theme.spacing.md,
-              borderRadius: theme.borderRadius.lg,
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              backgroundColor: theme.colors.background,
-              color: theme.colors.text,
-            }}
           />
         </View>
+        <View style={{ width: theme.spacing.sm }} />
+        <Pressable
+          onPress={commitSearch}
+          accessibilityRole="button"
+          accessibilityLabel={t("list.searchAccessibility")}
+          style={({ pressed }) => ({
+            paddingHorizontal: theme.spacing.md,
+            borderRadius: theme.borderRadius.lg,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            backgroundColor: theme.colors.card,
+            justifyContent: "center",
+            opacity: pressed ? 0.95 : 1,
+          })}
+        >
+          <Feather name="search" size={16} color={theme.colors.text} />
+        </Pressable>
         <View style={{ width: theme.spacing.sm }} />
         <Pressable
           onPress={() => setFiltersOpen(true)}
@@ -644,9 +687,11 @@ export function TicketsListScreen({ navigation }: Props) {
         visible={filtersOpen}
         client={client}
         apiKey={session.accessToken}
+        tenantId={session.tenantId ?? null}
         filters={filters}
         setFilters={setFilters}
         canFilterMe={Boolean(session?.user?.id)}
+        baseUrl={config.ok ? config.baseUrl : null}
         onClose={() => setFiltersOpen(false)}
       />
     </View>
@@ -668,7 +713,7 @@ function FilterChipBar({
   const chips: string[] = [];
   if (filters.statusIds.length > 0) chips.push(t("filters.statusesCount", { count: filters.statusIds.length }));
   else if (filters.status !== "any") chips.push(t("filters.statusLabel", { status: filters.status === "open" ? t("filters.open") : t("filters.closed") }));
-  if (filters.assignee !== "any") chips.push(t("filters.assigneeLabel", { assignee: filters.assignee === "me" ? t("filters.me") : t("quickFilters.unassigned") }));
+  if (filters.assignee !== "any") chips.push(t("filters.assigneeLabel", { assignee: filters.assignee === "me" ? t("filters.me") : filters.assignee === "agent" ? (filters.assigneeName ?? "Agent") : t("quickFilters.unassigned") }));
   if (filters.priorityName.trim()) chips.push(t("filters.priorityLabel", { priority: filters.priorityName.trim() }));
   const dateOnly = filters.updatedSinceDate.trim();
   if (dateOnly) chips.push(t("filters.updatedDate", { date: dateOnly }));
@@ -701,13 +746,10 @@ function QuickFilters({
 }) {
   const { t } = useTranslation("tickets");
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm, gap: theme.spacing.sm }}>
       <QuickChip theme={theme} label={t("quickFilters.myTickets")} onPress={() => onSelect("mine")} />
-      <View style={{ width: theme.spacing.sm }} />
       <QuickChip theme={theme} label={t("quickFilters.unassigned")} onPress={() => onSelect("unassigned")} />
-      <View style={{ width: theme.spacing.sm }} />
       <QuickChip theme={theme} label={t("quickFilters.highPriority")} onPress={() => onSelect("highPriority")} />
-      <View style={{ width: theme.spacing.sm }} />
       <QuickChip theme={theme} label={t("quickFilters.recentlyUpdated")} onPress={() => onSelect("recent")} />
     </View>
   );
@@ -734,43 +776,98 @@ function QuickChip({ theme, label, onPress }: { theme: Theme; label: string; onP
   );
 }
 
+/**
+ * Groups statuses by name across boards and toggles all matching status_ids at once.
+ */
+function GroupedStatusChips({
+  statusOptions,
+  selectedStatusIds,
+  theme,
+  onToggle,
+}: {
+  statusOptions: TicketStatus[];
+  selectedStatusIds: string[];
+  theme: Theme;
+  onToggle: (nextIds: string[]) => void;
+}) {
+  const grouped = useMemo(() => {
+    const map = new Map<string, TicketStatus[]>();
+    for (const s of statusOptions) {
+      const existing = map.get(s.name);
+      if (existing) existing.push(s);
+      else map.set(s.name, [s]);
+    }
+    return Array.from(map.entries()).map(([name, statuses]) => ({
+      name,
+      ids: statuses.map((s) => s.status_id),
+      isClosed: statuses[0].is_closed,
+    }));
+  }, [statusOptions]);
+
+  const selectedSet = useMemo(() => new Set(selectedStatusIds), [selectedStatusIds]);
+
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
+      {grouped.map((group) => {
+        const selected = group.ids.some((id) => selectedSet.has(id));
+        return (
+          <View key={group.name} style={{ marginRight: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+            <Pressable
+              onPress={() => {
+                let next: string[];
+                if (selected) {
+                  const removeSet = new Set(group.ids);
+                  next = selectedStatusIds.filter((id) => !removeSet.has(id));
+                } else {
+                  next = [...selectedStatusIds, ...group.ids];
+                }
+                onToggle(next);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={group.name}
+              style={({ pressed }) => ({
+                paddingHorizontal: theme.spacing.md,
+                paddingVertical: theme.spacing.sm,
+                borderRadius: theme.borderRadius.full,
+                borderWidth: 1,
+                borderColor: selected ? theme.colors.primary : theme.colors.border,
+                backgroundColor: selected ? theme.colors.primary : theme.colors.card,
+                opacity: pressed ? 0.95 : 1,
+              })}
+            >
+              <Text style={{ ...theme.typography.caption, color: selected ? theme.colors.textInverse : theme.colors.text, fontWeight: "600" }}>
+                {selected ? "\u2713 " : ""}
+                {group.name}
+              </Text>
+            </Pressable>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 function FiltersModal({
   theme,
   visible,
   client,
   apiKey,
+  tenantId,
   filters,
   setFilters,
   canFilterMe,
+  baseUrl,
   onClose,
 }: {
   theme: Theme;
   visible: boolean;
   client: ApiClient | null;
   apiKey: string | null;
-  filters: {
-    status: "any" | "open" | "closed";
-    statusIds: string[];
-    assignee: "any" | "me" | "unassigned";
-    priorityName: string;
-    updatedSinceDays: number | null;
-    updatedSinceDate: string;
-    sortField: "updated_at" | "entered_at" | "priority_name" | "status_name" | "client_name";
-    sortOrder: "asc" | "desc";
-  };
-  setFilters: Dispatch<
-    SetStateAction<{
-      status: "any" | "open" | "closed";
-      statusIds: string[];
-      assignee: "any" | "me" | "unassigned";
-      priorityName: string;
-      updatedSinceDays: number | null;
-      updatedSinceDate: string;
-      sortField: "updated_at" | "entered_at" | "priority_name" | "status_name" | "client_name";
-      sortOrder: "asc" | "desc";
-    }>
-  >;
+  tenantId: string | null;
+  filters: TicketListFilters;
+  setFilters: Dispatch<SetStateAction<TicketListFilters>>;
   canFilterMe: boolean;
+  baseUrl: string | null;
   onClose: () => void;
 }) {
   const { t } = useTranslation("tickets");
@@ -780,6 +877,7 @@ function FiltersModal({
   const [priorityOptions, setPriorityOptions] = useState<TicketPriority[]>([]);
   const [priorityOptionsLoading, setPriorityOptionsLoading] = useState(false);
   const [priorityOptionsError, setPriorityOptionsError] = useState<string | null>(null);
+  const [agentFilterPickerOpen, setAgentFilterPickerOpen] = useState(false);
 
   useEffect(() => {
     let canceled = false;
@@ -787,21 +885,32 @@ function FiltersModal({
       if (!visible) return;
       if (!client || !apiKey) return;
       if (statusOptions.length > 0) return;
-      setStatusOptionsLoading(true);
-      setStatusOptionsError(null);
-      const res = await getTicketStatuses(client, { apiKey });
-      if (canceled) return;
-      if (!res.ok) {
-        setStatusOptionsError(t("filters.unableToLoadStatuses"));
+      const cacheKey = tenantId ?? "unknownTenant";
+      const cached = getCachedTicketStatuses(cacheKey);
+      if (Array.isArray(cached) && cached.length > 0) {
+        setStatusOptions(cached as TicketStatus[]);
         return;
       }
-      setStatusOptions(res.data.data);
+      setStatusOptionsLoading(true);
+      setStatusOptionsError(null);
+      try {
+        const res = await getTicketStatuses(client, { apiKey });
+        if (canceled) return;
+        if (!res.ok) {
+          setStatusOptionsError(t("filters.unableToLoadStatuses"));
+          return;
+        }
+        setStatusOptions(res.data.data);
+        setCachedTicketStatuses(cacheKey, res.data.data);
+      } finally {
+        if (!canceled) setStatusOptionsLoading(false);
+      }
     };
     void run();
     return () => {
       canceled = true;
     };
-  }, [apiKey, client, statusOptions.length, visible]);
+  }, [apiKey, client, statusOptions.length, tenantId, visible]);
 
   useEffect(() => {
     let canceled = false;
@@ -809,25 +918,36 @@ function FiltersModal({
       if (!visible) return;
       if (!client || !apiKey) return;
       if (priorityOptions.length > 0) return;
-      setPriorityOptionsLoading(true);
-      setPriorityOptionsError(null);
-      const res = await getTicketPriorities(client, { apiKey });
-      if (canceled) return;
-      if (!res.ok) {
-        setPriorityOptionsError(t("filters.unableToLoadPriorities"));
+      const cacheKey = tenantId ?? "unknownTenant";
+      const cached = getCachedTicketPriorities(cacheKey);
+      if (Array.isArray(cached) && cached.length > 0) {
+        setPriorityOptions(cached as TicketPriority[]);
         return;
       }
-      setPriorityOptions(res.data.data);
+      setPriorityOptionsLoading(true);
+      setPriorityOptionsError(null);
+      try {
+        const res = await getTicketPriorities(client, { apiKey });
+        if (canceled) return;
+        if (!res.ok) {
+          setPriorityOptionsError(t("filters.unableToLoadPriorities"));
+          return;
+        }
+        setPriorityOptions(res.data.data);
+        setCachedTicketPriorities(cacheKey, res.data.data);
+      } finally {
+        if (!canceled) setPriorityOptionsLoading(false);
+      }
     };
     void run();
     return () => {
       canceled = true;
     };
-  }, [apiKey, client, priorityOptions.length, visible]);
+  }, [apiKey, client, priorityOptions.length, tenantId, visible]);
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.background }}>
+      <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: theme.spacing.xl }}>
         <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{t("filters.title")}</Text>
 
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.status")}</Text>
@@ -852,39 +972,12 @@ function FiltersModal({
             {statusOptionsError}
           </Text>
         ) : statusOptions.length > 0 ? (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
-            {statusOptions.map((s) => {
-              const selected = filters.statusIds.includes(s.status_id);
-              return (
-                <View key={s.status_id} style={{ marginRight: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
-                  <Pressable
-                    onPress={() => {
-                      const next = selected
-                        ? filters.statusIds.filter((id) => id !== s.status_id)
-                        : [...filters.statusIds, s.status_id];
-                      setFilters({ ...filters, status: "any", statusIds: next });
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={s.name}
-                    style={({ pressed }) => ({
-                      paddingHorizontal: theme.spacing.md,
-                      paddingVertical: theme.spacing.sm,
-                      borderRadius: theme.borderRadius.full,
-                      borderWidth: 1,
-                      borderColor: selected ? theme.colors.primary : theme.colors.border,
-                      backgroundColor: selected ? theme.colors.primary : theme.colors.card,
-                      opacity: pressed ? 0.95 : 1,
-                    })}
-                  >
-                    <Text style={{ ...theme.typography.caption, color: selected ? theme.colors.textInverse : theme.colors.text, fontWeight: "600" }}>
-                      {selected ? "✓ " : ""}
-                      {s.name}
-                    </Text>
-                  </Pressable>
-                </View>
-              );
-            })}
-          </View>
+          <GroupedStatusChips
+            statusOptions={statusOptions}
+            selectedStatusIds={filters.statusIds}
+            theme={theme}
+            onToggle={(nextIds) => setFilters({ ...filters, status: "any", statusIds: nextIds })}
+          />
         ) : (
           <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
             {t("filters.noStatusesAvailable")}
@@ -899,14 +992,50 @@ function FiltersModal({
             { label: t("filters.me"), value: "me", disabled: !canFilterMe },
             { label: t("quickFilters.unassigned"), value: "unassigned" },
           ]}
-          value={filters.assignee}
-          onChange={(assignee) => setFilters({ ...filters, assignee })}
+          value={filters.assignee === "agent" ? "any" : filters.assignee}
+          onChange={(assignee) => setFilters({ ...filters, assignee, assigneeUserId: undefined, assigneeName: undefined })}
         />
         {!canFilterMe ? (
           <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
             {t("filters.meFilterHint")}
           </Text>
         ) : null}
+        <Pressable
+          onPress={() => setAgentFilterPickerOpen(true)}
+          accessibilityRole="button"
+          style={({ pressed }) => ({
+            marginTop: theme.spacing.sm,
+            paddingHorizontal: theme.spacing.md,
+            paddingVertical: theme.spacing.sm,
+            borderRadius: theme.borderRadius.full,
+            borderWidth: 1,
+            borderColor: filters.assignee === "agent" ? theme.colors.primary : theme.colors.border,
+            backgroundColor: filters.assignee === "agent" ? theme.colors.primary : theme.colors.card,
+            alignSelf: "flex-start",
+            opacity: pressed ? 0.95 : 1,
+          })}
+        >
+          <Text style={{ ...theme.typography.caption, color: filters.assignee === "agent" ? theme.colors.textInverse : theme.colors.text, fontWeight: "600" }}>
+            {filters.assignee === "agent" && filters.assigneeName
+              ? `${t("filters.agent")}: ${filters.assigneeName}`
+              : t("filters.pickAgent")}
+          </Text>
+        </Pressable>
+        <AgentPickerModal
+          visible={agentFilterPickerOpen}
+          updating={false}
+          updateError={null}
+          currentAssignedToName={null}
+          onSelect={(userId, displayName) => {
+            setFilters({ ...filters, assignee: "agent", assigneeUserId: userId, assigneeName: displayName });
+            setAgentFilterPickerOpen(false);
+          }}
+          onUnassign={() => {}}
+          onClose={() => setAgentFilterPickerOpen(false)}
+          client={client}
+          apiKey={apiKey ?? ""}
+          baseUrl={baseUrl}
+        />
 
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.priority")}</Text>
         {priorityOptionsLoading ? (
@@ -952,23 +1081,6 @@ function FiltersModal({
             })}
           </View>
         ) : null}
-        <TextInput
-          value={filters.priorityName}
-          onChangeText={(priorityName) => setFilters({ ...filters, priorityName })}
-          placeholder={t("filters.priorityPlaceholder")}
-          placeholderTextColor={theme.colors.placeholder}
-          accessibilityLabel={t("filters.priorityAccessibility")}
-          style={{
-            paddingVertical: theme.spacing.sm,
-            paddingHorizontal: theme.spacing.md,
-            borderRadius: theme.borderRadius.lg,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            backgroundColor: theme.colors.background,
-            color: theme.colors.text,
-            marginTop: theme.spacing.sm,
-          }}
-        />
 
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.updatedSince")}</Text>
         <OptionRow
@@ -982,25 +1094,24 @@ function FiltersModal({
           value={filters.updatedSinceDays}
           onChange={(updatedSinceDays) => setFilters({ ...filters, updatedSinceDays, updatedSinceDate: "" })}
         />
-        <TextInput
-          value={filters.updatedSinceDate}
-          onChangeText={(updatedSinceDate) => setFilters({ ...filters, updatedSinceDays: null, updatedSinceDate })}
-          placeholder={t("filters.updatedSinceDatePlaceholder")}
-          placeholderTextColor={theme.colors.placeholder}
-          autoCapitalize="none"
-          autoCorrect={false}
-          accessibilityLabel={t("filters.updatedSinceDateAccessibility")}
-          style={{
-            paddingVertical: theme.spacing.sm,
-            paddingHorizontal: theme.spacing.md,
-            borderRadius: theme.borderRadius.lg,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            backgroundColor: theme.colors.background,
-            color: theme.colors.text,
-            marginTop: theme.spacing.sm,
-          }}
-        />
+        <View style={{ marginTop: theme.spacing.sm }}>
+          <DatePickerField
+            value={filters.updatedSinceDate ? (() => { const d = new Date(`${filters.updatedSinceDate}T00:00:00`); return Number.isNaN(d.getTime()) ? undefined : d; })() : undefined}
+            onChange={(d) => {
+              if (d) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, "0");
+                const dd = String(d.getDate()).padStart(2, "0");
+                setFilters({ ...filters, updatedSinceDays: null, updatedSinceDate: `${yyyy}-${mm}-${dd}` });
+              } else {
+                setFilters({ ...filters, updatedSinceDate: "" });
+              }
+            }}
+            placeholder={t("filters.updatedSinceDatePlaceholder")}
+            clearable
+            label={t("filters.updatedSinceDateAccessibility")}
+          />
+        </View>
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
           {t("filters.updatedSinceDateHint")}
         </Text>
@@ -1030,9 +1141,7 @@ function FiltersModal({
           onChange={(sortOrder) => setFilters({ ...filters, sortOrder })}
         />
 
-        <View style={{ flex: 1 }} />
-
-        <View style={{ flexDirection: "row" }}>
+        <View style={{ flexDirection: "row", marginTop: theme.spacing.xl }}>
           <PrimaryButton
             onPress={() =>
               setFilters({ ...DEFAULT_FILTERS })
@@ -1043,7 +1152,7 @@ function FiltersModal({
           <View style={{ width: theme.spacing.sm }} />
           <PrimaryButton onPress={onClose}>{t("common:done")}</PrimaryButton>
         </View>
-      </View>
+      </ScrollView>
     </Modal>
   );
 }
@@ -1143,6 +1252,66 @@ const TicketRow = memo(function TicketRow({
     </Pressable>
   );
 });
+
+function SearchField({
+  theme,
+  value,
+  onChangeText,
+  onSubmit,
+  onClear,
+  placeholder,
+  accessibilityLabel,
+}: {
+  theme: Theme;
+  value: string;
+  onChangeText: (text: string) => void;
+  onSubmit: () => void;
+  onClear: () => void;
+  placeholder: string;
+  accessibilityLabel?: string;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        borderRadius: theme.borderRadius.lg,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.background,
+        paddingHorizontal: theme.spacing.md,
+      }}
+    >
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        onSubmitEditing={onSubmit}
+        returnKeyType="search"
+        placeholder={placeholder}
+        placeholderTextColor={theme.colors.placeholder}
+        autoCapitalize="none"
+        autoCorrect={false}
+        accessibilityLabel={accessibilityLabel}
+        style={{
+          flex: 1,
+          paddingVertical: theme.spacing.sm,
+          color: theme.colors.text,
+        }}
+      />
+      {value.length > 0 ? (
+        <Pressable
+          onPress={onClear}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+          hitSlop={8}
+          style={{ padding: theme.spacing.xs }}
+        >
+          <Feather name="x" size={16} color={theme.colors.textSecondary} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
 
 function priorityTone(priorityName: string): "neutral" | "success" | "warning" | "danger" {
   const normalized = priorityName.trim().toLowerCase();

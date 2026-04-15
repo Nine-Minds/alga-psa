@@ -1,0 +1,164 @@
+[
+  {
+    "id": "F001",
+    "description": "TimeSheet grid click handling distinguishes empty cells, single-entry cells, and multi-entry cells as separate interaction paths.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Clicking a multi-entry grid cell switches the screen into list view instead of opening the time-entry dialog directly.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "TimeSheet owns a temporary focus-filter state describing the clicked work item, date, and entry ids for a multi-entry grid cell.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements > Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "TimeSheetListView accepts the temporary focus filter and renders only the exact matching entries from the clicked grid cell.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Filtered list mode hides unrelated day groups and unrelated entry rows entirely instead of merely dimming or collapsing them.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "A filtered-state banner appears above the list describing the active focus filter with work item name, date, and entry count.",
+    "implemented": true,
+    "prdRefs": [
+      "Filter banner",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "The filtered-state banner includes a Clear filter action that removes the filter while keeping the user in list view.",
+    "implemented": true,
+    "prdRefs": [
+      "Filter banner",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "The filtered-state banner includes a Back to grid action that clears the filter and returns the user to grid view.",
+    "implemented": true,
+    "prdRefs": [
+      "Filter banner",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Manual switching from list view back to grid view clears any active multi-entry focus filter.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Clicking a row from filtered list mode continues to open the existing editor flow for exactly one time entry.",
+    "implemented": true,
+    "prdRefs": [
+      "List view filtered mode",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "TimeEntryDialog is simplified so it always edits exactly one entry and no longer accepts or renders a multi-entry editing mode.",
+    "implemented": true,
+    "prdRefs": [
+      "Dialog behavior",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "TimeEntryDialog exposes only one clear Save action for the active entry and removes the competing multi-entry save model.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Dialog behavior",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "TimeEntryDialog removes its internal entry list and no longer allows users to jump between multiple entries inside the dialog.",
+    "implemented": true,
+    "prdRefs": [
+      "Dialog behavior",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "TimeEntryDialog removes its in-dialog Add Entry affordance so new entries are initiated only from the grid or list surfaces.",
+    "implemented": true,
+    "prdRefs": [
+      "Dialog behavior",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Existing empty-cell create-entry behavior remains unchanged and still opens a single-entry creation flow.",
+    "implemented": true,
+    "prdRefs": [
+      "Grid behavior",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Existing single-entry grid-cell behavior remains unchanged and still opens direct single-entry editing.",
+    "implemented": true,
+    "prdRefs": [
+      "Grid behavior",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "If the active filtered entry set becomes empty after a save or delete, the UI automatically clears the filter and leaves the user in a coherent destination state.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Delegated editing and normal timesheet editability rules continue to govern all grid, list, and dialog actions in the new flow.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Requirements > Non-functional Requirements"
+    ]
+  }
+]

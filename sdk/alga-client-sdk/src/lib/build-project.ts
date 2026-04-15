@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { execSync, spawnSync } from 'node:child_process';
+import { join, resolve, relative } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 export interface BuildProjectOptions {
   /** Project root. Defaults to `process.cwd()` */
@@ -23,6 +23,17 @@ interface ManifestJson {
   api?: {
     endpoints?: Array<{ handler?: string }>;
   };
+}
+
+function runNpmScript(project: string, scriptName: string, log: BuildProjectOptions['logger']): boolean {
+  const logger = log ?? console;
+  logger.info?.(`[build] Running npm run ${scriptName}...`);
+  const result = spawnSync('npm', ['run', scriptName], {
+    cwd: project,
+    stdio: 'inherit',
+    shell: true,
+  });
+  return result.status === 0;
 }
 
 /**
@@ -93,6 +104,7 @@ export async function buildProject(opts: BuildProjectOptions = {}): Promise<Buil
   // (avoid infinite loop when the build script IS the CLI)
   const buildScript = packageJson.scripts?.build;
   const isAlgaBuildScript = buildScript?.includes('alga build');
+  const invokedFromNpmBuildLifecycle = process.env.npm_lifecycle_event === 'build';
 
   if (buildScript && !isAlgaBuildScript) {
     log.info('[build] Running npm run build...');
@@ -127,9 +139,15 @@ export async function buildProject(opts: BuildProjectOptions = {}): Promise<Buil
     return { success: true };
   }
 
+  if (!invokedFromNpmBuildLifecycle && packageJson.scripts?.prebuild) {
+    if (!runNpmScript(project, 'prebuild', log)) {
+      return { success: false, error: 'npm run prebuild failed' };
+    }
+  }
+
   // No build script - try to run the default WASM build pipeline
   if (needsWasmBuild) {
-    log.info('[build] No build script found, running default WASM build pipeline...');
+    log.info('[build] Running default WASM build pipeline...');
 
     // Look for handler source
     const handlerPaths = [
@@ -137,11 +155,6 @@ export async function buildProject(opts: BuildProjectOptions = {}): Promise<Buil
       join(project, 'src', 'index.ts'),
       join(project, 'handler.ts'),
     ];
-
-    const handlerPath = handlerPaths.find(p => existsSync(p));
-    if (!handlerPath) {
-      return { success: false, error: 'No handler source found (src/handler.ts, src/index.ts, or handler.ts)' };
-    }
 
     // Look for WIT file
     const witPaths = [
@@ -156,42 +169,53 @@ export async function buildProject(opts: BuildProjectOptions = {}): Promise<Buil
     const distDir = join(project, 'dist');
     mkdirSync(distDir, { recursive: true });
 
-    // Step 1: Compile TypeScript to JavaScript
-    log.info('[build] Compiling TypeScript...');
-    const tscResult = spawnSync('npx', ['tsc', '--outDir', join(distDir, 'js'), '--module', 'ESNext', '--moduleResolution', 'bundler', '--target', 'ESNext'], {
-      cwd: project,
-      stdio: 'inherit',
-      shell: true,
-    });
+    const prebuiltJsOutputPaths = [
+      join(distDir, 'js', 'index.js'),
+      join(distDir, 'js', 'handler.js'),
+      join(distDir, 'js', 'src', 'handler.js'),
+      join(distDir, 'js', 'src', 'index.js'),
+    ];
+    let jsPath = prebuiltJsOutputPaths.find(p => existsSync(p));
 
-    // Try esbuild if tsc fails or isn't configured
-    if (tscResult.status !== 0) {
-      log.warn('[build] tsc failed, trying esbuild...');
-      const esbuildResult = spawnSync('npx', [
-        'esbuild',
-        handlerPath,
-        '--bundle',
-        '--format=esm',
-        '--platform=neutral',
-        `--outfile=${join(distDir, 'js', 'handler.js')}`,
-      ], {
+    if (jsPath) {
+      log.info(`[build] Using prebuilt JavaScript bundle: ${relative(project, jsPath)}`);
+    } else {
+      const handlerPath = handlerPaths.find(p => existsSync(p));
+      if (!handlerPath) {
+        return { success: false, error: 'No handler source found (src/handler.ts, src/index.ts, or handler.ts)' };
+      }
+
+      // Step 1: Compile TypeScript to JavaScript
+      log.info('[build] Compiling TypeScript...');
+      const tscResult = spawnSync('npx', ['tsc', '--outDir', join(distDir, 'js'), '--module', 'ESNext', '--moduleResolution', 'bundler', '--target', 'ESNext'], {
         cwd: project,
         stdio: 'inherit',
         shell: true,
       });
-      if (esbuildResult.status !== 0) {
-        return { success: false, error: 'TypeScript compilation failed (both tsc and esbuild)' };
+
+      // Try esbuild if tsc fails or isn't configured
+      if (tscResult.status !== 0) {
+        log.warn('[build] tsc failed, trying esbuild...');
+        const esbuildResult = spawnSync('npx', [
+          'esbuild',
+          handlerPath,
+          '--bundle',
+          '--format=esm',
+          '--platform=neutral',
+          `--outfile=${join(distDir, 'js', 'handler.js')}`,
+        ], {
+          cwd: project,
+          stdio: 'inherit',
+          shell: true,
+        });
+        if (esbuildResult.status !== 0) {
+          return { success: false, error: 'TypeScript compilation failed (both tsc and esbuild)' };
+        }
       }
+
+      jsPath = prebuiltJsOutputPaths.find(p => existsSync(p));
     }
 
-    // Find the compiled JS file
-    const jsOutputPaths = [
-      join(distDir, 'js', 'handler.js'),
-      join(distDir, 'js', 'index.js'),
-      join(distDir, 'js', 'src', 'handler.js'),
-      join(distDir, 'js', 'src', 'index.js'),
-    ];
-    const jsPath = jsOutputPaths.find(p => existsSync(p));
     if (!jsPath) {
       return { success: false, error: 'TypeScript compiled but no JS output found' };
     }
@@ -223,7 +247,20 @@ export async function buildProject(opts: BuildProjectOptions = {}): Promise<Buil
     }
 
     log.info(`[build] WASM component built: dist/main.wasm`);
+
+    if (!invokedFromNpmBuildLifecycle && packageJson.scripts?.postbuild) {
+      if (!runNpmScript(project, 'postbuild', log)) {
+        return { success: false, error: 'npm run postbuild failed' };
+      }
+    }
+
     return { success: true, wasmPath };
+  }
+
+  if (!invokedFromNpmBuildLifecycle && packageJson.scripts?.postbuild) {
+    if (!runNpmScript(project, 'postbuild', log)) {
+      return { success: false, error: 'npm run postbuild failed' };
+    }
   }
 
   log.info('[build] No WASM build required (UI-only extension)');

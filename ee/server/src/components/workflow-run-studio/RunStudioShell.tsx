@@ -24,8 +24,8 @@ import {
 } from '@alga-psa/workflows/actions';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
-import { type WorkflowDefinition, type Step } from '@shared/workflow/runtime/client';
-import type { IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@shared/workflow/runtime/client';
+import { type WorkflowDefinition, type Step } from '@alga-psa/workflows/runtime/client';
+import type { IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@alga-psa/workflows/runtime/client';
 import {
   PipelineStart,
   PipelineConnector,
@@ -347,6 +347,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
     if (step.type === 'control.forEach') return 'For Each';
     if (step.type === 'control.tryCatch') return 'Try/Catch';
     if (step.type === 'event.wait') return 'Wait for Event';
+    if (step.type === 'time.wait') return 'Wait for Time';
     if (step.type === 'human.task') return 'Human Task';
     if (step.type === 'state.set') return 'Set State';
     if (step.type === 'transform.assign') return 'Assign';
@@ -1039,7 +1040,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                         ? Math.max(0, new Date(attempt.completed_at).getTime() - new Date(attempt.started_at).getTime())
                         : null;
                       return (
-                        <div key={`${entry.stepPath}-attempt-${attempt.attempt}`} className="flex items-center justify-between text-[11px] text-gray-500">
+                        <div key={attempt.step_id} className="flex items-center justify-between text-[11px] text-gray-500">
                           <span>Attempt {attempt.attempt} · {attempt.status}</span>
                           <span>{duration != null ? `${duration}ms` : 'In progress'}</span>
                         </div>
@@ -1139,6 +1140,20 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
         onClose={() => setRunActionMode(null)}
         title={runActionMode === 'cancel' ? 'Cancel Run' : 'Replay Run'}
         className="max-w-2xl"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="workflow-run-action-close" variant="outline" onClick={() => setRunActionMode(null)}>
+              Close
+            </Button>
+            <Button
+              id="workflow-run-action-confirm"
+              onClick={handleRunActionConfirm}
+              disabled={!actionReasonValid || isSubmittingAction || (runActionMode === 'replay' && !!replayPayloadError)}
+            >
+              {isSubmittingAction ? 'Working...' : runActionMode === 'cancel' ? 'Confirm Cancel' : 'Start Replay'}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <DialogHeader>
@@ -1176,18 +1191,6 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
             )}
           </div>
 
-	          <div className="mt-6 flex justify-end gap-2">
-	            <Button id="workflow-run-action-close" variant="outline" onClick={() => setRunActionMode(null)}>
-	              Close
-	            </Button>
-	            <Button
-	              id="workflow-run-action-confirm"
-	              onClick={handleRunActionConfirm}
-	              disabled={!actionReasonValid || isSubmittingAction || (runActionMode === 'replay' && !!replayPayloadError)}
-	            >
-	              {isSubmittingAction ? 'Working...' : runActionMode === 'cancel' ? 'Confirm Cancel' : 'Start Replay'}
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
     </div>

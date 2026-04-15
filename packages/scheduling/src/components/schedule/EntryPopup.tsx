@@ -11,8 +11,6 @@ import { ExternalLink, Check, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useDrawer, DeleteEntityDialog } from "@alga-psa/ui";
 import { WorkItemDrawer } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/WorkItemDrawer';
-import { format, isWeekend } from 'date-fns';
-import { formatInTimeZone } from 'date-fns-tz';
 import { IScheduleEntry, IRecurrencePattern, IEditScope, DeletionValidationResult } from '@alga-psa/types';
 import { AddWorkItemDialog } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/AddWorkItemDialog';
 import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
@@ -34,6 +32,7 @@ import {
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Label } from '@alga-psa/ui/components/Label';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const EntryPopupContext = React.createContext<EntryPopupProps | null>(null);
 
@@ -136,6 +135,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [declineReason, setDeclineReason] = useState('');
   const [assignedTechnicianId, setAssignedTechnicianId] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const { t } = useTranslation('msp/schedule');
+  const { formatDate } = useFormatters();
 
     // Determine mode and permissions
     const isEditing = !!event;
@@ -155,8 +156,11 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     );
     
     // Add a message to display when a user can't edit a private event
-    const privateEventMessage = isPrivateEvent && !isCurrentUserSoleAssignee ?
-      "This is a private entry. Only the creator can view or edit details." : null;
+    const privateEventMessage = isPrivateEvent && !isCurrentUserSoleAssignee
+      ? t('entryPopup.alerts.privateEntryOnlyCreator', {
+          defaultValue: 'This is a private entry. Only the creator can view or edit details.',
+        })
+      : null;
 
     // Detect if this is an appointment request and fetch its data
     useEffect(() => {
@@ -289,17 +293,17 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   }, [event, slot]);
 
   const recurrenceOptions = [
-    { value: 'none', label: 'None' },
-    { value: 'daily', label: 'Daily' },
-    { value: 'weekly', label: 'Weekly' },
-    { value: 'monthly', label: 'Monthly' },
-    { value: 'yearly', label: 'Yearly' }
+    { value: 'none', label: t('entryPopup.recurrence.options.none', { defaultValue: 'None' }) },
+    { value: 'daily', label: t('entryPopup.recurrence.options.daily', { defaultValue: 'Daily' }) },
+    { value: 'weekly', label: t('entryPopup.recurrence.options.weekly', { defaultValue: 'Weekly' }) },
+    { value: 'monthly', label: t('entryPopup.recurrence.options.monthly', { defaultValue: 'Monthly' }) },
+    { value: 'yearly', label: t('entryPopup.recurrence.options.yearly', { defaultValue: 'Yearly' }) }
   ];
 
   const endTypeOptions = [
-    { value: 'never', label: 'Never' },
-    { value: 'date', label: 'On Date' },
-    { value: 'count', label: 'After' }
+    { value: 'never', label: t('entryPopup.recurrence.endOptions.never', { defaultValue: 'Never' }) },
+    { value: 'date', label: t('entryPopup.recurrence.endOptions.date', { defaultValue: 'On Date' }) },
+    { value: 'count', label: t('entryPopup.recurrence.endOptions.count', { defaultValue: 'After' }) }
   ];
 
   // Note: Holidays are now automatically filtered at the backend from the unified
@@ -408,7 +412,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         setDeleteValidation({
           canDelete: false,
           code: 'VALIDATION_FAILED',
-          message: 'Failed to validate deletion. Please try again.',
+          message: t('entryPopup.delete.validationFailed', {
+            defaultValue: 'Failed to validate deletion. Please try again.',
+          }),
           dependencies: [],
           alternatives: []
         });
@@ -468,7 +474,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     if (!event || !event.work_item_id) return;
 
     if (!assignedTechnicianId) {
-      toast.error('Please assign a technician');
+      toast.error(t('entryPopup.appointmentRequest.toasts.assignTechnicianRequired', {
+        defaultValue: 'Please assign a technician',
+      }));
       return;
     }
 
@@ -485,7 +493,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       });
 
       if (result.success) {
-        toast.success('Appointment request approved');
+        toast.success(t('entryPopup.appointmentRequest.toasts.approved', {
+          defaultValue: 'Appointment request approved',
+        }));
         onClose();
         // Trigger calendar refresh by calling onSave with the updated entry
         // Update the title to remove [Pending Request] prefix
@@ -500,10 +510,14 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           });
         }
       } else {
-        toast.error(result.error || 'Failed to approve request');
+        toast.error(result.error || t('entryPopup.appointmentRequest.toasts.approveFailed', {
+          defaultValue: 'Failed to approve request',
+        }));
       }
     } catch (error) {
-      handleError(error, 'Failed to approve request');
+      handleError(error, t('entryPopup.appointmentRequest.toasts.approveFailed', {
+        defaultValue: 'Failed to approve request',
+      }));
     } finally {
       setIsProcessing(false);
     }
@@ -514,7 +528,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     if (!event || !event.work_item_id) return;
 
     if (!declineReason.trim()) {
-      toast.error('Please provide a reason for declining');
+      toast.error(t('entryPopup.appointmentRequest.toasts.declineReasonRequired', {
+        defaultValue: 'Please provide a reason for declining',
+      }));
       return;
     }
 
@@ -526,7 +542,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       });
 
       if (result.success) {
-        toast.success('Appointment request declined');
+        toast.success(t('entryPopup.appointmentRequest.toasts.declined', {
+          defaultValue: 'Appointment request declined',
+        }));
         onClose();
         // Don't call onSave - the schedule entry was deleted by the decline action
         // Just refresh the calendar by calling onDelete if available
@@ -534,10 +552,14 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           onDelete(event.entry_id);
         }
       } else {
-        toast.error(result.error || 'Failed to decline request');
+        toast.error(result.error || t('entryPopup.appointmentRequest.toasts.declineFailed', {
+          defaultValue: 'Failed to decline request',
+        }));
       }
     } catch (error) {
-      handleError(error, 'Failed to decline request');
+      handleError(error, t('entryPopup.appointmentRequest.toasts.declineFailed', {
+        defaultValue: 'Failed to decline request',
+      }));
     } finally {
       setIsProcessing(false);
     }
@@ -551,16 +573,20 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     
     // Validate required fields
     if (!entryData.title?.trim() && entryData.work_item_type === 'ad_hoc') {
-      errors.push('Title is required for ad-hoc entries');
+      errors.push(t('entryPopup.validation.titleRequiredForAdHoc', {
+        defaultValue: 'Title is required for ad-hoc entries',
+      }));
     }
     if (!entryData.scheduled_start) {
-      errors.push('Start date/time');
+      errors.push(t('entryPopup.validation.startRequired', { defaultValue: 'Start date/time' }));
     }
     if (!entryData.scheduled_end) {
-      errors.push('End date/time');
+      errors.push(t('entryPopup.validation.endRequired', { defaultValue: 'End date/time' }));
     }
     if (!entryData.assigned_user_ids || entryData.assigned_user_ids.length === 0) {
-      errors.push('At least one assigned user');
+      errors.push(t('entryPopup.validation.assigneeRequired', {
+        defaultValue: 'At least one assigned user',
+      }));
     }
     
     // Validate dates
@@ -568,15 +594,17 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     const endDate = new Date(entryData.scheduled_end);
 
     if (isNaN(startDate.getTime())) {
-      errors.push('Start date is invalid');
+      errors.push(t('entryPopup.validation.startInvalid', { defaultValue: 'Start date is invalid' }));
     }
 
     if (isNaN(endDate.getTime())) {
-      errors.push('End date is invalid');
+      errors.push(t('entryPopup.validation.endInvalid', { defaultValue: 'End date is invalid' }));
     }
 
     if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate <= startDate) {
-      errors.push('End date must be after start date');
+      errors.push(t('entryPopup.validation.endAfterStart', {
+        defaultValue: 'End date must be after start date',
+      }));
     }
     
     if (errors.length > 0) {
@@ -590,13 +618,17 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     if (recurrencePattern) {
       // Validate interval
       if (!Number.isInteger(recurrencePattern.interval) || recurrencePattern.interval < 1) {
-        errors.push('Recurrence interval must be a positive whole number');
+        errors.push(t('entryPopup.validation.recurrenceIntervalPositive', {
+          defaultValue: 'Recurrence interval must be a positive whole number',
+        }));
       }
 
       // Validate count if specified
       if (recurrencePattern.count !== undefined) {
         if (!Number.isInteger(recurrencePattern.count) || recurrencePattern.count < 1) {
-          errors.push('Number of occurrences must be a positive whole number');
+          errors.push(t('entryPopup.validation.recurrenceCountPositive', {
+            defaultValue: 'Number of occurrences must be a positive whole number',
+          }));
         }
       }
 
@@ -604,9 +636,13 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       if (recurrencePattern.endDate) {
         const patternEndDate = new Date(recurrencePattern.endDate);
         if (isNaN(patternEndDate.getTime())) {
-          errors.push('Recurrence end date is invalid');
+          errors.push(t('entryPopup.validation.recurrenceEndInvalid', {
+            defaultValue: 'Recurrence end date is invalid',
+          }));
         } else if (patternEndDate <= startDate) {
-          errors.push('Recurrence end date must be after start date');
+          errors.push(t('entryPopup.validation.recurrenceEndAfterStart', {
+            defaultValue: 'Recurrence end date must be after start date',
+          }));
         }
       }
     }
@@ -646,7 +682,13 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       <div className="shrink-0 pb-4 border-b flex justify-between items-center">
         {isInDrawer && (
           <h2 className="text-xl font-bold">
-            {(isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending') ? 'Appointment Request' : (viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry'))}
+            {isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending'
+              ? t('entryPopup.title.appointmentRequest', { defaultValue: 'Appointment Request' })
+              : viewOnly
+                ? t('entryPopup.title.view', { defaultValue: 'View Entry' })
+                : event
+                  ? t('entryPopup.title.edit', { defaultValue: 'Edit Entry' })
+                  : t('entryPopup.title.new', { defaultValue: 'New Entry' })}
           </h2>
         )}
         <div className={`flex gap-2 ${!isInDrawer ? 'ml-auto' : ''}`}>
@@ -670,7 +712,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               variant="destructive"
               size="sm"
             >
-              Delete Entry
+              {t('entryPopup.actions.delete', { defaultValue: 'Delete Entry' })}
             </Button>
           )}
         </div>
@@ -679,7 +721,11 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         {hasAttemptedSubmit && validationErrors.length > 0 && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>
-              <p className="font-medium mb-2">Please fill in the required fields:</p>
+              <p className="font-medium mb-2">
+                {t('entryPopup.validation.summaryTitle', {
+                  defaultValue: 'Please fill in the required fields:',
+                })}
+              </p>
               <ul className="list-disc list-inside space-y-1">
                 {validationErrors.map((err, index) => (
                   <li key={index}>{err}</li>
@@ -700,9 +746,20 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         {isAppointmentRequest && event && appointmentRequestData && appointmentRequestData.status === 'approved' && (
           <Alert variant="success" className="mb-4">
             <AlertDescription>
-              <p className="font-medium">Approved Appointment</p>
+              <p className="font-medium">
+                {t('entryPopup.appointmentRequest.approved.title', {
+                  defaultValue: 'Approved Appointment',
+                })}
+              </p>
               <p className="text-sm mt-1">
-                This appointment originated from a client request{appointmentRequestData.approved_at ? ` and was approved on ${format(new Date(appointmentRequestData.approved_at), 'PPP')}` : ''}.
+                {appointmentRequestData.approved_at
+                  ? t('entryPopup.appointmentRequest.approved.descriptionWithDate', {
+                      defaultValue: 'This appointment originated from a client request and was approved on {{date}}.',
+                      date: formatDate(new Date(appointmentRequestData.approved_at), { dateStyle: 'medium' }),
+                    })
+                  : t('entryPopup.appointmentRequest.approved.description', {
+                      defaultValue: 'This appointment originated from a client request.',
+                    })}
               </p>
             </AlertDescription>
           </Alert>
@@ -714,27 +771,47 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             <Alert variant={appointmentRequestData.status === 'declined' ? 'destructive' : 'default'}>
               <AlertDescription>
                 <p className="font-medium">
-                  {appointmentRequestData.status === 'declined' ? 'Declined Appointment Request' : 'Cancelled Appointment Request'}
+                  {appointmentRequestData.status === 'declined'
+                    ? t('entryPopup.appointmentRequest.declined.title', {
+                        defaultValue: 'Declined Appointment Request',
+                      })
+                    : t('entryPopup.appointmentRequest.cancelled.title', {
+                        defaultValue: 'Cancelled Appointment Request',
+                      })}
                 </p>
                 <p className="text-sm mt-1">
-                  {appointmentRequestData.status === 'declined' &&
-                    `This appointment request was declined${appointmentRequestData.declined_reason ? `: ${appointmentRequestData.declined_reason}` : '.'}`}
+                  {appointmentRequestData.status === 'declined' && appointmentRequestData.declined_reason
+                    ? t('entryPopup.appointmentRequest.declined.descriptionWithReason', {
+                        defaultValue: 'This appointment request was declined: {{reason}}',
+                        reason: appointmentRequestData.declined_reason,
+                      })
+                    : appointmentRequestData.status === 'declined'
+                      ? t('entryPopup.appointmentRequest.declined.description', {
+                          defaultValue: 'This appointment request was declined.',
+                        })
+                      : null}
                   {appointmentRequestData.status === 'cancelled' &&
-                    'This appointment request was cancelled by the client.'}
+                    t('entryPopup.appointmentRequest.cancelled.description', {
+                      defaultValue: 'This appointment request was cancelled by the client.',
+                    })}
                 </p>
               </AlertDescription>
             </Alert>
 
             <div>
-              <Label>Requested Date & Time</Label>
+              <Label>
+                {t('entryPopup.appointmentRequest.requestedDateTimeLabel', {
+                  defaultValue: 'Requested Date & Time',
+                })}
+              </Label>
               <div className="text-sm bg-gray-50 p-3 rounded border">
-                {formatInTimeZone(new Date(event.scheduled_start), Intl.DateTimeFormat().resolvedOptions().timeZone, 'PPP p')} - {formatInTimeZone(new Date(event.scheduled_end), Intl.DateTimeFormat().resolvedOptions().timeZone, 'p')}
+                {formatDate(new Date(event.scheduled_start), { dateStyle: 'medium', timeStyle: 'short' })} - {formatDate(new Date(event.scheduled_end), { timeStyle: 'short' })}
               </div>
             </div>
 
             {event.notes && (
               <div>
-                <Label>Notes</Label>
+                <Label>{t('entryPopup.fields.notes', { defaultValue: 'Notes' })}</Label>
                 <div className="text-sm bg-gray-50 p-3 rounded border whitespace-pre-wrap">
                   {event.notes}
                 </div>
@@ -748,36 +825,54 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           <div className="space-y-4">
                 <Alert className="border-rose-200 bg-rose-50">
                   <AlertDescription>
-                    <p className="font-medium text-rose-900">Pending Appointment Request</p>
-                    <p className="text-sm text-rose-700 mt-1">This is an appointment request from a client. You can approve or decline it below.</p>
+                    <p className="font-medium text-rose-900">
+                      {t('entryPopup.appointmentRequest.pending.title', {
+                        defaultValue: 'Pending Appointment Request',
+                      })}
+                    </p>
+                    <p className="text-sm text-rose-700 mt-1">
+                      {t('entryPopup.appointmentRequest.pending.description', {
+                        defaultValue: 'This is an appointment request from a client. You can approve or decline it below.',
+                      })}
+                    </p>
                   </AlertDescription>
                 </Alert>
 
                 <div>
                   <UserPicker
                     id="assign-technician-request"
-                    label="Assign Technician *"
+                    label={t('entryPopup.appointmentRequest.assignTechnicianLabel', {
+                      defaultValue: 'Assign Technician *',
+                    })}
                     users={users}
                     value={assignedTechnicianId}
                     onValueChange={setAssignedTechnicianId}
                     getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                    placeholder="Select technician"
+                    placeholder={t('entryPopup.appointmentRequest.assignTechnicianPlaceholder', {
+                      defaultValue: 'Select technician',
+                    })}
                     userTypeFilter="internal"
                     buttonWidth="full"
                   />
                 </div>
 
                 <div>
-                  <Label>Scheduled Date & Time</Label>
+                  <Label>
+                    {t('entryPopup.appointmentRequest.scheduledDateTimeLabel', {
+                      defaultValue: 'Scheduled Date & Time',
+                    })}
+                  </Label>
                   <div className="text-sm bg-gray-50 p-3 rounded border">
-                    {formatInTimeZone(new Date(event.scheduled_start), Intl.DateTimeFormat().resolvedOptions().timeZone, 'PPP p')} - {formatInTimeZone(new Date(event.scheduled_end), Intl.DateTimeFormat().resolvedOptions().timeZone, 'p')}
+                    {formatDate(new Date(event.scheduled_start), { dateStyle: 'medium', timeStyle: 'short' })} - {formatDate(new Date(event.scheduled_end), { timeStyle: 'short' })}
                   </div>
                 </div>
 
                 <div>
-                  <Label>Notes</Label>
+                  <Label>{t('entryPopup.fields.notes', { defaultValue: 'Notes' })}</Label>
                   <div className="text-sm bg-gray-50 p-3 rounded border whitespace-pre-wrap">
-                    {event.notes || 'No notes provided'}
+                    {event.notes || t('entryPopup.appointmentRequest.noNotes', {
+                      defaultValue: 'No notes provided',
+                    })}
                   </div>
                 </div>
 
@@ -791,7 +886,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                       type="button"
                     >
                       <Check className="h-4 w-4 mr-2" />
-                      Approve
+                      {t('entryPopup.appointmentRequest.actions.approve', { defaultValue: 'Approve' })}
                     </Button>
                     <Button
                       id="decline-appointment-request-show"
@@ -802,18 +897,24 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                       type="button"
                     >
                       <X className="h-4 w-4 mr-2" />
-                      Decline
+                      {t('entryPopup.appointmentRequest.actions.decline', { defaultValue: 'Decline' })}
                     </Button>
                   </div>
                 ) : (
                   <div className="space-y-4 pt-4 border-t">
                     <div>
-                      <Label htmlFor="decline-reason">Reason for Declining *</Label>
+                      <Label htmlFor="decline-reason">
+                        {t('entryPopup.appointmentRequest.declineReasonLabel', {
+                          defaultValue: 'Reason for Declining *',
+                        })}
+                      </Label>
                       <TextArea
                         id="decline-reason"
                         value={declineReason}
                         onChange={(e) => setDeclineReason(e.target.value)}
-                        placeholder="Please provide a reason for declining this request..."
+                        placeholder={t('entryPopup.appointmentRequest.declineReasonPlaceholder', {
+                          defaultValue: 'Please provide a reason for declining this request...',
+                        })}
                         rows={4}
                       />
                     </div>
@@ -828,7 +929,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                         type="button"
                       >
                         <X className="h-4 w-4 mr-2" />
-                        Confirm Decline
+                        {t('entryPopup.appointmentRequest.actions.confirmDecline', {
+                          defaultValue: 'Confirm Decline',
+                        })}
                       </Button>
                       <Button
                         id="cancel-decline-request"
@@ -841,7 +944,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                         className="flex-1"
                         type="button"
                       >
-                        Cancel
+                        {t('entryPopup.actions.cancel', { defaultValue: 'Cancel' })}
                       </Button>
                     </div>
                   </div>
@@ -861,7 +964,11 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     <div className="text-sm text-gray-500 capitalize">{selectedWorkItem.type.replace('_', ' ')}</div>
                   </div>
                 ) : (
-                  <span className="font-bold text-black">Ad-hoc entry (no work item)</span>
+                  <span className="font-bold text-[rgb(var(--color-text-900))]">
+                    {t('entryPopup.workItem.adHocFallback', {
+                      defaultValue: 'Ad-hoc entry (no work item)',
+                    })}
+                  </span>
                 )}
               </div>
             ) : (
@@ -894,7 +1001,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           <div className="space-y-4">
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-              Title
+              {t('entryPopup.fields.title', { defaultValue: 'Title' })}
             </label>
             <Input
               id="title"
@@ -909,7 +1016,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             {canAssignMultipleAgents && (
               <div className="flex-1">
                 <label htmlFor="assigned_users" className="block text-sm font-medium text-gray-700 mb-1">
-                  Assigned Users *
+                  {t('entryPopup.fields.assignedUsers', { defaultValue: 'Assigned Users *' })}
                 </label>
                 <UserPicker
                   value={entryData.assigned_user_ids?.[0] || currentUserId}
@@ -924,16 +1031,18 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             {/* Only show private switch if the selected user is the current user */}
             {entryData.assigned_user_ids?.length === 1 && entryData.assigned_user_ids[0] === currentUserId && (
               <div className="flex-1 flex items-end">
-                <Switch
-                  id="is-private"
-                  checked={entryData.is_private || false}
-                  onCheckedChange={(checked) => {
-                    setEntryData(prev => ({
-                      ...prev,
-                      is_private: checked
-                    }));
-                  }}
-                  label="Private entry (not visible to other users)"
+                  <Switch
+                    id="is-private"
+                    checked={entryData.is_private || false}
+                    onCheckedChange={(checked) => {
+                      setEntryData(prev => ({
+                        ...prev,
+                        is_private: checked
+                      }));
+                    }}
+                  label={t('entryPopup.fields.privateEntry', {
+                    defaultValue: 'Private entry (not visible to other users)',
+                  })}
                   disabled={!canEditFields}
                 />
               </div>
@@ -941,7 +1050,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           </div>
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700">Start *</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('entryPopup.fields.start', { defaultValue: 'Start *' })}
+              </label>
               <DateTimePicker
                 id="scheduled_start"
                 value={entryData.scheduled_start}
@@ -956,7 +1067,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               />
             </div>
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700">End *</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('entryPopup.fields.end', { defaultValue: 'End *' })}
+              </label>
               <DateTimePicker
                 id="scheduled_end"
                 value={entryData.scheduled_end}
@@ -974,7 +1087,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           </div>
           <div>
             <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
-              Notes
+              {t('entryPopup.fields.notes', { defaultValue: 'Notes' })}
             </label>
             <TextArea
               id="notes"
@@ -990,7 +1103,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         <div className="space-y-4">
           <div className="relative z-10">
             <CustomSelect
-              label="Recurrence"
+              label={t('entryPopup.recurrence.label', { defaultValue: 'Recurrence' })}
               value={recurrencePattern?.frequency || 'none'}
               onValueChange={handleRecurrenceChange}
               options={recurrenceOptions}
@@ -1003,7 +1116,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             <div className="flex gap-4">
               <div className="flex-1">
                 <label htmlFor="interval" className="block text-sm font-medium text-gray-700">
-                  Interval
+                  {t('entryPopup.recurrence.intervalLabel', { defaultValue: 'Interval' })}
                 </label>
                 <Input
                   id="interval"
@@ -1028,7 +1141,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               </div>
               <div className="flex-1">
                 <CustomSelect
-                  label="End"
+                  label={t('entryPopup.recurrence.endLabel', { defaultValue: 'End' })}
                   value={recurrencePattern.endDate ? 'date' : recurrencePattern.count ? 'count' : 'never'}
                   onValueChange={handleEndTypeChange}
                   options={endTypeOptions}
@@ -1039,7 +1152,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             {recurrencePattern.endDate && (
               <div>
                 <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">
-                  End Date
+                  {t('entryPopup.recurrence.endDateLabel', { defaultValue: 'End Date' })}
                 </label>
                 <DatePicker
                   id="endDate"
@@ -1055,7 +1168,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             {recurrencePattern.count && (
               <div>
                 <label htmlFor="count" className="block text-sm font-medium text-gray-700">
-                  Occurrences
+                  {t('entryPopup.recurrence.occurrencesLabel', { defaultValue: 'Occurrences' })}
                 </label>
                 <Input
                   id="count"
@@ -1094,7 +1207,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                       daysOfWeek: checked ? [0, 1, 2, 3, 4] : undefined
                     };
                   })}
-                  label="Workdays only (Mon-Fri, excluding holidays)"
+                  label={t('entryPopup.recurrence.workdaysOnly', {
+                    defaultValue: 'Workdays only (Mon-Fri, excluding holidays)',
+                  })}
                   disabled={!canEditFields} // Disable based on permissions
                 />
               </div>
@@ -1108,7 +1223,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         {/* Only show Cancel/Close button if not in a drawer, since the drawer will have its own close button */}
         {!isInDrawer && (
           <Button id="cancel-entry-btn" onClick={onClose} variant="outline">
-            Cancel
+            {t('entryPopup.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
         )}
 
@@ -1118,7 +1233,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             id="close-entry-btn"
             onClick={onClose}
           >
-            Close
+            {t('entryPopup.actions.close', { defaultValue: 'Close' })}
           </Button>
         ) : (
           <Button
@@ -1134,7 +1249,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             // Disable save only if editing AND user lacks permission to edit these fields
             disabled={isEditing && !canEditFields}
           >
-            Save
+            {t('entryPopup.actions.save', { defaultValue: 'Save' })}
           </Button>
         )}
       </div>
@@ -1176,7 +1291,13 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       isOpen={true}
       onClose={onClose}
       hideCloseButton={false}
-      title={(isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending') ? 'Appointment Request' : (viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry'))}
+      title={isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending'
+        ? t('entryPopup.title.appointmentRequest', { defaultValue: 'Appointment Request' })
+        : viewOnly
+          ? t('entryPopup.title.view', { defaultValue: 'View Entry' })
+          : event
+            ? t('entryPopup.title.edit', { defaultValue: 'Edit Entry' })
+            : t('entryPopup.title.new', { defaultValue: 'New Entry' })}
     >
       <EntryPopupContext value={contextValue}>
         {content}
@@ -1187,14 +1308,14 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         isOpen={showDeleteDialog}
         onConfirm={handleDeleteConfirm}
         onClose={() => setShowDeleteDialog(false)}
-        title="Delete Schedule Entry"
-        message="Select which events to delete:"
+        title={t('entryPopup.delete.scopeDialog.title', { defaultValue: 'Delete Schedule Entry' })}
+        message={t('entryPopup.delete.scopeDialog.message', { defaultValue: 'Select which events to delete:' })}
         options={[
-          { value: IEditScope.SINGLE, label: 'Only this event' },
-          { value: IEditScope.FUTURE, label: 'This and future events' },
-          { value: IEditScope.ALL, label: 'All events' }
+          { value: IEditScope.SINGLE, label: t('entryPopup.scopeOptions.single', { defaultValue: 'Only this event' }) },
+          { value: IEditScope.FUTURE, label: t('entryPopup.scopeOptions.future', { defaultValue: 'This and future events' }) },
+          { value: IEditScope.ALL, label: t('entryPopup.scopeOptions.all', { defaultValue: 'All events' }) }
         ]}
-        confirmLabel="Continue"
+        confirmLabel={t('entryPopup.delete.scopeDialog.confirm', { defaultValue: 'Continue' })}
       />
 
       <DeleteEntityDialog
@@ -1202,7 +1323,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         isOpen={isDeleteDialogOpen}
         onClose={resetDeleteState}
         onConfirmDelete={handleDeleteDialogConfirm}
-        entityName={event?.title || 'this schedule entry'}
+        entityName={event?.title || t('entryPopup.delete.entityFallback', { defaultValue: 'this schedule entry' })}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}
@@ -1218,12 +1339,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             setShowRecurrenceDialog(false);
           }
         }}
-        title="Apply Changes To"
-        message="Select which events to update:"
+        title={t('entryPopup.recurrence.applyDialog.title', { defaultValue: 'Apply Changes To' })}
+        message={t('entryPopup.recurrence.applyDialog.message', { defaultValue: 'Select which events to update:' })}
         options={[
-          { value: IEditScope.SINGLE, label: 'Only this event' },
-          { value: IEditScope.FUTURE, label: 'This and future events' },
-          { value: IEditScope.ALL, label: 'All events' }
+          { value: IEditScope.SINGLE, label: t('entryPopup.scopeOptions.single', { defaultValue: 'Only this event' }) },
+          { value: IEditScope.FUTURE, label: t('entryPopup.scopeOptions.future', { defaultValue: 'This and future events' }) },
+          { value: IEditScope.ALL, label: t('entryPopup.scopeOptions.all', { defaultValue: 'All events' }) }
         ]}
         id="recurrence-edit-dialog"
       />
@@ -1234,6 +1355,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
 // Component for the Open Drawer button
 const OpenDrawerButton = ({ event }: { event: IScheduleEntry }) => {
   const { openDrawer, closeDrawer } = useDrawer();
+  const { t } = useTranslation('msp/schedule');
   // Get access to the parent component's props
   const parentProps = React.useContext(EntryPopupContext);
 
@@ -1279,7 +1401,7 @@ const OpenDrawerButton = ({ event }: { event: IScheduleEntry }) => {
       className="flex items-center gap-1"
     >
       <ExternalLink className="w-4 h-4" />
-      <span>Details</span>
+      <span>{t('entryPopup.workItem.openDetails', { defaultValue: 'Details' })}</span>
     </Button>
   );
 };

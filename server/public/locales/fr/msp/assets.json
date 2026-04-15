@@ -1,0 +1,1192 @@
+{
+  "common": {
+    "actions": {
+      "add": "Ajouter",
+      "back": "Dos",
+      "cancel": "Annuler",
+      "close": "Fermer",
+      "copy": "Copie",
+      "create": "Créer",
+      "delete": "Supprimer",
+      "download": "Télécharger",
+      "edit": "Modifier",
+      "refresh": "Rafraîchir",
+      "remove": "Retirer",
+      "retry": "Réessayer",
+      "save": "Sauvegarder",
+      "saving": "Économie...",
+      "search": "Recherche",
+      "select": "Sélectionner",
+      "update": "Mise à jour",
+      "view": "Voir"
+    },
+    "states": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "loading": "Chargement...",
+      "na": "N/A",
+      "none": "Aucun"
+    },
+    "no": "Non",
+    "yes": "Oui"
+  },
+  "assetAlertsSection": {
+    "title": "Section Alertes sur les actifs",
+    "description": "Wrapper de section d’alerte d’entreprise pour les alertes RMM et les actions correctives spécifiques aux actifs"
+  },
+  "assetCommandPalette": {
+    "title": "Palette de commandes",
+    "description": "Palette de commandes pour rechercher des actifs et lancer des actions sur les actifs",
+    "register": {
+      "label": "Palette de commandes d'actifs",
+      "title": "Palette de commandes d'actifs"
+    },
+    "actions": {
+      "createAsset": {
+        "label": "Créer un actif",
+        "description": "Ouvrir l'ajout rapide pour enregistrer un nouvel actif"
+      },
+      "refreshData": {
+        "label": "Actualiser les données",
+        "description": "Récupérer les actifs du serveur"
+      },
+      "reset": {
+        "label": "Réinitialiser",
+        "description": "Supprimez tous les filtres et termes de recherche actifs"
+      }
+    },
+    "searchPlaceholder": "Rechercher des actifs, des clients, des tickets…",
+    "empty": "Aucun match pour l'instant. Essayez un autre mot-clé.",
+    "groups": {
+      "quickActions": "Actions rapides",
+      "assets": "Actifs",
+      "hints": "Conseils"
+    },
+    "hint": {
+      "body": "Continuez à taper pour effectuer une recherche dans la liste complète des actifs. Les billets et la recherche de clients arriveront ultérieurement.",
+      "badge": "À venir"
+    },
+    "values": {
+      "unassigned": "Non attribué"
+    }
+  },
+  "assetDashboard": {
+    "title": "Tableau de bord des actifs",
+    "description": "Wrapper de tableau de bord d'actifs de niveau supérieur qui restitue l'expérience des actifs du client"
+  },
+  "assetDashboardClient": {
+    "title": "Client du tableau de bord des actifs",
+    "description": "Page principale de liste des actifs avec filtres, vues de tableau et de grille, actions groupées et flux de tiroirs",
+    "reflection": {
+      "label": "Tableau de bord des actifs"
+    },
+    "errors": {
+      "loadDrawerFailed": "Impossible de charger les détails de l'actif pour le moment. Veuillez réessayer."
+    },
+    "details": {
+      "noIp": "Pas d'adresse IP",
+      "network": "Réseau",
+      "local": "Locale",
+      "noDetails": "Aucun détail disponible",
+      "unassigned": "Non attribué"
+    },
+    "selection": {
+      "selectAllVisibleAssets": "Sélectionnez tous les éléments visibles",
+      "selectAsset": "Sélectionnez l'élément {{name}}",
+      "selectedAssets": "{{count}} élément{{suffix}} sélectionné",
+      "clearSelection": "Effacer la sélection",
+      "bulkActionsComingSoon": "Actions groupées à venir"
+    },
+    "actions": {
+      "openActionsForAsset": "Actions ouvertes pour l'élément {{name}}",
+      "viewDetails": "Afficher les détails",
+      "editAsset": "Modifier l'élément",
+      "createTicket": "Créer un ticket",
+      "refreshData": "Actualiser les données"
+    },
+    "table": {
+      "name": "Nom",
+      "tag": "Étiqueter",
+      "type": "Taper",
+      "details": "Détails",
+      "status": "Statut",
+      "agent": "Agent",
+      "client": "Client",
+      "location": "Emplacement",
+      "actions": "Actes"
+    },
+    "metrics": {
+      "totalAssets": {
+        "title": "Actif total",
+        "helper": "Chez tous les clients"
+      },
+      "filteredView": {
+        "title": "Vue filtrée",
+        "helper": "Filtres actifs correspondants"
+      },
+      "automationReady": {
+        "title": "Prêt pour l'automatisation",
+        "helper": "Calendriers de maintenance actifs",
+        "upcoming": "À venir : {{count}}",
+        "overdue": "En retard : {{count}}"
+      },
+      "activeSchedules": {
+        "title": "Horaires actifs",
+        "helper": "Automatisation du cycle de vie"
+      },
+      "overdueMaintenance": {
+        "title": "Entretien en retard",
+        "helper": "A besoin d'attention"
+      },
+      "upcomingMaintenance": {
+        "title": "Entretien à venir",
+        "helper": "30 prochains jours"
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "Rechercher par nom, étiquette ou numéro de série",
+      "reset": "Réinitialiser",
+      "status": "Statut",
+      "type": "Taper",
+      "agent": "Agent",
+      "columns": "Colonnes",
+      "client": {
+        "loading": "Chargement des clients…",
+        "placeholder": "Client",
+        "clear": "Effacer le filtre client"
+      },
+      "rmmManaged": {
+        "managed": "RMM Géré",
+        "unmanaged": "Non géré"
+      },
+      "agentStatuses": {
+        "online": "En ligne",
+        "offline": "Hors ligne",
+        "overdue": "En retard",
+        "unknown": "Inconnu"
+      }
+    },
+    "activeFilters": {
+      "status": "Statut : {{value}}",
+      "type": "Tapez : {{value}}",
+      "client": "Client : {{value}}",
+      "agent": "Agent : {{value}}"
+    },
+    "statuses": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "maintenance": "Entretien"
+    },
+    "types": {
+      "workstation": "Poste de travail",
+      "server": "Serveur",
+      "network_device": "Périphérique réseau",
+      "mobile_device": "Appareil mobile",
+      "printer": "Imprimante"
+    },
+    "columns": {
+      "select": "sélectionner",
+      "name": "nom",
+      "asset_tag": "étiquette d'actif",
+      "asset_type": "type d'actif",
+      "details": "détails",
+      "status": "statut",
+      "agent_status": "statut d'agent",
+      "client_name": "nom du client",
+      "location": "emplacement",
+      "actions": "actes"
+    }
+  },
+  "assetDashboardGrid": {
+    "title": "Grille du tableau de bord des actifs",
+    "description": "Disposition en grille composite pour les cartes de détails des actifs, les panneaux RMM et les widgets d'état associés"
+  },
+  "assetDetailDrawer": {
+    "title": "Tiroir de détails des actifs",
+    "description": "Vue rapide des actifs dans un tiroir avec actions, données récapitulatives et navigation dans l'enregistrement complet",
+    "label": "Tiroir de détails des actifs",
+    "header": {
+      "title": "Détails de l'actif",
+      "subtitle": "Restez en contexte tout en examinant le cycle de vie et la configuration"
+    },
+    "tabs": {
+      "overview": "Aperçu",
+      "maintenance": "Entretien",
+      "tickets": "Billets",
+      "configuration": "Configuration",
+      "documents": "Documents"
+    },
+    "helper": {
+      "awaitingSelection": "En attente de sélection des actifs",
+      "selectedAsset": "{{name}} • {{tab}}"
+    },
+    "statuses": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "maintenance": "Entretien"
+    },
+    "empty": {
+      "selectAsset": "Sélectionnez un actif pour afficher les détails",
+      "nothingToDisplay": "Rien à afficher"
+    },
+    "actions": {
+      "openAssetRecord": "Enregistrement d'actif ouvert",
+      "delete": "Supprimer"
+    },
+    "overview": {
+      "assetTag": "Numéro d'inventaire {{tag}} • {{type}}",
+      "client": "Client : {{name}}",
+      "activeSchedules": "Horaires actifs",
+      "upcomingMaintenance": "Entretien à venir",
+      "nextOn": "Suivant le {{date}}",
+      "completedMaintenance": "Entretien terminé",
+      "compliance": "Conformité {{percent}}%",
+      "lastMaintenance": "Dernier entretien",
+      "noHistory": "Pas d'historique",
+      "maintenanceDataPending": "Les données de maintenance apparaîtront une fois les plannings configurés.",
+      "assetSummary": "Résumé des actifs",
+      "recentLifecycleEvents": "Événements récents du cycle de vie"
+    },
+    "maintenance": {
+      "noSchedules": "Aucun calendrier de maintenance trouvé pour cet actif pour l'instant.",
+      "totalSchedules": "Horaires totaux",
+      "active": "Actif",
+      "complianceRate": "Taux de conformité",
+      "history": "Historique d'entretien",
+      "loggedBy": "Enregistré par {{name}}",
+      "system": "système",
+      "noLogs": "Les journaux de maintenance apparaîtront ici après la première entrée de service."
+    },
+    "tickets": {
+      "empty": "Aucun ticket lié à cet actif pour l'instant. Utilisez l’action rapide pour en créer un.",
+      "linked": "Lié {{date}}",
+      "client": "Client : {{name}}",
+      "assignee": "Destinataire : {{name}}",
+      "openTicket": "Billet ouvert"
+    },
+    "configuration": {
+      "coreAttributes": "Attributs de base",
+      "serialNumber": "Numéro de série",
+      "location": "Emplacement",
+      "purchaseDate": "Date d'achat",
+      "warrantyEnd": "Fin de garantie",
+      "notProvided": "Non fourni"
+    },
+    "info": {
+      "client": "Client",
+      "unassigned": "Non attribué",
+      "assetTag": "Étiquette d'actif",
+      "status": "Statut",
+      "created": "Créé",
+      "updated": "Mis à jour",
+      "tenant": "Locataire"
+    },
+    "typeDetails": {
+      "workstation": "Détails du poste de travail",
+      "networkDevice": "Détails du périphérique réseau",
+      "server": "Détails du serveur",
+      "mobileDevice": "Détails de l'appareil mobile",
+      "printer": "Détails de l'imprimante",
+      "operatingSystem": "Système opérateur",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Stockage",
+      "gpu": "GPU",
+      "notProvided": "Non fourni",
+      "never": "Jamais",
+      "deviceType": "Type d'appareil",
+      "managementIp": "IP de gestion",
+      "portCount": "Nombre de ports",
+      "firmwareVersion": "Version du micrologiciel",
+      "poeSupport": "Prise en charge de PoE",
+      "powerDraw": "Consommation d'énergie",
+      "virtualized": "Virtualisé",
+      "primaryIp": "IP principale",
+      "hypervisor": "Hyperviseur",
+      "os": "OS",
+      "model": "Modèle",
+      "imei": "IMEI",
+      "phoneNumber": "Numéro de téléphone",
+      "carrier": "Transporteur",
+      "lastLogin": "Dernière connexion",
+      "lastCheckIn": "Dernier enregistrement",
+      "notReported": "Non signalé",
+      "networkPrinter": "Imprimante réseau",
+      "ipAddress": "Adresse IP",
+      "supportsColor": "Prend en charge la couleur",
+      "supportsDuplex": "Prend en charge le recto verso",
+      "monthlyDutyCycle": "Cycle de service mensuel",
+      "monthlyDutyCycleValue": "{{count}} pages"
+    },
+    "relative": {
+      "momentsAgo": "il y a quelques instants",
+      "minutesAgo": "Il y a {{count}} minute{{suffix}}",
+      "hoursAgo": "Il y a {{count}} heure{{suffix}}",
+      "daysAgo": "Il y a {{count}} jour{{suffix}}"
+    }
+  },
+  "assetDetailHeader": {
+    "title": "En-tête de détail de l'actif",
+    "description": "En-tête chromé pour l'expérience détaillée des actifs, y compris l'identité, les badges et les actions d'actualisation",
+    "backToAssets": "Retour aux actifs",
+    "assetTag": "Numéro d'actif : {{tag}}",
+    "actions": {
+      "createTicket": "Créer un ticket",
+      "menu": "Actes",
+      "refreshing": "Rafraîchissant...",
+      "refreshData": "Actualiser les données",
+      "rebootDevice": "Redémarrer l'appareil",
+      "editAsset": "Modifier l'actif",
+      "deleteAsset": "Supprimer l'actif"
+    },
+    "values": {
+      "unknownClient": "Client inconnu"
+    }
+  },
+  "assetDetailTabs": {
+    "title": "Onglets de détails des actifs",
+    "description": "Navigation détaillée des actifs par onglets pour la présentation, la maintenance, les documents, l'historique et les enregistrements associés",
+    "tabs": {
+      "serviceHistory": "Historique des services",
+      "software": "Logiciel",
+      "maintenance": "Entretien",
+      "relatedAssets": "Actifs associés",
+      "documentsPasswords": "Documents et mots de passe",
+      "auditLog": "Journal d'audit"
+    }
+  },
+  "assetDetailView": {
+    "title": "Vue détaillée des actifs",
+    "description": "Composition détaillée des actifs avec chargement, erreur, métriques, panneaux de grille et onglets de détail",
+    "loading": "Chargement des détails de l'actif...",
+    "errors": {
+      "title": "Erreur",
+      "notFound": "Actif introuvable ou vous n'êtes pas autorisé à l'afficher."
+    }
+  },
+  "assetDetails": {
+    "title": "Détails de l'actif",
+    "description": "Page complète de détails sur les actifs avec fiches récapitulatives, associations, documents et actions opérationnelles",
+    "assetTag": "Numéro d'actif : {{tag}}",
+    "loading": {
+      "details": "Chargement des détails..."
+    },
+    "fields": {
+      "status": "Statut",
+      "serialNumber": "Numéro de série",
+      "location": "Emplacement",
+      "client": "Client",
+      "purchaseDate": "Date d'achat",
+      "warrantyEnd": "Fin de garantie",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Stockage",
+      "gpu": "GPU",
+      "lastLogin": "Dernière connexion",
+      "managementIp": "IP de gestion",
+      "portCount": "Nombre de ports",
+      "powerDraw": "Consommation d'énergie",
+      "firmwareVersion": "Version du micrologiciel",
+      "poeSupport": "PoE Assistance",
+      "type": "Taper",
+      "hypervisor": "Hyperviseur",
+      "primaryIp": "IP principale",
+      "operatingSystem": "Système opérateur",
+      "imei": "IMEI",
+      "phoneNumber": "Numéro de téléphone",
+      "carrier": "Transporteur",
+      "supervisionStatus": "Statut de surveillance",
+      "ipAddress": "Adresse IP",
+      "networkPrinter": "Imprimante réseau",
+      "colorSupport": "Prise en charge des couleurs",
+      "duplexSupport": "Prise en charge recto-verso",
+      "monthlyDutyCycle": "Cycle de service mensuel"
+    },
+    "sections": {
+      "basicInformation": "Informations de base",
+      "workstation": "Détails du poste de travail",
+      "networkDevice": "Détails du périphérique réseau",
+      "server": "Détails du serveur",
+      "mobileDevice": "Détails de l'appareil mobile",
+      "printer": "Détails de l'imprimante",
+      "relatedAssets": "Actifs associés"
+    },
+    "maintenance": {
+      "activeSchedules": "Horaires actifs",
+      "overdue": "En retard",
+      "upcoming": "Prochain"
+    },
+    "tabs": {
+      "details": "Détails",
+      "relatedAssets": "Actifs associés",
+      "documents": "Documents"
+    },
+    "relationships": {
+      "parentOf": "Parent de",
+      "childOf": "Enfant de"
+    },
+    "empty": {
+      "notSpecified": "Non spécifié",
+      "unassigned": "Non attribué",
+      "never": "Jamais",
+      "noAdditionalDetails": "Aucun détail supplémentaire disponible",
+      "noRelatedAssets": "Aucun élément associé trouvé"
+    },
+    "values": {
+      "virtual": "Virtuel",
+      "physical": "Physique",
+      "supervised": "Supervisé",
+      "unsupervised": "Sans surveillance",
+      "pagesUnit": "pages"
+    },
+    "statuses": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "maintenance": "Entretien"
+    },
+    "deviceTypes": {
+      "switch": "Changer",
+      "router": "Routeur",
+      "firewall": "Pare-feu",
+      "access_point": "Point d'accès",
+      "load_balancer": "Équilibreur de charge"
+    },
+    "relationshipTypes": {
+      "affected": "Affecté",
+      "related": "En rapport"
+    }
+  },
+  "assetDocuments": {
+    "title": "Documents d'actif",
+    "description": "Liste des documents d'actif et surface de pièce jointe pour les fichiers associés à un actif"
+  },
+  "assetForm": {
+    "title": "Formulaire d'actif",
+    "description": "Formulaire de création et de modification de l'actif principal avec champs d'identité, de cycle de vie, de contrat et de métadonnées",
+    "heading": "Modifier l'actif",
+    "loading": {
+      "assetDetails": "Chargement des détails de l'actif..."
+    },
+    "errors": {
+      "assetNotFound": "Actif introuvable",
+      "loadFailed": "Échec du chargement des détails de l'actif",
+      "clientsLoadFailed": "Impossible de charger les clients",
+      "locationsLoadFailed": "Impossible de charger les emplacements pour ce client",
+      "updateFailed": "Échec de la mise à jour de l'élément"
+    },
+    "actions": {
+      "viewClient": "Afficher le client",
+      "manageClientLocations": "Gérer les emplacements des clients",
+      "saveChanges": "Enregistrer les modifications"
+    },
+    "alerts": {
+      "noLocationsSaved": "Ce client n'a pas encore d'emplacement enregistré. Utilisez une entrée personnalisée ou créez-en une à partir du dossier client."
+    },
+    "sections": {
+      "basicInformation": "Informations de base",
+      "clientAndLocation": "Client et emplacement",
+      "assetBasics": "Bases des actifs"
+    },
+    "fields": {
+      "customLocationOption": "Emplacement personnalisé",
+      "osType": "OS Type",
+      "osVersion": "Version OS",
+      "cpuModel": "CPU Modèle",
+      "cpuCores": "CPU Noyaux",
+      "ramGb": "RAM (Go)",
+      "storageType": "Type de stockage",
+      "storageCapacityGb": "Capacité de stockage (Go)",
+      "gpuModel": "GPU Modèle",
+      "deviceType": "Type d'appareil",
+      "managementIp": "IP de gestion",
+      "portCount": "Nombre de ports",
+      "firmwareVersion": "Version du micrologiciel",
+      "powerDrawWatts": "Consommation d'énergie (Watts)",
+      "supportsPoe": "Prend en charge PoE",
+      "primaryIp": "IP principale",
+      "raidConfig": "Configuration RAID",
+      "virtualMachine": "Machine virtuelle",
+      "hypervisor": "Hyperviseur",
+      "model": "Modèle",
+      "imei": "IMEI",
+      "phoneNumber": "Numéro de téléphone",
+      "carrier": "Transporteur",
+      "supervisedDevice": "Appareil supervisé",
+      "ipAddress": "Adresse IP",
+      "monthlyDutyCycle": "Cycle de service mensuel",
+      "networkPrinter": "Imprimante réseau",
+      "colorSupport": "Prise en charge des couleurs",
+      "duplexSupport": "Prise en charge recto-verso",
+      "client": "Client",
+      "primaryLocation": "Emplacement principal",
+      "name": "Nom",
+      "assetTag": "Étiquette d'actif",
+      "serialNumber": "Numéro de série",
+      "status": "Statut",
+      "purchaseDate": "Date d'achat",
+      "warrantyEndDate": "Date de fin de garantie"
+    },
+    "placeholders": {
+      "loadingClients": "Chargement des clients…",
+      "selectClient": "Sélectionner un client",
+      "loadingLocations": "Emplacements de chargement…",
+      "selectLocation": "Sélectionnez un emplacement",
+      "selectClientFirst": "Sélectionnez d'abord un client",
+      "customLocation": "Entrez un emplacement ou une zone personnalisée",
+      "selectPurchaseDate": "Sélectionnez la date d'achat",
+      "selectWarrantyEndDate": "Sélectionnez la date de fin de garantie"
+    },
+    "statusOptions": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "maintenance": "Entretien"
+    },
+    "networkDeviceTypes": {
+      "switch": "Changer",
+      "router": "Routeur",
+      "firewall": "Pare-feu",
+      "access_point": "Point d'accès",
+      "load_balancer": "Équilibreur de charge"
+    },
+    "storageTypes": {
+      "ssd": "SSD",
+      "hdd": "HDD",
+      "nvme": "NVMe"
+    },
+    "osTypes": {
+      "windows": "Fenêtres",
+      "macos": "macOS",
+      "linux": "Linux"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Androïde"
+    },
+    "typeDetails": {
+      "workstation": "Détails du poste de travail",
+      "networkDevice": "Détails du périphérique réseau",
+      "server": "Détails du serveur",
+      "mobileDevice": "Détails de l'appareil mobile",
+      "printer": "Détails de l'imprimante"
+    }
+  },
+  "assetFormClient": {
+    "title": "Client de formulaire d'actif",
+    "description": "Wrapper dynamique réservé au client pour le formulaire d'actif et l'expérience de modification du squelette",
+    "loadingTitle": "Modifier l'actif"
+  },
+  "assetMetricsBanner": {
+    "title": "Bannière de mesures des actifs",
+    "description": "Cartes métriques et cumuls pour les tickets, la maintenance, la disponibilité et les indicateurs de santé des actifs",
+    "labels": {
+      "healthStatus": "État de santé",
+      "openTickets": "Billets ouverts",
+      "securityStatus": "Statut de sécurité",
+      "warranty": "Garantie"
+    },
+    "healthStatuses": {
+      "healthy": "En bonne santé",
+      "warning": "Avertissement",
+      "critical": "Critique",
+      "unknown": "Inconnu"
+    },
+    "securityStatuses": {
+      "secure": "Sécurisé",
+      "missingPatches": "{{count}} Correctifs manquants",
+      "critical": "Critique",
+      "unknown": "Inconnu"
+    },
+    "openTickets": {
+      "active": "[{{count}} Actif]"
+    },
+    "warrantyStatuses": {
+      "expiresIn": "Expire dans {{count}} jours",
+      "expired": "Expiré",
+      "unknown": "Inconnu"
+    }
+  },
+  "assetPatchStatusSection": {
+    "title": "Section État des correctifs d'actifs",
+    "description": "Correctif d'entreprise et wrapper d'état de l'antivirus affichés dans l'expérience détaillée des actifs"
+  },
+  "assetSoftwareInventory": {
+    "title": "Inventaire des logiciels d'actifs",
+    "description": "Wrapper d'inventaire de logiciels d'entreprise pour les logiciels installés et les données de version"
+  },
+  "associatedAssets": {
+    "title": "Actifs associés",
+    "description": "Gestion des relations entre les actifs parents et enfants avec des actions sur les actifs liés",
+    "loading": {
+      "assets": "Chargement des éléments..."
+    },
+    "actions": {
+      "addAsset": "Ajouter un actif",
+      "showLess": "Afficher moins",
+      "moreAssets": "{{count}} plus d'actif{{suffix}}"
+    },
+    "errors": {
+      "loadAvailableAssets": "Échec du chargement des ressources disponibles",
+      "loadDrawerFailed": "Impossible de charger les détails de l'actif pour le moment. Veuillez réessayer.",
+      "loadAssociatedAssets": "Échec du chargement des éléments associés",
+      "selectAtLeastOneAsset": "Veuillez sélectionner au moins un élément",
+      "associateFailed": "Échec de l'association des actifs : ils sont peut-être déjà associés",
+      "associationFailed": "Échec de l'association des actifs",
+      "removeFailed": "Échec de la suppression de l'association d'éléments"
+    },
+    "success": {
+      "associated": "{{count}} actif{{suffix}} associé avec succès",
+      "associatedPartial": "{{count}} actif{{suffix}} associé avec succès, {{failed}} a échoué (peut-être déjà associé)",
+      "removed": "Association d'éléments supprimée"
+    },
+    "empty": {
+      "noneAssociated": "Aucun actif associé à ce ticket.",
+      "unknownAsset": "Actif inconnu"
+    },
+    "dialog": {
+      "title": "Ajouter un actif",
+      "loadingAssets": "Chargement des éléments...",
+      "selectedAssetsLabel": "Choisi:",
+      "search": {
+        "label": "Rechercher des ressources",
+        "placeholder": "Recherchez par nom, étiquette ou numéro de série..."
+      },
+      "empty": {
+        "search": "Aucun actif trouvé correspondant à votre recherche",
+        "available": "Aucun actif disponible pour ce client"
+      },
+      "relationship": {
+        "placeholder": "Taper..."
+      },
+      "actions": {
+        "addAssets": "Ajouter un actif{{suffix}}"
+      }
+    },
+    "table": {
+      "name": "Nom",
+      "assetTag": "Étiquette d'actif",
+      "type": "Taper",
+      "status": "Statut"
+    },
+    "assetStatuses": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "maintenance": "Entretien"
+    },
+    "assetTypes": {
+      "workstation": "Poste de travail",
+      "server": "Serveur",
+      "network_device": "Périphérique réseau",
+      "mobile_device": "Appareil mobile",
+      "printer": "Imprimante"
+    },
+    "relationshipTypes": {
+      "affected": "Affecté",
+      "related": "En rapport"
+    }
+  },
+  "createTicketFromAssetButton": {
+    "title": "Créer un ticket à partir d'un actif",
+    "description": "Flux de création de tickets lancé à partir d'un actif avec sélection de tableau, de statut et de catégorie",
+    "register": {
+      "label": "Créer un ticket à partir d'un actif",
+      "title": "Créer un ticket à partir d'un actif"
+    },
+    "defaultTitle": "Problème avec {{name}}",
+    "actions": {
+      "open": "Créer un ticket",
+      "create": "Créer un ticket",
+      "creating": "Création..."
+    },
+    "fields": {
+      "title": "Titre",
+      "description": "Description",
+      "board": "Conseil",
+      "status": "Statut",
+      "priority": "Priorité"
+    },
+    "placeholders": {
+      "title": "Entrez le titre du billet",
+      "description": "Décrivez le problème...",
+      "loadingBoards": "Chargement des planches...",
+      "selectBoard": "Sélectionnez le tableau...",
+      "selectBoardFirst": "Sélectionnez d'abord le tableau...",
+      "loadingStatuses": "Chargement des statuts...",
+      "selectStatus": "Sélectionnez le statut...",
+      "loadingPriorities": "Chargement des priorités...",
+      "selectPriority": "Sélectionnez la priorité..."
+    },
+    "errors": {
+      "loadPriorities": "Échec du chargement des priorités",
+      "loadBoards": "Échec du chargement des tableaux",
+      "loadStatuses": "Échec du chargement des statuts",
+      "requiredFields": "Veuillez remplir le titre, le tableau, le statut et la priorité",
+      "createFailed": "Échec de la création du ticket"
+    },
+    "success": {
+      "created": "Ticket créé avec succès"
+    }
+  },
+  "deleteAssetButton": {
+    "title": "Bouton Supprimer l'actif",
+    "description": "Supprimer le flux de confirmation pour supprimer un enregistrement d'actif",
+    "actions": {
+      "removing": "Suppression…"
+    },
+    "entityNameFallback": "cet atout",
+    "errors": {
+      "validationFailed": "Échec de la validation de la suppression. Veuillez réessayer.",
+      "deleteFailed": "Échec de la suppression de l'élément. Veuillez réessayer."
+    }
+  },
+  "quickAddAsset": {
+    "title": "Ajout rapide d'un actif",
+    "description": "Flux d'actifs de création rapide avec des champs essentiels pour ajouter un nouvel enregistrement d'actif",
+    "actions": {
+      "addAsset": "Ajouter un actif",
+      "creating": "Création...",
+      "createAsset": "Créer un actif"
+    },
+    "errors": {
+      "fetchClientsFailed": "Échec de la récupération des clients",
+      "createFailed": "Échec de la création de l'élément"
+    },
+    "validation": {
+      "client": "Client",
+      "assetName": "Nom de l'actif",
+      "assetTag": "Étiquette d'actif",
+      "assetType": "Type d'actif",
+      "requiredFields": "Veuillez remplir les champs obligatoires :"
+    },
+    "fields": {
+      "osType": "OS Type",
+      "osVersion": "Version OS",
+      "deviceType": "Type d'appareil",
+      "managementIp": "IP de gestion",
+      "model": "Modèle",
+      "clientRequired": "Client *",
+      "assetNameRequired": "Nom de l'actif *",
+      "assetTagRequired": "Étiquette d'actif *",
+      "typeRequired": "Taper *",
+      "status": "Statut",
+      "serialNumber": "Numéro de série"
+    },
+    "placeholders": {
+      "workstationOsType": "par exemple, Windows, macOS, Linux",
+      "workstationOsVersion": "par exemple, 11, Monterey, Ubuntu 22.04",
+      "selectDeviceType": "Sélectionnez le type d'appareil",
+      "managementIp": "par exemple, 192.168.1.1",
+      "serverOsType": "par exemple, Windows Server, Ubuntu Server",
+      "serverOsVersion": "par exemple, 2022, 22.04 LTS",
+      "selectOsType": "Sélectionnez le type OS",
+      "mobileModel": "par exemple, iPhone 14 Pro, Galaxy S23",
+      "printerModel": "par exemple, HP LaserJet Pro M404n",
+      "assetName": "Entrez le nom de l'actif",
+      "assetTag": "Saisir le numéro d'actif",
+      "selectType": "Sélectionnez le type",
+      "selectStatus": "Sélectionnez le statut",
+      "serialNumber": "Entrez le numéro de série"
+    },
+    "sections": {
+      "typeSpecificDetails": "Détails spécifiques au type"
+    },
+    "statusOptions": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "maintenance": "Entretien"
+    },
+    "assetTypes": {
+      "workstation": "Poste de travail",
+      "network_device": "Périphérique réseau",
+      "server": "Serveur",
+      "mobile_device": "Appareil mobile",
+      "printer": "Imprimante"
+    },
+    "networkDeviceTypes": {
+      "switch": "Changer",
+      "router": "Routeur",
+      "firewall": "Pare-feu",
+      "accessPoint": "Point d'accès",
+      "loadBalancer": "Équilibreur de charge"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Androïde"
+    }
+  },
+  "remoteAccessButton": {
+    "title": "Bouton d'accès à distance",
+    "description": "Lanceur d'accès à distance pour les actifs avec intégrations de connexion prises en charge"
+  },
+  "rmmStatusIndicator": {
+    "title": "RMM Indicateur d'état",
+    "description": "Puce d'état RMM connectée/déconnectée et étiquettes d'état prises en charge",
+    "titles": {
+      "unknown": "Statut de l'agent inconnu",
+      "status": "{{status}}{{suffix}}",
+      "lastSeen": "- Dernière vue : {{value}}"
+    },
+    "statuses": {
+      "online": "En ligne",
+      "offline": "Hors ligne",
+      "overdue": "En retard",
+      "unknown": "Inconnu"
+    },
+    "relative": {
+      "justNow": "Tout à l' heure",
+      "minutesAgo": "il y a {{count}} mois",
+      "hoursAgo": "Il y a {{count}}h",
+      "daysAgo": "Il y a {{count}}d"
+    }
+  },
+  "assetInfoPanel": {
+    "title": "Informations sur les actifs et cycle de vie",
+    "description": "Panneau d'informations générales sur les actifs pour les détails d'identification, de propriétaire et de cycle de vie",
+    "actions": {
+      "copy": "Copie",
+      "copied": "Copié"
+    },
+    "fields": {
+      "client": "Client",
+      "location": "Emplacement",
+      "model": "Modèle",
+      "serialNumber": "Numéro de série",
+      "purchaseDate": "Date d'achat",
+      "warrantyEnd": "Fin de garantie"
+    },
+    "values": {
+      "unknownClient": "Client inconnu",
+      "unassigned": "Non attribué",
+      "unknownModel": "Modèle inconnu"
+    }
+  },
+  "assetNotesPanel": {
+    "title": "Notes et informations rapides",
+    "description": "Panneau de notes en texte enrichi pour des notes spécifiques aux actifs et un contexte opérationnel rapide",
+    "errors": {
+      "loadTitle": "Les notes n'ont pas pu être chargées",
+      "unknown": "Erreur inconnue"
+    },
+    "lastUpdated": "Dernière mise à jour : {{value}}"
+  },
+  "hardwareSpecsPanel": {
+    "title": "Spécifications matérielles",
+    "description": "Panneau de spécifications matérielles couvrant CPU, la mémoire, le stockage et les métadonnées de l'appareil",
+    "fields": {
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Stockage",
+      "utilization": "Utilisation"
+    },
+    "values": {
+      "unknownCpu": "Inconnu CPU",
+      "unknown": "Inconnu",
+      "unifiedMemory": "{{size}}Go de mémoire unifiée",
+      "memoryUsed": "({{size}}Go utilisé)",
+      "freeStorage": "{{size}} Go gratuits"
+    },
+    "empty": "Aucune donnée matérielle disponible",
+    "emptyStorage": "Aucun lecteur de stockage détecté"
+  },
+  "rmmVitalsPanel": {
+    "title": "RMM Vitalités et connectivité",
+    "description": "Panneau RMM Vitals pour les détails sur le rythme cardiaque, la surveillance et l'état des points finaux",
+    "actions": {
+      "refresh": "Rafraîchir"
+    },
+    "fields": {
+      "agentStatus": "Statut de l'agent",
+      "currentUser": "Utilisateur actuel",
+      "lastCheckIn": "(Dernier enregistrement : {{value}})",
+      "uptime": "Temps de disponibilité",
+      "lastSync": "Dernière synchronisation RMM",
+      "network": "Réseau",
+      "networkValue": "LAN IP : {{lan}} | WAN IP : {{wan}}"
+    },
+    "values": {
+      "never": "Jamais"
+    },
+    "empty": {
+      "title": "RMM Vitalités",
+      "notConnected": "Non connecté à RMM"
+    },
+    "uptime": "{{days}} jours, {{hours}} heures, {{minutes}} minutes"
+  },
+  "securityPatchingPanel": {
+    "title": "Sécurité et correctifs",
+    "description": "Panneau de sécurité et de mise à jour des correctifs pour les indicateurs de vulnérabilité et d'état de mise à jour",
+    "fields": {
+      "osVersion": "Version OS",
+      "antivirus": "Antivirus",
+      "patchStatus": "État du correctif",
+      "firewall": "Pare-feu"
+    },
+    "values": {
+      "unknown": "Inconnu"
+    },
+    "antivirus": {
+      "running": "✔ Installé et en cours d'exécution",
+      "inactive": "Inactif",
+      "lastScan": "| Dernière analyse : aujourd'hui, 3h00"
+    },
+    "patchStatus": {
+      "critical": "Critique",
+      "atRisk": "À risque",
+      "missingPatches": "- {{count}} Critique OS Correctifs manquants.",
+      "upToDate": "✔ À jour"
+    },
+    "firewall": {
+      "on": "✔ Activé"
+    }
+  },
+  "copyableField": {
+    "title": "Champ copiable",
+    "description": "Champ de copie partagé dans le presse-papiers utilisé dans les formulaires d'actifs et les panneaux de détail",
+    "actions": {
+      "copy": "Copie",
+      "copied": "Copié"
+    }
+  },
+  "statusBadge": {
+    "title": "Insigne de statut",
+    "description": "Moteur de rendu de badge partagé pour le cycle de vie des actifs et les statuts de surveillance",
+    "statuses": {
+      "online": "En ligne",
+      "offline": "Hors ligne",
+      "overdue": "En retard",
+      "healthy": "En bonne santé",
+      "warning": "Avertissement",
+      "critical": "Critique",
+      "unknown": "Inconnu",
+      "secure": "Sécurisé",
+      "at_risk": "À risque",
+      "active": "Actif",
+      "expiring_soon": "Expire bientôt",
+      "expired": "Expiré"
+    }
+  },
+  "utilizationBar": {
+    "title": "Barre d'utilisation",
+    "description": "Composant de barre de progression partagé pour l'utilisation et les mesures d'actifs basées sur un pourcentage"
+  },
+  "auditLogTab": {
+    "title": "Journal d'audit",
+    "description": "Onglet Historique d'audit des actifs pour les événements de la chronologie et les modifications enregistrées",
+    "changedBy": "Modifié par {{name}}",
+    "userFallback": "utilisateur {{id}}",
+    "empty": "Aucun historique d'audit disponible.",
+    "changeTypes": {
+      "created": "Créé",
+      "updated": "Mis à jour"
+    }
+  },
+  "createMaintenanceScheduleDialog": {
+    "title": "Créer un calendrier de maintenance",
+    "description": "Boîte de dialogue permettant de définir les plannings de maintenance et les règles de récurrence pour un bien",
+    "titles": {
+      "create": "Planifier l'entretien",
+      "edit": "Modifier le calendrier de maintenance"
+    },
+    "actions": {
+      "create": "Créer un calendrier",
+      "creating": "Création...",
+      "update": "Calendrier de mise à jour",
+      "updating": "Mise à jour..."
+    },
+    "fields": {
+      "scheduleName": "Nom de l'horaire *",
+      "description": "Description",
+      "maintenanceType": "Type d'entretien *",
+      "frequency": "Fréquence *",
+      "interval": "Intervalle *",
+      "nextMaintenanceDate": "Prochaine date de maintenance *",
+      "active": "Actif"
+    },
+    "placeholders": {
+      "scheduleName": "par exemple, maintenance mensuelle du serveur",
+      "description": "Description facultative...",
+      "maintenanceType": "Sélectionnez le type d'entretien",
+      "frequency": "Sélectionnez la fréquence",
+      "interval": "1",
+      "nextMaintenanceDate": "Sélectionnez une date"
+    },
+    "frequencyOptions": {
+      "daily": "Tous les jours",
+      "weekly": "Hebdomadaire",
+      "monthly": "Mensuel",
+      "quarterly": "Trimestriel",
+      "yearly": "Annuel"
+    },
+    "errors": {
+      "scheduleNameRequired": "Le nom de l'horaire est obligatoire",
+      "maintenanceTypeRequired": "Le type de maintenance est requis",
+      "frequencyRequired": "La fréquence est requise",
+      "nextMaintenanceRequired": "La prochaine date de maintenance est requise",
+      "frequencyIntervalMin": "L'intervalle de fréquence doit être d'au moins 1",
+      "saveFailed": "Échec de la création du calendrier de maintenance"
+    }
+  },
+  "documentsPasswordsTab": {
+    "title": "Documents et mots de passe",
+    "description": "Onglet combiné pour les documents d'actifs, les informations d'identification et les enregistrements sécurisés associés",
+    "passwords": {
+      "title": "Mots de passe et secrets",
+      "comingSoon": "Gestion sécurisée des mots de passe bientôt disponible."
+    }
+  },
+  "maintenanceSchedulesTab": {
+    "title": "Calendriers d'entretien",
+    "description": "Onglet de gestion du calendrier de maintenance pour les services planifiés et les travaux récurrents",
+    "summary": {
+      "complianceRate": "Taux de conformité",
+      "nextMaintenance": "Entretien suivant",
+      "noneScheduled": "Aucun programmé"
+    },
+    "actions": {
+      "scheduleMaintenance": "Planifier l'entretien"
+    },
+    "errors": {
+      "deleteFailed": "Échec de la suppression du calendrier de maintenance"
+    },
+    "table": {
+      "scheduleName": "Nom du programme",
+      "type": "Taper",
+      "frequency": "Fréquence",
+      "nextMaintenance": "Entretien suivant",
+      "lastMaintenance": "Dernier entretien",
+      "status": "Statut",
+      "actions": "Actes"
+    },
+    "frequency": {
+      "every": "Tous les {{count}} {{frequency}}{{suffix}}",
+      "units": {
+        "daily": "jour",
+        "weekly": "semaine",
+        "monthly": "mois",
+        "quarterly": "quart",
+        "yearly": "année"
+      }
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "types": {
+      "preventive": "Préventif",
+      "inspection": "Inspection",
+      "calibration": "Étalonnage",
+      "replacement": "Remplacement"
+    },
+    "empty": {
+      "schedules": "Aucun calendrier de maintenance trouvé. Cliquez sur « Planifier la maintenance » pour en créer un."
+    },
+    "history": {
+      "title": "Historique d'entretien",
+      "performedAt": "Effectué à",
+      "performedBy": "Interprété par",
+      "notes": "Remarques",
+      "empty": "Aucun historique de maintenance enregistré."
+    },
+    "dialog": {
+      "delete": {
+        "title": "Supprimer le calendrier de maintenance",
+        "message": "Êtes-vous sûr de vouloir supprimer « {{name}} » ? Cette action ne peut pas être annulée."
+      }
+    }
+  },
+  "relatedAssetsTab": {
+    "title": "Actifs associés ({{count}})",
+    "description": "Onglet pour parcourir et gérer les relations entre les actifs associés",
+    "loading": "Chargement des éléments associés...",
+    "actions": {
+      "linkAsset": "Lier l'actif",
+      "unlink": "Dissocier",
+      "linkEmptyState": "Lier un actif"
+    },
+    "success": {
+      "linked": "Actif lié",
+      "unlinked": "Actif non lié"
+    },
+    "errors": {
+      "selectAsset": "Sélectionnez un actif à lier",
+      "linkFailed": "Échec de l'association de l'élément",
+      "unlinkFailed": "Échec de la dissociation de l'élément"
+    },
+    "table": {
+      "assetName": "Nom de l'actif",
+      "relationship": "Relation",
+      "linkedDate": "Date liée",
+      "actions": "Actes"
+    },
+    "empty": {
+      "linked": "Aucun actif associé lié."
+    },
+    "dialog": {
+      "title": "Lier l'actif",
+      "loadingAssets": "Chargement des éléments...",
+      "empty": "Aucun actif disponible trouvé.",
+      "search": {
+        "label": "Rechercher des ressources",
+        "placeholder": "Recherche par nom, tag, numéro de série..."
+      },
+      "relationshipType": {
+        "label": "Type de relation",
+        "placeholder": "en rapport"
+      },
+      "table": {
+        "asset": "Actif",
+        "select": "Sélectionner"
+      },
+      "actions": {
+        "selected": "Choisi",
+        "linking": "Enchaînement...",
+        "confirm": "Actif de lien"
+      }
+    },
+    "relationshipTypes": {
+      "related": "En rapport",
+      "affected": "Affecté"
+    }
+  },
+  "serviceHistoryTab": {
+    "title": "Historique des services",
+    "description": "Onglet Historique de service résumant l'activité de maintenance et de ticket pour l'actif",
+    "actions": {
+      "createTicket": "Créer un ticket"
+    },
+    "table": {
+      "ticketId": "Identifiant du billet",
+      "subject": "Sujet",
+      "status": "Statut",
+      "priority": "Priorité",
+      "dateLinked": "Date de liaison"
+    },
+    "empty": "Aucun ticket lié à cet actif.",
+    "clientFallback": "Client inconnu"
+  },
+  "softwareInventoryTab": {
+    "title": "Inventaire des logiciels",
+    "description": "Onglet Inventaire logiciel pour les logiciels installés, les versions et les métadonnées de découverte",
+    "searchPlaceholder": "Logiciel de recherche...",
+    "category": {
+      "placeholder": "Catégorie",
+      "options": {
+        "all": "Tous",
+        "browser": "Navigateur",
+        "security": "Sécurité",
+        "productivity": "Productivité",
+        "development": "Développement"
+      }
+    },
+    "table": {
+      "name": "Nom",
+      "version": "Version",
+      "publisher": "Éditeur",
+      "installDate": "Date d'installation"
+    },
+    "empty": "Aucun logiciel trouvé correspondant à votre recherche.",
+    "totalItems": "Total des articles : {{count}}",
+    "values": {
+      "unknown": "Inconnu"
+    }
+  }
+}

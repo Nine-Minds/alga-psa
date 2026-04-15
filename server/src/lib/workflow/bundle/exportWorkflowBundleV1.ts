@@ -1,15 +1,17 @@
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
 import {
   assertWorkflowBundleWorkflowKey,
   createWorkflowBundleHeaderV1,
   type WorkflowBundleV1,
   type WorkflowBundleWorkflowV1
-} from '@shared/workflow/bundle/workflowBundleV1';
+} from '@alga-psa/workflows/bundle';
 import {
   collectWorkflowDefinitionDependencySummaryV1,
   mergeDependencySummariesV1
-} from '@shared/workflow/bundle/dependencySummaryV1';
+} from '@alga-psa/workflows/bundle';
+import {
+  WorkflowDefinitionModelV2,
+  WorkflowDefinitionVersionModelV2,
+} from '@alga-psa/workflows/persistence';
 import type { Knex } from 'knex';
 
 const normalizeBoolean = (value: unknown, defaultValue: boolean): boolean =>

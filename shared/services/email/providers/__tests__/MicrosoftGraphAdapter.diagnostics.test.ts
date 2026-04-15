@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { MicrosoftGraphAdapter } from '../MicrosoftGraphAdapter';
 
 function makeJwt(payload: Record<string, any>) {
@@ -149,5 +149,69 @@ describe('MicrosoftGraphAdapter.runMicrosoft365Diagnostics', () => {
 
     const buffer = await adapter.downloadMessageSource('message-1');
     expect(buffer.toString('utf8')).toContain('From: sender@example.com');
+  });
+
+  it('requests html bodies and preserves html for inline image extraction', async () => {
+    const adapter = makeAdapter();
+    const get = vi.fn(async (path: string, options?: any) => {
+      if (path === '/users/support%40example.com/messages/message-1') {
+        return {
+          data: {
+            id: 'message-1',
+            receivedDateTime: '2026-03-31T23:11:12.021Z',
+            subject: 'inline image test',
+            body: {
+              contentType: 'html',
+              content: '<p>Hello<img src="cid:inline-image-1" /></p>',
+            },
+            bodyPreview: 'Hello',
+            from: {
+              emailAddress: {
+                address: 'sender@example.com',
+                name: 'Sender',
+              },
+            },
+            toRecipients: [],
+            ccRecipients: [],
+            conversationId: 'conversation-1',
+            internetMessageHeaders: [],
+            attachments: [
+              {
+                id: 'attachment-1',
+                name: 'image.png',
+                contentType: 'image/png',
+                size: 1234,
+                contentId: 'inline-image-1',
+                isInline: true,
+              },
+            ],
+          },
+        };
+      }
+
+      throw new Error(`Unexpected GET ${path} ${JSON.stringify(options || {})}`);
+    });
+
+    (adapter as any).httpClient = { get };
+
+    const message = await adapter.getMessageDetails('message-1');
+
+    expect(get).toHaveBeenCalledWith(
+      '/users/support%40example.com/messages/message-1',
+      expect.objectContaining({
+        headers: {
+          Prefer: 'outlook.body-content-type="html"',
+        },
+      })
+    );
+    expect(message.body.html).toBe('<p>Hello<img src="cid:inline-image-1" /></p>');
+    expect(message.body.text).toBe('Hello');
+    expect(message.attachments).toEqual([
+      expect.objectContaining({
+        id: 'attachment-1',
+        contentId: 'inline-image-1',
+        isInline: true,
+      }),
+    ]);
   });
 });

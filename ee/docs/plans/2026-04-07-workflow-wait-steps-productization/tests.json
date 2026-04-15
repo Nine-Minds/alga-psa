@@ -1,0 +1,104 @@
+[
+  {
+    "id": "T001",
+    "description": "Integration: `event.wait` with payload filters resumes only when the submitted event matches event name, correlation key, and all filter clauses.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Integration: `event.wait` supports `in` filtering with array literals, such as `newStatus in [\"Live\", \"Complete\"]`, and ignores non-matching statuses.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F006"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Integration: existing `event.wait` definitions without filters still create waits and resume successfully, preserving backward compatibility.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Integration: filtered `event.wait` timeout still produces the expected timeout behavior and can be caught by enclosing try/catch logic.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F018"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Integration: `time.wait` in duration mode creates a due wait and the worker resumes the run when the deadline passes.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010",
+      "F012",
+      "F020"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Integration: `time.wait` in until mode accepts valid timestamps or expressions and rejects malformed configuration at publish time or runtime with a clear error.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F018"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Playwright smoke: the workflow designer palette exposes `Wait for Event` and `Wait for Time`, and each step’s custom editor persists its key fields into the workflow definition.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F014",
+      "F015",
+      "F016",
+      "F019"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "E2E: an onboarding-style workflow waiting on `project.status.changed` with a `newStatus in [\"Live\", \"Complete\"]` filter resumes only on the first matching event and continues its downstream action path.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F015",
+      "F017",
+      "F019"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Playwright smoke: when an event field exposes supported picker metadata, the wait-filter editor renders the corresponding typed value control, such as a status dropdown, rather than a raw text or JSON input.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F019",
+      "F021"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Playwright smoke: when an event field has no picker metadata, the wait-filter editor falls back to enum or primitive controls and still allows a valid filter to be authored.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F022"
+    ]
+  }
+]

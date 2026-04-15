@@ -1,0 +1,292 @@
+{
+  "page": {
+    "title": "Base de conocimientos",
+    "subtitle": "Crear y gestionar artículos de la base de conocimientos.",
+    "actions": {
+      "import": "Importar",
+      "newArticle": "Nuevo artículo"
+    },
+    "tabs": {
+      "articles": "Artículos",
+      "reviewDashboard": "Panel de revisión"
+    },
+    "feedback": {
+      "loadError": "No se pudieron cargar los artículos",
+      "createError": "No se pudo crear el artículo",
+      "userLoadError": "No se pudo cargar el usuario. La edición del artículo no está disponible."
+    },
+    "newArticleTitle": "Nuevo artículo"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "Borrador",
+      "review": "En revisión",
+      "published": "Publicado",
+      "archived": "Archivado"
+    },
+    "audienceLabels": {
+      "internal": "Interno",
+      "client": "Cliente",
+      "public": "Público"
+    },
+    "typeLabels": {
+      "how_to": "Cómo hacerlo",
+      "faq": "Preguntas frecuentes",
+      "troubleshooting": "Solución de problemas",
+      "reference": "Referencia"
+    },
+    "reviewCycleOptions": {
+      "30": "30 dias",
+      "60": "60 días",
+      "90": "90 dias",
+      "180": "180 días",
+      "365": "1 año",
+      "none": "Sin ciclo de revisión"
+    },
+    "fallbacks": {
+      "emptyDate": "-"
+    }
+  },
+  "list": {
+    "title": "Artículos de la base de conocimientos",
+    "countSummary": "{{count}} artículo(s)",
+    "itemLabel": "artículos",
+    "empty": "No se encontraron artículos",
+    "createFirst": "Crea tu primer artículo",
+    "table": {
+      "title": "Título",
+      "type": "Tipo",
+      "audience": "Audiencia",
+      "status": "Estado",
+      "tags": "Etiquetas",
+      "stats": "Estadísticas",
+      "updated": "Actualizado",
+      "actions": "Acciones"
+    },
+    "stats": {
+      "views": "Vistas",
+      "helpful": "Útil",
+      "notHelpful": "No es útil"
+    },
+    "actions": {
+      "edit": "Editar",
+      "submitForReview": "Enviar para revisión",
+      "publish": "Publicar",
+      "archive": "Archivar"
+    },
+    "pagination": {
+      "itemsPerPage": {
+        "10": "10 artículos/página",
+        "20": "20 artículos/página",
+        "50": "50 artículos/página"
+      }
+    },
+    "stale": {
+      "reviewOverdue": "Revisión vencida"
+    },
+    "dialogs": {
+      "archive": {
+        "title": "Archivar artículo",
+        "message": "¿Está seguro de que desea archivar \"{{title}}\"? Esto lo eliminará de la visibilidad del cliente."
+      }
+    },
+    "feedback": {
+      "archiveError": "No se pudo archivar el artículo",
+      "archiveSuccess": "Artículo archivado"
+    }
+  },
+  "editor": {
+    "header": {
+      "untitled": "Artículo sin título",
+      "back": "Atrás"
+    },
+    "actions": {
+      "submitForReview": "Enviar para revisión",
+      "publish": "Publicar",
+      "archive": "Archivar",
+      "saveMetadata": "Guardar metadatos",
+      "saving": "Guardando..."
+    },
+    "feedback": {
+      "permissionDenied": "Permiso denegado",
+      "notFound": "Artículo no encontrado",
+      "loadError": "No se pudo cargar el artículo",
+      "noChanges": "No hay cambios para guardar",
+      "saveError": "No se pudo guardar el artículo",
+      "saveSuccess": "Metadatos del artículo guardados",
+      "publishError": "No se pudo publicar el artículo",
+      "publishSuccess": "Artículo publicado",
+      "statusChangeError": "No se pudo cambiar el estado del artículo",
+      "submitForReviewSuccess": "Artículo enviado para revisión",
+      "archiveSuccess": "Artículo archivado"
+    },
+    "badges": {
+      "reviewOverdue": "Revisión vencida"
+    },
+    "stats": {
+      "title": "Estadística",
+      "views": "Vistas",
+      "helpful": "Útil",
+      "notHelpful": "No es útil",
+      "published": "Publicado"
+    },
+    "metadata": {
+      "title": "Metadatos",
+      "fields": {
+        "title": "Título",
+        "slug": "Barra de URL",
+        "articleType": "Tipo de artículo",
+        "audience": "Audiencia",
+        "category": "Categoría",
+        "reviewCycle": "Ciclo de revisión",
+        "nextReview": "Próxima revisión",
+        "noCategory": "Sin categoría"
+      }
+    },
+    "tags": {
+      "title": "Etiquetas"
+    }
+  },
+  "filters": {
+    "title": "Filtros",
+    "actions": {
+      "clear": "Claro"
+    },
+    "labels": {
+      "search": "Buscar",
+      "status": "Estado",
+      "audience": "Audiencia",
+      "articleType": "Tipo de artículo",
+      "category": "Categoría",
+      "tags": "Etiquetas"
+    },
+    "placeholders": {
+      "search": "Buscar artículos...",
+      "status": "Seleccionar estado...",
+      "audience": "Seleccionar audiencia...",
+      "articleType": "Seleccione tipo...",
+      "category": "Seleccione categoría...",
+      "tags": "Filtrar por etiquetas..."
+    },
+    "options": {
+      "status": {
+        "all": "Todos los estados"
+      },
+      "audience": {
+        "all": "Todos los públicos"
+      },
+      "articleType": {
+        "all": "Todos los tipos"
+      },
+      "category": {
+        "all": "Todas las categorías"
+      }
+    }
+  },
+  "categoryTree": {
+    "allCategories": "Todas las categorías",
+    "empty": "No hay categorías definidas"
+  },
+  "publishing": {
+    "title": "Publicación",
+    "currentStatus": "Estado actual",
+    "actions": {
+      "submitForReview": "Enviar para revisión",
+      "publish": "Publicar",
+      "approveAndPublish": "Aprobar y publicar",
+      "archive": "Archivar",
+      "republish": "Republicar"
+    },
+    "flow": {
+      "draft": "Borrador",
+      "review": "Revisar",
+      "published": "Publicado"
+    },
+    "warnings": {
+      "audience": "La publicación hará que este artículo sea visible para {{audience}} usuarios."
+    },
+    "dialogs": {
+      "publish": {
+        "title": "Publicar artículo",
+        "message": "¿Estás seguro de que quieres publicar este artículo?",
+        "messageWithAudience": "Esto publicará el artículo y lo hará visible para {{audience}} usuarios. ¿Está seguro?"
+      },
+      "archive": {
+        "title": "Archivar artículo",
+        "message": "Esto archivará el artículo y lo eliminará de la visibilidad del cliente. ¿Está seguro?"
+      }
+    },
+    "feedback": {
+      "publishError": "No se pudo publicar el artículo",
+      "publishSuccess": "Artículo publicado con éxito",
+      "archiveError": "No se pudo archivar el artículo",
+      "archiveSuccess": "Artículo archivado"
+    }
+  },
+  "reviewDashboard": {
+    "summary": {
+      "awaitingReview": "En espera de revisión",
+      "overdueReviews": "Revisiones vencidas"
+    },
+    "empty": "¡Todos atrapados! Ningún artículo necesita revisión.",
+    "sections": {
+      "awaitingReview": "Artículos en espera de revisión",
+      "overdue": "Atrasado para revisión"
+    },
+    "labels": {
+      "submitted": "Enviado",
+      "due": "Pendiente",
+      "lastReviewed": "Última revisión",
+      "never": "Nunca"
+    },
+    "actions": {
+      "view": "Ver",
+      "review": "Revisar",
+      "reviewNow": "Revisar ahora"
+    },
+    "feedback": {
+      "loadError": "No se pudieron cargar los datos de revisión"
+    }
+  },
+  "importDialog": {
+    "title": "Importar artículos",
+    "dropzone": {
+      "title": "Suelte los archivos aquí o haga clic para explorar",
+      "formats": "Admite archivos .md y .html"
+    },
+    "fields": {
+      "audience": "Audiencia",
+      "articleType": "Tipo de artículo"
+    },
+    "actions": {
+      "import": "Importar {{count}} archivo(s)",
+      "importing": "Importador..."
+    },
+    "feedback": {
+      "unsupportedFileType": "{{fileName}}: tipo de archivo no admitido. Utilice .md o .html",
+      "permissionDenied": "Permiso denegado",
+      "importSuccess": "Importó {{imported}} de {{total}} artículo(s)",
+      "allFailed": "Todas las importaciones fallaron",
+      "importError": "Importación fallida"
+    },
+    "results": {
+      "summary": "{{imported}} de {{total}} artículo(s) importado(s)",
+      "failedCount": "{{count}} falló:"
+    }
+  },
+  "staleness": {
+    "badges": {
+      "reviewOverdue": "Revisión vencida",
+      "reviewDueSoon": "Revisión pendiente pronto",
+      "overdueBy": "Vencido por {{count}} días",
+      "dueIn": "Vencimiento en {{count}} días"
+    },
+    "tooltips": {
+      "reviewOverdue": "La revisión venció el {{date}}",
+      "reviewDue": "Revisión pendiente {{date}}"
+    }
+  },
+  "common": {
+    "done": "Hecho"
+  }
+}

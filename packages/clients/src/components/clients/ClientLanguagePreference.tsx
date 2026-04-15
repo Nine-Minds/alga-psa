@@ -6,6 +6,7 @@ import { updateClientLocaleAction, getClientLocaleAction } from '@alga-psa/clien
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientLanguagePreferenceProps {
   /** Client ID */
@@ -31,6 +32,7 @@ export function ClientLanguagePreference({
   className = '',
   onSave,
 }: ClientLanguagePreferenceProps) {
+  const { t } = useTranslation('msp/clients');
   const [currentLocale, setCurrentLocale] = useState<SupportedLocale | undefined>();
   const [loading, setLoading] = useState(true);
   const [isChanging, setIsChanging] = useState(false);
@@ -69,10 +71,14 @@ export function ClientLanguagePreference({
     try {
       await updateClientLocaleAction(clientId, locale);
       setCurrentLocale(locale);
-      toast.success(`Default language for ${clientName || 'client'} contacts updated to ${LOCALE_CONFIG.localeNames[locale]}`);
+      toast.success(t('clientLanguagePreference.saveSuccess', {
+        defaultValue: 'Default language for {{clientName}} contacts updated to {{language}}',
+        clientName: clientName || t('clientLanguagePreference.thisClient', { defaultValue: 'client' }),
+        language: LOCALE_CONFIG.localeNames[locale]
+      }));
       onSave?.(locale);
     } catch (error) {
-      handleError(error, 'Failed to update client language preference');
+      handleError(error, t('clientLanguagePreference.saveError', { defaultValue: 'Failed to update client language preference' }));
     } finally {
       setIsChanging(false);
     }
@@ -82,20 +88,22 @@ export function ClientLanguagePreference({
     <div className={className}>
       <CustomSelect
         id={`client-${clientId}-language`}
-        label="Default Language for Contacts"
+        label={t('clientLanguagePreference.label', { defaultValue: 'Default Language for Contacts' })}
         options={languageOptions}
         value={currentLocale || ''}
         onValueChange={handleLanguageChange}
         disabled={loading || isChanging}
-        placeholder="Select a language"
+        placeholder={t('clientLanguagePreference.selectPlaceholder', { defaultValue: 'Select a language' })}
         data-automation-id={`client-${clientId}-language-select`}
       />
       <p className="mt-1 text-sm text-gray-500">
-        This will be the default language for all contacts from {clientName || 'this client'}.
-        Individual users can override this in their personal settings.
+        {t('clientLanguagePreference.description', {
+          defaultValue: 'This will be the default language for all contacts from {{clientName}}. Individual users can override this in their personal settings.',
+          clientName: clientName || t('clientLanguagePreference.thisClient', { defaultValue: 'this client' })
+        })}
       </p>
       {isChanging && (
-        <p className="mt-2 text-sm text-gray-500">Updating language preference...</p>
+        <p className="mt-2 text-sm text-gray-500">{t('clientLanguagePreference.updating', { defaultValue: 'Updating language preference...' })}</p>
       )}
     </div>
   );
@@ -104,10 +112,13 @@ export function ClientLanguagePreference({
     return (
       <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
         <h3 className="text-lg font-medium text-gray-900 mb-2">
-          Client Language Settings
+          {t('clientLanguagePreference.title', { defaultValue: 'Client Language Settings' })}
         </h3>
         <p className="text-sm text-gray-600 mb-4">
-          Set the default language for all contacts in {clientName || 'this client'}.
+          {t('clientLanguagePreference.cardDescription', {
+            defaultValue: 'Set the default language for all contacts in {{clientName}}.',
+            clientName: clientName || t('clientLanguagePreference.thisClient', { defaultValue: 'this client' })
+          })}
         </p>
         {content}
       </div>

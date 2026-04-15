@@ -36,13 +36,17 @@ import { SharedNumberingService } from '@shared/services/numberingService';
 import {
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders';
+} from '@alga-psa/workflow-streams';
 import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCompletedPayload,
   buildProjectTaskCreatedPayload,
   buildProjectTaskStatusChangedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
+} from '@alga-psa/workflow-streams';
+
+type InternalUpdateProjectTaskData = UpdateProjectTaskData & {
+  description_rich_text?: string | null;
+};
 
 async function resolveUserName(
   trx: Knex.Transaction,
@@ -480,6 +484,7 @@ export class ProjectService extends BaseService<IProject> {
   
         const phaseData = {
           ...data,
+          status: data.status ?? 'planning',
           project_id: projectId,
           order_number: nextOrderNumber,
           wbs_code: newWbsCode,
@@ -671,7 +676,7 @@ export class ProjectService extends BaseService<IProject> {
     }
 
 
-  async updateTask(taskId: string, data: UpdateProjectTaskData, context: ServiceContext): Promise<IProjectTask> {
+  async updateTask(taskId: string, data: InternalUpdateProjectTaskData, context: ServiceContext): Promise<IProjectTask> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
@@ -985,21 +990,13 @@ export class ProjectService extends BaseService<IProject> {
       const { knex } = await this.getKnex();
       
       // First try to find a status marked as default
-      let status = await knex('statuses')
-        .where({ 
-          tenant: context.tenant,
-          item_type: 'project',
-          is_default: true
-        })
+      let status = await this.buildProjectStatusQuery(knex, context)
+        .where({ is_default: true })
         .first();
       
       // If no default status, get the first one by order
       if (!status) {
-        status = await knex('statuses')
-          .where({ 
-            tenant: context.tenant,
-            item_type: 'project'
-          })
+        status = await this.buildProjectStatusQuery(knex, context)
           .orderBy('order_number')
           .first();
       }
@@ -1010,6 +1007,14 @@ export class ProjectService extends BaseService<IProject> {
   
       return status;
     }
+
+  private buildProjectStatusQuery(knex: Knex, context: ServiceContext) {
+    return knex('statuses')
+      .where('tenant', context.tenant)
+      .andWhere((query) => {
+        query.where('status_type', 'project').orWhere('item_type', 'project');
+      });
+  }
 
   // Helper method to check if a string is a valid UUID
   private isUUID(str: string): boolean {
@@ -1033,12 +1038,8 @@ export class ProjectService extends BaseService<IProject> {
 
     const dbStatusName = statusNameMap[statusName.toLowerCase()] || statusName;
     
-    const status = await knex('statuses')
-      .where({
-        tenant: context.tenant,
-        item_type: 'project',
-        name: dbStatusName
-      })
+    const status = await this.buildProjectStatusQuery(knex, context)
+      .where({ name: dbStatusName })
       .first();
 
     if (!status) {
@@ -1365,7 +1366,10 @@ export class ProjectService extends BaseService<IProject> {
         phase_id: phaseId,
         tenant: context.tenant
       })
-      .orderBy('sort_order');
+      .orderBy([
+        { column: 'order_key', order: 'asc' },
+        { column: 'wbs_code', order: 'asc' }
+      ]);
 
     return tasks;
   }

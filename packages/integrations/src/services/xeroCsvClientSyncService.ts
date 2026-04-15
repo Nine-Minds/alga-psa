@@ -16,6 +16,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { unparseCSV, parseCSV } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
 import type { IClient, IClientLocation } from '@alga-psa/types';
+import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
 
 const ADAPTER_TYPE = 'xero_csv';
 
@@ -167,6 +168,13 @@ export function getXeroCsvClientSyncService(): XeroCsvClientSyncService {
  * Xero CSV Client Sync Service implementation.
  */
 export class XeroCsvClientSyncService {
+  private getClientSummaryEmail(
+    client: Pick<DbClient, 'billing_email'>,
+    location?: Pick<DbClientLocation, 'email'> | null,
+  ): string {
+    return client.billing_email ?? location?.email ?? '';
+  }
+
   /**
    * Export Alga clients to Xero Contacts CSV format.
    *
@@ -233,7 +241,7 @@ export class XeroCsvClientSyncService {
 
         return {
           '*ContactName': client.client_name,
-          'EmailAddress': client.billing_email ?? location?.email ?? '',
+          'EmailAddress': this.getClientSummaryEmail(client, location),
           'FirstName': '',
           'LastName': '',
           'POAddressLine1': location?.address_line1 ?? '',
@@ -709,6 +717,11 @@ export class XeroCsvClientSyncService {
       billing_cycle: 'monthly',
       created_at: now,
       updated_at: now
+    });
+
+    await ensureDefaultContractForClientIfBillingConfigured(trx, {
+      tenant,
+      clientId,
     });
 
     // Create default location if we have address data

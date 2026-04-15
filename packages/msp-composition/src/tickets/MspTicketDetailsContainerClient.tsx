@@ -7,6 +7,7 @@ import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import type { IClient, IContact, SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import CreateTaskFromTicketDialog from '@alga-psa/projects/components/CreateTaskFromTicketDialog';
 import LinkTicketToTaskDialog from '@alga-psa/projects/components/LinkTicketToTaskDialog';
+import TicketLinkedTasksBadge from '@alga-psa/projects/components/TicketLinkedTasksBadge';
 import { IntervalManagement } from '@alga-psa/scheduling/components/time-management/interval-tracking/IntervalManagement';
 import { TicketIntegrationProvider } from '@alga-psa/projects/context/TicketIntegrationContext';
 import { useTicketIntegrationValue } from '../projects/useTicketIntegrationValue';
@@ -45,6 +46,7 @@ export default function MspTicketDetailsContainerClient({ surveySummary, ...prop
   const renderCreateProjectTask = useCallback(
     ({ ticket, additionalAgents }: { ticket: any; additionalAgents?: { user_id: string; name: string }[] }) => (
       <>
+        {ticket.ticket_id && <TicketLinkedTasksBadge ticketId={ticket.ticket_id} />}
         <CreateTaskFromTicketDialog ticket={{ ...ticket, additional_agents: additionalAgents }} />
         <LinkTicketToTaskDialog ticket={ticket} />
       </>

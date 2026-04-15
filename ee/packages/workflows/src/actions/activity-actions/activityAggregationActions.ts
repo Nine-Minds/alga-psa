@@ -15,7 +15,7 @@ import {
   timeEntryToActivity,
   workflowTaskToActivity,
 } from '@alga-psa/types';
-import ScheduleEntry from '@alga-psa/scheduling/models/scheduleEntry';
+import { getAllScheduleEntries } from '@alga-psa/core';
 import { withAuth } from '@alga-psa/auth';
 import { ISO8601String } from '@alga-psa/types';
 import { IProjectTask } from '@alga-psa/types';
@@ -185,7 +185,7 @@ export async function fetchScheduleActivities(
     if (!tenant) {
       throw new Error("Tenant is required");
     }
-    const entries = await ScheduleEntry.getAll(knex, tenant, start, end);
+    const entries = await getAllScheduleEntries(knex, tenant, start, end);
     
     // Filter entries assigned to the user
     let userEntries = entries.filter(entry =>
@@ -260,7 +260,14 @@ export async function fetchProjectActivities(
         "project_phases.phase_name",
         "project_phases.project_id",
         "projects.project_name",
-        "standard_statuses.name as status_name",
+        // Resolve status name and is_closed from either custom or standard status,
+        // preferring psm.custom_name if provided.
+        db.raw(
+          "COALESCE(project_status_mappings.custom_name, custom_statuses.name, standard_statuses.name) as status_name"
+        ),
+        db.raw(
+          "COALESCE(custom_statuses.is_closed, standard_statuses.is_closed, false) as is_closed"
+        ),
         "priorities.priority_name",
         "priorities.color as priority_color",
         db.raw("'#3b82f6' as status_color") // Blue color for consistency
@@ -284,6 +291,10 @@ export async function fetchProjectActivities(
       .leftJoin("standard_statuses", function() {
         this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id")
             .andOn("project_status_mappings.tenant", "standard_statuses.tenant");
+      })
+      .leftJoin({ custom_statuses: "statuses" }, function() {
+        this.on("project_status_mappings.status_id", "custom_statuses.status_id")
+            .andOn("project_status_mappings.tenant", "custom_statuses.tenant");
       })
       .where("project_tasks.tenant", tenant)
       .where(function() {
@@ -329,29 +340,49 @@ export async function fetchProjectActivities(
         
         // Apply closed filter if provided
         if (filters.isClosed === false) {
-          // If isClosed is false, only show open tasks
-          // Tasks with NULL project_status_mapping_id are treated as open
-          // Mappings without a standard_status_id are also treated as open (LEFT JOIN)
+          // If isClosed is false, only show open tasks. A task is "closed" when
+          // its mapping resolves to a status (custom OR standard) with is_closed=true.
+          // Tasks with NULL project_status_mapping_id are treated as open.
           queryBuilder.where(function() {
             this.whereNull("project_tasks.project_status_mapping_id")
               .orWhereIn("project_tasks.project_status_mapping_id", function() {
-                this.select("project_status_mappings.project_status_mapping_id")
-                  .from("project_status_mappings")
-                  .leftJoin("standard_statuses", function() {
-                    this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id")
-                        .andOn("project_status_mappings.tenant", "standard_statuses.tenant");
+                this.select("psm.project_status_mapping_id")
+                  .from({ psm: "project_status_mappings" })
+                  .leftJoin({ ss: "standard_statuses" }, function() {
+                    this.on("psm.standard_status_id", "ss.standard_status_id")
+                        .andOn("psm.tenant", "ss.tenant");
                   })
-                  .where("project_status_mappings.tenant", tenant)
-                  .where(function() {
-                    this.where("standard_statuses.is_closed", false)
-                      .orWhereNull("standard_statuses.is_closed");
-                  });
+                  .leftJoin({ cs: "statuses" }, function() {
+                    this.on("psm.status_id", "cs.status_id")
+                        .andOn("psm.tenant", "cs.tenant");
+                  })
+                  .where("psm.tenant", tenant)
+                  .whereRaw("COALESCE(cs.is_closed, ss.is_closed, false) = false");
               });
           });
         }
         
-        // Apply project filter if provided
-        if (filters.projectId) {
+        // Apply project and phase filters with OR semantics:
+        // A task matches if its project is selected OR its phase is selected.
+        const hasProjectIds = filters.projectIds && filters.projectIds.length > 0;
+        const hasPhaseIds = filters.phaseIds && filters.phaseIds.length > 0;
+
+        if (hasProjectIds || hasPhaseIds) {
+          queryBuilder.where(function() {
+            if (hasProjectIds) {
+              this.whereExists(function() {
+                this.select(db.raw(1))
+                  .from("project_phases")
+                  .whereRaw("project_phases.phase_id = project_tasks.phase_id")
+                  .andWhere("project_phases.tenant", tenant)
+                  .whereIn("project_phases.project_id", filters.projectIds!);
+              });
+            }
+            if (hasPhaseIds) {
+              this.orWhereIn("project_tasks.phase_id", filters.phaseIds!);
+            }
+          });
+        } else if (filters.projectId) {
           queryBuilder.whereExists(function() {
             this.select(db.raw(1))
               .from("project_phases")
@@ -360,15 +391,32 @@ export async function fetchProjectActivities(
               .andWhere("project_phases.project_id", filters.projectId);
           });
         }
-        
-        // Apply phase filter if provided
+
+        // Apply singular phase filter if provided (backward compat, combined with AND)
         if (filters.phaseId) {
           queryBuilder.where("project_tasks.phase_id", filters.phaseId);
         }
         
+        // Project task-specific status filter by mapping ID
+        if (filters.projectStatusMappingIds && filters.projectStatusMappingIds.length > 0) {
+          queryBuilder.whereIn("project_tasks.project_status_mapping_id", filters.projectStatusMappingIds);
+        }
+
         // Apply priority filter by priority IDs if provided
         if (filters.priorityIds && filters.priorityIds.length > 0) {
           queryBuilder.whereIn("project_tasks.priority_id", filters.priorityIds);
+        }
+
+        // Tag filter: task must have at least one of the requested tags
+        if (filters.projectTaskTagIds && filters.projectTaskTagIds.length > 0) {
+          queryBuilder.whereExists(function() {
+            this.select(db.raw(1))
+              .from("tag_mappings")
+              .whereRaw("tag_mappings.tagged_id = project_tasks.task_id::text")
+              .andWhere("tag_mappings.tenant", tenant)
+              .andWhere("tag_mappings.tagged_type", "project_task")
+              .whereIn("tag_mappings.tag_id", filters.projectTaskTagIds!);
+          });
         }
 
         // Apply search filter if provided
@@ -418,6 +466,7 @@ export async function fetchProjectActivities(
         phaseId: task.phase_id,
         projectName: task.project_name,
         phaseName: task.phase_name,
+        statusMappingId: task.project_status_mapping_id,
         estimatedHours: task.estimated_hours || undefined,
         actualHours: task.actual_hours || undefined,
         wbsCode: task.wbs_code,
@@ -518,6 +567,16 @@ export async function fetchTicketActivities(
           queryBuilder.whereIn("tickets.status_id", filters.status);
         }
 
+        // Ticket-specific board filter
+        if (filters.ticketBoardIds && filters.ticketBoardIds.length > 0) {
+          queryBuilder.whereIn("tickets.board_id", filters.ticketBoardIds);
+        }
+
+        // Ticket-specific status filter by status_id
+        if (filters.ticketStatusIds && filters.ticketStatusIds.length > 0) {
+          queryBuilder.whereIn("tickets.status_id", filters.ticketStatusIds);
+        }
+
         // Apply priority filter by priority IDs if provided
         if (filters.priorityIds && filters.priorityIds.length > 0) {
           queryBuilder.whereIn("tickets.priority_id", filters.priorityIds);
@@ -550,8 +609,19 @@ export async function fetchTicketActivities(
 
         // Ticket number filter
         if (filters.ticketNumber) {
-          // Using ilike for case-insensitive partial match. Use '=' for exact match.
           queryBuilder.where("tickets.ticket_number", 'ilike', `%${filters.ticketNumber}%`);
+        }
+
+        // Tag filter: ticket must have at least one of the requested tags
+        if (filters.ticketTagIds && filters.ticketTagIds.length > 0) {
+          queryBuilder.whereExists(function() {
+            this.select(db.raw(1))
+              .from("tag_mappings")
+              .whereRaw("tag_mappings.tagged_id = tickets.ticket_id::text")
+              .andWhere("tag_mappings.tenant", tenant)
+              .andWhere("tag_mappings.tagged_type", "ticket")
+              .whereIn("tag_mappings.tag_id", filters.ticketTagIds!);
+          });
         }
 
         // Text search filter
@@ -560,9 +630,6 @@ export async function fetchTicketActivities(
           queryBuilder.where(function() {
             this.where("tickets.title", 'ilike', searchTerm)
               .orWhere("tickets.ticket_number", 'ilike', searchTerm);
-            // Add other fields to search if needed (e.g., client name, contact name)
-            // .orWhere("clients.client_name", 'ilike', searchTerm)
-            // .orWhere("contacts.full_name", 'ilike', searchTerm);
           });
         }
       });
@@ -600,6 +667,8 @@ export async function fetchTicketActivities(
         sourceId: ticket.ticket_id,
         sourceType: ActivityType.TICKET,
         ticketNumber: ticket.ticket_number,
+        boardId: ticket.board_id,
+        statusId: ticket.status_id,
         clientId: ticket.client_id,
         clientName: ticket.client_name,
         contactId: ticket.contact_name_id,
@@ -924,31 +993,86 @@ function processActivities(
     });
   }
 
-  // Sort activities by due date (ascending) and priority (descending)
-  filteredActivities.sort((a, b) => {
-    // First sort by priority (high to low)
-    const priorityOrder = { 
-      [ActivityPriority.HIGH]: 0, 
-      [ActivityPriority.MEDIUM]: 1, 
-      [ActivityPriority.LOW]: 2 
-    };
-    const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
-    if (priorityDiff !== 0) return priorityDiff;
-    
-    // Then sort by due date (closest first)
-    if (a.dueDate && b.dueDate) {
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    } else if (a.dueDate) {
-      return -1; // a has due date, b doesn't
-    } else if (b.dueDate) {
-      return 1; // b has due date, a doesn't
-    }
-    
-    // Finally sort by creation date (newest first)
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  // Apply sorting
+  sortActivities(filteredActivities, filters.sortBy, filters.sortDirection);
 
   return filteredActivities;
+}
+
+/**
+ * Sort activities in place based on requested column and direction.
+ * Rules:
+ * - When sortBy is not specified, applies the default sort (priority high→low, then due date asc).
+ * - For `priority` and `dueDate`: items with no value always go to the bottom, regardless of direction.
+ * - For text columns: case-insensitive locale comparison.
+ */
+function sortActivities(
+  activities: Activity[],
+  sortBy?: import('@alga-psa/types').ActivitySortBy,
+  sortDirection: 'asc' | 'desc' = 'asc'
+): void {
+  if (!sortBy) {
+    // Default sort: priority (high first) then due date (closest first) then newest created
+    const priorityOrder = {
+      [ActivityPriority.HIGH]: 0,
+      [ActivityPriority.MEDIUM]: 1,
+      [ActivityPriority.LOW]: 2,
+    };
+    activities.sort((a, b) => {
+      const pd = priorityOrder[a.priority] - priorityOrder[b.priority];
+      if (pd !== 0) return pd;
+      if (a.dueDate && b.dueDate) {
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      } else if (a.dueDate) {
+        return -1;
+      } else if (b.dueDate) {
+        return 1;
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+    return;
+  }
+
+  const dir = sortDirection === 'desc' ? -1 : 1;
+
+  const compareStrings = (a: string, b: string): number =>
+    a.localeCompare(b, undefined, { sensitivity: 'base' });
+
+  activities.sort((a, b) => {
+    switch (sortBy) {
+      case 'type':
+        return compareStrings(a.type, b.type) * dir;
+
+      case 'title':
+        return compareStrings(a.title || '', b.title || '') * dir;
+
+      case 'status':
+        return compareStrings(a.status || '', b.status || '') * dir;
+
+      case 'priority': {
+        // "None" (no priorityName) always at bottom regardless of direction
+        const aNone = !a.priorityName;
+        const bNone = !b.priorityName;
+        if (aNone && bNone) return 0;
+        if (aNone) return 1;
+        if (bNone) return -1;
+        return compareStrings(a.priorityName!, b.priorityName!) * dir;
+      }
+
+      case 'dueDate': {
+        // No due date always at bottom regardless of direction
+        const aHas = !!a.dueDate;
+        const bHas = !!b.dueDate;
+        if (!aHas && !bHas) return 0;
+        if (!aHas) return 1;
+        if (!bHas) return -1;
+        return (new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()) * dir;
+      }
+
+      default:
+        return 0;
+    }
+  });
 }
 
 /**

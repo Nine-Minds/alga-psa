@@ -10,12 +10,12 @@ import {
   deleteSecret,
   getSecretUsage
 } from '@alga-psa/tenancy/actions';
-import type { TenantSecretMetadata } from '@alga-psa/shared/workflow/secrets';
+import type { TenantSecretMetadata } from '@alga-psa/workflows/secrets';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Plus, Trash2, Edit, Key, AlertTriangle, Search } from 'lucide-react';
 import SecretDialog from './SecretDialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -235,6 +235,26 @@ export default function SecretsManagement() {
         isOpen={deleteDialogOpen}
         onClose={() => !deleting && setDeleteDialogOpen(false)}
         title={t('secrets.dialog.deleteTitle')}
+        footer={secretToDelete ? (
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-delete-secret"
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleting}
+            >
+              {t('secrets.dialog.actions.cancel')}
+            </Button>
+            <Button
+              id="confirm-delete-secret"
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={deleting || deleteConfirmName !== secretToDelete.name}
+            >
+              {deleting ? t('secrets.dialog.actions.deleting') : t('secrets.dialog.actions.delete')}
+            </Button>
+          </div>
+        ) : undefined}
       >
         <DialogContent>
           {secretToDelete && (
@@ -277,25 +297,6 @@ export default function SecretsManagement() {
                   className="font-mono"
                 />
               </div>
-
-              <DialogFooter>
-                <Button
-                  id="cancel-delete-secret"
-                  variant="outline"
-                  onClick={() => setDeleteDialogOpen(false)}
-                  disabled={deleting}
-                >
-                  {t('secrets.dialog.actions.cancel')}
-                </Button>
-                <Button
-                  id="confirm-delete-secret"
-                  variant="destructive"
-                  onClick={handleDeleteConfirm}
-                  disabled={deleting || deleteConfirmName !== secretToDelete.name}
-                >
-                  {deleting ? t('secrets.dialog.actions.deleting') : t('secrets.dialog.actions.delete')}
-                </Button>
-              </DialogFooter>
             </div>
           )}
         </DialogContent>

@@ -4,7 +4,10 @@
  */
 
 import { z } from 'zod';
-import { CONTACT_PHONE_CANONICAL_TYPES } from '@alga-psa/shared/interfaces/contact.interfaces';
+import {
+  CONTACT_EMAIL_CANONICAL_TYPES,
+  CONTACT_PHONE_CANONICAL_TYPES,
+} from '@alga-psa/shared/interfaces/contact.interfaces';
 import { 
   uuidSchema, 
   emailSchema, 
@@ -15,6 +18,7 @@ import {
 } from './common';
 
 const contactPhoneCanonicalTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
+const contactEmailCanonicalTypeSchema = z.enum(CONTACT_EMAIL_CANONICAL_TYPES);
 const contactPhoneNumberInputSchema = z.object({
   contact_phone_number_id: uuidSchema.optional(),
   phone_number: z.string().trim().min(1, 'Phone number is required'),
@@ -22,6 +26,14 @@ const contactPhoneNumberInputSchema = z.object({
   custom_type: z.string().trim().min(1).nullish(),
   is_default: z.boolean().optional(),
   display_order: z.number().int().min(0).optional()
+});
+
+const contactEmailAddressInputSchema = z.object({
+  contact_additional_email_address_id: uuidSchema.optional(),
+  email_address: emailSchema,
+  canonical_type: contactEmailCanonicalTypeSchema.nullish(),
+  custom_type: z.string().trim().min(1).nullish(),
+  display_order: z.number().int().min(0).optional(),
 });
 
 const contactPhoneNumberResponseSchema = z.object({
@@ -35,12 +47,26 @@ const contactPhoneNumberResponseSchema = z.object({
   display_order: z.number().int().min(0)
 });
 
+const contactEmailAddressResponseSchema = z.object({
+  contact_additional_email_address_id: uuidSchema,
+  email_address: z.string().email(),
+  normalized_email_address: z.string().email(),
+  canonical_type: contactEmailCanonicalTypeSchema.nullable(),
+  custom_email_type_id: uuidSchema.nullable().optional(),
+  custom_type: z.string().nullable(),
+  display_order: z.number().int().min(0),
+});
+
 // Create contact schema
 export const createContactSchema = z.object({
   full_name: z.string().min(1, 'Full name is required').max(255),
   client_id: uuidSchema.optional(),
   phone_numbers: z.array(contactPhoneNumberInputSchema).optional().default([]),
   email: emailSchema,
+  primary_email_canonical_type: contactEmailCanonicalTypeSchema.nullish(),
+  primary_email_custom_type: z.string().trim().min(1).nullish(),
+  primary_email_custom_type_id: uuidSchema.nullable().optional(),
+  additional_email_addresses: z.array(contactEmailAddressInputSchema).optional().default([]),
   role: z.string().max(100).optional(),
   notes: z.string().optional(),
   is_inactive: z.boolean().optional().default(false),
@@ -74,6 +100,10 @@ export const contactResponseSchema = z.object({
   default_phone_number: z.string().nullable().optional(),
   default_phone_type: z.string().nullable().optional(),
   email: z.string(),
+  primary_email_canonical_type: contactEmailCanonicalTypeSchema.nullable().optional(),
+  primary_email_custom_type_id: uuidSchema.nullable().optional(),
+  primary_email_type: z.string().nullable().optional(),
+  additional_email_addresses: z.array(contactEmailAddressResponseSchema).optional().default([]),
   role: z.string().nullable(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),

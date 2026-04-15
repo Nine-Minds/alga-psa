@@ -1,5 +1,7 @@
 'use server'
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
+
 import { validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
@@ -14,10 +16,11 @@ import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { createTenantKnex, getConnection, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
-import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
 import {
   applyVisibilityBoardFilter,
-  getClientContactVisibilityContext
+  getClientContactVisibilityContext,
+  getTicketOrigin,
+  parseTicketStatusFilterValue,
 } from '@alga-psa/tickets/lib';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions';
 
@@ -105,6 +108,8 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       throw new Error('Insufficient permissions to view tickets');
     }
 
+    const parsedStatusFilter = parseTicketStatusFilterValue(status);
+
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const { visibility } = await resolvePortalVisibility(trx, tenant, user.user_id);
 
@@ -180,15 +185,16 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       applyVisibilityBoardFilter(query, visibility.visibleBoardIds);
 
     // Filter by status
-    if (status === 'all') {
+    if (parsedStatusFilter.kind === 'all') {
       // No filter, show all tickets
-    } else if (status === 'open') {
-      query = query.whereNull('t.closed_at');
-    } else if (status === 'closed') {
-      query = query.whereNotNull('t.closed_at');
-    } else if (status) {
-      // Filter by specific status_id
-      query = query.where('t.status_id', status);
+    } else if (parsedStatusFilter.kind === 'open') {
+      query = query.where('s.is_closed', false);
+    } else if (parsedStatusFilter.kind === 'closed') {
+      query = query.where('s.is_closed', true);
+    } else if (parsedStatusFilter.kind === 'name') {
+      query = query.where('s.name', parsedStatusFilter.statusName);
+    } else if (parsedStatusFilter.kind === 'id') {
+      query = query.where('t.status_id', parsedStatusFilter.statusId);
     }
 
       const tickets = await query.orderBy('t.entered_at', 'desc');
@@ -678,6 +684,23 @@ export const updateTicketStatus = withAuth(async (
         throw new Error('Ticket not found');
       }
 
+      if (!ticket.board_id) {
+        throw new Error('Ticket does not have a board');
+      }
+
+      const statusForBoard = await trx('statuses')
+        .where({
+          tenant,
+          status_id: newStatusId,
+          status_type: 'ticket',
+          board_id: ticket.board_id,
+        })
+        .first('status_id');
+
+      if (!statusForBoard) {
+        throw new Error('Selected status is not valid for the ticket board');
+      }
+
       // Get old status for change tracking
       const oldStatusId = ticket.status_id;
 
@@ -904,42 +927,38 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         }
       }
 
-      if (!assignedBoardId) {
-        const defaultBoard = await trx('boards')
-          .where({
-            tenant,
-            is_default: true
-          })
-          .first();
+      const resolvedBoard = !assignedBoardId
+        ? await trx('boards')
+            .where({
+              tenant,
+              is_default: true
+            })
+            .first()
+        : await trx('boards')
+            .where({
+              tenant,
+              board_id: assignedBoardId
+            })
+            .first();
 
-        if (!defaultBoard) {
-          throw new Error('No default board configured for tickets');
-        }
-
-        assignedBoardId = defaultBoard.board_id;
-      } else {
-        const selectedBoard = await trx('boards')
-          .where({
-            tenant,
-            board_id: assignedBoardId
-          })
-          .first();
-
-        if (!selectedBoard) {
-          throw new Error(VISIBILITY_NOT_FOUND_ERROR);
-        }
+      if (!resolvedBoard) {
+        throw new Error(
+          assignedBoardId
+            ? VISIBILITY_NOT_FOUND_ERROR
+            : 'No default board configured for tickets'
+        );
       }
 
-      // Fetch default status for tickets
-      const defaultStatus = await trx('statuses')
-        .where({
-          tenant,
-          is_default: true,
-          status_type: 'ticket'
-        })
-        .first();
+      assignedBoardId = resolvedBoard.board_id;
 
-      if (!defaultStatus) {
+      // Fetch default status for tickets
+      const defaultStatusId = await TicketModel.getDefaultStatusId(
+        tenant,
+        trx,
+        resolvedBoard.board_id
+      );
+
+      if (!defaultStatusId) {
         throw new Error('No default status configured for tickets');
       }
 
@@ -953,10 +972,10 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         entered_by: user.user_id,
         source: 'client_portal',
         ticket_origin: TICKET_ORIGINS.CLIENT_PORTAL,
-        board_id: assignedBoardId,
-        status_id: defaultStatus.status_id,
-        // Auto-assign is derived from the selected board to avoid hidden-board bypasses.
-        assigned_to: undefined
+        board_id: resolvedBoard.board_id,
+        status_id: defaultStatusId,
+        // Auto-assign from the resolved board after visibility checks.
+        assigned_to: resolvedBoard.default_assigned_to ?? undefined
       };
 
       // Create adapters for client portal context

@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound, FlaskConical } from 'lucide-react';
 import type { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
+import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 import GeneralSettings from './general/GeneralSettings';
 import UserManagement from './general/UserManagement';
 import ClientPortalSettings from './general/ClientPortalSettings';
@@ -48,8 +49,12 @@ import { ProjectSettings } from '@alga-psa/projects/components';
 
 import { SecretsManagement } from './secrets';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
-import { useTierFeature } from '@/context/TierContext';
+import { useTier, useTierFeature } from '@/context/TierContext';
 import { TIER_FEATURES } from '@alga-psa/types';
+
+type SettingsTabContent = TabContent & {
+  requiredFeature?: TIER_FEATURES;
+};
 
 // Wrapper component with UnsavedChangesProvider
 type SettingsPageProps = {
@@ -80,11 +85,12 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   const canUseEntraSync = useTierFeature(TIER_FEATURES.ENTRA_SYNC);
   const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
   const canUseTeams = useTierFeature(TIER_FEATURES.TEAMS_INTEGRATION);
+  const { hasFeature } = useTier();
 
-  const baseTabContent: TabContent[] = [
+  const baseTabContent: SettingsTabContent[] = [
     {
       id: 'general',
-      label: "General",
+      label: t('tabs.general'),
       icon: Settings,
       content: (
         <Card>
@@ -102,7 +108,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'experimental-features',
-      label: "Experimental Features",
+      label: t('tabs.experimentalFeatures'),
       icon: FlaskConical,
       content: (
         <Suspense
@@ -120,19 +126,19 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'client-portal',
-      label: "Client Portal",
+      label: t('tabs.clientPortal'),
       icon: Globe,
       content: <ClientPortalSettings />,
     },
     {
       id: 'users',
-      label: "Users",
+      label: t('tabs.users'),
       icon: UserCog,
       content: <UserManagement />,
     },
     {
       id: 'teams',
-      label: "Teams",
+      label: t('tabs.teams'),
       icon: Users,
       content: (
         <Card>
@@ -150,13 +156,13 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     ...(isMspI18nEnabled ? [{
       id: 'language',
-      label: "Language",
+      label: t('tabs.language'),
       icon: Globe,
       content: <MspLanguageSettings />,
     }] : []),
     {
       id: 'ticketing',
-      label: "Ticketing",
+      label: t('tabs.ticketing'),
       icon: MessageSquare,
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />}>
@@ -166,14 +172,14 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'projects',
-      label: "Projects",
+      label: t('tabs.projects'),
       icon: Layers,
       content: <ProjectSettings />,
     },
 
     {
       id: 'interactions',
-      label: "Interactions",
+      label: t('tabs.interactions'),
       icon: Handshake,
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Interactions" description="Loading interaction settings..." showTabs={false} />}>
@@ -183,13 +189,13 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'notifications',
-      label: "Notifications",
+      label: t('tabs.notifications'),
       icon: Bell,
       content: <NotificationsTab />,
     },
     {
       id: 'time-entry',
-      label: "Time Entry",
+      label: t('tabs.timeEntry'),
       icon: Clock,
       content: (
         <Card>
@@ -205,7 +211,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'billing',
-      label: "Billing",
+      label: t('tabs.billing'),
       icon: CreditCard,
       content: (
         <Card>
@@ -221,7 +227,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'secrets',
-      label: "Secrets",
+      label: t('tabs.secrets'),
       icon: KeyRound,
       content: (
         <Card>
@@ -239,13 +245,13 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'import-export',
-      label: "Import/Export",
+      label: t('tabs.importExport'),
       icon: Download,
       content: <ImportExportSettings />,
     },
     {
       id: 'email',
-      label: "Email",
+      label: t('tabs.email'),
       icon: Mail,
       content: (
         <Card>
@@ -262,8 +268,9 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     {
       // Integrations tab with category-based organization
       id: 'integrations',
-      label: "Integrations",
+      label: t('tabs.integrations'),
       icon: Plug,
+      requiredFeature: TIER_FEATURES.INTEGRATIONS,
       content: <IntegrationsSettingsPage canUseEntraSync={canUseEntraSync} canUseCipp={canUseCipp} canUseTeams={canUseTeams} />,
     }
   ];
@@ -271,10 +278,11 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   // Always include an "Extensions" tab.
   // - EE: full Manage + Install sub-tabs
   // - OSS: enterprise-only stub
-  const extensionsTab: TabContent = {
+  const extensionsTab: SettingsTabContent = {
     id: 'extensions',
-    label: "Extensions",
+    label: t('tabs.extensions'),
     icon: Puzzle,
+    requiredFeature: TIER_FEATURES.EXTENSIONS,
     content: <ExtensionManagement />,
   };
 
@@ -298,11 +306,27 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   }, [initialTabId]);
 
   const activeTabContent = allTabs.find(tab => tab.id === activeTab);
+  const activeTabBody = useMemo(() => {
+    if (!activeTabContent) {
+      return null;
+    }
+
+    if (activeTabContent.requiredFeature && !hasFeature(activeTabContent.requiredFeature)) {
+      return (
+        <FeatureUpgradeNotice
+          featureName={activeTabContent.label}
+          requiredTier="pro"
+        />
+      );
+    }
+
+    return activeTabContent.content;
+  }, [activeTabContent, hasFeature]);
 
   return (
     <div className="h-full overflow-y-auto p-6">
       <h1 className="text-3xl font-bold mb-6">{t('page.title')}</h1>
-      {activeTabContent?.content}
+      {activeTabBody}
     </div>
   );
 };

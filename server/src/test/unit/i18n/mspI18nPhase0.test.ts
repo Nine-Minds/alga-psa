@@ -127,7 +127,7 @@ const runPseudoLocale = (locale: string, fill: string) => {
 };
 
 const pseudoLocale = 'xx';
-const pseudoFill = '1111';
+const pseudoFill = '11111';
 const pseudoLocaleRoot = path.join(localesRoot, pseudoLocale);
 const englishRoot = path.join(localesRoot, 'en');
 
@@ -154,13 +154,13 @@ describe('MSP i18n Phase 0 - config', () => {
       'client-portal',
       'features/tickets',
     ]);
-    expect(ROUTE_NAMESPACES['/msp']).toEqual(['common', 'msp/core']);
+    expect(ROUTE_NAMESPACES['/msp']).toEqual(['common', 'msp/core', 'msp/dashboard']);
     expect(ROUTE_NAMESPACES['/msp/tickets']).toEqual([
       'common',
       'msp/core',
       'features/tickets',
     ]);
-    expect(ROUTE_NAMESPACES['/msp/settings']).toEqual(['common', 'msp/core']);
+    expect(ROUTE_NAMESPACES['/msp/settings']).toEqual(['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets']);
 
     const hasLegacyMsp = Object.values(ROUTE_NAMESPACES).some((namespaces) =>
       namespaces.includes('msp')
@@ -218,11 +218,7 @@ describe('MSP i18n Phase 0 - pseudo locale generator', () => {
     runPseudoLocale(pseudoLocale, pseudoFill);
   });
 
-  afterAll(async () => {
-    if (fs.existsSync(pseudoLocaleRoot)) {
-      await fsPromises.rm(pseudoLocaleRoot, { recursive: true, force: true });
-    }
-  });
+  // No cleanup — pseudo-locales are ephemeral and other test suites read them.
 
   it('T023-T027: pseudo-locale files are generated with preserved structure', () => {
     expect(fileExists(`server/public/locales/${pseudoLocale}`)).toBe(true);

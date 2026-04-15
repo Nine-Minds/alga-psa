@@ -11,6 +11,7 @@ import { DocumentsPasswordsTab } from './tabs/DocumentsPasswordsTab';
 import { AuditLogTab } from './tabs/AuditLogTab';
 import type { Asset } from '@alga-psa/types';
 import { History, LayoutGrid, CalendarDays, FileText, Network, Lock } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface AssetDetailTabsProps {
   asset: Asset;
@@ -19,6 +20,7 @@ interface AssetDetailTabsProps {
 const DEFAULT_TAB = 'service-history';
 
 export const AssetDetailTabs: React.FC<AssetDetailTabsProps> = ({ asset }) => {
+  const { t } = useTranslation('msp/assets');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
 
@@ -59,37 +61,39 @@ export const AssetDetailTabs: React.FC<AssetDetailTabsProps> = ({ asset }) => {
   const tabs = [
     {
       id: 'service-history',
-      label: 'Service History',
+      label: t('assetDetailTabs.tabs.serviceHistory', { defaultValue: 'Service History' }),
       icon: History,
       content: <ServiceHistoryTab asset={asset} />
     },
     {
       id: 'software',
-      label: 'Software',
+      label: t('assetDetailTabs.tabs.software', { defaultValue: 'Software' }),
       icon: LayoutGrid,
       content: <SoftwareInventoryTab asset={asset} />
     },
     {
       id: 'maintenance',
-      label: 'Maintenance',
+      label: t('assetDetailTabs.tabs.maintenance', { defaultValue: 'Maintenance' }),
       icon: CalendarDays,
       content: <MaintenanceSchedulesTab assetId={asset.asset_id} />
     },
     {
       id: 'related-assets',
-      label: 'Related Assets',
+      label: t('assetDetailTabs.tabs.relatedAssets', { defaultValue: 'Related Assets' }),
       icon: Network,
       content: <RelatedAssetsTab asset={asset} />
     },
     {
       id: 'documents-passwords',
-      label: 'Documents & Passwords',
+      label: t('assetDetailTabs.tabs.documentsPasswords', {
+        defaultValue: 'Documents & Passwords'
+      }),
       icon: Lock,
       content: <DocumentsPasswordsTab asset={asset} />
     },
     {
       id: 'audit-log',
-      label: 'Audit Log',
+      label: t('assetDetailTabs.tabs.auditLog', { defaultValue: 'Audit Log' }),
       icon: FileText,
       content: <AuditLogTab assetId={asset.asset_id} />
     }

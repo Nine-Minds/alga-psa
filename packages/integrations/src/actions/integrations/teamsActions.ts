@@ -287,7 +287,10 @@ async function saveTeamsIntegrationSettingsImpl(
     };
 
     if (existing) {
-      await knex('teams_integrations').where({ tenant }).update(row);
+      // Citus distributes teams_integrations by `tenant`; the distribution column
+      // must never appear in an UPDATE SET clause, even when the value is unchanged.
+      const { tenant: _tenant, created_at: _createdAt, created_by: _createdBy, ...updatePayload } = row;
+      await knex('teams_integrations').where({ tenant }).update(updatePayload);
     } else {
       await knex('teams_integrations').insert(row);
     }

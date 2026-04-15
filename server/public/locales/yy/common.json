@@ -367,7 +367,9 @@
       "namePlaceholder": "55555",
       "loading": "55555",
       "rootOption": "55555",
-      "empty": "55555"
+      "empty": "55555",
+      "showAllFolders": "55555",
+      "showEntityFolders": "55555"
     },
     "filters": {
       "searchLabel": "55555",
@@ -418,7 +420,13 @@
           "asc": "55555",
           "desc": "55555"
         }
-      }
+      },
+      "clientVisibility": {
+        "all": "55555",
+        "visible": "55555",
+        "hidden": "55555"
+      },
+      "clientVisibilityLabel": "55555"
     },
     "selector": {
       "title": "55555",
@@ -458,7 +466,9 @@
       "loading": "55555",
       "title": "55555",
       "collapse": "55555",
-      "allDocuments": "55555"
+      "allDocuments": "55555",
+      "expand": "55555",
+      "deleteTitle": "55555"
     },
     "folderManager": {
       "title": "55555",
@@ -475,7 +485,35 @@
         "Tickets": "55555",
         "Time Entries": "55555"
       }
-    }
+    },
+    "list": {
+      "name": "55555",
+      "folder": "55555",
+      "size": "55555",
+      "modified": "55555",
+      "visibility": "55555",
+      "actions": "55555"
+    },
+    "hasShareLinks": "55555",
+    "visibility": {
+      "clientVisible": "55555",
+      "internalOnly": "55555",
+      "markedVisible": "55555 {{name}} 55555",
+      "markedHidden": "55555 {{name}} 55555",
+      "toggleFailed": "55555",
+      "cascadeTitle": "55555",
+      "cascadeMakeVisible": "55555 {{count}} 55555 {{name}} 55555",
+      "cascadeMakeHidden": "55555 {{count}} 55555 {{name}} 55555",
+      "cascadeYes": "55555",
+      "cascadeNo": "55555"
+    },
+    "share": "55555",
+    "videoPlaybackFailed": "55555",
+    "videoPlaybackIssue": "55555",
+    "downloadVideo": "55555",
+    "downloadAsPdf": "55555",
+    "downloadAsMarkdown": "55555",
+    "move": "55555"
   },
   "surveys": {
     "common": {
@@ -621,6 +659,18 @@
         },
         "noTemplates": "55555",
         "prioritiesMixed": "55555"
+      },
+      "preview": {
+        "heading": "55555",
+        "tabs": {
+          "survey": "55555",
+          "thankYou": "55555"
+        },
+        "noPrompt": "55555",
+        "commentPlaceholder": "55555",
+        "noThankYou": "55555",
+        "notice": "55555",
+        "editEmailTemplate": "55555"
       }
     },
     "response": {
@@ -798,7 +848,12 @@
     "required": "55555",
     "optional": "55555",
     "notSpecified": "55555",
-    "unknown": "55555"
+    "unknown": "55555",
+    "edited": "55555",
+    "editComment": "55555",
+    "deleteCommentAriaLabel": "55555",
+    "deleteComment": "55555",
+    "deleteCommentConfirmation": "55555"
   },
   "sessionManagement": {
     "title": "55555",

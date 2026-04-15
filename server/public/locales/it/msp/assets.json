@@ -1,0 +1,1192 @@
+{
+  "common": {
+    "actions": {
+      "add": "Aggiungi",
+      "back": "Indietro",
+      "cancel": "Annulla",
+      "close": "Chiudi",
+      "copy": "Copia",
+      "create": "Crea",
+      "delete": "Elimina",
+      "download": "Scarica",
+      "edit": "Modifica",
+      "refresh": "Aggiorna",
+      "remove": "Rimuovi",
+      "retry": "Riprova",
+      "save": "Salva",
+      "saving": "Salvataggio...",
+      "search": "Cerca",
+      "select": "Seleziona",
+      "update": "Aggiorna",
+      "view": "Visualizza"
+    },
+    "states": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "loading": "Caricamento...",
+      "na": "N/D",
+      "none": "Nessuno"
+    },
+    "no": "No",
+    "yes": "Sì"
+  },
+  "assetAlertsSection": {
+    "title": "Sezione Avvisi sulle risorse",
+    "description": "Wrapper della sezione di avviso aziendale per avvisi RMM specifici per asset e azioni correttive"
+  },
+  "assetCommandPalette": {
+    "title": "Tavolozza dei comandi",
+    "description": "Tavolozza dei comandi per la ricerca di risorse e l'avvio di azioni sulle risorse",
+    "register": {
+      "label": "Tavolozza dei comandi delle risorse",
+      "title": "Tavolozza dei comandi delle risorse"
+    },
+    "actions": {
+      "createAsset": {
+        "label": "Crea risorsa",
+        "description": "Apri l'aggiunta rapida per registrare una nuova risorsa"
+      },
+      "refreshData": {
+        "label": "Aggiorna i dati",
+        "description": "Recupera le risorse dal server"
+      },
+      "reset": {
+        "label": "Reimposta",
+        "description": "Rimuovi tutti i filtri attivi e i termini di ricerca"
+      }
+    },
+    "searchPlaceholder": "Cerca asset, clienti, ticket…",
+    "empty": "Nessuna corrispondenza ancora. Prova una parola chiave diversa.",
+    "groups": {
+      "quickActions": "Azioni rapide",
+      "assets": "Risorse",
+      "hints": "Suggerimenti"
+    },
+    "hint": {
+      "body": "Continua a digitare per eseguire la ricerca nell'elenco completo delle risorse. I ticket e la ricerca del cliente arriveranno in un secondo momento.",
+      "badge": "Prossimamente"
+    },
+    "values": {
+      "unassigned": "Non assegnato"
+    }
+  },
+  "assetDashboard": {
+    "title": "Dashboard delle risorse",
+    "description": "Wrapper del dashboard delle risorse di primo livello che rappresenta l'esperienza delle risorse del cliente"
+  },
+  "assetDashboardClient": {
+    "title": "Client del dashboard delle risorse",
+    "description": "Pagina principale dell'elenco delle risorse con filtri, visualizzazioni tabella e griglia, azioni collettive e flussi dei cassetti",
+    "reflection": {
+      "label": "Dashboard delle risorse"
+    },
+    "errors": {
+      "loadDrawerFailed": "Impossibile caricare i dettagli della risorsa in questo momento. Per favore riprova."
+    },
+    "details": {
+      "noIp": "Nessun IP",
+      "network": "Rete",
+      "local": "Locale",
+      "noDetails": "Nessun dettaglio disponibile",
+      "unassigned": "Non assegnato"
+    },
+    "selection": {
+      "selectAllVisibleAssets": "Seleziona tutte le risorse visibili",
+      "selectAsset": "Seleziona risorsa {{name}}",
+      "selectedAssets": "{{count}} risorsa{{suffix}} selezionata",
+      "clearSelection": "Cancella selezione",
+      "bulkActionsComingSoon": "Azioni collettive in arrivo"
+    },
+    "actions": {
+      "openActionsForAsset": "Azioni aperte per la risorsa {{name}}",
+      "viewDetails": "Visualizza i dettagli",
+      "editAsset": "Modifica risorsa",
+      "createTicket": "Crea biglietto",
+      "refreshData": "Aggiorna i dati"
+    },
+    "table": {
+      "name": "Nome",
+      "tag": "Etichetta",
+      "type": "Tipo",
+      "details": "Dettagli",
+      "status": "Stato",
+      "agent": "Agente",
+      "client": "Cliente",
+      "location": "Posizione",
+      "actions": "Azioni"
+    },
+    "metrics": {
+      "totalAssets": {
+        "title": "Risorse totali",
+        "helper": "Su tutti i clienti"
+      },
+      "filteredView": {
+        "title": "Visualizzazione filtrata",
+        "helper": "Filtri attivi corrispondenti"
+      },
+      "automationReady": {
+        "title": "Pronto per l'automazione",
+        "helper": "Piani di manutenzione attivi",
+        "upcoming": "Prossimo: {{count}}",
+        "overdue": "In ritardo: {{count}}"
+      },
+      "activeSchedules": {
+        "title": "Pianificazioni attive",
+        "helper": "Automazione del ciclo di vita"
+      },
+      "overdueMaintenance": {
+        "title": "Manutenzione scaduta",
+        "helper": "Ha bisogno di attenzione"
+      },
+      "upcomingMaintenance": {
+        "title": "Prossima manutenzione",
+        "helper": "Prossimi 30 giorni"
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "Cerca per nome, tag o numero di serie",
+      "reset": "Reimposta",
+      "status": "Stato",
+      "type": "Tipo",
+      "agent": "Agente",
+      "columns": "Colonne",
+      "client": {
+        "loading": "Caricamento clienti…",
+        "placeholder": "Cliente",
+        "clear": "Cancella filtro cliente"
+      },
+      "rmmManaged": {
+        "managed": "Gestito da RMM",
+        "unmanaged": "Non gestito"
+      },
+      "agentStatuses": {
+        "online": "In linea",
+        "offline": "Non in linea",
+        "overdue": "In ritardo",
+        "unknown": "Sconosciuto"
+      }
+    },
+    "activeFilters": {
+      "status": "Stato: {{value}}",
+      "type": "Tipo: {{value}}",
+      "client": "Cliente: {{value}}",
+      "agent": "Agente: {{value}}"
+    },
+    "statuses": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "maintenance": "Manutenzione"
+    },
+    "types": {
+      "workstation": "Stazione di lavoro",
+      "server": "Server",
+      "network_device": "Dispositivo di rete",
+      "mobile_device": "Dispositivo mobile",
+      "printer": "Stampante"
+    },
+    "columns": {
+      "select": "selezionare",
+      "name": "nome",
+      "asset_tag": "etichetta di risorsa",
+      "asset_type": "tipo di risorsa",
+      "details": "dettagli",
+      "status": "stato",
+      "agent_status": "stato di agente",
+      "client_name": "nome del cliente",
+      "location": "posizione",
+      "actions": "azioni"
+    }
+  },
+  "assetDashboardGrid": {
+    "title": "Griglia del dashboard delle risorse",
+    "description": "Layout a griglia composita per schede dettagli risorse, pannelli RMM e relativi widget di stato"
+  },
+  "assetDetailDrawer": {
+    "title": "Cassetto dei dettagli delle risorse",
+    "description": "Visualizzazione rapida delle risorse basata su cassetto con azioni, dati di riepilogo e navigazione nel record completo",
+    "label": "Cassetto dei dettagli delle risorse",
+    "header": {
+      "title": "Dettagli della risorsa",
+      "subtitle": "Rimani nel contesto mentre rivedi il ciclo di vita e la configurazione"
+    },
+    "tabs": {
+      "overview": "Panoramica",
+      "maintenance": "Manutenzione",
+      "tickets": "Biglietti",
+      "configuration": "Configurazione",
+      "documents": "Documenti"
+    },
+    "helper": {
+      "awaitingSelection": "In attesa di selezione dell'asset",
+      "selectedAsset": "{{name}} • {{tab}}"
+    },
+    "statuses": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "maintenance": "Manutenzione"
+    },
+    "empty": {
+      "selectAsset": "Seleziona una risorsa per visualizzare i dettagli",
+      "nothingToDisplay": "Niente da visualizzare"
+    },
+    "actions": {
+      "openAssetRecord": "Apri il record delle risorse",
+      "delete": "Elimina"
+    },
+    "overview": {
+      "assetTag": "Etichetta risorsa {{tag}} • {{type}}",
+      "client": "Cliente: {{name}}",
+      "activeSchedules": "Pianificazioni attive",
+      "upcomingMaintenance": "Prossima manutenzione",
+      "nextOn": "Avanti il ​​{{date}}",
+      "completedMaintenance": "Manutenzione completata",
+      "compliance": "Conformità {{percent}}%",
+      "lastMaintenance": "Ultima manutenzione",
+      "noHistory": "Nessuna storia",
+      "maintenanceDataPending": "I dati di manutenzione verranno visualizzati una volta configurati i programmi.",
+      "assetSummary": "Riepilogo delle risorse",
+      "recentLifecycleEvents": "Eventi recenti del ciclo di vita"
+    },
+    "maintenance": {
+      "noSchedules": "Nessun programma di manutenzione ancora trovato per questa risorsa.",
+      "totalSchedules": "Orari totali",
+      "active": "Attivo",
+      "complianceRate": "Tasso di conformità",
+      "history": "Storia della manutenzione",
+      "loggedBy": "Registrato da {{name}}",
+      "system": "sistema",
+      "noLogs": "I registri di manutenzione verranno visualizzati qui dopo la prima voce di servizio."
+    },
+    "tickets": {
+      "empty": "Nessun biglietto ancora collegato a questa risorsa. Utilizza l'azione rapida per crearne uno.",
+      "linked": "Collegato {{date}}",
+      "client": "Cliente: {{name}}",
+      "assignee": "Assegnatario: {{name}}",
+      "openTicket": "Biglietto aperto"
+    },
+    "configuration": {
+      "coreAttributes": "Attributi fondamentali",
+      "serialNumber": "Numero di serie",
+      "location": "Posizione",
+      "purchaseDate": "Data di acquisto",
+      "warrantyEnd": "Fine della garanzia",
+      "notProvided": "Non fornito"
+    },
+    "info": {
+      "client": "Cliente",
+      "unassigned": "Non assegnato",
+      "assetTag": "Etichetta di risorsa",
+      "status": "Stato",
+      "created": "Creato",
+      "updated": "Aggiornato",
+      "tenant": "Inquilino"
+    },
+    "typeDetails": {
+      "workstation": "Dettagli della postazione di lavoro",
+      "networkDevice": "Dettagli del dispositivo di rete",
+      "server": "Dettagli del server",
+      "mobileDevice": "Dettagli del dispositivo mobile",
+      "printer": "Dettagli della stampante",
+      "operatingSystem": "Sistema operativo",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Archiviazione",
+      "gpu": "GPU",
+      "notProvided": "Non fornito",
+      "never": "Mai",
+      "deviceType": "Tipo di dispositivo",
+      "managementIp": "IP di gestione",
+      "portCount": "Conteggio delle porte",
+      "firmwareVersion": "Versione del firmware",
+      "poeSupport": "Supporto PoE",
+      "powerDraw": "Assorbimento di potenza",
+      "virtualized": "Virtualizzato",
+      "primaryIp": "IP primario",
+      "hypervisor": "Hypervisor",
+      "os": "OS",
+      "model": "Modello",
+      "imei": "IMEI",
+      "phoneNumber": "Numero di telefono",
+      "carrier": "Vettore",
+      "lastLogin": "Ultimo accesso",
+      "lastCheckIn": "Ultimo check-in",
+      "notReported": "Non segnalato",
+      "networkPrinter": "Stampante di rete",
+      "ipAddress": "Indirizzo IP",
+      "supportsColor": "Supporta il colore",
+      "supportsDuplex": "Supporta il duplex",
+      "monthlyDutyCycle": "Ciclo di lavoro mensile",
+      "monthlyDutyCycleValue": "{{count}} pagine"
+    },
+    "relative": {
+      "momentsAgo": "pochi istanti fa",
+      "minutesAgo": "{{count}} minuto{{suffix}} fa",
+      "hoursAgo": "{{count}} ora{{suffix}} fa",
+      "daysAgo": "{{count}} giorno{{suffix}} fa"
+    }
+  },
+  "assetDetailHeader": {
+    "title": "Intestazione dettagli risorsa",
+    "description": "Intestazione cromata per l'esperienza dei dettagli delle risorse, inclusi identità, badge e azioni di aggiornamento",
+    "backToAssets": "Torna alle risorse",
+    "assetTag": "Etichetta risorsa: {{tag}}",
+    "actions": {
+      "createTicket": "Crea biglietto",
+      "menu": "Azioni",
+      "refreshing": "Aggiornamento in corso...",
+      "refreshData": "Aggiorna dati",
+      "rebootDevice": "Riavvia il dispositivo",
+      "editAsset": "Modifica risorsa",
+      "deleteAsset": "Elimina risorsa"
+    },
+    "values": {
+      "unknownClient": "Cliente sconosciuto"
+    }
+  },
+  "assetDetailTabs": {
+    "title": "Schede dei dettagli delle risorse",
+    "description": "Navigazione nei dettagli delle risorse a schede per panoramica, manutenzione, documenti, cronologia e record correlati",
+    "tabs": {
+      "serviceHistory": "Cronologia del servizio",
+      "software": "Software",
+      "maintenance": "Manutenzione",
+      "relatedAssets": "Risorse correlate",
+      "documentsPasswords": "Documenti e password",
+      "auditLog": "Registro di controllo"
+    }
+  },
+  "assetDetailView": {
+    "title": "Visualizzazione dettagliata delle risorse",
+    "description": "Composizione dei dettagli delle risorse con caricamento, errori, metriche, pannelli a griglia e schede dei dettagli",
+    "loading": "Caricamento dettagli risorsa...",
+    "errors": {
+      "title": "Errore",
+      "notFound": "Risorsa non trovata o non disponi dell'autorizzazione per visualizzarla."
+    }
+  },
+  "assetDetails": {
+    "title": "Dettagli risorsa",
+    "description": "Pagina di dettaglio completo degli asset con schede riepilogative, associazioni, documenti e azioni operative",
+    "assetTag": "Etichetta risorsa: {{tag}}",
+    "loading": {
+      "details": "Caricamento dettagli..."
+    },
+    "fields": {
+      "status": "Stato",
+      "serialNumber": "Numero di serie",
+      "location": "Posizione",
+      "client": "Cliente",
+      "purchaseDate": "Data di acquisto",
+      "warrantyEnd": "Fine della garanzia",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Archiviazione",
+      "gpu": "GPU",
+      "lastLogin": "Ultimo accesso",
+      "managementIp": "IP di gestione",
+      "portCount": "Conteggio delle porte",
+      "powerDraw": "Assorbimento di potenza",
+      "firmwareVersion": "Versione del firmware",
+      "poeSupport": "Supporto PoE",
+      "type": "Tipo",
+      "hypervisor": "Hypervisor",
+      "primaryIp": "IP primario",
+      "operatingSystem": "Sistema operativo",
+      "imei": "IMEI",
+      "phoneNumber": "Numero di telefono",
+      "carrier": "Vettore",
+      "supervisionStatus": "Stato di supervisione",
+      "ipAddress": "Indirizzo IP",
+      "networkPrinter": "Stampante di rete",
+      "colorSupport": "Supporto colore",
+      "duplexSupport": "Supporto fronte-retro",
+      "monthlyDutyCycle": "Ciclo di lavoro mensile"
+    },
+    "sections": {
+      "basicInformation": "Informazioni di base",
+      "workstation": "Dettagli della stazione di lavoro",
+      "networkDevice": "Dettagli del dispositivo di rete",
+      "server": "Dettagli del server",
+      "mobileDevice": "Dettagli del dispositivo mobile",
+      "printer": "Dettagli della stampante",
+      "relatedAssets": "Risorse correlate"
+    },
+    "maintenance": {
+      "activeSchedules": "Pianificazioni attive",
+      "overdue": "In ritardo",
+      "upcoming": "Prossimamente"
+    },
+    "tabs": {
+      "details": "Dettagli",
+      "relatedAssets": "Risorse correlate",
+      "documents": "Documenti"
+    },
+    "relationships": {
+      "parentOf": "Genitore di",
+      "childOf": "Figlio di"
+    },
+    "empty": {
+      "notSpecified": "Non specificato",
+      "unassigned": "Non assegnato",
+      "never": "Mai",
+      "noAdditionalDetails": "Nessun ulteriore dettaglio disponibile",
+      "noRelatedAssets": "Nessuna risorsa correlata trovata"
+    },
+    "values": {
+      "virtual": "Virtuale",
+      "physical": "Fisico",
+      "supervised": "Supervisionato",
+      "unsupervised": "Senza supervisione",
+      "pagesUnit": "pagine"
+    },
+    "statuses": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "maintenance": "Manutenzione"
+    },
+    "deviceTypes": {
+      "switch": "Interruttore",
+      "router": "Router",
+      "firewall": "Firewall",
+      "access_point": "Punto di accesso",
+      "load_balancer": "Bilanciatore del carico"
+    },
+    "relationshipTypes": {
+      "affected": "Interessato",
+      "related": "Imparentato"
+    }
+  },
+  "assetDocuments": {
+    "title": "Documenti patrimoniali",
+    "description": "Elenco dei documenti delle risorse e superficie degli allegati per i file associati a una risorsa"
+  },
+  "assetForm": {
+    "title": "Modulo risorsa",
+    "description": "Modulo di creazione e modifica delle risorse primarie con campi di identità, ciclo di vita, contratto e metadati",
+    "heading": "Modifica risorsa",
+    "loading": {
+      "assetDetails": "Caricamento dettagli risorsa..."
+    },
+    "errors": {
+      "assetNotFound": "Risorsa non trovata",
+      "loadFailed": "Impossibile caricare i dettagli della risorsa",
+      "clientsLoadFailed": "Impossibile caricare i client",
+      "locationsLoadFailed": "Impossibile caricare posizioni per questo client",
+      "updateFailed": "Impossibile aggiornare la risorsa"
+    },
+    "actions": {
+      "viewClient": "Visualizza cliente",
+      "manageClientLocations": "Gestisci le posizioni dei clienti",
+      "saveChanges": "Salva modifiche"
+    },
+    "alerts": {
+      "noLocationsSaved": "Questo cliente non ha ancora alcuna posizione salvata. Utilizza una voce personalizzata o creane una dal record del cliente."
+    },
+    "sections": {
+      "basicInformation": "Informazioni di base",
+      "clientAndLocation": "Cliente e posizione",
+      "assetBasics": "Nozioni di base sulle risorse"
+    },
+    "fields": {
+      "customLocationOption": "Posizione personalizzata",
+      "osType": "Tipo di sistema operativo",
+      "osVersion": "Versione del sistema operativo",
+      "cpuModel": "Modello della CPU",
+      "cpuCores": "Core della CPU",
+      "ramGb": "RAM (GB)",
+      "storageType": "Tipo di archiviazione",
+      "storageCapacityGb": "Capacità di archiviazione (GB)",
+      "gpuModel": "Modello GPU",
+      "deviceType": "Tipo di dispositivo",
+      "managementIp": "IP di gestione",
+      "portCount": "Conteggio delle porte",
+      "firmwareVersion": "Versione del firmware",
+      "powerDrawWatts": "Potenza assorbita (Watt)",
+      "supportsPoe": "Supporta PoE",
+      "primaryIp": "IP primario",
+      "raidConfig": "Configurazione RAID",
+      "virtualMachine": "Macchina virtuale",
+      "hypervisor": "Hypervisor",
+      "model": "Modello",
+      "imei": "IMEI",
+      "phoneNumber": "Numero di telefono",
+      "carrier": "Vettore",
+      "supervisedDevice": "Dispositivo supervisionato",
+      "ipAddress": "Indirizzo IP",
+      "monthlyDutyCycle": "Ciclo di lavoro mensile",
+      "networkPrinter": "Stampante di rete",
+      "colorSupport": "Supporto colore",
+      "duplexSupport": "Supporto fronte-retro",
+      "client": "Cliente",
+      "primaryLocation": "Posizione primaria",
+      "name": "Nome",
+      "assetTag": "Etichetta risorsa",
+      "serialNumber": "Numero di serie",
+      "status": "Stato",
+      "purchaseDate": "Data di acquisto",
+      "warrantyEndDate": "Data di fine garanzia"
+    },
+    "placeholders": {
+      "loadingClients": "Caricamento clienti…",
+      "selectClient": "Seleziona cliente",
+      "loadingLocations": "Caricamento posizioni…",
+      "selectLocation": "Seleziona una posizione",
+      "selectClientFirst": "Seleziona prima un cliente",
+      "customLocation": "Inserisci una posizione o un'area personalizzata",
+      "selectPurchaseDate": "Seleziona la data di acquisto",
+      "selectWarrantyEndDate": "Seleziona la data di fine della garanzia"
+    },
+    "statusOptions": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "maintenance": "Manutenzione"
+    },
+    "networkDeviceTypes": {
+      "switch": "Interruttore",
+      "router": "Router",
+      "firewall": "Firewall",
+      "access_point": "Punto di accesso",
+      "load_balancer": "Bilanciatore del carico"
+    },
+    "storageTypes": {
+      "ssd": "SSD",
+      "hdd": "HDD",
+      "nvme": "NVMe"
+    },
+    "osTypes": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Android"
+    },
+    "typeDetails": {
+      "workstation": "Dettagli della stazione di lavoro",
+      "networkDevice": "Dettagli del dispositivo di rete",
+      "server": "Dettagli del server",
+      "mobileDevice": "Dettagli del dispositivo mobile",
+      "printer": "Dettagli della stampante"
+    }
+  },
+  "assetFormClient": {
+    "title": "Cliente del modulo asset",
+    "description": "Wrapper dinamico solo client per il modulo asset e modifica dell'esperienza di struttura",
+    "loadingTitle": "Modifica risorsa"
+  },
+  "assetMetricsBanner": {
+    "title": "Banner delle metriche delle risorse",
+    "description": "Schede metriche e rollup per ticket, manutenzione, tempi di attività e indicatori di stato delle risorse",
+    "labels": {
+      "healthStatus": "Stato di salute",
+      "openTickets": "Biglietti aperti",
+      "securityStatus": "Stato di sicurezza",
+      "warranty": "Garanzia"
+    },
+    "healthStatuses": {
+      "healthy": "Salutare",
+      "warning": "Avvertimento",
+      "critical": "Critico",
+      "unknown": "Sconosciuto"
+    },
+    "securityStatuses": {
+      "secure": "Sicuro",
+      "missingPatches": "{{count}} Patch mancanti",
+      "critical": "Critico",
+      "unknown": "Sconosciuto"
+    },
+    "openTickets": {
+      "active": "[{{count}} Attivo]"
+    },
+    "warrantyStatuses": {
+      "expiresIn": "Scade tra {{count}} giorni",
+      "expired": "Scaduto",
+      "unknown": "Sconosciuto"
+    }
+  },
+  "assetPatchStatusSection": {
+    "title": "Sezione Stato patch risorse",
+    "description": "Patch aziendale e wrapper dello stato antivirus mostrati nell'esperienza dei dettagli della risorsa"
+  },
+  "assetSoftwareInventory": {
+    "title": "Inventario del software delle risorse",
+    "description": "Wrapper di inventario software aziendale per il software installato e i dati sulla versione"
+  },
+  "associatedAssets": {
+    "title": "Beni associati",
+    "description": "Gestione delle relazioni tra asset padre e figlio con azioni sugli asset collegati",
+    "loading": {
+      "assets": "Caricamento risorse..."
+    },
+    "actions": {
+      "addAsset": "Aggiungi risorsa",
+      "showLess": "Mostra meno",
+      "moreAssets": "{{count}} altra risorsa{{suffix}}"
+    },
+    "errors": {
+      "loadAvailableAssets": "Impossibile caricare le risorse disponibili",
+      "loadDrawerFailed": "Impossibile caricare i dettagli della risorsa in questo momento. Per favore riprova.",
+      "loadAssociatedAssets": "Impossibile caricare le risorse associate",
+      "selectAtLeastOneAsset": "Seleziona almeno una risorsa",
+      "associateFailed": "Impossibile associare le risorse: potrebbero essere già associate",
+      "associationFailed": "Impossibile associare le risorse",
+      "removeFailed": "Impossibile rimuovere l'associazione della risorsa"
+    },
+    "success": {
+      "associated": "{{count}} asset{{suffix}} associato correttamente",
+      "associatedPartial": "{{count}} asset{{suffix}} associato correttamente, {{failed}} non riuscito (potrebbe essere già associato)",
+      "removed": "Associazione della risorsa rimossa"
+    },
+    "empty": {
+      "noneAssociated": "Nessuna risorsa associata a questo ticket.",
+      "unknownAsset": "Risorsa sconosciuta"
+    },
+    "dialog": {
+      "title": "Aggiungi risorsa",
+      "loadingAssets": "Caricamento risorse...",
+      "selectedAssetsLabel": "Selezionato:",
+      "search": {
+        "label": "Cerca risorse",
+        "placeholder": "Cerca per nome, tag o seriale..."
+      },
+      "empty": {
+        "search": "Nessuna risorsa trovata corrispondente alla tua ricerca",
+        "available": "Nessuna risorsa disponibile per questo cliente"
+      },
+      "relationship": {
+        "placeholder": "Tipo..."
+      },
+      "actions": {
+        "addAssets": "Aggiungi risorsa{{suffix}}"
+      }
+    },
+    "table": {
+      "name": "Nome",
+      "assetTag": "Etichetta risorsa",
+      "type": "Tipo",
+      "status": "Stato"
+    },
+    "assetStatuses": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "maintenance": "Manutenzione"
+    },
+    "assetTypes": {
+      "workstation": "Stazione di lavoro",
+      "server": "Server",
+      "network_device": "Dispositivo di rete",
+      "mobile_device": "Dispositivo mobile",
+      "printer": "Stampante"
+    },
+    "relationshipTypes": {
+      "affected": "Interessato",
+      "related": "Imparentato"
+    }
+  },
+  "createTicketFromAssetButton": {
+    "title": "Crea ticket da risorsa",
+    "description": "Flusso di creazione del ticket avviato da una risorsa con selezione di scheda, stato e categoria",
+    "register": {
+      "label": "Crea ticket da risorsa",
+      "title": "Crea ticket da risorsa"
+    },
+    "defaultTitle": "Problema con {{name}}",
+    "actions": {
+      "open": "Crea biglietto",
+      "create": "Crea biglietto",
+      "creating": "Creazione..."
+    },
+    "fields": {
+      "title": "Titolo",
+      "description": "Descrizione",
+      "board": "Asse",
+      "status": "Stato",
+      "priority": "Priorità"
+    },
+    "placeholders": {
+      "title": "Inserisci il titolo del biglietto",
+      "description": "Descrivi il problema...",
+      "loadingBoards": "Caricamento schede...",
+      "selectBoard": "Seleziona scheda...",
+      "selectBoardFirst": "Seleziona prima la scheda...",
+      "loadingStatuses": "Caricamento stati...",
+      "selectStatus": "Seleziona lo stato...",
+      "loadingPriorities": "Caricamento priorità...",
+      "selectPriority": "Seleziona priorità..."
+    },
+    "errors": {
+      "loadPriorities": "Impossibile caricare le priorità",
+      "loadBoards": "Impossibile caricare le schede",
+      "loadStatuses": "Impossibile caricare gli stati",
+      "requiredFields": "Inserisci titolo, consiglio, stato e priorità",
+      "createFailed": "Impossibile creare il biglietto"
+    },
+    "success": {
+      "created": "Biglietto creato con successo"
+    }
+  },
+  "deleteAssetButton": {
+    "title": "Pulsante Elimina risorsa",
+    "description": "Elimina il flusso di conferma per la rimozione di un record di asset",
+    "actions": {
+      "removing": "Rimozione…"
+    },
+    "entityNameFallback": "questa risorsa",
+    "errors": {
+      "validationFailed": "Impossibile convalidare l'eliminazione. Per favore riprova.",
+      "deleteFailed": "Impossibile eliminare la risorsa. Per favore riprova."
+    }
+  },
+  "quickAddAsset": {
+    "title": "Aggiunta rapida risorsa",
+    "description": "Crea rapidamente un flusso di risorse con campi essenziali per aggiungere un nuovo record di risorse",
+    "actions": {
+      "addAsset": "Aggiungi risorsa",
+      "creating": "Creazione...",
+      "createAsset": "Crea risorsa"
+    },
+    "errors": {
+      "fetchClientsFailed": "Impossibile recuperare i client",
+      "createFailed": "Impossibile creare la risorsa"
+    },
+    "validation": {
+      "client": "Cliente",
+      "assetName": "Nome della risorsa",
+      "assetTag": "Etichetta risorsa",
+      "assetType": "Tipo di risorsa",
+      "requiredFields": "Si prega di compilare i campi richiesti:"
+    },
+    "fields": {
+      "osType": "Tipo di sistema operativo",
+      "osVersion": "Versione del sistema operativo",
+      "deviceType": "Tipo di dispositivo",
+      "managementIp": "IP di gestione",
+      "model": "Modello",
+      "clientRequired": "Cliente *",
+      "assetNameRequired": "Nome della risorsa *",
+      "assetTagRequired": "Etichetta risorsa *",
+      "typeRequired": "Tipo *",
+      "status": "Stato",
+      "serialNumber": "Numero di serie"
+    },
+    "placeholders": {
+      "workstationOsType": "ad esempio Windows, macOS, Linux",
+      "workstationOsVersion": "ad esempio, 11, Monterey, Ubuntu 22.04",
+      "selectDeviceType": "Seleziona il tipo di dispositivo",
+      "managementIp": "ad esempio, 192.168.1.1",
+      "serverOsType": "ad esempio, Windows Server, Ubuntu Server",
+      "serverOsVersion": "ad esempio, 2022, 22.04 LTS",
+      "selectOsType": "Seleziona il tipo di sistema operativo",
+      "mobileModel": "ad esempio, iPhone 14 Pro, Galaxy S23",
+      "printerModel": "ad esempio, HP LaserJet Pro M404n",
+      "assetName": "Inserisci il nome della risorsa",
+      "assetTag": "Inserisci il tag risorsa",
+      "selectType": "Seleziona il tipo",
+      "selectStatus": "Seleziona lo stato",
+      "serialNumber": "Inserisci il numero di serie"
+    },
+    "sections": {
+      "typeSpecificDetails": "Dettagli specifici del tipo"
+    },
+    "statusOptions": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "maintenance": "Manutenzione"
+    },
+    "assetTypes": {
+      "workstation": "Stazione di lavoro",
+      "network_device": "Dispositivo di rete",
+      "server": "Server",
+      "mobile_device": "Dispositivo mobile",
+      "printer": "Stampante"
+    },
+    "networkDeviceTypes": {
+      "switch": "Interruttore",
+      "router": "Router",
+      "firewall": "Firewall",
+      "accessPoint": "Punto di accesso",
+      "loadBalancer": "Bilanciatore del carico"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Android"
+    }
+  },
+  "remoteAccessButton": {
+    "title": "Pulsante di accesso remoto",
+    "description": "Avvio di accesso remoto per risorse con integrazioni di connessione supportate"
+  },
+  "rmmStatusIndicator": {
+    "title": "Indicatore di stato dell'RMM",
+    "description": "Chip di stato RMM connesso/disconnesso ed etichette di stato di supporto",
+    "titles": {
+      "unknown": "Stato dell'agente sconosciuto",
+      "status": "{{status}}{{suffix}}",
+      "lastSeen": "- Ultimo visto: {{value}}"
+    },
+    "statuses": {
+      "online": "In linea",
+      "offline": "Non in linea",
+      "overdue": "In ritardo",
+      "unknown": "Sconosciuto"
+    },
+    "relative": {
+      "justNow": "Proprio adesso",
+      "minutesAgo": "{{count}}m fa",
+      "hoursAgo": "{{count}}h fa",
+      "daysAgo": "{{count}}d fa"
+    }
+  },
+  "assetInfoPanel": {
+    "title": "Informazioni sulle risorse e ciclo di vita",
+    "description": "Pannello di informazioni generali sulle risorse per l'identificazione, il proprietario e i dettagli del ciclo di vita",
+    "actions": {
+      "copy": "Copia",
+      "copied": "Copiato"
+    },
+    "fields": {
+      "client": "Cliente",
+      "location": "Posizione",
+      "model": "Modello",
+      "serialNumber": "Numero di serie",
+      "purchaseDate": "Data di acquisto",
+      "warrantyEnd": "Fine della garanzia"
+    },
+    "values": {
+      "unknownClient": "Cliente sconosciuto",
+      "unassigned": "Non assegnato",
+      "unknownModel": "Modello sconosciuto"
+    }
+  },
+  "assetNotesPanel": {
+    "title": "Note e informazioni rapide",
+    "description": "Pannello delle note in formato rich-text per note specifiche sulle risorse e un rapido contesto operativo",
+    "errors": {
+      "loadTitle": "Impossibile caricare le note",
+      "unknown": "Errore sconosciuto"
+    },
+    "lastUpdated": "Ultimo aggiornamento: {{value}}"
+  },
+  "hardwareSpecsPanel": {
+    "title": "Specifiche dell'hardware",
+    "description": "Pannello delle specifiche hardware che copre CPU, memoria, spazio di archiviazione e metadati del dispositivo",
+    "fields": {
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Archiviazione",
+      "utilization": "Utilizzo"
+    },
+    "values": {
+      "unknownCpu": "CPU sconosciuta",
+      "unknown": "Sconosciuto",
+      "unifiedMemory": "{{size}}GB Memoria unificata",
+      "memoryUsed": "({{size}}GB utilizzato)",
+      "freeStorage": "{{size}} GB Gratuito"
+    },
+    "empty": "Nessun dato hardware disponibile",
+    "emptyStorage": "Nessuna unità di archiviazione rilevata"
+  },
+  "rmmVitalsPanel": {
+    "title": "Elementi vitali RMM e connettività",
+    "description": "Pannello dei parametri vitali RMM per battito cardiaco, monitoraggio e dettagli sullo stato degli endpoint",
+    "actions": {
+      "refresh": "Aggiorna"
+    },
+    "fields": {
+      "agentStatus": "Stato dell'agente",
+      "currentUser": "Utente corrente",
+      "lastCheckIn": "(Ultimo check-in: {{value}})",
+      "uptime": "Tempo di attività",
+      "lastSync": "Ultima sincronizzazione RMM",
+      "network": "Rete",
+      "networkValue": "IP LAN: {{lan}} | IP WAN: {{wan}}"
+    },
+    "values": {
+      "never": "Mai"
+    },
+    "empty": {
+      "title": "Vitali RMM",
+      "notConnected": "Non connesso a RMM"
+    },
+    "uptime": "{{days}} giorni, {{hours}} ore, {{minutes}} minuti"
+  },
+  "securityPatchingPanel": {
+    "title": "Sicurezza e patch",
+    "description": "Pannello sul comportamento di sicurezza e patch per indicatori di vulnerabilità e stato degli aggiornamenti",
+    "fields": {
+      "osVersion": "Versione del sistema operativo",
+      "antivirus": "antivirus",
+      "patchStatus": "Stato della patch",
+      "firewall": "Firewall"
+    },
+    "values": {
+      "unknown": "Sconosciuto"
+    },
+    "antivirus": {
+      "running": "✔ Installato e funzionante",
+      "inactive": "Inattivo",
+      "lastScan": "| Ultima scansione: oggi, 3:00"
+    },
+    "patchStatus": {
+      "critical": "Critico",
+      "atRisk": "A rischio",
+      "missingPatches": "- {{count}} Patch critiche del sistema operativo mancanti.",
+      "upToDate": "✔ Aggiornato"
+    },
+    "firewall": {
+      "on": "✔ Acceso"
+    }
+  },
+  "copyableField": {
+    "title": "Campo copiabile",
+    "description": "Campo condiviso di copia negli appunti utilizzato nei moduli delle risorse e nei pannelli dei dettagli",
+    "actions": {
+      "copy": "Copia",
+      "copied": "Copiato"
+    }
+  },
+  "statusBadge": {
+    "title": "Badge di stato",
+    "description": "Renderer di badge condiviso per il ciclo di vita delle risorse e gli stati di monitoraggio",
+    "statuses": {
+      "online": "In linea",
+      "offline": "Non in linea",
+      "overdue": "In ritardo",
+      "healthy": "Salutare",
+      "warning": "Avvertimento",
+      "critical": "Critico",
+      "unknown": "Sconosciuto",
+      "secure": "Sicuro",
+      "at_risk": "A rischio",
+      "active": "Attivo",
+      "expiring_soon": "In scadenza a breve",
+      "expired": "Scaduto"
+    }
+  },
+  "utilizationBar": {
+    "title": "Barra di utilizzo",
+    "description": "Componente della barra di avanzamento condiviso per l'utilizzo e le metriche delle risorse basate sulla percentuale"
+  },
+  "auditLogTab": {
+    "title": "Registro di controllo",
+    "description": "Scheda della cronologia di controllo delle risorse per gli eventi della sequenza temporale e le modifiche ai record",
+    "changedBy": "Modificato da {{name}}",
+    "userFallback": "utente {{id}}",
+    "empty": "Nessuna cronologia di audit disponibile.",
+    "changeTypes": {
+      "created": "Creato",
+      "updated": "Aggiornato"
+    }
+  },
+  "createMaintenanceScheduleDialog": {
+    "title": "Crea programma di manutenzione",
+    "description": "Finestra di dialogo per definire i programmi di manutenzione e le regole di ricorrenza per un asset",
+    "titles": {
+      "create": "Pianifica manutenzione",
+      "edit": "Modifica programma di manutenzione"
+    },
+    "actions": {
+      "create": "Crea pianificazione",
+      "creating": "Creazione...",
+      "update": "Aggiorna programma",
+      "updating": "Aggiornamento in corso..."
+    },
+    "fields": {
+      "scheduleName": "Nome del programma *",
+      "description": "Descrizione",
+      "maintenanceType": "Tipologia di manutenzione *",
+      "frequency": "Frequenza *",
+      "interval": "Intervallo *",
+      "nextMaintenanceDate": "Data della prossima manutenzione *",
+      "active": "Attivo"
+    },
+    "placeholders": {
+      "scheduleName": "ad esempio, manutenzione mensile del server",
+      "description": "Descrizione facoltativa...",
+      "maintenanceType": "Seleziona il tipo di manutenzione",
+      "frequency": "Seleziona la frequenza",
+      "interval": "1",
+      "nextMaintenanceDate": "Seleziona la data"
+    },
+    "frequencyOptions": {
+      "daily": "Quotidiano",
+      "weekly": "Settimanale",
+      "monthly": "Mensile",
+      "quarterly": "Trimestrale",
+      "yearly": "Annuale"
+    },
+    "errors": {
+      "scheduleNameRequired": "Il nome della pianificazione è obbligatorio",
+      "maintenanceTypeRequired": "Il tipo di manutenzione è obbligatorio",
+      "frequencyRequired": "È necessaria la frequenza",
+      "nextMaintenanceRequired": "È richiesta la prossima data di manutenzione",
+      "frequencyIntervalMin": "L'intervallo di frequenza deve essere almeno 1",
+      "saveFailed": "Impossibile creare il programma di manutenzione"
+    }
+  },
+  "documentsPasswordsTab": {
+    "title": "Documenti e password",
+    "description": "Scheda combinata per documenti relativi alle risorse, credenziali e relativi record protetti",
+    "passwords": {
+      "title": "Password e segreti",
+      "comingSoon": "Presto disponibile la gestione sicura delle password."
+    }
+  },
+  "maintenanceSchedulesTab": {
+    "title": "Programmi di manutenzione",
+    "description": "Scheda di gestione del programma di manutenzione per il servizio pianificato e il lavoro ricorrente",
+    "summary": {
+      "complianceRate": "Tasso di conformità",
+      "nextMaintenance": "Prossima manutenzione",
+      "noneScheduled": "Nessuno pianificato"
+    },
+    "actions": {
+      "scheduleMaintenance": "Pianifica manutenzione"
+    },
+    "errors": {
+      "deleteFailed": "Impossibile eliminare il programma di manutenzione"
+    },
+    "table": {
+      "scheduleName": "Nome pianificazione",
+      "type": "Tipo",
+      "frequency": "Frequenza",
+      "nextMaintenance": "Prossima manutenzione",
+      "lastMaintenance": "Ultima manutenzione",
+      "status": "Stato",
+      "actions": "Azioni"
+    },
+    "frequency": {
+      "every": "Ogni {{count}} {{frequency}}{{suffix}}",
+      "units": {
+        "daily": "giorno",
+        "weekly": "settimana",
+        "monthly": "mese",
+        "quarterly": "trimestre",
+        "yearly": "anno"
+      }
+    },
+    "status": {
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    },
+    "types": {
+      "preventive": "Preventivo",
+      "inspection": "Ispezione",
+      "calibration": "Calibrazione",
+      "replacement": "Sostituzione"
+    },
+    "empty": {
+      "schedules": "Nessun programma di manutenzione trovato. Fare clic su \"Programma manutenzione\" per crearne uno."
+    },
+    "history": {
+      "title": "Cronologia della manutenzione",
+      "performedAt": "Eseguito a",
+      "performedBy": "Eseguito da",
+      "notes": "Note",
+      "empty": "Nessuna cronologia di manutenzione registrata."
+    },
+    "dialog": {
+      "delete": {
+        "title": "Elimina il programma di manutenzione",
+        "message": "Sei sicuro di voler eliminare \"{{name}}\"? Questa azione non può essere annullata."
+      }
+    }
+  },
+  "relatedAssetsTab": {
+    "title": "Risorse correlate ({{count}})",
+    "description": "Scheda per sfogliare e gestire le relazioni tra le risorse correlate",
+    "loading": "Caricamento risorse correlate...",
+    "actions": {
+      "linkAsset": "Collegamento risorsa",
+      "unlink": "Scollega",
+      "linkEmptyState": "Collegare una risorsa"
+    },
+    "success": {
+      "linked": "Risorsa collegata",
+      "unlinked": "Risorsa scollegata"
+    },
+    "errors": {
+      "selectAsset": "Seleziona una risorsa da collegare",
+      "linkFailed": "Impossibile collegare la risorsa",
+      "unlinkFailed": "Impossibile scollegare la risorsa"
+    },
+    "table": {
+      "assetName": "Nome della risorsa",
+      "relationship": "Relazione",
+      "linkedDate": "Data collegata",
+      "actions": "Azioni"
+    },
+    "empty": {
+      "linked": "Nessuna risorsa correlata collegata."
+    },
+    "dialog": {
+      "title": "Collegamento risorsa",
+      "loadingAssets": "Caricamento risorse...",
+      "empty": "Nessuna risorsa disponibile trovata.",
+      "search": {
+        "label": "Cerca risorse",
+        "placeholder": "Cerca per nome, tag, seriale..."
+      },
+      "relationshipType": {
+        "label": "Tipo di relazione",
+        "placeholder": "imparentato"
+      },
+      "table": {
+        "asset": "Risorsa",
+        "select": "Selezionare"
+      },
+      "actions": {
+        "selected": "Selezionato",
+        "linking": "Collegamento...",
+        "confirm": "Collega risorsa"
+      }
+    },
+    "relationshipTypes": {
+      "related": "Imparentato",
+      "affected": "Interessato"
+    }
+  },
+  "serviceHistoryTab": {
+    "title": "Cronologia del servizio",
+    "description": "Scheda Cronologia servizi che riepiloga la manutenzione e l'attività dei ticket per la risorsa",
+    "actions": {
+      "createTicket": "Crea biglietto"
+    },
+    "table": {
+      "ticketId": "Identificativo del biglietto",
+      "subject": "Soggetto",
+      "status": "Stato",
+      "priority": "Priorità",
+      "dateLinked": "Data collegata"
+    },
+    "empty": "Nessun biglietto collegato a questa risorsa.",
+    "clientFallback": "Cliente sconosciuto"
+  },
+  "softwareInventoryTab": {
+    "title": "Inventario del software",
+    "description": "Scheda Inventario software per software installato, versioni e metadati di rilevamento",
+    "searchPlaceholder": "Cerca software...",
+    "category": {
+      "placeholder": "Categoria",
+      "options": {
+        "all": "Tutto",
+        "browser": "Navigatore",
+        "security": "Sicurezza",
+        "productivity": "Produttività",
+        "development": "Sviluppo"
+      }
+    },
+    "table": {
+      "name": "Nome",
+      "version": "Versione",
+      "publisher": "Editore",
+      "installDate": "Data di installazione"
+    },
+    "empty": "Nessun software trovato corrispondente alla tua ricerca.",
+    "totalItems": "Articoli totali: {{count}}",
+    "values": {
+      "unknown": "Sconosciuto"
+    }
+  }
+}

@@ -8,7 +8,7 @@ export default defineConfig({
     'hooks/index': 'src/hooks/index.ts',
     'lib/index': 'src/lib/index.ts',
   },
-  format: ['esm', 'cjs'],
+  format: ['esm'],
   target: 'es2022',
   splitting: false,
   sourcemap: false,

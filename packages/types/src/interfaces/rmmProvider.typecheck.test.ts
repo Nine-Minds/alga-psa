@@ -9,5 +9,12 @@ describe('RmmProvider', () => {
     const asset: Partial<Asset> = { rmm_provider: provider };
     expect(asset.rmm_provider).toBe('tacticalrmm');
   });
-});
 
+  it('accepts tanium', () => {
+    const provider: RmmProvider = 'tanium';
+    expect(provider).toBe('tanium');
+
+    const asset: Partial<Asset> = { rmm_provider: provider };
+    expect(asset.rmm_provider).toBe('tanium');
+  });
+});

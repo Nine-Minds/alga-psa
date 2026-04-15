@@ -9,9 +9,25 @@ export type TicketMobileEditorCommand =
   | "toggle-bullet-list"
   | "toggle-ordered-list"
   | "undo"
-  | "redo";
+  | "redo"
+  | "insert-mention";
 
 export type TicketMobileEditorRequest = "get-html" | "get-json";
+
+export type TicketMobileEditorMentionPayload = {
+  userId: string;
+  username: string;
+  displayName: string;
+  from: number;
+  to: number;
+};
+
+export type TicketMobileEditorMentionQueryPayload = {
+  active: boolean;
+  query: string;
+  from: number;
+  to: number;
+};
 
 export type TicketMobileEditorToolbarState = {
   bold: boolean;
@@ -36,6 +52,7 @@ export type TicketMobileEditorInitPayload = {
   autofocus?: boolean;
   placeholder?: string;
   debounceMs?: number;
+  imageAuth?: { baseUrl: string; apiKey: string };
 };
 
 export type TicketMobileEditorNativeToWebMessage =
@@ -47,7 +64,7 @@ export type TicketMobileEditorNativeToWebMessage =
       type: "command";
       payload: {
         command: TicketMobileEditorCommand;
-        value?: string | boolean;
+        value?: string | boolean | TicketMobileEditorMentionPayload;
       };
     }
   | {
@@ -55,6 +72,13 @@ export type TicketMobileEditorNativeToWebMessage =
       payload: {
         requestId: string;
         request: TicketMobileEditorRequest;
+      };
+    }
+  | {
+      type: "image-data";
+      payload: {
+        src: string;
+        dataUri: string;
       };
     };
 
@@ -78,6 +102,12 @@ export type TicketMobileEditorWebToNativeMessage =
       };
     }
   | {
+      type: "content-height";
+      payload: {
+        height: number;
+      };
+    }
+  | {
       type: "response";
       payload: {
         requestId: string;
@@ -92,4 +122,14 @@ export type TicketMobileEditorWebToNativeMessage =
         message: string;
         requestId?: string;
       };
+    }
+  | {
+      type: "image-request";
+      payload: {
+        src: string;
+      };
+    }
+  | {
+      type: "mention-query";
+      payload: TicketMobileEditorMentionQueryPayload;
     };

@@ -1,0 +1,85 @@
+{
+  "shared": {
+    "fallbacks": {
+      "empty": "-"
+    },
+    "statusLabels": {
+      "completed": "Zakończony",
+      "failed": "Przegrany",
+      "processing": "Przetwarzanie",
+      "pending": "Aż do"
+    },
+    "runnerLabels": {
+      "temporal": "Czasowy",
+      "pgboss": "Szef PG"
+    }
+  },
+  "recentTable": {
+    "columns": {
+      "jobName": "Nazwa stanowiska",
+      "runner": "Biegacz",
+      "status": "Status",
+      "duration": "Czas trwania",
+      "started": "Rozpoczęło się",
+      "completed": "Zakończony"
+    },
+    "time": {
+      "justNow": "Właśnie",
+      "minutesAgo": "{{count}}m temu",
+      "hoursAgo": "{{count}}h temu"
+    },
+    "duration": {
+      "milliseconds": "{{count}}ms",
+      "seconds": "{{count}}s",
+      "minutesSeconds": "{{minutes}}m {{seconds}}s",
+      "hoursMinutes": "{{hours}}h {{minutes}}m"
+    },
+    "externalId": "Identyfikator: {{id}}..."
+  },
+  "metrics": {
+    "labels": {
+      "totalJobs": "Całkowita liczba miejsc pracy",
+      "totalJobsPgBoss": "Całkowita liczba stanowisk pracy (szef PG)",
+      "totalJobsTemporal": "Łączna liczba stanowisk pracy (tymczasowa)",
+      "completed": "Zakończony",
+      "failed": "Przegrany",
+      "pending": "Aż do",
+      "processing": "Przetwarzanie",
+      "pgboss": "Szef PG",
+      "temporal": "Czasowy"
+    },
+    "successRate": "{{count}}% wskaźnika sukcesu"
+  },
+  "historyTable": {
+    "columns": {
+      "jobName": "Nazwa stanowiska",
+      "status": "Status",
+      "created": "Stworzony",
+      "started": "Rozpoczęło się",
+      "completed": "Zakończony"
+    }
+  },
+  "progress": {
+    "loading": "Ładowanie szczegółów oferty pracy...",
+    "labels": {
+      "created": "Stworzony:",
+      "jobData": "Dane pracy"
+    }
+  },
+  "drawer": {
+    "title": "Szczegóły oferty pracy",
+    "jobId": "Identyfikator: {{id}}",
+    "sections": {
+      "progress": "Postęp pracy",
+      "metrics": "Metryki pracy",
+      "history": "Historia pracy"
+    }
+  },
+  "stepHistory": {
+    "title": "Kroki pracy",
+    "labels": {
+      "processed": "Obrobiony:",
+      "retries": "Ponowne próby:"
+    }
+  }
+}

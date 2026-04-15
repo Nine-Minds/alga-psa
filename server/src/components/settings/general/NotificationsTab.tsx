@@ -123,7 +123,7 @@ function NotificationsTabContent() {
   const emailTabContent = [
     {
       id: 'settings',
-      label: "Settings",
+      label: t('notifications.emailTabs.settings'),
       content: (
         <Card>
           <CardHeader>
@@ -138,7 +138,7 @@ function NotificationsTabContent() {
     },
     {
       id: 'email-templates',
-      label: "Email Templates",
+      label: t('notifications.emailTabs.emailTemplates'),
       content: (
         <Card>
           <CardHeader>
@@ -153,7 +153,7 @@ function NotificationsTabContent() {
     },
     {
       id: 'categories',
-      label: "Categories",
+      label: t('notifications.emailTabs.categories'),
       content: (
         <Card>
           <CardHeader>
@@ -168,7 +168,7 @@ function NotificationsTabContent() {
     },
     {
       id: 'telemetry',
-      label: "Telemetry",
+      label: t('notifications.emailTabs.telemetry'),
       content: (
         <Card>
           <CardHeader>
@@ -186,7 +186,7 @@ function NotificationsTabContent() {
   const internalTabContent = [
     {
       id: 'categories',
-      label: "Categories",
+      label: t('notifications.internalTabs.categories'),
       content: (
         <Card>
           <CardHeader>

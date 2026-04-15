@@ -15,10 +15,10 @@ import {
   createBlockDocument,
   getBlockContent,
   updateBlockContent,
-} from '@alga-psa/documents/actions/documentBlockContentActions';
+} from '@alga-psa/block-content/actions';
 import type { IDocument } from '@alga-psa/types';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { buildNoteCreatedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/crmInteractionNoteEventBuilders';
+import { buildNoteCreatedPayload } from '@alga-psa/workflow-streams';
 
 export interface ClientNoteContent {
   document: IDocument | null;

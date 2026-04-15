@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTruncationDetection } from '@alga-psa/ui/hooks';
+import { extractTaskDescriptionText } from '../../lib/taskRichText';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
@@ -77,11 +78,16 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ApplyTemplateDialog } from './ApplyTemplateDialog';
 import { TemplateTaskForm } from './TemplateTaskForm';
 import { TemplateStatusManager } from './TemplateStatusManager';
+import {
+  getEffectiveTemplateStatusMappings,
+  hasTemplatePhaseStatusMappings,
+} from '../../lib/templateStatusMappingUtils';
 import TemplateTaskListView from './TemplateTaskListView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import KanbanZoomControl, { calculateCardGap, calculateColumnWidth, calculateZoomScales } from '../KanbanZoomControl';
 import * as LucideIcons from 'lucide-react';
 import { LayoutGrid, List } from 'lucide-react';
+import { useKanbanPan } from '../useKanbanPan';
 import styles from '../ProjectDetail.module.css';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -96,6 +102,7 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { useTranslation } from 'react-i18next';
 
 // Task type icons mapping (fallback icons when database doesn't specify)
 // Helper to lighten hex color (for background)
@@ -135,6 +142,7 @@ interface TemplateEditorProps {
 }
 
 export default function TemplateEditor({ template: initialTemplate, onTemplateUpdated }: TemplateEditorProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const router = useRouter();
   const { resolvedTheme } = useTheme();
 
@@ -211,6 +219,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
 
   // Refs for scroll sync
   const kanbanBoardRef = useRef<HTMLDivElement>(null);
+  useKanbanPan(kanbanBoardRef, viewMode === 'kanban');
   const kanbanHeaderRef = useRef<HTMLDivElement>(null);
   const scrollbarProxyRef = useRef<HTMLDivElement>(null);
   const stickyStatusStripRef = useRef<HTMLDivElement>(null);
@@ -323,8 +332,8 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   };
 
   const viewOptions = [
-    { value: 'kanban' as const, label: 'Kanban', icon: LayoutGrid },
-    { value: 'list' as const, label: 'List', icon: List },
+    { value: 'kanban' as const, label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
+    { value: 'list' as const, label: t('listView', 'List'), icon: List },
   ];
 
   // Phase editing state
@@ -453,10 +462,10 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     try {
       setIsDeleting(true);
       await deleteTemplate(template.template_id);
-      toast.success('Template deleted successfully');
+      toast.success(t('templates.editor.deletedSuccess', 'Template deleted successfully'));
       router.push('/msp/projects/templates');
     } catch (error) {
-      handleError(error, 'Failed to delete template');
+      handleError(error, t('templates.editor.deleteFailed', 'Failed to delete template'));
     } finally {
       setIsDeleting(false);
       setShowDeleteTemplateConfirmation(false);
@@ -467,9 +476,9 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     try {
       setClientPortalConfig(config);
       await updateTemplate(template.template_id, { client_portal_config: config });
-      toast.success('Client portal settings saved');
+      toast.success(t('templates.editor.clientPortalSaved', 'Client portal settings saved'));
     } catch (error) {
-      handleError(error, 'Failed to save client portal settings');
+      handleError(error, t('templates.editor.clientPortalSaveFailed', 'Failed to save client portal settings'));
     }
   };
 
@@ -494,7 +503,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       setEditingPhaseDuration(undefined);
       setEditingPhaseOffset(0);
     } catch (error) {
-      handleError(error, 'Failed to add phase');
+      handleError(error, t('templates.editor.addPhaseFailed', 'Failed to add phase'));
     }
   };
 
@@ -521,9 +530,9 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         setSelectedPhase(updated);
       }
       setEditingPhaseId(null);
-      toast.success('Phase updated');
+      toast.success(t('templates.editor.phaseUpdated', 'Phase updated'));
     } catch (error) {
-      handleError(error, 'Failed to update phase');
+      handleError(error, t('templates.editor.updatePhaseFailed', 'Failed to update phase'));
     }
   };
 
@@ -543,9 +552,9 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       if (selectedPhase?.template_phase_id === deletePhaseConfirmation.phaseId) {
         setSelectedPhase(phases.find((p) => p.template_phase_id !== deletePhaseConfirmation.phaseId) || null);
       }
-      toast.success('Phase deleted');
+      toast.success(t('templates.editor.phaseDeleted', 'Phase deleted'));
     } catch (error) {
-      handleError(error, 'Failed to delete phase');
+      handleError(error, t('templates.editor.deletePhaseFailed', 'Failed to delete phase'));
     } finally {
       setDeletePhaseConfirmation(null);
     }
@@ -593,9 +602,11 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         setTasks((prev) =>
           prev.map((t) => (t.template_task_id === draggedTaskId ? updated : t))
         );
-        toast.success(`Task moved to "${targetPhase.phase_name}"`);
+        toast.success(t('templates.editor.taskMovedToPhase', 'Task moved to "{{phaseName}}"', {
+          phaseName: targetPhase.phase_name,
+        }));
       } catch (error) {
-        handleError(error, 'Failed to move task');
+        handleError(error, t('templates.editor.moveTaskFailed', 'Failed to move task'));
       } finally {
         setDraggedTaskId(null);
         document.body.classList.remove('dragging-task');
@@ -635,7 +646,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         prev.map((p) => (p.template_phase_id === draggedPhaseId ? updated : p))
       );
     } catch (error) {
-      handleError(error, 'Failed to reorder phase');
+      handleError(error, t('templates.editor.reorderPhaseFailed', 'Failed to reorder phase'));
     } finally {
       setDraggedPhaseId(null);
     }
@@ -652,7 +663,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
 
   const handleAddTask = (statusMappingId?: string) => {
     if (!selectedPhase) {
-      toast.error('Please select a phase first');
+      toast.error(t('templates.editor.selectPhaseFirst', 'Please select a phase first'));
       return;
     }
     setEditingTask(null);
@@ -684,12 +695,12 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           prev.map((t) => (t.template_task_id === editingTask.template_task_id ? updated : t))
         );
         taskId = editingTask.template_task_id;
-        toast.success('Task updated');
+        toast.success(t('templates.editor.taskUpdated', 'Task updated'));
       } else if (selectedPhase) {
         // Create new task - use newTaskStatusMappingId if set, otherwise from taskData or first status
         const statusMappingIdToUse = taskData.template_status_mapping_id || newTaskStatusMappingId || statusMappings[0]?.template_status_mapping_id;
         const newTask = await addTemplateTask(selectedPhase.template_phase_id, {
-          task_name: taskData.task_name || 'New Task',
+          task_name: taskData.task_name || t('templates.editor.newTaskFallback', 'New Task'),
           description: taskData.description,
           estimated_hours: taskData.estimated_hours,
           duration_days: taskData.duration_days,
@@ -702,7 +713,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         });
         setTasks((prev) => [...prev, newTask]);
         taskId = newTask.template_task_id;
-        toast.success('Task created');
+        toast.success(t('templates.editor.taskCreated', 'Task created'));
       } else {
         return;
       }
@@ -761,7 +772,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       setShowTaskForm(false);
       setEditingTask(null);
     } catch (error) {
-      handleError(error, 'Failed to save task');
+      handleError(error, t('templates.editor.taskSaveFailed', 'Failed to save task'));
     }
   };
 
@@ -774,9 +785,9 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     try {
       await deleteTemplateTask(taskToDelete.template_task_id);
       setTasks((prev) => prev.filter((t) => t.template_task_id !== taskToDelete.template_task_id));
-      toast.success('Task deleted');
+      toast.success(t('templates.editor.taskDeleted', 'Task deleted'));
     } catch (error) {
-      handleError(error, 'Failed to delete task');
+      handleError(error, t('templates.editor.deleteTaskFailed', 'Failed to delete task'));
     } finally {
       setTaskToDelete(null);
     }
@@ -821,7 +832,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         prev.map((t) => (t.template_task_id === draggedTaskId ? updated : t))
       );
     } catch (error) {
-      handleError(error, 'Failed to move task');
+      handleError(error, t('templates.editor.moveTaskFailed', 'Failed to move task'));
     } finally {
       setDraggedTaskId(null);
     }
@@ -864,7 +875,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         );
       }
     } catch (error) {
-      handleError(error, 'Failed to move task');
+      handleError(error, t('templates.editor.moveTaskFailed', 'Failed to move task'));
     }
   };
 
@@ -873,7 +884,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       const updated = await updateTemplateTask(taskId, { assigned_to: assigneeId });
       setTasks((prev) => prev.map((t) => (t.template_task_id === taskId ? updated : t)));
     } catch (error) {
-      handleError(error, 'Failed to update assignee');
+      handleError(error, t('templates.editor.updateAssigneeFailed', 'Failed to update assignee'));
     }
   };
 
@@ -895,15 +906,46 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     );
   };
 
-  const handleStatusReordered = (orderedMappingIds: string[]) => {
+  const handlePhaseStatusesRemoved = (templatePhaseId: string) => {
+    const removedMappingIds = statusMappings
+      .filter((mapping) => mapping.template_phase_id === templatePhaseId)
+      .map((mapping) => mapping.template_status_mapping_id);
+
+    setStatusMappings((prev) =>
+      prev.filter((mapping) => mapping.template_phase_id !== templatePhaseId)
+    );
+    setTasks((prev) =>
+      prev.map((task) =>
+        removedMappingIds.includes(task.template_status_mapping_id || '')
+          ? { ...task, template_status_mapping_id: undefined }
+          : task
+      )
+    );
+  };
+
+  const handleStatusReordered = (
+    orderedMappingIds: string[],
+    templatePhaseId?: string | null
+  ) => {
     setStatusMappings((prev) => {
       const mappingMap = new Map(prev.map((m) => [m.template_status_mapping_id, m]));
-      return orderedMappingIds
+      const reorderedScopeMappings = orderedMappingIds
         .map((id, index) => {
           const mapping = mappingMap.get(id);
           return mapping ? { ...mapping, display_order: index } : null;
         })
         .filter((m): m is IProjectTemplateStatusMapping => m !== null);
+
+      const reorderedIds = new Set(orderedMappingIds);
+      const untouchedMappings = prev.filter((mapping) => {
+        const isSameScope = templatePhaseId
+          ? mapping.template_phase_id === templatePhaseId
+          : !mapping.template_phase_id;
+
+        return !isSameScope && !reorderedIds.has(mapping.template_status_mapping_id);
+      });
+
+      return [...untouchedMappings, ...reorderedScopeMappings];
     });
   };
 
@@ -912,7 +954,10 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   // ============================================================
 
   const sortedPhases = [...phases].sort((a, b) => (a.order_key || '').localeCompare(b.order_key || ''));
-  const sortedStatusMappings = [...statusMappings].sort((a, b) => a.display_order - b.display_order);
+  const sortedStatusMappings = useMemo(
+    () => getEffectiveTemplateStatusMappings(statusMappings, selectedPhase?.template_phase_id),
+    [statusMappings, selectedPhase?.template_phase_id]
+  );
 
   // Compute task counts per phase
   const phaseTaskCounts = useMemo(() => {
@@ -975,7 +1020,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     const query = searchQuery.toLowerCase();
     return phaseTasks.filter((task) =>
       task.task_name.toLowerCase().includes(query) ||
-      (task.description && task.description.toLowerCase().includes(query))
+      (task.description && extractTaskDescriptionText(task.description_rich_text ?? task.description).toLowerCase().includes(query))
     );
   }, [phaseTasks, searchQuery]);
 
@@ -1019,10 +1064,22 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           open={showStatusManager}
           onClose={() => setShowStatusManager(false)}
           templateId={template.template_id}
+          phases={phases}
           statusMappings={statusMappings}
           availableStatuses={availableStatuses}
+          taskCountByMapping={statusTaskCounts}
           onStatusAdded={handleStatusAdded}
-          onStatusRemoved={handleStatusRemoved}
+          onStatusRemoved={(mappingId, moveTasksToMappingId) => {
+            if (moveTasksToMappingId) {
+              setTasks(prev => prev.map(task =>
+                task.template_status_mapping_id === mappingId
+                  ? { ...task, template_status_mapping_id: moveTasksToMappingId }
+                  : task
+              ));
+            }
+            handleStatusRemoved(mappingId);
+          }}
+          onPhaseStatusesRemoved={handlePhaseStatusesRemoved}
           onStatusReordered={handleStatusReordered}
         />
       )}
@@ -1032,10 +1089,12 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           isOpen={true}
           onClose={() => setShowDeleteTemplateConfirmation(false)}
           onConfirm={handleDeleteTemplate}
-          title="Delete Template"
-          message={`Are you sure you want to delete template "${template.template_name}"? This action cannot be undone.`}
-          confirmLabel="Delete"
-          cancelLabel="Cancel"
+          title={t('templates.editor.deleteTemplateTitle', 'Delete Template')}
+          message={t('templates.list.deleteMessage', 'Are you sure you want to delete template "{{templateName}}"? This action cannot be undone.', {
+            templateName: template.template_name,
+          })}
+          confirmLabel={t('common:actions.delete', 'Delete')}
+          cancelLabel={t('common:actions.cancel', 'Cancel')}
         />
       )}
 
@@ -1044,10 +1103,12 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           isOpen={true}
           onClose={() => setDeletePhaseConfirmation(null)}
           onConfirm={handleDeletePhase}
-          title="Delete Phase"
-          message={`Are you sure you want to delete phase "${deletePhaseConfirmation.phaseName}"? This will also delete all tasks in this phase.`}
-          confirmLabel="Delete"
-          cancelLabel="Cancel"
+          title={t('templates.editor.deletePhaseTitle', 'Delete Phase')}
+          message={t('templates.editor.deletePhaseMessage', 'Are you sure you want to delete phase "{{phaseName}}"? This will also delete all tasks in this phase.', {
+            phaseName: deletePhaseConfirmation.phaseName,
+          })}
+          confirmLabel={t('common:actions.delete', 'Delete')}
+          cancelLabel={t('common:actions.cancel', 'Cancel')}
         />
       )}
 
@@ -1056,10 +1117,12 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           isOpen={true}
           onClose={() => setTaskToDelete(null)}
           onConfirm={handleDeleteTask}
-          title="Delete Task"
-          message={`Are you sure you want to delete task "${taskToDelete.task_name}"?`}
-          confirmLabel="Delete"
-          cancelLabel="Cancel"
+          title={t('templates.editor.deleteTaskTitle', 'Delete Task')}
+          message={t('templates.editor.deleteTaskMessage', 'Are you sure you want to delete task "{{taskName}}"?', {
+            taskName: taskToDelete.task_name,
+          })}
+          confirmLabel={t('common:actions.delete', 'Delete')}
+          cancelLabel={t('common:actions.cancel', 'Cancel')}
         />
       )}
 
@@ -1074,12 +1137,12 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                 onClick={() => router.push('/msp/projects/templates')}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+                {t('common:actions.back', 'Back')}
               </Button>
               <div className="flex items-center gap-3">
                 <Badge variant="secondary" className="flex items-center gap-1">
                   <FileText className="h-3 w-3" />
-                  Template
+                  {t('templates.editor.templateBadge', 'Template')}
                 </Badge>
                 <h1 className="text-2xl font-bold">{template.template_name}</h1>
               </div>
@@ -1092,7 +1155,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
               />
               <Button id="use-template" onClick={() => setShowApplyDialog(true)}>
                 <Rocket className="h-4 w-4 mr-2" />
-                Use Template
+                {t('templates.editor.useTemplate', 'Use Template')}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -1102,17 +1165,17 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                     className="flex items-center gap-2"
                   >
                     <MoreVertical className="h-4 w-4" />
-                    Actions
+                    {t('projectList.columns.actions', 'Actions')}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onSelect={() => setShowStatusManager(true)}>
                     <Settings className="h-4 w-4 mr-2" />
-                    Status Columns
+                    {t('templates.editor.statusColumnsLabel', 'Status Columns')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setShowClientPortalConfig(true)}>
                     <Users className="h-4 w-4 mr-2" />
-                    Client Portal Visibility
+                    {t('templates.editor.clientPortalVisibility', 'Client Portal Visibility')}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={() => setShowDeleteTemplateConfirmation(true)}
@@ -1120,7 +1183,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                     className="text-destructive focus:text-destructive focus:bg-destructive/10"
                   >
                     <Trash className="h-4 w-4 mr-2" />
-                    Delete Template
+                    {t('templates.editor.deleteTemplateTitle', 'Delete Template')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -1131,11 +1194,11 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           <div className="mt-2 flex items-center justify-between gap-4">
             {template.description && (
               <p className="text-sm text-gray-600 flex-1 min-w-0">
-                <span className="font-medium">Description:</span> {template.description}
+                <span className="font-medium">{t('templates.detail.description', 'Description:')}</span> {template.description}
               </p>
             )}
             <Badge variant="secondary" className="text-xs shrink-0">
-              Used {template.use_count} {template.use_count === 1 ? 'time' : 'times'}
+              {t('templates.detail.usedCount', 'Used: {{count}} times', { count: template.use_count })}
             </Badge>
           </div>
 
@@ -1143,31 +1206,33 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           <Dialog
             isOpen={showClientPortalConfig}
             onClose={() => setShowClientPortalConfig(false)}
-            title="Client Portal Visibility"
+            title={t('templates.editor.clientPortalVisibility', 'Client Portal Visibility')}
             id="template-client-portal-config-dialog"
             className="max-w-lg"
+            footer={
+              <div className="flex justify-end">
+                <Button
+                  id="close-template-client-portal-config"
+                  type="button"
+                  onClick={() => setShowClientPortalConfig(false)}
+                >
+                  {t('templates.editor.done', 'Done')}
+                </Button>
+              </div>
+            }
           >
             <div className="p-4">
               <ClientPortalConfigEditor
                 config={clientPortalConfig}
                 onChange={handleClientPortalConfigChange}
               />
-              <div className="flex justify-end mt-4">
-                <Button
-                  id="close-template-client-portal-config"
-                  type="button"
-                  onClick={() => setShowClientPortalConfig(false)}
-                >
-                  Done
-                </Button>
-              </div>
             </div>
           </Dialog>
         </div>
 
         <div
           className={styles.mainContent}
-          style={viewMode === 'kanban' ? { flex: '0 0 auto', minHeight: 'auto' } : undefined}
+          style={viewMode !== 'kanban' ? { flex: '0 0 auto', minHeight: 'auto' } : undefined}
         >
           {viewMode === 'list' ? (
             /* List View - Full Width */
@@ -1202,22 +1267,22 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
             /* Kanban View - Phases sidebar + Kanban board */
             <div
               className={styles.contentWrapper}
-              style={{ flex: '0 0 auto', minHeight: 'auto', alignItems: 'flex-start' }}
+              style={viewMode !== 'kanban' ? { flex: '0 0 auto', minHeight: 'auto', alignItems: 'flex-start' } : undefined}
             >
               {/* Collapsible Phases Panel */}
               <div className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}>
                 <CollapseToggleButton
                   id="toggle-phases-panel"
                   isCollapsed={!isPhasesPanelVisible}
-                  collapsedLabel="Show phases panel"
-                  expandedLabel="Hide phases panel"
+                  collapsedLabel={t('projectDetail.showPhasesPanel', 'Show phases panel')}
+                  expandedLabel={t('projectDetail.hidePhasesPanel', 'Hide phases panel')}
                   className={styles.phasesPanelToggle}
                   onClick={() => setIsPhasesPanelVisible(!isPhasesPanelVisible)}
                 />
                 <div className={`${styles.phasesList} ${isPhasesPanelVisible ? styles.phasesListVisible : styles.phasesListHidden}`}>
                   <div className={styles.phasesPanel}>
                     <div className={styles.phasesPanelHeader}>
-                      <h2 className="text-xl font-bold mb-2">Project Phases</h2>
+                      <h2 className="text-xl font-bold mb-2">{t('templates.editor.projectPhases', 'Project Phases')}</h2>
                       <div className="flex gap-2 flex-wrap">
                         <Button
                           id="add-task-from-phases-panel"
@@ -1225,17 +1290,17 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                           size="sm"
                           disabled={!selectedPhase}
                         >
-                          + Add Task
+                          + {t('projectPhases.addTask', 'Add Task')}
                         </Button>
                         <Button id="add-phase" variant="default" size="sm" onClick={handleAddPhase}>
-                          + Add Phase
+                          + {t('projectPhases.addPhase', 'Add Phase')}
                         </Button>
                       </div>
                     </div>
                     <ul className={styles.phasesScrollArea}>
                     {sortedPhases.length === 0 ? (
                       <div className="text-sm text-gray-500 text-center py-4">
-                        No phases yet.
+                        {t('templates.editor.noPhasesYet', 'No phases yet.')}
                         <br />
                         <Button
                           id="add-first-phase"
@@ -1244,7 +1309,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                           className="text-purple-600 hover:text-purple-700 mt-1"
                           onClick={handleAddPhase}
                         >
-                          Add your first phase
+                          {t('templates.editor.addFirstPhase', 'Add your first phase')}
                         </Button>
                       </div>
                     ) : (
@@ -1285,45 +1350,76 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                             <div className="flex flex-col w-full gap-3" onClick={(e) => e.stopPropagation()}>
                               <div className="flex-1 min-w-0">
                                 <div>
-                                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phase Name</label>
+                                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('templates.editor.phaseName', 'Phase Name')}</label>
                                   <Input
                                     value={editingPhaseName}
                                     onChange={(e) => setEditingPhaseName(e.target.value)}
-                                    placeholder="Phase name"
+                                    placeholder={t('templates.editor.phaseNamePlaceholder', 'Phase name')}
                                     autoFocus
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phase Description</label>
+                                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('templates.editor.phaseDescription', 'Phase Description')}</label>
                                   <TextArea
                                     value={editingPhaseDescription}
                                     onChange={(e) => setEditingPhaseDescription(e.target.value)}
-                                    placeholder="Description (optional)"
+                                    placeholder={t('templates.editor.phaseDescriptionPlaceholder', 'Description (optional)')}
                                     rows={2}
                                   />
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                   <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Duration</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('templates.editor.duration', 'Duration')}</label>
                                     <Input
                                       type="number"
                                       value={editingPhaseDuration || ''}
                                       onChange={(e) =>
                                         setEditingPhaseDuration(e.target.value ? parseInt(e.target.value) : undefined)
                                       }
-                                      placeholder="Days"
+                                      placeholder={t('templates.editor.daysPlaceholder', 'Days')}
                                     />
                                   </div>
                                   <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Start offset</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('templates.editor.startOffset', 'Start offset')}</label>
                                     <Input
                                       type="number"
                                       value={editingPhaseOffset}
                                       onChange={(e) => setEditingPhaseOffset(parseInt(e.target.value) || 0)}
-                                      placeholder="Days"
+                                      placeholder={t('templates.editor.daysPlaceholder', 'Days')}
                                     />
                                   </div>
                                 </div>
+                              </div>
+                              {/* Status columns indicator */}
+                              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                                <Tooltip content={t('templates.editor.statusColumnsTooltip', 'Status columns: {{value}}', {
+                                  value: hasTemplatePhaseStatusMappings(statusMappings, phase.template_phase_id)
+                                    ? t('templates.editor.customStatusesCount', 'Custom ({{count}} statuses)', {
+                                        count: statusMappings.filter(m => m.template_phase_id === phase.template_phase_id).length,
+                                      })
+                                    : t('templates.editor.templateDefaults', 'Template defaults'),
+                                })}>
+                                  <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                                    <Columns3 className="w-3.5 h-3.5 shrink-0" />
+                                    <span>
+                                      {hasTemplatePhaseStatusMappings(statusMappings, phase.template_phase_id)
+                                        ? t('templates.editor.customStatusesCount', 'Custom ({{count}} statuses)', {
+                                            count: statusMappings.filter(m => m.template_phase_id === phase.template_phase_id).length,
+                                          })
+                                        : t('templates.editor.templateDefaults', 'Template defaults')}
+                                    </span>
+                                  </div>
+                                </Tooltip>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowStatusManager(true);
+                                  }}
+                                  className="text-xs text-primary hover:underline shrink-0"
+                                >
+                                  {t('phases.configureStatuses', 'Configure')}
+                                </button>
                               </div>
                               <div className="flex justify-end gap-2 mt-3">
                                 <Button
@@ -1332,10 +1428,10 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                   size="sm"
                                   onClick={() => setEditingPhaseId(null)}
                                 >
-                                  Cancel
+                                  {t('common:actions.cancel', 'Cancel')}
                                 </Button>
                                 <Button id="save-edit-phase" size="sm" onClick={() => handleSavePhase(phase)}>
-                                  Save
+                                  {t('common:actions.save', 'Save')}
                                 </Button>
                               </div>
                             </div>
@@ -1348,8 +1444,8 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                 <div className="flex items-start justify-between gap-2">
                                   <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{phase.phase_name}</span>
                                   {phaseTaskCounts[phase.template_phase_id] !== undefined && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 shrink-0">
-                                      {phaseTaskCounts[phase.template_phase_id]} {phaseTaskCounts[phase.template_phase_id] === 1 ? 'task' : 'tasks'}
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 shrink-0">
+                                      {phaseTaskCounts[phase.template_phase_id]} {t(phaseTaskCounts[phase.template_phase_id] === 1 ? 'task' : 'tasks.title', phaseTaskCounts[phase.template_phase_id] === 1 ? 'task' : 'tasks')}
                                     </span>
                                   )}
                                 </div>
@@ -1360,14 +1456,18 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                 )}
                                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 space-y-1">
                                   <div>
-                                    Duration: {phase.duration_days !== undefined && phase.duration_days !== null
-                                      ? `${phase.duration_days}d`
-                                      : 'Not set'}
+                                    {t('templates.editor.durationSummary', 'Duration: {{value}}', {
+                                      value: phase.duration_days !== undefined && phase.duration_days !== null
+                                        ? `${phase.duration_days}d`
+                                        : t('templates.editor.notSet', 'Not set'),
+                                    })}
                                   </div>
                                   <div>
-                                    Start offset: {phase.start_offset_days !== undefined && phase.start_offset_days > 0
-                                      ? `+${phase.start_offset_days}d`
-                                      : '0d'}
+                                    {t('templates.editor.startOffsetSummary', 'Start offset: {{value}}', {
+                                      value: phase.start_offset_days !== undefined && phase.start_offset_days > 0
+                                        ? `+${phase.start_offset_days}d`
+                                        : '0d',
+                                    })}
                                   </div>
                                 </div>
                               </div>
@@ -1409,7 +1509,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
               </div>
 
               {/* Kanban Board - Right Side */}
-              <div className={styles.kanbanArea} style={{ flex: '1 1 auto', minHeight: 'auto' }}>
+              <div className={styles.kanbanArea} style={viewMode !== 'kanban' ? { flex: '1 1 auto', minHeight: 'auto' } : undefined}>
                 {/* Pinnable header with phase info, search, and controls */}
                 <div
                   ref={kanbanHeaderRef}
@@ -1418,14 +1518,18 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                   {selectedPhase && (
                     <div className="flex items-center justify-between gap-4 pb-3">
                       <div className="min-w-0">
-                        <h2 className="text-xl font-bold mb-1">Phase: {selectedPhase.phase_name}</h2>
+                        <h2 className="text-xl font-bold mb-1">{t('templates.detail.phasePrefix', 'Phase:')} {selectedPhase.phase_name}</h2>
                         {selectedPhase.description && (
                           <p className="text-sm text-gray-600">{selectedPhase.description}</p>
                         )}
                         <div className="text-sm text-gray-500 mt-1">
-                          {selectedPhase.duration_days && `Duration: ${selectedPhase.duration_days} days`}
+                          {selectedPhase.duration_days && t('templates.editor.phaseDurationDays', 'Duration: {{days}} days', {
+                            days: selectedPhase.duration_days,
+                          })}
                           {selectedPhase.start_offset_days > 0 &&
-                            ` | Start: +${selectedPhase.start_offset_days} days`}
+                            ` | ${t('templates.editor.phaseStartDays', 'Start: +{{days}} days', {
+                              days: selectedPhase.start_offset_days,
+                            })}`}
                         </div>
                       </div>
                       <div className="flex items-center gap-4 flex-shrink-0">
@@ -1438,7 +1542,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Search tasks..."
+                                placeholder={t('templates.editor.searchTasksPlaceholder', 'Search tasks...')}
                                 className="pl-7 pr-2 py-1 text-sm border border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded-md w-48 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                                 autoFocus
                               />
@@ -1454,7 +1558,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                             </Button>
                           </div>
                         ) : (
-                          <Tooltip content="Search tasks">
+                          <Tooltip content={t('templates.editor.searchTasks', 'Search tasks')}>
                             <Button
                               id="open-search-bar"
                               variant="ghost"
@@ -1472,7 +1576,9 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                           onZoomChange={handleZoomChange}
                         />
                         {/* Sticky status names toggle */}
-                        <Tooltip content={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}>
+                        <Tooltip content={showStickyStatusNames
+                          ? t('templates.editor.hideStickyStatusNames', 'Hide sticky status names')
+                          : t('templates.editor.showStickyStatusNames', 'Show sticky status names')}>
                           <Button
                             id="sticky-status-names-toggle"
                             variant="ghost"
@@ -1483,13 +1589,17 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                 : 'text-gray-400 hover:text-gray-600'
                             }`}
                             onClick={handleToggleStickyStatusNames}
-                            aria-label={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}
+                            aria-label={showStickyStatusNames
+                              ? t('templates.editor.hideStickyStatusNames', 'Hide sticky status names')
+                              : t('templates.editor.showStickyStatusNames', 'Show sticky status names')}
                           >
                             <Columns3 className="h-4 w-4" />
                           </Button>
                         </Tooltip>
                         {/* Pin header toggle */}
-                        <Tooltip content={isHeaderPinned ? "Unpin header" : "Pin header to top"}>
+                        <Tooltip content={isHeaderPinned
+                          ? t('templates.editor.unpinHeader', 'Unpin header')
+                          : t('templates.editor.pinHeader', 'Pin header to top')}>
                           <Button
                             id="pin-header-toggle"
                             variant="ghost"
@@ -1500,7 +1610,9 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                 : 'text-gray-400 hover:text-gray-600'
                             }`}
                             onClick={handleToggleHeaderPinned}
-                            aria-label={isHeaderPinned ? "Unpin header" : "Pin header to top"}
+                            aria-label={isHeaderPinned
+                              ? t('templates.editor.unpinHeader', 'Unpin header')
+                              : t('templates.editor.pinHeader', 'Pin header to top')}
                           >
                             <Pin className={`h-4 w-4 ${isHeaderPinned ? 'fill-current' : ''}`} />
                           </Button>
@@ -1522,7 +1634,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                     <div className={styles.kanbanStatusStripScroller} ref={stickyStatusStripRef}>
                       <div className={styles.kanbanStatusStripTrack}>
                         {sortedStatusMappings.map((statusMapping) => {
-                          const displayName = statusMapping.status_name || statusMapping.custom_status_name || 'Status';
+                          const displayName = statusMapping.status_name || statusMapping.custom_status_name || t('templates.editor.statusFallback', 'Status');
                           const statusColor = statusMapping.color || '#6B7280';
                           const { itemStyle, countStyle } = getStatusStripStyles(statusColor);
                           return (
@@ -1546,7 +1658,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                 size="sm"
                                 onClick={() => handleAddTask(statusMapping.template_status_mapping_id)}
                                 disabled={!selectedPhase}
-                                tooltipText="Add Task"
+                                tooltipText={t('projectPhases.addTask', 'Add Task')}
                                 tooltip={true}
                                 className="!w-5 !h-5 !p-0 !min-w-0 flex-shrink-0"
                               >
@@ -1567,21 +1679,21 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                   className={styles.kanbanContainer}
                   ref={kanbanBoardRef}
                   data-kanban-container="true"
-                  style={{ overflowY: 'visible', flex: '0 0 auto' }}
+                  style={viewMode !== 'kanban' ? { overflowY: 'visible', flex: '0 0 auto' } : undefined}
                 >
                   {!selectedPhase ? (
                     <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
                       <div className="text-center">
                         <p className="text-xl text-gray-600">
                           {phases.length === 0
-                            ? 'Add a phase to get started'
-                            : 'Select a phase to view tasks'}
+                            ? t('templates.editor.addPhaseToGetStarted', 'Add a phase to get started')
+                            : t('templates.editor.selectPhaseToViewTasks', 'Select a phase to view tasks')}
                         </p>
                       </div>
                     </div>
                   ) : sortedStatusMappings.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
-                      <p>No status columns defined</p>
+                      <p>{t('templates.editor.noStatusColumns', 'No status columns defined')}</p>
                       <Button
                         id="add-status-columns-empty"
                         variant="outline"
@@ -1589,14 +1701,14 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                         onClick={() => setShowStatusManager(true)}
                       >
                         <Settings className="h-4 w-4 mr-2" />
-                        Add Status Columns
+                        {t('templates.editor.addStatusColumns', 'Add Status Columns')}
                       </Button>
                     </div>
                   ) : (
-                    <div className={styles.kanbanWrapper} style={{ height: 'auto', minHeight: 'auto' }}>
+                    <div className={styles.kanbanWrapper} style={viewMode !== 'kanban' ? { height: 'auto', minHeight: 'auto' } : undefined}>
                       <div
                         className={styles.kanbanBoard}
-                        style={{ height: 'auto', minHeight: 'auto', alignItems: 'flex-start' }}
+                        style={viewMode !== 'kanban' ? { height: 'auto', minHeight: 'auto' } : undefined}
                       >
                         {sortedStatusMappings.map((statusMapping, index) => {
                           const isFirstColumn = index === 0;
@@ -1608,7 +1720,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                           );
 
                           const displayName =
-                            statusMapping.status_name || statusMapping.custom_status_name || 'Status';
+                            statusMapping.status_name || statusMapping.custom_status_name || t('templates.editor.statusFallback', 'Status');
                           const statusColor = statusMapping.color || '#6B7280';
                           const statusIcon = getTemplateStatusIcon(statusMapping);
 
@@ -1642,6 +1754,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                               columnWidth={kanbanColumnWidth}
                               cardGap={kanbanCardGap}
                               zoomLevel={kanbanZoomLevel}
+                              hideHeader={showStickyStatusNames}
                             />
                           );
                         })}
@@ -1695,6 +1808,7 @@ interface TemplateStatusColumnProps {
   columnWidth?: number;
   cardGap?: number;
   zoomLevel?: number;
+  hideHeader?: boolean;
 }
 
 function TemplateStatusColumn({
@@ -1725,7 +1839,9 @@ function TemplateStatusColumn({
   columnWidth = 350,
   cardGap = 8,
   zoomLevel = 50,
+  hideHeader = false,
 }: TemplateStatusColumnProps) {
+  const { t } = useTranslation('features/projects');
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const [dropIndicatorPosition, setDropIndicatorPosition] = useState<number | null>(null);
@@ -1799,9 +1915,6 @@ function TemplateStatusColumn({
         width: `${columnWidth}px`,
         minWidth: `${columnWidth}px`,
         maxWidth: `${columnWidth}px`,
-        height: 'auto',
-        maxHeight: 'none',
-        alignSelf: 'flex-start',
         backgroundColor: isDark ? darkenColor(statusColor, 0.75) : lightenColor(statusColor, 0.85),
         borderColor: isDraggedOver && draggedTaskId ? undefined : (isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70))
       }}
@@ -1810,49 +1923,51 @@ function TemplateStatusColumn({
       onDrop={handleDrop}
     >
       {/* Status Column Header */}
-      <div className={`font-bold ${zoomLevel <= 30 ? 'text-xs p-2' : 'text-sm p-3'} rounded-t-lg`}>
-        <div className="flex items-center justify-between gap-2">
-          <div
-            className={`${zoomLevel <= 30 ? 'rounded-xl border px-2 py-1.5' : 'rounded-2xl border-2 ps-3 py-3 pe-4'} flex items-center min-w-0 flex-1 shadow-sm`}
-            style={{
-              backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70),
-              borderColor: isDark ? darkenColor(statusColor, 0.40) : lightenColor(statusColor, 0.40),
-            }}
-          >
-            <span className="flex-shrink-0">{statusIcon}</span>
-            <span className={`${zoomLevel <= 30 ? 'ml-1.5 text-xs leading-tight' : 'ml-2'} truncate`}>
-              {displayName}
-            </span>
-          </div>
-          <div className={`${styles.statusHeader} flex-shrink-0 flex items-center`}>
-            <Button
-              id={`add-task-${statusMapping.template_status_mapping_id}`}
-              variant="default"
-              size="sm"
-              onClick={() => onAddTask(statusMapping.template_status_mapping_id)}
-              tooltipText="Add Task"
-              className={zoomLevel <= 30 ? '!w-5 !h-5 !p-0 !min-w-0' : '!w-6 !h-6 !p-0 !min-w-0'}
-            >
-              <Plus className={zoomLevel <= 30 ? 'w-3 h-3 text-white' : 'w-4 h-4 text-white'} />
-            </Button>
-            <span
-              className={`${zoomLevel <= 30 ? 'text-[10px] px-1.5' : 'text-xs px-2'} font-medium py-0.5 rounded-full`}
+      {!hideHeader && (
+        <div className={`font-bold ${zoomLevel <= 30 ? 'text-xs p-2' : 'text-sm p-3'} rounded-t-lg`}>
+          <div className="flex items-center justify-between gap-2">
+            <div
+              className={`${zoomLevel <= 30 ? 'rounded-xl border px-2 py-1.5' : 'rounded-2xl border-2 ps-3 py-3 pe-4'} flex items-center min-w-0 flex-1 shadow-sm`}
               style={{
                 backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70),
-                color: isDark ? lightenColor(statusColor, 0.40) : statusColor
+                borderColor: isDark ? darkenColor(statusColor, 0.40) : lightenColor(statusColor, 0.40),
               }}
             >
-              {sortedTasks.length}
-            </span>
+              <span className="flex-shrink-0">{statusIcon}</span>
+              <span className={`${zoomLevel <= 30 ? 'ml-1.5 text-xs leading-tight' : 'ml-2'} truncate`}>
+                {displayName}
+              </span>
+            </div>
+            <div className={`${styles.statusHeader} flex-shrink-0 flex items-center`}>
+              <Button
+                id={`add-task-${statusMapping.template_status_mapping_id}`}
+                variant="default"
+                size="sm"
+                onClick={() => onAddTask(statusMapping.template_status_mapping_id)}
+                tooltipText={t('projectPhases.addTask', 'Add Task')}
+                className={zoomLevel <= 30 ? '!w-5 !h-5 !p-0 !min-w-0' : '!w-6 !h-6 !p-0 !min-w-0'}
+              >
+                <Plus className={zoomLevel <= 30 ? 'w-3 h-3 text-white' : 'w-4 h-4 text-white'} />
+              </Button>
+              <span
+                className={`${zoomLevel <= 30 ? 'text-[10px] px-1.5' : 'text-xs px-2'} font-medium py-0.5 rounded-full`}
+                style={{
+                  backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70),
+                  color: isDark ? lightenColor(statusColor, 0.40) : statusColor
+                }}
+              >
+                {sortedTasks.length}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Tasks in this status */}
       <div
         className={`${styles.kanbanTasks} ${styles.taskList}`}
         data-kanban-column-tasks="true"
-        style={{ overflowY: 'visible', flex: '0 0 auto', gap: `${cardGap}px` }}
+        style={{ gap: `${cardGap}px` }}
       >
         {sortedTasks.map((task, index) => (
           <div key={task.template_task_id}>
@@ -1947,6 +2062,7 @@ function TaskCard({
   teamAvatarUrls = {},
   zoomLevel = 50,
 }: TaskCardProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isTitleExpanded, setIsTitleExpanded] = useState(false);
   const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
@@ -2002,20 +2118,20 @@ function TaskCard({
               className={zoomLevel <= 15 ? 'h-5 w-5 p-0' : 'h-6 w-6 p-0'}
             >
               <MoreVertical className={zoomLevel <= 15 ? 'h-3 w-3' : 'h-4 w-4'} />
-              <span className="sr-only">Task Actions</span>
+              <span className="sr-only">{t('templates.editor.taskActions', 'Task Actions')}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
             <DropdownMenuItem onSelect={() => onEdit(task)}>
               <Pencil className="mr-2 h-4 w-4" />
-              <span>Edit Task</span>
+              <span>{t('templates.editor.editTask', 'Edit Task')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => onDelete(task)}
               className="text-destructive focus:text-destructive focus:bg-destructive/10"
             >
               <Trash className="mr-2 h-4 w-4" />
-              <span>Delete Task</span>
+              <span>{t('templates.editor.deleteTask', 'Delete Task')}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -2035,7 +2151,9 @@ function TaskCard({
               <div
                 className={`${zoomLevel <= 15 ? 'w-2 h-2' : 'w-3 h-3'} rounded-full`}
                 style={{ backgroundColor: priority.color || '#6B7280' }}
-                title={`Priority level: ${priority.priority_name}`}
+                title={t('templates.editor.priorityLevel', 'Priority level: {{priority}}', {
+                  priority: priority.priority_name,
+                })}
               />
               {zoomLevel > 15 && (
                 <span className={`${zoomScales.metaSize} text-gray-600 dark:text-gray-400`}>
@@ -2056,7 +2174,9 @@ function TaskCard({
               setIsTitleExpanded(!isTitleExpanded);
             }}
           >
-            {isTitleExpanded ? 'See less' : 'See more'}
+            {isTitleExpanded
+              ? t('templates.editor.seeLess', 'See less')
+              : t('templates.editor.seeMore', 'See more')}
           </Button>
         )}
       </div>
@@ -2068,7 +2188,7 @@ function TaskCard({
             ref={descriptionRef}
             className={`${zoomScales.descSize} text-gray-600 dark:text-gray-400 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
           >
-            {task.description}
+            {extractTaskDescriptionText(task.description_rich_text ?? task.description)}
           </p>
           {(isDescriptionTruncated || isDescriptionExpanded) && (
             <Button
@@ -2081,7 +2201,9 @@ function TaskCard({
                 setIsDescriptionExpanded(!isDescriptionExpanded);
               }}
             >
-              {isDescriptionExpanded ? 'See less' : 'See more'}
+              {isDescriptionExpanded
+                ? t('templates.editor.seeLess', 'See less')
+                : t('templates.editor.seeMore', 'See more')}
             </Button>
           )}
         </div>
@@ -2114,10 +2236,10 @@ function TaskCard({
           <Tooltip
             content={
               <div className="text-xs space-y-1.5">
-                <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                <div className="font-medium text-gray-300 mb-1">{t('templates.editor.additionalAgents', 'Additional Agents:')}</div>
                 {taskAssignments.map((assignment, i) => {
                   const assignmentUser = users.find(u => u.user_id === assignment.user_id);
-                  const userName = assignmentUser ? `${assignmentUser.first_name} ${assignmentUser.last_name}` : 'Unknown';
+                  const userName = assignmentUser ? `${assignmentUser.first_name} ${assignmentUser.last_name}` : t('templates.editor.unknownUser', 'Unknown');
                   return (
                     <div key={i} className="flex items-center gap-2">
                       <UserAvatar
@@ -2163,7 +2285,9 @@ function TaskCard({
           {checklistItemsCount > 0 && (
             <span
               className="flex items-center gap-1 bg-gray-50 dark:bg-[rgb(var(--color-border-100))] px-2 py-1 rounded"
-              title={`${checklistItemsCount} checklist item${checklistItemsCount > 1 ? 's' : ''}`}
+              title={t('templates.editor.checklistCountTitle', '{{count}} checklist item', {
+                count: checklistItemsCount,
+              })}
             >
               <CheckSquare className="w-3 h-3" />
               {checklistItemsCount}
@@ -2176,7 +2300,7 @@ function TaskCard({
                 <div className="text-xs space-y-2 min-w-[220px]">
                   {taskDependencies.predecessors.length > 0 && (
                     <div>
-                      <div className="font-medium text-gray-300 mb-1">Depends on:</div>
+                      <div className="font-medium text-gray-300 mb-1">{t('templates.editor.dependsOn', 'Depends on:')}</div>
                       {taskDependencies.predecessors.map((d, i) => {
                         const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
                         const predecessorTask = allTasks.find(t => t.template_task_id === d.predecessor_task_id);
@@ -2185,7 +2309,7 @@ function TaskCard({
                             <span className={isBlocking ? 'text-orange-400' : 'text-blue-400'}>
                               {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
                             </span>
-                            <span>{predecessorTask?.task_name || 'Unknown task'}</span>
+                            <span>{predecessorTask?.task_name || t('templates.editor.unknownTask', 'Unknown task')}</span>
                           </div>
                         );
                       })}
@@ -2193,7 +2317,7 @@ function TaskCard({
                   )}
                   {taskDependencies.successors.length > 0 && (
                     <div>
-                      <div className="font-medium text-gray-300 mb-1">Blocks:</div>
+                      <div className="font-medium text-gray-300 mb-1">{t('templates.editor.blocks', 'Blocks:')}</div>
                       {taskDependencies.successors.map((d, i) => {
                         const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
                         const successorTask = allTasks.find(t => t.template_task_id === d.successor_task_id);
@@ -2202,7 +2326,7 @@ function TaskCard({
                             <span className={isBlocking ? 'text-red-400' : 'text-blue-400'}>
                               {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
                             </span>
-                            <span>{successorTask?.task_name || 'Unknown task'}</span>
+                            <span>{successorTask?.task_name || t('templates.editor.unknownTask', 'Unknown task')}</span>
                           </div>
                         );
                       })}

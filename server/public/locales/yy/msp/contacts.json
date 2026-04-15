@@ -1,0 +1,581 @@
+{
+  "common": {
+    "actions": {
+      "add": "55555",
+      "back": "55555",
+      "cancel": "55555",
+      "close": "55555",
+      "create": "55555",
+      "delete": "55555",
+      "downloadCsv": "55555",
+      "edit": "55555",
+      "import": "55555",
+      "reactivate": "55555",
+      "remove": "55555",
+      "retry": "55555",
+      "save": "55555",
+      "saving": "55555",
+      "search": "55555",
+      "select": "55555",
+      "update": "55555",
+      "uploadCsv": "55555",
+      "view": "55555"
+    },
+    "states": {
+      "active": "55555",
+      "inactive": "55555",
+      "loading": "55555",
+      "na": "55555",
+      "none": "55555"
+    },
+    "no": "55555",
+    "yes": "55555"
+  },
+  "contactsPage": {
+    "title": "55555",
+    "description": "55555",
+    "heading": "55555",
+    "addContact": "55555",
+    "actions": "55555",
+    "searchPlaceholder": "55555",
+    "resetFilters": "55555",
+    "unknownClient": "55555",
+    "noClient": "55555",
+    "thisContact": "55555",
+    "actionsMenuSrOnly": "55555",
+    "quickView": "55555",
+    "deleteValidationError": "55555",
+    "deleteSuccess": "55555 {{name}} 55555",
+    "deleteError": "55555",
+    "markInactiveSuccess": "55555 {{name}} 55555",
+    "markInactiveError": "55555",
+    "statusOptions": {
+      "all": "55555",
+      "active": "55555",
+      "inactive": "55555"
+    },
+    "table": {
+      "name": "55555",
+      "created": "55555",
+      "email": "55555",
+      "phoneNumber": "55555",
+      "client": "55555",
+      "tags": "55555",
+      "actions": "55555"
+    },
+    "lastPhoneTypeUsage": {
+      "title": "55555",
+      "message": "55555 {{suffix}} 55555 {{labels}} 55555 {{definitionSuffix}} 55555",
+      "deleteType": "55555",
+      "keepType": "55555"
+    }
+  },
+  "contactDetails": {
+    "title": "55555",
+    "description": "55555",
+    "backToContacts": "55555",
+    "inactiveBadge": "55555",
+    "actions": {
+      "goToContact": "55555",
+      "saveChanges": "55555"
+    },
+    "tabs": {
+      "details": "55555",
+      "tickets": "55555",
+      "documents": "55555",
+      "interactions": "55555",
+      "notes": "55555",
+      "portal": "55555"
+    },
+    "fields": {
+      "fullName": "55555",
+      "client": "55555",
+      "email": "55555",
+      "role": "55555",
+      "inboundTicketDestinationOverride": "55555",
+      "useClientDestination": "55555",
+      "inboundTicketDestinationHelp": "55555",
+      "tags": "55555",
+      "notes": "55555"
+    },
+    "status": {
+      "label": "55555",
+      "helper": "55555",
+      "active": "55555",
+      "inactive": "55555"
+    },
+    "loading": {
+      "destinations": "55555",
+      "ticketFilters": "55555"
+    },
+    "empty": {
+      "notSet": "55555",
+      "unknownClient": "55555"
+    },
+    "client": {
+      "noClientAssigned": "55555"
+    },
+    "delete": {
+      "successTitle": "55555",
+      "successDescription": "55555",
+      "validationFailed": "55555",
+      "failed": "55555"
+    },
+    "deactivate": {
+      "successTitle": "55555",
+      "successDescription": "55555"
+    },
+    "reactivate": {
+      "successTitle": "55555",
+      "successDescription": "55555"
+    },
+    "update": {
+      "successTitle": "55555",
+      "successDescription": "55555"
+    },
+    "saveFailed": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "error": {
+      "title": "55555"
+    },
+    "errors": {
+      "permissionDenied": "55555",
+      "markInactiveFailed": "55555",
+      "reactivateFailed": "55555"
+    }
+  },
+  "contactsImportDialog": {
+    "title": "55555",
+    "description": "55555",
+    "fields": {
+      "name": "55555",
+      "email": "55555",
+      "defaultPhoneNumber": "55555",
+      "client": "55555",
+      "tags": "55555",
+      "role": "55555",
+      "notes": "55555",
+      "primaryEmailLabel": "55555",
+      "additionalEmails": "55555"
+    },
+    "unassigned": "55555",
+    "errors": {
+      "emptyCsv": "55555",
+      "readingCsv": "55555 {{message}} 55555",
+      "unknownError": "55555",
+      "requiredFieldNotMapped": "55555 {{field}} 55555",
+      "nameRequired": "55555",
+      "emailRequired": "55555",
+      "invalidEmail": "55555",
+      "processingCsv": "55555",
+      "importFailed": "55555"
+    },
+    "importOptions": {
+      "updateExisting": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "skipInvalid": {
+        "title": "55555",
+        "description": "55555"
+      }
+    },
+    "results": {
+      "title": "55555",
+      "downloadFailedRecords": "55555"
+    },
+    "table": {
+      "status": "55555",
+      "name": "55555",
+      "email": "55555",
+      "message": "55555",
+      "exists": "55555",
+      "issues": "55555"
+    },
+    "tooltips": {
+      "importSuccessful": "55555",
+      "importFailed": "55555",
+      "validReady": "55555",
+      "invalidHasErrors": "55555"
+    },
+    "upload": {
+      "help": "55555",
+      "requiredLabel": "55555",
+      "contactFieldsLabel": "55555",
+      "contactFieldsDescription": "55555",
+      "clientFieldLabel": "55555",
+      "clientFieldDescription": "55555",
+      "noteLabel": "55555",
+      "noteDescription": "55555",
+      "downloadTemplate": "55555",
+      "emailFieldsLabel": "55555",
+      "emailFieldsDescription": "55555",
+      "hybridEmailNote": "55555"
+    },
+    "mapping": {
+      "title": "55555",
+      "description": "55555",
+      "contactFieldHeader": "55555",
+      "csvColumnHeader": "55555",
+      "notMapped": "55555",
+      "requiredFieldsNote": "55555",
+      "largeImportWarning": "55555 {{count}} 55555",
+      "processing": "55555",
+      "preview": "55555"
+    },
+    "preview": {
+      "title": "55555",
+      "totalRecords": "55555",
+      "valid": "55555",
+      "invalid": "55555"
+    },
+    "importing": {
+      "title": "55555",
+      "processing": "55555 {{current}} 55555 {{total}} 55555",
+      "currentItem": "55555 {{item}} 55555"
+    },
+    "complete": {
+      "title": "55555",
+      "successMessage": "55555 {{count}} 55555"
+    },
+    "confirmUpdate": {
+      "title": "55555",
+      "message": "55555 {{count}} 55555"
+    }
+  },
+  "contactPhoneNumbersEditor": {
+    "title": "55555",
+    "description": "55555",
+    "actions": {
+      "addPhone": "55555"
+    },
+    "empty": "55555",
+    "phoneTypes": {
+      "work": "55555",
+      "mobile": "55555",
+      "home": "55555",
+      "fax": "55555",
+      "other": "55555",
+      "custom": "55555"
+    },
+    "row": {
+      "title": "55555 {{number}} 55555",
+      "defaultDescription": "55555",
+      "secondaryDescription": "55555",
+      "defaultLabel": "55555",
+      "moveUp": "55555 {{number}} 55555",
+      "moveDown": "55555 {{number}} 55555",
+      "remove": "55555 {{number}} 55555"
+    },
+    "fields": {
+      "phoneNumber": "55555",
+      "phoneType": "55555",
+      "customPhoneType": "55555",
+      "customTypePlaceholder": "55555",
+      "customTypeSearchPlaceholder": "55555",
+      "customTypeEmpty": "55555",
+      "customTypeUseValue": "55555 {{value}} 55555"
+    },
+    "validation": {
+      "selectExactlyOneDefault": "55555",
+      "phoneRow": "55555 {{number}} 55555",
+      "enterCompletePhoneNumber": "55555",
+      "enterCustomPhoneType": "55555",
+      "customTypesUnique": "55555"
+    },
+    "lastTypeUsage": {
+      "title": "55555",
+      "message": "55555 {{label}} 55555",
+      "removeAndDelete": "55555",
+      "removeAndKeep": "55555"
+    }
+  },
+  "contactPortalTab": {
+    "title": "55555",
+    "description": "55555",
+    "loadingDescription": "55555",
+    "information": "55555",
+    "activeAccess": "55555",
+    "noAccess": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "portalAdmin": {
+      "label": "55555",
+      "helper": "55555"
+    },
+    "roles": {
+      "label": "55555",
+      "none": "55555",
+      "placeholder": "55555",
+      "addButton": "55555"
+    },
+    "userStatus": {
+      "label": "55555",
+      "active": "55555",
+      "inactive": "55555"
+    },
+    "lastLogin": {
+      "label": "55555",
+      "via": "55555 {{method}} 55555"
+    },
+    "history": {
+      "title": "55555",
+      "description": "55555",
+      "empty": "55555",
+      "sentPrefix": "55555",
+      "expiresPrefix": "55555",
+      "usedPrefix": "55555",
+      "status": {
+        "pending": "55555",
+        "used": "55555",
+        "expired": "55555",
+        "revoked": "55555"
+      }
+    },
+    "actions": {
+      "sendInvitation": "55555",
+      "sending": "55555",
+      "refresh": "55555",
+      "refreshing": "55555",
+      "resend": "55555",
+      "resending": "55555",
+      "revoke": "55555"
+    },
+    "toast": {
+      "successTitle": "55555",
+      "errorTitle": "55555",
+      "permissionDeniedTitle": "55555",
+      "loadError": "55555",
+      "refreshHistoryError": "55555",
+      "sendInvitePermissionDenied": "55555",
+      "sendInviteSuccess": "55555",
+      "sendInviteFailed": "55555",
+      "revokeInviteSuccess": "55555",
+      "revokeInviteFailed": "55555",
+      "resendInviteSuccess": "55555",
+      "resendInviteFailed": "55555",
+      "updatePortalSettingsPermissionDenied": "55555",
+      "portalAdminEnabled": "55555",
+      "portalAdminDisabled": "55555",
+      "updatePortalAdminFailed": "55555",
+      "updateAdminFailed": "55555",
+      "updateRolesPermissionDenied": "55555",
+      "roleAdded": "55555",
+      "addRoleFailed": "55555",
+      "roleRemoved": "55555",
+      "removeRoleFailed": "55555",
+      "updateStatusPermissionDenied": "55555",
+      "userActivated": "55555",
+      "userDeactivated": "55555",
+      "updateUserStatusFailed": "55555"
+    }
+  },
+  "quickAddContact": {
+    "title": "55555",
+    "description": "55555",
+    "dialog": {
+      "title": "55555"
+    },
+    "errorFallback": {
+      "title": "55555",
+      "tryAgain": "55555"
+    },
+    "actions": {
+      "submit": "55555"
+    },
+    "fields": {
+      "fullName": "55555",
+      "email": "55555",
+      "clientOptional": "55555",
+      "role": "55555",
+      "rolePlaceholder": "55555",
+      "notes": "55555",
+      "notesPlaceholder": "55555"
+    },
+    "status": {
+      "label": "55555",
+      "active": "55555",
+      "inactive": "55555"
+    },
+    "validation": {
+      "alertIntro": "55555",
+      "fullNameRequired": "55555",
+      "fullNameEmpty": "55555",
+      "fullNameSpaces": "55555",
+      "emailRequired": "55555",
+      "emailSpaces": "55555",
+      "roleSpaces": "55555",
+      "roleLength": "55555",
+      "roleCharacters": "55555",
+      "notesSpaces": "55555"
+    },
+    "toasts": {
+      "warningTitle": "55555",
+      "tagsFailed": "55555 {{count}} 55555",
+      "contactCreated": "55555",
+      "contactAdded": "55555 {{name}} 55555"
+    },
+    "errors": {
+      "createContactTitle": "55555",
+      "unexpected": "55555",
+      "validationTitle": "55555",
+      "emailExistsTitle": "55555",
+      "invalidReferenceTitle": "55555",
+      "systemTitle": "55555",
+      "genericTitle": "55555",
+      "closeMessage": "55555",
+      "createContactHeading": "55555",
+      "validationPrefix": "55555",
+      "emailExistsPrefix": "55555",
+      "invalidReferencePrefix": "55555",
+      "systemPrefix": "55555"
+    }
+  },
+  "contactDetailsEdit": {
+    "title": "55555 {{name}} 55555",
+    "heading": "55555 {{name}} 55555",
+    "inactiveBadge": "55555",
+    "description": "55555",
+    "validation": {
+      "fullNameRequired": "55555",
+      "emailRequired": "55555",
+      "invalidEmail": "55555"
+    },
+    "errors": {
+      "validationPrefix": "55555",
+      "emailExists": "55555",
+      "invalidReferencePrefix": "55555",
+      "systemPrefix": "55555",
+      "saveFailed": "55555",
+      "unexpected": "55555"
+    },
+    "fields": {
+      "fullName": "55555",
+      "email": "55555",
+      "role": "55555",
+      "rolePlaceholder": "55555",
+      "phoneNumbers": "55555",
+      "inboundTicketDestinationOverride": "55555",
+      "inboundTicketDestinationHelp": "55555",
+      "useClientDestination": "55555",
+      "client": "55555",
+      "status": "55555",
+      "notes": "55555",
+      "notesPlaceholder": "55555",
+      "tags": "55555",
+      "emailAddresses": "55555"
+    },
+    "loading": {
+      "destinations": "55555"
+    },
+    "status": {
+      "active": "55555",
+      "inactive": "55555"
+    }
+  },
+  "contactDetailsView": {
+    "title": "55555 {{name}} 55555",
+    "description": "55555",
+    "actions": {
+      "goToContact": "55555"
+    },
+    "empty": {
+      "notSet": "55555",
+      "unknownClient": "55555"
+    },
+    "phoneTypes": {
+      "work": "55555",
+      "mobile": "55555",
+      "home": "55555",
+      "fax": "55555",
+      "other": "55555"
+    },
+    "fields": {
+      "fullName": "55555",
+      "email": "55555",
+      "phone": "55555",
+      "defaultPhone": "55555",
+      "client": "55555",
+      "noClientAssigned": "55555",
+      "role": "55555",
+      "status": "55555",
+      "createdAt": "55555",
+      "updatedAt": "55555",
+      "notes": "55555",
+      "tags": "55555",
+      "emailAddresses": "55555",
+      "defaultEmail": "55555"
+    },
+    "status": {
+      "active": "55555",
+      "inactive": "55555"
+    },
+    "sections": {
+      "documents": "55555"
+    },
+    "errors": {
+      "loadTagsSystem": "55555",
+      "loadTagsFailed": "55555",
+      "unexpected": "55555",
+      "clientNotFound": "55555",
+      "loadClientSystem": "55555",
+      "clientMissing": "55555",
+      "loadClientFailed": "55555",
+      "updateClientFailedWithMessage": "55555 {{message}} 55555",
+      "updateClientFailed": "55555"
+    }
+  },
+  "clientContactsList": {
+    "title": "55555",
+    "description": "55555",
+    "table": {
+      "name": "55555",
+      "email": "55555",
+      "phoneNumber": "55555",
+      "actions": "55555"
+    },
+    "filter": {
+      "show": "55555",
+      "active": "55555",
+      "inactive": "55555",
+      "all": "55555"
+    },
+    "actions": {
+      "openMenu": "55555",
+      "quickView": "55555",
+      "addNewContact": "55555"
+    },
+    "errors": {
+      "loadFailed": "55555",
+      "loadingTitle": "55555",
+      "retryFailed": "55555"
+    }
+  },
+  "contactsLayout": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "contactsSkeleton": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "contactAvatarUpload": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "contactNotesPanel": {
+    "title": "55555",
+    "description": "55555",
+    "legacy": {
+      "initialNote": "55555"
+    },
+    "errors": {
+      "loadTitle": "55555",
+      "unknown": "55555"
+    },
+    "lastUpdated": "55555 {{date}} 55555"
+  }
+}

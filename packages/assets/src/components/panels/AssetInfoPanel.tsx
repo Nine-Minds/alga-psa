@@ -7,6 +7,7 @@ import type { Asset } from '@alga-psa/types';
 import { formatDateOnly } from '@alga-psa/core';
 import Link from 'next/link';
 import { cn, useClientDrawer } from '@alga-psa/ui';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface AssetInfoPanelProps {
   asset: Asset;
@@ -18,13 +19,19 @@ const InfoRow = ({
   value, 
   copyable = false, 
   link = null,
-  onClick = null
+  onClick = null,
+  copyId,
+  copyLabel,
+  copiedLabel
 }: { 
   label: string, 
   value: React.ReactNode, 
   copyable?: boolean, 
   link?: string | null,
-  onClick?: (() => void) | null
+  onClick?: (() => void) | null,
+  copyId?: string,
+  copyLabel?: string,
+  copiedLabel?: string
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -58,9 +65,9 @@ const InfoRow = ({
           <div className="flex items-center gap-1.5">
             <span className="text-sm text-gray-900">{value}</span>
             {copyable && typeof value === 'string' && (
-              <Tooltip content={copied ? 'Copied' : 'Copy'}>
+              <Tooltip content={copied ? copiedLabel : copyLabel}>
                 <Button
-                  id={`copy-${label.toLowerCase().replace(/\s+/g, '-')}`}
+                  id={`copy-${copyId ?? 'value'}`}
                   variant="ghost"
                   size="icon"
                   className={cn(
@@ -86,6 +93,7 @@ export const AssetInfoPanel: React.FC<AssetInfoPanelProps> = ({
   asset,
   isLoading
 }) => {
+  const { t } = useTranslation('msp/assets');
   const clientDrawer = useClientDrawer();
 
   if (isLoading) {
@@ -110,41 +118,60 @@ export const AssetInfoPanel: React.FC<AssetInfoPanelProps> = ({
            asset.network_device?.device_type || 
            asset.workstation?.cpu_model || // Fallback to CPU if model unknown
            asset.server?.cpu_model ||
-           'Unknown Model';
+           t('assetInfoPanel.values.unknownModel', { defaultValue: 'Unknown Model' });
   };
 
   return (
     <Card className="bg-white">
       <CardHeader>
-        <CardTitle>Asset Info & Lifecycle</CardTitle>
+        <CardTitle>{t('assetInfoPanel.title', { defaultValue: 'Asset Info & Lifecycle' })}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-2">
           <InfoRow 
-            label="Client" 
-            value={asset.client?.client_name || 'Unknown Client'} 
+            label={t('assetInfoPanel.fields.client', { defaultValue: 'Client' })}
+            value={asset.client?.client_name || t('assetInfoPanel.values.unknownClient', {
+              defaultValue: 'Unknown Client'
+            })}
             onClick={handleOpenClientDrawer}
+            copyLabel={t('assetInfoPanel.actions.copy', { defaultValue: 'Copy' })}
+            copiedLabel={t('assetInfoPanel.actions.copied', { defaultValue: 'Copied' })}
           />
           <InfoRow 
-            label="Location" 
-            value={asset.location || 'Unassigned'} 
+            label={t('assetInfoPanel.fields.location', { defaultValue: 'Location' })}
+            value={asset.location || t('assetInfoPanel.values.unassigned', { defaultValue: 'Unassigned' })}
+            copyLabel={t('assetInfoPanel.actions.copy', { defaultValue: 'Copy' })}
+            copiedLabel={t('assetInfoPanel.actions.copied', { defaultValue: 'Copied' })}
           />
           <InfoRow 
-            label="Model" 
+            label={t('assetInfoPanel.fields.model', { defaultValue: 'Model' })}
             value={getModelName()} 
+            copyLabel={t('assetInfoPanel.actions.copy', { defaultValue: 'Copy' })}
+            copiedLabel={t('assetInfoPanel.actions.copied', { defaultValue: 'Copied' })}
           />
           <InfoRow 
-            label="Serial Number" 
-            value={asset.serial_number || 'N/A'} 
+            label={t('assetInfoPanel.fields.serialNumber', { defaultValue: 'Serial Number' })}
+            value={asset.serial_number || t('common.states.na', { defaultValue: 'N/A' })}
             copyable={!!asset.serial_number}
+            copyId="serial-number"
+            copyLabel={t('assetInfoPanel.actions.copy', { defaultValue: 'Copy' })}
+            copiedLabel={t('assetInfoPanel.actions.copied', { defaultValue: 'Copied' })}
           />
           <InfoRow 
-            label="Purchase Date" 
-            value={asset.purchase_date ? formatDateOnly(new Date(asset.purchase_date)) : 'N/A'} 
+            label={t('assetInfoPanel.fields.purchaseDate', { defaultValue: 'Purchase Date' })}
+            value={asset.purchase_date
+              ? formatDateOnly(new Date(asset.purchase_date))
+              : t('common.states.na', { defaultValue: 'N/A' })}
+            copyLabel={t('assetInfoPanel.actions.copy', { defaultValue: 'Copy' })}
+            copiedLabel={t('assetInfoPanel.actions.copied', { defaultValue: 'Copied' })}
           />
           <InfoRow 
-            label="Warranty End" 
-            value={asset.warranty_end_date ? formatDateOnly(new Date(asset.warranty_end_date)) : 'N/A'} 
+            label={t('assetInfoPanel.fields.warrantyEnd', { defaultValue: 'Warranty End' })}
+            value={asset.warranty_end_date
+              ? formatDateOnly(new Date(asset.warranty_end_date))
+              : t('common.states.na', { defaultValue: 'N/A' })}
+            copyLabel={t('assetInfoPanel.actions.copy', { defaultValue: 'Copy' })}
+            copiedLabel={t('assetInfoPanel.actions.copied', { defaultValue: 'Copied' })}
           />
         </div>
       </CardContent>

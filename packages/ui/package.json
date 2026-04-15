@@ -3,88 +3,72 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.mjs",
   "types": "./src/index.ts",
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.mjs"
     },
     "./components": {
       "types": "./src/components/index.ts",
-      "import": "./dist/components/index.mjs",
-      "require": "./dist/components/index.js"
+      "import": "./dist/components/index.mjs"
     },
     "./components/*": {
       "types": "./src/components/*.tsx",
-      "import": "./dist/components/*.mjs",
-      "require": "./dist/components/*.js"
+      "import": "./dist/components/*.mjs"
     },
     "./ui-reflection": {
       "types": "./src/ui-reflection/index.ts",
-      "import": "./dist/ui-reflection/index.mjs",
-      "require": "./dist/ui-reflection/index.js"
+      "import": "./dist/ui-reflection/index.mjs"
     },
     "./ui-reflection/*": {
       "types": "./src/ui-reflection/*.tsx",
-      "import": "./dist/ui-reflection/*.mjs",
-      "require": "./dist/ui-reflection/*.js"
+      "import": "./dist/ui-reflection/*.mjs"
     },
     "./lib": {
       "types": "./src/lib/index.ts",
-      "import": "./dist/lib/index.mjs",
-      "require": "./dist/lib/index.js"
+      "import": "./dist/lib/index.mjs"
     },
     "./lib/*": {
       "types": "./src/lib/*.ts",
-      "import": "./dist/lib/*.mjs",
-      "require": "./dist/lib/*.js"
+      "import": "./dist/lib/*.mjs"
     },
     "./lib/i18n/config": {
       "types": "./src/lib/i18n/config.ts",
-      "import": "./dist/lib/i18n/config.mjs",
-      "require": "./dist/lib/i18n/config.js"
+      "import": "./dist/lib/i18n/config.mjs"
     },
     "./lib/i18n/client": {
       "types": "./src/lib/i18n/client.tsx",
-      "import": "./dist/lib/i18n/client.mjs",
-      "require": "./dist/lib/i18n/client.js"
+      "import": "./dist/lib/i18n/client.mjs"
     },
     "./lib/i18n/*": {
       "types": "./src/lib/i18n/*.tsx",
-      "import": "./dist/lib/i18n/*.mjs",
-      "require": "./dist/lib/i18n/*.js"
+      "import": "./dist/lib/i18n/*.mjs"
     },
     "./hooks": {
       "types": "./src/hooks/index.ts",
-      "import": "./dist/hooks/index.mjs",
-      "require": "./dist/hooks/index.js"
+      "import": "./dist/hooks/index.mjs"
     },
     "./hooks/*": {
       "types": "./src/hooks/*.ts",
-      "import": "./dist/hooks/*.mjs",
-      "require": "./dist/hooks/*.js"
+      "import": "./dist/hooks/*.mjs"
     },
     "./context": {
       "types": "./src/context/index.ts",
-      "import": "./dist/context/index.mjs",
-      "require": "./dist/context/index.js"
+      "import": "./dist/context/index.mjs"
     },
     "./editor": {
       "types": "./src/editor/index.ts",
-      "import": "./dist/editor/index.mjs",
-      "require": "./dist/editor/index.js"
+      "import": "./dist/editor/index.mjs"
     },
     "./editor/*": {
       "types": "./src/editor/*.tsx",
-      "import": "./dist/editor/*.mjs",
-      "require": "./dist/editor/*.js"
+      "import": "./dist/editor/*.mjs"
     },
     "./services": {
       "types": "./src/services/index.ts",
-      "import": "./dist/services/index.mjs",
-      "require": "./dist/services/index.js"
+      "import": "./dist/services/index.mjs"
     }
   },
   "scripts": {
@@ -94,6 +78,7 @@
   "dependencies": {
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/formatting": "*",
     "@alga-psa/types": "*",
     "@blocknote/core": "^0.47.0",
     "@blocknote/mantine": "^0.47.0",

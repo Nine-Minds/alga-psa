@@ -10,6 +10,7 @@ import { ISO8601String } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { toPlainDate } from '@alga-psa/core';
 
 
 export const getBillingCycle = withAuth(async (
@@ -19,7 +20,7 @@ export const getBillingCycle = withAuth(async (
 ): Promise<BillingCycleType> => {
   const { knex: conn } = await createTenantKnex();
 
-  const result = await withTransaction(conn, async (trx: Knex.Transaction) => {
+  const result: { billing_cycle?: BillingCycleType | null } | undefined = await withTransaction(conn, async (trx: Knex.Transaction) => {
     return await trx('clients')
       .where({
         client_id: clientId,
@@ -209,6 +210,81 @@ export const createNextBillingCycle = withAuth(async (
   });
 });
 
+async function getBillingCycleRecord(
+  knex: Knex,
+  tenant: string,
+  cycleId: string
+) {
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return trx('client_billing_cycles')
+      .where({
+        billing_cycle_id: cycleId,
+        tenant,
+      })
+      .first();
+  });
+}
+
+async function deactivateBillingCycleRecord(
+  knex: Knex,
+  tenant: string,
+  cycleId: string
+): Promise<void> {
+  const billingCycle = await getBillingCycleRecord(knex, tenant, cycleId);
+
+  if (!billingCycle) {
+    throw new Error('Billing cycle not found');
+  }
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return trx('client_billing_cycles')
+      .where({
+        billing_cycle_id: cycleId,
+        tenant
+      })
+      .update({
+        is_active: false,
+        period_end_date: new Date().toISOString()
+      });
+  });
+
+  const nextBillingDate = await getNextBillingDate(
+    billingCycle.client_id,
+    new Date().toISOString()
+  );
+
+  if (!nextBillingDate) {
+    throw new Error('Failed to verify future billing periods');
+  }
+}
+
+async function permanentlyDeleteBillingCycleRecord(
+  knex: Knex,
+  tenant: string,
+  cycleId: string
+): Promise<void> {
+  const billingCycle = await getBillingCycleRecord(knex, tenant, cycleId);
+
+  if (!billingCycle) {
+    throw new Error('Billing cycle not found');
+  }
+
+  const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return trx('client_billing_cycles')
+      .where({
+        billing_cycle_id: cycleId,
+        tenant
+      })
+      .del();
+  });
+
+  if (deletedCount === 0) {
+    console.warn(`Billing cycle ${cycleId} was not found for deletion, but associated invoice might have been deleted.`);
+  } else {
+    console.log(`Successfully deleted billing cycle ${cycleId}`);
+  }
+}
+
 // function for rollback (deactivate cycle, delete invoice)
 export const removeBillingCycle = withAuth(async (
   user,
@@ -216,20 +292,6 @@ export const removeBillingCycle = withAuth(async (
   cycleId: string
 ): Promise<void> => {
   const { knex } = await createTenantKnex();
-
-  // Get the billing cycle first to ensure it exists and get client_id
-  const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_cycles')
-      .where({
-        billing_cycle_id: cycleId,
-        tenant
-      })
-      .first();
-  });
-
-  if (!billingCycle) {
-    throw new Error('Billing cycle not found');
-  }
 
   // Check for existing invoices
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -242,32 +304,10 @@ export const removeBillingCycle = withAuth(async (
   });
 
   if (invoice) {
-    // Use the hardDeleteInvoice function to properly clean up the invoice
     await hardDeleteInvoice(invoice.invoice_id);
   }
 
-  // Mark billing cycle as inactive instead of deleting
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_cycles')
-      .where({
-        billing_cycle_id: cycleId,
-        tenant
-      })
-      .update({
-        is_active: false,
-        period_end_date: new Date().toISOString() // Set end date to now
-      });
-  });
-
-  // Verify future periods won't be affected
-  const nextBillingDate = await getNextBillingDate(
-    billingCycle.client_id,
-    new Date().toISOString()
-  );
-
-  if (!nextBillingDate) {
-    throw new Error('Failed to verify future billing periods');
-  }
+  await deactivateBillingCycleRecord(knex, tenant, cycleId);
 });
 
 // function for hard delete (delete cycle and invoice)
@@ -278,20 +318,6 @@ export const hardDeleteBillingCycle = withAuth(async (
 ): Promise<void> => {
   const { knex } = await createTenantKnex();
 
-  // Get the billing cycle first to ensure it exists and get client_id
-  const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_cycles')
-      .where({
-        billing_cycle_id: cycleId,
-        tenant
-      })
-      .first();
-  });
-
-  if (!billingCycle) {
-    throw new Error('Billing cycle not found');
-  }
-
   // Check for existing invoices
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('invoices')
@@ -303,27 +329,218 @@ export const hardDeleteBillingCycle = withAuth(async (
   });
 
   if (invoice) {
-    // Use the hardDeleteInvoice function to properly clean up the invoice
     await hardDeleteInvoice(invoice.invoice_id);
   }
 
-  // Delete the billing cycle record
-  const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_cycles')
-      .where({
-        billing_cycle_id: cycleId,
-        tenant
-      })
-      .del();
+  await permanentlyDeleteBillingCycleRecord(knex, tenant, cycleId);
+});
+
+export interface RecurringInvoiceHistoryRow {
+  invoiceId: string;
+  invoiceNumber: string | null;
+  invoiceStatus: string | null;
+  invoiceDate: ISO8601String | null;
+  clientId: string;
+  clientName: string;
+  billingCycleId: string | null;
+  hasBillingCycleBridge: boolean;
+  cadenceSource: 'client_schedule' | 'contract_anniversary';
+  executionWindowKind: 'client_cadence_window' | 'contract_cadence_window';
+  servicePeriodStart: ISO8601String | null;
+  servicePeriodEnd: ISO8601String | null;
+  servicePeriodLabel: string;
+  invoiceWindowStart: ISO8601String | null;
+  invoiceWindowEnd: ISO8601String | null;
+  invoiceWindowLabel: string;
+  assignmentContractIds: string[];
+  assignmentDefaultContractIds: string[];
+  assignmentExplicitContractIds: string[];
+  assignmentSourceSummary: 'system_managed_default_contract' | 'explicit_contract' | 'mixed' | 'unassigned';
+  isMultiAssignment: boolean;
+  assignmentSummary: string;
+}
+
+export type InvoicedRecurringHistoryRow = RecurringInvoiceHistoryRow;
+
+function formatHistoryDisplayDate(value?: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return toPlainDate(value).toString();
+  } catch {
+    return value;
+  }
+}
+
+function formatHistoryRangeLabel(start?: string | null, end?: string | null) {
+  const formattedStart = formatHistoryDisplayDate(start);
+  const formattedEnd = formatHistoryDisplayDate(end);
+
+  if (!formattedStart && !formattedEnd) {
+    return 'Unavailable';
+  }
+
+  if (!formattedStart || !formattedEnd) {
+    return formattedStart ?? formattedEnd ?? 'Unavailable';
+  }
+
+  return `${formattedStart} to ${formattedEnd}`;
+}
+
+function normalizeHistoryDate(value: unknown): string | null {
+  if (!value) {
+    return null;
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return null;
+}
+
+function normalizeHistoryAssignmentContractIds(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      return trimmed
+        .slice(1, -1)
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
+    }
+  }
+  return [];
+}
+
+function buildHistoryAssignmentSummary(input: {
+  assignmentContractIds: string[];
+  assignmentDefaultContractIds: string[];
+  assignmentExplicitContractIds: string[];
+}): {
+  assignmentSummary: string;
+  assignmentSourceSummary: RecurringInvoiceHistoryRow['assignmentSourceSummary'];
+} {
+  const totalAssignments = input.assignmentContractIds.length;
+  const defaultCount = input.assignmentDefaultContractIds.length;
+  const explicitCount =
+    input.assignmentExplicitContractIds.length > 0
+      ? input.assignmentExplicitContractIds.length
+      : Math.max(totalAssignments - defaultCount, 0);
+
+  if (totalAssignments === 0) {
+    return {
+      assignmentSummary: 'No assignment header',
+      assignmentSourceSummary: 'unassigned',
+    };
+  }
+
+  if (defaultCount > 0 && explicitCount === 0) {
+    return {
+      assignmentSummary:
+        totalAssignments > 1
+          ? `System-managed default contract (${totalAssignments} assignments)`
+          : 'System-managed default contract',
+      assignmentSourceSummary: 'system_managed_default_contract',
+    };
+  }
+
+  if (defaultCount > 0 && explicitCount > 0) {
+    return {
+      assignmentSummary:
+        `Mixed assignment (${explicitCount} explicit, ${defaultCount} system-managed default)`,
+      assignmentSourceSummary: 'mixed',
+    };
+  }
+
+  return {
+    assignmentSummary:
+      totalAssignments > 1
+        ? `Explicit contract assignments (${totalAssignments})`
+        : 'Explicit contract assignment',
+    assignmentSourceSummary: 'explicit_contract',
+  };
+}
+
+function mapRecurringHistoryRow(row: any): RecurringInvoiceHistoryRow {
+  const servicePeriodStart = normalizeHistoryDate(row.service_period_start);
+  const servicePeriodEnd = normalizeHistoryDate(row.service_period_end);
+  const invoiceWindowStart = normalizeHistoryDate(row.invoice_window_start);
+  const invoiceWindowEnd = normalizeHistoryDate(row.invoice_window_end);
+  const invoiceDate = normalizeHistoryDate(row.invoice_date);
+  const cadenceSource = row.cadence_owner === 'contract'
+    ? 'contract_anniversary'
+    : 'client_schedule';
+  const executionWindowKind = row.cadence_owner === 'contract'
+    ? 'contract_cadence_window'
+    : 'client_cadence_window';
+  const assignmentContractIds = normalizeHistoryAssignmentContractIds(
+    row.assignment_contract_ids,
+  );
+  const assignmentDefaultContractIds = normalizeHistoryAssignmentContractIds(
+    row.assignment_default_contract_ids,
+  );
+  const assignmentExplicitContractIds = normalizeHistoryAssignmentContractIds(
+    row.assignment_explicit_contract_ids,
+  );
+  const assignmentSummary = buildHistoryAssignmentSummary({
+    assignmentContractIds,
+    assignmentDefaultContractIds,
+    assignmentExplicitContractIds,
   });
 
-  if (deletedCount === 0) {
-    // This might happen if the cycle was already deleted in a race condition,
-    // but the invoice deletion succeeded. Log a warning.
-    console.warn(`Billing cycle ${cycleId} was not found for deletion, but associated invoice might have been deleted.`);
-  } else {
-    console.log(`Successfully deleted billing cycle ${cycleId}`);
-  }
+  return {
+    invoiceId: row.invoice_id,
+    invoiceNumber: row.invoice_number ?? null,
+    invoiceStatus: row.status ?? null,
+    clientId: row.client_id,
+    clientName: row.client_name,
+    billingCycleId: row.billing_cycle_id ?? null,
+    hasBillingCycleBridge: Boolean(row.billing_cycle_id),
+    cadenceSource,
+    executionWindowKind,
+    servicePeriodStart,
+    servicePeriodEnd,
+    servicePeriodLabel: formatHistoryRangeLabel(
+      servicePeriodStart,
+      servicePeriodEnd,
+    ),
+    invoiceDate,
+    invoiceWindowStart,
+    invoiceWindowEnd,
+    invoiceWindowLabel: formatHistoryRangeLabel(
+      invoiceWindowStart,
+      invoiceWindowEnd,
+    ),
+    assignmentContractIds,
+    assignmentDefaultContractIds,
+    assignmentExplicitContractIds,
+    assignmentSourceSummary: assignmentSummary.assignmentSourceSummary,
+    isMultiAssignment: assignmentContractIds.length > 1,
+    assignmentSummary: assignmentSummary.assignmentSummary,
+  };
+}
+
+export const reverseRecurringInvoice = withAuth(async (
+  user,
+  { tenant },
+  params: { invoiceId: string; billingCycleId?: string | null }
+): Promise<void> => {
+  await hardDeleteInvoice(params.invoiceId);
+});
+
+export const hardDeleteRecurringInvoice = withAuth(async (
+  user,
+  { tenant },
+  params: { invoiceId: string; billingCycleId?: string | null }
+): Promise<void> => {
+  await hardDeleteInvoice(params.invoiceId);
 });
 
 export const getInvoicedBillingCycles = withAuth(async (
@@ -366,56 +583,84 @@ export const getInvoicedBillingCycles = withAuth(async (
 });
 
 // Types for paginated invoiced billing cycles
-export interface FetchInvoicedCyclesOptions {
+export interface FetchRecurringInvoiceHistoryOptions {
   page?: number;
   pageSize?: number;
   searchTerm?: string;
 }
 
-export interface PaginatedInvoicedCyclesResult {
-  cycles: (IClientContractLineCycle & {
-    client_name: string;
-    period_start_date: ISO8601String;
-    period_end_date: ISO8601String;
-  })[];
+export interface PaginatedRecurringInvoiceHistoryResult {
+  rows: RecurringInvoiceHistoryRow[];
   total: number;
   page: number;
   pageSize: number;
   totalPages: number;
 }
 
-/**
- * Fetch invoiced billing cycles with server-side pagination and search
- */
-export const getInvoicedBillingCyclesPaginated = withAuth(async (
-  user,
-  { tenant },
-  options: FetchInvoicedCyclesOptions = {}
-): Promise<PaginatedInvoicedCyclesResult> => {
+export interface FetchInvoicedCyclesOptions extends FetchRecurringInvoiceHistoryOptions {}
+
+export interface PaginatedInvoicedCyclesResult {
+  cycles: InvoicedRecurringHistoryRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+async function fetchRecurringInvoiceHistoryPage(
+  tenant: string,
+  options: FetchRecurringInvoiceHistoryOptions = {}
+): Promise<PaginatedRecurringInvoiceHistoryResult> {
+  const { knex: conn } = await createTenantKnex();
   const {
     page = 1,
     pageSize = 10,
     searchTerm = ''
   } = options;
 
-  const { knex: conn } = await createTenantKnex();
-
   const result = await withTransaction(conn, async (trx: Knex.Transaction) => {
-    // Build base query
-    const buildBaseQuery = () => {
-      const query = trx('client_billing_cycles as cbc')
-        .join('clients as c', function () {
-          this.on('c.client_id', '=', 'cbc.client_id')
-            .andOn('c.tenant', '=', 'cbc.tenant');
-        })
-        .join('invoices as i', function () {
-          this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-            .andOn('i.tenant', '=', 'cbc.tenant');
-        })
-        .where('cbc.tenant', tenant)
-        .whereNotNull('cbc.period_end_date');
+    const detailServicePeriodStartSql = `
+      SELECT MIN(iid.service_period_start)
+      FROM invoice_charges ic
+      JOIN invoice_charge_details iid
+        ON iid.item_id = ic.item_id
+       AND iid.tenant = ic.tenant
+      WHERE ic.invoice_id = i.invoice_id
+        AND ic.tenant = i.tenant
+    `;
+    const detailServicePeriodEndSql = `
+      SELECT MAX(iid.service_period_end)
+      FROM invoice_charges ic
+      JOIN invoice_charge_details iid
+        ON iid.item_id = ic.item_id
+       AND iid.tenant = ic.tenant
+      WHERE ic.invoice_id = i.invoice_id
+        AND ic.tenant = i.tenant
+    `;
+    const recurringSummaryQuery = trx('recurring_service_periods as rsp')
+      .where('rsp.tenant', tenant)
+      .whereNotNull('rsp.invoice_id')
+      .select('rsp.invoice_id')
+      .min('rsp.service_period_start as service_period_start')
+      .max('rsp.service_period_end as service_period_end')
+      .min('rsp.invoice_window_start as invoice_window_start')
+      .max('rsp.invoice_window_end as invoice_window_end')
+      .max('rsp.cadence_owner as cadence_owner')
+      .groupBy('rsp.invoice_id')
+      .as('rsp_summary');
 
-      // Apply search filter
+    const buildBaseQuery = () => {
+      const query = trx('invoices as i')
+        .join('clients as c', function () {
+          this.on('c.client_id', '=', 'i.client_id')
+            .andOn('c.tenant', '=', 'i.tenant');
+        })
+        .leftJoin(recurringSummaryQuery, 'rsp_summary.invoice_id', 'i.invoice_id')
+        .where('i.tenant', tenant)
+        .whereRaw(
+          `coalesce(rsp_summary.service_period_start, (${detailServicePeriodStartSql})) is not null`,
+        );
+
       if (searchTerm.trim()) {
         const searchPattern = `%${searchTerm.trim().toLowerCase()}%`;
         query.whereRaw('LOWER(c.client_name) LIKE ?', [searchPattern]);
@@ -426,13 +671,13 @@ export const getInvoicedBillingCyclesPaginated = withAuth(async (
 
     // Get total count
     const countResult = await buildBaseQuery()
-      .countDistinct('cbc.billing_cycle_id as count')
+      .countDistinct('i.invoice_id as count')
       .first();
     const total = parseInt(String(countResult?.count || '0'), 10);
 
     if (total === 0) {
       return {
-        cycles: [],
+        rows: [],
         total: 0,
         page,
         pageSize,
@@ -447,21 +692,62 @@ export const getInvoicedBillingCyclesPaginated = withAuth(async (
     // Fetch paginated data
     const cycles = await buildBaseQuery()
       .select(
-        'cbc.billing_cycle_id',
-        'cbc.client_id',
+        'i.invoice_id',
+        'i.invoice_number',
+        'i.status',
+        'i.invoice_date',
+        'i.billing_cycle_id',
+        'i.client_id',
+        'i.client_contract_id',
         'c.client_name',
-        'cbc.billing_cycle',
-        'cbc.period_start_date',
-        'cbc.period_end_date',
-        'cbc.effective_date',
-        'cbc.tenant'
+        trx.raw(`coalesce(rsp_summary.service_period_start, (${detailServicePeriodStartSql})) as service_period_start`),
+        trx.raw(`coalesce(rsp_summary.service_period_end, (${detailServicePeriodEndSql})) as service_period_end`),
+        trx.raw(`coalesce(rsp_summary.invoice_window_start, i.billing_period_start) as invoice_window_start`),
+        trx.raw(`coalesce(rsp_summary.invoice_window_end, i.billing_period_end) as invoice_window_end`),
+        trx.raw(`coalesce(rsp_summary.cadence_owner, 'client') as cadence_owner`),
+        trx.raw(`coalesce((
+          select array_agg(distinct ic.client_contract_id)
+          from invoice_charges ic
+          where ic.invoice_id = i.invoice_id
+            and ic.tenant = i.tenant
+            and ic.client_contract_id is not null
+        ), ARRAY[]::uuid[]) as assignment_contract_ids`),
+        trx.raw(`coalesce((
+          select array_agg(distinct ic.client_contract_id)
+          from invoice_charges ic
+          join client_contracts cc
+            on cc.client_contract_id = ic.client_contract_id
+           and cc.tenant = ic.tenant
+          join contracts ct
+            on ct.contract_id = cc.contract_id
+           and ct.tenant = cc.tenant
+          where ic.invoice_id = i.invoice_id
+            and ic.tenant = i.tenant
+            and ic.client_contract_id is not null
+            and ct.is_system_managed_default = true
+        ), ARRAY[]::uuid[]) as assignment_default_contract_ids`),
+        trx.raw(`coalesce((
+          select array_agg(distinct ic.client_contract_id)
+          from invoice_charges ic
+          join client_contracts cc
+            on cc.client_contract_id = ic.client_contract_id
+           and cc.tenant = ic.tenant
+          join contracts ct
+            on ct.contract_id = cc.contract_id
+           and ct.tenant = cc.tenant
+          where ic.invoice_id = i.invoice_id
+            and ic.tenant = i.tenant
+            and ic.client_contract_id is not null
+            and (ct.is_system_managed_default is null or ct.is_system_managed_default = false)
+        ), ARRAY[]::uuid[]) as assignment_explicit_contract_ids`)
       )
-      .orderBy('cbc.period_end_date', 'desc')
+      .orderByRaw(`coalesce(rsp_summary.invoice_window_end, i.billing_period_end, i.invoice_date) desc`)
+      .orderBy('i.invoice_id', 'desc')
       .limit(pageSize)
       .offset(offset);
 
     return {
-      cycles,
+      rows: cycles.map(mapRecurringHistoryRow),
       total,
       page,
       pageSize,
@@ -470,6 +756,35 @@ export const getInvoicedBillingCyclesPaginated = withAuth(async (
   });
 
   return result;
+}
+
+/**
+ * Fetch recurring invoice history with server-side pagination and search.
+ */
+export const getRecurringInvoiceHistoryPaginated = withAuth(async (
+  user,
+  { tenant },
+  options: FetchRecurringInvoiceHistoryOptions = {}
+): Promise<PaginatedRecurringInvoiceHistoryResult> => {
+  return fetchRecurringInvoiceHistoryPage(tenant, options);
+});
+
+/**
+ * @deprecated Use getRecurringInvoiceHistoryPaginated.
+ */
+export const getInvoicedBillingCyclesPaginated = withAuth(async (
+  user,
+  { tenant },
+  options: FetchInvoicedCyclesOptions = {}
+): Promise<PaginatedInvoicedCyclesResult> => {
+  const result = await fetchRecurringInvoiceHistoryPage(tenant, options);
+  return {
+    cycles: result.rows,
+    total: result.total,
+    page: result.page,
+    pageSize: result.pageSize,
+    totalPages: result.totalPages,
+  };
 });
 
 export const getAllBillingCycles = withAuth(async (

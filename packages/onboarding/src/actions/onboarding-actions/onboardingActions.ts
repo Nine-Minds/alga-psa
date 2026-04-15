@@ -10,6 +10,7 @@ import { createClientContact } from '@alga-psa/clients/actions';
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alga-psa/tenancy/actions';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { getLicenseUsage } from '../../../../licensing/src/lib/get-license-usage';
 
 export interface OnboardingActionResult {
   success: boolean;
@@ -20,7 +21,7 @@ export interface OnboardingActionResult {
 export interface ClientInfoData {
   firstName: string;
   lastName: string;
-  clientName: string;
+  tenantName: string;
   email: string;
   newPassword?: string;
 }
@@ -54,6 +55,8 @@ export interface BillingData {
   servicePrice: string;
   contractLineName: string;
   serviceTypeId?: string;
+  serviceBillingMode?: 'fixed' | 'hourly' | 'usage';
+  currencyCode?: string;
 }
 
 export interface TicketingData {
@@ -123,9 +126,9 @@ export const saveClientInfo = withAuth(async (
       // Save progress to tenant settings
       // IMPORTANT: Do NOT save user-specific fields (firstName, lastName, email) to tenant-wide storage
       // These fields are specific to the current user and should not be shared across users in the tenant
-      // Only save tenant-level data like clientName
+      // Only save tenant-level data like tenantName
       const progressData: any = {
-        clientName: data.clientName
+        tenantName: data.tenantName
       };
 
       await saveTenantOnboardingProgress(progressData);
@@ -146,13 +149,12 @@ export const addSingleTeamMember = withAuth(async (
 ): Promise<OnboardingActionResult> => {
   try {
     // Check license limits for MSP (internal) users
-    const { getLicenseUsage } = await import('@alga-psa/licensing');
     const usage = await getLicenseUsage(tenant);
 
     if (usage.limit !== null && usage.used >= usage.limit) {
       return {
         success: false,
-        error: `You've reached your internal user licence limit of ${usage.limit}. Please remove or deactivate existing users to add new ones.`
+        error: `You've reached your internal user license limit of ${usage.limit}. Please remove or deactivate existing users to add new ones.`
       };
     }
 
@@ -274,7 +276,6 @@ export const addTeamMembers = withAuth(async (
   try {
     // Check license limits for  MSP (internal) users
     const { knex } = await createTenantKnex();
-    const { getLicenseUsage } = await import('@alga-psa/licensing');
     const usage = await getLicenseUsage(tenant);
     
     // Determine how many users we can actually add
@@ -287,7 +288,7 @@ export const addTeamMembers = withAuth(async (
       if (canAdd === 0) {
         return { 
           success: false, 
-          error: `You've reached your internal user licence limit of ${usage.limit}. Please remove or deactivate existing users to add new ones.`
+          error: `You've reached your internal user license limit of ${usage.limit}. Please remove or deactivate existing users to add new ones.`
         };
       }
       
@@ -654,24 +655,60 @@ export const setupBilling = withAuth(async (
         throw new Error('Invalid service type selected');
       }
 
-      // Create service catalog entry
+      // Create service catalog entry.
+      // Billing behavior is contract/service configuration context, not service-type identity.
+      const currencyCode = data.currencyCode || 'USD';
+      const rateInCents = Math.round((parseFloat(data.servicePrice) || 0) * 100);
+      // Billing behavior is contract/service configuration context, not service-type identity.
       serviceId = require('crypto').randomUUID();
       await trx('service_catalog').insert({
         service_id: serviceId,
         tenant,
         service_name: data.serviceName,
         description: data.serviceDescription,
-        billing_method: serviceType.billing_method || 'usage',
+        billing_method: data.serviceBillingMode || 'usage',
         custom_service_type_id: serviceType.id,
-        default_rate: parseFloat(data.servicePrice) || 0,
-        unit_of_measure: 'hour'
+        default_rate: rateInCents,
+        unit_of_measure: 'hour',
+        cost_currency: currencyCode,
       });
+
+      // Create service_prices entry so the catalog UI shows the correct currency & rate
+      await trx('service_prices').insert({
+        price_id: require('crypto').randomUUID(),
+        tenant,
+        service_id: serviceId,
+        currency_code: currencyCode,
+        rate: rateInCents,
+      });
+
+      // Set default currency on all tenant clients created during onboarding
+      await trx('clients')
+        .where({ tenant })
+        .whereNull('default_currency_code')
+        .update({ default_currency_code: currencyCode });
+
+      // Persist the selected currency as the tenant-level billing default
+      const existingSettings = await trx('default_billing_settings').where({ tenant }).first();
+      if (existingSettings) {
+        await trx('default_billing_settings')
+          .where({ tenant })
+          .update({ default_currency_code: currencyCode, updated_at: trx.fn.now() });
+      } else {
+        await trx('default_billing_settings').insert({
+          tenant,
+          zero_dollar_invoice_handling: 'normal',
+          suppress_zero_dollar_invoices: false,
+          default_currency_code: currencyCode,
+        });
+      }
 
       // Save progress
       await saveTenantOnboardingProgress({
         serviceName: data.serviceName,
         serviceDescription: data.serviceDescription,
         servicePrice: data.servicePrice,
+        serviceBillingMode: data.serviceBillingMode || 'usage',
         contractLineName: data.contractLineName
       });
     });
@@ -759,6 +796,7 @@ export const configureTicketing = withAuth(async (
         // This is a manually created board
         boardId = require('crypto').randomUUID();
         const shouldBeDefault = data.isDefaultBoard || false;
+        const boardColumns = await trx('boards').columnInfo();
         
         // If setting as default, clear any existing defaults first
         if (shouldBeDefault) {
@@ -774,8 +812,9 @@ export const configureTicketing = withAuth(async (
           board_id: boardId,
           tenant,
           board_name: data.boardName,
-          email: data.supportEmail,
-          is_active: true,
+          ...(Object.prototype.hasOwnProperty.call(boardColumns, 'email') ? { email: data.supportEmail } : {}),
+          ...(Object.prototype.hasOwnProperty.call(boardColumns, 'is_active') ? { is_active: true } : {}),
+          ...(Object.prototype.hasOwnProperty.call(boardColumns, 'is_inactive') ? { is_inactive: false } : {}),
           is_default: shouldBeDefault
         });
         
@@ -843,6 +882,10 @@ export const configureTicketing = withAuth(async (
 
       // Create statuses - only ones that don't exist
       if (data.statuses && data.statuses.length > 0) {
+        if (!boardId) {
+          throw new Error('Select or create a board before adding ticket statuses.');
+        }
+
         // Check if any status (imported or manual) should be the default
         const defaultStatus = data.statuses.find(s => s.is_default);
         
@@ -851,7 +894,8 @@ export const configureTicketing = withAuth(async (
           await trx('statuses')
             .where({ 
               tenant, 
-              item_type: 'ticket',
+              board_id: boardId,
+              status_type: 'ticket',
               is_default: true
             })
             .update({ is_default: false });
@@ -865,7 +909,8 @@ export const configureTicketing = withAuth(async (
               await trx('statuses')
                 .where({
                   tenant,
-                  status_id: status.status_id
+                  status_id: status.status_id,
+                  board_id: boardId
                 })
                 .update({ is_default: true });
             }
@@ -877,7 +922,8 @@ export const configureTicketing = withAuth(async (
             .where({ 
               tenant, 
               name: status.name,
-              status_type: 'ticket'
+              status_type: 'ticket',
+              board_id: boardId
             })
             .first();
 
@@ -886,6 +932,7 @@ export const configureTicketing = withAuth(async (
             await trx('statuses').insert({
               status_id: statusId,
               tenant,
+              board_id: boardId,
               name: status.name,
               is_closed: status.is_closed || false,
               is_default: status.is_default || false,
@@ -986,7 +1033,8 @@ export const validateOnboardingDefaults = withAuth(async (
         .where({ 
           is_default: true,
           status_type: 'ticket',
-          tenant
+          tenant,
+          board_id: defaultBoard.board_id
         })
         .first();
       
@@ -1089,7 +1137,7 @@ export const getOnboardingInitialData = withAuth(async (
         firstName: currentUser.first_name || '',
         lastName: currentUser.last_name || '',
         email: currentUser.email || '',
-        clientName: client?.client_name || tenant // Use tenant name as fallback
+        tenantName: client?.client_name || tenant // Use tenant name as fallback
       }
     };
   } catch (error) {
@@ -1117,26 +1165,22 @@ export const getTenantTicketingData = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    const [boards, categories, statuses, priorities] = await Promise.all([
-      // Get boards
-      knex('boards')
-        .where({ tenant })
-        .orderBy('display_order', 'asc')
-        .orderBy('board_name', 'asc'),
+    const boards = await knex('boards')
+      .where({ tenant })
+      .orderBy('display_order', 'asc')
+      .orderBy('board_name', 'asc');
 
-      // Get categories
+    const [categories, statuses, priorities] = await Promise.all([
       knex('categories')
         .where({ tenant })
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
-
-      // Get statuses
       knex('statuses')
         .where({ tenant, status_type: 'ticket' })
+        .whereNotNull('board_id')
+        .orderBy('board_id', 'asc')
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
-
-      // Get priorities
       knex('priorities')
         .where({ tenant, item_type: 'ticket' })
         .orderBy('order_number', 'asc')

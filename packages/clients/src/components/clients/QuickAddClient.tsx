@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ContactPhoneNumberInput, IClient, IClientLocation } from '@alga-psa/types';
+import type { ContactPhoneNumberInput, CreateContactInput, IClient, IClientLocation } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -14,8 +14,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import {
   Dialog,
   DialogContent,
-  DialogTrigger,
-  DialogFooter
+  DialogTrigger
 } from '@alga-psa/ui/components/Dialog';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
@@ -26,7 +25,7 @@ import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import ClientCreatedDialog from './ClientCreatedDialog';
+import { ChevronRight } from 'lucide-react';
 import { QuickAddTagPicker } from '@alga-psa/tags/components';
 import type { PendingTag } from '@alga-psa/types';
 import { createTagsForEntity } from '@alga-psa/tags/actions';
@@ -48,12 +47,20 @@ import ContactPhoneNumbersEditor, {
   compactContactPhoneNumbers,
   validateContactPhoneNumbers,
 } from '../contacts/ContactPhoneNumbersEditor';
+import ContactEmailAddressesEditor, {
+  compactContactEmailAddresses,
+  validateContactEmailAddresses,
+} from '../contacts/ContactEmailAddressesEditor';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type CreateClientData = Omit<IClient, "client_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at">;
 
 type CreateLocationData = Omit<IClientLocation, "location_id" | "tenant" | "created_at" | "updated_at">;
 
-type CreateContactData = Pick<IContact, 'full_name' | 'email' | 'role' | 'notes'> & {
+type CreateContactData = Pick<IContact, 'full_name' | 'email' | 'role' | 'notes'> & Pick<
+  CreateContactInput,
+  'primary_email_canonical_type' | 'primary_email_custom_type' | 'additional_email_addresses'
+> & {
   phone_numbers: ContactPhoneNumberInput[];
 };
 
@@ -70,8 +77,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   onOpenChange,
   onClientAdded,
   trigger,
-  skipSuccessDialog = false,
 }) => {
+  const { t } = useTranslation('msp/clients');
   const initialFormData: CreateClientData = {
     client_name: '',
     client_type: 'company',
@@ -116,6 +123,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     full_name: '',
     phone_numbers: [],
     email: '',
+    primary_email_canonical_type: 'work',
+    primary_email_custom_type: null,
+    additional_email_addresses: [],
     role: '',
     notes: '',
   };
@@ -124,6 +134,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   const [locationData, setLocationData] = useState<CreateLocationData>(initialLocationData);
   const [contactData, setContactData] = useState<CreateContactData>(initialContactData);
   const [contactPhoneValidationErrors, setContactPhoneValidationErrors] = useState<string[]>([]);
+  const [contactEmailValidationErrors, setContactEmailValidationErrors] = useState<string[]>([]);
   const [customPhoneTypeSuggestions, setCustomPhoneTypeSuggestions] = useState<string[]>([]);
   const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
   const [countries, setCountries] = useState<ICountry[]>([]);
@@ -134,10 +145,17 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [createdClient, setCreatedClient] = useState<IClient | null>(null);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    location: false,
+    contact: false,
+    additional: false,
+  });
   const router = useRouter();
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   const getPrimaryContactPhone = (rows: ContactPhoneNumberInput[]): string => {
     return compactContactPhoneNumbers(rows).find((row) => row.is_default)?.phone_number ?? '';
@@ -147,6 +165,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     return !!(
       data.full_name.trim() ||
       (data.email ?? '').trim() ||
+      compactContactEmailAddresses(data).additional_email_addresses.length > 0 ||
       compactContactPhoneNumbers(data.phone_numbers).length > 0 ||
       (data.role ?? '').trim()
     );
@@ -161,7 +180,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
           const users = await getAllUsersBasicAsync();
           setInternalUsers(users);
         } catch (error: any) {
-          handleError(error, "Failed to load users for Account Manager selection.");
+          handleError(error, t('quickAddClient.usersLoadError', {
+            defaultValue: 'Failed to load users for Account Manager selection.',
+          }));
         } finally {
           setIsLoadingUsers(false);
         }
@@ -174,7 +195,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
           const countriesData = await getAllCountries();
           setCountries(countriesData);
         } catch (error: any) {
-          handleError(error, "Failed to load countries.");
+          handleError(error, t('quickAddClient.countriesLoadError', {
+            defaultValue: 'Failed to load countries.',
+          }));
         } finally {
           setIsLoadingCountries(false);
         }
@@ -185,7 +208,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
           const labels = await listContactPhoneTypeSuggestions();
           setCustomPhoneTypeSuggestions(labels);
         } catch (error: any) {
-          handleError(error, 'Failed to load contact phone type suggestions.');
+          handleError(error, t('quickAddClient.phoneTypeSuggestionsError', {
+            defaultValue: 'Failed to load contact phone type suggestions.',
+          }));
         }
       };
 
@@ -198,12 +223,14 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       setLocationData(initialLocationData);
       setContactData(initialContactData);
       setContactPhoneValidationErrors([]);
+      setContactEmailValidationErrors([]);
       setIsSubmitting(false);
       setError(null);
       setHasAttemptedSubmit(false);
       setValidationErrors([]);
       setFieldErrors({});
       setPendingTags([]);
+      setExpandedSections({ location: false, contact: false, additional: false });
     }
   }, [open]);
 
@@ -359,8 +386,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     return error;
   };
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent, options?: { openAfterCreate?: boolean; addAnother?: boolean }) => {
+    e?.preventDefault();
     if (isSubmitting) return;
 
     setHasAttemptedSubmit(true);
@@ -389,9 +416,11 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         validationResult.isValid = false;
         validationResult.errors.contact_name = 'Full name is required when adding a contact';
       }
-      if (!(contactData.email ?? '').trim()) {
+      const currentContactEmailErrors = validateContactEmailAddresses(contactData);
+      setContactEmailValidationErrors(currentContactEmailErrors);
+      if (currentContactEmailErrors.length > 0) {
         validationResult.isValid = false;
-        validationResult.errors.contact_email = 'Email is required when adding a contact';
+        validationResult.errors.contact_email = currentContactEmailErrors[0]!;
       }
     }
 
@@ -407,6 +436,19 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       setFieldErrors(validationResult.errors);
       const errorMessages = Object.values(validationResult.errors).filter(Boolean);
       setValidationErrors(errorMessages);
+
+      // Auto-expand sections that contain errors so the user can see them
+      const errorKeys = Object.keys(validationResult.errors);
+      const locationFields = ['location_email', 'location_phone', 'postal_code', 'city', 'state_province', 'address_line1'];
+      const contactFields = ['contact_name', 'contact_email', 'contact_phone'];
+      const additionalFields = ['url', 'industry', 'notes'];
+      setExpandedSections(prev => ({
+        ...prev,
+        location: prev.location || errorKeys.some(k => locationFields.includes(k)),
+        contact: prev.contact || errorKeys.some(k => contactFields.includes(k)),
+        additional: prev.additional || errorKeys.some(k => additionalFields.includes(k)),
+      }));
+
       return; // Stop here - don't proceed with async submit logic
     }
 
@@ -447,12 +489,16 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       }
 
       // Create contact if contact data is provided
-      if (contactData.full_name.trim() || (contactData.email ?? '').trim()) {
+      if (hasAnyContactData(contactData)) {
         try {
+          const sanitizedContactEmails = compactContactEmailAddresses(contactData);
           await createClientContact({
             clientId: newClient.client_id,
             fullName: contactData.full_name,
-            email: contactData.email ?? '',
+            email: sanitizedContactEmails.email ?? '',
+            primaryEmailCanonicalType: sanitizedContactEmails.primary_email_canonical_type,
+            primaryEmailCustomType: sanitizedContactEmails.primary_email_custom_type,
+            additionalEmailAddresses: sanitizedContactEmails.additional_email_addresses,
             phoneNumbers: compactContactPhoneNumbers(contactData.phone_numbers),
             jobTitle: contactData.role ?? undefined,
           });
@@ -477,10 +523,29 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       // Pass client with tags to callback
       const clientWithTags = { ...newClient, tags: createdTags };
       onClientAdded(clientWithTags);
-      onOpenChange(false);
-      if (!skipSuccessDialog) {
-        setCreatedClient(clientWithTags);
-        setShowSuccess(true);
+      if (options?.openAfterCreate) {
+        onOpenChange(false);
+        router.push(`/msp/clients/${newClient.client_id}`);
+      } else if (options?.addAnother) {
+        // Reset form but keep dialog open
+        setFormData(initialFormData);
+        setLocationData(initialLocationData);
+        setContactData(initialContactData);
+        setContactPhoneValidationErrors([]);
+        setContactEmailValidationErrors([]);
+        setIsSubmitting(false);
+        setError(null);
+        setHasAttemptedSubmit(false);
+        setValidationErrors([]);
+        setFieldErrors({});
+        setPendingTags([]);
+        setExpandedSections({ location: false, contact: false, additional: false });
+        toast.success(t('quickAddClient.created', {
+          defaultValue: '"{{name}}" created. Add another client below.',
+          name: newClient.client_name,
+        }));
+      } else {
+        onOpenChange(false);
       }
       } catch (error: any) {
       console.error("Error creating client:", error);
@@ -552,7 +617,10 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     }
   };
 
-  const handleContactChange = (field: keyof CreateContactData, value: string | ContactPhoneNumberInput[]) => {
+  const handleContactChange = (
+    field: keyof CreateContactData,
+    value: string | ContactPhoneNumberInput[] | CreateContactInput['additional_email_addresses'] | null
+  ) => {
     setContactData(prev => ({
       ...prev,
       [field]: value
@@ -582,93 +650,60 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     }));
   };
 
-  // Comprehensive form validation check for submit button state
-  const isFormValid = () => {
-    // Required field: Company name
-    if (!formData.company_name || !formData.company_name.trim()) {
-      return false;
-    }
 
-    // Check for any existing field errors
-    if (Object.values(fieldErrors).some(error => error && error.trim() !== '')) {
-      return false;
-    }
-
-    // Validate all fields real-time without showing errors
-    const companyNameError = validateField('company_name', formData.company_name, undefined, false);
-    if (companyNameError) return false;
-
-    // Optional field validations - only if they have content
-    if (formData.url && formData.url.trim()) {
-      const urlError = validateField('url', formData.url, undefined, false);
-      if (urlError) return false;
-    }
-
-    if (formData.properties?.industry && formData.properties.industry.trim()) {
-      const industryError = validateField('industry', formData.properties.industry, undefined, false);
-      if (industryError) return false;
-    }
-
-    // Location validations - only if they have content
-    if (locationData.email && locationData.email.trim()) {
-      const emailError = validateField('location_email', locationData.email, undefined, false);
-      if (emailError) return false;
-    }
-
-    if (locationData.phone && locationData.phone.trim()) {
-      const phoneError = validateField('location_phone', locationData.phone, undefined, false);
-      if (phoneError) return false;
-    }
-
-    if (locationData.postal_code && locationData.postal_code.trim()) {
-      const postalError = validateField('postal_code', locationData.postal_code, { countryCode: locationData.country_code }, false);
-      if (postalError) return false;
-    }
-
-    if (locationData.city && locationData.city.trim()) {
-      const cityError = validateField('city', locationData.city, undefined, false);
-      if (cityError) return false;
-    }
-
-    if (locationData.state_province && locationData.state_province.trim()) {
-      const stateError = validateField('state_province', locationData.state_province, undefined, false);
-      if (stateError) return false;
-    }
-
-    if (locationData.address_line1 && locationData.address_line1.trim()) {
-      const addressError = validateField('address_line1', locationData.address_line1, undefined, false);
-      if (addressError) return false;
-    }
-
-    // Contact validations - if any contact field is filled, require name and email
-    if (hasAnyContactData(contactData)) {
-      if (!contactData.full_name.trim()) return false;
-      if (!(contactData.email ?? '').trim()) return false;
-    }
-
-    if (contactData.full_name && contactData.full_name.trim()) {
-      const nameError = validateField('contact_name', contactData.full_name, undefined, false);
-      if (nameError) return false;
-    }
-
-    if (contactData.email && contactData.email.trim()) {
-      const contactEmailError = validateField('contact_email', contactData.email, undefined, false);
-      if (contactEmailError) return false;
-    }
-
-    if (contactData.phone_numbers.length > 0) {
-      const contactPhoneErrors = validateContactPhoneNumbers(contactData.phone_numbers);
-      if (contactPhoneErrors.length > 0) return false;
-    }
-
-    if (contactData.notes && contactData.notes.trim()) {
-      const notesError = validateField('notes', contactData.notes, undefined, false);
-      if (notesError) return false;
-    }
-
-    return true;
-  };
-
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="cancel-dialog-btn"
+        type="button"
+        variant="outline"
+        disabled={isSubmitting}
+        onClick={() => {
+          setHasAttemptedSubmit(false);
+          setValidationErrors([]);
+          setFieldErrors({});
+          onOpenChange(false);
+        }}
+      >
+        {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+      </Button>
+      <Button
+        id="create-another-client-btn"
+        type="button"
+        variant="secondary"
+        disabled={isSubmitting || !formData.client_name.trim()}
+        className={(!formData.client_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
+        onClick={() => { void handleSubmit(undefined, { addAnother: true }); }}
+      >
+        {isSubmitting
+          ? t('quickAddClient.creating', { defaultValue: 'Creating...' })
+          : t('quickAddClient.createAndAddAnother', { defaultValue: 'Create + Add Another' })}
+      </Button>
+      <Button
+        id="create-view-client-btn"
+        type="button"
+        variant="secondary"
+        disabled={isSubmitting || !formData.client_name.trim()}
+        className={(!formData.client_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
+        onClick={() => { void handleSubmit(undefined, { openAfterCreate: true }); }}
+      >
+        {isSubmitting
+          ? t('quickAddClient.creating', { defaultValue: 'Creating...' })
+          : t('quickAddClient.createAndView', { defaultValue: 'Create + View Client' })}
+      </Button>
+      <Button
+        id="create-client-btn"
+        type="button"
+        disabled={isSubmitting || !formData.client_name.trim()}
+        className={(!formData.client_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
+        onClick={() => { void handleSubmit(); }}
+      >
+        {isSubmitting
+          ? t('quickAddClient.creating', { defaultValue: 'Creating...' })
+          : t('quickAddClient.createClient', { defaultValue: 'Create' })}
+      </Button>
+    </div>
+  );
 
   return (
     <>
@@ -676,18 +711,21 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       id="quick-add-client-dialog"
       isOpen={open}
       onClose={() => onOpenChange(false)}
-      title="Add New Client"
-      disableFocusTrap>
+      title={t('quickAddClient.title', { defaultValue: 'Add New Client' })}
+      disableFocusTrap
+      footer={footer}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
         <form onSubmit={handleSubmit} id="quick-add-client-form" noValidate>
-          <div className="max-h-[60vh] overflow-y-auto px-1 py-4 space-y-6">
+          <div className="px-1 py-4 space-y-6">
             
             {/* Validation Errors */}
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>
-                  <p className="font-medium mb-2">Please correct the following errors:</p>
+                  <p className="font-medium mb-2">
+                    {t('quickAddClient.validationHeader', { defaultValue: 'Please correct the following errors:' })}
+                  </p>
                   <ul className="list-disc list-inside space-y-1">
                     {validationErrors.map((err, index) => (
                       <li key={index}>{err}</li>
@@ -706,15 +744,11 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
               </Alert>
             )}
             
-            {/* Client Details Section */}
+            {/* Client Details Section — always visible */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
-                Client Details
-              </h3>
-              
               <div>
                 <Label htmlFor="client_name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Client Name *
+                  {t('quickAddClient.clientName', { defaultValue: 'Client Name *' })}
                 </Label>
                 <Input
                   id="client-name"
@@ -726,7 +760,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                   onBlur={() => {
                     validateField('client_name', formData.client_name);
                   }}
-                  placeholder="Enter client name"
+                  placeholder={t('quickAddClient.enterClientName', { defaultValue: 'Enter client name' })}
                   disabled={isSubmitting}
                   className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.client_name ? 'border-red-500' : 'border-gray-300'}`}
                 />
@@ -738,14 +772,14 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="client-type-select" className="block text-sm font-medium text-gray-700 mb-1">
-                    Client Type
+                    {t('quickAddClient.clientType', { defaultValue: 'Client Type' })}
                   </Label>
                   <CustomSelect
                     id="client-type-select"
                     data-automation-id="client-type-select"
                     options={[
-                      { value: 'company', label: 'Company' },
-                      { value: 'individual', label: 'Individual' }
+                      { value: 'company', label: t('quickAddClient.company', { defaultValue: 'Company' }) },
+                      { value: 'individual', label: t('quickAddClient.individual', { defaultValue: 'Individual' }) }
                     ]}
                     value={formData.client_type}
                     onValueChange={(value) => handleClientChange('client_type', value)}
@@ -754,51 +788,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-1">
-                    Industry
-                  </Label>
-                  <Input
-                    id="industry"
-                    data-automation-id="industry"
-                    value={formData.properties?.industry || ''}
-                    onChange={(e) => handleClientChange('properties.industry', e.target.value)}
-                    onBlur={() => {
-                      validateField('industry', formData.properties?.industry || '');
-                    }}
-                    disabled={isSubmitting}
-                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.industry ? 'border-red-500' : 'border-gray-300'}`}
-                  />
-                  {fieldErrors.industry && (
-                    <p className="text-sm text-red-600 mt-1">{fieldErrors.industry}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">
-                    Website URL
-                  </Label>
-                  <Input
-                    id="url"
-                    data-automation-id="url"
-                    value={formData.url}
-                    onChange={(e) => handleClientChange('url', e.target.value)}
-                    onBlur={() => {
-                      validateField('url', formData.url);
-                    }}
-                    placeholder="https://example.com"
-                    disabled={isSubmitting}
-                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.url ? 'border-red-500' : 'border-gray-300'}`}
-                  />
-                  {fieldErrors.url && (
-                    <p className="text-sm text-red-600 mt-1">{fieldErrors.url}</p>
-                  )}
-                </div>
-
-                <div>
                   <Label htmlFor="account-manager-picker" className="block text-sm font-medium text-gray-700 mb-1">
-                    Account Manager
+                    {t('quickAddClient.accountManager', { defaultValue: 'Account Manager' })}
                   </Label>
                   <UserPicker
                     id="account-manager-picker"
@@ -808,7 +799,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     users={internalUsers}
                     getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                     disabled={isLoadingUsers || isSubmitting}
-                    placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
+                    placeholder={isLoadingUsers
+                      ? t('quickAddClient.loadingUsers', { defaultValue: 'Loading users...' })
+                      : t('quickAddClient.selectAccountManager', { defaultValue: 'Select Account Manager' })}
                     buttonWidth="full"
                   />
                 </div>
@@ -824,15 +817,25 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
               />
             </div>
 
-            {/* Client Location Section */}
+            {/* Client Location Section — collapsible */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
-                Client Location
-              </h3>
-              
+              <Button
+                id="toggle-location-section"
+                type="button"
+                variant="ghost"
+                onClick={() => toggleSection('location')}
+                className="w-full justify-start gap-2 text-lg font-medium border-b border-gray-200 pb-2 rounded-none px-0 h-auto hover:bg-transparent"
+              >
+                <ChevronRight
+                  className={`h-4 w-4 shrink-0 transition-transform duration-200 ${expandedSections.location ? 'rotate-90' : ''}`}
+                />
+                {t('quickAddClient.clientLocation', { defaultValue: 'Client Location' })}
+              </Button>
+
+              {expandedSections.location && (<div className="space-y-4">
               <div>
                 <Label htmlFor="address-line-1" className="block text-sm font-medium text-gray-700 mb-1">
-                  Street Address
+                  {t('quickAddClient.streetAddress', { defaultValue: 'Street Address' })}
                 </Label>
                 <Input
                   id="address-line-1"
@@ -853,7 +856,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                    City
+                    {t('quickAddClient.city', { defaultValue: 'City' })}
                   </Label>
                   <Input
                     id="city"
@@ -873,7 +876,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
                 <div>
                   <Label htmlFor="state-province" className="block text-sm font-medium text-gray-700 mb-1">
-                    State
+                    {t('quickAddClient.state', { defaultValue: 'State' })}
                   </Label>
                   <Input
                     id="state-province"
@@ -893,7 +896,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
                 <div>
                   <Label htmlFor="client-postal-code" className="block text-sm font-medium text-gray-700 mb-1">
-                    Zip Code
+                    {t('quickAddClient.zipCode', { defaultValue: 'Zip Code' })}
                   </Label>
                   <Input
                     id="client-postal-code"
@@ -913,7 +916,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
                 <div>
                   <Label htmlFor="country-picker" className="block text-sm font-medium text-gray-700 mb-1">
-                    Country
+                    {t('quickAddClient.country', { defaultValue: 'Country' })}
                   </Label>
                   <CountryPicker
                     id="country-picker"
@@ -922,7 +925,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     onValueChange={handleCountryChange}
                     countries={countries}
                     disabled={isLoadingCountries || isSubmitting}
-                    placeholder={isLoadingCountries ? "Loading countries..." : "Select Country"}
+                    placeholder={isLoadingCountries
+                      ? t('quickAddClient.loadingCountries', { defaultValue: 'Loading countries...' })
+                      : t('quickAddClient.selectCountry', { defaultValue: 'Select Country' })}
                     buttonWidth="full"
                   />
                 </div>
@@ -930,7 +935,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                 <div>
                   <PhoneInput
                     id="client-location-phone"
-                    label="Phone"
+                    label={t('quickAddClient.phone', { defaultValue: 'Phone' })}
                     value={locationData.phone || ''}
                     onChange={(value) => {
                       handleLocationChange('phone', value);
@@ -960,7 +965,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
                 <div>
                   <Label htmlFor="client-location-email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
+                    {t('quickAddClient.email', { defaultValue: 'Email' })}
                   </Label>
                   <Input
                     id="client-location-email"
@@ -985,18 +990,28 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                   )}
                 </div>
               </div>
+              </div>)}
             </div>
 
-
-            {/* Contact Information Section */}
+            {/* Contact Information Section — collapsible */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
-                Contact Information
-              </h3>
-              
+              <Button
+                id="toggle-contact-section"
+                type="button"
+                variant="ghost"
+                onClick={() => toggleSection('contact')}
+                className="w-full justify-start gap-2 text-lg font-medium border-b border-gray-200 pb-2 rounded-none px-0 h-auto hover:bg-transparent"
+              >
+                <ChevronRight
+                  className={`h-4 w-4 shrink-0 transition-transform duration-200 ${expandedSections.contact ? 'rotate-90' : ''}`}
+                />
+                {t('quickAddClient.contactInformation', { defaultValue: 'Contact Information' })}
+              </Button>
+
+              {expandedSections.contact && (<div className="space-y-4">
               <div>
                 <Label htmlFor="contact-name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Name{hasAnyContactData(contactData) ? ' *' : ''}
+                  {t('quickAddClient.contactName', { defaultValue: 'Name' })}{hasAnyContactData(contactData) ? ' *' : ''}
                 </Label>
                 <Input
                   id="contact-name"
@@ -1014,59 +1029,104 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                 )}
               </div>
 
+              <div className="space-y-4">
+                <ContactEmailAddressesEditor
+                  id="client-contact-email"
+                  value={contactData}
+                  onChange={(value) => {
+                    setContactData(prev => ({ ...prev, ...value }));
+                    if (fieldErrors.contact_email) {
+                      setFieldErrors(prev => ({ ...prev, contact_email: '' }));
+                    }
+                  }}
+                  customTypeSuggestions={[]}
+                  disabled={isSubmitting}
+                  errorMessages={hasAttemptedSubmit ? contactEmailValidationErrors : undefined}
+                  onValidationChange={setContactEmailValidationErrors}
+                />
+
+                <ContactPhoneNumbersEditor
+                  id="client-contact-phone"
+                  value={contactData.phone_numbers}
+                  onChange={(rows) => {
+                    handleContactChange('phone_numbers', rows);
+                    if (fieldErrors.contact_phone) {
+                      setFieldErrors(prev => ({ ...prev, contact_phone: '' }));
+                    }
+                  }}
+                  countries={countries}
+                  customTypeSuggestions={customPhoneTypeSuggestions}
+                  disabled={isSubmitting}
+                  allowEmpty={false}
+                  errorMessages={hasAttemptedSubmit ? contactPhoneValidationErrors : undefined}
+                  onValidationChange={setContactPhoneValidationErrors}
+                />
+              </div>
+              </div>)}
+            </div>
+
+            {/* Additional Details — collapsible */}
+            <div className="space-y-4">
+              <Button
+                id="toggle-additional-section"
+                type="button"
+                variant="ghost"
+                onClick={() => toggleSection('additional')}
+                className="w-full justify-start gap-2 text-lg font-medium border-b border-gray-200 pb-2 rounded-none px-0 h-auto hover:bg-transparent"
+              >
+                <ChevronRight
+                  className={`h-4 w-4 shrink-0 transition-transform duration-200 ${expandedSections.additional ? 'rotate-90' : ''}`}
+                />
+                {t('quickAddClient.additionalDetails', { defaultValue: 'Additional Details' })}
+              </Button>
+
+              {expandedSections.additional && (<div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="client-contact-email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email{hasAnyContactData(contactData) ? ' *' : ''}
+                  <Label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('quickAddClient.industry', { defaultValue: 'Industry' })}
                   </Label>
                   <Input
-                    id="client-contact-email"
-                    data-automation-id="client-contact-email"
-                    type="email"
-                    value={contactData.email ?? ''}
-                    onChange={(e) => {
-                      handleContactChange('email', e.target.value);
-                      if (/^\s+$/.test(e.target.value)) {
-                        setFieldErrors(prev => ({ ...prev, contact_email: 'Email address cannot contain only spaces' }));
-                      }
-                    }}
+                    id="industry"
+                    data-automation-id="industry"
+                    value={formData.properties?.industry || ''}
+                    onChange={(e) => handleClientChange('properties.industry', e.target.value)}
                     onBlur={() => {
-                      validateField('contact_email', contactData.email ?? '');
+                      validateField('industry', formData.properties?.industry || '');
                     }}
                     disabled={isSubmitting}
-                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.contact_email ? 'border-red-500' : 'border-gray-300'}`}
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.industry ? 'border-red-500' : 'border-gray-300'}`}
                   />
-                  {fieldErrors.contact_email && (
-                    <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_email}</p>
+                  {fieldErrors.industry && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.industry}</p>
                   )}
                 </div>
 
-                <div className="col-span-2">
-                  <ContactPhoneNumbersEditor
-                    id="client-contact-phone"
-                    value={contactData.phone_numbers}
-                    onChange={(rows) => {
-                      handleContactChange('phone_numbers', rows);
-                      if (fieldErrors.contact_phone) {
-                        setFieldErrors(prev => ({ ...prev, contact_phone: '' }));
-                      }
+                <div>
+                  <Label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('quickAddClient.websiteUrl', { defaultValue: 'Website URL' })}
+                  </Label>
+                  <Input
+                    id="url"
+                    data-automation-id="url"
+                    value={formData.url}
+                    onChange={(e) => handleClientChange('url', e.target.value)}
+                    onBlur={() => {
+                      validateField('url', formData.url);
                     }}
-                    countries={countries}
-                    customTypeSuggestions={customPhoneTypeSuggestions}
+                    placeholder="https://example.com"
                     disabled={isSubmitting}
-                    allowEmpty={false}
-                    errorMessages={hasAttemptedSubmit ? contactPhoneValidationErrors : undefined}
-                    onValidationChange={setContactPhoneValidationErrors}
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.url ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.url && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.url}</p>
+                  )}
                 </div>
               </div>
-            </div>
 
-            {/* Additional Settings */}
-            <div className="space-y-4">
               <div>
                 <Label htmlFor="client-notes-input" className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
+                  {t('quickAddClient.notes', { defaultValue: 'Notes' })}
                 </Label>
                 <TextArea
                   id="client-notes-input"
@@ -1076,7 +1136,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                   onBlur={() => {
                     validateField('notes', formData.notes || '');
                   }}
-                  placeholder="Add any initial notes (optional)"
+                  placeholder={t('quickAddClient.notesPlaceholder', {
+                    defaultValue: 'Add any initial notes (optional)',
+                  })}
                   disabled={isSubmitting}
                   className={`w-full p-2 border rounded-md resize-none focus:outline-none focus:ring-2 ${fieldErrors.notes ? 'border-red-500' : 'border-gray-300'} ${fieldErrors.notes ? 'focus:ring-red-500' : 'focus:ring-purple-500'}`}
                   rows={3}
@@ -1085,54 +1147,12 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                   <p className="text-sm text-red-600 mt-1">{fieldErrors.notes}</p>
                 )}
               </div>
+              </div>)}
             </div>
           </div>
         </form>
-
-        <DialogFooter>
-          <div className="flex justify-between mt-6 w-full">
-            <Button
-              id="cancel-dialog-btn"
-              type="button"
-              variant="ghost"
-              disabled={isSubmitting}
-              onClick={() => {
-                setHasAttemptedSubmit(false);
-                setValidationErrors([]);
-                setFieldErrors({});
-                onOpenChange(false);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              id="create-client-btn"
-              type="submit"
-              form="quick-add-client-form"
-              disabled={isSubmitting || !formData.client_name.trim()}
-              className={(!formData.client_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
-            >
-              {isSubmitting ? 'Creating...' : 'Create Client'}
-            </Button>
-          </div>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
-    <ClientCreatedDialog
-      isOpen={showSuccess}
-      client={createdClient}
-      onClose={() => setShowSuccess(false)}
-      onViewClient={() => {
-        if (createdClient) {
-          setShowSuccess(false);
-          router.push(`/msp/clients/${createdClient.client_id}`);
-        }
-      }}
-      onAddAnother={() => {
-        setShowSuccess(false);
-        onOpenChange(true);
-      }}
-    />
     </>
   );
 };

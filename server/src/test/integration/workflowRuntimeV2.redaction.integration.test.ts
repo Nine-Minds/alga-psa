@@ -12,7 +12,7 @@ import {
   submitWorkflowEventAction,
   listWorkflowRunStepsAction
 } from '@alga-psa/workflows/actions';
-import WorkflowRunSnapshotModelV2 from '@shared/workflow/persistence/workflowRunSnapshotModelV2';
+import WorkflowRunSnapshotModelV2 from '@alga-psa/workflows/persistence/workflowRunSnapshotModelV2';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
   buildWorkflowDefinition,

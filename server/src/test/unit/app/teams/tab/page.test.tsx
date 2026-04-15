@@ -134,27 +134,6 @@ describe('TeamsTabPage', () => {
     );
   });
 
-  it('T115/T423: renders a disabled Teams shell when the tenant flag is off', async () => {
-    getTeamsAvailabilityMock.mockResolvedValue({
-      enabled: false,
-      reason: 'flag_disabled',
-      flagKey: 'teams-integration-ui',
-      message: 'Microsoft Teams integration is disabled for this tenant.',
-    });
-
-    const result = await TeamsTabPage({
-      searchParams: Promise.resolve({
-        tenantId: 'tenant-1',
-      }),
-    });
-
-    expect(redirectMock).not.toHaveBeenCalled();
-    expect(resolveTeamsTabAuthStateMock).not.toHaveBeenCalled();
-    expect((result as any)?.type).toBe(CardMock);
-    expect(collectNormalizedText(result)).toContain('Teams integration disabled');
-    expect(collectNormalizedText(result)).toContain('Microsoft Teams integration is disabled for this tenant.');
-  });
-
   it('T185/T187: renders the Teams personal tab entry point at the default my-work landing destination', async () => {
     resolveTeamsTabAuthStateMock.mockResolvedValue(readyAuthState);
 

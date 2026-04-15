@@ -5,6 +5,7 @@ import { AlertTriangle } from 'lucide-react';
 import { useTier } from '@/context/TierContext';
 import { createCustomerPortalSessionAction } from '@ee/lib/actions/license-actions';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 /**
  * Shows a persistent, non-dismissible payment failure badge in the header.
@@ -12,6 +13,7 @@ import { toast } from 'react-hot-toast';
  * Replaces TrialBanner if both would apply.
  */
 export function PaymentFailedBanner() {
+  const { t } = useTranslation('msp/core');
   const { isPaymentFailed } = useTier();
 
   if (!isPaymentFailed) return null;
@@ -22,10 +24,19 @@ export function PaymentFailedBanner() {
       if (result.success && result.data?.portal_url) {
         window.open(result.data.portal_url, '_blank', 'noopener,noreferrer');
       } else {
-        toast.error(result.error || 'Failed to open billing portal');
+        toast.error(
+          result.error
+            || t('banners.paymentFailed.portalError', {
+              defaultValue: 'Failed to open billing portal',
+            })
+        );
       }
     } catch {
-      toast.error('Failed to open billing portal');
+      toast.error(
+        t('banners.paymentFailed.portalError', {
+          defaultValue: 'Failed to open billing portal',
+        })
+      );
     }
   };
 
@@ -35,7 +46,11 @@ export function PaymentFailedBanner() {
       className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium bg-red-100 text-red-800 border border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700 cursor-pointer hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
     >
       <AlertTriangle className="h-3 w-3" />
-      <span>Payment failed — Update payment method</span>
+      <span>
+        {t('banners.paymentFailed.message', {
+          defaultValue: 'Payment failed — Update payment method',
+        })}
+      </span>
     </button>
   );
 }

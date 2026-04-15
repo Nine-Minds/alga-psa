@@ -8,6 +8,7 @@ const isExperimentalFeatureEnabledMock = vi.hoisted(() => vi.fn<
 const chatCompletionsHandleRequestMock = vi.hoisted(() => vi.fn<
   (req: Request) => Promise<Response>
 >());
+const assertAddOnAccessMock = vi.hoisted(() => vi.fn<() => Promise<void>>());
 
 vi.mock('@alga-psa/tenancy/actions', () => ({
   isExperimentalFeatureEnabled: isExperimentalFeatureEnabledMock,
@@ -19,6 +20,11 @@ vi.mock('@product/chat/entry', () => ({
   },
 }));
 
+vi.mock('@/lib/tier-gating/assertAddOnAccess', () => ({
+  AddOnAccessError: class AddOnAccessError extends Error {},
+  assertAddOnAccess: assertAddOnAccessMock,
+}));
+
 describe('POST /api/chat/v1/completions', () => {
   const originalEdition = process.env.EDITION;
   const originalPublicEdition = process.env.NEXT_PUBLIC_EDITION;
@@ -26,6 +32,8 @@ describe('POST /api/chat/v1/completions', () => {
   beforeEach(() => {
     isExperimentalFeatureEnabledMock.mockReset();
     chatCompletionsHandleRequestMock.mockReset();
+    assertAddOnAccessMock.mockReset();
+    assertAddOnAccessMock.mockResolvedValue(undefined);
     process.env.EDITION = 'ee';
     delete process.env.NEXT_PUBLIC_EDITION;
   });

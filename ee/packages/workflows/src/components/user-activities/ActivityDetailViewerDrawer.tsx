@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: invalidateCache property missing from hook return type
 'use client'
 
 
@@ -9,23 +7,14 @@ import { ActivityType } from "@alga-psa/types";
 import { processTemplateVariables } from "@alga-psa/core";
 import { useDrawer } from "@alga-psa/ui";
 import { useActivitiesCache } from "../../hooks/useActivitiesCache";
-import { getConsolidatedTicketData } from "@alga-psa/tickets/actions/optimizedTicketActions";
 import { useTenant } from "@alga-psa/ui/components/providers/TenantProvider";
 import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { getTicketById } from "@alga-psa/tickets/actions/ticketActions";
-import { getTaskWithDetails } from "@alga-psa/projects/actions/projectTaskActions";
 import { getTaskDetails } from "@alga-psa/workflows/actions/workflow-actions/taskInboxActions";
-import { getScheduleEntries } from "@alga-psa/scheduling/actions";
 import { getCurrentUser, getAllUsersBasic } from "@alga-psa/user-composition/actions";
-import { getTimeEntryById, saveTimeEntry } from "@alga-psa/scheduling/actions/timeEntryActions";
-import TicketDetails from "@alga-psa/tickets/components/ticket/TicketDetails";
-import TaskEdit from "@alga-psa/projects/components/TaskEdit";
-import EntryPopup from "@alga-psa/scheduling/components/schedule/EntryPopup";
 import { TaskForm } from "@alga-psa/workflows/components";
-import TimeEntryDialog from "@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeEntryDialog";
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { formatISO } from 'date-fns';
@@ -34,9 +23,9 @@ import { TimeSheetStatus, ITimePeriodWithStatusView } from "@alga-psa/types";
 import { NotificationDetailView } from "@alga-psa/notifications/components";
 import { NotificationActivity } from "@alga-psa/types";
 import { getNotificationByIdAction } from "@alga-psa/notifications/actions";
-import { getBlockContent, updateBlockContent } from "@alga-psa/documents/actions/documentBlockContentActions";
 import { RichTextViewer, TextEditor } from "@alga-psa/ui/editor";
 import { PartialBlock } from '@blocknote/core';
+import { useActivityCrossFeature } from "@alga-psa/ui/context";
 
 interface ActivityDetailViewerDrawerProps {
   activityType: ActivityType;
@@ -67,6 +56,7 @@ function DocumentViewerEditor({
   invalidateCache: any;
   onActionComplete?: () => void;
 }) {
+  const { updateBlockContent } = useActivityCrossFeature();
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentContent, setCurrentContent] = useState<PartialBlock[]>(initialContent);
   const [isSaving, setIsSaving] = useState(false);
@@ -88,7 +78,7 @@ function DocumentViewerEditor({
       setHasContentChanged(false);
       setIsEditMode(false);
       toast.success('Document saved successfully');
-      invalidateCache({ activityType: ActivityType.DOCUMENT });
+      invalidateCache(ActivityType.DOCUMENT);
       onActionComplete?.();
     } catch (error) {
       handleError(error, 'Failed to save document');
@@ -185,13 +175,14 @@ export function ActivityDetailViewerDrawer({
   const tenant = useTenant();
   const drawer = useDrawer();
   const { invalidateCache } = useActivitiesCache();
+  const ctx = useActivityCrossFeature();
 
   // Memoize the loadContent function to prevent unnecessary re-renders
   const loadContent = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       // Get current user for actions that require user context
       const currentUser = await getCurrentUser();
       if (!currentUser) {
@@ -201,49 +192,32 @@ export function ActivityDetailViewerDrawer({
       switch(activityType) {
         case ActivityType.TICKET: {
           // Use the consolidated function to get all ticket data in a single call
-          const ticketData = await getConsolidatedTicketData(activityId);
-          
+          const ticketData = await ctx.getConsolidatedTicketData(activityId);
+
           setContent(
             <div className="h-full">
-              <TicketDetails
-                isInDrawer={true}
-                initialTicket={ticketData.ticket}
-                initialComments={ticketData.comments}
-                initialBoard={ticketData.board}
-                initialClient={ticketData.client}
-                initialContacts={ticketData.contacts}
-                initialContactInfo={ticketData.contactInfo}
-                initialCreatedByUser={ticketData.createdByUser}
-                initialAdditionalAgents={ticketData.additionalAgents}
-                statusOptions={ticketData.options.status}
-                agentOptions={ticketData.options.agent}
-                boardOptions={ticketData.options.board}
-                priorityOptions={ticketData.options.priority}
-                initialCategories={ticketData.categories}
-                initialClients={ticketData.clients}
-                initialLocations={ticketData.locations}
-                initialAgentSchedules={ticketData.agentSchedules}
-                currentUser={currentUser}
-                initialUserMap={ticketData.userMap}
-                initialAvailableAgents={ticketData.availableAgents}
-                onClose={onClose}
-              />
+              {ctx.renderTicketDetails({
+                isInDrawer: true,
+                consolidatedData: ticketData,
+                currentUser,
+                onClose,
+              })}
             </div>
           );
           break;
         }
-        
+
         case ActivityType.PROJECT_TASK: {
-          const taskData = await getTaskWithDetails(activityId);
+          const taskData = await ctx.getTaskWithDetails(activityId);
           // Get users for the TaskEdit component
           const users = await getAllUsersBasic();
-          
+
           setContent(
             <div className="h-full">
-              <TaskEdit
-                inDrawer={true}
-                users={users || []}
-                phase={{
+              {ctx.renderTaskEdit({
+                inDrawer: true,
+                users: users || [],
+                phase: {
                   phase_id: taskData.phase_id,
                   project_id: taskData.project_id || '',
                   phase_name: taskData.phase_name || '',
@@ -256,23 +230,23 @@ export function ActivityDetailViewerDrawer({
                   updated_at: new Date(),
                   wbs_code: taskData.wbs_code,
                   tenant: tenant || ''
-                }}
-                task={{
+                },
+                task: {
                   ...taskData,
                   tenant: tenant || ''
-                }}
-                onClose={onClose}
-                onTaskUpdated={async () => {
+                },
+                onClose,
+                onTaskUpdated: async () => {
                   // Invalidate cache for this activity type
-                  invalidateCache({ activityType: ActivityType.PROJECT_TASK });
+                  invalidateCache(ActivityType.PROJECT_TASK);
                   onActionComplete?.();
-                }}
-              />
+                },
+              })}
             </div>
           );
           break;
         }
-        
+
         case ActivityType.SCHEDULE: {
           // For schedule entries, we need to get the entry from the schedule entries
           // This assumes the schedule entries API can filter by entry_id
@@ -281,26 +255,25 @@ export function ActivityDetailViewerDrawer({
           oneMonthAgo.setMonth(now.getMonth() - 1);
           const oneMonthAhead = new Date(now);
           oneMonthAhead.setMonth(now.getMonth() + 1);
-          
-          const scheduleResult = await getScheduleEntries(oneMonthAgo, oneMonthAhead);
-          const scheduleEntry = scheduleResult.success ? 
-            scheduleResult.entries.find(e => e.entry_id === activityId) : null;
-            
+
+          const scheduleResult = await ctx.getScheduleEntries(oneMonthAgo, oneMonthAhead);
+          const scheduleEntry = scheduleResult.success ?
+            scheduleResult.entries.find((e: any) => e.entry_id === activityId) : null;
+
           if (!scheduleEntry) {
             throw new Error('Schedule entry not found');
           }
-          
+
           // Get users for the EntryPopup
           const users = await getAllUsersBasic();
-          const currentUser = await getCurrentUser();
-          
+
           setContent(
             <div className="h-full">
-              <EntryPopup
-                canAssignMultipleAgents={true}
-                users={users || []}
-                currentUserId={currentUser?.user_id || ''}
-                event={{
+              {ctx.renderEntryPopup({
+                canAssignMultipleAgents: true,
+                users: users || [],
+                currentUserId: currentUser?.user_id || '',
+                event: {
                   entry_id: scheduleEntry.entry_id,
                   work_item_id: scheduleEntry.work_item_id || '',
                   work_item_type: scheduleEntry.work_item_type || '',
@@ -312,32 +285,32 @@ export function ActivityDetailViewerDrawer({
                   assigned_user_ids: scheduleEntry.assigned_user_ids || [],
                   created_at: scheduleEntry.created_at,
                   updated_at: scheduleEntry.updated_at
-                }}
-                onClose={onClose}
-                onSave={async () => {
+                },
+                onClose,
+                onSave: async () => {
                   // Invalidate cache for this activity type
-                  invalidateCache({ activityType: ActivityType.SCHEDULE });
+                  invalidateCache(ActivityType.SCHEDULE);
                   onActionComplete?.();
-                }}
-                isInDrawer={true}
-                canModifySchedule={true}
-                focusedTechnicianId={currentUser?.user_id || ''}
-                canAssignOthers={true}
-              />
+                },
+                isInDrawer: true,
+                canModifySchedule: true,
+                focusedTechnicianId: currentUser?.user_id || '',
+                canAssignOthers: true,
+              })}
             </div>
           );
           break;
         }
-        
+
         case ActivityType.TIME_ENTRY: {
           try {
             // Fetch the time entry details
-            const timeEntryData = await getTimeEntryById(activityId);
-            
+            const timeEntryData = await ctx.getTimeEntryById(activityId);
+
             if (!timeEntryData) {
               throw new Error('Time entry not found');
             }
-            
+
             // Get the current time period for the time entry
             const now = new Date();
             // Create a time period object with all required properties
@@ -348,7 +321,7 @@ export function ActivityDetailViewerDrawer({
               timeSheetId: timeEntryData.time_sheet_id || '',
               timeSheetStatus: (timeEntryData.approval_status as TimeSheetStatus) || 'DRAFT'
             };
-            
+
             // Ensure the time entry data has all required properties
             const formattedTimeEntry = {
               ...timeEntryData,
@@ -363,7 +336,7 @@ export function ActivityDetailViewerDrawer({
               // Add any other required properties
               date: new Date(timeEntryData.start_time)
             };
-            
+
             // Create a work item object from the time entry's work item
             const workItem: Omit<IWorkItem, 'tenant'> = {
               work_item_id: timeEntryData.work_item_id,
@@ -372,36 +345,36 @@ export function ActivityDetailViewerDrawer({
               type: timeEntryData.work_item_type,
               is_billable: Boolean(timeEntryData.workItem?.is_billable)
             };
-            
+
             setContent(
               <div className="h-full">
-                <TimeEntryDialog
-                  id={`time-entry-dialog-${activityId}`}
-                  isOpen={true}
-                  onClose={onClose}
-                  onSave={async (updatedTimeEntry) => {
+                {ctx.renderTimeEntryDialog({
+                  id: `time-entry-dialog-${activityId}`,
+                  isOpen: true,
+                  onClose,
+                  onSave: async (updatedTimeEntry) => {
                     try {
                       // Save the updated time entry
-                      await saveTimeEntry({
+                      await ctx.saveTimeEntry({
                         ...updatedTimeEntry,
                         entry_id: timeEntryData.entry_id
                       });
                       // Invalidate cache for this activity type
-                      invalidateCache({ activityType: ActivityType.TIME_ENTRY });
+                      invalidateCache(ActivityType.TIME_ENTRY);
                       toast.success('Time entry updated successfully');
                       onActionComplete?.();
                     } catch (error) {
                       handleError(error, 'Failed to update time entry');
                     }
-                  }}
-                  workItem={workItem}
-                  date={new Date(timeEntryData.start_time)}
-                  existingEntries={[formattedTimeEntry]}
-                  timePeriod={timePeriod}
-                  isEditable={true}
-                  inDrawer={true}
-                  timeSheetId={timeEntryData.time_sheet_id}
-                />
+                  },
+                  workItem,
+                  date: new Date(timeEntryData.start_time),
+                  existingEntries: [formattedTimeEntry],
+                  timePeriod,
+                  isEditable: true,
+                  inDrawer: true,
+                  timeSheetId: timeEntryData.time_sheet_id,
+                })}
               </div>
             );
           } catch (error) {
@@ -422,7 +395,7 @@ export function ActivityDetailViewerDrawer({
           }
           break;
         }
-        
+
         case ActivityType.WORKFLOW_TASK: {
           const taskDetails = await getTaskDetails(activityId);
 
@@ -447,7 +420,7 @@ export function ActivityDetailViewerDrawer({
                   initialFormData={initialDataForForm} // Use the prepared initialDataForForm
                   onComplete={() => {
                     // Invalidate cache for this activity type
-                    invalidateCache({ activityType: ActivityType.WORKFLOW_TASK });
+                    invalidateCache(ActivityType.WORKFLOW_TASK);
                     onActionComplete?.();
                   }}
                   contextData={taskDetails.contextData}
@@ -475,7 +448,7 @@ export function ActivityDetailViewerDrawer({
 
           try {
             // Load the document content
-            const content = await getBlockContent(documentId);
+            const content = await ctx.getBlockContent(documentId);
             let parsedContent: PartialBlock[] = [{
               type: "paragraph",
               props: {
@@ -576,7 +549,7 @@ export function ActivityDetailViewerDrawer({
                   // Load ticket data and render
                   try {
                     setIsLoading(true);
-                    const ticketData = await getConsolidatedTicketData(ticketId);
+                    const ticketData = await ctx.getConsolidatedTicketData(ticketId);
 
                     setContent(
                       <div className="h-full flex flex-col">
@@ -591,29 +564,12 @@ export function ActivityDetailViewerDrawer({
                           </Button>
                         </div>
                         <div className="flex-1 overflow-hidden">
-                          <TicketDetails
-                            isInDrawer={true}
-                            initialTicket={ticketData.ticket}
-                            initialComments={ticketData.comments}
-                            initialBoard={ticketData.board}
-                            initialClient={ticketData.client}
-                            initialContacts={ticketData.contacts}
-                            initialContactInfo={ticketData.contactInfo}
-                            initialCreatedByUser={ticketData.createdByUser}
-                            initialAdditionalAgents={ticketData.additionalAgents}
-                            statusOptions={ticketData.options.status}
-                            agentOptions={ticketData.options.agent}
-                            boardOptions={ticketData.options.board}
-                            priorityOptions={ticketData.options.priority}
-                            initialCategories={ticketData.categories}
-                            initialClients={ticketData.clients}
-                            initialLocations={ticketData.locations}
-                            initialAgentSchedules={ticketData.agentSchedules}
-                            currentUser={currentUser}
-                            initialUserMap={ticketData.userMap}
-                            initialAvailableAgents={ticketData.availableAgents}
-                            onClose={onClose}
-                          />
+                          {ctx.renderTicketDetails({
+                            isInDrawer: true,
+                            consolidatedData: ticketData,
+                            currentUser,
+                            onClose,
+                          })}
                         </div>
                       </div>
                     );
@@ -631,7 +587,7 @@ export function ActivityDetailViewerDrawer({
                   // Load task data and render
                   try {
                     setIsLoading(true);
-                    const taskData = await getTaskWithDetails(taskId);
+                    const taskData = await ctx.getTaskWithDetails(taskId);
                     const users = await getAllUsersBasic();
 
                     setContent(
@@ -647,10 +603,10 @@ export function ActivityDetailViewerDrawer({
                           </Button>
                         </div>
                         <div className="flex-1 overflow-hidden">
-                          <TaskEdit
-                            inDrawer={true}
-                            users={users || []}
-                            phase={{
+                          {ctx.renderTaskEdit({
+                            inDrawer: true,
+                            users: users || [],
+                            phase: {
                               phase_id: taskData.phase_id,
                               project_id: taskData.project_id || '',
                               phase_name: taskData.phase_name || '',
@@ -663,17 +619,17 @@ export function ActivityDetailViewerDrawer({
                               updated_at: new Date(),
                               wbs_code: taskData.wbs_code,
                               tenant: tenant || ''
-                            }}
-                            task={{
+                            },
+                            task: {
                               ...taskData,
                               tenant: tenant || ''
-                            }}
-                            onClose={onClose}
-                            onTaskUpdated={async () => {
-                              invalidateCache({ activityType: ActivityType.PROJECT_TASK });
+                            },
+                            onClose,
+                            onTaskUpdated: async () => {
+                              invalidateCache(ActivityType.PROJECT_TASK);
                               onActionComplete?.();
-                            }}
-                          />
+                            },
+                          })}
                         </div>
                       </div>
                     );
@@ -689,7 +645,7 @@ export function ActivityDetailViewerDrawer({
                   (async () => {
                     try {
                       setIsLoading(true);
-                      const documentContent = await getBlockContent(documentId);
+                      const documentContent = await ctx.getBlockContent(documentId);
                       let parsedContent: PartialBlock[] = [{
                         type: "paragraph",
                         props: {
@@ -773,13 +729,13 @@ export function ActivityDetailViewerDrawer({
     } finally {
       setIsLoading(false);
     }
-  }, [activityType, activityId, onActionComplete, onClose, tenant]);
-  
+  }, [activityType, activityId, onActionComplete, onClose, tenant, ctx, invalidateCache]);
+
   // Use effect to call loadContent when component mounts or dependencies change
   useEffect(() => {
     loadContent();
   }, [loadContent]);
-  
+
   // Memoize the rendered content to prevent unnecessary re-renders
   const renderedContent = useMemo(() => {
     if (isLoading) {
@@ -791,7 +747,7 @@ export function ActivityDetailViewerDrawer({
     }
     return content;
   }, [isLoading, content]);
-  
+
   return (
     <div className="min-w-auto h-full bg-white">
       {renderedContent}

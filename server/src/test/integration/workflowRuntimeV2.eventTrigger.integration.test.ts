@@ -7,16 +7,16 @@ import {
   ensureWorkflowScheduleStateTable,
   resetWorkflowRuntimeTables
 } from '../helpers/workflowRuntimeV2TestUtils';
-import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { createTenantKnex, getCurrentTenantId } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth';
 import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction,
   submitWorkflowEventAction
 } from '@alga-psa/workflows/actions';
-import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
-import WorkflowRuntimeEventModelV2 from '@shared/workflow/persistence/workflowRuntimeEventModelV2';
-import { getSchemaRegistry } from '@shared/workflow/runtime';
+import WorkflowRunModelV2 from '@alga-psa/workflows/persistence/workflowRunModelV2';
+import WorkflowRuntimeEventModelV2 from '@alga-psa/workflows/persistence/workflowRuntimeEventModelV2';
+import { getSchemaRegistry } from '@alga-psa/workflows/runtime';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
   buildWorkflowDefinition,
@@ -24,17 +24,61 @@ import {
   TEST_SCHEMA_REF
 } from '../helpers/workflowRuntimeV2TestHelpers';
 
-vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn(),
-  getCurrentTenantId: vi.fn()
+const {
+  startWorkflowRuntimeV2TemporalRunMock
+} = vi.hoisted(() => ({
+  startWorkflowRuntimeV2TemporalRunMock: vi.fn()
 }));
 
-vi.mock('@alga-psa/users/actions', () => ({
-  getCurrentUser: vi.fn()
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(),
+    getCurrentTenantId: vi.fn(),
+    auditLog: vi.fn().mockResolvedValue(undefined)
+  };
+});
+
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      { tenant: tenantId },
+      ...args
+    ),
+  withOptionalAuth: (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      { tenant: tenantId },
+      ...args
+    ),
+  withAuthCheck: (action: (user: any, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      ...args
+    ),
+  AuthenticationError: class AuthenticationError extends Error {},
+  hasPermission: vi.fn().mockResolvedValue(true),
+  checkMultiplePermissions: vi.fn().mockResolvedValue(true),
+  getCurrentUser: vi.fn(),
+  preCheckDeletion: vi.fn()
 }));
 
-vi.mock('server/src/lib/auth/rbac', () => ({
-  hasPermission: vi.fn().mockResolvedValue(true)
+vi.mock('@alga-psa/workflows/lib/workflowRuntimeV2Temporal', () => ({
+  startWorkflowRuntimeV2TemporalRun: (...args: unknown[]) => startWorkflowRuntimeV2TemporalRunMock(...args)
 }));
 
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
@@ -77,6 +121,11 @@ beforeEach(async () => {
   mockedCreateTenantKnex.mockImplementation(async () => ({ knex: db, tenant: tenantId }));
   mockedGetCurrentTenantId.mockImplementation(() => tenantId);
   mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
+  startWorkflowRuntimeV2TemporalRunMock.mockReset();
+  startWorkflowRuntimeV2TemporalRunMock.mockResolvedValue({
+    workflowId: 'workflow-runtime-v2:run:run-replayed',
+    firstExecutionRunId: 'temporal-run-replayed'
+  });
 });
 
 afterAll(async () => {
@@ -101,7 +150,10 @@ describe('workflow runtime v2 event trigger integration tests', () => {
 
     const run = await WorkflowRunModelV2.getById(db, result.startedRuns[0]);
     expect(run?.workflow_id).toBe(workflowId);
-    expect(run?.status).toBe('SUCCEEDED');
+    expect(run?.status).toBe('RUNNING');
+    expect(run?.engine).toBe('temporal');
+    expect(run?.temporal_workflow_id).toBe('workflow-runtime-v2:run:run-replayed');
+    expect(run?.temporal_run_id).toBe('temporal-run-replayed');
   });
 
   it('Event trigger starts runs for all published workflows sharing the trigger. Mocks: non-target dependencies.', async () => {
@@ -176,11 +228,13 @@ describe('workflow runtime v2 event trigger integration tests', () => {
     const run = await WorkflowRunModelV2.getById(db, result.startedRuns[0]);
     expect(run?.workflow_id).toBe(workflowId);
     expect(run?.workflow_version).toBe(1);
-    expect(run?.status).toBe('SUCCEEDED');
+    expect(run?.status).toBe('RUNNING');
+    expect(run?.engine).toBe('temporal');
     expect(run?.trigger_type).toBe('event');
     expect(run?.trigger_metadata_json).toMatchObject({
-      eventName: 'REGRESSION',
-      payloadSchemaRef: TEST_SCHEMA_REF
+      eventType: 'REGRESSION',
+      sourcePayloadSchemaRef: TEST_SCHEMA_REF,
+      triggerMappingApplied: false
     });
   });
 
@@ -196,14 +250,14 @@ describe('workflow runtime v2 event trigger integration tests', () => {
     });
     await publishWorkflow(workflowId, 1);
 
-    await expect(
-      submitWorkflowEventAction({
-        eventName: 'STRICT',
-        correlationKey: 'k4',
-        payload: { bar: 123 },
-        payloadSchemaRef: strictRef
-      })
-    ).rejects.toMatchObject({ status: 400 });
+    const result = await submitWorkflowEventAction({
+      eventName: 'STRICT',
+      correlationKey: 'k4',
+      payload: { bar: 123 },
+      payloadSchemaRef: strictRef
+    });
+    expect(result.status).toBe('no_wait');
+    expect(result.startedRuns).toHaveLength(0);
 
     const runs = await db('workflow_runs').where({ workflow_id: workflowId });
     expect(runs.length).toBe(0);

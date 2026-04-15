@@ -10,6 +10,7 @@ declare module 'next-auth' {
     clientId?: string;
     contactId?: string;
     plan?: string;
+    addons?: string[];
     max_concurrent_sessions?: number;
     two_factor_enabled?: boolean;
     two_factor_required_new_device?: boolean;
@@ -39,8 +40,10 @@ declare module 'next-auth' {
       clientId?: string;
       contactId?: string;
       plan?: string;
+      addons?: string[];
       trial_end?: string | null;
       subscription_status?: string | null;
+      solo_pro_trial_end?: string | null;
       premium_trial_end?: string | null;
       premium_trial_confirmed?: boolean;
       premium_trial_effective_date?: string | null;
@@ -60,8 +63,10 @@ declare module 'next-auth' {
     clientId?: string;
     contactId?: string;
     plan?: string;
+    addons?: string[];
     trial_end?: string | null;
     subscription_status?: string | null;
+    solo_pro_trial_end?: string | null;
     premium_trial_end?: string | null;
     premium_trial_confirmed?: boolean;
     premium_trial_effective_date?: string | null;
@@ -72,4 +77,3 @@ declare module 'next-auth' {
     last_plan_check?: number;
   }
 }
-

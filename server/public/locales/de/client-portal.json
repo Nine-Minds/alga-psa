@@ -14,7 +14,8 @@
     "portal": "Portal",
     "notifications": "Benachrichtigungen",
     "documents": "Dokumente",
-    "knowledgeBase": "Wissensdatenbank"
+    "knowledgeBase": "Wissensdatenbank",
+    "requestServices": "Dienste anfordern"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -137,7 +138,9 @@
         "description": "Sieh dir geteilte Dokumente und Ressourcen an"
       }
     },
-    "forgotPassword": "Passwort vergessen?"
+    "forgotPassword": "Passwort vergessen?",
+    "sessionEndedTitle": "Sitzung beendet",
+    "sessionEndedMessage": "Ihre Sitzung wurde beendet. Bitte melden Sie sich erneut an."
   },
   "account": {
     "title": "Konto",
@@ -339,7 +342,9 @@
       "uploadError": "Hochladen fehlgeschlagen. Bitte versuche es erneut.",
       "deleteSuccess": "Erfolgreich gelöscht.",
       "deleteError": "Löschen fehlgeschlagen.",
-      "deleteConfirm": "Möchtest du dies wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+      "deleteConfirm": "Möchtest du dies wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "linking": "Verknüpfen...",
+      "linkDocument": "Dokument verknüpfen"
     },
     "validation": {
       "clientNameRequired": "Firmenname ist erforderlich",
