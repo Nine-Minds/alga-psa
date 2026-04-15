@@ -297,7 +297,7 @@
   {
     "id": "F060",
     "description": "Wire useTranslation('msp/contracts') in TemplateWizard.tsx -- translate step labels (Template Basics, Fixed Fee Blocks, Products, Hourly Blocks, Usage-Based Blocks, Review & Publish), validation messages (Template name required, duplicate name error), save button labels, and recurring authoring validation errors",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F061",

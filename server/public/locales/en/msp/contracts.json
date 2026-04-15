@@ -1668,7 +1668,50 @@
       "itemEditLater": "Remember: you can edit the contract later if needed"
     }
   },
-  "templateWizard": {},
+  "templateWizard": {
+    "title": {
+      "createContractTemplate": "Create Contract Template"
+    },
+    "steps": {
+      "templateBasics": "Template Basics",
+      "fixedFeeBlocks": "Fixed Fee Blocks",
+      "products": "Products",
+      "hourlyBlocks": "Hourly Blocks",
+      "usageBasedBlocks": "Usage-Based Blocks",
+      "reviewPublish": "Review & Publish"
+    },
+    "actions": {
+      "continue": "Continue",
+      "publishTemplate": "Publish Template"
+    },
+    "errors": {
+      "failedToCreateTemplate": "Failed to create template"
+    },
+    "validation": {
+      "templateNameRequired": "Template name is required",
+      "billingFrequencyRequired": "Billing frequency is required",
+      "duplicateNameExists": "A template with this name already exists",
+      "templateNameAlreadyInUse": "Template name is already in use",
+      "atLeastOneServiceRequired": "At least one service is required",
+      "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead.",
+      "recurring": {
+        "frequency": {
+          "monthly": "monthly",
+          "quarterly": "quarterly",
+          "semi-annually": "semi-annually",
+          "annually": "annually",
+          "weekly": "weekly",
+          "biweekly": "biweekly"
+        },
+        "lineType": {
+          "fixed": "Fixed",
+          "product": "Product",
+          "hourly": "Hourly",
+          "usage": "Usage"
+        }
+      }
+    }
+  },
   "templateBasics": {},
   "templateFixed": {},
   "templateProducts": {},

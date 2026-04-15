@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
 import { WizardNavigation } from '@alga-psa/ui/components/onboarding/WizardNavigation';
@@ -11,16 +11,19 @@ import { TemplateHourlyServicesStep } from './steps/TemplateHourlyServicesStep';
 import { TemplateUsageBasedServicesStep } from './steps/TemplateUsageBasedServicesStep';
 import { TemplateReviewContractStep } from './steps/TemplateReviewContractStep';
 import { createContractTemplateFromWizard, ContractTemplateWizardSubmission, checkTemplateNameExists } from '@alga-psa/billing/actions/contractWizardActions';
-import { getUnsupportedRecurringAuthoringCombinationMessage } from '@shared/billingClients/recurringAuthoringValidation';
+import {
+  getUnsupportedRecurringAuthoringCombination,
+  getUnsupportedRecurringAuthoringCombinationMessage,
+} from '@shared/billingClients/recurringAuthoringValidation';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-const TEMPLATE_STEPS = [
-  'Template Basics',
-  'Fixed Fee Blocks',
-  'Products',
-  'Hourly Blocks',
-  'Usage-Based Blocks',
-  'Review & Publish'
-] as const;
+const TEMPLATE_STEPS_COUNT = 6;
+const RECURRING_LINE_TYPE_KEYS = {
+  Fixed: 'fixed',
+  Product: 'product',
+  Hourly: 'hourly',
+  Usage: 'usage',
+} as const;
 
 const REQUIRED_TEMPLATE_STEPS = [0, 5];
 
@@ -72,6 +75,7 @@ interface TemplateWizardProps {
 }
 
 export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizardProps) {
+  const { t } = useTranslation('msp/contracts');
   const [currentStep, setCurrentStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<number, string>>({});
@@ -91,6 +95,21 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     hourly_services: [],
     usage_services: [],
   });
+  const formatList = useMemo(
+    () => new Intl.ListFormat(undefined, { style: 'long', type: 'conjunction' }),
+    []
+  );
+  const stepLabels = useMemo(
+    () => ([
+      t('templateWizard.steps.templateBasics', { defaultValue: 'Template Basics' }),
+      t('templateWizard.steps.fixedFeeBlocks', { defaultValue: 'Fixed Fee Blocks' }),
+      t('templateWizard.steps.products', { defaultValue: 'Products' }),
+      t('templateWizard.steps.hourlyBlocks', { defaultValue: 'Hourly Blocks' }),
+      t('templateWizard.steps.usageBasedBlocks', { defaultValue: 'Usage-Based Blocks' }),
+      t('templateWizard.steps.reviewPublish', { defaultValue: 'Review & Publish' }),
+    ]),
+    [t]
+  );
 
   useEffect(() => {
     if (!open) {
@@ -139,9 +158,9 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
   };
 
   const getRecurringAuthoringValidationError = (): string | null => {
-    const combinations = [
+    const unsupportedCombination = [
       wizardData.fixed_services.length > 0
-        ? getUnsupportedRecurringAuthoringCombinationMessage({
+        ? getUnsupportedRecurringAuthoringCombination({
             lineType: 'Fixed',
             cadenceOwner: wizardData.cadence_owner,
             billingTiming: wizardData.billing_timing,
@@ -149,7 +168,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
           })
         : null,
       wizardData.product_services.length > 0
-        ? getUnsupportedRecurringAuthoringCombinationMessage({
+        ? getUnsupportedRecurringAuthoringCombination({
             lineType: 'Product',
             cadenceOwner: wizardData.cadence_owner,
             billingTiming: wizardData.billing_timing,
@@ -157,7 +176,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
           })
         : null,
       wizardData.hourly_services.length > 0
-        ? getUnsupportedRecurringAuthoringCombinationMessage({
+        ? getUnsupportedRecurringAuthoringCombination({
             lineType: 'Hourly',
             cadenceOwner: wizardData.cadence_owner,
             billingTiming: wizardData.billing_timing,
@@ -165,16 +184,45 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
           })
         : null,
       (wizardData.usage_services?.length ?? 0) > 0
-        ? getUnsupportedRecurringAuthoringCombinationMessage({
+        ? getUnsupportedRecurringAuthoringCombination({
             lineType: 'Usage',
             cadenceOwner: wizardData.cadence_owner,
             billingTiming: wizardData.billing_timing,
             billingFrequency: wizardData.billing_frequency,
           })
         : null,
-    ];
+    ].find((combination) => Boolean(combination));
 
-    return combinations.find((message): message is string => Boolean(message)) ?? null;
+    if (!unsupportedCombination) {
+      return null;
+    }
+
+    const supportedFrequencies = unsupportedCombination.supportedBillingFrequencies.map((value) =>
+      t(`templateWizard.validation.recurring.frequency.${value}`, { defaultValue: value })
+    );
+    const recurringLineType = t(
+      `templateWizard.validation.recurring.lineType.${RECURRING_LINE_TYPE_KEYS[unsupportedCombination.lineType]}`,
+      { defaultValue: unsupportedCombination.lineType }
+    );
+    const unsupportedFrequency = t(
+      `templateWizard.validation.recurring.frequency.${unsupportedCombination.billingFrequency}`,
+      { defaultValue: unsupportedCombination.billingFrequency }
+    );
+    const defaultRecurringMessage = getUnsupportedRecurringAuthoringCombinationMessage({
+      lineType: unsupportedCombination.lineType,
+      cadenceOwner: 'contract',
+      billingTiming: wizardData.billing_timing,
+      billingFrequency: unsupportedCombination.billingFrequency,
+    });
+
+    return t('templateWizard.validation.unsupportedRecurringAuthoringCombination', {
+      defaultValue:
+        defaultRecurringMessage ??
+        'Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead.',
+      lineType: recurringLineType,
+      supportedFrequencies: formatList.format(supportedFrequencies),
+      billingFrequency: unsupportedFrequency,
+    });
   };
 
   const checkDuplicateTemplateName = async (name: string): Promise<boolean> => {
@@ -194,23 +242,43 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     setErrors((prev) => ({ ...prev, [stepIndex]: '' }));
 
     switch (stepIndex) {
-      case 0:
+      case 0: {
         if (!wizardData.contract_name?.trim()) {
-          setErrors((prev) => ({ ...prev, [stepIndex]: 'Template name is required' }));
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t('templateWizard.validation.templateNameRequired', {
+              defaultValue: 'Template name is required',
+            }),
+          }));
           return false;
         }
         if (!wizardData.billing_frequency) {
-          setErrors((prev) => ({ ...prev, [stepIndex]: 'Billing frequency is required' }));
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t('templateWizard.validation.billingFrequencyRequired', {
+              defaultValue: 'Billing frequency is required',
+            }),
+          }));
           return false;
         }
         // Check for duplicate template name
         const isDuplicate = await checkDuplicateTemplateName(wizardData.contract_name);
         if (isDuplicate) {
-          setTemplateNameError('A template with this name already exists');
-          setErrors((prev) => ({ ...prev, [stepIndex]: 'Template name is already in use' }));
+          setTemplateNameError(
+            t('templateWizard.validation.duplicateNameExists', {
+              defaultValue: 'A template with this name already exists',
+            })
+          );
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t('templateWizard.validation.templateNameAlreadyInUse', {
+              defaultValue: 'Template name is already in use',
+            }),
+          }));
           return false;
         }
         return true;
+      }
       case 5: {
         const hasServices =
           wizardData.fixed_services.length > 0 ||
@@ -219,7 +287,12 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
           !!(wizardData.usage_services && wizardData.usage_services.length > 0);
 
         if (!hasServices) {
-          setErrors((prev) => ({ ...prev, [stepIndex]: 'At least one service is required' }));
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t('templateWizard.validation.atLeastOneServiceRequired', {
+              defaultValue: 'At least one service is required',
+            }),
+          }));
           return false;
         }
         const recurringAuthoringError = getRecurringAuthoringValidationError();
@@ -239,7 +312,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     if (!isValid) {
       return;
     }
-    if (currentStep < TEMPLATE_STEPS.length - 1) {
+    if (currentStep < TEMPLATE_STEPS_COUNT - 1) {
       setCompletedSteps((prev) => new Set([...prev, currentStep]));
       setCurrentStep((prev) => prev + 1);
     }
@@ -252,7 +325,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
   };
 
   const handleSkip = () => {
-    if (currentStep < TEMPLATE_STEPS.length - 1 && !REQUIRED_TEMPLATE_STEPS.includes(currentStep)) {
+    if (currentStep < TEMPLATE_STEPS_COUNT - 1 && !REQUIRED_TEMPLATE_STEPS.includes(currentStep)) {
       setCompletedSteps((prev) => new Set([...prev, currentStep]));
       setCurrentStep((prev) => prev + 1);
     }
@@ -277,7 +350,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     setIsSaving(true);
     try {
       const submission = buildSubmissionData();
-      const result = await createContractTemplateFromWizard(submission);
+      await createContractTemplateFromWizard(submission);
       if (onComplete) {
         onComplete(wizardData);
       }
@@ -301,7 +374,9 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
       console.error('Failed to create template from wizard', error);
       setErrors((prev) => ({
         ...prev,
-        [currentStep]: error instanceof Error ? error.message : 'Failed to create template',
+        [currentStep]: t('templateWizard.errors.failedToCreateTemplate', {
+          defaultValue: 'Failed to create template',
+        }),
       }));
     } finally {
       setIsSaving(false);
@@ -311,7 +386,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
   const wizardFooter = (
     <WizardNavigation
       currentStep={currentStep}
-      totalSteps={TEMPLATE_STEPS.length}
+      totalSteps={stepLabels.length}
       onBack={handleBack}
       onNext={handleNext}
       onSkip={handleSkip}
@@ -319,8 +394,8 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
       isNextDisabled={isSaving}
       isSkipDisabled={REQUIRED_TEMPLATE_STEPS.includes(currentStep)}
       isLoading={isSaving}
-      nextLabel="Continue"
-      finishLabel="Publish Template"
+      nextLabel={t('templateWizard.actions.continue', { defaultValue: 'Continue' })}
+      finishLabel={t('templateWizard.actions.publishTemplate', { defaultValue: 'Publish Template' })}
     />
   );
 
@@ -328,14 +403,14 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     <Dialog
       isOpen={open}
       onClose={() => onOpenChange(false)}
-      title="Create Contract Template"
+      title={t('templateWizard.title.createContractTemplate', { defaultValue: 'Create Contract Template' })}
       className="max-w-4xl max-h-[90vh]"
       footer={wizardFooter}
     >
       <div className="flex flex-col h-full bg-[rgb(var(--color-card))] rounded-lg">
         <div className="flex-shrink-0 px-6 pt-6">
           <WizardProgress
-            steps={TEMPLATE_STEPS.slice()}
+            steps={stepLabels}
             currentStep={currentStep}
             completedSteps={completedSteps}
             onStepClick={handleStepClick}
