@@ -264,6 +264,9 @@
       "contractNameRequired": "Contract name is required.",
       "failedToUpdate": "Failed to update contract",
       "fixErrors": "Please fix the following errors:"
+    },
+    "documents": {
+      "loading": "Loading documents..."
     }
   },
   "contractHeader": {

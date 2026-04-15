@@ -264,6 +264,9 @@
       "configureCustom": "To configure custom billing behavior, create or edit a normal user-authored contract.",
       "createdAutomatically": "Created automatically for uncontracted work.",
       "title": "System-managed default contract"
+    },
+    "documents": {
+      "loading": "Loading documents..."
     }
   },
   "contractHeader": {

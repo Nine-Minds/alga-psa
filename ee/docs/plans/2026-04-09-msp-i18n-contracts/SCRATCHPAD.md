@@ -295,3 +295,6 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractsSubbatch.i18n.test.ts` (pass; 1 file, 6 tests).
 - **(2026-04-15)** `T008` completed: added invoice-tab i18n coverage in `ContractsSubbatch.i18n.test.ts` for ContractDetail title/help text, refresh CTA, loading/empty/no-template states, invoice preview label, and table column headers.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractsSubbatch.i18n.test.ts` (pass; 1 file, 7 tests).
+- **(2026-04-15)** `T009` completed: added pseudo-locale guard in `ContractsSubbatch.i18n.test.ts` that extracts all `ContractDetail.tsx` translation keys and asserts each resolves to `xx` pseudo values (`11111` pattern), covering all tabs.
+- **(2026-04-15)** Discovery/fix: `contractDetail.documents.loading` was referenced in `ContractDetail.tsx` but missing from locale JSON. Added `contractDetail.documents.loading` to all 9 locale files (`en/de/es/fr/it/nl/pl/xx/yy`) with pseudo values for `xx`/`yy`.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractsSubbatch.i18n.test.ts` (pass; 1 file, 8 tests) and `node scripts/validate-translations.cjs` (pass; Errors: 0, Warnings: 0).
