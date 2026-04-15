@@ -300,6 +300,7 @@ describe('taniumActions', () => {
 
     expect(result.success).toBe(true);
     expect(listEndpointsMock).toHaveBeenCalledTimes(1);
+    expect(listEndpointsMock).toHaveBeenCalledWith({ computerGroupId: 'scope_1' });
     expect(ingestNormalizedRmmDeviceSnapshotMock).toHaveBeenCalled();
     expect(state.rmm_integrations[0].sync_status).toBe('completed');
   });
@@ -323,6 +324,7 @@ describe('taniumActions', () => {
     const result = await (triggerTaniumFullSync as any)();
 
     expect(result.success).toBe(true);
+    expect(listEndpointsMock).toHaveBeenCalledWith({ computerGroupId: 'scope_1' });
     expect(ingestNormalizedRmmDeviceSnapshotMock).toHaveBeenCalled();
     const call = ingestNormalizedRmmDeviceSnapshotMock.mock.calls[0]?.[0];
     expect(call?.snapshot?.externalDeviceId).toBe('asset_fallback_1');
@@ -373,6 +375,93 @@ describe('taniumActions', () => {
 
     expect(result.success).toBe(true);
     expect(ingestNormalizedRmmDeviceSnapshotMock.mock.calls[0]?.[0]?.snapshot?.assetType).toBe('server');
+  });
+
+  it('classifies macOS endpoints as workstation assets even when an ipAddress field is present', async () => {
+    state.rmm_organization_mappings.push({
+      tenant: 'tenant_1',
+      mapping_id: 'map_1',
+      integration_id: 'integration_tanium',
+      external_organization_id: 'scope_1',
+      client_id: 'client_1',
+      auto_sync_assets: true,
+    });
+    gatewayEndpointsByScope.scope_1 = [
+      {
+        id: 'mac_1',
+        name: '06:21:32:B6:E3:C2',
+        online: true,
+        osName: 'macOS (26.3.1 (a))',
+        osVersion: 'macOS 26.3',
+        ipAddress: '192.168.254.190',
+        computerGroupId: 'scope_1',
+        metadata: {
+          ipAddress: '192.168.254.190',
+        },
+      },
+    ];
+    ingestNormalizedRmmDeviceSnapshotMock.mockResolvedValue({ action: 'created' });
+
+    const result = await (triggerTaniumFullSync as any)();
+
+    expect(result.success).toBe(true);
+    expect(ingestNormalizedRmmDeviceSnapshotMock.mock.calls[0]?.[0]?.snapshot?.assetType).toBe('workstation');
+  });
+
+  it('maps Tanium enrichment fields into the normalized snapshot during sync', async () => {
+    state.rmm_organization_mappings.push({
+      tenant: 'tenant_1',
+      mapping_id: 'map_1',
+      integration_id: 'integration_tanium',
+      external_organization_id: 'scope_1',
+      client_id: 'client_1',
+      auto_sync_assets: true,
+    });
+    gatewayEndpointsByScope.scope_1 = [
+      {
+        id: 'mac_1',
+        name: 'MacBook Pro',
+        online: true,
+        osName: 'macOS (26.3.1 (a))',
+        osVersion: 'macOS 26.3',
+        currentUser: 'roberisaacs',
+        ipAddress: '192.168.254.190',
+        wanIpAddress: '10.0.156.6',
+        manufacturer: 'Apple',
+        model: 'Mac16,5',
+        cpuModel: 'Apple M4 Max 2.4GHz',
+        cpuLogicalProcessors: 16,
+        memoryTotalGb: 48,
+        lastRebootAt: '2026-04-15T10:00:00Z',
+        diskUsage: [{ name: '/', total_gb: 995, free_gb: 20, utilization_percent: 39 }],
+        installedApplications: [{ name: 'Docker Desktop', version: '4.40.0', uninstallable: true }],
+        computerGroupId: 'scope_1',
+        metadata: {
+          manufacturer: 'Apple',
+          model: 'Mac16,5',
+        },
+      },
+    ];
+    ingestNormalizedRmmDeviceSnapshotMock.mockResolvedValue({ action: 'created' });
+
+    const result = await (triggerTaniumFullSync as any)();
+
+    expect(result.success).toBe(true);
+    expect(ingestNormalizedRmmDeviceSnapshotMock.mock.calls[0]?.[0]?.snapshot?.extension).toMatchObject({
+      currentUser: 'roberisaacs',
+      lanIp: '192.168.254.190',
+      wanIp: '10.0.156.6',
+      lastRebootAt: '2026-04-15T10:00:00Z',
+      cpuModel: 'Apple M4 Max 2.4GHz',
+      cpuCores: 16,
+      ramGb: 48,
+      diskUsage: [{ name: '/', total_gb: 995, free_gb: 20, utilization_percent: 39 }],
+      installedSoftware: [{ name: 'Docker Desktop', version: '4.40.0' }],
+      systemInfo: {
+        manufacturer: 'Apple',
+        model: 'Mac16,5',
+      },
+    });
   });
 
   it('T007: connection test failure keeps integration inactive and returns actionable error', async () => {
