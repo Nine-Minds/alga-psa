@@ -248,8 +248,8 @@ describe('Teams app package actions', () => {
       'createTicketFromMessage',
       'updateFromMessage',
     ]);
-    expect(result.package?.manifest.composeExtensions[0]?.commands[0]?.contexts).toEqual(['compose', 'commandBox']);
-    expect(result.package?.manifest.composeExtensions[0]?.commands[1]?.contexts).toEqual(['message']);
+    expect(result.package?.manifest.composeExtensions[0]?.commands[0]?.context).toEqual(['compose', 'commandBox']);
+    expect(result.package?.manifest.composeExtensions[0]?.commands[1]?.context).toEqual(['message']);
     expect(result.package?.manifest.activities.activityTypes).toHaveLength(5);
     expect(result.package?.manifest.authorization).toEqual({
       permissions: {

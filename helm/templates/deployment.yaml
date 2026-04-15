@@ -540,6 +540,13 @@ spec:
             value: "{{ .Values.auth.nextauth_session_expires }}"
           - name: AUTH_TRUST_HOST
             value: "true"
+          {{- if .Values.server.teamsIframeSessionCookie }}
+          # Relax session cookie SameSite so the Alga PSA tab can read the
+          # session from inside the Microsoft Teams iframe. Off by default;
+          # enable only on deployments that host the Teams personal tab.
+          - name: TEAMS_IFRAME_SESSION_COOKIE
+            value: "true"
+          {{- end }}
 
           # ----------- EXTENSIONS ----------------
           {{- with .Values.config.extensions.domainRoot }}

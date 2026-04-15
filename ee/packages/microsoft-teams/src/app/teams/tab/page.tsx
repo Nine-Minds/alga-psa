@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
 import { getTeamsAvailability, type TeamsAvailability } from '../../../lib/teams/teamsAvailability';
 import { buildTeamsReauthPath } from '../../../lib/teams/buildTeamsReauthUrl';
@@ -12,6 +11,9 @@ import {
   type TeamsTabDestination,
   resolveTeamsTabDestination,
 } from '../../../lib/teams/resolveTeamsTabDestination';
+import { TeamsTabSignInGate } from './TeamsTabSignInGate';
+
+const TEAMS_POPUP_COMPLETE_PATH = '/teams/auth/popup-complete';
 
 interface TeamsTabPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -163,7 +165,21 @@ export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) 
   });
 
   if (state.status === 'unauthenticated') {
-    redirect(buildTeamsReauthPath(buildTeamsTabCallbackUrl(params)));
+    // Teams hosts this page inside an iframe, so a top-level NextAuth redirect
+    // fails on CSRF cookies (third-party cookie restrictions). The gate
+    // initializes the Teams SDK client-side and opens the MSP sign-in inside a
+    // Teams-managed popup window, which runs in a top-level context where
+    // cookies work normally. Browser users fall through to the legacy
+    // fallbackSignInUrl redirect inside the gate.
+    const originalCallbackUrl = buildTeamsTabCallbackUrl(params);
+    const fallbackSignInUrl = buildTeamsReauthPath(originalCallbackUrl);
+    const popupSignInUrl = buildTeamsReauthPath(TEAMS_POPUP_COMPLETE_PATH);
+    return (
+      <TeamsTabSignInGate
+        fallbackSignInUrl={fallbackSignInUrl}
+        popupSignInUrl={popupSignInUrl}
+      />
+    );
   }
 
   const availability = await getTeamsAvailability({
