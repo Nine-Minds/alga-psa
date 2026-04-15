@@ -264,7 +264,7 @@
   {
     "id": "T031",
     "description": "Unit: ContractWizard.i18n.test -- step labels render via t() in the wizard progress component",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
