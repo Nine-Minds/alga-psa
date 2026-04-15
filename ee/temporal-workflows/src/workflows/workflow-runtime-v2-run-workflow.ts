@@ -1122,8 +1122,8 @@ function parseTimeWaitConfig(config: unknown, stepPath: string): ParsedTimeWaitC
   }
 
   if (mode === 'duration') {
-    if (typeof config.durationMs !== 'number' || !Number.isFinite(config.durationMs) || config.durationMs <= 0) {
-      throw createValidationRuntimeError(stepPath, 'time.wait duration mode requires durationMs > 0');
+    if (typeof config.durationMs !== 'number' || !Number.isSafeInteger(config.durationMs) || config.durationMs <= 0) {
+      throw createValidationRuntimeError(stepPath, 'time.wait duration mode requires a positive safe-integer durationMs');
     }
   } else if (!isExpr(config.until)) {
     throw createValidationRuntimeError(stepPath, 'time.wait until mode requires an until expression');

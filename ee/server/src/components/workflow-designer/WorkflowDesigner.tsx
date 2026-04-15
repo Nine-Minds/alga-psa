@@ -137,6 +137,12 @@ import {
 } from '@alga-psa/workflows/authoring';
 import { validateExpressionSource } from '@alga-psa/workflows/authoring';
 import { partitionStepExpressionValidations, validateStepExpressions } from './expressionValidation';
+import {
+  composeTimeWaitDurationMs,
+  decomposeTimeWaitDurationMs,
+  formatTimeWaitDurationPart,
+  parseTimeWaitDurationPart,
+} from './timeWaitDuration';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 type WorkflowDefinitionRecord = {
@@ -5857,6 +5863,10 @@ export const StepConfigPanel: React.FC<{
   const timeWaitConfig = step.type === 'time.wait'
     ? removeInvalidWaitConfigFields((((step as NodeStep).config as Record<string, unknown> | undefined) ?? {}))
     : null;
+  const timeWaitDurationParts = useMemo(
+    () => decomposeTimeWaitDurationMs(typeof timeWaitConfig?.durationMs === 'number' ? timeWaitConfig.durationMs : undefined),
+    [timeWaitConfig?.durationMs]
+  );
   const selectedWaitEventName = typeof eventWaitConfig?.eventName === 'string' ? eventWaitConfig.eventName : '';
   const selectedWaitEventOption = useMemo(
     () => eventCatalogOptions.find((option) => option.event_type === selectedWaitEventName) ?? null,
@@ -5917,6 +5927,22 @@ export const StepConfigPanel: React.FC<{
       config: removeInvalidWaitConfigFields(nextConfig)
     });
   }, [onChange, removeInvalidWaitConfigFields, step]);
+
+  const updateTimeWaitDurationPart = useCallback((unit: 'days' | 'hours' | 'minutes' | 'seconds', raw: string) => {
+    if (!timeWaitConfig) {
+      return;
+    }
+
+    const nextDurationMs = composeTimeWaitDurationMs({
+      ...timeWaitDurationParts,
+      [unit]: parseTimeWaitDurationPart(raw)
+    });
+
+    updateWaitNodeConfig({
+      ...timeWaitConfig,
+      durationMs: nextDurationMs
+    });
+  }, [timeWaitConfig, timeWaitDurationParts, updateWaitNodeConfig]);
 
   const eventFilters = useMemo(() => {
     if (!eventWaitConfig) return [] as EventWaitFilterClause[];
@@ -6445,20 +6471,46 @@ export const StepConfigPanel: React.FC<{
             disabled={!editable}
           />
           {(timeWaitConfig.mode ?? 'duration') === 'duration' ? (
-            <Input
-              id={`time-wait-duration-${step.id}`}
-              label="Duration (ms)"
-              type="number"
-              value={typeof timeWaitConfig.durationMs === 'number' ? timeWaitConfig.durationMs : ''}
-              disabled={!editable}
-              onChange={(event) => {
-                const raw = event.target.value.trim();
-                updateWaitNodeConfig({
-                  ...timeWaitConfig,
-                  durationMs: raw ? Number(raw) : undefined
-                });
-              }}
-            />
+            <div className="space-y-2">
+              <Label>Duration</Label>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <Input
+                  id={`time-wait-duration-days-${step.id}`}
+                  label="Days"
+                  type="number"
+                  value={formatTimeWaitDurationPart(timeWaitDurationParts.days)}
+                  disabled={!editable}
+                  onChange={(event) => updateTimeWaitDurationPart('days', event.target.value)}
+                />
+                <Input
+                  id={`time-wait-duration-hours-${step.id}`}
+                  label="Hours"
+                  type="number"
+                  value={formatTimeWaitDurationPart(timeWaitDurationParts.hours)}
+                  disabled={!editable}
+                  onChange={(event) => updateTimeWaitDurationPart('hours', event.target.value)}
+                />
+                <Input
+                  id={`time-wait-duration-minutes-${step.id}`}
+                  label="Minutes"
+                  type="number"
+                  value={formatTimeWaitDurationPart(timeWaitDurationParts.minutes)}
+                  disabled={!editable}
+                  onChange={(event) => updateTimeWaitDurationPart('minutes', event.target.value)}
+                />
+                <Input
+                  id={`time-wait-duration-seconds-${step.id}`}
+                  label="Seconds"
+                  type="number"
+                  value={formatTimeWaitDurationPart(timeWaitDurationParts.seconds)}
+                  disabled={!editable}
+                  onChange={(event) => updateTimeWaitDurationPart('seconds', event.target.value)}
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                Stored as milliseconds in the workflow definition. Use fixed units only.
+              </p>
+            </div>
           ) : (
             <ExpressionField
               idPrefix={`time-wait-until-${step.id}`}
@@ -6604,7 +6656,7 @@ const FIELD_METADATA: Record<string, { label: string; description?: string; adva
   filters: { label: 'Payload Filters', description: 'Optional event payload filters (AND semantics)' },
   timeoutMs: { label: 'Timeout (ms)', description: 'Maximum time to wait in milliseconds', advanced: true },
   mode: { label: 'Wait Mode', description: 'Duration or until time' },
-  durationMs: { label: 'Duration (ms)', description: 'Relative duration in milliseconds' },
+  durationMs: { label: 'Duration', description: 'Relative duration stored in milliseconds' },
   until: { label: 'Until', description: 'Expression resolving to an absolute date/time' },
   state: { label: 'State Name', description: 'The state to transition to' },
   assign: { label: 'Assignments', description: 'Variables to assign' },
