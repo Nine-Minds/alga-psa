@@ -52,4 +52,44 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T014: template composition and line/service manager labels use translated keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/ContractTemplateDetail.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keyChecks = [
+      'templateDetail.composition.title',
+      'templateDetail.composition.manageServices',
+      'templateDetail.composition.closeManager',
+      'templateDetail.composition.fixedFeeBundles',
+      'templateDetail.composition.hourlyPlans',
+      'templateDetail.composition.usageBasedPlans',
+      'templateDetail.composition.additionalPlans',
+      'templateDetail.composition.noFixedFeeLines',
+      'templateDetail.composition.noHourlyLines',
+      'templateDetail.composition.noUsageLines',
+      'templateDetail.composition.serviceCountSingle',
+      'templateDetail.composition.serviceCountPlural',
+      'templateDetail.composition.noServicesAssigned',
+      'templateDetail.composition.serviceFallback',
+      'templateDetail.composition.quantityLabel',
+      'templateDetail.composition.unitLabel',
+      'templateDetail.composition.minimumTimeLabel',
+      'templateDetail.composition.roundUpLabel',
+      'templateDetail.composition.minutesValue',
+      'templateDetail.composition.bucketSummary',
+      'templateDetail.composition.manageTemplateServices',
+      'templateDetail.composition.addContractLinesBeforeManaging',
+      'templateDetail.composition.fixedFeeRate',
+      'templateDetail.composition.editRate',
+      'templateDetail.composition.notSet',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });

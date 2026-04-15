@@ -120,7 +120,7 @@
   {
     "id": "T014",
     "description": "Unit: ContractTemplateDetail.i18n.test -- contract lines section columns, actions, and inline editing labels render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
