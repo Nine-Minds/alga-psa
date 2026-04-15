@@ -61,9 +61,14 @@ export interface TeamsPendingApprovalRecord {
   period_end_date: string | null;
 }
 
-function fullNameExpression(knex: any, alias: string): any {
+// Raw.as() is not reliably available on knex Raw instances after bundling —
+// the production build throws `j(...).as is not a function`. Embed the AS
+// clause directly in the raw SQL to avoid the prototype call entirely. Both
+// tableAlias and outputAlias are hard-coded by the callers, so string
+// interpolation here cannot become a SQL injection vector.
+function fullNameExpression(knex: any, tableAlias: string, outputAlias: string): any {
   return knex.raw(
-    `CASE WHEN ${alias}.first_name IS NOT NULL AND ${alias}.last_name IS NOT NULL THEN CONCAT(${alias}.first_name, ' ', ${alias}.last_name) ELSE NULL END`
+    `CASE WHEN ${tableAlias}.first_name IS NOT NULL AND ${tableAlias}.last_name IS NOT NULL THEN CONCAT(${tableAlias}.first_name, ' ', ${tableAlias}.last_name) ELSE NULL END AS ${outputAlias}`
   );
 }
 
@@ -99,7 +104,7 @@ export async function getTeamsTicketById(
       'stat.name as status_name',
       'stat.is_closed as status_is_closed',
       'pri.priority_name',
-      fullNameExpression(knex, 'assigned_user').as('assigned_to_name')
+      fullNameExpression(knex, 'assigned_user', 'assigned_to_name')
     )
     .first();
 
@@ -143,7 +148,7 @@ export async function listAssignedOpenTeamsTickets(params: {
       'stat.name as status_name',
       'stat.is_closed as status_is_closed',
       'pri.priority_name',
-      fullNameExpression(knex, 'assigned_user').as('assigned_to_name')
+      fullNameExpression(knex, 'assigned_user', 'assigned_to_name')
     )
     .orderBy('t.entered_at', 'desc')
     .limit(params.limit);
