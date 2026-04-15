@@ -312,3 +312,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractTemplateDetail.i18n.test.ts` (pass; 1 file, 3 tests).
 - **(2026-04-15)** `T016` completed: added pseudo-locale coverage in `ContractTemplateDetail.i18n.test.ts` by extracting all `t('...')` keys used in `ContractTemplateDetail.tsx` and asserting each resolves to `xx` pseudo values (`11111`).
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractTemplateDetail.i18n.test.ts` (pass; 1 file, 4 tests).
+- **(2026-04-15)** `T017` completed: added `packages/billing/tests/billing-dashboard/CreateCustomContractLineDialog.i18n.test.ts` with i18n wiring assertions for dialog shell labels, billing-frequency/timing controls, billing-model selector copy, and service-picker labels.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/CreateCustomContractLineDialog.i18n.test.ts` (pass; 1 file, 1 test).

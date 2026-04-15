@@ -146,7 +146,7 @@
   {
     "id": "T017",
     "description": "Unit: CreateCustomContractLineDialog.i18n.test -- dialog title, type selector labels, service picker labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
