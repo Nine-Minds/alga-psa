@@ -281,4 +281,27 @@ describe('Contracts integration i18n coverage', () => {
       expect(getLeaf(de, key)).toBeDefined();
     }
   });
+
+  it('T068: contract detail QuickStartGuide resolves all visible copy via locale keys (de + xx)', () => {
+    const quickStartSource = read('../../src/components/billing-dashboard/contracts/QuickStartGuide.tsx');
+    const de = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/de/msp/contracts.json'
+    );
+    const xx = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/xx/msp/contracts.json'
+    );
+
+    expect(quickStartSource).toContain("const { t } = useTranslation('msp/contracts');");
+
+    const keySet = new Set<string>(getTranslationKeys(quickStartSource));
+    expect(keySet.size).toBeGreaterThan(25);
+
+    for (const key of keySet) {
+      const deValue = getLeaf(de, key);
+      const xxValue = getLeaf(xx, key);
+      expect(typeof deValue).toBe('string');
+      expect(typeof xxValue).toBe('string');
+      expect((xxValue as string)).toContain('11111');
+    }
+  });
 });

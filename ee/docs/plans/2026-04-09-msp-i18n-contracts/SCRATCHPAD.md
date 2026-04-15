@@ -417,3 +417,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractsIntegration.i18n.test.ts` (pass; 1 file, 4 tests).
 - **(2026-04-15)** `T067` completed: extended integration coverage for template creation flow (`TemplateWizard` + all template-step components + `TemplateServicePreviewSection`). The test extracts literal translation keys (`>120`) and verifies key resolution across both `en` and `de` locales.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractsIntegration.i18n.test.ts` (pass; 1 file, 5 tests).
+- **(2026-04-15)** `T068` completed: extended integration suite with `QuickStartGuide` coverage asserting all extracted translation keys resolve in `de` and pseudo-locale `xx`; pseudo assertions (`contains '11111'`) enforce that visible quick-start copy is translation-driven rather than hardcoded.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractsIntegration.i18n.test.ts` (pass; 1 file, 6 tests).
