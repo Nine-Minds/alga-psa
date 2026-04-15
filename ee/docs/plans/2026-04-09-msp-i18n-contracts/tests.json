@@ -481,7 +481,7 @@
   {
     "id": "T058",
     "description": "Unit: TemplateProductsStep.i18n.test -- step heading, service picker, preview render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
