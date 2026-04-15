@@ -33,9 +33,13 @@ export function useAssetDetail(assetId: string) {
 
       try {
         setIsRefreshing(true);
-        const updatedData = await refreshAssetRmmData(assetId);
+        const [updatedData, updatedAsset] = await Promise.all([
+          refreshAssetRmmData(assetId),
+          getAsset(assetId),
+        ]);
 
         await mutateRmmData(updatedData, false);
+        await mutateAsset(updatedAsset, false);
 
         toast.success('RMM data refreshed');
       } catch (error) {
@@ -45,7 +49,7 @@ export function useAssetDetail(assetId: string) {
         setIsRefreshing(false);
       }
     },
-    [assetId, mutateRmmData]
+    [assetId, mutateAsset, mutateRmmData]
   );
 
   return {

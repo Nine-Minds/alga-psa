@@ -296,4 +296,81 @@ describe('sharedAssetIngestionService', () => {
       sync_status: 'synced',
     });
   });
+
+  it('reclassifies an existing asset type when the normalized snapshot type changes', async () => {
+    const state: DbState = {
+      assets: [
+        {
+          tenant: 'tenant_1',
+          asset_id: 'asset_existing',
+          asset_type: 'mobile_device',
+          client_id: 'client_1',
+          name: 'Old Name',
+          serial_number: 'OLD',
+          status: 'active',
+          location: 'Old',
+          rmm_provider: 'tanium',
+          rmm_device_id: 'device_1',
+        },
+      ],
+      workstation_assets: [],
+      server_assets: [],
+      tenant_external_entity_mappings: [
+        {
+          id: 'map_existing',
+          tenant: 'tenant_1',
+          integration_type: 'tanium',
+          alga_entity_type: 'asset',
+          alga_entity_id: 'asset_existing',
+          external_entity_id: 'device_1',
+          external_realm_id: 'scope_1',
+          sync_status: 'pending',
+        },
+      ],
+      rmm_organization_mappings: [],
+    };
+    const knex = createFakeKnex(state);
+
+    const result = await ingestNormalizedRmmDeviceSnapshot({
+      tenant: 'tenant_1',
+      snapshot: buildSnapshot({
+        assetType: 'workstation',
+        extension: {
+          osType: 'macOS',
+          osVersion: 'macOS 26.3',
+          currentUser: 'roberisaacs',
+          lanIp: '192.168.254.190',
+          wanIp: '10.0.156.6',
+          lastRebootAt: '2026-04-15T10:00:00Z',
+          cpuModel: 'Apple M4 Max 2.4GHz',
+          cpuCores: 16,
+          ramGb: 48,
+          diskUsage: [{ name: '/', total_gb: 995, free_gb: 20, utilization_percent: 39 }],
+          installedSoftware: [{ name: 'Docker Desktop', version: '4.40.0' }],
+          systemInfo: { manufacturer: 'Apple', model: 'Mac16,5' },
+        },
+      }),
+      knex,
+    });
+
+    expect(result.action).toBe('updated');
+    expect(state.assets[0]).toMatchObject({
+      asset_type: 'workstation',
+    });
+    expect(state.workstation_assets).toHaveLength(1);
+    expect(state.workstation_assets[0]).toMatchObject({
+      asset_id: 'asset_existing',
+      os_type: 'macOS',
+      os_version: 'macOS 26.3',
+      current_user: 'roberisaacs',
+      lan_ip: '192.168.254.190',
+      wan_ip: '10.0.156.6',
+      cpu_model: 'Apple M4 Max 2.4GHz',
+      cpu_cores: 16,
+      ram_gb: 48,
+      disk_usage: JSON.stringify([{ name: '/', total_gb: 995, free_gb: 20, utilization_percent: 39 }]),
+      installed_software: JSON.stringify([{ name: 'Docker Desktop', version: '4.40.0' }]),
+      system_info: JSON.stringify({ manufacturer: 'Apple', model: 'Mac16,5' }),
+    });
+  });
 });

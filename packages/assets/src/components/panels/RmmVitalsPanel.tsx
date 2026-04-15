@@ -2,12 +2,13 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { RefreshCw, WifiOff } from 'lucide-react';
-import type { RmmCachedData } from '@alga-psa/types';
+import type { Asset, RmmCachedData } from '@alga-psa/types';
 import { StatusBadge } from '../shared/StatusBadge';
 import { formatRelativeDateTime } from '@alga-psa/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface RmmVitalsPanelProps {
+  asset: Asset;
   data: RmmCachedData | null | undefined;
   isLoading: boolean;
   onRefresh: () => void;
@@ -24,6 +25,7 @@ const VitalRow = ({ label, value }: { label: string, value: React.ReactNode }) =
 );
 
 export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
+  asset,
   data,
   isLoading,
   onRefresh,
@@ -49,7 +51,29 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
     return <Card className="h-64 animate-pulse bg-gray-50" />;
   }
 
-  if (!data) {
+  const extensionData = asset.workstation ?? asset.server;
+
+  const fallbackManagedData: RmmCachedData | null = asset.rmm_provider && asset.rmm_device_id
+    ? {
+        provider: asset.rmm_provider,
+        agent_status: asset.agent_status || 'unknown',
+        last_check_in: asset.last_seen_at || null,
+        last_rmm_sync_at: asset.last_rmm_sync_at || null,
+        current_user: extensionData?.current_user || null,
+        uptime_seconds: extensionData?.uptime_seconds || null,
+        lan_ip: extensionData?.lan_ip || null,
+        wan_ip: extensionData?.wan_ip || null,
+        cpu_utilization_percent: asset.workstation?.cpu_utilization_percent || asset.server?.cpu_usage_percent || null,
+        memory_utilization_percent: extensionData?.memory_usage_percent || null,
+        memory_used_gb: extensionData?.memory_used_gb || null,
+        memory_total_gb: extensionData?.ram_gb || null,
+        storage: extensionData?.disk_usage || [],
+      }
+    : null;
+
+  const effectiveData = data ?? fallbackManagedData;
+
+  if (!effectiveData) {
     return (
       <Card className="bg-white">
         <CardHeader>
@@ -97,12 +121,12 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
             label={t('rmmVitalsPanel.fields.agentStatus', { defaultValue: 'Agent Status' })}
             value={
               <div className="flex items-center gap-2">
-                <StatusBadge status={(data.agent_status as any) || 'unknown'} size="sm" showIcon={false} />
-                {data.last_check_in && (
+                <StatusBadge status={(effectiveData.agent_status as any) || 'unknown'} size="sm" showIcon={false} />
+                {effectiveData.last_check_in && (
                   <span className="text-sm text-gray-500">
                     {t('rmmVitalsPanel.fields.lastCheckIn', {
                       defaultValue: '(Last check-in: {{value}})',
-                      value: formatRelativeDateTime(new Date(data.last_check_in), Intl.DateTimeFormat().resolvedOptions().timeZone)
+                      value: formatRelativeDateTime(new Date(effectiveData.last_check_in), Intl.DateTimeFormat().resolvedOptions().timeZone)
                     })}
                   </span>
                 )}
@@ -112,18 +136,18 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
 
           <VitalRow
             label={t('rmmVitalsPanel.fields.currentUser', { defaultValue: 'Current User' })}
-            value={data.current_user || t('common.states.none', { defaultValue: 'None' })}
+            value={effectiveData.current_user || t('common.states.none', { defaultValue: 'None' })}
           />
           
           <VitalRow
             label={t('rmmVitalsPanel.fields.uptime', { defaultValue: 'Uptime' })}
-            value={formatUptime(data.uptime_seconds)}
+            value={formatUptime(effectiveData.uptime_seconds)}
           />
           
           <VitalRow 
             label={t('rmmVitalsPanel.fields.lastSync', { defaultValue: 'Last RMM Sync' })}
-            value={data.last_rmm_sync_at 
-              ? formatRelativeDateTime(new Date(data.last_rmm_sync_at), Intl.DateTimeFormat().resolvedOptions().timeZone) 
+            value={effectiveData.last_rmm_sync_at 
+              ? formatRelativeDateTime(new Date(effectiveData.last_rmm_sync_at), Intl.DateTimeFormat().resolvedOptions().timeZone) 
               : t('rmmVitalsPanel.values.never', { defaultValue: 'Never' })
             } 
           />
@@ -132,8 +156,8 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
             label={t('rmmVitalsPanel.fields.network', { defaultValue: 'Network' })}
             value={t('rmmVitalsPanel.fields.networkValue', {
               defaultValue: 'LAN IP: {{lan}} | WAN IP: {{wan}}',
-              lan: data.lan_ip || t('common.states.na', { defaultValue: 'N/A' }),
-              wan: data.wan_ip || t('common.states.na', { defaultValue: 'N/A' })
+              lan: effectiveData.lan_ip || t('common.states.na', { defaultValue: 'N/A' }),
+              wan: effectiveData.wan_ip || t('common.states.na', { defaultValue: 'N/A' })
             })}
           />
         </div>
