@@ -227,7 +227,7 @@
   {
     "id": "F046",
     "description": "Wire useTranslation('msp/contracts') in ContractLineEditDialog.tsx -- translate dialog title with interpolation ('Edit Contract Line: {{name}}'), Pricing heading, Rate label, Billing Timing heading, timing question label, timing options (In Arrears/In Advance), timing descriptions, validation error, and Save/Cancel buttons (including 'Saving...' state)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F047",

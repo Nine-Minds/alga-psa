@@ -509,7 +509,39 @@
     },
     "title": "Contract Lines"
   },
-  "contractLineEdit": {},
+  "contractLineEdit": {
+    "actions": {
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes",
+      "saving": "Saving..."
+    },
+    "errors": {
+      "failedToSaveChanges": "Failed to save changes"
+    },
+    "fields": {
+      "billingTimingQuestion": "When should this line be billed?",
+      "rate": "Rate"
+    },
+    "sections": {
+      "billingTiming": "Billing Timing",
+      "pricing": "Pricing"
+    },
+    "timingDescriptions": {
+      "advance": "Charges will be billed before the service is provided",
+      "arrears": "Charges will be billed after the service is provided"
+    },
+    "timingOptions": {
+      "advance": "In Advance (at start of billing period)",
+      "arrears": "In Arrears (at end of billing period)"
+    },
+    "title": "Edit Contract Line: {{name}}",
+    "validation": {
+      "validRateRequired": "Please enter a valid rate (must be a non-negative number)"
+    },
+    "values": {
+      "unnamedLine": "Unnamed line"
+    }
+  },
   "contractLineRate": {},
   "addLines": {
     "actions": {
