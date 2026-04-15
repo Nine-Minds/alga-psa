@@ -20,6 +20,39 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
 import { ADD_ONS, type AddOnKey, type TenantTier } from '@alga-psa/types';
 import { tierFromStripeProduct } from './stripeTierMapping';
+import {
+  getAppleIapConfig,
+  getAllSubscriptionStatuses,
+  verifyRenewalInfoJws,
+} from '@/lib/iap/appStoreServer';
+
+/**
+ * Error thrown by Stripe-side billing methods that refuse to operate on an
+ * Apple IAP tenant. The action layer catches this and routes the user to the
+ * IAP → Stripe transition flow (or shows an "add-ons unavailable" message).
+ */
+export class AppleIapBillingError extends Error {
+  readonly code:
+    | 'iap_upgrade_requires_transition'
+    | 'iap_addons_unavailable'
+    | 'iap_seat_changes_unavailable';
+  constructor(
+    code: 'iap_upgrade_requires_transition' | 'iap_addons_unavailable' | 'iap_seat_changes_unavailable',
+    message: string,
+  ) {
+    super(message);
+    this.name = 'AppleIapBillingError';
+    this.code = code;
+  }
+}
+
+type IapSubscriptionContext = {
+  originalTransactionId: string;
+  status: string;
+  autoRenewStatus: boolean;
+  expiresAt: Date | null;
+  transitionStripeSubscriptionExternalId: string | null;
+};
 
 const SOLO_PRO_TRIAL_DAYS = 30;
 
@@ -639,6 +672,14 @@ export class StripeService {
     logger.info(`[StripeService] Update or create subscription for tenant ${tenantId}, quantity: ${quantity}`);
 
     const knex = await getConnection(tenantId);
+
+    // Apple IAP tenants cannot use Stripe seat management — the IAP product is
+    // a single-seat Solo tier and seat count changes require completing the
+    // Apple → Stripe transition first.
+    await this.refuseIfIapBilled(tenantId, knex, 'iap_seat_changes_unavailable',
+      'Seat count changes are not available while your subscription is managed by Apple. To add seats, upgrade to a web-billed plan first.',
+    );
+
     const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
 
     // Get or import customer
@@ -1164,6 +1205,37 @@ export class StripeService {
     const productName = product?.name;
     const plan = tierFromStripeProduct(productName);
     const quantity = this.getLicensedUserCountFromStripeItems(subscription.items.data, plan);
+
+    // Apple IAP → Stripe transition: the user is still on Apple IAP for the
+    // remainder of the current Apple billing period; Stripe is parked in
+    // trialing state until Apple expires. We intentionally do NOT touch
+    // tenants.billing_source — that flips later in the IAP webhook handler
+    // when EXPIRED arrives. We DO update tenants.plan so the user sees the
+    // new tier's features immediately, and we link the Stripe sub back to
+    // the IAP row so the webhook can find it.
+    const isIapTransition = subscription.metadata?.iap_transition === 'true';
+    const iapOriginalTransactionId = subscription.metadata?.iap_original_transaction_id;
+
+    if (isIapTransition && iapOriginalTransactionId) {
+      await knex('apple_iap_subscriptions')
+        .where({ tenant: tenantId, original_transaction_id: iapOriginalTransactionId })
+        .update({
+          transition_stripe_subscription_external_id: subscription.id,
+          updated_at: knex.fn.now(),
+        });
+
+      await knex('tenants')
+        .where({ tenant: tenantId })
+        .update({
+          plan,
+          updated_at: knex.fn.now(),
+        });
+
+      logger.info(
+        `[StripeService] Wired IAP → Stripe transition for tenant ${tenantId}: stripe sub ${subscription.id}, plan ${plan}`,
+      );
+      return;
+    }
 
     await knex('tenants')
       .where({ tenant: tenantId })
@@ -1725,6 +1797,14 @@ export class StripeService {
     }
 
     const knex = await getConnection(tenantId);
+
+    // Apple IAP tenants use a different upgrade path that creates a fresh
+    // Stripe subscription in trial mode aligned to Apple's expiry. Action
+    // layer is responsible for calling startIapToStripeTransition instead.
+    await this.refuseIfIapBilled(tenantId, knex, 'iap_upgrade_requires_transition',
+      'Your subscription is managed by Apple. To upgrade, start the Apple → Stripe transition from Account Management.',
+    );
+
     const customer = await this.getOrImportCustomer(tenantId);
 
     const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
@@ -2739,6 +2819,22 @@ export class StripeService {
       return { success: false, error: `Pricing not configured for add-on ${addOn}` };
     }
 
+    // Add-ons are not available for Apple IAP tenants — Apple's IAP surface
+    // has no add-on content, and standing up a parallel Stripe add-on sub
+    // while the primary subscription is Apple-managed creates billing
+    // complexity we don't want to support.
+    try {
+      const knex = await getConnection(tenantId);
+      await this.refuseIfIapBilled(tenantId, knex, 'iap_addons_unavailable',
+        'Add-ons are not available while your subscription is managed by Apple.',
+      );
+    } catch (err) {
+      if (err instanceof AppleIapBillingError) {
+        return { success: false, error: err.message };
+      }
+      throw err;
+    }
+
     try {
       const customer = await this.getOrImportCustomer(tenantId);
       const session = await this.stripe.checkout.sessions.create({
@@ -2814,6 +2910,375 @@ export class StripeService {
   async getPublishableKey(): Promise<string> {
     await this.ensureInitialized();
     return this.config.publishableKey;
+  }
+
+  // ==========================================================================
+  // Apple IAP → Stripe transition
+  // ==========================================================================
+
+  /**
+   * Read the tenant's billing_source and current active Apple IAP sub.
+   * Returns { billingSource: 'stripe' } if not IAP-billed.
+   */
+  private async getIapContext(
+    tenantId: string,
+    knex: Knex,
+  ): Promise<{ billingSource: string; iapSub: IapSubscriptionContext | null }> {
+    const tenant = await knex('tenants')
+      .where({ tenant: tenantId })
+      .first<{ billing_source: string | null }>('billing_source');
+
+    const billingSource = tenant?.billing_source ?? 'stripe';
+
+    if (billingSource !== 'apple_iap') {
+      return { billingSource, iapSub: null };
+    }
+
+    const iap = await knex('apple_iap_subscriptions')
+      .where({ tenant: tenantId })
+      .whereIn('status', ['active', 'grace_period'])
+      .orderBy('created_at', 'desc')
+      .first<{
+        original_transaction_id: string;
+        status: string;
+        auto_renew_status: boolean;
+        expires_at: Date | null;
+        transition_stripe_subscription_external_id: string | null;
+      }>(
+        'original_transaction_id',
+        'status',
+        'auto_renew_status',
+        'expires_at',
+        'transition_stripe_subscription_external_id',
+      );
+
+    return {
+      billingSource,
+      iapSub: iap
+        ? {
+            originalTransactionId: iap.original_transaction_id,
+            status: iap.status,
+            autoRenewStatus: iap.auto_renew_status,
+            expiresAt: iap.expires_at ? new Date(iap.expires_at) : null,
+            transitionStripeSubscriptionExternalId: iap.transition_stripe_subscription_external_id,
+          }
+        : null,
+    };
+  }
+
+  /**
+   * Throws AppleIapBillingError if the tenant is billed via Apple IAP. Used
+   * by the Stripe-side methods that refuse to touch IAP tenants.
+   */
+  private async refuseIfIapBilled(
+    tenantId: string,
+    knex: Knex,
+    code: 'iap_upgrade_requires_transition' | 'iap_addons_unavailable' | 'iap_seat_changes_unavailable',
+    message: string,
+  ): Promise<void> {
+    const { billingSource } = await this.getIapContext(tenantId, knex);
+    if (billingSource === 'apple_iap') {
+      throw new AppleIapBillingError(code, message);
+    }
+  }
+
+  /**
+   * Query the App Store Server API for the current auto-renew status on the
+   * given original transaction and persist it to apple_iap_subscriptions.
+   * Returns true if auto-renew is currently ON.
+   */
+  private async refreshAutoRenewStatus(
+    tenantId: string,
+    originalTransactionId: string,
+    knex: Knex,
+  ): Promise<boolean> {
+    const config = await getAppleIapConfig();
+    const statuses = await getAllSubscriptionStatuses(originalTransactionId, config);
+
+    let renewalJws: string | null = null;
+    for (const group of statuses.data ?? []) {
+      for (const lastTx of group.lastTransactions ?? []) {
+        if (lastTx.originalTransactionId === originalTransactionId) {
+          renewalJws = lastTx.signedRenewalInfo;
+          break;
+        }
+      }
+      if (renewalJws) break;
+    }
+    if (!renewalJws) {
+      throw new Error(`Apple API returned no renewal info for transaction ${originalTransactionId}`);
+    }
+
+    const renewalInfo = verifyRenewalInfoJws(renewalJws, config);
+    const autoRenewOn = renewalInfo.autoRenewStatus === 1;
+
+    await knex('apple_iap_subscriptions')
+      .where({ tenant: tenantId, original_transaction_id: originalTransactionId })
+      .update({
+        auto_renew_status: autoRenewOn,
+        auto_renew_status_updated_at: new Date(),
+        updated_at: new Date(),
+      });
+
+    return autoRenewOn;
+  }
+
+  /**
+   * Start an Apple IAP → Stripe transition.
+   *
+   * Preconditions:
+   *   - Tenant billing_source is 'apple_iap'
+   *   - An active apple_iap_subscriptions row exists
+   *   - Apple auto-renew is currently OFF (verified against App Store Server API)
+   *   - No transition is already pending
+   *   - Apple expiry is at least 48 hours in the future (Stripe trial_end min)
+   *
+   * Creates a Stripe Checkout session in embedded mode with
+   * subscription_data.trial_end pinned to Apple expires_at. The Stripe sub is
+   * wired to apple_iap_subscriptions.transition_stripe_subscription_external_id
+   * via handleCheckoutCompleted when the user finishes checkout.
+   */
+  async startIapToStripeTransition(
+    tenantId: string,
+    targetTier: 'pro' | 'premium',
+    interval: 'month' | 'year' = 'month',
+  ): Promise<
+    | { type: 'needs_auto_renew_off'; expiresAt: string }
+    | { type: 'already_pending'; stripeSubscriptionExternalId: string }
+    | { type: 'checkout'; clientSecret: string; sessionId: string }
+    | { type: 'error'; error: string }
+  > {
+    await this.ensureInitialized();
+
+    const knex = await getConnection(tenantId);
+    const { billingSource, iapSub } = await this.getIapContext(tenantId, knex);
+
+    if (billingSource !== 'apple_iap') {
+      return { type: 'error', error: 'Tenant is not billed via Apple IAP' };
+    }
+    if (!iapSub) {
+      return { type: 'error', error: 'No active Apple IAP subscription found for this tenant' };
+    }
+    if (iapSub.transitionStripeSubscriptionExternalId) {
+      return {
+        type: 'already_pending',
+        stripeSubscriptionExternalId: iapSub.transitionStripeSubscriptionExternalId,
+      };
+    }
+    if (!iapSub.expiresAt) {
+      return { type: 'error', error: 'Apple subscription has no expiry date on file' };
+    }
+
+    // Stripe requires trial_end to be at least 48 hours in the future.
+    const nowMs = Date.now();
+    const expiresMs = iapSub.expiresAt.getTime();
+    const hoursUntilExpiry = (expiresMs - nowMs) / (1000 * 60 * 60);
+    if (hoursUntilExpiry < 48) {
+      return {
+        type: 'error',
+        error: `Your Apple subscription expires in less than 48 hours (on ${iapSub.expiresAt.toISOString()}). Please wait until it expires, then upgrade.`,
+      };
+    }
+
+    // Verify auto-renew is off via Apple's API (not just our local copy,
+    // which can be seconds-to-minutes stale).
+    let autoRenewOn: boolean;
+    try {
+      autoRenewOn = await this.refreshAutoRenewStatus(
+        tenantId,
+        iapSub.originalTransactionId,
+        knex,
+      );
+    } catch (err) {
+      logger.error(
+        `[StripeService] Failed to query Apple auto-renew status for tenant ${tenantId}`,
+        err,
+      );
+      // If Apple's API is unreachable, trust our local copy. If it says off,
+      // we proceed — the trial extension safety net in the IAP webhook
+      // handler will catch any subsequent Apple renewal.
+      autoRenewOn = iapSub.autoRenewStatus;
+    }
+
+    if (autoRenewOn) {
+      return { type: 'needs_auto_renew_off', expiresAt: iapSub.expiresAt.toISOString() };
+    }
+
+    // Good to go: build the checkout session.
+    const tierPrices = this.getTierPriceIds(targetTier, interval);
+    if (!tierPrices) {
+      return { type: 'error', error: `Pricing not configured for ${targetTier} tier` };
+    }
+    if (!tierPrices.userPriceId) {
+      return { type: 'error', error: `Per-user pricing not configured for ${targetTier} tier` };
+    }
+
+    const customer = await this.getOrImportCustomer(tenantId);
+    // IAP tenants are single-seat Solo → quantity=1 with included-users applied.
+    const lineItems = this.buildTierLineItems(
+      tierPrices,
+      1,
+      this.getIncludedUsersForTier(targetTier),
+    );
+
+    const trialEndUnix = Math.floor(expiresMs / 1000);
+
+    try {
+      const session = await this.stripe.checkout.sessions.create({
+        customer: customer.stripe_customer_external_id,
+        ui_mode: 'embedded',
+        mode: 'subscription',
+        line_items: lineItems,
+        subscription_data: {
+          trial_end: trialEndUnix,
+          metadata: {
+            tenant_id: tenantId,
+            source: 'algapsa_iap_transition',
+            iap_transition: 'true',
+            iap_original_transaction_id: iapSub.originalTransactionId,
+            target_tier: targetTier,
+            billing_interval: interval,
+          },
+        },
+        return_url: `${getStripeReturnBaseUrl()}/msp/settings/account?session_id={CHECKOUT_SESSION_ID}&iap_transition=1`,
+        metadata: {
+          tenant_id: tenantId,
+          iap_transition: 'true',
+          iap_original_transaction_id: iapSub.originalTransactionId,
+          target_tier: targetTier,
+          billing_interval: interval,
+        },
+      });
+
+      if (!session.client_secret) {
+        return { type: 'error', error: 'Stripe checkout session created without client_secret' };
+      }
+
+      logger.info(
+        `[StripeService] Created IAP transition checkout for tenant ${tenantId}, trial_end=${iapSub.expiresAt.toISOString()}, tier=${targetTier}`,
+      );
+
+      return { type: 'checkout', clientSecret: session.client_secret, sessionId: session.id };
+    } catch (error: any) {
+      logger.error(
+        `[StripeService] Failed to create IAP transition checkout for tenant ${tenantId}:`,
+        error,
+      );
+      return { type: 'error', error: error.message || 'Failed to create checkout session' };
+    }
+  }
+
+  /**
+   * Extend a Stripe subscription's trial_end. Safety net for the IAP webhook
+   * handler when Apple unexpectedly renews a subscription that has a pending
+   * Stripe transition (user re-enabled auto-renew after starting the upgrade).
+   */
+  async extendSubscriptionTrialEnd(
+    tenantId: string,
+    stripeSubExternalId: string,
+    newTrialEnd: Date,
+  ): Promise<void> {
+    await this.ensureInitialized();
+    const trialEndUnix = Math.floor(newTrialEnd.getTime() / 1000);
+    await this.stripe.subscriptions.update(stripeSubExternalId, {
+      trial_end: trialEndUnix,
+      proration_behavior: 'none',
+    });
+    logger.info(
+      `[StripeService] Extended trial for ${stripeSubExternalId} to ${newTrialEnd.toISOString()} (tenant ${tenantId})`,
+    );
+  }
+
+  /**
+   * Complete a pending Apple → Stripe transition. Called by the IAP webhook
+   * handler when the Apple subscription reaches a terminal state AND the
+   * tenant has a transition pending. Flips tenants.billing_source to 'stripe'
+   * and clears the transition pointer. The existing Stripe trial sub rolls
+   * into its first paid cycle on its own.
+   */
+  async completeIapToStripeTransition(
+    tenantId: string,
+    originalTransactionId: string,
+    stripeSubExternalId: string,
+  ): Promise<void> {
+    await this.ensureInitialized();
+    const knex = await getConnection(tenantId);
+
+    await knex.transaction(async (trx) => {
+      await trx('tenants')
+        .where({ tenant: tenantId })
+        .update({ billing_source: 'stripe', updated_at: trx.fn.now() });
+
+      await trx('apple_iap_subscriptions')
+        .where({ tenant: tenantId, original_transaction_id: originalTransactionId })
+        .update({
+          transition_stripe_subscription_external_id: null,
+          updated_at: trx.fn.now(),
+        });
+    });
+
+    logger.info(
+      `[StripeService] Completed IAP → Stripe transition for tenant ${tenantId} (Stripe sub ${stripeSubExternalId})`,
+    );
+  }
+
+  /**
+   * Cancel a pending Apple → Stripe transition. Cancels the Stripe trial sub,
+   * clears the transition pointer, reverts tenants.plan to 'solo'. The user
+   * stays on Apple IAP Solo as if they'd never clicked upgrade.
+   */
+  async cancelIapToStripeTransition(
+    tenantId: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    await this.ensureInitialized();
+    const knex = await getConnection(tenantId);
+
+    const iapSub = await knex('apple_iap_subscriptions')
+      .where({ tenant: tenantId })
+      .whereNotNull('transition_stripe_subscription_external_id')
+      .first<{
+        original_transaction_id: string;
+        transition_stripe_subscription_external_id: string;
+      }>(
+        'original_transaction_id',
+        'transition_stripe_subscription_external_id',
+      );
+
+    if (!iapSub) {
+      return { success: false, error: 'No pending Apple → Stripe transition found' };
+    }
+
+    const stripeSubId = iapSub.transition_stripe_subscription_external_id;
+
+    // Cancel the Stripe trial sub. It's in 'trialing' state so there's
+    // nothing to prorate or refund — cancelling removes it cleanly.
+    try {
+      await this.stripe.subscriptions.cancel(stripeSubId, { prorate: false });
+    } catch (error: any) {
+      logger.warn(
+        `[StripeService] Stripe cancel for transition sub ${stripeSubId} returned error (continuing with local cleanup): ${error.message}`,
+      );
+    }
+
+    await knex.transaction(async (trx) => {
+      await trx('apple_iap_subscriptions')
+        .where({ tenant: tenantId, original_transaction_id: iapSub.original_transaction_id })
+        .update({
+          transition_stripe_subscription_external_id: null,
+          updated_at: trx.fn.now(),
+        });
+      await trx('tenants')
+        .where({ tenant: tenantId })
+        .update({ plan: 'solo', updated_at: trx.fn.now() });
+      await trx('stripe_subscriptions')
+        .where({ tenant: tenantId, stripe_subscription_external_id: stripeSubId })
+        .update({ status: 'canceled', canceled_at: trx.fn.now(), updated_at: trx.fn.now() });
+    });
+
+    logger.info(
+      `[StripeService] Cancelled IAP → Stripe transition for tenant ${tenantId}`,
+    );
+    return { success: true };
   }
 }
 

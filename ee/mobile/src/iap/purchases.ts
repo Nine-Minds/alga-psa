@@ -19,7 +19,6 @@ import {
   finishTransaction,
   purchaseUpdatedListener,
   purchaseErrorListener,
-  flushFailedPurchasesCachedAsPendingAndroid,
   type Subscription,
   type SubscriptionPurchase,
   type PurchaseError,
@@ -60,8 +59,6 @@ export async function ensureIapConnection(): Promise<void> {
   }
   if (connectionInitialized) return;
   await initConnection();
-  // Android-only but harmless when called from iOS guards.
-  await flushFailedPurchasesCachedAsPendingAndroid().catch(() => undefined);
   connectionInitialized = true;
 }
 

@@ -10,7 +10,8 @@
     "generate:ticket-editor": "node ./scripts/generate-ticket-mobile-editor-html.mjs",
     "typecheck": "npm run generate:ticket-editor && tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
-    "test": "npm run generate:ticket-editor && vitest run"
+    "test": "npm run generate:ticket-editor && vitest run",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@blocknote/core": "^0.47.0",
@@ -59,6 +60,7 @@
     "@typescript-eslint/parser": "^8.8.0",
     "esbuild": "^0.27.2",
     "eslint": "^8.57.0",
+    "patch-package": "^8.0.1",
     "react-test-renderer": "^19.1.0",
     "typescript": "~5.9.2",
     "vitest": "^3.2.4"

@@ -4,7 +4,7 @@ import { getLicenseUsage, type LicenseUsage } from '../license/get-license-usage
 import { getSession } from '@alga-psa/auth';
 import type { AddOnKey } from '@alga-psa/types';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
-import { getStripeService } from '../stripe/StripeService';
+import { getStripeService, AppleIapBillingError } from '../stripe/StripeService';
 import { getConnection } from '@/lib/db/db';
 import logger from '@alga-psa/core/logger';
 import { sendCancellationRequestEmail } from '@alga-psa/email/sendCancellationRequestEmail';
@@ -1113,8 +1113,17 @@ export async function upgradeTierAction(
       return { success: false, error: 'Stripe billing is not configured' };
     }
 
-    const result = await stripeService.upgradeTier(session.user.tenant, targetTier, interval);
-    return result;
+    try {
+      const result = await stripeService.upgradeTier(session.user.tenant, targetTier, interval);
+      return result;
+    } catch (err) {
+      if (err instanceof AppleIapBillingError) {
+        // UI should have routed to startIapUpgradeAction in this case, but
+        // surface a clear error if someone clicked the wrong button.
+        return { success: false, error: err.message };
+      }
+      throw err;
+    }
   } catch (error) {
     logger.error('[upgradeTierAction] Error:', error);
     return {
@@ -1587,6 +1596,196 @@ export async function sendPremiumTrialRequestAction(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to send trial request',
+    };
+  }
+}
+
+// ============================================================================
+// Apple IAP → Stripe transition actions
+// ============================================================================
+
+export type IapBillingContext = {
+  billingSource: 'stripe' | 'apple_iap';
+  iap: null | {
+    originalTransactionId: string;
+    status: string;
+    autoRenewStatus: boolean;
+    expiresAt: string | null;
+    hasPendingTransition: boolean;
+  };
+};
+
+/**
+ * Return billing_source and IAP sub state for the session tenant. The UI
+ * uses this to decide whether to show the Apple-specific upgrade flow and
+ * the pending-transition banner.
+ */
+export async function getIapBillingContextAction(): Promise<{
+  success: boolean;
+  data?: IapBillingContext;
+  error?: string;
+}> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const knex = await getConnection(session.user.tenant);
+    const tenant = await knex('tenants')
+      .where({ tenant: session.user.tenant })
+      .first<{ billing_source: string | null }>('billing_source');
+
+    const billingSource = (tenant?.billing_source ?? 'stripe') as 'stripe' | 'apple_iap';
+
+    if (billingSource !== 'apple_iap') {
+      return { success: true, data: { billingSource, iap: null } };
+    }
+
+    const iap = await knex('apple_iap_subscriptions')
+      .where({ tenant: session.user.tenant })
+      .whereIn('status', ['active', 'grace_period'])
+      .orderBy('created_at', 'desc')
+      .first<{
+        original_transaction_id: string;
+        status: string;
+        auto_renew_status: boolean;
+        expires_at: Date | null;
+        transition_stripe_subscription_external_id: string | null;
+      }>(
+        'original_transaction_id',
+        'status',
+        'auto_renew_status',
+        'expires_at',
+        'transition_stripe_subscription_external_id',
+      );
+
+    return {
+      success: true,
+      data: {
+        billingSource,
+        iap: iap
+          ? {
+              originalTransactionId: iap.original_transaction_id,
+              status: iap.status,
+              autoRenewStatus: iap.auto_renew_status,
+              expiresAt: iap.expires_at ? new Date(iap.expires_at).toISOString() : null,
+              hasPendingTransition: !!iap.transition_stripe_subscription_external_id,
+            }
+          : null,
+      },
+    };
+  } catch (error) {
+    logger.error('[getIapBillingContextAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get billing context',
+    };
+  }
+}
+
+/**
+ * Start an Apple IAP → Stripe transition. Returns one of:
+ *   - { needsAutoRenewOff, expiresAt } — show "cancel auto-renew first" modal
+ *   - { alreadyPending: true } — user already has a transition pending
+ *   - { checkout: { clientSecret, sessionId, publishableKey } } — show Stripe Checkout
+ *   - { error } — failed
+ */
+export async function startIapUpgradeAction(
+  targetTier: 'pro' | 'premium',
+  interval: 'month' | 'year' = 'month',
+): Promise<{
+  success: boolean;
+  needsAutoRenewOff?: boolean;
+  expiresAt?: string;
+  alreadyPending?: boolean;
+  checkout?: { clientSecret: string; sessionId: string; publishableKey: string };
+  error?: string;
+}> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to change the subscription plan' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    const result = await stripeService.startIapToStripeTransition(
+      session.user.tenant,
+      targetTier,
+      interval,
+    );
+
+    switch (result.type) {
+      case 'needs_auto_renew_off':
+        return { success: true, needsAutoRenewOff: true, expiresAt: result.expiresAt };
+
+      case 'already_pending':
+        return { success: true, alreadyPending: true };
+
+      case 'checkout': {
+        const publishableKey = await stripeService.getPublishableKey();
+        return {
+          success: true,
+          checkout: {
+            clientSecret: result.clientSecret,
+            sessionId: result.sessionId,
+            publishableKey,
+          },
+        };
+      }
+
+      case 'error':
+      default:
+        return { success: false, error: (result as { error: string }).error };
+    }
+  } catch (error) {
+    logger.error('[startIapUpgradeAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to start Apple upgrade',
+    };
+  }
+}
+
+/**
+ * Cancel a pending Apple → Stripe transition. Cancels the Stripe trial sub,
+ * clears the transition pointer, and reverts tenants.plan back to solo.
+ */
+export async function cancelIapTransitionAction(): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to manage the subscription' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.cancelIapToStripeTransition(session.user.tenant);
+  } catch (error) {
+    logger.error('[cancelIapTransitionAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to cancel transition',
     };
   }
 }

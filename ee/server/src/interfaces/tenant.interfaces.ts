@@ -91,7 +91,7 @@ export interface ResendWelcomeEmailClientResult {
 
 export interface TenantDeletionInput {
   tenantId: string;
-  triggerSource: 'stripe_webhook' | 'nineminds_extension' | 'manual';
+  triggerSource: 'stripe_webhook' | 'apple_iap_webhook' | 'nineminds_extension' | 'manual';
   triggeredBy?: string;
   subscriptionExternalId?: string;
   reason?: string;
