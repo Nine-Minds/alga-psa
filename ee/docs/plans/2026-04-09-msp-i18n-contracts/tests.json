@@ -66,7 +66,7 @@
   {
     "id": "T008",
     "description": "Unit: ContractDetail.i18n.test -- invoice tab column headers and empty/loading states render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]

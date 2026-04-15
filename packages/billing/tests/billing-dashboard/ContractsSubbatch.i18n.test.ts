@@ -194,4 +194,32 @@ describe('Contracts i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T008: ContractDetail invoice tab columns and loading/empty states use translated keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/ContractDetail.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keyChecks = [
+      'contractDetail.invoices.title',
+      'contractDetail.invoices.selectForPreview',
+      'contractDetail.invoices.loading',
+      'contractDetail.invoices.empty',
+      'contractDetail.invoices.noTemplatesAvailable',
+      'contractDetail.invoices.preview',
+      'contractDetail.invoices.columns.invoiceNumber',
+      'contractDetail.invoices.columns.status',
+      'contractDetail.invoices.columns.invoiceDate',
+      'contractDetail.invoices.columns.dueDate',
+      'contractDetail.invoices.columns.amount',
+      'contractDetail.invoices.columns.preview',
+      'common.actions.refresh',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });
