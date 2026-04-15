@@ -256,7 +256,7 @@
   {
     "id": "T030",
     "description": "Unit: ClientContractsTab.i18n.test -- empty state, terminate dialog, and error alert render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]

@@ -339,3 +339,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/Contracts.i18n.test.ts` (pass; 1 file, 4 tests).
 - **(2026-04-15)** `T029` completed: added `packages/billing/tests/billing-dashboard/ClientContractsTab.i18n.test.ts` with i18n assertions for client-contract table columns, PO indicator labels, status badge labels, top-level tab labels, and search placeholder/aria text.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ClientContractsTab.i18n.test.ts` (pass; 1 file, 1 test).
+- **(2026-04-15)** `T030` completed: extended `ClientContractsTab.i18n.test.ts` with loading/error/empty-state checks and terminate-confirmation dialog copy coverage, plus related operation failure toasts.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ClientContractsTab.i18n.test.ts` (pass; 1 file, 2 tests).

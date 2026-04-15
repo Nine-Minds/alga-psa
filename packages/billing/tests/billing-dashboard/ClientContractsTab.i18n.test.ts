@@ -58,4 +58,32 @@ describe('ClientContractsTab i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T030: empty/loading/error states and terminate dialog copy use translated keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/ClientContractsTab.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keyChecks = [
+      'clientContracts.loading',
+      'clientContracts.errors.failedToFetch',
+      'clientContracts.empty.noMatches',
+      'clientContracts.dialogs.terminate.title',
+      'clientContracts.dialogs.terminate.message',
+      'clientContracts.dialogs.terminate.clientSuffix',
+      'contractsList.actions.terminate',
+      'common.actions.cancel',
+      'clientContracts.toasts.failedToTerminate',
+      'clientContracts.toasts.failedToDelete',
+      'clientContracts.toasts.failedToRestore',
+      'clientContracts.toasts.failedToActivate',
+      'clientContracts.toasts.failedToResumeDraft',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });
