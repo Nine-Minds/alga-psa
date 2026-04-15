@@ -1600,6 +1600,58 @@ export const getClientPortalVisibilityGroupById = withAuth(async (
   }
 });
 
+async function ensureBoardsAreActiveInTenant(
+  trx: Knex.Transaction,
+  tenant: string,
+  boardIds: string[]
+): Promise<void> {
+  if (boardIds.length === 0) {
+    return;
+  }
+
+  const validBoardCount = await trx('boards')
+    .where({ tenant })
+    .andWhere('is_inactive', false)
+    .whereIn('board_id', boardIds)
+    .count('* as count')
+    .first();
+
+  if (Number(validBoardCount?.count || 0) !== boardIds.length) {
+    throw new Error('One or more boards are invalid for this tenant');
+  }
+}
+
+async function ensureBoardsAreActiveOrAlreadyAssignedToGroup(
+  trx: Knex.Transaction,
+  tenant: string,
+  groupId: string,
+  boardIds: string[]
+): Promise<void> {
+  if (boardIds.length === 0) {
+    return;
+  }
+
+  const activeRows = await trx('boards')
+    .where({ tenant })
+    .andWhere('is_inactive', false)
+    .whereIn('board_id', boardIds)
+    .select('board_id');
+
+  const existingMembershipRows = await trx('client_portal_visibility_group_boards')
+    .where({ tenant, group_id: groupId })
+    .whereIn('board_id', boardIds)
+    .select('board_id');
+
+  const allowedBoardIds = new Set<string>([
+    ...activeRows.map((row) => row.board_id),
+    ...existingMembershipRows.map((row) => row.board_id),
+  ]);
+
+  if (boardIds.some((boardId) => !allowedBoardIds.has(boardId))) {
+    throw new Error('One or more boards are invalid for this tenant');
+  }
+}
+
 export const createClientPortalVisibilityGroupForContact = withAuth(async (
   user,
   { tenant },
@@ -1617,18 +1669,7 @@ export const createClientPortalVisibilityGroupForContact = withAuth(async (
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
 
-    if (boardIds.length > 0) {
-      const validBoardCount = await trx('boards')
-        .where({ tenant })
-        .andWhere('is_inactive', false)
-        .whereIn('board_id', boardIds)
-        .count('* as count')
-        .first();
-
-      if (Number(validBoardCount?.count || 0) !== boardIds.length) {
-        throw new Error('One or more boards are invalid for this tenant');
-      }
-    }
+    await ensureBoardsAreActiveInTenant(trx, tenant, boardIds);
 
     const [group] = await trx('client_portal_visibility_groups')
       .insert({
@@ -1682,18 +1723,7 @@ export const updateClientPortalVisibilityGroupForContact = withAuth(async (
       throw new Error('Visibility group not found');
     }
 
-    if (boardIds.length > 0) {
-      const validBoardCount = await trx('boards')
-        .where({ tenant })
-        .andWhere('is_inactive', false)
-        .whereIn('board_id', boardIds)
-        .count('* as count')
-        .first();
-
-      if (Number(validBoardCount?.count || 0) !== boardIds.length) {
-        throw new Error('One or more boards are invalid for this tenant');
-      }
-    }
+    await ensureBoardsAreActiveOrAlreadyAssignedToGroup(trx, tenant, groupId, boardIds);
 
     await trx('client_portal_visibility_groups')
       .where({ tenant, group_id: groupId })

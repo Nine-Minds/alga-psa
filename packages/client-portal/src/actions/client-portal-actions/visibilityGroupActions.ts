@@ -50,6 +50,13 @@ type VisibilityContact = {
   portal_visibility_group_id: string | null;
 };
 
+export type DeleteClientPortalVisibilityGroupResult =
+  | { ok: true }
+  | {
+      ok: false;
+      code: 'ASSIGNED_TO_CONTACTS' | 'NOT_FOUND';
+    };
+
 function uniqueItems<T>(values: T[]): T[] {
   return Array.from(new Set(values));
 }
@@ -76,6 +83,38 @@ async function ensureBoardsAreActiveInTenant(
 
   const existing = rows.map((row) => row.board_id);
   const missing = boardIds.filter((boardId) => !existing.includes(boardId));
+
+  if (missing.length > 0) {
+    throw new Error('One or more boards are invalid for this tenant');
+  }
+}
+
+async function ensureBoardsAreActiveOrAlreadyAssignedToGroup(
+  trx: Knex.Transaction,
+  tenant: string,
+  groupId: string,
+  boardIds: string[]
+) {
+  if (!boardIds.length) {
+    return;
+  }
+
+  const activeRows = await trx('boards')
+    .where({ tenant })
+    .andWhere('is_inactive', false)
+    .whereIn('board_id', boardIds)
+    .select('board_id');
+
+  const existingMembershipRows = await trx('client_portal_visibility_group_boards')
+    .where({ tenant, group_id: groupId })
+    .whereIn('board_id', boardIds)
+    .select('board_id');
+
+  const allowedBoardIds = new Set<string>([
+    ...activeRows.map((row) => row.board_id),
+    ...existingMembershipRows.map((row) => row.board_id),
+  ]);
+  const missing = boardIds.filter((boardId) => !allowedBoardIds.has(boardId));
 
   if (missing.length > 0) {
     throw new Error('One or more boards are invalid for this tenant');
@@ -383,7 +422,7 @@ export const updateClientPortalVisibilityGroup = withAuth(async (
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const { clientId } = await resolveManagementScope(trx, tenant, currentUser);
     const boardIds = uniqueItems(payload.boardIds);
-    await ensureBoardsAreActiveInTenant(trx, tenant, boardIds);
+    await ensureBoardsAreActiveOrAlreadyAssignedToGroup(trx, tenant, groupId, boardIds);
 
     const existing = await trx('client_portal_visibility_groups')
       .where({ tenant, group_id: groupId, client_id: clientId })
@@ -422,7 +461,7 @@ export const deleteClientPortalVisibilityGroup = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: { tenant: string },
   groupId: string
-): Promise<void> => {
+): Promise<DeleteClientPortalVisibilityGroupResult> => {
   visibilityGroupIdSchema.parse({ groupId });
   const { knex } = await createTenantKnex();
 
@@ -434,7 +473,7 @@ export const deleteClientPortalVisibilityGroup = withAuth(async (
       .first();
 
     if (!existing) {
-      throw new Error('Visibility group not found');
+      return { ok: false, code: 'NOT_FOUND' };
     }
 
     const assignedCount = await trx('contacts')
@@ -447,7 +486,7 @@ export const deleteClientPortalVisibilityGroup = withAuth(async (
       .first();
 
     if (toInt(assignedCount?.count) > 0) {
-      throw new Error('Cannot delete visibility group while it is assigned to contacts');
+      return { ok: false, code: 'ASSIGNED_TO_CONTACTS' };
     }
 
     await trx('client_portal_visibility_group_boards')
@@ -459,6 +498,7 @@ export const deleteClientPortalVisibilityGroup = withAuth(async (
       .delete();
 
     revalidatePath('/client-portal/client-settings?tab=visibility-groups');
+    return { ok: true };
   });
 });
 

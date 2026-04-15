@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useToast } from '@alga-psa/ui';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -50,10 +51,31 @@ export function VisibilityGroupsSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [pendingDeleteGroupId, setPendingDeleteGroupId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [boardIds, setBoardIds] = useState<string[]>([]);
   const [assignments, setAssignments] = useState<Record<string, string | null>>({});
+
+  const applyGroupsAndContacts = (groupRows: VisibilityGroup[], contactRows: VisibilityContact[]) => {
+    setGroups(groupRows);
+    setContacts(contactRows);
+    setAssignments(
+      contactRows.reduce<Record<string, string | null>>((acc, contact) => {
+        acc[contact.contact_name_id] = contact.portal_visibility_group_id;
+        return acc;
+      }, {})
+    );
+  };
+
+  const refreshGroupsAndContacts = async () => {
+    const [groupRows, contactRows] = await Promise.all([
+      getClientPortalVisibilityGroups(),
+      getClientPortalVisibilityContacts(),
+    ]);
+
+    applyGroupsAndContacts(groupRows as VisibilityGroup[], contactRows as VisibilityContact[]);
+  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -64,15 +86,8 @@ export function VisibilityGroupsSettings() {
         getClientPortalVisibilityGroupBoards(),
       ]);
 
-      setGroups(groupRows as VisibilityGroup[]);
-      setContacts(contactRows as VisibilityContact[]);
+      applyGroupsAndContacts(groupRows as VisibilityGroup[], contactRows as VisibilityContact[]);
       setBoards(boardRows);
-      setAssignments(
-        contactRows.reduce<Record<string, string | null>>((acc, contact) => {
-          acc[contact.contact_name_id] = contact.portal_visibility_group_id;
-          return acc;
-        }, {})
-      );
     } catch (error) {
       console.error('Failed to load visibility groups', error);
       toast({
@@ -167,14 +182,38 @@ export function VisibilityGroupsSettings() {
     }
   };
 
-  const deleteGroup = async (groupId: string) => {
-    if (!confirm(t('clientSettings.visibilityGroups.deleteConfirm', 'Delete this visibility group?'))) {
+  const requestDeleteGroup = (groupId: string) => {
+    setPendingDeleteGroupId(groupId);
+  };
+
+  const deleteGroup = async () => {
+    if (!pendingDeleteGroupId) {
       return;
     }
 
     setIsSaving(true);
     try {
-      await deleteClientPortalVisibilityGroup(groupId);
+      const result = await deleteClientPortalVisibilityGroup(pendingDeleteGroupId);
+
+      if (!result.ok) {
+        const description = result.code === 'ASSIGNED_TO_CONTACTS'
+          ? t(
+              'clientSettings.visibilityGroups.deleteAssignedError',
+              'This visibility group is still assigned to one or more contacts.'
+            )
+          : t(
+              'clientSettings.visibilityGroups.deleteMissingError',
+              'This visibility group no longer exists.'
+            );
+
+        toast({
+          variant: 'destructive',
+          title: t('clientSettings.visibilityGroups.deleteError', 'Unable to delete visibility group'),
+          description,
+        });
+        return;
+      }
+
       await loadData();
       toast({ title: t('clientSettings.visibilityGroups.deleteSuccess', 'Visibility group deleted') });
     } catch (error) {
@@ -185,6 +224,7 @@ export function VisibilityGroupsSettings() {
       });
     } finally {
       setIsSaving(false);
+      setPendingDeleteGroupId(null);
     }
   };
 
@@ -201,6 +241,9 @@ export function VisibilityGroupsSettings() {
       await assignClientPortalVisibilityGroupToContact({
         contactId,
         groupId: nextGroupId
+      });
+      await refreshGroupsAndContacts().catch((refreshError) => {
+        console.error('Failed to refresh visibility group counts after assignment update', refreshError);
       });
       toast({ title: t('clientSettings.visibilityGroups.assignSuccess', 'Contact visibility assignment updated') });
     } catch (error) {
@@ -317,7 +360,7 @@ export function VisibilityGroupsSettings() {
                         type="button"
                         size="sm"
                         variant="destructive"
-                        onClick={() => void deleteGroup(group.group_id)}
+                        onClick={() => requestDeleteGroup(group.group_id)}
                         disabled={isSaving}
                       >
                         {t('clientSettings.visibilityGroups.delete', 'Delete')}
@@ -330,6 +373,18 @@ export function VisibilityGroupsSettings() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmationDialog
+        id="visibility-group-delete-confirmation"
+        isOpen={!!pendingDeleteGroupId}
+        onClose={() => setPendingDeleteGroupId(null)}
+        onConfirm={deleteGroup}
+        title={t('clientSettings.visibilityGroups.deleteDialogTitle', 'Delete visibility group')}
+        message={t('clientSettings.visibilityGroups.deleteConfirm', 'Delete this visibility group?')}
+        confirmLabel={t('clientSettings.visibilityGroups.delete', 'Delete')}
+        cancelLabel={t('clientSettings.visibilityGroups.cancel', 'Cancel')}
+        isConfirming={isSaving}
+      />
 
       <Card>
         <CardHeader>

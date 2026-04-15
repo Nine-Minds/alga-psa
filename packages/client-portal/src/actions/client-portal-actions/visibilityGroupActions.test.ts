@@ -355,6 +355,9 @@ describe('client portal visibility group actions', () => {
         if (table === 'client_portal_visibility_group_boards') {
           return {
             where: vi.fn(() => ({
+              whereIn: vi.fn(() => ({
+                select: vi.fn().mockResolvedValue([]),
+              })),
               delete: deleteBoardsMock,
             })),
             insert: insertBoardsMock,
@@ -476,6 +479,80 @@ describe('client portal visibility group actions', () => {
         boardIds: [boardIdOne, boardIdTwo],
       })
     ).rejects.toThrow('One or more boards are invalid for this tenant');
+  });
+
+  it('allows preserving inactive boards already assigned to a group during updates', async () => {
+    const updateMock = vi.fn().mockResolvedValue(undefined);
+    const deleteBoardsMock = vi.fn().mockResolvedValue(undefined);
+    const insertBoardsMock = vi.fn().mockResolvedValue(undefined);
+
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
+      const trx = (table: string) => {
+        if (table === 'contacts') {
+          return {
+            where: vi.fn(() => ({
+              select: vi.fn(() => ({
+                first: vi.fn().mockResolvedValue({
+                  client_id: clientId,
+                  is_client_admin: true,
+                }),
+              })),
+            })),
+          };
+        }
+
+        if (table === 'boards') {
+          return {
+            where: vi.fn(() => ({
+              andWhere: vi.fn(() => ({
+                whereIn: vi.fn(() => ({
+                  select: vi.fn().mockResolvedValue([{ board_id: boardIdThree }]),
+                })),
+              })),
+            })),
+          };
+        }
+
+        if (table === 'client_portal_visibility_groups') {
+          return {
+            where: vi.fn((filters: Record<string, any>) => ({
+              first: vi.fn().mockResolvedValue(
+                filters.group_id === groupId ? { group_id: groupId } : undefined
+              ),
+              update: updateMock,
+            })),
+          };
+        }
+
+        if (table === 'client_portal_visibility_group_boards') {
+          return {
+            where: vi.fn(() => ({
+              whereIn: vi.fn(() => ({
+                select: vi.fn().mockResolvedValue([{ board_id: boardIdTwo }]),
+              })),
+              delete: deleteBoardsMock,
+            })),
+            insert: insertBoardsMock,
+          };
+        }
+
+        throw new Error(`Unexpected table: ${table}`);
+      };
+
+      return callback(trx);
+    });
+
+    const { updateClientPortalVisibilityGroup } = await import('./visibilityGroupActions');
+    await updateClientPortalVisibilityGroup(groupId, {
+      name: 'Executives',
+      description: 'Exec-only boards',
+      boardIds: [boardIdTwo, boardIdThree],
+    });
+
+    expect(insertBoardsMock).toHaveBeenCalledWith([
+      { tenant: 'tenant-1', group_id: groupId, board_id: boardIdTwo },
+      { tenant: 'tenant-1', group_id: groupId, board_id: boardIdThree },
+    ]);
   });
 
   it('T024: client portal admin can assign a visibility group to a contact in the same client', async () => {
@@ -633,6 +710,128 @@ describe('client portal visibility group actions', () => {
     expect(updateMock).toHaveBeenCalledWith(
       expect.objectContaining({ portal_visibility_group_id: groupId })
     );
+  });
+
+  it('T033: delete returns a validation result instead of throwing when the group is assigned to contacts', async () => {
+    const deleteBoardsMock = vi.fn().mockResolvedValue(undefined);
+    const deleteGroupsMock = vi.fn().mockResolvedValue(undefined);
+
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
+      const trx = (table: string) => {
+        if (table === 'contacts') {
+          return {
+            where: vi.fn((filters: Record<string, any>) => {
+              if (filters.portal_visibility_group_id === groupId) {
+                return {
+                  count: vi.fn(() => ({
+                    first: vi.fn().mockResolvedValue({ count: 1 }),
+                  })),
+                };
+              }
+
+              return {
+                select: vi.fn(() => ({
+                  first: vi.fn().mockResolvedValue({
+                    client_id: clientId,
+                    is_client_admin: true,
+                  }),
+                })),
+              };
+            }),
+          };
+        }
+
+        if (table === 'client_portal_visibility_groups') {
+          return {
+            where: vi.fn(() => ({
+              first: vi.fn().mockResolvedValue({ group_id: groupId, client_id: clientId }),
+              delete: deleteGroupsMock,
+            })),
+          };
+        }
+
+        if (table === 'client_portal_visibility_group_boards') {
+          return {
+            where: vi.fn(() => ({
+              delete: deleteBoardsMock,
+            })),
+          };
+        }
+
+        throw new Error(`Unexpected table: ${table}`);
+      };
+
+      return callback(trx);
+    });
+
+    const { deleteClientPortalVisibilityGroup } = await import('./visibilityGroupActions');
+    const result = await deleteClientPortalVisibilityGroup(groupId);
+
+    expect(result).toEqual({ ok: false, code: 'ASSIGNED_TO_CONTACTS' });
+    expect(deleteBoardsMock).not.toHaveBeenCalled();
+    expect(deleteGroupsMock).not.toHaveBeenCalled();
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it('T034: delete succeeds and revalidates when the group is unassigned', async () => {
+    const deleteBoardsMock = vi.fn().mockResolvedValue(undefined);
+    const deleteGroupsMock = vi.fn().mockResolvedValue(1);
+
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
+      const trx = (table: string) => {
+        if (table === 'contacts') {
+          return {
+            where: vi.fn((filters: Record<string, any>) => {
+              if (filters.portal_visibility_group_id === groupId) {
+                return {
+                  count: vi.fn(() => ({
+                    first: vi.fn().mockResolvedValue({ count: 0 }),
+                  })),
+                };
+              }
+
+              return {
+                select: vi.fn(() => ({
+                  first: vi.fn().mockResolvedValue({
+                    client_id: clientId,
+                    is_client_admin: true,
+                  }),
+                })),
+              };
+            }),
+          };
+        }
+
+        if (table === 'client_portal_visibility_groups') {
+          return {
+            where: vi.fn(() => ({
+              first: vi.fn().mockResolvedValue({ group_id: groupId, client_id: clientId }),
+              delete: deleteGroupsMock,
+            })),
+          };
+        }
+
+        if (table === 'client_portal_visibility_group_boards') {
+          return {
+            where: vi.fn(() => ({
+              delete: deleteBoardsMock,
+            })),
+          };
+        }
+
+        throw new Error(`Unexpected table: ${table}`);
+      };
+
+      return callback(trx);
+    });
+
+    const { deleteClientPortalVisibilityGroup } = await import('./visibilityGroupActions');
+    const result = await deleteClientPortalVisibilityGroup(groupId);
+
+    expect(result).toEqual({ ok: true });
+    expect(deleteBoardsMock).toHaveBeenCalled();
+    expect(deleteGroupsMock).toHaveBeenCalled();
+    expect(revalidatePathMock).toHaveBeenCalledWith('/client-portal/client-settings?tab=visibility-groups');
   });
 
   it('T032: the latest client portal admin assignment wins without lock semantics', async () => {

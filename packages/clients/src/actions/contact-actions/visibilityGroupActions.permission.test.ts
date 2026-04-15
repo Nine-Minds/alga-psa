@@ -161,4 +161,75 @@ describe('contactActions visibility group assignment/delete guardrails', () => {
     expect(groupDeleteMock).toHaveBeenCalled();
     expect(contactsWhereMock).toHaveBeenCalled();
   });
+
+  it('allows preserving inactive boards already assigned to a group during MSP-side updates', async () => {
+    const groupUpdateMock = vi.fn(async () => 1);
+    const groupBoardsInsertMock = vi.fn(async () => 1);
+    const groupBoardsDeleteMock = vi.fn(async () => 1);
+    const contactsWhereMock = vi.fn(() => ({
+      first: vi.fn(async () => ({ contact_name_id: 'contact-1', client_id: 'client-a' })),
+    }));
+
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<unknown>) => {
+      const trx = (table: string) => {
+        if (table === 'contacts') {
+          return { where: contactsWhereMock };
+        }
+
+        if (table === 'client_portal_visibility_groups') {
+          return {
+            where: vi.fn(() => ({
+              first: vi.fn(async () => ({ group_id: 'group-1' })),
+              update: groupUpdateMock,
+            })),
+          };
+        }
+
+        if (table === 'boards') {
+          return {
+            where: vi.fn(() => ({
+              andWhere: vi.fn(() => ({
+                whereIn: vi.fn(() => ({
+                  select: vi.fn(async () => [{ board_id: 'board-active' }]),
+                })),
+              })),
+            })),
+          };
+        }
+
+        if (table === 'client_portal_visibility_group_boards') {
+          return {
+            where: vi.fn(() => ({
+              whereIn: vi.fn(() => ({
+                select: vi.fn(async () => [{ board_id: 'board-inactive' }]),
+              })),
+              delete: groupBoardsDeleteMock,
+            })),
+            insert: groupBoardsInsertMock,
+          };
+        }
+
+        throw new Error(`Unexpected table: ${table}`);
+      };
+
+      return callback(trx);
+    });
+
+    const { updateClientPortalVisibilityGroupForContact } = await import('./contactActions');
+
+    await expect(
+      updateClientPortalVisibilityGroupForContact('contact-1', 'group-1', {
+        name: 'Updated Group',
+        description: 'Keeps inactive memberships',
+        boardIds: ['board-inactive', 'board-active'],
+      })
+    ).resolves.toBeUndefined();
+
+    expect(groupUpdateMock).toHaveBeenCalled();
+    expect(groupBoardsDeleteMock).toHaveBeenCalled();
+    expect(groupBoardsInsertMock).toHaveBeenCalledWith([
+      { tenant: 'tenant-1', group_id: 'group-1', board_id: 'board-inactive' },
+      { tenant: 'tenant-1', group_id: 'group-1', board_id: 'board-active' },
+    ]);
+  });
 });
