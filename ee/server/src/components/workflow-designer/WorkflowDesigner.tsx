@@ -39,6 +39,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { analytics } from '@alga-psa/analytics/client';
 import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
@@ -1062,6 +1063,48 @@ const buildExpressionContext = (
 };
 
 const ensureExpr = (value: Expr | undefined): Expr => ({ $expr: value?.$expr ?? '' });
+
+const buildFixedTimeWaitUntilExpr = (value: Date): Expr => ({
+  $expr: JSON.stringify(value.toISOString())
+});
+
+const parseStringLiteralExpression = (value: string | undefined): string | null => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    return typeof parsed === 'string' ? parsed : null;
+  } catch {
+    // Fall through to single-quoted string support for older/manual expressions.
+  }
+
+  if (trimmed.startsWith("'") && trimmed.endsWith("'")) {
+    return trimmed.slice(1, -1).replace(/\\'/g, "'");
+  }
+
+  return null;
+};
+
+const parseFixedTimeWaitUntilExpr = (value: Expr | undefined): Date | null => {
+  const literal = parseStringLiteralExpression(value?.$expr);
+  if (!literal) {
+    return null;
+  }
+
+  const parsedDate = new Date(literal);
+  return Number.isFinite(parsedDate.getTime()) ? parsedDate : null;
+};
+
+const inferTimeWaitUntilAuthoringMode = (config: Record<string, unknown> | null): 'fixed' | 'expression' => {
+  if (!config || config.mode !== 'until') {
+    return 'fixed';
+  }
+
+  return parseFixedTimeWaitUntilExpr(config.until as Expr | undefined) ? 'fixed' : 'expression';
+};
 
 /**
  * Generate a smart default saveAs variable name from an action ID.
@@ -5857,6 +5900,8 @@ export const StepConfigPanel: React.FC<{
   const timeWaitConfig = step.type === 'time.wait'
     ? removeInvalidWaitConfigFields((((step as NodeStep).config as Record<string, unknown> | undefined) ?? {}))
     : null;
+  const [timeWaitUntilAuthoringMode, setTimeWaitUntilAuthoringMode] = useState<'fixed' | 'expression'>(() => inferTimeWaitUntilAuthoringMode(timeWaitConfig));
+  const previousTimeWaitStepIdRef = useRef<string | null>(null);
   const selectedWaitEventName = typeof eventWaitConfig?.eventName === 'string' ? eventWaitConfig.eventName : '';
   const selectedWaitEventOption = useMemo(
     () => eventCatalogOptions.find((option) => option.event_type === selectedWaitEventName) ?? null,
@@ -5864,6 +5909,21 @@ export const StepConfigPanel: React.FC<{
   );
   const [eventWaitPayloadSchema, setEventWaitPayloadSchema] = useState<JsonSchema | null>(null);
   const [eventWaitPayloadSchemaStatus, setEventWaitPayloadSchemaStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+
+  useEffect(() => {
+    if (step.type !== 'time.wait') {
+      previousTimeWaitStepIdRef.current = null;
+      return;
+    }
+
+    if (previousTimeWaitStepIdRef.current === step.id) {
+      return;
+    }
+
+    previousTimeWaitStepIdRef.current = step.id;
+    const nextTimeWaitConfig = removeInvalidWaitConfigFields((((step as NodeStep).config as Record<string, unknown> | undefined) ?? {}));
+    setTimeWaitUntilAuthoringMode(inferTimeWaitUntilAuthoringMode(nextTimeWaitConfig));
+  }, [removeInvalidWaitConfigFields, step]);
 
   useEffect(() => {
     if (step.type !== 'event.wait') return;
@@ -6426,62 +6486,105 @@ export const StepConfigPanel: React.FC<{
         </div>
       )}
 
-      {step.type === 'time.wait' && timeWaitConfig && (
-        <div className="space-y-3">
-          <CustomSelect
-            id={`time-wait-mode-${step.id}`}
-            label="Mode"
-            options={[
-              { value: 'duration', label: 'Duration' },
-              { value: 'until', label: 'Until' }
-            ]}
-            value={typeof timeWaitConfig.mode === 'string' ? timeWaitConfig.mode : 'duration'}
-            onValueChange={(mode) => updateWaitNodeConfig({
-              ...timeWaitConfig,
-              mode,
-              durationMs: mode === 'duration' ? (timeWaitConfig.durationMs ?? 1000) : undefined,
-              until: mode === 'until' ? (timeWaitConfig.until ?? { $expr: '' }) : undefined
-            })}
-            disabled={!editable}
-          />
-          {(timeWaitConfig.mode ?? 'duration') === 'duration' ? (
-            <Input
-              id={`time-wait-duration-${step.id}`}
-              label="Duration (ms)"
-              type="number"
-              value={typeof timeWaitConfig.durationMs === 'number' ? timeWaitConfig.durationMs : ''}
-              disabled={!editable}
-              onChange={(event) => {
-                const raw = event.target.value.trim();
+      {step.type === 'time.wait' && timeWaitConfig && (() => {
+        const fixedUntilValue = parseFixedTimeWaitUntilExpr(timeWaitConfig.until as Expr | undefined) ?? undefined;
+
+        return (
+          <div className="space-y-3">
+            <CustomSelect
+              id={`time-wait-mode-${step.id}`}
+              label="Mode"
+              options={[
+                { value: 'duration', label: 'Duration' },
+                { value: 'until', label: 'Until' }
+              ]}
+              value={typeof timeWaitConfig.mode === 'string' ? timeWaitConfig.mode : 'duration'}
+              onValueChange={(mode) => {
+                if (mode === 'until') {
+                  setTimeWaitUntilAuthoringMode('fixed');
+                }
                 updateWaitNodeConfig({
                   ...timeWaitConfig,
-                  durationMs: raw ? Number(raw) : undefined
+                  mode,
+                  durationMs: mode === 'duration' ? (timeWaitConfig.durationMs ?? 1000) : undefined,
+                  until: mode === 'until' ? (timeWaitConfig.until ?? { $expr: '' }) : undefined
                 });
               }}
+              disabled={!editable}
             />
-          ) : (
-            <ExpressionField
-              idPrefix={`time-wait-until-${step.id}`}
-              label="Until expression"
-              value={ensureExpr((timeWaitConfig.until as Expr | undefined) ?? { $expr: '' })}
-              onChange={(untilExpr) => updateWaitNodeConfig({ ...timeWaitConfig, until: untilExpr })}
+            {(timeWaitConfig.mode ?? 'duration') === 'duration' ? (
+              <Input
+                id={`time-wait-duration-${step.id}`}
+                label="Duration (ms)"
+                type="number"
+                value={typeof timeWaitConfig.durationMs === 'number' ? timeWaitConfig.durationMs : ''}
+                disabled={!editable}
+                onChange={(event) => {
+                  const raw = event.target.value.trim();
+                  updateWaitNodeConfig({
+                    ...timeWaitConfig,
+                    durationMs: raw ? Number(raw) : undefined
+                  });
+                }}
+              />
+            ) : (
+              <div className="space-y-3">
+                <CustomSelect
+                  id={`time-wait-until-authoring-mode-${step.id}`}
+                  label="Until input"
+                  options={[
+                    { value: 'fixed', label: 'Specific date & time' },
+                    { value: 'expression', label: 'Advanced expression' }
+                  ]}
+                  value={timeWaitUntilAuthoringMode}
+                  onValueChange={(value) => setTimeWaitUntilAuthoringMode(value === 'expression' ? 'expression' : 'fixed')}
+                  disabled={!editable}
+                />
+
+                {timeWaitUntilAuthoringMode === 'fixed' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor={`time-wait-until-picker-${step.id}`}>Specific date & time</Label>
+                    <DateTimePicker
+                      id={`time-wait-until-picker-${step.id}`}
+                      label="Specific date & time"
+                      value={fixedUntilValue}
+                      onChange={(value) => updateWaitNodeConfig({
+                        ...timeWaitConfig,
+                        until: value ? buildFixedTimeWaitUntilExpr(value) : { $expr: '' }
+                      })}
+                      disabled={!editable}
+                      clearable
+                    />
+                    <div className="text-xs text-[rgb(var(--color-text-500))]">
+                      Stored as an absolute timestamp using your current browser timezone.
+                    </div>
+                  </div>
+                ) : (
+                  <ExpressionField
+                    idPrefix={`time-wait-until-${step.id}`}
+                    label="Until expression"
+                    value={ensureExpr((timeWaitConfig.until as Expr | undefined) ?? { $expr: '' })}
+                    onChange={(untilExpr) => updateWaitNodeConfig({ ...timeWaitConfig, until: untilExpr })}
+                    fieldOptions={enhancedFieldOptions}
+                    context={expressionContext}
+                    disabled={!editable}
+                  />
+                )}
+              </div>
+            )}
+
+            <MappingExprEditor
+              idPrefix={`time-wait-assign-${step.id}`}
+              label="Assign on resume"
+              value={(timeWaitConfig.assign as Record<string, Expr>) ?? {}}
+              onChange={(assign) => updateWaitNodeConfig({ ...timeWaitConfig, assign })}
               fieldOptions={enhancedFieldOptions}
               context={expressionContext}
               disabled={!editable}
             />
-          )}
-
-          <MappingExprEditor
-            idPrefix={`time-wait-assign-${step.id}`}
-            label="Assign on resume"
-            value={(timeWaitConfig.assign as Record<string, Expr>) ?? {}}
-            onChange={(assign) => updateWaitNodeConfig({ ...timeWaitConfig, assign })}
-            fieldOptions={enhancedFieldOptions}
-            context={expressionContext}
-            disabled={!editable}
-          />
-        </div>
-      )}
+          </div>
+        );
+      })()}
 
       {nodeSchema
         && step.type !== 'control.return'
