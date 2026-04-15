@@ -9,6 +9,7 @@ import { Plus, X, Package } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { TemplateWizardData } from '../TemplateWizard';
 import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TemplateProductsStepProps {
   data: TemplateWizardData;
@@ -16,6 +17,8 @@ interface TemplateProductsStepProps {
 }
 
 export function TemplateProductsStep({ data, updateData }: TemplateProductsStepProps) {
+  const { t } = useTranslation('msp/contracts');
+
   const handleAddProduct = () => {
     updateData({
       product_services: [
@@ -51,11 +54,13 @@ export function TemplateProductsStep({ data, updateData }: TemplateProductsStepP
       .filter((line) => line.service_id)
       .map((line) => ({
         id: `product-${line.service_id}`,
-        name: line.service_name || 'Unknown Product',
+        name:
+          line.service_name ||
+          t('templateProducts.preview.unknownProduct', { defaultValue: 'Unknown Product' }),
         quantity: line.quantity ?? 1,
         serviceId: line.service_id,
       }));
-  }, [data.product_services]);
+  }, [data.product_services, t]);
 
   const handlePreviewQuantityChange = (itemId: string, quantity: number) => {
     if (!itemId.startsWith('product-')) return;
@@ -79,10 +84,14 @@ export function TemplateProductsStep({ data, updateData }: TemplateProductsStepP
     <ReflectionContainer id="template-products-step">
       <div className="space-y-6">
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">Products</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            {t('templateProducts.heading', { defaultValue: 'Products' })}
+          </h3>
           <p className="text-sm text-[rgb(var(--color-text-500))]">
-            Attach products to the template. When a contract is created from this template, products
-            will be billed each cycle using the product catalog price for the contract currency.
+            {t('templateProducts.description', {
+              defaultValue:
+                'Attach products to the template. When a contract is created from this template, products will be billed each cycle using the product catalog price for the contract currency.',
+            })}
           </p>
         </div>
 
@@ -96,7 +105,7 @@ export function TemplateProductsStep({ data, updateData }: TemplateProductsStepP
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Products
+            {t('templateProducts.fields.products', { defaultValue: 'Products' })}
           </Label>
 
           {data.product_services.map((product, index) => (
@@ -107,7 +116,10 @@ export function TemplateProductsStep({ data, updateData }: TemplateProductsStepP
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`template-product-${index}`} className="text-sm">
-                    Product {index + 1}
+                    {t('templateProducts.fields.productNumber', {
+                      index: index + 1,
+                      defaultValue: 'Product {{index}}',
+                    })}
                   </Label>
                   <ServiceCatalogPicker
                     id={`template-product-${index}`}
@@ -115,13 +127,17 @@ export function TemplateProductsStep({ data, updateData }: TemplateProductsStepP
                     selectedLabel={product.service_name}
                     onSelect={(item) => handleProductChange(index, item)}
                     itemKinds={['product']}
-                    placeholder="Select a product"
+                    placeholder={t('templateProducts.placeholders.selectProduct', {
+                      defaultValue: 'Select a product',
+                    })}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor={`template-product-quantity-${index}`} className="text-sm">
-                    Quantity (Optional)
+                    {t('templateProducts.fields.quantityOptional', {
+                      defaultValue: 'Quantity (Optional)',
+                    })}
                   </Label>
                   <Input
                     id={`template-product-quantity-${index}`}
@@ -133,7 +149,11 @@ export function TemplateProductsStep({ data, updateData }: TemplateProductsStepP
                     }
                     className="w-24"
                   />
-                  <p className="text-xs text-[rgb(var(--color-text-400))]">Suggested quantity when creating contracts</p>
+                  <p className="text-xs text-[rgb(var(--color-text-400))]">
+                    {t('templateProducts.help.quantity', {
+                      defaultValue: 'Suggested quantity when creating contracts',
+                    })}
+                  </p>
                 </div>
               </div>
 
@@ -158,11 +178,10 @@ export function TemplateProductsStep({ data, updateData }: TemplateProductsStepP
             className="inline-flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Add Product
+            {t('templateProducts.actions.addProduct', { defaultValue: 'Add Product' })}
           </Button>
         </div>
       </div>
     </ReflectionContainer>
   );
 }
-

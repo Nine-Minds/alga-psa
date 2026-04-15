@@ -1780,7 +1780,27 @@
       "addService": "Add Service"
     }
   },
-  "templateProducts": {},
+  "templateProducts": {
+    "heading": "Products",
+    "description": "Attach products to the template. When a contract is created from this template, products will be billed each cycle using the product catalog price for the contract currency.",
+    "fields": {
+      "products": "Products",
+      "productNumber": "Product {{index}}",
+      "quantityOptional": "Quantity (Optional)"
+    },
+    "placeholders": {
+      "selectProduct": "Select a product"
+    },
+    "help": {
+      "quantity": "Suggested quantity when creating contracts"
+    },
+    "actions": {
+      "addProduct": "Add Product"
+    },
+    "preview": {
+      "unknownProduct": "Unknown Product"
+    }
+  },
   "templateHourly": {},
   "templateUsage": {},
   "templateReview": {},
