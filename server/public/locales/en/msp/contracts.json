@@ -1196,7 +1196,13 @@
       "units": "units"
     }
   },
-  "frequencyOverride": {},
+  "frequencyOverride": {
+    "confirmation": "This contract line will be billed {{lineFrequency}} instead of {{contractFrequency}}.",
+    "description": "Optional: Override the contract's billing frequency ({{frequency}}) for this specific contract line.",
+    "label": "Billing Frequency Override",
+    "optionAlreadySetForContract": "{{label}} (already set for contract)",
+    "placeholder": "Use contract billing frequency ({{frequency}})"
+  },
   "wizard": {
     "dialogs": {
       "unsavedChanges": {

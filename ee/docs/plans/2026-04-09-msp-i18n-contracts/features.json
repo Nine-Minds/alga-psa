@@ -247,7 +247,7 @@
   {
     "id": "F050",
     "description": "Wire useTranslation('msp/contracts') in BillingFrequencyOverrideSelect.tsx -- translate label, description text with interpolation ('Override the contract\\'s billing frequency ({{frequency}})...'), placeholder with interpolation ('Use contract billing frequency ({{frequency}})'), and override confirmation text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F051",

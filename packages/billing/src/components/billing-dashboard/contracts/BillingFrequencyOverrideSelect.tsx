@@ -3,14 +3,15 @@
 import React, { useMemo } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Repeat } from 'lucide-react';
-import { BILLING_FREQUENCY_OPTIONS, BILLING_FREQUENCY_DISPLAY } from '@alga-psa/billing/constants/billing';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useBillingFrequencyOptions, useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 interface BillingFrequencyOverrideSelectProps {
   contractBillingFrequency: string;
   value?: string;
   onChange: (value: string | undefined) => void;
-  label: string;
+  label?: string;
   description?: string;
 }
 
@@ -21,22 +22,29 @@ export function BillingFrequencyOverrideSelect({
   label,
   description,
 }: BillingFrequencyOverrideSelectProps) {
-  const contractFrequencyLabel = BILLING_FREQUENCY_DISPLAY[contractBillingFrequency] || contractBillingFrequency;
+  const { t } = useTranslation('msp/contracts');
+  const billingFrequencyOptions = useBillingFrequencyOptions();
+  const formatBillingFrequency = useFormatBillingFrequency();
+  const contractFrequencyLabel = formatBillingFrequency(contractBillingFrequency);
+  const resolvedLabel = label || t('frequencyOverride.label', { defaultValue: 'Billing Frequency Override' });
 
   const options: SelectOption[] = useMemo(() => {
-    return BILLING_FREQUENCY_OPTIONS.map((option) => {
+    return billingFrequencyOptions.map((option) => {
       const isContractFrequency = option.value === contractBillingFrequency;
       return {
         value: option.value,
         label: isContractFrequency
-          ? `${option.label} (already set for contract)`
+          ? t('frequencyOverride.optionAlreadySetForContract', {
+            defaultValue: '{{label}} (already set for contract)',
+            label: option.label,
+          })
           : option.label,
         className: isContractFrequency
           ? 'opacity-50 cursor-not-allowed'
           : '',
       };
     });
-  }, [contractBillingFrequency]);
+  }, [billingFrequencyOptions, contractBillingFrequency, t]);
 
   const handleValueChange = (newValue: string) => {
     // Prevent selecting the contract's billing frequency
@@ -51,10 +59,13 @@ export function BillingFrequencyOverrideSelect({
     <div className="space-y-2">
       <Label htmlFor="billing-frequency-override" className="flex items-center gap-2 text-sm">
         <Repeat className="h-4 w-4" />
-        {label}
+        {resolvedLabel}
       </Label>
       <p className="text-xs text-muted-foreground">
-        {description || `Optional: Override the contract's billing frequency (${contractFrequencyLabel}) for this specific contract line.`}
+        {description || t('frequencyOverride.description', {
+          defaultValue: 'Optional: Override the contract\'s billing frequency ({{frequency}}) for this specific contract line.',
+          frequency: contractFrequencyLabel,
+        })}
       </p>
 
       <div className="space-y-2">
@@ -63,13 +74,20 @@ export function BillingFrequencyOverrideSelect({
           options={options}
           value={value || ''}
           onValueChange={handleValueChange}
-          placeholder={`Use contract billing frequency (${contractFrequencyLabel})`}
+          placeholder={t('frequencyOverride.placeholder', {
+            defaultValue: 'Use contract billing frequency ({{frequency}})',
+            frequency: contractFrequencyLabel,
+          })}
           allowClear
         />
 
         {value && value !== contractBillingFrequency && (
           <p className="text-xs text-muted-foreground">
-            This contract line will be billed {BILLING_FREQUENCY_DISPLAY[value]?.toLowerCase()} instead of {contractFrequencyLabel.toLowerCase()}.
+            {t('frequencyOverride.confirmation', {
+              defaultValue: 'This contract line will be billed {{lineFrequency}} instead of {{contractFrequency}}.',
+              lineFrequency: formatBillingFrequency(value),
+              contractFrequency: contractFrequencyLabel,
+            })}
           </p>
         )}
       </div>
