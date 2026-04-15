@@ -292,7 +292,7 @@
   {
     "id": "F059",
     "description": "Wire useTranslation('msp/contracts') in ReviewContractStep.tsx -- translate service summary sections (Fixed Fee Services, Products, Hourly Services, Usage-Based Services), including table headers, rate display, bucket summary, quantity, total monthly estimate, PO section, and recurring authoring preview text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F060",
