@@ -576,7 +576,7 @@
   {
     "id": "T067",
     "description": "Integration: template creation wizard renders all step labels and form fields translated in de",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060",
       "F061",

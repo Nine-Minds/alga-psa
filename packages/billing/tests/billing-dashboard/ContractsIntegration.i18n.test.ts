@@ -221,4 +221,64 @@ describe('Contracts integration i18n coverage', () => {
       expect(getLeaf(de, key)).toBeDefined();
     }
   });
+
+  it('T067: template creation wizard wiring resolves all step/form translation keys in de locale', () => {
+    const templateWizardSource = read(
+      '../../src/components/billing-dashboard/contracts/template-wizard/TemplateWizard.tsx'
+    );
+    const templateBasicsSource = read(
+      '../../src/components/billing-dashboard/contracts/template-wizard/steps/TemplateContractBasicsStep.tsx'
+    );
+    const templateFixedSource = read(
+      '../../src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.tsx'
+    );
+    const templateProductsSource = read(
+      '../../src/components/billing-dashboard/contracts/template-wizard/steps/TemplateProductsStep.tsx'
+    );
+    const templateHourlySource = read(
+      '../../src/components/billing-dashboard/contracts/template-wizard/steps/TemplateHourlyServicesStep.tsx'
+    );
+    const templateUsageSource = read(
+      '../../src/components/billing-dashboard/contracts/template-wizard/steps/TemplateUsageBasedServicesStep.tsx'
+    );
+    const templateReviewSource = read(
+      '../../src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.tsx'
+    );
+    const templatePreviewSource = read(
+      '../../src/components/billing-dashboard/contracts/template-wizard/TemplateServicePreviewSection.tsx'
+    );
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+    const de = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/de/msp/contracts.json'
+    );
+
+    expect(templateWizardSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(templateBasicsSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(templateFixedSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(templateProductsSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(templateHourlySource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(templateUsageSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(templateReviewSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(templatePreviewSource).toContain("const { t } = useTranslation('msp/contracts');");
+
+    const keySet = new Set<string>([
+      ...getTranslationKeys(templateWizardSource),
+      ...getTranslationKeys(templateBasicsSource),
+      ...getTranslationKeys(templateFixedSource),
+      ...getTranslationKeys(templateProductsSource),
+      ...getTranslationKeys(templateHourlySource),
+      ...getTranslationKeys(templateUsageSource),
+      ...getTranslationKeys(templateReviewSource),
+      ...getTranslationKeys(templatePreviewSource),
+    ]);
+
+    expect(keySet.size).toBeGreaterThan(120);
+
+    for (const key of keySet) {
+      expect(getLeaf(en, key)).toBeDefined();
+      expect(getLeaf(de, key)).toBeDefined();
+    }
+  });
 });
