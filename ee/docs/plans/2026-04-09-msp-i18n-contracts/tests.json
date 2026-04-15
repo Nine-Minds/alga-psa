@@ -401,7 +401,7 @@
   {
     "id": "T048",
     "description": "Unit: ContractBasicsStep.i18n.test -- renewal section, PO fields, cadence owner options render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
