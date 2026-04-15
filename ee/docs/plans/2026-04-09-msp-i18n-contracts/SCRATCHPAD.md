@@ -287,3 +287,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractsSubbatch.i18n.test.ts` (pass; 1 file, 2 tests).
 - **(2026-04-14)** `T004` completed: extended `ContractsSubbatch.i18n.test.ts` with details-card wiring checks covering `contractDetail.detailsCard.*` labels and edit/save/cancel action keys plus `contractDetail.labels.noDescription` locale presence.
 - **(2026-04-14)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractsSubbatch.i18n.test.ts` (pass; 1 file, 3 tests).
+- **(2026-04-15)** `T005` completed: extended `packages/billing/tests/billing-dashboard/ContractsSubbatch.i18n.test.ts` with ContractDetail header-card i18n coverage for status/billing/currency/renewal labels (`contractDetail.headerCard.*`, `status.*`, `renewal.*`, `common.labels.*`) and English locale key-presence assertions.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractsSubbatch.i18n.test.ts` (pass; 1 file, 4 tests).

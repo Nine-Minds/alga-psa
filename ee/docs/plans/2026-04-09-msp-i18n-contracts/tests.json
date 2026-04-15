@@ -42,7 +42,7 @@
   {
     "id": "T005",
     "description": "Unit: ContractDetail.i18n.test -- Contract Header card renders translated status, billing, currency, renewal labels",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]

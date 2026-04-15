@@ -87,4 +87,39 @@ describe('Contracts i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T005: ContractDetail header-card status, billing, currency, and renewal labels use msp/contracts keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/ContractDetail.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keyChecks = [
+      'contractDetail.headerCard.title',
+      'contractDetail.headerCard.assignmentStatus',
+      'contractDetail.headerCard.billingFrequencyLabel',
+      'common.labels.currency',
+      'common.labels.created',
+      'common.labels.lastUpdated',
+      'contractDetail.headerCard.renewalHeading',
+      'contractDetail.headerCard.notice',
+      'contractDetail.headerCard.tenantDefaults',
+      'contractDetail.headerCard.customSettings',
+      'renewal.labels.mode',
+      'renewal.labels.source',
+      'renewal.labels.decisionDue',
+      'status.active',
+      'status.draft',
+      'status.terminated',
+      'status.expired',
+      'renewal.modes.auto',
+      'renewal.modes.manual',
+      'renewal.modes.none',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });
