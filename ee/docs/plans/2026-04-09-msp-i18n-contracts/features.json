@@ -287,7 +287,7 @@
   {
     "id": "F058",
     "description": "Wire useTranslation('msp/contracts') in ReviewContractStep.tsx -- translate review heading, description, Contract Basics section labels (Client, Contract Name, Billing Frequency, Currency, Start/End Date, Renewal Mode, Notice Period), 'Not selected'/'Not specified'/'Ongoing'/'N/A' fallbacks",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F059",

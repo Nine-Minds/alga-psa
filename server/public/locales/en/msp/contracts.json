@@ -822,8 +822,7 @@
       "createContract": "Create Contract",
       "createTemplate": "Create Template",
       "openMenu": "Open menu",
-      "quickAdd": "Quick Add"
-      ,
+      "quickAdd": "Quick Add",
       "resume": "Resume",
       "restore": "Restore",
       "setToActive": "Set to Active",
@@ -1526,7 +1525,43 @@
       "defaultUnit": "unit"
     }
   },
-  "wizardReview": {},
+  "wizardReview": {
+    "heading": "Review Contract",
+    "description": "Review all contract details before creating. You can still edit after creation if needed.",
+    "sections": {
+      "contractBasics": "Contract Basics"
+    },
+    "fields": {
+      "client": "Client",
+      "contractName": "Contract Name",
+      "billingFrequency": "Billing Frequency",
+      "currency": "Currency",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "renewalMode": "Renewal Mode",
+      "noticePeriod": "Notice Period",
+      "renewalTerm": "Renewal Term"
+    },
+    "fallback": {
+      "notSelected": "Not selected",
+      "notSpecified": "Not specified",
+      "ongoing": "Ongoing",
+      "notApplicable": "N/A"
+    },
+    "renewalMode": {
+      "none": "No Renewal",
+      "manual": "Manual Renewal",
+      "auto": "Auto Renew"
+    },
+    "noticePeriod": {
+      "one": "{{count}} day",
+      "other": "{{count}} days"
+    },
+    "renewalTerm": {
+      "one": "{{count}} month",
+      "other": "{{count}} months"
+    }
+  },
   "templateWizard": {},
   "templateBasics": {},
   "templateFixed": {},
