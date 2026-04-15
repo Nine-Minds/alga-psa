@@ -305,7 +305,7 @@
   {
     "id": "T036",
     "description": "Unit: TemplatesTab.i18n.test -- columns, status badges, search, actions render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
