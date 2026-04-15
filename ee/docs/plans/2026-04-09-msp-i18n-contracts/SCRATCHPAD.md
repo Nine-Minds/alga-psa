@@ -310,3 +310,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractTemplateDetail.i18n.test.ts` (pass; 1 file, 2 tests).
 - **(2026-04-15)** `T015` completed: extended `ContractTemplateDetail.i18n.test.ts` to validate translated cadence labels in `ContractTemplateDetail.tsx` and billing-timing option/description labels used in the template line edit flow (`ContractLineEditDialog.tsx`).
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractTemplateDetail.i18n.test.ts` (pass; 1 file, 3 tests).
+- **(2026-04-15)** `T016` completed: added pseudo-locale coverage in `ContractTemplateDetail.i18n.test.ts` by extracting all `t('...')` keys used in `ContractTemplateDetail.tsx` and asserting each resolves to `xx` pseudo values (`11111`).
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractTemplateDetail.i18n.test.ts` (pass; 1 file, 4 tests).

@@ -127,4 +127,23 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T016: ContractTemplateDetail translation keys resolve to pseudo-locale values in xx', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/ContractTemplateDetail.tsx');
+    const xx = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/xx/msp/contracts.json'
+    );
+
+    const keys = Array.from(
+      new Set(Array.from(source.matchAll(/(?:^|[^\w])t\('([^']+)'/g), (match) => match[1]))
+    );
+
+    expect(keys.length).toBeGreaterThan(60);
+
+    for (const key of keys) {
+      const value = getLeaf(xx, key);
+      expect(typeof value).toBe('string');
+      expect(value).toContain('11111');
+    }
+  });
 });

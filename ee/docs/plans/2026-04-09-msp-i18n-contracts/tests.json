@@ -136,7 +136,7 @@
   {
     "id": "T016",
     "description": "Unit: ContractTemplateDetail.i18n.test -- pseudo-locale (xx) coverage",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F020",
