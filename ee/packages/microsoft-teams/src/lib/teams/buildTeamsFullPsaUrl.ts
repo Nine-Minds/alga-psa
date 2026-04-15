@@ -19,6 +19,7 @@ export function buildTeamsFullPsaUrl(destination: TeamsTabDestination): string |
     case 'contact':
       return `/msp/contacts/${destination.contactId}`;
     case 'my_work':
+      return '/msp/dashboard';
     default:
       return null;
   }
