@@ -192,7 +192,7 @@
   {
     "id": "F039",
     "description": "Wire useTranslation('msp/contracts') in PricingScheduleDialog.tsx -- translate dialog title, form labels, date pickers, rate fields, validation messages, and save/cancel buttons",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F040",

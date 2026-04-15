@@ -632,7 +632,52 @@
       "usageServiceSelectRequired": "Service {{index}}: Please select a service"
     }
   },
-  "pricingSchedules": {},
+  "pricingSchedules": {
+    "dialog": {
+      "actions": {
+        "addSchedule": "Add Schedule",
+        "cancel": "Cancel",
+        "saving": "Saving...",
+        "updateSchedule": "Update Schedule"
+      },
+      "durationUnits": {
+        "days": "Days",
+        "months": "Months",
+        "weeks": "Weeks",
+        "years": "Years"
+      },
+      "errors": {
+        "failedToSavePricingSchedule": "Failed to save pricing schedule"
+      },
+      "fields": {
+        "customRate": "Custom Rate",
+        "customRatePlaceholder": "0.00",
+        "duration": "Duration",
+        "durationPlaceholder": "e.g., 6",
+        "effectiveDate": "Effective Date",
+        "endDate": "End Date",
+        "hasEndDate": "Has end date",
+        "notes": "Notes",
+        "notesPlaceholder": "Add notes about this pricing change (e.g., 'Annual rate increase')",
+        "unit": "Unit",
+        "useDefaultRate": "Use default rate",
+        "useDuration": "Use duration"
+      },
+      "title": {
+        "addPricingSchedule": "Add Pricing Schedule",
+        "editPricingSchedule": "Edit Pricing Schedule"
+      },
+      "validation": {
+        "customRatePositive": "Custom rate must be a positive number",
+        "customRateRequired": "Custom rate is required when not using default rate",
+        "durationPositive": "Duration must be a positive number",
+        "durationRequired": "Duration value is required when using duration",
+        "effectiveDateRequired": "Effective date is required",
+        "endDateAfterEffectiveDate": "End date must be after effective date",
+        "endDateRequiredWhenEnabled": "End date is required when \"Has end date\" is enabled"
+      }
+    }
+  },
   "contractsList": {
     "actions": {
       "deleting": "Deleting…",
