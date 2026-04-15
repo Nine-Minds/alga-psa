@@ -497,7 +497,7 @@
   {
     "id": "T060",
     "description": "Unit: TemplateUsageBasedServicesStep.i18n.test -- step heading, service picker, unit measure/bucket labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]
