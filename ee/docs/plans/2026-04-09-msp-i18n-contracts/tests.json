@@ -248,7 +248,7 @@
   {
     "id": "T029",
     "description": "Unit: ClientContractsTab.i18n.test -- column headers, status badges, search placeholder render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
