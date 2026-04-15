@@ -534,7 +534,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                 <div className="rounded-lg border border-border bg-muted/30 p-3 flex items-start gap-3">
                   <Lock className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                   <p className="text-sm text-muted-foreground">
-                    Managed email domains are available on the Pro plan. Upgrade to use Nine Minds managed outbound infrastructure with custom domains.
+                    Managed email domains are not available on your current plan. Upgrade to use Nine Minds managed outbound infrastructure with custom domains.
                   </p>
                 </div>
               </>

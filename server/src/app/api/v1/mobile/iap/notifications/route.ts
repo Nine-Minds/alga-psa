@@ -1,0 +1,210 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { ZodError, z } from 'zod';
+import { getConnection } from '@/lib/db/db';
+import {
+  getAppleIapConfig,
+  verifyNotificationPayload,
+  type JWSTransactionDecodedPayload,
+  type NotificationV2DecodedPayload,
+} from '@/lib/iap/appStoreServer';
+
+/**
+ * POST /api/v1/mobile/iap/notifications
+ *
+ * App Store Server Notifications v2 webhook. Apple sends subscription
+ * lifecycle events here. We verify the JWS, persist the raw notification
+ * for audit, and update apple_iap_subscriptions accordingly.
+ *
+ * Must always respond 200 OK to Apple (unless the request is unauthenticated
+ * or malformed). Apple retries non-2xx responses aggressively.
+ *
+ * Body: { signedPayload: string }  // a JWS from Apple
+ */
+
+const notificationBodySchema = z.object({
+  signedPayload: z.string().min(1),
+});
+
+type SubscriptionStatus = 'active' | 'grace_period' | 'expired' | 'revoked' | 'refunded';
+
+function statusForNotification(
+  notificationType: string,
+  subtype: string | undefined,
+): SubscriptionStatus | null {
+  switch (notificationType) {
+    case 'SUBSCRIBED':
+    case 'DID_RENEW':
+    case 'OFFER_REDEEMED':
+    case 'RENEWAL_EXTENDED':
+    case 'RENEWAL_EXTENSION':
+      return 'active';
+
+    case 'DID_FAIL_TO_RENEW':
+      // Apple distinguishes between "will retry in grace period" and "fatal".
+      return subtype === 'GRACE_PERIOD' ? 'grace_period' : 'expired';
+
+    case 'GRACE_PERIOD_EXPIRED':
+    case 'EXPIRED':
+      return 'expired';
+
+    case 'REVOKE':
+      return 'revoked';
+
+    case 'REFUND':
+      return 'refunded';
+
+    // These are informational — no status change.
+    case 'DID_CHANGE_RENEWAL_STATUS':
+    case 'DID_CHANGE_RENEWAL_PREF':
+    case 'PRICE_INCREASE':
+    case 'CONSUMPTION_REQUEST':
+    case 'REFUND_DECLINED':
+    case 'REFUND_REVERSED':
+    case 'TEST':
+      return null;
+
+    default:
+      return null;
+  }
+}
+
+/**
+ * Record the raw notification. Returns true if this is a new notification,
+ * false if we've already seen this notification_uuid.
+ */
+async function recordNotification(
+  notification: NotificationV2DecodedPayload,
+  transaction: JWSTransactionDecodedPayload | null,
+  payload: unknown,
+): Promise<boolean> {
+  const knex = await getConnection(null);
+
+  // Try to find the tenant for this transaction. May be null if the notification
+  // arrives before /provision finishes (unusual but possible for SUBSCRIBED).
+  let tenantId: string | null = null;
+  if (transaction?.originalTransactionId) {
+    const sub = await knex('apple_iap_subscriptions')
+      .where({ original_transaction_id: transaction.originalTransactionId })
+      .first('tenant');
+    tenantId = (sub as any)?.tenant ?? null;
+  }
+
+  try {
+    await knex('apple_iap_notifications').insert({
+      notification_uuid: notification.notificationUUID,
+      notification_type: notification.notificationType,
+      subtype: notification.subtype ?? null,
+      original_transaction_id: transaction?.originalTransactionId ?? null,
+      tenant: tenantId,
+      payload: payload as any,
+    });
+    return true;
+  } catch (err: any) {
+    // Duplicate notification_uuid → already processed. Acknowledge successfully.
+    if (err?.code === '23505' /* unique_violation */) {
+      return false;
+    }
+    throw err;
+  }
+}
+
+async function applyStatusUpdate(
+  notification: NotificationV2DecodedPayload,
+  transaction: JWSTransactionDecodedPayload,
+  nextStatus: SubscriptionStatus,
+): Promise<void> {
+  const knex = await getConnection(null);
+  const expiresAt = transaction.expiresDate ? new Date(transaction.expiresDate) : null;
+
+  await knex('apple_iap_subscriptions')
+    .where({ original_transaction_id: transaction.originalTransactionId })
+    .update({
+      status: nextStatus,
+      expires_at: expiresAt,
+      latest_transaction_id: transaction.transactionId,
+      latest_notification_type: notification.notificationType,
+      latest_notification_subtype: notification.subtype ?? null,
+      latest_notification_at: new Date(),
+      updated_at: new Date(),
+    });
+
+  // When a subscription goes to revoked/refunded, access should be suspended.
+  // Full suspension (blocking the tenant's sign-in / API calls) is enforced
+  // elsewhere via a billing_status column; for now we only update the IAP
+  // subscription row and let a downstream consumer handle suspension.
+  // TODO: wire this to a tenant-suspension signal / workflow.
+}
+
+async function markNotificationProcessed(
+  notificationUuid: string,
+  error?: string,
+): Promise<void> {
+  const knex = await getConnection(null);
+  await knex('apple_iap_notifications')
+    .where({ notification_uuid: notificationUuid })
+    .update({
+      processed_at: new Date(),
+      processing_error: error ?? null,
+    });
+}
+
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const parsed = notificationBodySchema.parse(body);
+
+    const config = await getAppleIapConfig();
+
+    // Verify the JWS (signature + x5c chain when root CA configured).
+    const { notification, transaction } = await verifyNotificationPayload(
+      parsed.signedPayload,
+      config,
+    );
+
+    // Persist first, then process. If processing fails we can replay from
+    // the stored row.
+    const isNew = await recordNotification(notification, transaction, {
+      notification,
+      transaction,
+    });
+
+    if (!isNew) {
+      return NextResponse.json({ ok: true, duplicate: true });
+    }
+
+    if (!transaction) {
+      await markNotificationProcessed(notification.notificationUUID);
+      return NextResponse.json({ ok: true, handled: false, reason: 'no transaction info' });
+    }
+
+    const nextStatus = statusForNotification(notification.notificationType, notification.subtype);
+
+    if (nextStatus) {
+      try {
+        await applyStatusUpdate(notification, transaction, nextStatus);
+        await markNotificationProcessed(notification.notificationUUID);
+      } catch (err) {
+        await markNotificationProcessed(
+          notification.notificationUUID,
+          err instanceof Error ? err.message : 'unknown error',
+        );
+        throw err;
+      }
+    } else {
+      await markNotificationProcessed(notification.notificationUUID);
+    }
+
+    return NextResponse.json({ ok: true, notificationType: notification.notificationType });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json({ ok: false, error: 'invalid body' }, { status: 400 });
+    }
+    // Log and return 500 so Apple retries. Never expose error details.
+    // eslint-disable-next-line no-console
+    console.error('[iap/notifications] processing failed', error);
+    return NextResponse.json({ ok: false }, { status: 500 });
+  }
+}
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

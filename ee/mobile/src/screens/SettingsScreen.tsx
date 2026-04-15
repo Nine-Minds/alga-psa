@@ -3,6 +3,7 @@ import { Alert, Linking, Platform, Pressable, ScrollView, Text, View } from "rea
 import * as Application from "expo-application";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useNavigation } from "@react-navigation/native";
 import { getAppConfig } from "../config/appConfig";
 import { useTheme } from "../ui/ThemeContext";
 import { authenticateForUnlock, canUseBiometrics, getBiometricGateEnabled, setBiometricGateEnabled } from "../auth/biometricGate";
@@ -24,6 +25,7 @@ export function SettingsScreen() {
   const { t } = useTranslation("settings");
   const theme = useTheme();
   const config = getAppConfig();
+  const navigation = useNavigation<any>();
   const { session, logout } = useAuth();
   const version = Application.nativeApplicationVersion ?? t("common:unknown");
   const build = Application.nativeBuildVersion ?? t("common:unknown");
@@ -157,6 +159,29 @@ export function SettingsScreen() {
         >
           <Text style={{ ...theme.typography.body, color: theme.colors.text, fontWeight: "600" }}>
             {logoutBusy ? t("account.signingOut") : t("account.signOut")}
+          </Text>
+        </Pressable>
+
+        <View style={{ height: theme.spacing.sm }} />
+
+        <Pressable
+          onPress={() => navigation.navigate("AccountDeletion")}
+          disabled={!session}
+          accessibilityRole="button"
+          accessibilityLabel={t("accountDelete.title", "Delete Account")}
+          style={({ pressed }) => ({
+            paddingVertical: theme.spacing.sm,
+            paddingHorizontal: theme.spacing.md,
+            backgroundColor: theme.colors.card,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: theme.borderRadius.md,
+            alignItems: "center",
+            opacity: pressed ? 0.9 : !session ? 0.5 : 1,
+          })}
+        >
+          <Text style={{ ...theme.typography.body, color: theme.colors.danger, fontWeight: "600" }}>
+            {t("accountDelete.title", "Delete Account")}
           </Text>
         </Pressable>
       </View>

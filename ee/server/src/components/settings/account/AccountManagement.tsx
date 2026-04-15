@@ -937,7 +937,7 @@ export default function AccountManagement() {
               {isSolo && (
                 <div className="mb-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3">
                   <p className="text-sm text-blue-900 dark:text-blue-200">
-                    Your Solo plan includes core PSA features. Upgrade to Pro for integrations, mobile access, and more.
+                    Your Solo plan includes core PSA features and mobile access. Upgrade to Pro for advanced workflow design, Teams integration, and team collaboration.
                   </p>
                 </div>
               )}
@@ -964,7 +964,7 @@ export default function AccountManagement() {
                 {displayedTierFeatures.length === 0 && (
                   <p className="text-sm text-muted-foreground">
                     {isSolo
-                      ? 'Core PSA tools are active on Solo. Upgrade to Pro to unlock integrations, managed email, workflow design, and mobile access.'
+                      ? 'Core PSA tools and mobile access are active on Solo. Upgrade to Pro to unlock advanced workflow design and Teams integration.'
                       : 'Your Pro plan includes all standard features.'}
                   </p>
                 )}

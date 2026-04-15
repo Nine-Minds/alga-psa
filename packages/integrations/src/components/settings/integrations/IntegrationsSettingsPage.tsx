@@ -82,7 +82,7 @@ interface IntegrationsSettingsPageProps {
   canUseEntraSync?: boolean;
   /** Whether the user can use CIPP (premium feature) */
   canUseCipp?: boolean;
-  /** Whether the user can use Teams integration (premium feature) */
+  /** Whether the user can use Teams integration (pro feature) */
   canUseTeams?: boolean;
 }
 
@@ -173,7 +173,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
             : () => (
                 <FeatureUpgradeNotice
                   featureName={t('integrations.items.teams.name')}
-                  requiredTier="premium"
+                  requiredTier="pro"
                   description={t('integrations.items.teams.upgradeDescription')}
                 />
               ),

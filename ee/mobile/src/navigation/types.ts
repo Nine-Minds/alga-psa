@@ -2,6 +2,7 @@ import type { TicketRichTextQaScenario } from "../qa/ticketRichTextQa";
 
 export type RootStackParamList = {
   SignIn: undefined;
+  CreateWorkspace: undefined;
   AuthCallback:
     | {
         ott?: string;
@@ -20,6 +21,7 @@ export type RootStackParamList = {
     qaScenario?: TicketRichTextQaScenario;
   };
   CreateTicket: undefined;
+  AccountDeletion: undefined;
 };
 
 export type TicketsStackParamList = {

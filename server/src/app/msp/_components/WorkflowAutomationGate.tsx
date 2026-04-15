@@ -11,7 +11,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { DynamicWorkflowComponent } from '@alga-psa/workflows/components/WorkflowComponentLoader';
 import type { WorkflowProps } from '@alga-psa/workflows/components/WorkflowComponentLoader';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
-import { TIER_FEATURES } from '@alga-psa/types';
+import { TIER_FEATURES, FEATURE_MINIMUM_TIER } from '@alga-psa/types';
 import { useTier } from 'server/src/context/TierContext';
 import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 
@@ -70,7 +70,7 @@ export default function WorkflowAutomationGate({ workflowProps }: WorkflowAutoma
       <div className="h-full p-6">
         <FeatureUpgradeNotice
           featureName="Workflow Automation"
-          requiredTier="pro"
+          requiredTier={FEATURE_MINIMUM_TIER[TIER_FEATURES.WORKFLOW_DESIGNER]}
         />
       </div>
     );

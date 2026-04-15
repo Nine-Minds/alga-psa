@@ -1305,7 +1305,7 @@
       "teams": {
         "name": "Microsoft Teams",
         "description": "Configureer Teams-samenwerkingsoppervlakken voor MSP-technici",
-        "upgradeDescription": "Configureer Microsoft Teams-samenwerkingsoppervlakken voor MSP-technici. Upgrade naar Premium om deze functie te ontgrendelen."
+        "upgradeDescription": "Configureer Microsoft Teams-samenwerkingsoppervlakken voor MSP-technici. Upgrade naar Pro om deze functie te ontgrendelen."
       },
       "calendarSync": {
         "name": "Agendasynchronisatie",
