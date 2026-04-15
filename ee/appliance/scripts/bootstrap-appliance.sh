@@ -173,6 +173,42 @@ print(parsed.netloc)
 PY
 }
 
+infer_node_ip_from_kubeconfig() {
+  [ -f "$KUBECONFIG_PATH" ] || return 0
+
+  python3 - "$KUBECONFIG_PATH" <<'PY'
+import re
+import sys
+from urllib.parse import urlparse
+
+text = open(sys.argv[1], 'r', encoding='utf-8').read()
+match = re.search(r'^\s*server:\s*(\S+)\s*$', text, re.MULTILINE)
+if not match:
+    raise SystemExit(0)
+parsed = urlparse(match.group(1))
+if parsed.hostname:
+    print(parsed.hostname)
+PY
+}
+
+resolve_default_app_url() {
+  local inferred_ip="${NODE_IP:-}"
+
+  if [ -z "$inferred_ip" ] && [ -f "$CONFIG_DIR/node-ip" ]; then
+    inferred_ip="$(tr -d '\n' < "$CONFIG_DIR/node-ip")"
+  fi
+
+  if [ -z "$inferred_ip" ]; then
+    inferred_ip="$(infer_node_ip_from_kubeconfig || true)"
+  fi
+
+  if [ -n "$inferred_ip" ]; then
+    printf 'http://%s:3000\n' "$inferred_ip"
+  else
+    printf 'http://localhost:3000\n'
+  fi
+}
+
 run_cmd() {
   if $DRY_RUN; then
     printf '+'
@@ -275,8 +311,13 @@ resolve_runtime_inputs() {
     HOSTNAME_VALUE="$SITE_ID"
   fi
 
+  if [ -z "$APP_URL" ] && [ -f "$CONFIG_DIR/app-url" ]; then
+    APP_URL="$(tr -d '\n' < "$CONFIG_DIR/app-url")"
+  fi
+
   if [ -z "$APP_URL" ]; then
-    local default_app_url="http://${NODE_IP}:3000"
+    local default_app_url
+    default_app_url="$(resolve_default_app_url)"
     if is_interactive; then
       APP_URL="$(prompt_value "Public application URL" "$default_app_url")"
     else
@@ -882,6 +923,7 @@ install_gitops_sync() {
     --url="$REPO_URL" \
     --branch="$REPO_BRANCH" \
     --interval=1m \
+    --timeout=5m \
     --export | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
 
   flux --kubeconfig "$KUBECONFIG_PATH" create kustomization alga-appliance \
@@ -930,6 +972,37 @@ prepull_images() {
   talos_cmd image pull "ghcr.io/nine-minds/temporal-worker:${TEMPORAL_WORKER_TAG}"
 }
 
+promote_bootstrap_mode_to_recover() {
+  local values_file
+  local requested_at
+
+  if [ "$BOOTSTRAP_MODE" != "fresh" ]; then
+    return 0
+  fi
+
+  if $DRY_RUN; then
+    echo "+ promote bootstrap.mode from fresh to recover after successful initial bootstrap"
+    return 0
+  fi
+
+  values_file="$TEMP_PROFILE_DIR/values/alga-core.$PROFILE.yaml"
+  if [ -f "$values_file" ]; then
+    set_yaml_value "$values_file" "bootstrap.mode" "recover"
+  fi
+
+  values_file="$CONFIG_DIR/values/alga-core.$PROFILE.yaml"
+  if [ -f "$values_file" ]; then
+    set_yaml_value "$values_file" "bootstrap.mode" "recover"
+  fi
+
+  kubectl --kubeconfig "$KUBECONFIG_PATH" apply -k "$TEMP_PROFILE_DIR"
+  requested_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system annotate helmrelease alga-core \
+    reconcile.fluxcd.io/requestedAt="$requested_at" --overwrite >/dev/null
+  kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system wait --for=condition=Ready --timeout=30m helmrelease/alga-core
+  BOOTSTRAP_MODE="recover"
+}
+
 wait_for_bootstrap() {
   if $DRY_RUN; then
     cat <<EOF
@@ -949,6 +1022,7 @@ EOF
     kubectl --kubeconfig "$KUBECONFIG_PATH" -n msp wait --for=condition=complete --timeout=20m "job/${bootstrap_job}"
   fi
   kubectl --kubeconfig "$KUBECONFIG_PATH" -n msp rollout status deployment/alga-core-sebastian --timeout=20m
+  promote_bootstrap_mode_to_recover
 }
 
 while [ "$#" -gt 0 ]; do

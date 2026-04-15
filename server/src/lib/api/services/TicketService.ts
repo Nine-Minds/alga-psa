@@ -497,6 +497,50 @@ export class TicketService extends BaseService<ITicket> {
     };
   }
 
+  async deleteTicketDocument(
+    ticketId: string,
+    documentId: string,
+    context: ServiceContext
+  ): Promise<void> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const doc = await knex('documents as d')
+      .join('document_associations as da', function () {
+        this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
+      })
+      .where({
+        'da.entity_id': ticketId,
+        'da.entity_type': 'ticket',
+        'd.document_id': documentId,
+        'd.tenant': context.tenant,
+      })
+      .select('d.document_id', 'd.file_id', 'da.association_id')
+      .first();
+
+    if (!doc) {
+      throw new NotFoundError('Document not found');
+    }
+
+    await withTransaction(knex, async (trx) => {
+      await trx('document_associations')
+        .where({ association_id: doc.association_id, tenant: context.tenant })
+        .del();
+
+      // Only delete the document itself if no other associations remain
+      const remaining = await trx('document_associations')
+        .where({ document_id: documentId, tenant: context.tenant })
+        .count('* as count')
+        .first();
+
+      if (!remaining || Number(remaining.count) === 0) {
+        await trx('documents')
+          .where({ document_id: documentId, tenant: context.tenant })
+          .del();
+      }
+    });
+  }
+
   async getTicketMaterials(ticketId: string, context: ServiceContext): Promise<ITicketMaterial[]> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
@@ -1003,7 +1047,7 @@ export class TicketService extends BaseService<ITicket> {
   async getTicketComments(
     ticketId: string,
     context: ServiceContext,
-    options?: { limit?: number; offset?: number; order?: 'asc' | 'desc' }
+    options?: { limit?: number; offset?: number; order?: 'asc' | 'desc'; contentFormat?: 'full' | 'markdown' }
   ): Promise<any[]> {
     const { knex } = await this.getKnex();
 
@@ -1075,20 +1119,43 @@ export class TicketService extends BaseService<ITicket> {
       }
     }
 
+    const useMarkdown = options?.contentFormat === 'markdown';
+
     // Map database fields to API response format
-    return comments.map(comment => ({
-      ...comment,
-      comment_text: comment.note,
-      comment_html: renderTicketRichTextHtml(comment.note),
-      created_by: comment.user_id ?? null,
-      created_by_name: comment.created_by_name || comment.author_contact_name || null,
-      created_by_avatar_url: comment.user_id ? (avatarMap[comment.user_id] ?? null) : null,
-      author_contact_id: comment.author_contact_id || comment.contact_id || null,
-      author_contact_name: comment.author_contact_name || null,
-      author_contact_email: comment.author_contact_email || null,
-      reactions: reactionsMap[comment.comment_id] ?? [],
-      reaction_user_names: reactionUserNames,
-    }));
+    return comments.map(comment => {
+      if (useMarkdown) {
+        // Compact format: only markdown text and metadata, no heavy BlockNote JSON or HTML
+        return {
+          comment_id: comment.comment_id,
+          ticket_id: comment.ticket_id,
+          markdown_content: comment.markdown_content || null,
+          author_type: comment.author_type,
+          is_internal: comment.is_internal,
+          is_resolution: comment.is_resolution,
+          created_at: comment.created_at,
+          updated_at: comment.updated_at,
+          created_by: comment.user_id ?? null,
+          created_by_name: comment.created_by_name || comment.author_contact_name || null,
+          author_contact_id: comment.author_contact_id || comment.contact_id || null,
+          author_contact_name: comment.author_contact_name || null,
+        };
+      }
+
+      return {
+        ...comment,
+        comment_text: comment.note,
+        markdown_content: comment.markdown_content || null,
+        comment_html: renderTicketRichTextHtml(comment.note),
+        created_by: comment.user_id ?? null,
+        created_by_name: comment.created_by_name || comment.author_contact_name || null,
+        created_by_avatar_url: comment.user_id ? (avatarMap[comment.user_id] ?? null) : null,
+        author_contact_id: comment.author_contact_id || comment.contact_id || null,
+        author_contact_name: comment.author_contact_name || null,
+        author_contact_email: comment.author_contact_email || null,
+        reactions: reactionsMap[comment.comment_id] ?? [],
+        reaction_user_names: reactionUserNames,
+      };
+    });
   }
 
   /**
@@ -1515,7 +1582,34 @@ export class TicketService extends BaseService<ITicket> {
                 .from('clients as c')
                 .whereRaw('c.client_id = t.client_id')
                 .andWhere('c.tenant', query.client.raw('t.tenant'))
-                .andWhereILike('c.client_name', `%${value}%`);
+                .andWhere('c.client_name', value);
+          });
+          break;
+        case 'contact_name':
+          query.whereExists(function() {
+            this.select('*')
+                .from('contacts as cn')
+                .whereRaw('cn.contact_name_id = t.contact_name_id')
+                .andWhere('cn.tenant', query.client.raw('t.tenant'))
+                .andWhere('cn.full_name', value);
+          });
+          break;
+        case 'board_name':
+          query.whereExists(function() {
+            this.select('*')
+                .from('boards as b')
+                .whereRaw('b.board_id = t.board_id')
+                .andWhere('b.tenant', query.client.raw('t.tenant'))
+                .andWhere('b.board_name', value);
+          });
+          break;
+        case 'category_name':
+          query.whereExists(function() {
+            this.select('*')
+                .from('categories as cat')
+                .whereRaw('cat.category_id = t.category_id')
+                .andWhere('cat.tenant', query.client.raw('t.tenant'))
+                .andWhere('cat.category_name', value);
           });
           break;
         case 'search':
@@ -1552,7 +1646,7 @@ export class TicketService extends BaseService<ITicket> {
                 .from('priorities as p')
                 .whereRaw('p.priority_id = t.priority_id')
                 .andWhere('p.tenant', query.client.raw('t.tenant'))
-                .andWhereILike('p.priority_name', `%${value}%`);
+                .andWhere('p.priority_name', value);
           });
           break;
         case 'status_name':
@@ -1561,7 +1655,7 @@ export class TicketService extends BaseService<ITicket> {
                 .from('statuses as s')
                 .whereRaw('s.status_id = t.status_id')
                 .andWhere('s.tenant', query.client.raw('t.tenant'))
-                .andWhereILike('s.name', `%${value}%`);
+                .andWhere('s.name', value);
           });
           break;
         case 'entered_from':

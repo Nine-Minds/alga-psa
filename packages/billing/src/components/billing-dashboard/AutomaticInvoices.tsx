@@ -32,7 +32,7 @@ import {
   getAvailableRecurringDueWork,
   type BillingPeriodDateRange,
 } from '@alga-psa/billing/actions/billingAndTax';
-import { Dialog, DialogContent, DialogFooter, DialogDescription } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { formatCurrency } from '@alga-psa/core';
 // Added imports for DropdownMenu
 import {
@@ -190,6 +190,23 @@ const getTodayDate = (): Date => {
 const buildServicePeriodRepairHref = (scheduleKey: string) =>
   `/msp/billing?tab=service-periods&scheduleKey=${encodeURIComponent(scheduleKey)}`;
 
+const AUTOMATIC_INVOICES_CLIENT_FILTER_QUERY_PARAM = 'automaticClientFilter';
+
+const readAutomaticInvoicesClientFilterFromLocation = (): string => {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return new URLSearchParams(window.location.search).get(AUTOMATIC_INVOICES_CLIENT_FILTER_QUERY_PARAM) ?? '';
+};
+
+const buildReviewApprovalsHref = (input: {
+  clientId: string;
+  windowStart: string;
+  windowEnd: string;
+}) =>
+  `/msp/time-sheet-approvals?clientId=${encodeURIComponent(input.clientId)}&windowStart=${encodeURIComponent(input.windowStart)}&windowEnd=${encodeURIComponent(input.windowEnd)}`;
+
 const isInvoiceDraftStatus = (status: string | null | undefined): boolean =>
   (status ?? '').toLowerCase() === 'draft';
 
@@ -329,8 +346,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReversing, setIsReversing] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
-  const [clientFilter, setClientFilter] = useState<string>('');
-  const [debouncedClientFilter, setDebouncedClientFilter] = useState<string>('');
+  const [clientFilter, setClientFilter] = useState<string>(() => readAutomaticInvoicesClientFilterFromLocation());
+  const [debouncedClientFilter, setDebouncedClientFilter] = useState<string>(() => readAutomaticInvoicesClientFilterFromLocation());
 
   // Date range filter state (pending = user selection, applied = active filter)
   const [pendingDateRange, setPendingDateRange] = useState<DateRange>(() => ({
@@ -414,10 +431,27 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   const initialLoadDone = useRef(false);
 
-  // Debounce client filter for server-side search
+  // Debounce client filter for local ready/blocked row filtering and persist it in the URL.
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedClientFilter(clientFilter);
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const normalizedFilter = clientFilter.trim();
+        if (normalizedFilter) {
+          params.set(AUTOMATIC_INVOICES_CLIENT_FILTER_QUERY_PARAM, normalizedFilter);
+        } else {
+          params.delete(AUTOMATIC_INVOICES_CLIENT_FILTER_QUERY_PARAM);
+        }
+
+        const nextSearch = params.toString();
+        const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
+        const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        if (nextUrl !== currentUrl) {
+          window.history.replaceState(window.history.state, '', nextUrl);
+        }
+      }
+
       if (initialLoadDone.current) {
         setCurrentReadyPage(1);
         setSelectedTargets(new Set()); // Clear selection when filter changes
@@ -462,7 +496,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         const result = await getAvailableRecurringDueWork({
           page: currentReadyPage,
           pageSize: pageSize,
-          searchTerm: debouncedClientFilter,
           dateRange: dateRangeFilter
         });
 
@@ -495,15 +528,27 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     return () => {
       isMounted = false;
     };
-  }, [currentReadyPage, pageSize, debouncedClientFilter, appliedDateRange, refreshTrigger]);
+  }, [currentReadyPage, pageSize, appliedDateRange, refreshTrigger]);
 
-  // For server-side pagination, filteredPeriods is just periods
-  const filteredPeriods = periods;
+  const normalizedReadyClientFilter = debouncedClientFilter.trim().toLowerCase();
+
+  // Client filtering is intentionally scoped to Needs Approval + Ready to Invoice only.
+  const filteredPeriods = normalizedReadyClientFilter.length === 0
+    ? periods
+    : periods.filter((period) =>
+        (period.clientName ?? '').toLowerCase().includes(normalizedReadyClientFilter),
+      );
   const parentGroups = buildRecurringInvoiceParentGroups(filteredPeriods);
-  const readyRows = parentGroups.flatMap((group) => group.childExecutionRows);
+  const needsApprovalParentGroups = parentGroups.filter(
+    (group) => (group.candidate.approvalBlockedEntryCount ?? 0) > 0,
+  );
+  const readyParentGroups = parentGroups.filter(
+    (group) => (group.candidate.approvalBlockedEntryCount ?? 0) === 0,
+  );
+  const readyRows = readyParentGroups.flatMap((group) => group.childExecutionRows);
   const childSelectionKeyForMember = (member: RecurringInvoiceParentGroup['childExecutionRows'][number]) =>
     `child-selection:${member.executionIdentityKey}`;
-  const selectedParentGroups = parentGroups.filter((group) =>
+  const selectedParentGroups = readyParentGroups.filter((group) =>
     selectedTargets.has(group.parentSummary.parentSelectionKey),
   );
   const selectedParentSelectionKeys = new Set(
@@ -546,7 +591,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     })),
     ...selectedChildRows
       .filter((member) => {
-        const parentGroup = parentGroups.find((group) =>
+        const parentGroup = readyParentGroups.find((group) =>
           group.childExecutionRows.some((groupMember) => groupMember.executionIdentityKey === member.executionIdentityKey),
         );
         return !parentGroup || !selectedParentSelectionKeys.has(parentGroup.parentSummary.parentSelectionKey);
@@ -575,8 +620,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
     return selectableChildren.every((member) => selectedTargets.has(childSelectionKeyForMember(member)));
   };
-  const allGroupsFullySelected = parentGroups.length > 0 && parentGroups.every((group) => isGroupFullySelected(group));
-  const hasAnyGroupSelection = parentGroups.some((group) => {
+  const allGroupsFullySelected = readyParentGroups.length > 0 && readyParentGroups.every((group) => isGroupFullySelected(group));
+  const hasAnyGroupSelection = readyParentGroups.some((group) => {
     if (selectedTargets.has(group.parentSummary.parentSelectionKey)) {
       return true;
     }
@@ -645,7 +690,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
       const nextSelections = new Set<string>();
-      for (const group of parentGroups) {
+      for (const group of readyParentGroups) {
         const selectableChildren = group.childExecutionRows.filter((member) => member.canGenerate);
         if (selectableChildren.length === 0) {
           continue;
@@ -1109,6 +1154,49 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       ) : (
       <div className="space-y-8">
         <div>
+          {needsApprovalParentGroups.length > 0 ? (
+            <div className="mb-6 rounded-md border border-warning/40 bg-warning/5 p-4" data-testid="needs-approval-section">
+              <h2 className="text-lg font-semibold">Needs Approval</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                These recurring windows contain billable time that is not approved yet. The entire invoice window is blocked until approvals are complete.
+              </p>
+              <div className="mt-4 space-y-3">
+                {needsApprovalParentGroups.map((group) => {
+                  const blockedEntryCount = group.candidate.approvalBlockedEntryCount ?? 0;
+                  const blockedEntryLabel = blockedEntryCount === 1 ? 'entry' : 'entries';
+                  return (
+                    <div
+                      key={`needs-approval-${group.parentSummary.candidateKey}`}
+                      className="rounded-md border border-warning/30 bg-background/90 p-3"
+                      data-testid={`needs-approval-row-${group.parentSummary.candidateKey}`}
+                    >
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div className="space-y-1 text-sm">
+                          <div className="font-medium">{group.parentSummary.clientName ?? 'Unknown client'}</div>
+                          <div>Service period: {group.parentSummary.servicePeriodLabel}</div>
+                          <div>Invoice window: {group.parentSummary.windowLabel}</div>
+                          <div className="text-warning">
+                            {blockedEntryCount} unapproved {blockedEntryLabel}
+                          </div>
+                        </div>
+                        <a
+                          href={buildReviewApprovalsHref({
+                            clientId: group.candidate.clientId,
+                            windowStart: group.candidate.windowStart,
+                            windowEnd: group.candidate.windowEnd,
+                          })}
+                          className="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
+                        >
+                          Review Approvals
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex justify-between items-center mb-4">
             <div>
               <h2 className="text-lg font-semibold">Ready to Invoice</h2>
@@ -1258,7 +1346,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           <DataTable
             id="automatic-invoices-table"
             key={`${currentReadyPage}-${pageSize}`}
-            data={parentGroups}
+            data={readyParentGroups}
             // Add onRowClick prop - implementation depends on DataTable component
             // Assuming it takes a function like this:
             // Temporarily disabled invoice preview on row click
@@ -1276,7 +1364,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       checked={allGroupsFullySelected}
                       indeterminate={!allGroupsFullySelected && hasAnyGroupSelection}
                       onChange={handleSelectAll}
-                      disabled={parentGroups.length === 0}
+                      disabled={readyParentGroups.length === 0}
                     />
                   </div>
                 ),
@@ -1548,7 +1636,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             onPageChange={handleReadyPageChange}
             pageSize={pageSize}
             onItemsPerPageChange={handlePageSizeChange}
-            totalItems={totalPeriods}
+            totalItems={normalizedReadyClientFilter.length > 0 ? filteredPeriods.length : totalPeriods}
             // Fixed rowClassName prop - removed cursor-pointer since row click is disabled
             rowClassName={() => ""}
           />
@@ -1693,6 +1781,25 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         isOpen={showReverseDialog}
         onClose={() => setShowReverseDialog(false)}
         title="Reverse Recurring Invoice"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id='cancel-reverse-billing-cycle-button'
+              variant="outline"
+              onClick={() => setShowReverseDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              id='reverse-billing-cycle-button'
+              variant="destructive"
+              onClick={handleReverseBillingCycle}
+              disabled={isReversing}
+            >
+              {isReversing ? 'Reversing...' : 'Yes, Reverse Invoice'}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="flex items-center gap-2 text-red-600 mb-4">
@@ -1723,24 +1830,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             </AlertDescription>
           </Alert>
         </DialogContent>
-
-        <DialogFooter>
-          <Button
-            id='cancel-reverse-billing-cycle-button'
-            variant="outline"
-            onClick={() => setShowReverseDialog(false)}
-          >
-            Cancel
-          </Button>
-          <Button
-            id='reverse-billing-cycle-button'
-            variant="destructive"
-            onClick={handleReverseBillingCycle}
-            disabled={isReversing}
-          >
-            {isReversing ? 'Reversing...' : 'Yes, Reverse Invoice'}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       <Dialog
@@ -1758,6 +1847,44 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           setErrors({}); // Clear preview-specific errors on close
         }}
         title="Invoice Preview"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="close-preview-dialog-button"
+              variant="outline" // Use outline for secondary action
+              onClick={() => {
+                setShowPreviewDialog(false);
+                setPreviewState({
+                  previews: [],
+                  invoiceCount: 0,
+                  billingCycleId: null,
+                  executionIdentityKey: null,
+                  selectorInput: null,
+                }); // Reset state on close
+                setErrors({}); // Clear errors on close
+              }}
+              disabled={isGeneratingFromPreview} // Disable while generating
+            >
+              Close Preview
+            </Button>
+            {/* Add Generate Invoice button */}
+            <Button
+              id="generate-invoice-from-preview-button"
+              onClick={handleGenerateFromPreview}
+              // Disable if there's an error, no data, or generation is in progress
+              disabled={
+                !!errors.preview
+                || previewState.previews.length === 0
+                || !previewState.selectorInput
+                || isGeneratingFromPreview
+                || isPreviewLoading
+                || !previewSupportsDirectGeneration
+              }
+            >
+              {isGeneratingFromPreview ? 'Generating...' : 'Generate Invoice'}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <DialogDescription>
@@ -1864,43 +1991,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             </div>
           )}
         </DialogContent>
-
-        <DialogFooter>
-          <Button
-            id="close-preview-dialog-button"
-            variant="outline" // Use outline for secondary action
-            onClick={() => {
-              setShowPreviewDialog(false);
-              setPreviewState({
-                previews: [],
-                invoiceCount: 0,
-                billingCycleId: null,
-                executionIdentityKey: null,
-                selectorInput: null,
-              }); // Reset state on close
-              setErrors({}); // Clear errors on close
-            }}
-            disabled={isGeneratingFromPreview} // Disable while generating
-          >
-            Close Preview
-          </Button>
-          {/* Add Generate Invoice button */}
-          <Button
-            id="generate-invoice-from-preview-button"
-            onClick={handleGenerateFromPreview}
-            // Disable if there's an error, no data, or generation is in progress
-            disabled={
-              !!errors.preview
-              || previewState.previews.length === 0
-              || !previewState.selectorInput
-              || isGeneratingFromPreview
-              || isPreviewLoading
-              || !previewSupportsDirectGeneration
-            }
-          >
-            {isGeneratingFromPreview ? 'Generating...' : 'Generate Invoice'}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       <ConfirmationDialog

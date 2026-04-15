@@ -105,6 +105,7 @@ type WorkflowRunWaitRecord = {
   key?: string | null;
   timeout_at?: string | null;
   status: string;
+  payload?: Record<string, unknown> | null;
   created_at: string;
   resolved_at?: string | null;
 };
@@ -1056,18 +1057,34 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
               <div className="mt-2 space-y-2">
                 {stepWaits.map((wait) => (
                   <Card key={wait.wait_id} className="p-3">
+                    {(() => {
+                      const waitPayload = (wait.payload as { filters?: unknown[]; mode?: string; dueAt?: string | null } | null | undefined) ?? null;
+                      const eventFilterCount = Array.isArray(waitPayload?.filters) ? waitPayload!.filters!.length : 0;
+                      const isTimeWait = wait.wait_type === 'time';
+                      return (
+                        <>
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-semibold text-gray-700">
                         {wait.wait_type.toUpperCase()} · {wait.status}
                       </div>
                       <div className="text-xs text-gray-500">{formatDateTime(wait.created_at)}</div>
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Event: {wait.event_name ?? '—'} · Key: {wait.key ?? '—'}
-                    </div>
+                    {!isTimeWait && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Event: {wait.event_name ?? '—'} · Key: {wait.key ?? '—'} · Filters: {eventFilterCount}
+                      </div>
+                    )}
+                    {isTimeWait && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Mode: {waitPayload?.mode ?? '—'} · Scheduled resume: {formatDateTime(wait.timeout_at ?? waitPayload?.dueAt ?? null)}
+                      </div>
+                    )}
                     <div className="text-xs text-gray-500">
                       Timeout: {formatDateTime(wait.timeout_at)} · Resolved: {formatDateTime(wait.resolved_at)}
                     </div>
+                        </>
+                      );
+                    })()}
                   </Card>
                 ))}
               </div>

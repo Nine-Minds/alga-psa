@@ -67,7 +67,8 @@
     "loadSlotsFailed": "Fehler beim Laden der verfügbaren Zeitslots. Bitte versuchen Sie es erneut.",
     "createFailed": "Fehler beim Erstellen der Terminanfrage. Bitte versuchen Sie es erneut.",
     "updateFailed": "Fehler beim Aktualisieren der Terminanfrage. Bitte versuchen Sie es erneut.",
-    "loadFailed": "Fehler beim Laden der Termine. Bitte versuchen Sie es erneut."
+    "loadFailed": "Fehler beim Laden der Termine. Bitte versuchen Sie es erneut.",
+    "notFound": "Terminanfrage nicht gefunden"
   },
   "messages": {
     "requestSuccess": "Terminanfrage erfolgreich eingereicht!",
@@ -100,7 +101,7 @@
     "notAssigned": "Nicht zugewiesen",
     "viewDetails": "Details anzeigen",
     "edit": "Bearbeiten",
-    "cancel": "Stornieren"
+    "cancel": "Abbrechen"
   },
   "details": {
     "title": "Termindetails",

@@ -35,8 +35,20 @@ export default function FolderManager({
     onClose();
   }
 
+  const footer = (
+    <div className="flex gap-2 justify-end">
+      <Button id="folder-cancel-button" variant="outline" onClick={onClose}>
+        {t('common.cancel', 'Cancel')}
+      </Button>
+      <Button id="folder-create-button" onClick={handleCreate} disabled={!folderName.trim()}>
+        <FolderPlus className="w-4 h-4 mr-2" />
+        {t('common.create', 'Create')}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog isOpen={open} onClose={onClose}>
+    <Dialog isOpen={open} onClose={onClose} footer={footer}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('documents.folderManager.title', 'Create New Folder')}</DialogTitle>
@@ -62,16 +74,6 @@ export default function FolderManager({
               })}
             </div>
           )}
-
-          <div className="flex gap-2 justify-end">
-            <Button id="folder-cancel-button" variant="outline" onClick={onClose}>
-              {t('common.cancel', 'Cancel')}
-            </Button>
-            <Button id="folder-create-button" onClick={handleCreate} disabled={!folderName.trim()}>
-              <FolderPlus className="w-4 h-4 mr-2" />
-              {t('common.create', 'Create')}
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>

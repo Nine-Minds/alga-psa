@@ -155,9 +155,15 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
     for (const target of targets) {
       const { executionWindow, selectorInput } = target;
       try {
-        const invoice = await generateInvoiceForSelectionInput(selectorInput, {
-          allowPoOverage: params.allowPoOverage,
-        }, target.billingCycleId ? { billingCycleId: target.billingCycleId } : undefined);
+        const invoice = target.billingCycleId
+          ? await generateInvoiceForSelectionInput(
+              selectorInput,
+              { allowPoOverage: params.allowPoOverage },
+              { billingCycleId: target.billingCycleId },
+            )
+          : await generateInvoiceForSelectionInput(selectorInput, {
+              allowPoOverage: params.allowPoOverage,
+            });
         if (invoice) {
           invoicesCreated += 1;
         }
@@ -294,9 +300,15 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
       }
 
       try {
-        const invoice = await generateInvoiceForSelectionInputs(group.selectorInputs, {
-          allowPoOverage: params.allowPoOverage,
-        }, group.billingCycleId ? { billingCycleId: group.billingCycleId } : undefined);
+        const invoice = group.billingCycleId
+          ? await generateInvoiceForSelectionInputs(
+              group.selectorInputs,
+              { allowPoOverage: params.allowPoOverage },
+              { billingCycleId: group.billingCycleId },
+            )
+          : await generateInvoiceForSelectionInputs(group.selectorInputs, {
+              allowPoOverage: params.allowPoOverage,
+            });
         if (invoice) {
           invoicesCreated += 1;
         }

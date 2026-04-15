@@ -29,6 +29,7 @@ import {
   upsertBucketOverlay,
   deleteBucketOverlay
 } from '../../../actions/bucketOverlayActions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ContractLineServiceFormProps {
   planService: IContractLineService;
@@ -47,6 +48,7 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
   onClose,
   onServiceUpdated
 }) => {
+  const { t } = useTranslation('msp/contract-lines');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -154,14 +156,16 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
         }
       } catch (error) {
         console.error('Error loading service configuration:', error);
-        setError('Failed to load service configuration');
+        setError(t('forms.serviceForm.errors.failedToLoadServiceConfiguration', {
+          defaultValue: 'Failed to load service configuration',
+        }));
       } finally {
         setIsLoading(false);
       }
     };
 
     loadConfiguration();
-  }, [planService, service]);
+  }, [planService, service, t]);
 
   const handleConfigurationChange = (updates: Partial<IContractLineServiceConfiguration>) => {
     setBaseConfig(prev => ({ ...prev, ...updates }));
@@ -202,7 +206,9 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
 
   const handleSubmit = async () => {
     if (!planService.contract_line_id || !planService.service_id) {
-      setError('Missing plan or service information');
+      setError(t('forms.serviceForm.errors.missingPlanOrServiceInformation', {
+        defaultValue: 'Missing plan or service information',
+      }));
       return;
     }
 
@@ -256,7 +262,9 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
       onServiceUpdated();
     } catch (error) {
       console.error('Error updating service:', error);
-      setError('Failed to update service');
+      setError(t('forms.serviceForm.errors.failedToUpdateService', {
+        defaultValue: 'Failed to update service',
+      }));
       setIsSubmitting(false);
     }
   };
@@ -265,13 +273,15 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
     <Dialog
       isOpen={true}
       onClose={onClose}
-      title="Edit Service Configuration"
+      title={t('forms.serviceForm.title', { defaultValue: 'Edit Service Configuration' })}
       className="max-w-4xl"
     >
       <DialogContent>
 
           {isLoading ? (
-            <div className="py-8 text-center">Loading service configuration...</div>
+            <div className="py-8 text-center">
+              {t('forms.serviceForm.loading', { defaultValue: 'Loading service configuration...' })}
+            </div>
           ) : (
             <ServiceConfigurationPanel
               configuration={{

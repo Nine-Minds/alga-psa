@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { randomUUID } from 'crypto';
 import { 
   setupE2ETestEnvironment,
   E2ETestEnvironment
@@ -219,6 +220,51 @@ describe('Projects API E2E Tests', () => {
   describe('Project Tasks and Tickets', () => {
     let testProjectId: string;
 
+    const createTaskFixture = async (overrides: {
+      description?: string | null;
+      description_rich_text?: string | null;
+    } = {}) => {
+      const phaseResponse = await env.apiClient.post(
+        `/api/v1/projects/${testProjectId}/phases`,
+        {
+          phase_name: 'API Task Phase',
+          description: 'Phase for task API contract coverage',
+          status: 'planning'
+        }
+      );
+
+      expect(phaseResponse.status).toBe(201);
+
+      const phaseId = phaseResponse.data.data.phase_id;
+      const statusMapping = await env.db('project_status_mappings')
+        .where({ tenant: env.tenant, project_id: testProjectId })
+        .orderBy('display_order', 'asc')
+        .first<{ project_status_mapping_id: string }>('project_status_mapping_id');
+
+      expect(statusMapping?.project_status_mapping_id).toBeTruthy();
+
+      const taskId = randomUUID();
+      await env.db('project_tasks').insert({
+        tenant: env.tenant,
+        task_id: taskId,
+        phase_id: phaseId,
+        task_name: 'API task fixture',
+        description: overrides.description ?? 'Original markdown description',
+        description_rich_text: overrides.description_rich_text ?? '{"type":"doc","content":[]}',
+        estimated_hours: 120,
+        actual_hours: 0,
+        project_status_mapping_id: statusMapping!.project_status_mapping_id,
+        created_at: new Date(),
+        updated_at: new Date(),
+        wbs_code: '1.1',
+        order_key: 'a0',
+        due_date: new Date(),
+        task_type_key: 'task'
+      });
+
+      return { phaseId, taskId };
+    };
+
     beforeEach(async () => {
       // Create a test project
       const projectData = createProjectTestData({ client_id: env.clientId });
@@ -230,10 +276,12 @@ describe('Projects API E2E Tests', () => {
     });
 
     it('should get project tasks', async () => {
+      await createTaskFixture();
       const response = await env.apiClient.get(`/api/v1/projects/${testProjectId}/tasks`);
       
       expect(response.status).toBe(200);
       expect(response.data.data).toBeInstanceOf(Array);
+      expect(response.data.data[0]).not.toHaveProperty('description_rich_text');
     });
 
     it('should get project tickets', async () => {
@@ -242,6 +290,39 @@ describe('Projects API E2E Tests', () => {
       expect(response.status).toBe(200);
       expect(response.data.data).toBeInstanceOf(Array);
       expect(response.data.pagination).toBeDefined();
+    });
+
+    it('should keep description_rich_text internal across phase list, task detail, and update endpoints', async () => {
+      const { phaseId, taskId } = await createTaskFixture();
+
+      const phaseTasksResponse = await env.apiClient.get(
+        `/api/v1/projects/${testProjectId}/phases/${phaseId}/tasks`
+      );
+      expect(phaseTasksResponse.status).toBe(200);
+      expect(phaseTasksResponse.data.data[0]).not.toHaveProperty('description_rich_text');
+
+      const taskResponse = await env.apiClient.get(`/api/v1/projects/tasks/${taskId}`);
+      expect(taskResponse.status).toBe(200);
+      expect(taskResponse.data.data).not.toHaveProperty('description_rich_text');
+
+      const updateResponse = await env.apiClient.put(`/api/v1/projects/tasks/${taskId}`, {
+        description: 'Updated markdown description',
+        description_rich_text: '{"type":"doc","content":[{"type":"paragraph"}]}'
+      });
+
+      expect(updateResponse.status).toBe(200);
+      expect(updateResponse.data.data).not.toHaveProperty('description_rich_text');
+      expect(updateResponse.data.data.description).toBe('Updated markdown description');
+
+      const storedTask = await env.db('project_tasks')
+        .where({ tenant: env.tenant, task_id: taskId })
+        .first<{ description: string | null; description_rich_text: string | null }>(
+          'description',
+          'description_rich_text'
+        );
+
+      expect(storedTask?.description).toBe('Updated markdown description');
+      expect(storedTask?.description_rich_text).toBeNull();
     });
   });
 

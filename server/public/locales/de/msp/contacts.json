@@ -156,7 +156,9 @@
       "client": "Kunde",
       "tags": "Tags",
       "role": "Rolle",
-      "notes": "Notizen"
+      "notes": "Notizen",
+      "primaryEmailLabel": "Label für primäre E-Mail",
+      "additionalEmails": "Zusätzliche E-Mail-Adressen"
     },
     "unassigned": "Feld auswählen",
     "errors": {
@@ -207,7 +209,10 @@
       "clientFieldDescription": "client (gleicht vorhandene Kunden nach Name ab)",
       "noteLabel": "Hinweis:",
       "noteDescription": "CSV-Import/Export in Version 1 unterstützt pro Kontakt eine standardmäßige Telefonnummer. Tags sollten kommaseparierte Werte sein.",
-      "downloadTemplate": "CSV-Vorlage herunterladen"
+      "downloadTemplate": "CSV-Vorlage herunterladen",
+      "emailFieldsLabel": "E-Mail-Felder:",
+      "emailFieldsDescription": "primary_email_type (work/personal/billing/other oder ein benutzerdefiniertes Label), additional_email_addresses (verwenden Sie `label:email@example.com | label:email@example.com`)",
+      "hybridEmailNote": "CSV-Import/-Export behält `email` als primäre/Standard-Kontakt-E-Mail bei. Tags sollten durch Kommas getrennte Werte sein."
     },
     "mapping": {
       "title": "Kontaktfelder CSV-Spalten zuordnen",
@@ -460,7 +465,8 @@
       "status": "Status:",
       "notes": "Notizen:",
       "notesPlaceholder": "Fügen Sie zusätzliche Notizen zum Kontakt hinzu...",
-      "tags": "Tags:"
+      "tags": "Tags:",
+      "emailAddresses": "E-Mail-Adressen:"
     },
     "loading": {
       "destinations": "Ziele werden geladen..."
@@ -499,7 +505,9 @@
       "createdAt": "Erstellt am",
       "updatedAt": "Aktualisiert am",
       "notes": "Notizen:",
-      "tags": "Tags:"
+      "tags": "Tags:",
+      "emailAddresses": "E-Mail-Adressen:",
+      "defaultEmail": "Standard"
     },
     "status": {
       "active": "Aktiv",

@@ -6,7 +6,7 @@ import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
@@ -17,6 +17,7 @@ import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteT
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions';
 import QuoteStatusBadge from './QuoteStatusBadge';
+import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 
 interface QuoteDetailProps {
   quoteId: string;
@@ -82,6 +83,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [approvalComment, setApprovalComment] = useState('');
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const [sendMessage, setSendMessage] = useState('');
+  const [sendRecipients, setSendRecipients] = useState<QuoteRecipient[]>([]);
   const [additionalEmails, setAdditionalEmails] = useState('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string } | null>(null);
@@ -364,13 +366,19 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setIsWorking(true);
       setError(null);
       setNotice(null);
-      const parsedEmails = additionalEmails
-        .split(',')
-        .map((e) => e.trim())
-        .filter(Boolean);
+      const typedEmails = additionalEmails.split(',').map((e) => e.trim()).filter(Boolean);
+      const pickedEmails = sendRecipients.map((r) => r.email);
+      const seen = new Set<string>();
+      const combined: string[] = [];
+      for (const email of [...pickedEmails, ...typedEmails]) {
+        const key = email.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        combined.push(email);
+      }
       const result = await sendQuote(quote.quote_id, {
         message: sendMessage.trim() || undefined,
-        email_addresses: parsedEmails.length > 0 ? parsedEmails : undefined,
+        email_addresses: combined.length > 0 ? combined : undefined,
       });
 
       if ('permissionError' in result) {
@@ -380,6 +388,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setQuote(result);
       setIsSendDialogOpen(false);
       setSendMessage('');
+      setSendRecipients([]);
       setAdditionalEmails('');
       setNotice('Quote sent to the client.');
     } catch (actionError) {
@@ -918,8 +927,20 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           )}
         </section>
       </Box>
-      <Dialog id="quote-conversion-preview" isOpen={isConversionDialogOpen} onClose={() => setIsConversionDialogOpen(false)}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-3xl">
+      <Dialog
+        id="quote-conversion-preview"
+        isOpen={isConversionDialogOpen}
+        onClose={() => setIsConversionDialogOpen(false)}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="quote-conversion-cancel" variant="outline" onClick={() => setIsConversionDialogOpen(false)} disabled={isWorking}>Cancel</Button>
+            <Button id="quote-conversion-confirm" onClick={() => void handleConfirmConversion()} disabled={isWorking || !conversionPreview || (conversionMode === 'contract' && !conversionPreview.contract_items.length) || (conversionMode === 'invoice' && !conversionPreview.invoice_items.length) || (conversionMode === 'both' && (!conversionPreview.contract_items.length || !conversionPreview.invoice_items.length))}>
+              {conversionMode === 'contract' ? 'Create Draft Contract' : conversionMode === 'invoice' ? 'Create Draft Invoice' : 'Create Both Records'}
+            </Button>
+          </div>
+        )}
+      >
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Conversion Preview</DialogTitle>
             <DialogDescription>
@@ -1000,16 +1021,21 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             </div>
           )}
 
-          <DialogFooter>
-            <Button id="quote-conversion-cancel" variant="outline" onClick={() => setIsConversionDialogOpen(false)} disabled={isWorking}>Cancel</Button>
-            <Button id="quote-conversion-confirm" onClick={() => void handleConfirmConversion()} disabled={isWorking || !conversionPreview || (conversionMode === 'contract' && !conversionPreview.contract_items.length) || (conversionMode === 'invoice' && !conversionPreview.invoice_items.length) || (conversionMode === 'both' && (!conversionPreview.contract_items.length || !conversionPreview.invoice_items.length))}>
-              {conversionMode === 'contract' ? 'Create Draft Contract' : conversionMode === 'invoice' ? 'Create Draft Invoice' : 'Create Both Records'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog id="quote-preview-dialog" isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} title="Quote Preview" className="max-w-4xl">
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <Dialog
+        id="quote-preview-dialog"
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        title="Quote Preview"
+        className="max-w-4xl"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="quote-preview-close" variant="outline" onClick={() => setIsPreviewOpen(false)}>Close</Button>
+          </div>
+        )}
+      >
+        <DialogContent>
           {previewHtml ? (
             <div className="rounded border border-border p-4 bg-white text-black" style={{ colorScheme: 'light' }}>
               <style dangerouslySetInnerHTML={{ __html: previewHtml.css }} />
@@ -1018,19 +1044,38 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           ) : (
             <div className="p-8 text-center text-sm text-muted-foreground">Loading preview...</div>
           )}
-          <DialogFooter>
-            <Button id="quote-preview-close" variant="outline" onClick={() => setIsPreviewOpen(false)}>Close</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog id="quote-send-dialog" isOpen={isSendDialogOpen} onClose={() => setIsSendDialogOpen(false)} title="Send Quote to Client">
+      <Dialog
+        id="quote-send-dialog"
+        isOpen={isSendDialogOpen}
+        onClose={() => setIsSendDialogOpen(false)}
+        title="Send Quote to Client"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="quote-send-cancel" variant="outline" onClick={() => setIsSendDialogOpen(false)} disabled={isWorking}>Cancel</Button>
+            <Button id="quote-send-confirm" onClick={() => void handleSendQuote()} disabled={isWorking}>
+              {isWorking ? 'Sending...' : 'Send Quote'}
+            </Button>
+          </div>
+        )}
+      >
         <DialogContent>
           <DialogDescription>
             This will email the quote to the client&apos;s billing contacts and change its status to &ldquo;Sent&rdquo;.
           </DialogDescription>
           <div className="space-y-3 py-2">
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Additional recipients (comma-separated)
+              Recipients
+              <QuoteSendRecipientsField
+                id="quote-send-recipients"
+                clientId={quote?.client_id}
+                value={sendRecipients}
+                onChange={setSendRecipients}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Additional email addresses (comma-separated)
               <input
                 type="text"
                 value={additionalEmails}
@@ -1049,12 +1094,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               />
             </label>
           </div>
-          <DialogFooter>
-            <Button id="quote-send-cancel" variant="outline" onClick={() => setIsSendDialogOpen(false)} disabled={isWorking}>Cancel</Button>
-            <Button id="quote-send-confirm" onClick={() => void handleSendQuote()} disabled={isWorking}>
-              {isWorking ? 'Sending...' : 'Send Quote'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
       <Dialog
@@ -1062,6 +1101,25 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         isOpen={approvalDialogMode !== null}
         onClose={() => { setApprovalDialogMode(null); setApprovalComment(''); }}
         title={approvalDialogMode === 'approve' ? 'Approve Quote' : 'Request Changes'}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="quote-approval-cancel"
+              variant="outline"
+              onClick={() => { setApprovalDialogMode(null); setApprovalComment(''); }}
+              disabled={isWorking}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="quote-approval-confirm"
+              onClick={() => void (approvalDialogMode === 'approve' ? handleApproveQuote() : handleRequestChanges())}
+              disabled={isWorking || (approvalDialogMode === 'changes' && !approvalComment.trim())}
+            >
+              {isWorking ? 'Processing...' : approvalDialogMode === 'approve' ? 'Approve' : 'Request Changes'}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <DialogDescription>
@@ -1080,23 +1138,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               />
             </label>
           </div>
-          <DialogFooter>
-            <Button
-              id="quote-approval-cancel"
-              variant="outline"
-              onClick={() => { setApprovalDialogMode(null); setApprovalComment(''); }}
-              disabled={isWorking}
-            >
-              Cancel
-            </Button>
-            <Button
-              id="quote-approval-confirm"
-              onClick={() => void (approvalDialogMode === 'approve' ? handleApproveQuote() : handleRequestChanges())}
-              disabled={isWorking || (approvalDialogMode === 'changes' && !approvalComment.trim())}
-            >
-              {isWorking ? 'Processing...' : approvalDialogMode === 'approve' ? 'Approve' : 'Request Changes'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Card>

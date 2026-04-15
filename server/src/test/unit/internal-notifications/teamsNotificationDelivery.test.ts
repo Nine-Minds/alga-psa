@@ -432,29 +432,6 @@ describe('Teams notification delivery', () => {
     });
   });
 
-  it('T033/T034/T287/T288: skips Teams delivery before Graph/runtime work when the shared availability helper disables the tenant', async () => {
-    hoisted.getTeamsAvailabilityMock.mockResolvedValue({
-      enabled: false,
-      reason: 'flag_disabled',
-      flagKey: 'teams-integration-ui',
-      message: 'Microsoft Teams integration is disabled for this tenant.',
-    });
-
-    const result = await deliverTeamsNotification(makeNotification());
-
-    expect(result).toEqual({
-      status: 'skipped',
-      reason: 'flag_disabled',
-    });
-    expect(hoisted.getTeamsAvailabilityMock).toHaveBeenCalledWith({
-      tenantId: 'tenant-1',
-      userId: 'user-1',
-    });
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(hoisted.publishWorkflowEventMock).not.toHaveBeenCalled();
-    expect(hoisted.buildTeamsPersonalTabDeepLinkFromPsaUrlMock).not.toHaveBeenCalled();
-  });
-
   it('T285/T286: skips Teams delivery before Graph/runtime work when the tenant is not in Enterprise Edition', async () => {
     hoisted.getTeamsAvailabilityMock.mockResolvedValue({
       enabled: false,

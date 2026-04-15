@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ITimeSheet } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 
 interface ApprovalActionsProps {
@@ -35,6 +35,28 @@ export function ApprovalActions({ timeSheet, onApprove, onReject, onRequestChang
     setChangeRequests([]);
   };
 
+  const rejectFooter = (
+    <div className="flex justify-end space-x-2">
+      <Button id="cancel-reject-btn" onClick={() => setIsRejectDialogOpen(false)}>
+        {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+      </Button>
+      <Button id="confirm-reject-btn" onClick={handleReject}>
+        {t('approvalActions.confirm.reject', { defaultValue: 'Confirm Reject' })}
+      </Button>
+    </div>
+  );
+
+  const changesFooter = (
+    <div className="flex justify-end space-x-2">
+      <Button id="cancel-changes-btn" onClick={() => setIsChangesDialogOpen(false)}>
+        {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+      </Button>
+      <Button id="confirm-changes-btn" onClick={handleRequestChanges}>
+        {t('approvalActions.confirm.changes', { defaultValue: 'Confirm Changes' })}
+      </Button>
+    </div>
+  );
+
   return (
     <div className="mb-4 flex space-x-2">
       <Button id="approve-timesheet-btn" onClick={handleApprove}>
@@ -47,10 +69,11 @@ export function ApprovalActions({ timeSheet, onApprove, onReject, onRequestChang
         {t('common.actions.requestChanges', { defaultValue: 'Request Changes' })}
       </Button>
 
-      <Dialog 
-        isOpen={isRejectDialogOpen} 
-        onClose={() => setIsRejectDialogOpen(false)} 
+      <Dialog
+        isOpen={isRejectDialogOpen}
+        onClose={() => setIsRejectDialogOpen(false)}
         title={t('approvalActions.dialogs.rejectTitle', { defaultValue: 'Reject Time Sheet' })}
+        footer={rejectFooter}
       >
         <DialogContent>
           <TextArea
@@ -62,33 +85,18 @@ export function ApprovalActions({ timeSheet, onApprove, onReject, onRequestChang
             label={t('approvalActions.labels.rejectionReason', { defaultValue: 'Rejection Reason' })}
           />
         </DialogContent>
-        <DialogFooter>
-          <Button id="cancel-reject-btn" onClick={() => setIsRejectDialogOpen(false)}>
-            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-          </Button>
-          <Button id="confirm-reject-btn" onClick={handleReject}>
-            {t('approvalActions.confirm.reject', { defaultValue: 'Confirm Reject' })}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
-      <Dialog 
-        isOpen={isChangesDialogOpen} 
-        onClose={() => setIsChangesDialogOpen(false)} 
+      <Dialog
+        isOpen={isChangesDialogOpen}
+        onClose={() => setIsChangesDialogOpen(false)}
         title={t('approvalActions.dialogs.requestChangesTitle', { defaultValue: 'Request Changes' })}
+        footer={changesFooter}
       >
         <DialogContent>
             <></>
           {/* Implement a form or interface for specifying change requests */}
         </DialogContent>
-        <DialogFooter>
-          <Button id="cancel-changes-btn" onClick={() => setIsChangesDialogOpen(false)}>
-            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-          </Button>
-          <Button id="confirm-changes-btn" onClick={handleRequestChanges}>
-            {t('approvalActions.confirm.changes', { defaultValue: 'Confirm Changes' })}
-          </Button>
-        </DialogFooter>
       </Dialog>
     </div>
   );

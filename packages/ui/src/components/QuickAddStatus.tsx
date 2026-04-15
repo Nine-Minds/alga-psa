@@ -11,6 +11,7 @@ import { Circle } from 'lucide-react';
 import type { ItemType, IStatus } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import { handleError } from '../lib/errorHandling';
+import { useTranslation } from 'react-i18next';
 
 export interface QuickAddStatusProps {
   open: boolean;
@@ -44,6 +45,7 @@ export function QuickAddStatus({
   trigger,
   showColorPicker = true,
 }: QuickAddStatusProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [statusName, setStatusName] = useState('');
   const [statusColor, setStatusColor] = useState(SOLID_COLORS[0]);
   const [isClosed, setIsClosed] = useState(false);
@@ -66,7 +68,7 @@ export function QuickAddStatus({
     const trimmedName = statusName.trim();
 
     if (!trimmedName) {
-      setError('Status name is required');
+      setError(t('quickAddStatus.nameRequired', 'Status name is required'));
       return;
     }
 
@@ -75,7 +77,7 @@ export function QuickAddStatus({
       s => s.name.toLowerCase() === trimmedName.toLowerCase()
     );
     if (isDuplicate) {
-      setError('A status with this name already exists');
+      setError(t('quickAddStatus.duplicateName', 'A status with this name already exists'));
       return;
     }
 
@@ -90,13 +92,13 @@ export function QuickAddStatus({
         color: statusColor,
       });
 
-      toast.success(`Status "${trimmedName}" created successfully`);
+      toast.success(t('quickAddStatus.createdSuccess', 'Status "{{name}}" created successfully', { name: trimmedName }));
       onStatusCreated(newStatus);
       onOpenChange(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create status';
+      const message = err instanceof Error ? err.message : t('quickAddStatus.createFailed', 'Failed to create status');
       setError(message);
-      handleError(err, 'Failed to create status');
+      handleError(err, t('quickAddStatus.createFailed', 'Failed to create status'));
     } finally {
       setIsSubmitting(false);
     }
@@ -106,7 +108,7 @@ export function QuickAddStatus({
     <Dialog
       isOpen={open}
       onClose={() => onOpenChange(false)}
-      title="Create New Status"
+      title={t('quickAddStatus.title', 'Create New Status')}
       className="max-w-md"
       id="quick-add-status-dialog"
     >
@@ -116,7 +118,7 @@ export function QuickAddStatus({
             {/* Status Name */}
             <div>
               <Label htmlFor="quick-add-status-name" className="block text-sm font-medium text-gray-700 mb-1">
-                Status Name *
+                {t('quickAddStatus.statusName', 'Status Name')} *
               </Label>
               <Input
                 id="quick-add-status-name"
@@ -131,7 +133,7 @@ export function QuickAddStatus({
                     handleSubmit();
                   }
                 }}
-                placeholder="e.g., In Progress, Review, Done"
+                placeholder={t('quickAddStatus.namePlaceholder', 'e.g., In Progress, Review, Done')}
                 autoFocus
                 disabled={isSubmitting}
                 className={error ? 'border-red-500' : ''}
@@ -145,7 +147,7 @@ export function QuickAddStatus({
             {showColorPicker && (
             <div>
               <Label className="block text-sm font-medium text-gray-700 mb-2">
-                Status Color
+                {t('quickAddStatus.statusColor', 'Status Color')}
               </Label>
               <div className="flex items-center gap-3">
                 <ColorPicker
@@ -166,7 +168,7 @@ export function QuickAddStatus({
                         fill={statusColor}
                         stroke={statusColor}
                       />
-                      <span className="text-sm text-gray-600">Change color</span>
+                      <span className="text-sm text-gray-600">{t('quickAddStatus.changeColor', 'Change color')}</span>
                     </button>
                   }
                 />
@@ -185,10 +187,10 @@ export function QuickAddStatus({
               />
               <div>
                 <Label htmlFor="quick-add-status-is-closed" className="text-sm font-medium text-gray-700 cursor-pointer">
-                  Mark as closed status
+                  {t('quickAddStatus.markClosed', 'Mark as closed status')}
                 </Label>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Tasks in closed statuses are considered complete
+                  {t('quickAddStatus.markClosedDescription', 'Tasks in closed statuses are considered complete')}
                 </p>
               </div>
             </div>
@@ -202,7 +204,7 @@ export function QuickAddStatus({
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
-              Cancel
+              {t('common:actions.cancel', 'Cancel')}
             </Button>
             <Button
               id="quick-add-status-submit"
@@ -210,7 +212,7 @@ export function QuickAddStatus({
               onClick={handleSubmit}
               disabled={isSubmitting || !statusName.trim()}
             >
-              {isSubmitting ? 'Creating...' : 'Create Status'}
+              {isSubmitting ? t('quickAddStatus.creating', 'Creating...') : t('quickAddStatus.createButton', 'Create Status')}
             </Button>
           </DialogFooter>
         </div>

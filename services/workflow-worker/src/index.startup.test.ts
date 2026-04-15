@@ -9,8 +9,11 @@ const {
   runtimeWorkerStopMock,
   eventWorkerStartMock,
   eventWorkerStopMock,
+  temporalWorkerStartMock,
+  temporalWorkerStopMock,
   runtimeWorkerCtorMock,
   eventWorkerCtorMock,
+  temporalWorkerCtorMock,
   loggerInfoMock,
   loggerErrorMock
 } = vi.hoisted(() => ({
@@ -22,8 +25,11 @@ const {
   runtimeWorkerStopMock: vi.fn(async () => undefined),
   eventWorkerStartMock: vi.fn(async () => undefined),
   eventWorkerStopMock: vi.fn(async () => undefined),
+  temporalWorkerStartMock: vi.fn(async () => undefined),
+  temporalWorkerStopMock: vi.fn(async () => undefined),
   runtimeWorkerCtorMock: vi.fn(),
   eventWorkerCtorMock: vi.fn(),
+  temporalWorkerCtorMock: vi.fn(),
   loggerInfoMock: vi.fn(),
   loggerErrorMock: vi.fn()
 }));
@@ -34,7 +40,7 @@ vi.mock('dotenv', () => ({
   }
 }));
 
-vi.mock('@alga-psa/workflows/runtime', () => ({
+vi.mock('@alga-psa/workflows/runtime/worker', () => ({
   initializeWorkflowRuntimeV2: (...args: unknown[]) => initializeWorkflowRuntimeV2Mock(...args),
   registerWorkflowEmailProvider: (...args: unknown[]) => registerWorkflowEmailProviderMock(...args)
 }));
@@ -71,6 +77,22 @@ vi.mock('./v2/WorkflowRuntimeV2EventStreamWorker.js', () => ({
   }
 }));
 
+vi.mock('./v2/WorkflowRuntimeV2TemporalWorker.js', () => ({
+  WorkflowRuntimeV2TemporalWorker: class {
+    constructor(workerId: string) {
+      temporalWorkerCtorMock(workerId);
+    }
+
+    async start() {
+      return temporalWorkerStartMock();
+    }
+
+    async stop() {
+      return temporalWorkerStopMock();
+    }
+  }
+}));
+
 vi.mock('./registerEnterpriseStorageProviders.js', () => ({
   registerEnterpriseStorageProviders: (...args: unknown[]) => registerEnterpriseStorageProvidersMock(...args)
 }));
@@ -91,6 +113,8 @@ vi.mock('@alga-psa/email', () => ({
 describe('workflow worker startup', () => {
   beforeEach(() => {
     vi.resetModules();
+    delete process.env.WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING;
+    delete process.env.WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING;
 
     dotenvConfigMock.mockReset();
     initializeWorkflowRuntimeV2Mock.mockReset();
@@ -100,13 +124,16 @@ describe('workflow worker startup', () => {
     runtimeWorkerStopMock.mockReset();
     eventWorkerStartMock.mockReset();
     eventWorkerStopMock.mockReset();
+    temporalWorkerStartMock.mockReset();
+    temporalWorkerStopMock.mockReset();
     runtimeWorkerCtorMock.mockReset();
     eventWorkerCtorMock.mockReset();
+    temporalWorkerCtorMock.mockReset();
     loggerInfoMock.mockReset();
     loggerErrorMock.mockReset();
   });
 
-  it('T048: imports the worker entrypoint and starts runtime + event workers through the EE workflow package', async () => {
+  it('T024: imports the worker entrypoint and starts authored Temporal polling plus event ingress by default (DB polling worker disabled)', async () => {
     const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
 
     try {
@@ -117,12 +144,55 @@ describe('workflow worker startup', () => {
         expect(registerEnterpriseStorageProvidersMock).toHaveBeenCalledTimes(1);
         expect(runtimeWorkerCtorMock).toHaveBeenCalledTimes(1);
         expect(eventWorkerCtorMock).toHaveBeenCalledTimes(1);
-        expect(runtimeWorkerStartMock).toHaveBeenCalledTimes(1);
+        expect(temporalWorkerCtorMock).toHaveBeenCalledTimes(1);
+        expect(runtimeWorkerStartMock).not.toHaveBeenCalled();
         expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
+        expect(temporalWorkerStartMock).toHaveBeenCalledTimes(1);
       });
 
       expect(processOnSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
       expect(processOnSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
+      expect(loggerErrorMock).not.toHaveBeenCalled();
+    } finally {
+      processOnSpy.mockRestore();
+    }
+  });
+
+  it('starts DB polling worker only when WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING is enabled', async () => {
+    process.env.WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING = 'true';
+    const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
+
+    try {
+      await import('./index.ts');
+      await vi.waitFor(() => {
+        expect(runtimeWorkerCtorMock).toHaveBeenCalledTimes(1);
+        expect(eventWorkerCtorMock).toHaveBeenCalledTimes(1);
+        expect(temporalWorkerCtorMock).toHaveBeenCalledTimes(1);
+        expect(runtimeWorkerStartMock).toHaveBeenCalledTimes(1);
+        expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
+        expect(temporalWorkerStartMock).toHaveBeenCalledTimes(1);
+      });
+
+      expect(loggerErrorMock).not.toHaveBeenCalled();
+    } finally {
+      processOnSpy.mockRestore();
+    }
+  });
+
+  it('does not start authored Temporal polling when WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING is disabled', async () => {
+    process.env.WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING = 'false';
+    const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
+
+    try {
+      await import('./index.ts');
+      await vi.waitFor(() => {
+        expect(runtimeWorkerCtorMock).toHaveBeenCalledTimes(1);
+        expect(eventWorkerCtorMock).toHaveBeenCalledTimes(1);
+        expect(temporalWorkerCtorMock).toHaveBeenCalledTimes(1);
+        expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
+      });
+
+      expect(temporalWorkerStartMock).not.toHaveBeenCalled();
       expect(loggerErrorMock).not.toHaveBeenCalled();
     } finally {
       processOnSpy.mockRestore();

@@ -85,6 +85,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'microsoft_profile_consumer_bindings', 'teams_integrations', 'microsoft_profiles',
 
   // User related details
+  'user_activity_group_items', 'user_activity_groups',
   'user_notification_preferences', 'user_internal_notification_preferences', 'user_preferences',
   'role_permissions', 'user_roles', 'user_auth_accounts',
   'mobile_push_tokens',

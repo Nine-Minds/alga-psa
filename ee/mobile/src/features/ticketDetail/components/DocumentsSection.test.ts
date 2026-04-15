@@ -12,17 +12,20 @@ function MockImage(props: Record<string, unknown>) {
   return React.createElement("MockImage", { ...props, testID: "preview-image" });
 }
 
+const mockAlert = vi.fn();
 vi.mock("react-native", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("react-native");
   return {
     ...actual,
     Modal: MockModal,
     Image: MockImage,
+    Alert: { alert: (...args: unknown[]) => mockAlert(...args) },
   };
 });
 
 const getTicketDocumentsMock = vi.fn();
 const uploadTicketDocumentMock = vi.fn();
+const deleteTicketDocumentMock = vi.fn();
 const requestCameraPermissionsAsyncMock = vi.fn();
 const launchCameraAsyncMock = vi.fn();
 const getDocumentAsyncMock = vi.fn();
@@ -57,6 +60,7 @@ vi.mock("../../../ui/components/SectionHeader", () => ({
 vi.mock("../../../api/documents", () => ({
   getTicketDocuments: (...args: unknown[]) => getTicketDocumentsMock(...args),
   uploadTicketDocument: (...args: unknown[]) => uploadTicketDocumentMock(...args),
+  deleteTicketDocument: (...args: unknown[]) => deleteTicketDocumentMock(...args),
 }));
 
 const mockFileUri = "file:///cache/test-file";
@@ -152,6 +156,7 @@ describe("DocumentsSection", () => {
     vi.clearAllMocks();
     getTicketDocumentsMock.mockResolvedValue({ ok: true, data: { data: [] } });
     uploadTicketDocumentMock.mockResolvedValue({ ok: true, data: { data: { document_id: "doc-1" } } });
+    deleteTicketDocumentMock.mockResolvedValue({ ok: true, data: { data: null } });
     downloadFileAsyncMock.mockResolvedValue({ uri: mockFileUri });
     shareAsyncMock.mockResolvedValue(undefined);
     requestCameraPermissionsAsyncMock.mockResolvedValue({ granted: true });
@@ -462,6 +467,93 @@ describe("DocumentsSection", () => {
     await flushAsyncWork();
 
     expect(getTextContent(renderer)).toContain("documents.errors.cameraPermission");
+  });
+
+  it("shows confirmation alert when tapping delete button", async () => {
+    getTicketDocumentsMock.mockResolvedValue({
+      ok: true,
+      data: { data: [pdfDoc] },
+    });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+
+    const deleteButton = renderer.root.findByProps({ accessibilityLabel: "documents.delete" });
+    await act(async () => {
+      deleteButton.props.onPress();
+    });
+
+    expect(mockAlert).toHaveBeenCalledWith(
+      "documents.deleteConfirmTitle",
+      expect.any(String),
+      expect.arrayContaining([
+        expect.objectContaining({ style: "cancel" }),
+        expect.objectContaining({ style: "destructive" }),
+      ]),
+    );
+  });
+
+  it("deletes document and refreshes list after confirmation", async () => {
+    getTicketDocumentsMock
+      .mockResolvedValueOnce({ ok: true, data: { data: [pdfDoc] } })
+      .mockResolvedValueOnce({ ok: true, data: { data: [] } });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+
+    const deleteButton = renderer.root.findByProps({ accessibilityLabel: "documents.delete" });
+    await act(async () => {
+      deleteButton.props.onPress();
+    });
+
+    // Simulate user pressing destructive button in the alert
+    const alertButtons = mockAlert.mock.calls[0][2] as Array<{ onPress?: () => void; style: string }>;
+    const destructiveButton = alertButtons.find((b) => b.style === "destructive");
+
+    await act(async () => {
+      destructiveButton?.onPress?.();
+    });
+    await flushAsyncWork();
+
+    expect(deleteTicketDocumentMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        apiKey: "api-key-1",
+        ticketId: "ticket-1",
+        documentId: "doc-1",
+      }),
+    );
+    // Should refresh the list after delete
+    expect(getTicketDocumentsMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows error when delete fails", async () => {
+    deleteTicketDocumentMock.mockResolvedValue({
+      ok: false,
+      error: { message: "delete failed" },
+    });
+    getTicketDocumentsMock.mockResolvedValue({
+      ok: true,
+      data: { data: [pdfDoc] },
+    });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+
+    const deleteButton = renderer.root.findByProps({ accessibilityLabel: "documents.delete" });
+    await act(async () => {
+      deleteButton.props.onPress();
+    });
+
+    const alertButtons = mockAlert.mock.calls[0][2] as Array<{ onPress?: () => void; style: string }>;
+    const destructiveButton = alertButtons.find((b) => b.style === "destructive");
+
+    await act(async () => {
+      destructiveButton?.onPress?.();
+    });
+    await flushAsyncWork();
+
+    expect(getTextContent(renderer)).toContain("delete failed");
   });
 
   it("disables the row and shows spinner while downloading", async () => {

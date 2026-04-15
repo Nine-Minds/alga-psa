@@ -73,12 +73,16 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
 
   const timeEntries = await db('time_entries')
-    .where({
-      time_sheet_id: validatedParams.timeSheetId,
-      tenant
+    .leftJoin('service_catalog', function() {
+      this.on('time_entries.service_id', '=', 'service_catalog.service_id')
+        .andOn('time_entries.tenant', '=', 'service_catalog.tenant');
     })
-    .orderBy('start_time', 'desc')
-    .select('*');
+    .where({
+      'time_entries.time_sheet_id': validatedParams.timeSheetId,
+      'time_entries.tenant': tenant
+    })
+    .orderBy('time_entries.start_time', 'desc')
+    .select('time_entries.*', 'service_catalog.service_name');
 
   const changeRequestsByEntryId = await fetchTimeEntryChangeRequestsForEntryIdsFromDb(
     db,

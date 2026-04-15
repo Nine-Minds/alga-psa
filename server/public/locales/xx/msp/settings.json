@@ -1246,6 +1246,94 @@
       }
     }
   },
+  "integrations": {
+    "betaNotice": "11111",
+    "emptyCategory": "11111",
+    "rmmEnterpriseNote": "11111",
+    "categoryHeading": "11111 {{label}} 11111",
+    "loading": {
+      "payments": "11111"
+    },
+    "categories": {
+      "accounting": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "rmm": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "communication": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "calendar": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "providers": {
+        "label": "11111",
+        "description": {
+          "ee": "11111",
+          "oss": "11111"
+        }
+      },
+      "identity": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "payments": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "items": {
+      "accountingSetup": {
+        "name": "11111",
+        "description": "11111"
+      },
+      "rmmSetup": {
+        "name": "11111",
+        "description": "11111"
+      },
+      "email": {
+        "name": "11111",
+        "description": "11111",
+        "cardTitle": "11111",
+        "cardDescription": "11111"
+      },
+      "teams": {
+        "name": "11111",
+        "description": "11111",
+        "upgradeDescription": "11111"
+      },
+      "calendarSync": {
+        "name": "11111",
+        "description": "11111"
+      },
+      "google": {
+        "name": "11111",
+        "description": {
+          "ee": "11111",
+          "oss": "11111"
+        },
+        "cardTitle": "11111",
+        "cardDescription": {
+          "ee": "11111",
+          "oss": "11111"
+        }
+      },
+      "entra": {
+        "name": "11111",
+        "description": "11111",
+        "upgradeDescription": "11111"
+      },
+      "stripe": {
+        "name": "11111",
+        "description": "11111"
+      }
+    }
+  },
   "orgChart": {
     "emptyState": "11111",
     "roles": {

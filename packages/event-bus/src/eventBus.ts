@@ -672,6 +672,7 @@ export class EventBus {
         const messageFields: { [key: string]: string } = {
           event_id: workflowEvent.event_id,
           execution_id: workflowEvent.execution_id || '',
+          workflow_correlation_key: workflowEvent.workflow_correlation_key || '',
           event_name: workflowEvent.event_name,
           event_type: workflowEvent.event_type,
           tenant: workflowEvent.tenant,

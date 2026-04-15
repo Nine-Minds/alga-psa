@@ -15,7 +15,7 @@ import type { IBoard } from '@alga-psa/types';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -318,7 +318,7 @@ const CategoriesSettings = (): React.JSX.Element => {
           </span>
           {record.is_from_itil_standard && (
             <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">
-              ITIL
+              {t('categories.itilBadge')}
             </span>
           )}
         </div>
@@ -483,16 +483,37 @@ const CategoriesSettings = (): React.JSX.Element => {
         boards={boards}
       />
 
-      {editingCategory && (
-        <Dialog 
-          isOpen={showAddEditDialog} 
+      {editingCategory && (() => {
+        const editFooter = (
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-category-dialog"
+              variant="outline"
+              onClick={() => {
+                setShowAddEditDialog(false);
+                setEditingCategory(null);
+                setFormData({ category_name: '', display_order: 0, board_id: '', parent_category: '' });
+                setError(null);
+              }}
+            >
+              {t('actions.cancel', 'Cancel')}
+            </Button>
+            <Button id="save-category-button" onClick={handleSaveCategory}>
+              {t('actions.update', 'Update')}
+            </Button>
+          </div>
+        );
+        return (
+        <Dialog
+          isOpen={showAddEditDialog}
           onClose={() => {
             setShowAddEditDialog(false);
             setEditingCategory(null);
             setFormData({ category_name: '', display_order: 0, board_id: '', parent_category: '' });
             setError(null);
-          }} 
+          }}
           title={t('settings.categories.editTitle', 'Edit Category')}
+          footer={editFooter}
         >
           <DialogContent>
             <div className="space-y-4">
@@ -551,36 +572,45 @@ const CategoriesSettings = (): React.JSX.Element => {
               </div>
             </div>
           </DialogContent>
-          <DialogFooter>
-            <Button 
-              id="cancel-category-dialog"
-              variant="outline" 
+        </Dialog>
+        );
+      })()}
+
+      {/* Import Dialog */}
+      {(() => {
+        const importFooter = (
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-import-categories-dialog"
+              variant="outline"
               onClick={() => {
-                setShowAddEditDialog(false);
-                setEditingCategory(null);
-                setFormData({ category_name: '', display_order: 0, board_id: '', parent_category: '' });
-                setError(null);
+                setShowImportDialog(false);
+                setSelectedImportCategories([]);
+                setImportTargetBoard('');
               }}
             >
               {t('actions.cancel', 'Cancel')}
             </Button>
-            <Button id="save-category-button" onClick={handleSaveCategory}>
-              {t('actions.update', 'Update')}
+            <Button
+              id="import-selected-categories"
+              onClick={handleImport}
+              disabled={selectedImportCategories.length === 0 || !importTargetBoard}
+            >
+              {t('settings.categories.importSelected', 'Import Selected')}
             </Button>
-          </DialogFooter>
-        </Dialog>
-      )}
-
-      {/* Import Dialog */}
-      <Dialog 
-        isOpen={showImportDialog && importConflicts.length === 0} 
+          </div>
+        );
+        return (
+      <Dialog
+        isOpen={showImportDialog && importConflicts.length === 0}
         onClose={() => {
           setShowImportDialog(false);
           setSelectedImportCategories([]);
           setImportTargetBoard('');
-        }} 
+        }}
         title={t('settings.categories.importTitle', 'Import Standard Categories')}
         className="max-w-3xl"
+        footer={importFooter}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -738,36 +768,38 @@ const CategoriesSettings = (): React.JSX.Element => {
             )}
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button 
-            id="cancel-import-categories-dialog"
-            variant="outline" 
-            onClick={() => {
-              setShowImportDialog(false);
-              setSelectedImportCategories([]);
-              setImportTargetBoard('');
-            }}
-          >
-            {t('actions.cancel', 'Cancel')}
-          </Button>
-          <Button 
-            id="import-selected-categories"
-            onClick={handleImport} 
-            disabled={selectedImportCategories.length === 0 || !importTargetBoard}
-          >
-            {t('settings.categories.importSelected', 'Import Selected')}
-          </Button>
-        </DialogFooter>
       </Dialog>
+        );
+      })()}
 
       {/* Conflict Resolution Dialog */}
-      <Dialog 
-        isOpen={importConflicts.length > 0} 
+      {(() => {
+        const conflictFooter = (
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-categories-conflict-dialog"
+              variant="outline"
+              onClick={() => {
+                setImportConflicts([]);
+                setConflictResolutions({});
+              }}
+            >
+              {t('actions.cancel', 'Cancel')}
+            </Button>
+            <Button id="import-categories-with-resolutions" onClick={handleImport}>
+              {t('settings.categories.importWithResolutions', 'Import With Resolutions')}
+            </Button>
+          </div>
+        );
+        return (
+      <Dialog
+        isOpen={importConflicts.length > 0}
         onClose={() => {
           setImportConflicts([]);
           setConflictResolutions({});
-        }} 
+        }}
         title={t('settings.categories.conflictsTitle', 'Resolve Import Conflicts')}
+        footer={conflictFooter}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -860,22 +892,9 @@ const CategoriesSettings = (): React.JSX.Element => {
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button 
-            id="cancel-categories-conflict-dialog"
-            variant="outline" 
-            onClick={() => {
-              setImportConflicts([]);
-              setConflictResolutions({});
-            }}
-          >
-            {t('actions.cancel', 'Cancel')}
-          </Button>
-          <Button id="import-categories-with-resolutions" onClick={handleImport}>
-            {t('settings.categories.importWithResolutions', 'Import With Resolutions')}
-          </Button>
-        </DialogFooter>
       </Dialog>
+        );
+      })()}
     </div>
   );
 };

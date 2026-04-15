@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { WorkItemList } from './WorkItemList';
 import { Filter, XCircle } from 'lucide-react';
@@ -29,7 +29,7 @@ interface WorkItemPickerProps {
   timePeriod?: ITimePeriodView;
 }
 
-export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: WorkItemPickerProps) {
+export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId, timePeriod }: WorkItemPickerProps) {
   const { t } = useTranslation('msp/time-entry');
   const { formatDate } = useFormatters();
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,6 +62,23 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
     end?: string;
   }>({});
   const [searchType, setSearchType] = useState<WorkItemType | 'all'>('all');
+  const [selectedWorkItemId, setSelectedWorkItemId] = useState<string | null>(initialWorkItemId ?? null);
+
+  const initialWorkItem = useMemo(() => {
+    if (!initialWorkItemId) {
+      return null;
+    }
+
+    const match = availableWorkItems.find((item) => item.work_item_id === initialWorkItemId);
+    if (!match) {
+      return null;
+    }
+
+    return {
+      ...match,
+      status: 'Active',
+    } as WorkItemWithStatus;
+  }, [availableWorkItems, initialWorkItemId]);
 
   const validateDates = useCallback((start: Date, end: Date) => {
     const errors: { start?: string; end?: string } = {};
@@ -241,6 +258,10 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
     debouncedSearch(searchTerm);
   }, [searchTerm, debouncedSearch]);
 
+  useEffect(() => {
+    setSelectedWorkItemId(initialWorkItemId ?? null);
+  }, [initialWorkItemId]);
+
   const handlePageChange = (newPage: number) => {
     if (!isSearching && newPage >= 1 && newPage <= Math.ceil(total / pageSize)) {
       setCurrentPage(newPage);
@@ -249,6 +270,15 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
   };
 
   const totalPages = Math.ceil(total / pageSize);
+
+  const handleSelectWorkItem = useCallback((workItem: IWorkItem | null) => {
+    if (!workItem) {
+      return;
+    }
+
+    setSelectedWorkItemId(workItem.work_item_id);
+    onSelect(workItem);
+  }, [onSelect]);
 
   return (
     <div className="flex flex-col h-auto max-h-[70vh] min-h-[200px] transition-all duration-300 ease-in-out">
@@ -539,13 +569,15 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
 
       <WorkItemList
         items={workItems}
+        pinnedItem={initialWorkItem}
+        selectedWorkItemId={selectedWorkItemId}
         isSearching={isSearching}
         currentPage={currentPage}
         totalPages={totalPages}
         total={total}
         hasMore={hasMore}
         onPageChange={handlePageChange}
-        onSelect={onSelect}
+        onSelect={handleSelectWorkItem}
       />
     </div>
   );

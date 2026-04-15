@@ -7,6 +7,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Info } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Define type for validation errors passed from parent
 type FormErrors = {
@@ -34,18 +35,19 @@ export function ServiceBucketConfigForm({
   disabled,
   onConfigChange,
 }: ServiceBucketConfigFormProps) {
+  const { t } = useTranslation('msp/contract-lines');
 
   // --- Pluralization Helper ---
   const pluralizeUnit = (unit: string): string => {
-    if (!unit) return 'Units'; // Fallback
+    if (!unit) return t('forms.bucketConfig.units.defaultPlural', { defaultValue: 'Units' }); // Fallback
     if (unit.toLowerCase().endsWith('s')) {
       return unit;
     }
     return `${unit}s`;
   };
 
-  const unitNameSingular = unit_of_measure || 'Unit';
-  const unitNamePlural = pluralizeUnit(unit_of_measure || 'Units');
+  const unitNameSingular = unit_of_measure || t('forms.bucketConfig.units.defaultSingular', { defaultValue: 'Unit' });
+  const unitNamePlural = pluralizeUnit(unit_of_measure || t('forms.bucketConfig.units.defaultPlural', { defaultValue: 'Units' }));
   const unitNameSingularLower = unitNameSingular.toLowerCase();
   const unitNamePluralLower = unitNamePlural.toLowerCase();
 
@@ -75,9 +77,15 @@ export function ServiceBucketConfigForm({
       <div>
         <div className="flex items-center space-x-1">
           <Label htmlFor={`total-${unitNamePluralLower}-input-${serviceId}`}>
-            Total {unitNamePlural} in Bucket
+            {t('forms.bucketConfig.labels.totalInBucket', {
+              defaultValue: 'Total {{units}} in Bucket',
+              units: unitNamePlural,
+            })}
           </Label>
-          <Tooltip content={`The total number of ${unitNamePluralLower} included in this bucket per billing period.`}>
+          <Tooltip content={t('forms.bucketConfig.tooltips.totalInBucket', {
+            defaultValue: 'The total number of {{units}} included in this bucket per billing period.',
+            units: unitNamePluralLower,
+          })}>
              <Info className="h-4 w-4 text-muted-foreground ml-1 cursor-help" />
           </Tooltip>
         </div>
@@ -85,7 +93,7 @@ export function ServiceBucketConfigForm({
           id={`total-${unitNamePluralLower}-input-${serviceId}`}
           data-testid={`total-${unitNamePluralLower}-input-${serviceId}`}
           type="number"
-          placeholder={`Enter total hours`}
+          placeholder={t('forms.bucketConfig.placeholders.totalHours', { defaultValue: 'Enter total hours' })}
           min={0}
           step={0.01}
           name="total_minutes"
@@ -111,9 +119,15 @@ export function ServiceBucketConfigForm({
       <div>
         <div className="flex items-center space-x-1">
           <Label htmlFor={`overage-rate-${unitNameSingularLower}-input-${serviceId}`}>
-            Overage Rate per {unitNameSingular}
+            {t('forms.bucketConfig.labels.overageRatePerUnit', {
+              defaultValue: 'Overage Rate per {{unit}}',
+              unit: unitNameSingular,
+            })}
           </Label>
-           <Tooltip content={`The rate charged for each ${unitNameSingularLower} used beyond the included amount. (e.g., $)`}>
+           <Tooltip content={t('forms.bucketConfig.tooltips.overageRatePerUnit', {
+             defaultValue: 'The rate charged for each {{unit}} used beyond the included amount. (e.g., $)',
+             unit: unitNameSingularLower,
+           })}>
              <Info className="h-4 w-4 text-muted-foreground ml-1 cursor-help" />
           </Tooltip>
         </div>
@@ -121,7 +135,7 @@ export function ServiceBucketConfigForm({
           id={`overage-rate-${unitNameSingularLower}-input-${serviceId}`}
           data-testid={`overage-rate-${unitNameSingularLower}-input-${serviceId}`}
           type="number"
-          placeholder="Enter overage rate"
+          placeholder={t('forms.bucketConfig.placeholders.overageRate', { defaultValue: 'Enter overage rate' })}
           min={0}
           step={0.01}
           name="overage_rate"
@@ -151,9 +165,15 @@ export function ServiceBucketConfigForm({
         />
         <div className="flex items-center space-x-1">
           <Label htmlFor={`allow-rollover-${unitNamePluralLower}-checkbox-${serviceId}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-            Allow unused {unitNamePluralLower} to roll over
+            {t('forms.bucketConfig.labels.allowRollover', {
+              defaultValue: 'Allow unused {{units}} to roll over',
+              units: unitNamePluralLower,
+            })}
           </Label>
-           <Tooltip content={`If checked, unused ${unitNamePluralLower} from one period can be used in the next.`}>
+           <Tooltip content={t('forms.bucketConfig.tooltips.allowRollover', {
+             defaultValue: 'If checked, unused {{units}} from one period can be used in the next.',
+             units: unitNamePluralLower,
+           })}>
              <Info className="h-4 w-4 text-muted-foreground ml-1 cursor-help" />
           </Tooltip>
         </div>

@@ -28,7 +28,8 @@
       "copyToAnotherDay": "Auf einen anderen Tag kopieren",
       "viewDetails": "Details anzeigen",
       "manageTimePeriods": "Zeiträume verwalten",
-      "selectWorkItem": "Wählen Sie Arbeitselement aus"
+      "selectWorkItem": "Wählen Sie Arbeitselement aus",
+      "clearFilter": "Filter löschen"
     },
     "states": {
       "inProgress": "In Arbeit",
@@ -165,7 +166,8 @@
       "next": "Weiter",
       "pageInfo": "Seite {{current}} von {{total}} ({{records}} Datensätze insgesamt)"
     },
-    "interactionType": "{{type}} • {{client}}"
+    "interactionType": "{{type}} • {{client}}",
+    "currentSelection": "Aktuelles Arbeitselement"
   },
   "timeSheetHeader": {
     "title": "Stundenzettel",
@@ -202,6 +204,7 @@
       "billable": "Abrechnungsfähig",
       "nonBillable": "Nicht abrechenbar",
       "workItem": "Arbeitselement",
+      "service": "Service",
       "duration": "Dauer",
       "notes": "Notizen",
       "entryChangeSuggestion": "Vorschlag zur Eintragsänderung",
@@ -328,6 +331,11 @@
     "dayGroup": {
       "entryOne": "{{count}} Eintrag",
       "entryOther": "{{count}} Einträge"
+    },
+    "focusFilter": {
+      "summary": "{{count}} Einträge für {{workItem}} am {{date}} werden angezeigt",
+      "description": "Es werden nur Einträge aus der ausgewählten Rasterzelle angezeigt.",
+      "backToGrid": "Zurück zum Raster"
     }
   },
   "selectedWorkItem": {

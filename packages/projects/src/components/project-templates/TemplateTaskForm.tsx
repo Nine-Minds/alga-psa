@@ -1,6 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import {
+  parseTaskRichTextContent,
+  serializeTaskRichTextContent,
+  serializeTaskDescriptions,
+  isTaskRichTextEmpty,
+} from '../../lib/taskRichText';
+import { TextEditor } from '@alga-psa/ui/editor';
+import type { BlockNoteEditor, PartialBlock } from '@blocknote/core';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -35,6 +44,7 @@ import { IUserWithRoles } from '@alga-psa/types';
 import { ITaskType } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
 import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Local checklist item - unified type for both new and existing items.
@@ -111,10 +121,19 @@ export function TemplateTaskForm({
   dependencies = [],
   tenant,
 }: TemplateTaskFormProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [taskName, setTaskName] = useState('');
-  const [description, setDescription] = useState('');
+  const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
+    parseTaskRichTextContent(null)
+  );
+  const [descriptionEditorKey, setDescriptionEditorKey] = useState(0);
+  // Live BlockNote editor instance — used so dirty checks read the normalized
+  // document and don't false-positive when BlockNote adds default props/IDs.
+  const blockNoteEditorRef = useRef<BlockNoteEditor<any, any, any> | null>(null);
+  // Serialized baseline captured after editor normalization completes.
+  const initialDescriptionSerializedRef = useRef<string | null>(null);
   const [estimatedHours, setEstimatedHours] = useState<string>('');
   const [durationDays, setDurationDays] = useState<string>('');
   const [taskTypeKey, setTaskTypeKey] = useState('');
@@ -144,7 +163,7 @@ export function TemplateTaskForm({
   // Track initial values for dirty state checking
   const [initialValues, setInitialValues] = useState<{
     taskName: string;
-    description: string;
+    descriptionSerialized: string;
     estimatedHours: string;
     durationDays: string;
     taskTypeKey: string;
@@ -214,7 +233,10 @@ export function TemplateTaskForm({
 
       if (task) {
         const taskNameVal = task.task_name || '';
-        const descriptionVal = task.description || '';
+        const descriptionBlocks = parseTaskRichTextContent(task.description_rich_text ?? task.description);
+        const descriptionSerializedVal = isTaskRichTextEmpty(descriptionBlocks)
+          ? ''
+          : serializeTaskRichTextContent(descriptionBlocks);
         const estimatedHoursVal = task.estimated_hours ? (Number(task.estimated_hours) / 60).toString() : '';
         const durationDaysVal = task.duration_days?.toString() || '';
         const taskTypeKeyVal = task.task_type_key || '';
@@ -239,14 +261,15 @@ export function TemplateTaskForm({
           return {
             id: dep.template_dependency_id,
             predecessorTaskId: dep.predecessor_task_id,
-            predecessorTaskName: predTask?.task_name || 'Unknown task',
+            predecessorTaskName: predTask?.task_name || t('templates.editor.unknownTask', 'Unknown task'),
             dependencyType: dep.dependency_type,
             isNew: false,
           };
         });
 
         setTaskName(taskNameVal);
-        setDescription(descriptionVal);
+        setDescriptionContent(descriptionBlocks);
+        setDescriptionEditorKey(prev => prev + 1);
         setEstimatedHours(estimatedHoursVal);
         setDurationDays(durationDaysVal);
         setTaskTypeKey(taskTypeKeyVal);
@@ -262,7 +285,7 @@ export function TemplateTaskForm({
 
         formValues = {
           taskName: taskNameVal,
-          description: descriptionVal,
+          descriptionSerialized: descriptionSerializedVal,
           estimatedHours: estimatedHoursVal,
           durationDays: durationDaysVal,
           taskTypeKey: taskTypeKeyVal,
@@ -280,7 +303,8 @@ export function TemplateTaskForm({
         const statusMappingIdVal = initialStatusMappingId || statusMappings[0]?.template_status_mapping_id || '';
 
         setTaskName('');
-        setDescription('');
+        setDescriptionContent(parseTaskRichTextContent(null));
+        setDescriptionEditorKey(prev => prev + 1);
         setEstimatedHours('');
         setDurationDays('');
         setTaskTypeKey('');
@@ -296,7 +320,7 @@ export function TemplateTaskForm({
 
         formValues = {
           taskName: '',
-          description: '',
+          descriptionSerialized: '',
           estimatedHours: '',
           durationDays: '',
           taskTypeKey: '',
@@ -320,16 +344,42 @@ export function TemplateTaskForm({
     }
   }, [open, task, taskAssignments, statusMappings, initialStatusMappingId, checklistItems, dependencies, allTasks]);
 
+  // Capture the BlockNote-normalized description as the dirty-check baseline
+  // after the editor initializes. Without this, opening a task and changing
+  // nothing can flag "unsaved changes" because BlockNote adds block IDs /
+  // default props on load and parseTaskRichTextContent's output doesn't match.
+  useEffect(() => {
+    if (!open) return;
+    initialDescriptionSerializedRef.current = null;
+    let frameId: number | null = null;
+    const capture = () => {
+      const editor = blockNoteEditorRef.current;
+      if (editor) {
+        const blocks = editor.document as PartialBlock[];
+        initialDescriptionSerializedRef.current = isTaskRichTextEmpty(blocks)
+          ? ''
+          : serializeTaskRichTextContent(blocks);
+        frameId = null;
+        return;
+      }
+      frameId = requestAnimationFrame(capture);
+    };
+    frameId = requestAnimationFrame(capture);
+    return () => {
+      if (frameId !== null) cancelAnimationFrame(frameId);
+    };
+  }, [open, task?.template_task_id, descriptionEditorKey]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!taskName.trim()) {
-      setError('Task name is required');
+      setError(t('templates.taskForm.taskNameRequired', 'Task name is required'));
       return;
     }
 
     if (additionalAgents.length > 0 && !assignedTo) {
-      toast.error('Primary agent is required when additional agents are assigned');
+      toast.error(t('templates.taskForm.primaryAgentRequired', 'Primary agent is required when additional agents are assigned'));
       return;
     }
 
@@ -348,10 +398,18 @@ export function TemplateTaskForm({
           dependencyType: d.dependencyType,
         }));
 
+      // Serialize the rich-text description. Prefer the live editor document
+      // (which has BlockNote's normalized form) so saves preserve what the
+      // user actually sees.
+      const liveBlocks = (blockNoteEditorRef.current?.document as PartialBlock[] | undefined) ?? descriptionContent;
+      const { description: descriptionMd, description_rich_text: descriptionRichText } =
+        serializeTaskDescriptions(liveBlocks);
+
       await onSave(
         {
           task_name: taskName.trim(),
-          description: description.trim() || undefined,
+          description: descriptionMd ?? undefined,
+          description_rich_text: descriptionRichText ?? undefined,
           // Convert from hours (display) to minutes (storage)
           estimated_hours: estimatedHours ? Math.round(parseFloat(estimatedHours) * 60) : undefined,
           duration_days: durationDays ? parseInt(durationDays) : undefined,
@@ -370,7 +428,7 @@ export function TemplateTaskForm({
         }
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save task');
+      setError(err instanceof Error ? err.message : t('templates.taskForm.saveFailed', 'Failed to save task'));
     } finally {
       setIsSubmitting(false);
     }
@@ -437,11 +495,11 @@ export function TemplateTaskForm({
   const getDependencyTypeInfo = (type: DependencyType) => {
     switch (type) {
       case 'blocks':
-        return { icon: <Ban className="h-4 w-4 text-destructive" />, label: 'Blocks' };
+        return { icon: <Ban className="h-4 w-4 text-destructive" />, label: t('taskDependencies.blocks', 'Blocks') };
       case 'blocked_by':
-        return { icon: <Ban className="h-4 w-4 text-orange-500" />, label: 'Blocked by' };
+        return { icon: <Ban className="h-4 w-4 text-orange-500" />, label: t('taskDependencies.blockedBy', 'Blocked by') };
       case 'related_to':
-        return { icon: <GitBranch className="h-4 w-4 text-blue-500" />, label: 'Related to' };
+        return { icon: <GitBranch className="h-4 w-4 text-blue-500" />, label: t('taskDependencies.relatedTo', 'Related to') };
       default:
         return { icon: <Link2 className="h-4 w-4 text-gray-500" />, label: type };
     }
@@ -459,7 +517,16 @@ export function TemplateTaskForm({
 
     // Compare simple values
     if (taskName !== initialValues.taskName) return true;
-    if (description !== initialValues.description) return true;
+    // Read current description from the live editor when available so both
+    // sides of the comparison use BlockNote's normalized form (same pattern
+    // as TaskForm). Fall back to the React state when the editor isn't
+    // attached yet (very early dirty-checks before first paint).
+    const liveBlocks = (blockNoteEditorRef.current?.document as PartialBlock[] | undefined) ?? descriptionContent;
+    const currentDescriptionSerialized = isTaskRichTextEmpty(liveBlocks)
+      ? ''
+      : serializeTaskRichTextContent(liveBlocks);
+    const baselineDescriptionSerialized = initialDescriptionSerializedRef.current ?? initialValues.descriptionSerialized;
+    if (currentDescriptionSerialized !== baselineDescriptionSerialized) return true;
     if (estimatedHours !== initialValues.estimatedHours) return true;
     if (durationDays !== initialValues.durationDays) return true;
     if (taskTypeKey !== initialValues.taskTypeKey) return true;
@@ -511,14 +578,43 @@ export function TemplateTaskForm({
     setShowCancelConfirm(false);
   };
 
+  const footer = (
+    <div className="flex justify-end gap-2">
+      <Button
+        id="cancel-task-form"
+        type="button"
+        variant="outline"
+        onClick={handleClose}
+        disabled={isSubmitting}
+      >
+        {t('common:actions.cancel', 'Cancel')}
+      </Button>
+      <Button
+        id="save-task-form"
+        type="button"
+        disabled={isSubmitting || !taskName.trim()}
+        onClick={() => (document.getElementById('template-task-form') as HTMLFormElement | null)?.requestSubmit()}
+      >
+        {isSubmitting
+          ? t('templates.taskForm.saving', 'Saving...')
+          : task
+            ? t('templates.taskForm.updateAction', 'Update Task')
+            : t('templates.taskForm.addAction', 'Add Task')}
+      </Button>
+    </div>
+  );
+
   return (
     <>
     <Dialog
       isOpen={open}
       onClose={handleClose}
-      title={task ? 'Edit Task' : 'Add Task'}
+      title={task
+        ? t('templates.taskForm.editTitle', 'Edit Task')
+        : t('templates.taskForm.addTitle', 'Add Task')}
       className="max-w-2xl"
       id="template-task-form-dialog"
+      footer={footer}
     >
       <DialogContent>
         <form onSubmit={handleSubmit} id="template-task-form">
@@ -526,7 +622,7 @@ export function TemplateTaskForm({
             {/* Task Name */}
             <div>
               <Label htmlFor="task-name" className="block text-sm font-medium text-gray-700 mb-1">
-                Task Name *
+                {t('templates.wizard.tasks.taskName', 'Task Name *')}
               </Label>
               <Input
                 id="task-name"
@@ -535,7 +631,7 @@ export function TemplateTaskForm({
                   setTaskName(e.target.value);
                   setError(null);
                 }}
-                placeholder="Enter task name"
+                placeholder={t('templates.taskForm.taskNamePlaceholder', 'Enter task name')}
                 autoFocus
                 disabled={isSubmitting}
                 className={error ? 'border-destructive' : ''}
@@ -546,29 +642,30 @@ export function TemplateTaskForm({
             {/* Description */}
             <div>
               <Label htmlFor="task-description" className="block text-sm font-medium text-gray-700 mb-1">
-                Description
+                {t('fields.description', 'Description')}
               </Label>
-              <TextArea
-                id="task-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Task description (optional)"
-                rows={3}
-                disabled={isSubmitting}
+              <TextEditor
+                key={descriptionEditorKey}
+                id={`template-task-description-${task?.template_task_id || 'new'}`}
+                initialContent={descriptionContent}
+                onContentChange={setDescriptionContent}
+                editorRef={blockNoteEditorRef}
+                searchMentions={searchUsersForMentions}
+                placeholder={t('templates.taskForm.descriptionPlaceholder', 'Task description (optional)')}
               />
             </div>
 
             {/* Service (for time entry prefill) - right under description */}
             <div>
               <Label htmlFor="task-service" className="block text-sm font-medium text-gray-700 mb-1">
-                Service (for time entries)
+                {t('templates.taskForm.serviceLabel', 'Service (for time entries)')}
               </Label>
               <CustomSelect
                 id="template-task-service-select"
                 value={serviceId}
                 onValueChange={setServiceId}
                 options={[
-                  { value: '', label: 'No service' },
+                  { value: '', label: t('templates.taskForm.noService', 'No service') },
                   ...availableServices.map((s) => ({
                     value: s.service_id,
                     label: s.service_name,
@@ -577,23 +674,23 @@ export function TemplateTaskForm({
                 disabled={isSubmitting}
               />
               <p className="text-xs text-gray-500 mt-1">
-                When set, this service will be automatically selected when creating time entries from tasks created using this template.
+                {t('templates.taskForm.serviceHint', 'When set, this service will be automatically selected when creating time entries from tasks created using this template.')}
               </p>
             </div>
 
             {/* Status Column */}
             <div>
               <Label htmlFor="task-status" className="block text-sm font-medium text-gray-700 mb-1">
-                Status Column
+                {t('templates.taskForm.statusColumnLabel', 'Status Column')}
               </Label>
               <CustomSelect
                 value={statusMappingId}
                 onValueChange={setStatusMappingId}
                 options={[
-                  { value: '', label: 'Select status...' },
+                  { value: '', label: t('templates.wizard.tasks.statusPlaceholder', 'Select status column') },
                   ...statusMappings.map((s) => ({
                     value: s.template_status_mapping_id,
-                    label: s.status_name || s.custom_status_name || 'Status',
+                    label: s.status_name || s.custom_status_name || t('templates.editor.statusFallback', 'Status'),
                   })),
                 ]}
                 disabled={isSubmitting}
@@ -605,7 +702,7 @@ export function TemplateTaskForm({
               {/* Estimated Hours */}
               <div>
                 <Label htmlFor="estimated-hours" className="block text-sm font-medium text-gray-700 mb-1">
-                  Estimated Hours
+                  {t('templates.taskForm.estimatedHoursLabel', 'Estimated Hours')}
                 </Label>
                 <Input
                   id="estimated-hours"
@@ -622,7 +719,7 @@ export function TemplateTaskForm({
               {/* Duration Days */}
               <div>
                 <Label htmlFor="duration-days" className="block text-sm font-medium text-gray-700 mb-1">
-                  Duration (days)
+                  {t('templates.taskForm.durationLabel', 'Duration (days)')}
                 </Label>
                 <Input
                   id="duration-days"
@@ -640,7 +737,7 @@ export function TemplateTaskForm({
               {/* Task Type */}
               <div>
                 <Label htmlFor="task-type" className="block text-sm font-medium text-gray-700 mb-1">
-                  Task Type
+                  {t('templates.taskForm.taskTypeLabel', 'Task Type')}
                 </Label>
                 <TaskTypeSelector
                   value={taskTypeKey}
@@ -653,13 +750,13 @@ export function TemplateTaskForm({
               {/* Priority */}
               <div>
                 <Label htmlFor="task-priority" className="block text-sm font-medium text-gray-700 mb-1">
-                  Priority
+                  {t('templates.taskForm.priorityLabel', 'Priority')}
                 </Label>
                 <CustomSelect
                   value={priorityId}
                   onValueChange={setPriorityId}
                   options={[
-                    { value: '', label: 'Select priority...' },
+                    { value: '', label: t('taskForm.selectPriorityPlaceholder', 'Select priority') },
                     ...priorities.map((p) => ({
                       value: p.priority_id,
                       label: p.priority_name,
@@ -674,7 +771,7 @@ export function TemplateTaskForm({
             <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="assigned-to" className="block text-sm font-medium text-gray-700 mb-1">
-                Primary Agent
+                {t('templates.taskForm.primaryAgentLabel', 'Primary Agent')}
               </Label>
               {teamsV2Enabled ? (
                 <UserAndTeamPicker
@@ -709,7 +806,7 @@ export function TemplateTaskForm({
                   teams={teams}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                   getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-                  placeholder="Select primary agent (optional)"
+                  placeholder={t('templates.taskForm.primaryAgentPlaceholder', 'Select primary agent (optional)')}
                   disabled={isSubmitting}
                   buttonWidth="full"
                 />
@@ -725,7 +822,7 @@ export function TemplateTaskForm({
                   }}
                   users={users}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                  placeholder="Select primary agent (optional)"
+                  placeholder={t('templates.taskForm.primaryAgentPlaceholder', 'Select primary agent (optional)')}
                   disabled={isSubmitting}
                   buttonWidth="full"
                 />
@@ -746,14 +843,14 @@ export function TemplateTaskForm({
                 ) : null;
               })()}
               <p className="text-xs text-gray-500 mt-1">
-                This user will be assigned when the template is applied
+                {t('templates.taskForm.assignedWhenApplied', 'This user will be assigned when the template is applied')}
               </p>
             </div>
 
             {/* Additional Agents */}
             <div>
               <Label className="block text-sm font-medium text-gray-700 mb-1">
-                Additional Agents
+                {t('templates.taskForm.additionalAgentsLabel', 'Additional Agents')}
               </Label>
               {teamsV2Enabled ? (
                 <MultiUserAndTeamPicker
@@ -796,7 +893,7 @@ export function TemplateTaskForm({
                 />
               )}
               <p className="text-xs text-gray-500 mt-1">
-                Additional team members to assign to this task
+                {t('templates.taskForm.additionalAgentsHelp', 'Additional team members to assign to this task')}
               </p>
             </div>
             </div>
@@ -805,13 +902,15 @@ export function TemplateTaskForm({
             {/* Note: Items with "temp_" prefix ids are client-generated temporary ids for new items */}
             <div className="border-t pt-4">
               <div className="flex items-center gap-2 mb-2">
-                <h3 className="font-semibold">Checklist</h3>
+                <h3 className="font-semibold">{t('templates.taskForm.checklist', 'Checklist')}</h3>
                 <button
                   id="toggle-checklist-edit"
                   type="button"
                   onClick={() => setIsEditingChecklist(!isEditingChecklist)}
                   className="text-gray-500 hover:text-gray-700"
-                  title={isEditingChecklist ? "Done editing" : "Edit checklist"}
+                  title={isEditingChecklist
+                    ? t('templates.taskForm.doneEditing', 'Done editing')
+                    : t('templates.taskForm.editChecklist', 'Edit checklist')}
                 >
                   <ListChecks className="h-5 w-5" />
                 </button>
@@ -841,7 +940,7 @@ export function TemplateTaskForm({
                                   removeChecklistItem(item.id);
                                 }
                               }}
-                              placeholder="Checklist item"
+                              placeholder={t('templates.taskForm.checklistItemPlaceholder', 'Checklist item')}
                               className={`w-full ${item.completed ? 'line-through text-gray-500' : ''}`}
                               rows={1}
                               autoFocus={item.isNew && !item.item_name}
@@ -854,7 +953,7 @@ export function TemplateTaskForm({
                             className="text-destructive flex-none"
                             onMouseDown={(e) => e.preventDefault()}
                           >
-                            Remove
+                            {t('common:actions.remove', 'Remove')}
                           </button>
                         </>
                       ) : (
@@ -869,7 +968,7 @@ export function TemplateTaskForm({
                             className={`flex-1 whitespace-pre-wrap cursor-pointer ${item.completed ? 'line-through text-gray-500' : ''}`}
                             onClick={() => setIsEditingChecklist(true)}
                           >
-                            {item.item_name || <span className="text-gray-400 italic">Empty item</span>}
+                            {item.item_name || <span className="text-gray-400 italic">{t('templates.taskForm.emptyChecklistItem', 'Empty item')}</span>}
                           </span>
                         </>
                       )}
@@ -884,7 +983,7 @@ export function TemplateTaskForm({
                   variant="soft"
                   onClick={addChecklistItem}
                 >
-                  Add an item
+                  {t('templates.taskForm.addChecklistItem', 'Add an item')}
                 </Button>
               )}
             </div>
@@ -894,7 +993,7 @@ export function TemplateTaskForm({
               <div className="border-t pt-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Link2 className="h-5 w-5 text-gray-500" />
-                  <h3 className="font-semibold">Dependencies</h3>
+                  <h3 className="font-semibold">{t('templates.taskForm.dependenciesLabel', 'Dependencies')}</h3>
                 </div>
 
                 {/* Existing dependencies list */}
@@ -921,7 +1020,7 @@ export function TemplateTaskForm({
                             type="button"
                             onClick={() => removeDependency(dep)}
                             className="text-destructive hover:text-destructive p-1"
-                            title="Remove dependency"
+                            title={t('templates.taskForm.removeDependency', 'Remove dependency')}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -938,9 +1037,9 @@ export function TemplateTaskForm({
                       value={newDependencyType}
                       onValueChange={(v) => setNewDependencyType(v as DependencyType)}
                       options={[
-                        { value: 'blocked_by', label: 'Blocked by' },
-                        { value: 'blocks', label: 'Blocks' },
-                        { value: 'related_to', label: 'Related to' },
+                        { value: 'blocked_by', label: t('taskDependencies.blockedBy', 'Blocked by') },
+                        { value: 'blocks', label: t('taskDependencies.blocks', 'Blocks') },
+                        { value: 'related_to', label: t('taskDependencies.relatedTo', 'Related to') },
                       ]}
                       className="w-32"
                     />
@@ -948,14 +1047,14 @@ export function TemplateTaskForm({
                       value={newDependencyTask}
                       onValueChange={setNewDependencyTask}
                       options={[
-                        { value: '', label: 'Select task...' },
+                        { value: '', label: t('templates.taskForm.selectTaskPlaceholder', 'Select task...') },
                         ...availableTasksForDependency.map(t => ({
                           value: t.template_task_id,
                           label: t.task_name,
                         })),
                       ]}
                       className="flex-1"
-                      placeholder="Select task..."
+                      placeholder={t('templates.taskForm.selectTaskPlaceholder', 'Select task...')}
                     />
                     <Button
                       id="add-dependency"
@@ -972,31 +1071,17 @@ export function TemplateTaskForm({
 
                 {availableTasksForDependency.length === 0 && localDependencies.length === 0 && (
                   <p className="text-sm text-gray-500 italic">
-                    No other tasks available for dependencies
+                    {t('taskDependencies.noOtherTasks', 'No other tasks available for dependencies')}
                   </p>
                 )}
 
                 <p className="text-xs text-gray-500 mt-2">
-                  Define task dependencies to control execution order when project is created
+                  {t('templates.taskForm.dependenciesHelp', 'Define task dependencies to control execution order when project is created')}
                 </p>
               </div>
             )}
           </div>
 
-          <DialogFooter className="mt-6">
-            <Button
-              id="cancel-task-form"
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button id="save-task-form" type="submit" disabled={isSubmitting || !taskName.trim()}>
-              {isSubmitting ? 'Saving...' : task ? 'Update Task' : 'Add Task'}
-            </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
@@ -1005,10 +1090,10 @@ export function TemplateTaskForm({
       isOpen={showCancelConfirm}
       onClose={handleCancelDismiss}
       onConfirm={handleCancelConfirm}
-      title="Cancel Edit"
-      message="Are you sure you want to cancel? Any unsaved changes will be lost."
-      confirmLabel="Discard changes"
-      cancelLabel="Continue editing"
+      title={t('templates.taskForm.cancelEditTitle', 'Cancel Edit')}
+      message={t('templates.taskForm.cancelEditMessage', 'Are you sure you want to cancel? Any unsaved changes will be lost.')}
+      confirmLabel={t('templates.taskForm.discardChanges', 'Discard changes')}
+      cancelLabel={t('templates.taskForm.continueEditing', 'Continue editing')}
     />
     </>
   );

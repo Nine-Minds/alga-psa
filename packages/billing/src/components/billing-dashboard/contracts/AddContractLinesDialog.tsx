@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -335,12 +335,36 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title="Add Contract Lines from Presets" className="max-w-4xl">
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Add Contract Lines from Presets"
+      className="max-w-4xl"
+      footer={(
+        <div className="flex justify-end space-x-2">
+          <Button
+            id="cancel-add-contract-lines"
+            variant="outline"
+            onClick={onClose}
+            disabled={isAdding}
+          >
+            Cancel
+          </Button>
+          <Button
+            id="confirm-add-contract-lines"
+            onClick={handleAdd}
+            disabled={selectedPresetIds.size === 0 || isAdding}
+          >
+            {isAdding ? 'Adding...' : `Add ${selectedPresetIds.size > 0 ? `(${selectedPresetIds.size})` : ''} Preset${selectedPresetIds.size !== 1 ? 's' : ''}`}
+          </Button>
+        </div>
+      )}
+    >
       <DialogHeader>
         <DialogTitle>Select Contract Line Presets to Add</DialogTitle>
       </DialogHeader>
 
-      <DialogContent className="max-h-[70vh] flex flex-col">
+      <DialogContent className="flex flex-col">
         <div className="space-y-4 flex flex-col h-full">
           {/* Search and Filter Row - outside overflow container */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -896,24 +920,6 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
           )}
         </div>
       </DialogContent>
-
-      <DialogFooter>
-        <Button
-          id="cancel-add-contract-lines"
-          variant="outline"
-          onClick={onClose}
-          disabled={isAdding}
-        >
-          Cancel
-        </Button>
-        <Button
-          id="confirm-add-contract-lines"
-          onClick={handleAdd}
-          disabled={selectedPresetIds.size === 0 || isAdding}
-        >
-          {isAdding ? 'Adding...' : `Add ${selectedPresetIds.size > 0 ? `(${selectedPresetIds.size})` : ''} Preset${selectedPresetIds.size !== 1 ? 's' : ''}`}
-        </Button>
-      </DialogFooter>
     </Dialog>
   );
 };

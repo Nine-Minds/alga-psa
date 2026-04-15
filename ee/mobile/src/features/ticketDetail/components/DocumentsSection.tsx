@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, Modal, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Modal, Pressable, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { File as ExpoFile, Paths } from "expo-file-system";
@@ -8,7 +8,7 @@ import * as Sharing from "expo-sharing";
 import { useTranslation } from "react-i18next";
 import { logger } from "../../../logging/logger";
 import type { ApiClient } from "../../../api";
-import { getTicketDocuments, uploadTicketDocument, type TicketDocument, type TicketDocumentUpload } from "../../../api/documents";
+import { deleteTicketDocument, getTicketDocuments, uploadTicketDocument, type TicketDocument, type TicketDocumentUpload } from "../../../api/documents";
 import { Badge } from "../../../ui/components/Badge";
 import { Card } from "../../../ui/components/Card";
 import { PrimaryButton } from "../../../ui/components/PrimaryButton";
@@ -205,6 +205,46 @@ export function DocumentsSection({
     }
   }, [downloadBaseUrl, downloadDocumentFile, t]);
 
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const handleDeleteDocument = useCallback((document: TicketDocument) => {
+    Alert.alert(
+      t("documents.deleteConfirmTitle"),
+      t("documents.deleteConfirmMessage", { name: document.document_name }),
+      [
+        { text: t("common:cancel"), style: "cancel" },
+        {
+          text: t("documents.delete"),
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              if (!client || !apiKey) return;
+              setDeleting(document.document_id);
+              setError(null);
+              try {
+                const result = await deleteTicketDocument(client, {
+                  apiKey,
+                  ticketId,
+                  documentId: document.document_id,
+                });
+                if (!result.ok) {
+                  setError(result.error.message || t("documents.errors.delete"));
+                  return;
+                }
+                await loadDocuments();
+              } catch (e) {
+                logger.error("[DocumentsSection] delete failed", { error: e });
+                setError(t("documents.errors.delete"));
+              } finally {
+                setDeleting(null);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }, [apiKey, client, loadDocuments, t, ticketId]);
+
   return (
     <Card accessibilityLabel={t("documents.title")}>
       <SectionHeader
@@ -315,6 +355,20 @@ export function DocumentsSection({
                   {[document.type_name ?? t("documents.unknownType"), formatBytes(document.file_size), formatDateTime(document.updated_at)].join(" • ")}
                 </Text>
               </View>
+              <Pressable
+                onPress={() => handleDeleteDocument(document)}
+                disabled={deleting === document.document_id}
+                accessibilityRole="button"
+                accessibilityLabel={t("documents.delete")}
+                hitSlop={8}
+                style={{ padding: spacing.xs }}
+              >
+                {deleting === document.document_id ? (
+                  <ActivityIndicator size={16} color={colors.danger} />
+                ) : (
+                  <Feather name="trash-2" size={16} color={colors.danger} />
+                )}
+              </Pressable>
             </Pressable>
           ))}
         </View>

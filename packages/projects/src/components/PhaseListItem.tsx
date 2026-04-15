@@ -267,7 +267,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
           <div className="flex-1 min-w-0">
             {/* Phase Name Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phase Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('phases.phaseName')}</label>
               <TextArea
                 ref={nameInputRef}
                 value={editingName}
@@ -278,34 +278,34 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             </div>
             {/* Description Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phase Description</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('phases.phaseDescription')}</label>
               <TextArea
                 value={editingDescription ?? ''}
                 onChange={(e) => onDescriptionChange(e.target.value || null)}
                 className="w-full px-3 py-1 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-                placeholder="Description"
+                placeholder={t('phases.descriptionPlaceholder')}
                 onClick={(e) => e.stopPropagation()}
                 rows={2}
               />
             </div>
             {/* Start Date Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('phases.startDate')}</label>
               <DatePicker
                 value={editingStartDate}
                 onChange={(date: Date | undefined) => onStartDateChange?.(date)}
-                placeholder="Start date"
+                placeholder={t('phases.startDatePlaceholder')}
                 className="w-full"
                 clearable={true}
               />
             </div>
             {/* End Date Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-0.5">End Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-0.5">{t('phases.endDate')}</label>
               <DatePicker
                 value={editingEndDate}
                 onChange={(date: Date | undefined) => onEndDateChange?.(date)}
-                placeholder="End date"
+                placeholder={t('phases.endDatePlaceholder')}
                 className="w-full"
                 clearable={true}
               />
@@ -347,9 +347,9 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                   e.stopPropagation();
                   onCancel();
                 }}
-                title="Cancel editing"
+                title={t('phases.cancelEditing')}
               >
-                Cancel
+                {t('phases.cancel')}
               </Button>
               <Button
                 id={`save-edit-phase-${phase.phase_id}`}
@@ -359,9 +359,9 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                   e.stopPropagation();
                   onSave(phase);
                 }}
-                title="Save changes"
+                title={t('phases.saveChanges')}
               >
-                Save
+                {t('phases.save')}
               </Button>
             </div>
           </div>
@@ -377,7 +377,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             <div className="flex items-start justify-between gap-2">
               <span className="text-lg font-bold text-gray-900 dark:text-gray-100 min-w-0 break-words">{phase.phase_name}</span>
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 shrink-0">
-                {taskCount ?? 0} {(taskCount ?? 0) === 1 ? 'task' : 'tasks'}
+                {t('phases.taskCount', { count: taskCount ?? 0 })}
               </span>
             </div>
             {phase.description && (
@@ -385,14 +385,14 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             )}
             <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 space-y-1">
               <div>
-                Start: {phase.start_date
+                {t('phases.startLabel')}: {phase.start_date
                   ? new Date(phase.start_date).toLocaleDateString()
-                  : 'Not set'}
+                  : t('phases.notSet')}
               </div>
               <div>
-                Due: {phase.end_date
+                {t('phases.dueLabel')}: {phase.end_date
                   ? new Date(phase.end_date).toLocaleDateString()
-                  : 'Not set'}
+                  : t('phases.notSet')}
               </div>
             </div>
           </div>
@@ -404,7 +404,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 onEdit(phase);
               }}
               className="p-1 rounded hover:bg-gray-200 dark:hover:bg-[rgb(var(--color-border-200))]"
-              title="Edit phase"
+              title={t('phases.editPhase')}
             >
               <Pencil className="w-3 h-3" />
             </button>
@@ -414,7 +414,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 onDelete(phase);
               }}
               className="p-1 rounded hover:bg-destructive/15 text-destructive"
-              title="Delete phase"
+              title={t('phases.deletePhase')}
             >
               <Trash2 className="w-3 h-3" />
             </button>

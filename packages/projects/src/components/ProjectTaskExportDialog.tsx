@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -9,6 +9,7 @@ import { Download, Check, FileSpreadsheet } from 'lucide-react';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { exportProjectTasksToCSV } from '../actions/projectTaskExportActions';
 import type { IProjectPhase } from '@alga-psa/types';
+import { useTranslation } from 'react-i18next';
 
 interface ProjectTaskExportDialogProps {
   isOpen: boolean;
@@ -46,6 +47,9 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
   projectId,
   phases,
 }) => {
+  const { t } = useTranslation(['features/projects', 'common']);
+  const exportT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
+    t(`export.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
   const [step, setStep] = useState<ExportStep>('configure');
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set(ALL_FIELD_KEYS));
   const [selectedPhaseIds, setSelectedPhaseIds] = useState<Set<string>>(
@@ -133,18 +137,50 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
       setExportedCount(count);
       setStep('complete');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to export tasks');
+      setError(err instanceof Error ? err.message : exportT('failed', 'Failed to export tasks'));
       setStep('configure');
-      handleError(err, 'Failed to export tasks');
+      handleError(err, exportT('failed', 'Failed to export tasks'));
     }
-  }, [projectId, selectedFields, selectedPhaseIds]);
+  }, [projectId, selectedFields, selectedPhaseIds, exportT]);
+
+  const footer =
+    step === 'configure' ? (
+      <div className="flex justify-end gap-2">
+        <Button
+          id="export-tasks-cancel-btn"
+          variant="outline"
+          onClick={handleClose}
+        >
+          {t('common:actions.cancel', 'Cancel')}
+        </Button>
+        <Button
+          id="export-tasks-btn"
+          onClick={() => void handleExport()}
+          disabled={noPhasesSelected || noFieldsSelected}
+          className="flex items-center gap-2"
+        >
+          <Download className="h-4 w-4" />
+          {exportT('exportTasks', 'Export Tasks')}
+        </Button>
+      </div>
+    ) : step === 'complete' ? (
+      <div className="flex justify-end">
+        <Button
+          id="export-tasks-done-btn"
+          onClick={handleClose}
+        >
+          {exportT('done', 'Done')}
+        </Button>
+      </div>
+    ) : undefined;
 
   return (
     <Dialog
       isOpen={isOpen}
       onClose={handleClose}
-      title="Export Project Tasks"
+      title={exportT('title', 'Export Project Tasks')}
       className="max-w-lg"
+      footer={footer}
     >
       <DialogContent>
         {error && (
@@ -160,14 +196,16 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-[rgb(var(--color-text-200))]">
-                  Phases to export
+                  {exportT('phasesToExport', 'Phases to export')}
                 </h3>
                 <button
                   type="button"
                   onClick={toggleAllPhases}
                   className="text-xs text-primary-600 hover:text-primary-700 dark:text-[rgb(var(--color-primary-400))] dark:hover:text-[rgb(var(--color-primary-300))]"
                 >
-                  {allPhasesSelected ? 'Deselect all' : 'Select all'}
+                  {allPhasesSelected
+                    ? exportT('deselectAll', 'Deselect all')
+                    : exportT('selectAll', 'Select all')}
                 </button>
               </div>
               <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
@@ -187,7 +225,11 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
                 </div>
               </div>
               <p className="mt-1.5 text-xs text-gray-500 dark:text-[rgb(var(--color-text-500))]">
-                {selectedPhaseIds.size} of {phases.length} phase{phases.length === 1 ? '' : 's'} selected
+                {exportT('phasesSelected', '{{selected}} of {{total}} phase{{plural}} selected', {
+                  selected: selectedPhaseIds.size,
+                  total: phases.length,
+                  plural: phases.length === 1 ? '' : 's',
+                })}
               </p>
             </div>
 
@@ -195,14 +237,16 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-[rgb(var(--color-text-200))]">
-                  Fields to export
+                  {exportT('fieldsToExport', 'Fields to export')}
                 </h3>
                 <button
                   type="button"
                   onClick={toggleAllFields}
                   className="text-xs text-primary-600 hover:text-primary-700 dark:text-[rgb(var(--color-primary-400))] dark:hover:text-[rgb(var(--color-primary-300))]"
                 >
-                  {allFieldsSelected ? 'Deselect all' : 'Select all'}
+                  {allFieldsSelected
+                    ? exportT('deselectAll', 'Deselect all')
+                    : exportT('selectAll', 'Select all')}
                 </button>
               </div>
               <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
@@ -211,7 +255,18 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
                     <Checkbox
                       key={field.key}
                       id={`export-field-${field.key}`}
-                      label={field.label}
+                      label={exportT(`fields.${field.key === 'task_name' ? 'taskName'
+                        : field.key === 'is_closed' ? 'isClosed'
+                        : field.key === 'task_type' ? 'taskType'
+                        : field.key === 'assigned_to' ? 'assignedTo'
+                        : field.key === 'assigned_team' ? 'assignedTeam'
+                        : field.key === 'due_date' ? 'dueDate'
+                        : field.key === 'estimated_hours' ? 'estimatedHours'
+                        : field.key === 'actual_hours' ? 'actualHours'
+                        : field.key === 'checklist_progress' ? 'checklistProgress'
+                        : field.key === 'created_at' ? 'createdAt'
+                        : field.key === 'updated_at' ? 'updatedAt'
+                        : field.key}`, field.label)}
                       checked={selectedFields.has(field.key)}
                       onChange={() => toggleField(field.key)}
                       size="sm"
@@ -222,28 +277,13 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
                 </div>
               </div>
               <p className="mt-1.5 text-xs text-gray-500 dark:text-[rgb(var(--color-text-500))]">
-                {selectedFields.size} of {EXPORT_FIELDS.length} fields selected
+                {exportT('fieldsSelected', '{{selected}} of {{total}} fields selected', {
+                  selected: selectedFields.size,
+                  total: EXPORT_FIELDS.length,
+                })}
               </p>
             </div>
 
-            <DialogFooter>
-              <Button
-                id="export-tasks-cancel-btn"
-                variant="outline"
-                onClick={handleClose}
-              >
-                Cancel
-              </Button>
-              <Button
-                id="export-tasks-btn"
-                onClick={() => void handleExport()}
-                disabled={noPhasesSelected || noFieldsSelected}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Export Tasks
-              </Button>
-            </DialogFooter>
           </div>
         )}
 
@@ -251,7 +291,7 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
         {step === 'exporting' && (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">Exporting tasks...</p>
+            <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">{exportT('exporting', 'Exporting tasks...')}</p>
           </div>
         )}
 
@@ -261,18 +301,13 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
               <Check className="h-6 w-6 text-green-600" />
             </div>
-            <h3 className="text-lg font-medium mb-2">Export Complete</h3>
+            <h3 className="text-lg font-medium mb-2">{exportT('completeTitle', 'Export Complete')}</h3>
             <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">
-              Successfully exported {exportedCount} task{exportedCount === 1 ? '' : 's'} to CSV.
+              {exportT('success', 'Successfully exported {{count}} task{{plural}} to CSV.', {
+                count: exportedCount,
+                plural: exportedCount === 1 ? '' : 's',
+              })}
             </p>
-            <DialogFooter>
-              <Button
-                id="export-tasks-done-btn"
-                onClick={handleClose}
-              >
-                Done
-              </Button>
-            </DialogFooter>
           </div>
         )}
       </DialogContent>

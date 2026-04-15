@@ -1,57 +1,57 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.0.13-rc5",
+  "version": "1.0.20-rc5",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./src/index.ts",
   "exports": {
     ".": {
-      "import": "./src/index.ts",
+      "import": "./dist/index.js",
       "types": "./src/index.ts"
     },
     "./features": {
-      "import": "./src/lib/features.ts",
+      "import": "./dist/lib/features.js",
       "types": "./src/lib/features.ts"
     },
     "./logger": {
-      "import": "./src/lib/logger.ts",
+      "import": "./dist/lib/logger.js",
       "types": "./src/lib/logger.ts"
     },
     "./formatters": {
-      "import": "./src/lib/formatters.ts",
+      "import": "./dist/lib/formatters.js",
       "types": "./src/lib/formatters.ts"
     },
     "./secrets": {
-      "import": "./src/lib/secrets/index.ts",
+      "import": "./dist/lib/secrets/index.js",
       "types": "./src/lib/secrets/index.ts"
     },
     "./events": {
-      "import": "./src/lib/events/index.ts",
+      "import": "./dist/lib/events/index.js",
       "types": "./src/lib/events/index.ts"
     },
     "./encryption": {
-      "import": "./src/lib/encryption.ts",
+      "import": "./dist/lib/encryption.js",
       "types": "./src/lib/encryption.ts"
     },
     "./server": {
-      "import": "./src/server.ts",
+      "import": "./dist/server.js",
       "types": "./src/server.ts"
     },
     "./i18n/config": {
-      "import": "./src/lib/i18n/config.ts",
+      "import": "./dist/lib/i18n/config.js",
       "types": "./src/lib/i18n/config.ts"
     },
     "./config/deletion": {
-      "import": "./src/config/deletion/index.ts",
+      "import": "./dist/config/deletion/index.js",
       "types": "./src/config/deletion/index.ts"
     },
     "./lib/scheduleEntryRegistry": {
-      "import": "./src/lib/scheduleEntryRegistry.ts",
+      "import": "./dist/lib/scheduleEntryRegistry.js",
       "types": "./src/lib/scheduleEntryRegistry.ts"
     },
     "./context/DocumentsCrossFeatureContext": {
-      "import": "./src/context/DocumentsCrossFeatureContext.ts",
+      "import": "./dist/context/DocumentsCrossFeatureContext.js",
       "types": "./src/context/DocumentsCrossFeatureContext.ts"
     }
   },

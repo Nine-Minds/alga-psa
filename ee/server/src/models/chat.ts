@@ -59,6 +59,73 @@ const Chat = {
     }
   },
 
+  searchByUser: async (userId: string, query: string, limit = 20): Promise<IChatHistoryItem[]> => {
+    try {
+      const { knex: db } = await createTenantKnex();
+      // Search at the chat scope so multi-term queries can match across the title
+      // and multiple persisted messages, not just within a single indexed field.
+      const rawResult = await db.raw(
+        `
+          with search_query as (
+            select websearch_to_tsquery('english', ?) as query
+          ),
+          chat_documents as (
+            select
+              chats.*,
+              (
+                select m_latest.content
+                from messages m_latest
+                where m_latest.chat_id = chats.id
+                  and m_latest.tenant = chats.tenant
+                order by m_latest.message_order desc nulls last, m_latest.id desc
+                limit 1
+              ) as preview_text,
+              (
+                setweight(chats.title_index, 'A')
+                ||
+                coalesce(
+                  (
+                    select process_large_lexemes(
+                      string_agg(
+                        coalesce(m_aggregate.content, ''),
+                        ' '
+                        order by m_aggregate.message_order asc nulls last, m_aggregate.id asc
+                      )
+                    )
+                    from messages m_aggregate
+                    where m_aggregate.chat_id = chats.id
+                      and m_aggregate.tenant = chats.tenant
+                  ),
+                  ''::tsvector
+                )
+              ) as conversation_index
+            from chats
+            where chats.user_id = ?
+          )
+          select
+            chat_documents.*,
+            ts_rank_cd(chat_documents.conversation_index, search_query.query) as relevance_rank
+          from chat_documents
+          cross join search_query
+          where chat_documents.conversation_index @@ search_query.query
+          order by
+            relevance_rank desc,
+            coalesce(chat_documents.updated_at, chat_documents.created_at) desc nulls last,
+            chat_documents.id desc
+          limit ?
+        `,
+        [query, userId, limit]
+      );
+
+      return Array.isArray(rawResult)
+        ? (rawResult as IChatHistoryItem[])
+        : ((rawResult as { rows?: IChatHistoryItem[] })?.rows ?? []);
+    } catch (error) {
+      console.error(`Error searching chats for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
   insert: async (Chat: IChat): Promise<Pick<Omit<IChat, 'tenant'>, "id">> => {
     try {
       const {knex: db, tenant} = await createTenantKnex();

@@ -207,12 +207,43 @@ export default function ReduceLicensesModal({
   const newMonthlyTotal = newQuantity * pricePerLicense;
   const monthlySavings = currentMonthlyTotal - newMonthlyTotal;
 
+  const footer = !showConfirmation ? (
+    <div className="flex justify-end space-x-2">
+      <Button id="cancel-reduce-licenses-btn" variant="outline" onClick={handleClose} disabled={loading}>
+        {tCommon('actions.cancel', { defaultValue: 'Cancel' })}
+      </Button>
+      <Button
+        id="confirm-reduce-licenses-btn"
+        onClick={handleShowConfirmation}
+        disabled={!!validationError || loading}
+      >
+        {t('removalModal.actions.reviewRemoval', { defaultValue: 'Review Removal' })}
+      </Button>
+    </div>
+  ) : (
+    <div className="flex justify-end space-x-2">
+      <Button id="back-to-form-btn" variant="outline" onClick={handleBackToForm} disabled={loading}>
+        {tCommon('actions.back', { defaultValue: 'Back' })}
+      </Button>
+      <Button
+        id="final-confirm-reduce-licenses-btn"
+        onClick={handleConfirmReduction}
+        disabled={loading}
+      >
+        {loading
+          ? tCommon('status.processing', { defaultValue: 'Processing...' })
+          : t('removalModal.actions.confirmRemoval', { defaultValue: 'Confirm Removal' })}
+      </Button>
+    </div>
+  );
+
   return (
     <Dialog
       isOpen={isOpen}
       onClose={handleClose}
       title={t('removalModal.title', { defaultValue: 'Remove Licenses' })}
       className="max-w-[500px]"
+      footer={footer}
     >
       <div className="space-y-4">
         {!showConfirmation ? (
@@ -305,18 +336,6 @@ export default function ReduceLicensesModal({
             </Alert>
           )}
 
-            <div className="mt-6 flex justify-end space-x-2">
-              <Button id="cancel-reduce-licenses-btn" variant="outline" onClick={handleClose} disabled={loading}>
-                {tCommon('actions.cancel', { defaultValue: 'Cancel' })}
-              </Button>
-              <Button
-                id="confirm-reduce-licenses-btn"
-                onClick={handleShowConfirmation}
-                disabled={!!validationError || loading}
-              >
-                {t('removalModal.actions.reviewRemoval', { defaultValue: 'Review Removal' })}
-              </Button>
-            </div>
           </>
         ) : (
           <>
@@ -390,20 +409,6 @@ export default function ReduceLicensesModal({
               </AlertDescription>
             </Alert>
 
-            <div className="mt-6 flex justify-end space-x-2">
-              <Button id="back-to-form-btn" variant="outline" onClick={handleBackToForm} disabled={loading}>
-                {tCommon('actions.back', { defaultValue: 'Back' })}
-              </Button>
-              <Button
-                id="final-confirm-reduce-licenses-btn"
-                onClick={handleConfirmReduction}
-                disabled={loading}
-              >
-                {loading
-                  ? tCommon('status.processing', { defaultValue: 'Processing...' })
-                  : t('removalModal.actions.confirmRemoval', { defaultValue: 'Confirm Removal' })}
-              </Button>
-            </div>
           </>
         )}
       </div>

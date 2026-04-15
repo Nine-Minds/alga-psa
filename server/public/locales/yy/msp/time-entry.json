@@ -28,7 +28,8 @@
       "copyToAnotherDay": "55555",
       "viewDetails": "55555",
       "manageTimePeriods": "55555",
-      "selectWorkItem": "55555"
+      "selectWorkItem": "55555",
+      "clearFilter": "55555"
     },
     "states": {
       "inProgress": "55555",
@@ -165,7 +166,8 @@
       "next": "55555",
       "pageInfo": "55555 {{current}} 55555 {{total}} 55555 {{records}} 55555"
     },
-    "interactionType": "55555 {{type}} 55555 {{client}} 55555"
+    "interactionType": "55555 {{type}} 55555 {{client}} 55555",
+    "currentSelection": "55555"
   },
   "timeSheetHeader": {
     "title": "55555",
@@ -202,6 +204,7 @@
       "billable": "55555",
       "nonBillable": "55555",
       "workItem": "55555",
+      "service": "55555",
       "duration": "55555",
       "notes": "55555",
       "entryChangeSuggestion": "55555",
@@ -328,6 +331,11 @@
     "dayGroup": {
       "entryOne": "55555 {{count}} 55555",
       "entryOther": "55555 {{count}} 55555"
+    },
+    "focusFilter": {
+      "summary": "55555 {{count}} 55555 {{workItem}} 55555 {{date}} 55555",
+      "description": "55555",
+      "backToGrid": "55555"
     }
   },
   "selectedWorkItem": {

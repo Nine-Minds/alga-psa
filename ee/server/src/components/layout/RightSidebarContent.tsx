@@ -6,7 +6,7 @@ import { Chat } from '../chat/Chat';
 import * as Collapsible from '@radix-ui/react-collapsible';
 import { History, MoreHorizontal, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@alga-psa/ui/components/DropdownMenu';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -16,6 +16,7 @@ import {
   getChatMessagesAction,
   listCurrentUserChatsAction,
   renameCurrentUserChatAction,
+  searchCurrentUserChatsAction,
   type ChatHistoryItem,
 } from '../../lib/chat-actions/chatActions';
 
@@ -42,6 +43,8 @@ interface RightSidebarProps {
 }
 
 const HISTORY_LIMIT = 20;
+const MIN_HISTORY_SEARCH_CHARS = 2;
+const HISTORY_SEARCH_DEBOUNCE_MS = 250;
 
 const formatHistoryTimestamp = (value?: string | Date | null) => {
   if (!value) {
@@ -130,11 +133,12 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
   onRegisterCancelHandler,
 }) => {
   const [chatKey, setChatKey] = useState(0);
-  const [width, setWidth] = useState(384);
+  const [width, setWidth] = useState(560);
   const [isResizing, setIsResizing] = useState(false);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [activeChatMessages, setActiveChatMessages] = useState<any[]>([]);
   const [historyItems, setHistoryItems] = useState<ChatHistoryItem[]>([]);
+  const [historyQuery, setHistoryQuery] = useState('');
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [loadingHistoryChatId, setLoadingHistoryChatId] = useState<string | null>(null);
@@ -151,10 +155,20 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
   const startWidthRef = useRef(384);
   const activeChatIdRef = useRef<string | null>(null);
   const showHistoryRef = useRef(showHistory);
+  const historyRequestSequenceRef = useRef(0);
+
+  const trimmedHistoryQuery = historyQuery.trim();
+  const isSearchMode = trimmedHistoryQuery.length > 0;
+  const isSearchQueryTooShort =
+    isSearchMode && trimmedHistoryQuery.length < MIN_HISTORY_SEARCH_CHARS;
 
   useEffect(() => {
     showHistoryRef.current = showHistory;
   }, [showHistory]);
+
+  const invalidateHistoryRequests = useCallback(() => {
+    historyRequestSequenceRef.current += 1;
+  }, []);
 
   const resetChatSession = useCallback(() => {
     activeChatIdRef.current = null;
@@ -164,25 +178,56 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
     setChatKey(prev => prev + 1);
   }, []);
 
-  const loadHistory = useCallback(async () => {
+  const loadHistory = useCallback(async (searchQuery: string) => {
     if (!userId) {
+      invalidateHistoryRequests();
       setHistoryItems([]);
       setHistoryError(null);
+      setIsHistoryLoading(false);
       return;
     }
+
+    const requestSequence = historyRequestSequenceRef.current + 1;
+    historyRequestSequenceRef.current = requestSequence;
+    const trimmedQuery = searchQuery.trim();
+    const nextMode = trimmedQuery.length === 0 ? 'recent' : 'search';
 
     setIsHistoryLoading(true);
     setHistoryError(null);
     try {
-      const chats = await listCurrentUserChatsAction(HISTORY_LIMIT);
+      const chats =
+        nextMode === 'recent'
+          ? await listCurrentUserChatsAction(HISTORY_LIMIT)
+          : await searchCurrentUserChatsAction(trimmedQuery, HISTORY_LIMIT);
+
+      if (historyRequestSequenceRef.current !== requestSequence) {
+        return;
+      }
       setHistoryItems(chats);
     } catch (error) {
+      if (historyRequestSequenceRef.current !== requestSequence) {
+        return;
+      }
       console.error('[RightSidebarContent] Failed to load chat history', error);
-      setHistoryError('Unable to load recent chats.');
+      setHistoryError(
+        nextMode === 'recent' ? 'Unable to load recent chats.' : 'Unable to load search results.',
+      );
     } finally {
-      setIsHistoryLoading(false);
+      if (historyRequestSequenceRef.current === requestSequence) {
+        setIsHistoryLoading(false);
+      }
     }
   }, [userId]);
+
+  const refreshActiveHistoryDataset = useCallback(() => {
+    if (trimmedHistoryQuery.length > 0 && trimmedHistoryQuery.length < MIN_HISTORY_SEARCH_CHARS) {
+      setIsHistoryLoading(false);
+      setHistoryError(null);
+      setHistoryItems([]);
+      return;
+    }
+    void loadHistory(trimmedHistoryQuery);
+  }, [invalidateHistoryRequests, loadHistory, trimmedHistoryQuery]);
 
   const loadPersistedChat = useCallback(async (chatId: string) => {
     if (!chatId) {
@@ -235,10 +280,10 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
       setActiveChatId(nextChatId);
 
       if (nextChatId && showHistoryRef.current) {
-        void loadHistory();
+        void loadHistory(trimmedHistoryQuery);
       }
     },
-    [loadHistory]
+    [loadHistory, trimmedHistoryQuery]
   );
 
   void auth_token;
@@ -247,7 +292,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
     const handleMouseMove = (event: MouseEvent) => {
       if (!isResizing) return;
       const delta = startXRef.current - event.clientX;
-      const newWidth = Math.min(Math.max(startWidthRef.current + delta, 280), 640);
+      const newWidth = Math.min(Math.max(startWidthRef.current + delta, 320), 800);
       if (newWidth !== width) {
         setWidth(newWidth);
       }
@@ -284,8 +329,27 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
       return;
     }
 
-    void loadHistory();
-  }, [isOpen, showHistory, loadHistory]);
+    if (trimmedHistoryQuery.length === 0) {
+      void loadHistory('');
+      return;
+    }
+
+    if (trimmedHistoryQuery.length < MIN_HISTORY_SEARCH_CHARS) {
+      invalidateHistoryRequests();
+      setIsHistoryLoading(false);
+      setHistoryError(null);
+      setHistoryItems([]);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void loadHistory(trimmedHistoryQuery);
+    }, HISTORY_SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [invalidateHistoryRequests, isOpen, showHistory, loadHistory, trimmedHistoryQuery]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -333,7 +397,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
       );
       setRenameTargetChat(null);
       setRenameValue('');
-      void loadHistory();
+      refreshActiveHistoryDataset();
     } catch (error) {
       console.error('[RightSidebarContent] Failed to rename chat', error);
     } finally {
@@ -358,7 +422,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
         resetChatSession();
       }
       setDeleteTargetChat(null);
-      void loadHistory();
+      refreshActiveHistoryDataset();
     } catch (error) {
       console.error('[RightSidebarContent] Failed to delete chat', error);
     } finally {
@@ -438,11 +502,20 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
                 <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
                   <div className="flex items-center justify-between border-b border-gray-200 bg-white px-3 py-2">
                     <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Recent Chats
+                      {isSearchMode ? 'Search Results' : 'Recent Chats'}
                     </span>
                     <span className="text-xs text-gray-400">
                       {isHistoryLoading ? 'Loading…' : `${historyItems.length}`}
                     </span>
+                  </div>
+                  <div className="border-b border-gray-200 bg-white px-3 py-2">
+                    <Input
+                      id="chat-history-search"
+                      aria-label="Search chat history"
+                      placeholder="Search saved chats"
+                      value={historyQuery}
+                      onChange={(event) => setHistoryQuery(event.target.value)}
+                    />
                   </div>
                   <div className="max-h-56 overflow-y-auto p-2 space-y-1">
                     {historyError ? (
@@ -450,9 +523,23 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
                         {historyError}
                       </div>
                     ) : null}
-                    {!historyError && !isHistoryLoading && historyItems.length === 0 ? (
+                    {!historyError && !isHistoryLoading && isSearchQueryTooShort ? (
+                      <div className="rounded-lg border border-dashed border-gray-200 bg-white px-3 py-3 text-xs text-gray-500">
+                        Type at least 2 characters to search saved chats.
+                      </div>
+                    ) : null}
+                    {!historyError && !isHistoryLoading && !isSearchMode && historyItems.length === 0 ? (
                       <div className="rounded-lg border border-dashed border-gray-200 bg-white px-3 py-3 text-xs text-gray-500">
                         Saved chats will appear here after you send a message.
+                      </div>
+                    ) : null}
+                    {!historyError &&
+                    !isHistoryLoading &&
+                    isSearchMode &&
+                    !isSearchQueryTooShort &&
+                    historyItems.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-gray-200 bg-white px-3 py-3 text-xs text-gray-500">
+                        No matching chats found.
                       </div>
                     ) : null}
                     {historyItems.map((chat) => {
@@ -595,20 +682,8 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
         title="Rename chat"
         className="max-w-md"
         draggable={false}
-      >
-        <DialogContent>
-          <Input
-            id="rename-chat-input"
-            label="Chat title"
-            value={renameValue}
-            onChange={(event) => setRenameValue(event.target.value)}
-            placeholder="Enter chat title"
-            autoFocus
-            disabled={isRenamingChat}
-          />
-        </DialogContent>
-        <DialogFooter>
-          <div className="mt-4 flex justify-end gap-2">
+        footer={(
+          <div className="flex justify-end space-x-2">
             <Button
               id="rename-chat-cancel"
               variant="outline"
@@ -628,7 +703,19 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
               Save
             </Button>
           </div>
-        </DialogFooter>
+        )}
+      >
+        <DialogContent>
+          <Input
+            id="rename-chat-input"
+            label="Chat title"
+            value={renameValue}
+            onChange={(event) => setRenameValue(event.target.value)}
+            placeholder="Enter chat title"
+            autoFocus
+            disabled={isRenamingChat}
+          />
+        </DialogContent>
       </Dialog>
     </Collapsible.Root>
   );

@@ -28,7 +28,8 @@
       "copyToAnotherDay": "Copia in un altro giorno",
       "viewDetails": "Visualizza i dettagli",
       "manageTimePeriods": "Gestisci periodi di tempo",
-      "selectWorkItem": "Seleziona elemento di lavoro"
+      "selectWorkItem": "Seleziona elemento di lavoro",
+      "clearFilter": "Cancella filtro"
     },
     "states": {
       "inProgress": "In corso",
@@ -165,7 +166,8 @@
       "next": "Successivo",
       "pageInfo": "Pagina {{current}} di {{total}} ({{records}} record totali)"
     },
-    "interactionType": "{{type}} • {{client}}"
+    "interactionType": "{{type}} • {{client}}",
+    "currentSelection": "Elemento di lavoro corrente"
   },
   "timeSheetHeader": {
     "title": "Foglio presenze",
@@ -202,6 +204,7 @@
       "billable": "Fatturabile",
       "nonBillable": "Non fatturabile",
       "workItem": "Elemento di lavoro",
+      "service": "Servizio",
       "duration": "Durata",
       "notes": "Note",
       "entryChangeSuggestion": "Suggerimento per la modifica della voce",
@@ -328,6 +331,11 @@
     "dayGroup": {
       "entryOne": "{{count}} voce",
       "entryOther": "{{count}} voci"
+    },
+    "focusFilter": {
+      "summary": "Visualizzazione di {{count}} voci per {{workItem}} il {{date}}",
+      "description": "Sono visibili solo le voci della cella selezionata.",
+      "backToGrid": "Torna alla griglia"
     }
   },
   "selectedWorkItem": {

@@ -9,6 +9,7 @@ import type { IInvoiceTemplate } from '@alga-psa/types'; // Keep this for templa
 // Import the new server action
 import { renderTemplateOnServer } from '@alga-psa/billing/actions/invoiceTemplates';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TemplateRendererProps {
   template: IInvoiceTemplate | null; // Allow null template
@@ -21,6 +22,7 @@ interface TemplateRendererProps {
 }
 
 export function TemplateRenderer({ template, invoiceData, renderOverride = null }: TemplateRendererProps) {
+  const { t } = useTranslation('msp/billing');
   const [renderedHtml, setRenderedHtml] = useState<string | null>(null);
   const [renderedCss, setRenderedCss] = useState<string | null>(null); // Added state for CSS
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -83,7 +85,7 @@ export function TemplateRenderer({ template, invoiceData, renderOverride = null 
 
       } catch (err) {
         console.error("Error rendering invoice template:", err);
-        setError(err instanceof Error ? err.message : "Failed to render template using Wasm.");
+        setError(err instanceof Error ? err.message : 'Failed to render template using Wasm.');
         setRenderedHtml(null); // Clear on error
         setRenderedCss(null);
       } finally {
@@ -95,11 +97,17 @@ export function TemplateRenderer({ template, invoiceData, renderOverride = null 
   }, [template, invoiceData, renderOverride]); // Rerun effect when template/invoice/override changes
 
   if (isLoading) {
-    return <div>Loading template preview...</div>; // Or a Skeleton loader
+    return <div>{t('templateRenderer.loading', { defaultValue: 'Loading template preview...' })}</div>; // Or a Skeleton loader
   }
 
   if (error) {
-    return <Alert variant="destructive" className="p-4 rounded"><AlertDescription>Error: {error}</AlertDescription></Alert>;
+    return (
+      <Alert variant="destructive" className="p-4 rounded">
+        <AlertDescription>
+          {t('templateRenderer.errorPrefix', { defaultValue: 'Error:' })} {error}
+        </AlertDescription>
+      </Alert>
+    );
   }
 
   if (renderOverride) {
@@ -113,7 +121,11 @@ export function TemplateRenderer({ template, invoiceData, renderOverride = null 
 
   // Initial state or missing data message
   if (!template || !invoiceData) {
-      return <div className="text-muted-foreground p-4 border border-[rgb(var(--color-border-300))] bg-muted rounded">Please select an invoice and a template to preview.</div>;
+      return (
+        <div className="text-muted-foreground p-4 border border-[rgb(var(--color-border-300))] bg-muted rounded">
+          {t('templateRenderer.empty', { defaultValue: 'Please select an invoice and a template to preview.' })}
+        </div>
+      );
   }
 
   // Rendered content

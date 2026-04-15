@@ -415,7 +415,9 @@
       },
       "status": {
         "label": "55555",
-        "placeholder": "55555"
+        "placeholder": "55555",
+        "selectBoardFirst": "55555",
+        "loading": "55555"
       },
       "priority": {
         "label": "55555",

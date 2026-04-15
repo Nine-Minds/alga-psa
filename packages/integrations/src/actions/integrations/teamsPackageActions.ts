@@ -6,7 +6,6 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 import { getTeamsAvailability } from '../../lib/teamsAvailability';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
-import { evaluateTenantFeatureFlag } from './tenantFeatureFlags';
 import type { TeamsAppPackageStatusResponse } from './teamsContracts';
 import type { TeamsInstallStatus } from './teamsShared';
 import {
@@ -407,7 +406,6 @@ export const getTeamsAppPackageStatus = withAuth(async (
   { tenant }
 ): Promise<TeamsAppPackageStatusResponse> => {
   const availability = await getTeamsAvailability({
-    evaluateFlag: evaluateTenantFeatureFlag,
     tenantId: tenant,
     userId: (user as any)?.user_id,
   });

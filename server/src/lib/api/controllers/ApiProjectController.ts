@@ -6,12 +6,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
 import { ProjectService } from '../services/ProjectService';
-import { 
+import {
   createProjectSchema,
   updateProjectSchema,
   projectListQuerySchema,
   projectSearchSchema,
-  projectExportQuerySchema
+  projectExportQuerySchema,
+  updateProjectTaskSchema,
+  createProjectPhaseSchema,
+  createProjectTaskSchema
 } from '../schemas/project';
 import { 
   ApiKeyServiceForApi 
@@ -60,6 +63,16 @@ export class ApiProjectController extends ApiBaseController {
     });
     
     this.projectService = projectService;
+  }
+
+  /**
+   * Strip internal-only fields from task objects before sending via API.
+   * description_rich_text is an internal storage detail — the API only
+   * exposes the markdown `description`.
+   */
+  private stripInternalTaskFields<T extends { description_rich_text?: unknown }>(task: T): Omit<T, 'description_rich_text'> {
+    const { description_rich_text, ...rest } = task;
+    return rest as Omit<T, 'description_rich_text'>;
   }
 
   /**
@@ -257,8 +270,8 @@ export class ApiProjectController extends ApiBaseController {
             projectId,
             apiRequest.context!
           );
-          
-          return createSuccessResponse(tasks);
+
+          return createSuccessResponse(tasks.map(t => this.stripInternalTaskFields(t)));
         });
       } catch (error) {
         return handleApiError(error);
@@ -782,8 +795,8 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError('Project not found');
           }
 
-          // Parse body
-          const data = await req.json();
+          // Parse and validate body
+          const data = await this.validateData(apiRequest as AuthenticatedApiRequest, createProjectPhaseSchema);
 
           const phase = await this.projectService.createPhase(
             projectId,
@@ -1016,7 +1029,102 @@ export class ApiProjectController extends ApiBaseController {
             apiRequest.context!
           );
 
-          return createSuccessResponse(tasks);
+          return createSuccessResponse(tasks.map(t => this.stripInternalTaskFields(t)));
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Create project phase task
+   */
+  createPhaseTask() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        // Create request with context
+        const apiRequest = req as ApiRequest;
+        apiRequest.context = {
+          userId: keyRecord.user_id,
+          tenant: keyRecord.tenant,
+          user
+        };
+
+        // Extract IDs from URL
+        const url = new URL(req.url);
+        const pathParts = url.pathname.split('/');
+        const projectsIndex = pathParts.findIndex(part => part === 'projects');
+        const phasesIndex = pathParts.findIndex(part => part === 'phases');
+        const projectId = pathParts[projectsIndex + 1];
+        const phaseId = pathParts[phasesIndex + 1];
+
+        // Run within tenant context
+        return await runWithTenant(tenantId!, async () => {
+          // Check permissions
+          const knex = await getConnection(tenantId!);
+          const hasAccess = await hasPermission(user, 'project', 'update', knex);
+          if (!hasAccess) {
+            throw new ForbiddenError('Permission denied: Cannot update project');
+          }
+
+          // Check project exists
+          const project = await this.projectService.getById(projectId, apiRequest.context!);
+          if (!project) {
+            throw new NotFoundError('Project not found');
+          }
+
+          const phase = await knex('project_phases')
+            .where({ phase_id: phaseId, project_id: projectId, tenant: tenantId })
+            .first('phase_id');
+
+          if (!phase) {
+            throw new NotFoundError('Project phase not found');
+          }
+
+          const data = await this.validateData(
+            apiRequest as AuthenticatedApiRequest,
+            createProjectTaskSchema,
+          );
+
+          const task = await this.projectService.createTask(
+            phaseId,
+            data,
+            apiRequest.context!
+          );
+
+          return createSuccessResponse(task, 201);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1092,7 +1200,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError('Task not found');
           }
 
-          return createSuccessResponse(task);
+          return createSuccessResponse(this.stripInternalTaskFields(task));
         });
       } catch (error) {
         return handleApiError(error);
@@ -1159,12 +1267,21 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
 
-          // Parse body
-          const data = await req.json();
+          // Parse and validate body — strips unrecognized fields like
+          // description_rich_text so they can't be written via the API.
+          const raw = await req.json();
+          const data = updateProjectTaskSchema.parse(raw);
+
+          // When the API updates description (markdown), null out
+          // description_rich_text so the UI falls back to the new
+          // markdown instead of showing stale rich text.
+          const updatePayload = data.description !== undefined
+            ? { ...data, description_rich_text: null }
+            : data;
 
           const task = await this.projectService.updateTask(
             taskId,
-            data,
+            updatePayload,
             apiRequest.context!
           );
 
@@ -1172,7 +1289,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError('Task not found');
           }
 
-          return createSuccessResponse(task);
+          return createSuccessResponse(this.stripInternalTaskFields(task));
         });
       } catch (error) {
         return handleApiError(error);

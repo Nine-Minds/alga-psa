@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -155,13 +155,37 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     deleteDocumentFn: deleteDocument,
   });
 
-  const handleAddCommentClick = () => {
+  const addCommentBtnRef = useRef<HTMLButtonElement>(null);
+  const editorAreaRef = useRef<HTMLDivElement>(null);
+  const [addCommentBtnVisible, setAddCommentBtnVisible] = useState(true);
+
+  useEffect(() => {
+    const el = addCommentBtnRef.current;
+    if (!el) {
+      setAddCommentBtnVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setAddCommentBtnVisible(entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [showEditor]);
+
+  const handleAddCommentClick = (scrollToEditor = false) => {
     // Auto-check toggles based on which tab is active
     if (!hideInternalTab) {
       setIsInternalToggle(activeTab === INTERNAL_TAB_ID);
     }
     setIsResolutionToggle(activeTab === RESOLUTION_TAB_ID);
     setShowEditor(true);
+    if (scrollToEditor) {
+      // Wait for editor to render, then scroll to it
+      requestAnimationFrame(() => {
+        editorAreaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
   };
   const handleSubmitComment = async () => {
     let success = false;
@@ -397,7 +421,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     return (
       <div className="mt-4" id={`${compId}-external-comments`}>
         <div className="text-xs text-gray-500 mb-2">
-          Inbound replies on child tickets (view-only)
+          {t('conversation.inboundChildReplies')}
         </div>
         {commentsToRender.map((conversation) => {
           const key = `ext-${conversation.child_ticket_id || 'unknown'}-${conversation.comment_id || conversation.created_at || ''}`;
@@ -405,7 +429,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             <div key={key} className="mb-2">
               <div className="text-xs text-gray-600 mb-1">
                 {conversation.child_client_name ? `${conversation.child_client_name} • ` : ''}
-                {conversation.child_ticket_number ? `Ticket ${conversation.child_ticket_number}` : 'Child ticket'}
+                {conversation.child_ticket_number ? t('conversation.ticketPrefix', { number: conversation.child_ticket_number }) : t('conversation.childTicket')}
                 {conversation.child_ticket_title ? ` • ${conversation.child_ticket_title}` : ''}
               </div>
               <CommentItem
@@ -508,14 +532,15 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           <h2 className="text-xl font-bold">{t('conversation.comments', 'Comments')}</h2>
           {!showEditor && (
             <Button
+              ref={addCommentBtnRef}
               id={`${compId}-show-comment-editor-btn`}
-              onClick={handleAddCommentClick}
+              onClick={() => handleAddCommentClick()}
             >
               {t('conversation.addComment', 'Add Comment')}
             </Button>
           )}
         </div>
-        <div className='mb-3'>
+        <div className='mb-3' ref={editorAreaRef}>
           {showEditor && (
             <div className='flex items-start min-w-0 max-w-full'>
               <div className="mr-2">
@@ -625,6 +650,18 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           }
         />
       </div>
+      {/* Floating Add Comment button when the top button scrolls out of view */}
+      {!showEditor && !addCommentBtnVisible && (
+        <div className="sticky bottom-4 flex justify-end px-6 pb-4 pointer-events-none">
+          <Button
+            id={`${compId}-floating-add-comment-btn`}
+            onClick={() => handleAddCommentClick(true)}
+            className="pointer-events-auto shadow-lg"
+          >
+            {t('conversation.addComment', 'Add Comment')}
+          </Button>
+        </div>
+      )}
       <ConfirmationDialog
         id={`${compId}-clipboard-draft-cancel-dialog`}
         isOpen={composeUploadSession.showDraftCancelDialog}

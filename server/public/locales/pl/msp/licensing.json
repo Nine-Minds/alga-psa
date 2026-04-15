@@ -102,6 +102,11 @@
       "totalQuantity": "To ustawia łączną liczbę w subskrypcji (nie dodaje licencji do obecnej liczby)",
       "increasingImmediate": "Zwiększenie liczby licencji: natychmiastowy dostęp z naliczeniem proporcjonalnym",
       "billedMonthly": "Licencje są rozliczane miesięcznie i można je anulować w dowolnym momencie"
+    },
+    "solo": {
+      "title": "Solo obejmuje jednego użytkownika",
+      "description": "Plan Solo jest przeznaczony dla jednego użytkownika i nie obsługuje dodawania licencji. Przejdź na Pro, aby dodać więcej użytkowników do swojego zespołu.",
+      "upgradeCta": "Przejdź na Pro"
     }
   },
   "removalModal": {

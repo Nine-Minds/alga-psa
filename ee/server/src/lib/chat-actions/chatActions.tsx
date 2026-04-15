@@ -18,6 +18,12 @@ const isMissingRelationError = (error: unknown) =>
   'code' in error &&
   (error as { code?: string }).code === '42P01';
 
+const isMissingColumnError = (error: unknown) =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  (error as { code?: string }).code === '42703';
+
 const shouldRecheckPersistence = () => {
   if (cachedPersistenceStatus === null) {
     return true;
@@ -178,6 +184,41 @@ export async function listCurrentUserChatsAction(limit = 20): Promise<ChatHistor
     }
     console.error(error);
     throw new Error('Failed to list chats');
+  }
+}
+
+export async function searchCurrentUserChatsAction(
+  query: string,
+  limit = 20
+): Promise<ChatHistoryItem[]> {
+  const trimmedQuery = query.trim();
+  if (trimmedQuery.length < 2) {
+    return [];
+  }
+
+  if (!(await isChatPersistenceAvailable())) {
+    return [];
+  }
+
+  const user = await getCurrentUser();
+  if (!user?.user_id) {
+    return [];
+  }
+
+  try {
+    return await Chat.searchByUser(user.user_id, trimmedQuery, limit);
+  } catch (error) {
+    if (isMissingRelationError(error) || isMissingColumnError(error)) {
+      if (isMissingRelationError(error)) {
+        markPersistenceStatus(false);
+      }
+      console.warn(
+        '[chatActions] Chat search unavailable during rollout; continuing without search results.',
+      );
+      return [];
+    }
+    console.error(error);
+    throw new Error('Failed to search chats');
   }
 }
 

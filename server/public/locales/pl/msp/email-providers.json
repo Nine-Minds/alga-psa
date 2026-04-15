@@ -68,11 +68,11 @@
       "title": "Dostawcy poczty e-mail ({{count}})"
     },
     "filters": {
-      "searchPlaceholder": "Dostawcy wyszukiwania...",
+      "searchPlaceholder": "Szukaj dostawców...",
       "allProviders": "Wszyscy dostawcy"
     },
     "actions": {
-      "refresh": "Odświeżać"
+      "refresh": "Odśwież"
     }
   },
   "selector": {
@@ -82,7 +82,7 @@
     },
     "cards": {
       "google": {
-        "title": "Gmaila",
+        "title": "Gmail",
         "description": "Integracja z Google Workspace i Gmailem",
         "features": {
           "accounts": "✓ Konta Gmail i Google Workspace",
@@ -116,7 +116,7 @@
       }
     },
     "actions": {
-      "cancel": "Anulować"
+      "cancel": "Anuluj"
     },
     "help": {
       "enterprise": "Wybierz dostawcę, z którego korzysta już Twoja organizacja. Jeśli korzystasz z Google Workspace, wybierz Gmail; jeśli korzystasz z Microsoft 365, wybierz Microsoft 365. Możesz to zmienić później, usuwając i ponownie konfigurując dostawcę poczty e-mail.",
@@ -129,9 +129,9 @@
       "setup": "Konfiguracja {{provider}}"
     },
     "actions": {
-      "cancel": "Anulować",
-      "back": "Z powrotem",
-      "close": "Zamknąć"
+      "cancel": "Anuluj",
+      "back": "Wstecz",
+      "close": "Zamknij"
     }
   },
   "providerCard": {
@@ -143,7 +143,7 @@
     "badges": {
       "disabled": "Wyłączony",
       "connected": "Połączony",
-      "disconnected": "Bezładny",
+      "disconnected": "Rozłączony",
       "error": "Błąd",
       "configuring": "Konfigurowanie",
       "unknown": "Nieznany"
@@ -170,8 +170,8 @@
     "fields": {
       "status": "Status",
       "lastSync": "Ostatnia synchronizacja",
-      "created": "Stworzony",
-      "subscription": "Prenumerata",
+      "created": "Utworzono",
+      "subscription": "Subskrypcja",
       "defaults": "Domyślne ustawienia biletów",
       "error": "Błąd:"
     },
@@ -182,7 +182,7 @@
       "error": "Błąd"
     },
     "types": {
-      "google": "Gmaila",
+      "google": "Gmail",
       "microsoft": "Microsoft 365",
       "imap": "IMAP"
     },
@@ -206,8 +206,8 @@
   "forms": {
     "common": {
       "actions": {
-        "cancel": "Anulować",
-        "saving": "Oszczędność...",
+        "cancel": "Anuluj",
+        "saving": "Zapisywanie...",
         "updateProvider": "Aktualizuj dostawcę",
         "addProvider": "Dodaj dostawcę",
         "createProvider": "Utwórz dostawcę",
@@ -387,14 +387,14 @@
     },
     "validation": {
       "nameRequired": "Wymagana jest nazwa krótka i nazwa wyświetlana",
-      "boardRequired": "Wymagane jest wyżywienie",
-      "statusRequired": "Stan jest wymagany",
+      "boardRequired": "Tablica jest wymagana",
+      "statusRequired": "Status jest wymagany",
       "priorityRequired": "Wymagany jest priorytet",
       "clientRequired": "Firma jest wymagana"
     },
     "fields": {
       "shortName": {
-        "label": "Krótkie imię *",
+        "label": "Krótka nazwa *",
         "placeholder": "e-mail-ogólny",
         "help": "Unikalny identyfikator (np. e-mail-ogólny, wsparcie-billing)"
       },
@@ -411,11 +411,13 @@
       },
       "board": {
         "label": "Tablica *",
-        "placeholder": "Wybierz opcję Tablica"
+        "placeholder": "Wybierz tablicę"
       },
       "status": {
-        "label": "Stan *",
-        "placeholder": "Wybierz stan"
+        "label": "Status *",
+        "placeholder": "Wybierz status",
+        "selectBoardFirst": "Najpierw wybierz tablicę",
+        "loading": "Ładowanie statusów..."
       },
       "priority": {
         "label": "Priorytet *",
@@ -423,7 +425,7 @@
       },
       "client": {
         "label": "Klient *",
-        "placeholder": "Wybierz opcję Klient",
+        "placeholder": "Wybierz klienta",
         "help": "Wymagane: używane jako catch-all, gdy nie można dopasować żadnego klienta na podstawie wiadomości e-mail."
       },
       "category": {
@@ -451,7 +453,7 @@
       "default": "(Domyślny)"
     },
     "actions": {
-      "cancel": "Anulować",
+      "cancel": "Anuluj",
       "updating": "Aktualizowanie...",
       "creating": "Tworzenie...",
       "update": "Zaktualizuj ustawienia domyślne",

@@ -23,7 +23,7 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { ISlaPolicy } from '@alga-psa/sla/types';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -32,7 +32,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { ToggleGroup, ToggleGroupItem } from '@alga-psa/ui/components/ToggleGroup';
+import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import {
   DropdownMenu,
@@ -439,7 +439,8 @@ const BoardsSettings: React.FC = () => {
       // Handle different error codes
       switch (result.code) {
         case 'BOARD_HAS_CATEGORIES':
-          // Show confirmation dialog to force delete categories
+        case 'BOARD_HAS_STATUSES':
+          // Show confirmation dialog to force delete categories/statuses
           setDeleteDialog({
             ...deleteDialog,
             confirmForce: true,
@@ -493,12 +494,27 @@ const BoardsSettings: React.FC = () => {
     shouldManageTicketStatuses ? getManagedTicketStatusValidationError(formData.ticket_statuses) : null
   ), [formData.ticket_statuses, shouldManageTicketStatuses]);
 
+  const trimmedBoardName = formData.board_name.trim();
+  const isDuplicateBoardName = useMemo(() => {
+    if (!trimmedBoardName) return false;
+    const target = trimmedBoardName.toLowerCase();
+    return boards.some((board) =>
+      board.board_id !== editingBoard?.board_id &&
+      (board.board_name || '').trim().toLowerCase() === target
+    );
+  }, [boards, editingBoard, trimmedBoardName]);
+
   const handleSaveBoard = async () => {
     try {
       setError(null);
 
       if (!formData.board_name.trim()) {
         setError(t('ticketing.boards.messages.error.nameRequired'));
+        return;
+      }
+
+      if (isDuplicateBoardName) {
+        setError('A board with this name already exists.');
         return;
       }
 
@@ -665,6 +681,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.name'),
       dataIndex: 'board_name',
+      width: '18%',
       render: (value: string) => (
         <span className="text-gray-700 font-medium">{value}</span>
       ),
@@ -672,6 +689,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.description'),
       dataIndex: 'description',
+      width: '20%',
       render: (value: string | null) => (
         <span className="text-gray-600">{value || '-'}</span>
       ),
@@ -679,6 +697,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.status'),
       dataIndex: 'is_inactive',
+      width: '10%',
       render: (value: boolean, record: IBoard) => (
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-600">
@@ -704,6 +723,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.default'),
       dataIndex: 'is_default',
+      width: '8%',
       render: (value: boolean, record: IBoard) => (
         <div className="flex items-center space-x-2">
           <Switch
@@ -733,6 +753,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.defaultAgent'),
       dataIndex: 'default_assigned_to',
+      width: '10%',
       render: (value: string | null, record: IBoard) => {
         const team = record.default_assigned_team_id
           ? teams.find(t => t.team_id === record.default_assigned_team_id)
@@ -751,6 +772,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.defaultPriority'),
       dataIndex: 'default_priority_id',
+      width: '10%',
       render: (value: string | null) => {
         if (!value) return <span className="text-gray-400">-</span>;
         const pr = priorities.find(p => p.priority_id === value);
@@ -763,6 +785,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.boardManager'),
       dataIndex: 'manager_user_id',
+      width: '10%',
       render: (value: string | null) => {
         if (!value) return <span className="text-gray-400">-</span>;
         const user = users.find(u => u.user_id === value);
@@ -776,6 +799,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.order'),
       dataIndex: 'display_order',
+      width: '5%',
       render: (value: number) => (
         <span className="text-gray-600">{value}</span>
       ),
@@ -783,6 +807,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.itilBoard'),
       dataIndex: 'category_type',
+      width: '6%',
       render: (_, record: IBoard) => (
         record.category_type === 'itil' && record.priority_type === 'itil' ? (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/15 text-blue-600">
@@ -796,7 +821,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.actions'),
       dataIndex: 'board_id',
-      width: '10%',
+      width: '3%',
       render: (value: string, record: IBoard) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -947,6 +972,38 @@ const BoardsSettings: React.FC = () => {
           setIsLoadingBoardStatuses(false);
         }}
         title={editingBoard ? t('ticketing.boards.dialog.editBoard') : t('ticketing.boards.dialog.addBoard')}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-board-dialog"
+              variant="outline"
+              onClick={() => {
+                setShowAddEditDialog(false);
+                setEditingBoard(null);
+                setFormData(createEmptyFormData());
+                setError(null);
+                setIsLoadingBoardStatuses(false);
+              }}
+            >
+              {t('ticketing.boards.actions.cancel')}
+            </Button>
+            <Button
+              id="save-board-button"
+              onClick={handleSaveBoard}
+              disabled={
+                isLoadingBoardStatuses ||
+                !trimmedBoardName ||
+                isDuplicateBoardName ||
+                (shouldManageTicketStatuses && Boolean(ticketStatusValidationError)) ||
+                (!editingBoard &&
+                  formData.status_seed_mode === 'copy_existing' &&
+                  !formData.copy_ticket_statuses_from_board_id)
+              }
+            >
+              {editingBoard ? t('ticketing.boards.actions.update') : t('ticketing.boards.actions.create')}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -956,13 +1013,18 @@ const BoardsSettings: React.FC = () => {
               </Alert>
             )}
             <div>
-              <Label htmlFor="board_name">{t('ticketing.boards.fields.boardName.label')}</Label>
+              <Label htmlFor="board_name" required>{t('ticketing.boards.fields.boardName.label')}</Label>
               <Input
                 id="board_name"
                 value={formData.board_name}
                 onChange={(e) => setFormData({ ...formData, board_name: e.target.value })}
                 placeholder={t('ticketing.boards.fields.boardName.placeholder')}
               />
+              {isDuplicateBoardName && (
+                <p className="text-sm text-red-600 mt-1" data-testid="board-name-duplicate-error">
+                  A board with this name already exists.
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="description">{t('ticketing.boards.fields.description.label')}</Label>
@@ -1187,11 +1249,10 @@ const BoardsSettings: React.FC = () => {
 
             {!editingBoard && (
               <div>
-                <Label>Ticket status setup</Label>
-                <ToggleGroup
-                  type="single"
-                  value={formData.status_seed_mode}
-                  onValueChange={(value) => {
+                <Label required>Ticket status setup</Label>
+                <ViewSwitcher
+                  currentView={formData.status_seed_mode}
+                  onChange={(value) => {
                     if (value !== 'copy_existing' && value !== 'create_inline') {
                       return;
                     }
@@ -1204,24 +1265,13 @@ const BoardsSettings: React.FC = () => {
                         : prev.ticket_statuses,
                     }));
                   }}
+                  options={[
+                    { value: 'copy_existing', label: 'Copy from existing board', id: 'ticket-status-seed-mode-copy-existing' },
+                    { value: 'create_inline', label: 'Create statuses inline', id: 'ticket-status-seed-mode-create-inline' },
+                  ]}
                   aria-label="Ticket status setup"
-                  className="mt-2 w-full"
-                >
-                  <ToggleGroupItem
-                    id="ticket-status-seed-mode-copy-existing"
-                    value="copy_existing"
-                    className="flex-1 min-w-0"
-                  >
-                    Copy from existing board
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    id="ticket-status-seed-mode-create-inline"
-                    value="create_inline"
-                    className="flex-1 min-w-0"
-                  >
-                    Create statuses inline
-                  </ToggleGroupItem>
-                </ToggleGroup>
+                  className="mt-2 w-fit"
+                />
                 <p className="text-xs text-muted-foreground mt-1">
                   Choose whether this board starts from an existing lifecycle or a new inline status list.
                 </p>
@@ -1230,7 +1280,7 @@ const BoardsSettings: React.FC = () => {
 
             {!editingBoard && formData.status_seed_mode === 'copy_existing' && (
               <div>
-                <Label htmlFor="copy-ticket-statuses-select">Copy ticket statuses from</Label>
+                <Label htmlFor="copy-ticket-statuses-select" required>Copy ticket statuses from</Label>
                 <CustomSelect
                   id="copy-ticket-statuses-select"
                   value={formData.copy_ticket_statuses_from_board_id}
@@ -1269,26 +1319,21 @@ const BoardsSettings: React.FC = () => {
 
             {shouldManageTicketStatuses && (
               <div className="space-y-3 rounded-md border border-gray-200 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>
-                      {editingBoard
-                        ? 'Board ticket statuses'
-                        : formData.status_seed_mode === 'copy_existing'
-                          ? 'Copied ticket statuses'
-                          : 'Inline ticket statuses'}
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {editingBoard
-                        ? 'Edit the ticket lifecycle for this board only.'
-                        : formData.status_seed_mode === 'copy_existing'
-                          ? 'Review and adjust the copied lifecycle before saving the new board.'
-                          : 'Author the board&apos;s initial ticket lifecycle before saving.'}
-                    </p>
-                  </div>
-                  <Button id="add-inline-ticket-status-button" type="button" variant="outline" onClick={addManagedTicketStatus}>
-                    Add Status
-                  </Button>
+                <div>
+                  <Label>
+                    {editingBoard
+                      ? 'Board ticket statuses'
+                      : formData.status_seed_mode === 'copy_existing'
+                        ? 'Copied ticket statuses'
+                        : 'Inline ticket statuses'}
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {editingBoard
+                      ? 'Edit the ticket lifecycle for this board only.'
+                      : formData.status_seed_mode === 'copy_existing'
+                        ? 'Review and adjust the copied lifecycle before saving the new board.'
+                        : 'Author the board&apos;s initial ticket lifecycle before saving.'}
+                  </p>
                 </div>
 
                 {isLoadingBoardStatuses ? (
@@ -1356,6 +1401,14 @@ const BoardsSettings: React.FC = () => {
                   </div>
                 ))}
 
+                {!isLoadingBoardStatuses && (
+                  <div className="flex justify-start">
+                    <Button id="add-inline-ticket-status-button" type="button" variant="outline" onClick={addManagedTicketStatus}>
+                      Add Status
+                    </Button>
+                  </div>
+                )}
+
                 {ticketStatusValidationError && !isLoadingBoardStatuses && (
                   <p className="text-sm text-red-600" data-testid="ticket-status-validation-error">
                     {ticketStatusValidationError}
@@ -1405,38 +1458,38 @@ const BoardsSettings: React.FC = () => {
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id="cancel-board-dialog"
-            variant="outline"
-            onClick={() => {
-              setShowAddEditDialog(false);
-              setEditingBoard(null);
-              setFormData(createEmptyFormData());
-              setError(null);
-              setIsLoadingBoardStatuses(false);
-            }}
-          >
-            {t('ticketing.boards.actions.cancel')}
-          </Button>
-          <Button
-            id="save-board-button"
-            onClick={handleSaveBoard}
-            disabled={isLoadingBoardStatuses || (shouldManageTicketStatuses && Boolean(ticketStatusValidationError))}
-          >
-            {editingBoard ? t('ticketing.boards.actions.update') : t('ticketing.boards.actions.create')}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       {/* Import Dialog */}
-      <Dialog 
-        isOpen={showImportDialog && importConflicts.length === 0} 
+      <Dialog
+        isOpen={showImportDialog && importConflicts.length === 0}
         onClose={() => {
           setShowImportDialog(false);
           setSelectedImportBoards([]);
-        }} 
+        }}
         title={t('ticketing.boards.dialog.importTitle')}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-import-dialog"
+              variant="outline"
+              onClick={() => {
+                setShowImportDialog(false);
+                setSelectedImportBoards([]);
+                setImportBoardItilSettings({});
+              }}
+            >
+              {t('ticketing.boards.actions.cancel')}
+            </Button>
+            <Button
+              id="import-selected-boards"
+              onClick={handleImport}
+              disabled={selectedImportBoards.length === 0}
+            >
+              {t('ticketing.boards.actions.importSelected')}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -1541,36 +1594,33 @@ const BoardsSettings: React.FC = () => {
             )}
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id="cancel-import-dialog"
-            variant="outline"
-            onClick={() => {
-              setShowImportDialog(false);
-              setSelectedImportBoards([]);
-              setImportBoardItilSettings({});
-            }}
-          >
-            {t('ticketing.boards.actions.cancel')}
-          </Button>
-          <Button
-            id="import-selected-boards"
-            onClick={handleImport}
-            disabled={selectedImportBoards.length === 0}
-          >
-            {t('ticketing.boards.actions.importSelected')}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       {/* Conflict Resolution Dialog */}
-      <Dialog 
-        isOpen={importConflicts.length > 0} 
+      <Dialog
+        isOpen={importConflicts.length > 0}
         onClose={() => {
           setImportConflicts([]);
           setConflictResolutions({});
-        }} 
+        }}
         title={t('ticketing.boards.dialog.conflictsTitle')}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-conflict-dialog"
+              variant="outline"
+              onClick={() => {
+                setImportConflicts([]);
+                setConflictResolutions({});
+              }}
+            >
+              {t('ticketing.boards.actions.cancel')}
+            </Button>
+            <Button id="import-with-resolutions" onClick={handleImport}>
+              {t('ticketing.boards.dialog.importWithResolutions')}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -1655,21 +1705,6 @@ const BoardsSettings: React.FC = () => {
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id="cancel-conflict-dialog"
-            variant="outline"
-            onClick={() => {
-              setImportConflicts([]);
-              setConflictResolutions({});
-            }}
-          >
-            {t('ticketing.boards.actions.cancel')}
-          </Button>
-          <Button id="import-with-resolutions" onClick={handleImport}>
-            {t('ticketing.boards.dialog.importWithResolutions')}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       {/* ITIL Information Modal */}
@@ -1677,6 +1712,13 @@ const BoardsSettings: React.FC = () => {
         isOpen={showItilInfoModal}
         onClose={() => setShowItilInfoModal(false)}
         title={t('ticketing.boards.itilInfo.title')}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="close-itil-info" onClick={() => setShowItilInfoModal(false)}>
+              {t('ticketing.boards.actions.close')}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent className="max-w-4xl">
           <div className="space-y-6">
@@ -1823,11 +1865,6 @@ const BoardsSettings: React.FC = () => {
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button id="close-itil-info" onClick={() => setShowItilInfoModal(false)}>
-            {t('ticketing.boards.actions.close')}
-          </Button>
-        </DialogFooter>
       </Dialog>
     </div>
   );

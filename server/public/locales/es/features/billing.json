@@ -3,7 +3,8 @@
   "overview": "Resumen",
   "tabs": {
     "overview": "Resumen",
-    "invoices": "Facturas"
+    "invoices": "Facturas",
+    "quotes": "Presupuestos"
   },
   "currentContractLine": "Línea de contrato actual",
   "nextInvoice": "Próxima factura",
@@ -49,7 +50,18 @@
     "tax": "Impuesto",
     "taxBreakdown": "Desglose de impuestos",
     "manualInvoice": "Factura manual",
-    "credits": "Créditos"
+    "credits": "Créditos",
+    "financialArtifactSummary": "Factura solo financiera. Los períodos de servicio recurrentes aparecen únicamente en las líneas de detalle recurrentes.",
+    "servicePeriod": "Período de servicio",
+    "servicePeriods": "Períodos de servicio",
+    "financialOnlyLine": "Línea solo financiera. Sin período de servicio recurrente.",
+    "downloadStarted": "Preparando la descarga del PDF...",
+    "downloadComplete": "PDF descargado correctamente.",
+    "emailStarted": "Enviando el correo de la factura...",
+    "emailSent": "Correo de la factura enviado correctamente.",
+    "advanceTiming": "Anticipado",
+    "arrearsTiming": "A plazo vencido",
+    "paymentSummaryServicePeriods": "El pago liquida el saldo de la factura para estos períodos de servicio recurrentes. Abra los detalles de la factura a continuación para ver el desglose completo línea por línea."
   },
   "frequency": {
     "monthly": "Mensual",
@@ -70,7 +82,15 @@
     "serviceCategory": "Categoría del servicio",
     "statusDescription": "Esta línea de contrato está actualmente {{status}} y {{expiry}}.",
     "expiresOn": "expira el {{date}}",
-    "noExpiry": "no expira"
+    "noExpiry": "no expira",
+    "cadenceOwnerContractDescription": "Los períodos de servicio recurrentes siguen la cadencia del aniversario del contrato para esta línea.",
+    "cadenceOwnerClientDescription": "Los períodos de servicio recurrentes siguen el calendario de facturación del cliente para esta línea.",
+    "cadenceOwnerContract": "Aniversario del contrato",
+    "cadenceOwnerClient": "Calendario de facturación del cliente",
+    "billingTimingAdvance": "Anticipado",
+    "billingTimingArrears": "A plazo vencido",
+    "cadenceOwner": "Propietario de la cadencia",
+    "billingTiming": "Momento de facturación"
   },
   "payment": {
     "method": "Método de pago",
@@ -94,5 +114,23 @@
     "loadingInvoices": "Cargando facturas...",
     "paymentSuccessful": "Pago procesado correctamente",
     "paymentFailed": "El pago falló. Inténtalo de nuevo."
+  },
+  "quotes": {
+    "pendingQuotes": "Presupuestos pendientes",
+    "awaitingResponse": "{{count}} presupuesto(s) esperando su respuesta",
+    "noPending": "No hay presupuestos pendientes",
+    "viewAll": "Ver todos los presupuestos"
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "Mensual",
+      "quarterly": "Trimestral",
+      "annually": "Anual"
+    },
+    "contractLineType": {
+      "Fixed": "Fijo",
+      "Hourly": "Por hora",
+      "Usage": "Basado en uso"
+    }
   }
 }

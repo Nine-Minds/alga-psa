@@ -1,4 +1,4 @@
-{{- $replicationEnabled := default true .Values.portalDomain.secretReplicationEnabled -}}
+{{- $replicationEnabled := default false .Values.portalDomain.secretReplicationEnabled -}}
 {{- $gatewayNamespace := default "" .Values.portalDomain.gatewayNamespace -}}
 {{- $certificateNamespace := default "" .Values.portalDomain.certificateNamespace -}}
 {{- if and .Values.enabled $replicationEnabled }}

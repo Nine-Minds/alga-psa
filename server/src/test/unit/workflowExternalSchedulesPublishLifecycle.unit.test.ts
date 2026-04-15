@@ -30,13 +30,136 @@ const runner = {
 };
 
 const knexMock: any = vi.fn((table: string) => {
-  if (table === 'workflow_definition_versions') {
+  if (table === 'workflow_definitions') {
     return {
-      where: vi.fn().mockReturnThis(),
-      max: vi.fn().mockReturnThis(),
-      first: vi.fn().mockResolvedValue({
-        max_version: versionRecords.size > 0 ? Math.max(...versionRecords.keys()) : null
-      })
+      insert: vi.fn((data: WorkflowRecord) => ({
+        returning: vi.fn(async () => {
+          workflowRecord = { ...data };
+          return [workflowRecord];
+        })
+      })),
+      where: vi.fn((criteria: Record<string, unknown>) => ({
+        first: vi.fn(async () => {
+          if (!workflowRecord) return null;
+          return workflowRecord.workflow_id === criteria.workflow_id ? workflowRecord : null;
+        }),
+        update: vi.fn((data: WorkflowRecord) => ({
+          returning: vi.fn(async () => {
+            if (!workflowRecord || workflowRecord.workflow_id !== criteria.workflow_id) {
+              return [];
+            }
+            workflowRecord = {
+              ...workflowRecord,
+              ...data,
+            };
+            return [workflowRecord];
+          })
+        })),
+      })),
+      select: vi.fn(async () => (workflowRecord ? [workflowRecord] : [])),
+      first: vi.fn(async () => workflowRecord),
+    };
+  }
+
+  if (table === 'workflow_definition_versions') {
+    const buildFiltered = (criteria?: Record<string, unknown>) =>
+      Array.from(versionRecords.values()).filter((row) => {
+        if (!criteria) return true;
+        return Object.entries(criteria).every(([key, value]) => (row as any)[key] === value);
+      });
+
+    return {
+      insert: vi.fn((data: VersionRecord) => ({
+        returning: vi.fn(async () => {
+          const record = { ...data };
+          versionRecords.set(Number(record.version), record);
+          return [record];
+        })
+      })),
+      where: vi.fn((criteria: Record<string, unknown>) => ({
+        first: vi.fn(async () => buildFiltered(criteria)[0] ?? null),
+        orderBy: vi.fn((_column: string, direction: 'asc' | 'desc' = 'asc') => {
+          const filtered = buildFiltered(criteria).sort((a, b) => {
+            const av = Number((a as any).version ?? 0);
+            const bv = Number((b as any).version ?? 0);
+            return direction === 'desc' ? bv - av : av - bv;
+          });
+          return filtered;
+        }),
+        max: vi.fn(() => ({
+          first: vi.fn(async () => ({
+            max_version: versionRecords.size > 0 ? Math.max(...versionRecords.keys()) : null
+          }))
+        })),
+        update: vi.fn((data: VersionRecord) => ({
+          returning: vi.fn(async () => {
+            const current = buildFiltered(criteria)[0];
+            if (!current) return [];
+            const updated = { ...current, ...data };
+            versionRecords.set(Number(updated.version), updated);
+            return [updated];
+          })
+        })),
+      })),
+      max: vi.fn(() => ({
+        first: vi.fn(async () => ({
+          max_version: versionRecords.size > 0 ? Math.max(...versionRecords.keys()) : null
+        }))
+      })),
+      first: vi.fn(async () => buildFiltered()[0] ?? null),
+    };
+  }
+
+  if (table === 'tenant_workflow_schedule') {
+    const buildFiltered = (criteria?: Record<string, unknown>) =>
+      Array.from(scheduleRecords.values()).filter((row) => {
+        if (!criteria) return true;
+        return Object.entries(criteria).every(([key, value]) => (row as any)[key] === value);
+      });
+
+    return {
+      insert: vi.fn((data: ScheduleRecord) => ({
+        returning: vi.fn(async () => {
+          const record = {
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            ...data
+          };
+          scheduleRecords.set(String(record.id), record);
+          return [record];
+        })
+      })),
+      where: vi.fn((criteria: Record<string, unknown>) => ({
+        first: vi.fn(async () => buildFiltered(criteria)[0] ?? null),
+        orderBy: vi.fn((_column: string, _direction: 'asc' | 'desc' = 'asc') => buildFiltered(criteria)),
+        update: vi.fn((data: ScheduleRecord) => ({
+          returning: vi.fn(async () => {
+            const current = buildFiltered(criteria)[0];
+            if (!current) return [];
+            const updated = {
+              ...current,
+              ...data,
+              updated_at: new Date().toISOString()
+            };
+            scheduleRecords.set(String(updated.id), updated);
+            return [updated];
+          })
+        })),
+        del: vi.fn(async () => {
+          const targets = buildFiltered(criteria);
+          for (const row of targets) {
+            scheduleRecords.delete(String((row as any).id));
+          }
+          return targets.length;
+        }),
+      })),
+      whereIn: vi.fn((column: string, values: unknown[]) => ({
+        orderBy: vi.fn((_c: string, _d: 'asc' | 'desc' = 'asc') =>
+          Array.from(scheduleRecords.values()).filter((row) => values.includes((row as any)[column]))
+        )
+      })),
+      select: vi.fn(async () => Array.from(scheduleRecords.values())),
+      first: vi.fn(async () => Array.from(scheduleRecords.values())[0] ?? null),
     };
   }
   throw new Error(`Unexpected table access: ${table}`);

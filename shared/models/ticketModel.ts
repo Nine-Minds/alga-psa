@@ -176,6 +176,7 @@ export interface ValidationOptions {
   skipLocationValidation?: boolean;
   skipCategoryValidation?: boolean;
   skipSubcategoryValidation?: boolean;
+  skipStatusBoardValidation?: boolean;
   allowEmptyFields?: boolean;
 }
 
@@ -561,7 +562,7 @@ export class TicketModel {
         }
       }
 
-      if (input.status_id && input.board_id) {
+      if (!options.skipStatusBoardValidation && input.status_id && input.board_id) {
         const statusResult = await this.validateStatusBelongsToBoard(
           input.status_id,
           input.board_id,

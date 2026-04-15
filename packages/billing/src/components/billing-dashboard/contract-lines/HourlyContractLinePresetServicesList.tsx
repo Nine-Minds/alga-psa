@@ -27,11 +27,12 @@ import { BucketOverlayInput } from '../contracts/ContractWizard';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [
-  { value: 'fixed', label: 'Fixed Price' },
-  { value: 'hourly', label: 'Hourly' },
-  { value: 'usage', label: 'Usage Based' }
+const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; labelKey: string; defaultLabel: string }> = [
+  { value: 'fixed', labelKey: 'services.hourlyPreset.billingMethod.fixed', defaultLabel: 'Fixed Price' },
+  { value: 'hourly', labelKey: 'services.hourlyPreset.billingMethod.hourly', defaultLabel: 'Hourly' },
+  { value: 'usage', labelKey: 'services.hourlyPreset.billingMethod.usage', defaultLabel: 'Usage Based' }
 ];
 
 interface HourlyContractLinePresetServicesListProps {
@@ -48,6 +49,7 @@ interface PresetServiceWithBucket extends IContractLinePresetService {
 }
 
 const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetServicesListProps> = ({ presetId, onServiceAdded }) => {
+  const { t } = useTranslation('msp/contract-lines');
   const [presetServices, setPresetServices] = useState<PresetServiceWithBucket[]>([]);
   const [originalServices, setOriginalServices] = useState<PresetServiceWithBucket[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
@@ -94,8 +96,8 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
 
         return {
           ...presetService,
-          service_name: serviceDetails?.service_name || 'Unknown Service',
-          service_type_name: serviceDetails?.service_type_name || 'N/A',
+          service_name: serviceDetails?.service_name || t('services.hourlyPreset.unknownService', { defaultValue: 'Unknown Service' }),
+          service_type_name: serviceDetails?.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' }),
           billing_method: serviceDetails?.billing_method,
           default_rate: serviceDetails?.default_rate,
           bucket_overlay: bucketOverlay
@@ -108,11 +110,13 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
       setSelectedServicesToAdd([]);
     } catch (error) {
       console.error('Error fetching preset services data:', error);
-      setError('Failed to load services data');
+      setError(t('services.hourlyPreset.errors.failedToLoadServicesData', {
+        defaultValue: 'Failed to load services data',
+      }));
     } finally {
       setIsLoading(false);
     }
-  }, [presetId]);
+  }, [presetId, t]);
 
   useEffect(() => {
     fetchData();
@@ -249,8 +253,8 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
         tenant: '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        service_name: service?.service_name || 'Unknown Service',
-        service_type_name: service?.service_type_name || 'N/A',
+        service_name: service?.service_name || t('services.hourlyPreset.unknownService', { defaultValue: 'Unknown Service' }),
+        service_type_name: service?.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' }),
         billing_method: service?.billing_method,
         default_rate: service?.default_rate,
         bucket_overlay: null
@@ -294,15 +298,23 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
       await updateContractLinePresetServices(presetId, servicesToSave);
       await fetchData();
 
-      toast.success('Contract line preset services saved successfully');
+      toast.success(t('services.hourlyPreset.toast.savedSuccessfully', {
+        defaultValue: 'Contract line preset services saved successfully',
+      }));
 
       if (onServiceAdded) {
         onServiceAdded();
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save services';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('services.hourlyPreset.errors.failedToSaveServices', {
+            defaultValue: 'Failed to save services',
+          });
       setError(errorMessage);
-      handleError(error, 'Failed to save services');
+      handleError(error, t('services.hourlyPreset.errors.failedToSaveServices', {
+        defaultValue: 'Failed to save services',
+      }));
     } finally {
       setIsSaving(false);
     }
@@ -325,7 +337,9 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
       {hasUnsavedChanges && (
         <Alert variant="warning" className="mb-4">
           <AlertDescription>
-            You have unsaved changes. Click "Save Changes" to apply them.
+            {t('services.hourlyPreset.unsavedChanges.banner', {
+              defaultValue: 'You have unsaved changes. Click "Save Changes" to apply them.',
+            })}
           </AlertDescription>
         </Alert>
       )}
@@ -338,12 +352,18 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
       )}
 
       {isLoading ? (
-        <div className="text-center py-4">Loading services...</div>
+        <div className="text-center py-4">
+          {t('services.hourlyPreset.loadingServices', { defaultValue: 'Loading services...' })}
+        </div>
       ) : (
         <>
           <div className="mb-4">
             {presetServices.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No services currently associated with this contract line preset.</p>
+              <p className="text-sm text-muted-foreground">
+                {t('services.hourlyPreset.emptyState', {
+                  defaultValue: 'No services currently associated with this contract line preset.',
+                })}
+              </p>
             ) : (
               <div className="space-y-3">
                 {presetServices.map((service) => (
@@ -353,7 +373,15 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
                       <div className="flex-1">
                         <h4 className="font-medium">{service.service_name}</h4>
                         <p className="text-sm text-muted-foreground">
-                          Service Type: {service.service_type_name} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method}
+                          {t('services.hourlyPreset.serviceMetadata', {
+                            defaultValue: 'Service Type: {{type}} | Method: {{method}}',
+                            type: service.service_type_name,
+                            method: BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)
+                              ? t(BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)!.labelKey, {
+                                  defaultValue: BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)!.defaultLabel,
+                                })
+                              : service.billing_method,
+                          })}
                         </p>
                       </div>
                       <DropdownMenu>
@@ -363,7 +391,9 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
                             variant="ghost"
                             className="h-8 w-8 p-0"
                           >
-                            <span className="sr-only">Open menu</span>
+                            <span className="sr-only">
+                              {t('common.actions.openMenu', { defaultValue: 'Open menu' })}
+                            </span>
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -374,7 +404,7 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
                             onClick={() => handleRemoveService(service.service_id)}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Remove
+                            {t('common.actions.remove', { defaultValue: 'Remove' })}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -382,7 +412,9 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
 
                     {/* Hourly Rate */}
                     <div className="flex items-center gap-2 mb-3">
-                      <label className="text-sm font-medium w-24">Hourly Rate:</label>
+                      <label className="text-sm font-medium w-24">
+                        {t('services.hourlyPreset.hourlyRateLabel', { defaultValue: 'Hourly Rate:' })}
+                      </label>
                       <span className="text-muted-foreground">$</span>
                       <Input
                         type="text"
@@ -400,7 +432,9 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
                     {/* Bucket Overlay Section */}
                     <div className="space-y-3 pt-3 border-t border-dashed border-secondary-100">
                       <SwitchWithLabel
-                        label="Recommend bucket of hours"
+                        label={t('services.hourlyPreset.recommendBucketLabel', {
+                          defaultValue: 'Recommend bucket of hours',
+                        })}
                         checked={Boolean(service.bucket_overlay)}
                         onCheckedChange={(checked) => toggleBucketOverlay(service.service_id, Boolean(checked))}
                       />
@@ -421,15 +455,27 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
           </div>
 
           <div className="mt-6 border-t pt-4">
-            <h4 className="text-md font-medium mb-2">Add Services to Contract Line Preset</h4>
+            <h4 className="text-md font-medium mb-2">
+              {t('services.hourlyPreset.addServicesHeading', {
+                defaultValue: 'Add Services to Contract Line Preset',
+              })}
+            </h4>
             {servicesAvailableToAdd.length === 0 ? (
-              <p className="text-sm text-muted-foreground">All available hourly services are already associated with this preset.</p>
+              <p className="text-sm text-muted-foreground">
+                {t('services.hourlyPreset.allServicesAssociated', {
+                  defaultValue: 'All available hourly services are already associated with this preset.',
+                })}
+              </p>
             ) : (
               <>
                 <div className="mb-3">
                   <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto border rounded p-2">
                     {servicesAvailableToAdd.map(service => {
-                      const serviceTypeName = service.service_type_name || 'N/A';
+                      const serviceTypeName = service.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' });
+                      const billingMethodOption = BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method);
+                      const billingMethod = billingMethodOption
+                        ? t(billingMethodOption.labelKey, { defaultValue: billingMethodOption.defaultLabel })
+                        : service.billing_method;
                       return (
                         <div
                           key={service.service_id}
@@ -452,7 +498,12 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
                           <div className="flex-grow flex flex-col text-sm">
                             <span>{service.service_name}</span>
                             <span className="text-xs text-muted-foreground">
-                              Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Default Rate: ${(Number(service.default_rate) / 100).toFixed(2)}
+                              {t('services.hourlyPreset.serviceToAddMetadata', {
+                                defaultValue: 'Service Type: {{type}} | Method: {{method}} | Default Rate: {{rate}}',
+                                type: serviceTypeName,
+                                method: billingMethod,
+                                rate: `$${(Number(service.default_rate) / 100).toFixed(2)}`,
+                              })}
                             </span>
                           </div>
                         </div>
@@ -467,7 +518,10 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
                   className="w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Selected Services {selectedServicesToAdd.length > 0 ? `(${selectedServicesToAdd.length})` : ''}
+                  {t('services.hourlyPreset.addSelectedServices', {
+                    defaultValue: 'Add Selected ({{count}}) Services',
+                    count: selectedServicesToAdd.length,
+                  })}
                 </Button>
               </>
             )}
@@ -481,7 +535,7 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
               onClick={handleReset}
               disabled={isSaving || !hasUnsavedChanges}
             >
-              Reset
+              {t('common.actions.reset', { defaultValue: 'Reset' })}
             </Button>
             <Button
               id="save-preset-services"
@@ -489,7 +543,11 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
               disabled={isSaving || !hasUnsavedChanges}
             >
               <span className={hasUnsavedChanges ? 'font-bold' : ''}>
-                {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
+                {isSaving
+                  ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                  : hasUnsavedChanges
+                    ? t('common.actions.saveChangesDirty', { defaultValue: 'Save Changes *' })
+                    : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
               </span>
               {!isSaving && <Save className="ml-2 h-4 w-4" />}
             </Button>
@@ -502,10 +560,18 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
         isOpen={showNavigateAwayConfirm}
         onClose={handleNavigateAwayDismiss}
         onConfirm={handleNavigateAwayConfirm}
-        title="Unsaved Changes"
-        message="You have unsaved changes. Are you sure you want to leave this page? All changes will be lost."
-        confirmLabel="Leave Page"
-        cancelLabel="Stay on Page"
+        title={t('services.hourlyPreset.unsavedChanges.dialogTitle', {
+          defaultValue: 'Unsaved Changes',
+        })}
+        message={t('services.hourlyPreset.unsavedChanges.dialogMessage', {
+          defaultValue: 'You have unsaved changes. Are you sure you want to leave this page? All changes will be lost.',
+        })}
+        confirmLabel={t('services.hourlyPreset.unsavedChanges.confirmLabel', {
+          defaultValue: 'Leave Page',
+        })}
+        cancelLabel={t('services.hourlyPreset.unsavedChanges.cancelLabel', {
+          defaultValue: 'Stay on Page',
+        })}
       />
     </div>
   );

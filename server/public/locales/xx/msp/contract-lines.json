@@ -1,0 +1,803 @@
+{
+  "common": {
+    "actions": {
+      "add": "1111",
+      "cancel": "1111",
+      "configure": "1111",
+      "delete": "1111",
+      "edit": "1111",
+      "openMenu": "1111",
+      "remove": "1111",
+      "reset": "1111",
+      "save": "1111",
+      "saveChanges": "1111",
+      "saveChangesDirty": "1111",
+      "saving": "1111"
+    },
+    "errors": {
+      "errorWithMessage": "1111 {{message}} 1111"
+    },
+    "labels": {
+      "no": "1111",
+      "yes": "1111"
+    },
+    "moneyPlaceholder": "1111",
+    "notAvailable": "1111",
+    "tryAgain": "1111",
+    "validation": {
+      "prefix": "1111"
+    }
+  },
+  "configuration": {
+    "fixed": {
+      "basics": {
+        "billingFrequencyLabel": "1111",
+        "billingFrequencyPlaceholder": "1111",
+        "billingTiming": {
+          "options": {
+            "advance": "1111",
+            "arrears": "1111"
+          }
+        },
+        "billingTimingHelp": "1111",
+        "billingTimingLabel": "1111",
+        "billingTimingPlaceholder": "1111",
+        "cadenceOwner": {
+          "description": "1111",
+          "label": "1111",
+          "options": {
+            "client": {
+              "description": "1111",
+              "label": "1111"
+            },
+            "contract": {
+              "description": "1111",
+              "label": "1111"
+            }
+          }
+        },
+        "description": "1111",
+        "heading": "1111",
+        "nameLabel": "1111",
+        "namePlaceholder": "1111"
+      },
+      "cardTitle": "1111 {{name}} 1111",
+      "errors": {
+        "contractLineNotFoundOrInvalidType": "1111",
+        "failedToLoadContractLineConfiguration": "1111",
+        "failedToSaveContractLine": "1111",
+        "invalidContractLineTypeOrNotFound": "1111"
+      },
+      "services": {
+        "associatedCardTitle": "1111"
+      },
+      "settings": {
+        "adjustForPartialPeriodsHelp": "1111",
+        "adjustForPartialPeriodsLabel": "1111",
+        "baseRateHelp": "1111",
+        "baseRateLabel": "1111",
+        "billingCycleAlignment": {
+          "options": {
+            "end": "1111",
+            "prorated": "1111",
+            "start": "1111"
+          }
+        },
+        "billingCycleAlignmentLabel": "1111",
+        "billingCycleAlignmentPlaceholder": "1111",
+        "description": "1111",
+        "heading": "1111"
+      },
+      "validation": {
+        "baseRateRequiredForFixedLines": "1111",
+        "billingFrequency": "1111",
+        "contractLineName": "1111",
+        "contractLineType": "1111"
+      }
+    },
+    "hourly": {
+      "actions": {
+        "saveConfiguration": "1111"
+      },
+      "basics": {
+        "billingFrequencyLabel": "1111",
+        "billingFrequencyPlaceholder": "1111",
+        "cardTitle": "1111 {{name}} 1111",
+        "description": "1111",
+        "heading": "1111",
+        "nameLabel": "1111",
+        "namePlaceholder": "1111",
+        "validation": {
+          "billingFrequency": "1111",
+          "contractLineName": "1111"
+        }
+      },
+      "errors": {
+        "cannotSaveValidationErrors": "1111",
+        "contractLineNotFoundOrInvalidType": "1111",
+        "failedToLoadPlanConfiguration": "1111",
+        "failedToSaveContractLine": "1111",
+        "failedToSavePlanWideConfiguration": "1111 {{message}} 1111",
+        "failedToSaveServiceConfiguration": "1111 {{message}} 1111",
+        "invalidPlanTypeOrNotFound": "1111"
+      },
+      "planWideSettings": {
+        "afterHours": {
+          "enableLabel": "1111",
+          "multiplierHelp": "1111",
+          "multiplierLabel": "1111",
+          "multiplierPlaceholder": "1111",
+          "tooltip": "1111"
+        },
+        "overtime": {
+          "enableLabel": "1111",
+          "rateHelp": "1111",
+          "rateLabel": "1111",
+          "thresholdHelp": "1111",
+          "thresholdLabel": "1111",
+          "thresholdPlaceholder": "1111",
+          "tooltip": "1111"
+        },
+        "trigger": "1111"
+      },
+      "services": {
+        "cardTitle": "1111",
+        "emptyState": "1111",
+        "fallbackServiceName": "1111 {{id}} 1111",
+        "manageCardTitle": "1111",
+        "nonHourlyServiceMessage": "1111 {{method}} 1111"
+      },
+      "validation": {
+        "afterHoursMultiplierMinOne": "1111",
+        "overtimeRateNonNegative": "1111",
+        "overtimeThresholdNonNegative": "1111"
+      }
+    },
+    "usage": {
+      "actions": {
+        "saveAllConfigurations": "1111"
+      },
+      "basics": {
+        "billingFrequencyLabel": "1111",
+        "billingFrequencyPlaceholder": "1111",
+        "cardTitle": "1111 {{name}} 1111",
+        "description": "1111",
+        "heading": "1111",
+        "nameLabel": "1111",
+        "namePlaceholder": "1111",
+        "validation": {
+          "billingFrequency": "1111",
+          "contractLineName": "1111"
+        }
+      },
+      "errors": {
+        "failedToLoadPlanServicesOrConfigurations": "1111",
+        "failedToSaveContractLine": "1111",
+        "failedToSaveOneOrMoreServiceConfigurations": "1111",
+        "invalidPlanTypeOrNotFound": "1111",
+        "noChangesDetected": "1111",
+        "validationErrorDetails": "1111 {{details}} 1111",
+        "validationErrorsInModifiedServices": "1111"
+      },
+      "services": {
+        "emptyStateWithHelper": "1111",
+        "fallbackServiceName": "1111 {{id}} 1111",
+        "loadingConfiguration": "1111",
+        "manageCardTitle": "1111",
+        "pricingCardTitle": "1111",
+        "summary": {
+          "defaultUnit": "1111",
+          "loading": "1111",
+          "notSet": "1111",
+          "ratePerUnit": "1111 {{rate}} 1111 {{unit}} 1111",
+          "tieredPricing": "1111 {{count}} 1111"
+        }
+      },
+      "validation": {
+        "baseRateNonNegative": "1111",
+        "baseRateRequiredWhenTieredOff": "1111",
+        "firstTierStartsAtZero": "1111",
+        "minimumUsageNonNegative": "1111",
+        "onlyLastTierUnlimited": "1111",
+        "tierGap": "1111 {{tier1}} 1111 {{tier2}} 1111",
+        "tierOverlap": "1111 {{tier1}} 1111 {{tier2}} 1111",
+        "tierRatesNonNegative": "1111",
+        "tiersRequiredWhenTieredOn": "1111",
+        "tierUpperBound": "1111 {{tier}} 1111",
+        "unitOfMeasureRequired": "1111"
+      }
+    }
+  },
+  "dialog": {
+    "actions": {
+      "cancel": "1111",
+      "createPreset": "1111",
+      "saving": "1111",
+      "updatePreset": "1111"
+    },
+    "basics": {
+      "billingFrequencyLabel": "1111",
+      "billingFrequencyPlaceholder": "1111",
+      "billingTiming": {
+        "options": {
+          "advance": "1111",
+          "arrears": "1111"
+        }
+      },
+      "billingTimingLabel": "1111",
+      "billingTimingPlaceholder": "1111",
+      "description": "1111",
+      "heading": "1111",
+      "nameLabel": "1111",
+      "namePlaceholder": "1111"
+    },
+    "billingModel": {
+      "cards": {
+        "fixed": {
+          "description": "1111",
+          "title": "1111"
+        },
+        "hourly": {
+          "description": "1111",
+          "title": "1111"
+        },
+        "usage": {
+          "description": "1111",
+          "title": "1111"
+        }
+      },
+      "description": "1111",
+      "heading": "1111",
+      "timingHelp": {
+        "fixed": "1111",
+        "nonFixed": "1111"
+      }
+    },
+    "common": {
+      "moneyPlaceholder": "1111",
+      "quantity": "1111"
+    },
+    "errors": {
+      "saveFailed": "1111"
+    },
+    "fixed": {
+      "addItem": "1111",
+      "adjustForPartialPeriodsHelp": "1111",
+      "adjustForPartialPeriodsLabel": "1111",
+      "alertBody": "1111",
+      "alertTitle": "1111",
+      "baseRateHelp": "1111",
+      "baseRateLabel": "1111",
+      "description": "1111",
+      "emptyState": "1111",
+      "heading": "1111",
+      "itemLabel": "1111 {{index}} 1111",
+      "selectItemPlaceholder": "1111",
+      "servicesAndProducts": "1111"
+    },
+    "hourly": {
+      "addHourlyService": "1111",
+      "alertBody": "1111",
+      "alertTitle": "1111",
+      "description": "1111",
+      "emptyState": "1111",
+      "enterHourlyRate": "1111",
+      "heading": "1111",
+      "hourlyRateLabel": "1111",
+      "hourlyRateSummary": "1111 {{rate}} 1111",
+      "minimumBillableTimeHelp": "1111",
+      "minimumBillableTimeLabel": "1111",
+      "minutesPlaceholder": "1111",
+      "recommendBucketLabel": "1111",
+      "roundUpToNearestHelp": "1111",
+      "roundUpToNearestLabel": "1111",
+      "selectServicePlaceholder": "1111",
+      "serviceLabel": "1111 {{index}} 1111",
+      "servicesHeading": "1111"
+    },
+    "title": {
+      "add": "1111",
+      "edit": "1111"
+    },
+    "usage": {
+      "addUsageService": "1111",
+      "alertBody": "1111",
+      "alertTitle": "1111",
+      "defaultUnit": "1111",
+      "defaultUnits": "1111",
+      "description": "1111",
+      "emptyState": "1111",
+      "enterUnitRate": "1111",
+      "heading": "1111",
+      "ratePerUnitLabel": "1111",
+      "rateSummary": "1111 {{rate}} 1111 {{unit}} 1111",
+      "recommendBucketLabel": "1111",
+      "searchServicesPlaceholder": "1111",
+      "serviceLabel": "1111 {{index}} 1111",
+      "servicesHeading": "1111",
+      "unitOfMeasureHelp": "1111",
+      "unitOfMeasureLabel": "1111",
+      "unitOfMeasurePlaceholder": "1111"
+    },
+    "validation": {
+      "billingFrequencyRequired": "1111",
+      "contractLineTypeRequired": "1111",
+      "fixedServiceRequired": "1111",
+      "hourlyRateRequired": "1111 {{index}} 1111",
+      "hourlyServiceRequired": "1111",
+      "nameRequired": "1111",
+      "prefix": "1111",
+      "serviceSelectRequired": "1111 {{index}} 1111",
+      "unitOfMeasureRequired": "1111 {{index}} 1111",
+      "unitRateRequired": "1111 {{index}} 1111",
+      "usageServiceRequired": "1111"
+    }
+  },
+  "forms": {
+    "bucketConfig": {
+      "labels": {
+        "allowRollover": "1111 {{units}} 1111",
+        "overageRatePerUnit": "1111 {{unit}} 1111",
+        "totalInBucket": "1111 {{units}} 1111"
+      },
+      "placeholders": {
+        "overageRate": "1111",
+        "totalHours": "1111"
+      },
+      "tooltips": {
+        "allowRollover": "1111 {{units}} 1111",
+        "overageRatePerUnit": "1111 {{unit}} 1111",
+        "totalInBucket": "1111 {{units}} 1111"
+      },
+      "units": {
+        "defaultPlural": "1111",
+        "defaultSingular": "1111"
+      }
+    },
+    "editQuantity": {
+      "dialogTitle": "1111",
+      "errors": {
+        "quantityGreaterThanZero": "1111",
+        "updateFailed": "1111"
+      },
+      "heading": "1111",
+      "helperText": "1111",
+      "labels": {
+        "quantity": "1111",
+        "unitPriceOverrideOptional": "1111"
+      }
+    },
+    "hourlyConfig": {
+      "labels": {
+        "hourlyRate": "1111",
+        "minimumBillableTime": "1111",
+        "roundUpToNearest": "1111"
+      },
+      "placeholders": {
+        "minutes": "1111"
+      },
+      "tooltips": {
+        "hourlyRate": "1111",
+        "minimumBillableTime": "1111",
+        "roundUpToNearest": "1111"
+      },
+      "userTypeRates": {
+        "addNewRateLabel": "1111",
+        "heading": "1111",
+        "options": {
+          "administrator": "1111",
+          "consultant": "1111",
+          "engineer": "1111",
+          "projectManager": "1111",
+          "technician": "1111"
+        },
+        "perHourSuffix": "1111",
+        "rateSrLabel": "1111",
+        "selectTypePlaceholder": "1111",
+        "tooltip": "1111",
+        "userTypeSrLabel": "1111",
+        "validation": {
+          "duplicateType": "1111",
+          "selectTypeAndRate": "1111"
+        }
+      }
+    },
+    "serviceForm": {
+      "errors": {
+        "failedToLoadServiceConfiguration": "1111",
+        "failedToUpdateService": "1111",
+        "missingPlanOrServiceInformation": "1111"
+      },
+      "loading": "1111",
+      "title": "1111"
+    },
+    "tierEditor": {
+      "actions": {
+        "addTier": "1111"
+      },
+      "aria": {
+        "fromAmount": "1111 {{tier}} 1111",
+        "rate": "1111 {{tier}} 1111",
+        "removeTier": "1111 {{tier}} 1111",
+        "toAmount": "1111 {{tier}} 1111"
+      },
+      "cardTitle": "1111",
+      "columns": {
+        "from": "1111 {{unit}} 1111",
+        "ratePerUnit": "1111 {{unit}} 1111",
+        "to": "1111 {{unit}} 1111"
+      },
+      "emptyState": "1111",
+      "helperText": "1111",
+      "units": {
+        "defaultPlural": "1111",
+        "defaultSingular": "1111"
+      },
+      "unlimitedPlaceholder": "1111"
+    },
+    "usageConfig": {
+      "labels": {
+        "defaultRatePerUnit": "1111",
+        "enableTieredPricing": "1111 {{serviceName}} 1111",
+        "minimumUsage": "1111",
+        "unitOfMeasure": "1111"
+      },
+      "placeholders": {
+        "minimumUsage": "1111",
+        "selectUnit": "1111"
+      },
+      "requiredFieldHint": "1111",
+      "tooltips": {
+        "defaultRatePerUnit": "1111",
+        "minimumUsage": "1111",
+        "unitOfMeasure": "1111"
+      }
+    }
+  },
+  "list": {
+    "actions": {
+      "addContractLine": "1111"
+    },
+    "columns": {
+      "actions": "1111",
+      "billingFrequency": "1111",
+      "contractLineName": "1111",
+      "contractLineType": "1111",
+      "isCustom": "1111"
+    },
+    "deleteDialog": {
+      "defaultEntityName": "1111"
+    },
+    "errors": {
+      "failedToAddContractLineService": "1111",
+      "failedToDeleteContractLine": "1111",
+      "failedToFetchContractLines": "1111",
+      "failedToFetchContractLineServices": "1111",
+      "failedToRemoveContractLineService": "1111",
+      "failedToUpdateContractLineService": "1111",
+      "failedToValidateDeletion": "1111",
+      "unknownErrorFetchingServiceTypes": "1111"
+    },
+    "heading": "1111",
+    "planServices": {
+      "actions": {
+        "addService": "1111"
+      },
+      "columns": {
+        "actions": "1111",
+        "customRate": "1111",
+        "quantity": "1111",
+        "serviceName": "1111",
+        "unitOfMeasure": "1111"
+      },
+      "emptyStateSelectContractLine": "1111",
+      "heading": "1111",
+      "selectServicePlaceholder": "1111",
+      "servicesFor": "1111 {{name}} 1111"
+    },
+    "toast": {
+      "contractLineDeletedSuccessfully": "1111"
+    }
+  },
+  "overview": {
+    "actions": {
+      "addContractLinePreset": "1111"
+    },
+    "columns": {
+      "actions": "1111",
+      "billingFrequency": "1111",
+      "contractLineName": "1111",
+      "contractLineType": "1111"
+    },
+    "errors": {
+      "failedToFetchContractLinePresets": "1111",
+      "unexpectedDeleteError": "1111"
+    },
+    "filters": {
+      "searchPlaceholder": "1111",
+      "type": {
+        "allTypes": "1111",
+        "selectTypePlaceholder": "1111"
+      }
+    },
+    "heading": "1111",
+    "loading": "1111",
+    "toast": {
+      "contractLinePresetDeletedSuccessfully": "1111"
+    }
+  },
+  "preset": {
+    "fixed": {
+      "basics": {
+        "billingFrequencyLabel": "1111",
+        "billingFrequencyPlaceholder": "1111",
+        "description": "1111",
+        "heading": "1111",
+        "nameLabel": "1111",
+        "namePlaceholder": "1111"
+      },
+      "cardTitle": "1111 {{name}} 1111",
+      "errors": {
+        "contractLineNotFoundOrInvalidType": "1111",
+        "failedToLoadContractLinePresetConfiguration": "1111",
+        "failedToSaveContractLinePreset": "1111",
+        "invalidContractLinePresetTypeOrNotFound": "1111"
+      },
+      "services": {
+        "associatedCardTitle": "1111"
+      },
+      "settings": {
+        "adjustForPartialPeriodsHelp": "1111",
+        "adjustForPartialPeriodsLabel": "1111",
+        "baseRateHelp": "1111",
+        "baseRateLabel": "1111",
+        "billingCycleAlignment": {
+          "options": {
+            "end": "1111",
+            "prorated": "1111",
+            "start": "1111"
+          }
+        },
+        "billingCycleAlignmentLabel": "1111",
+        "billingCycleAlignmentPlaceholder": "1111",
+        "billingTiming": {
+          "options": {
+            "advance": "1111",
+            "arrears": "1111"
+          }
+        },
+        "billingTimingHelp": "1111",
+        "billingTimingLabel": "1111",
+        "billingTimingPlaceholder": "1111",
+        "description": "1111",
+        "heading": "1111"
+      },
+      "validation": {
+        "billingFrequency": "1111",
+        "contractLinePresetName": "1111",
+        "contractLineType": "1111"
+      }
+    },
+    "hourly": {
+      "basics": {
+        "billingFrequencyLabel": "1111",
+        "billingFrequencyPlaceholder": "1111",
+        "cardTitle": "1111 {{name}} 1111",
+        "description": "1111",
+        "heading": "1111",
+        "minimumBillableTimeHelp": "1111",
+        "minimumBillableTimeLabel": "1111",
+        "minutesPlaceholder": "1111",
+        "nameLabel": "1111",
+        "namePlaceholder": "1111",
+        "roundUpToNearestHelp": "1111",
+        "roundUpToNearestLabel": "1111",
+        "validation": {
+          "billingFrequency": "1111",
+          "contractLinePresetName": "1111"
+        }
+      },
+      "errors": {
+        "cannotSaveValidationErrors": "1111",
+        "contractLineNotFoundOrInvalidType": "1111",
+        "failedToLoadPlanConfiguration": "1111",
+        "failedToSaveContractLinePreset": "1111",
+        "failedToSavePlanWideConfiguration": "1111 {{message}} 1111",
+        "failedToSaveServiceConfiguration": "1111 {{message}} 1111",
+        "invalidPlanTypeOrNotFound": "1111"
+      },
+      "services": {
+        "manageCardTitle": "1111"
+      },
+      "validation": {
+        "afterHoursMultiplierMinOne": "1111",
+        "overtimeRateNonNegative": "1111",
+        "overtimeThresholdNonNegative": "1111"
+      }
+    },
+    "usage": {
+      "actions": {
+        "saveAllConfigurations": "1111"
+      },
+      "basics": {
+        "billingFrequencyLabel": "1111",
+        "billingFrequencyPlaceholder": "1111",
+        "cardTitle": "1111 {{name}} 1111",
+        "description": "1111",
+        "heading": "1111",
+        "nameLabel": "1111",
+        "namePlaceholder": "1111",
+        "validation": {
+          "billingFrequency": "1111",
+          "contractLinePresetName": "1111"
+        }
+      },
+      "errors": {
+        "failedToLoadPlanServicesOrConfigurations": "1111",
+        "failedToSaveContractLinePreset": "1111",
+        "failedToSaveOneOrMoreServiceConfigurations": "1111",
+        "invalidPlanTypeOrNotFound": "1111",
+        "noChangesDetected": "1111",
+        "validationErrorDetails": "1111 {{details}} 1111",
+        "validationErrorsInModifiedServices": "1111"
+      },
+      "services": {
+        "fallbackServiceName": "1111 {{id}} 1111",
+        "loadingConfiguration": "1111",
+        "manageCardTitle": "1111",
+        "pricingCardTitle": "1111",
+        "summary": {
+          "defaultUnit": "1111",
+          "loading": "1111",
+          "notSet": "1111",
+          "ratePerUnit": "1111 {{rate}} 1111 {{unit}} 1111",
+          "tieredPricing": "1111 {{count}} 1111"
+        }
+      },
+      "validation": {
+        "baseRateNonNegative": "1111",
+        "baseRateRequiredWhenTieredOff": "1111",
+        "firstTierStartsAtZero": "1111",
+        "minimumUsageNonNegative": "1111",
+        "onlyLastTierUnlimited": "1111",
+        "tierGap": "1111 {{tier1}} 1111 {{tier2}} 1111",
+        "tierOverlap": "1111 {{tier1}} 1111 {{tier2}} 1111",
+        "tierRatesNonNegative": "1111",
+        "tiersRequiredWhenTieredOn": "1111",
+        "tierUpperBound": "1111 {{tier}} 1111",
+        "unitOfMeasureRequired": "1111"
+      }
+    }
+  },
+  "router": {
+    "contractLine": {
+      "loadFailed": "1111",
+      "loading": "1111",
+      "notFound": "1111 {{id}} 1111",
+      "unsupportedType": "1111 {{type}} 1111"
+    },
+    "preset": {
+      "loadFailed": "1111",
+      "loading": "1111",
+      "notFound": "1111 {{id}} 1111",
+      "unsupportedType": "1111 {{type}} 1111"
+    }
+  },
+  "services": {
+    "generic": {
+      "addSelectedServices": "1111 {{count}} 1111",
+      "addServicesHeading": "1111",
+      "allServicesAssociated": "1111",
+      "badges": {
+        "billingMismatch": "1111",
+        "defaultConfigType": "1111"
+      },
+      "billingMethod": {
+        "fixed": "1111",
+        "hourly": "1111",
+        "usage": "1111"
+      },
+      "columns": {
+        "actions": "1111",
+        "billingMethod": "1111",
+        "customRate": "1111",
+        "derivedConfigType": "1111",
+        "quantity": "1111",
+        "serviceName": "1111",
+        "serviceType": "1111",
+        "unitOfMeasure": "1111"
+      },
+      "emptyState": "1111",
+      "errors": {
+        "contractLineNotFound": "1111 {{id}} 1111",
+        "enterRateForService": "1111 {{serviceName}} 1111 {{currency}} 1111",
+        "failedToAddServices": "1111",
+        "failedToLoadServicesData": "1111",
+        "failedToRemoveService": "1111"
+      },
+      "loadingServices": "1111",
+      "serviceToAdd": {
+        "enterRatePlaceholder": "1111",
+        "metadata": "1111 {{type}} 1111 {{method}} 1111",
+        "noCurrencyPrice": "1111 {{currency}} 1111",
+        "rateDetail": "1111 {{symbol}} 1111 {{amount}} 1111"
+      },
+      "unknownService": "1111"
+    },
+    "hourlyPreset": {
+      "addSelectedServices": "1111 {{count}} 1111",
+      "addServicesHeading": "1111",
+      "allServicesAssociated": "1111",
+      "billingMethod": {
+        "fixed": "1111",
+        "hourly": "1111",
+        "usage": "1111"
+      },
+      "emptyState": "1111",
+      "errors": {
+        "failedToLoadServicesData": "1111",
+        "failedToSaveServices": "1111"
+      },
+      "hourlyRateLabel": "1111",
+      "loadingServices": "1111",
+      "recommendBucketLabel": "1111",
+      "serviceMetadata": "1111 {{type}} 1111 {{method}} 1111",
+      "serviceToAddMetadata": "1111 {{type}} 1111 {{method}} 1111 {{rate}} 1111",
+      "toast": {
+        "savedSuccessfully": "1111"
+      },
+      "unknownService": "1111",
+      "unsavedChanges": {
+        "banner": "1111",
+        "cancelLabel": "1111",
+        "confirmLabel": "1111",
+        "dialogMessage": "1111",
+        "dialogTitle": "1111"
+      }
+    },
+    "usagePreset": {
+      "addSelectedServices": "1111 {{count}} 1111",
+      "addServicesHeading": "1111",
+      "allServicesAssociated": "1111",
+      "billingMethod": {
+        "fixed": "1111",
+        "hourly": "1111",
+        "usage": "1111"
+      },
+      "defaultUnit": "1111",
+      "defaultUnits": "1111",
+      "emptyState": "1111",
+      "errors": {
+        "failedToLoadServicesData": "1111",
+        "failedToSaveServices": "1111"
+      },
+      "loadingServices": "1111",
+      "ratePerUnitLabel": "1111",
+      "recommendBucketLabel": "1111",
+      "serviceMetadata": "1111 {{type}} 1111 {{method}} 1111",
+      "serviceToAddMetadata": "1111 {{type}} 1111 {{method}} 1111 {{rate}} 1111 {{unit}} 1111",
+      "toast": {
+        "savedSuccessfully": "1111"
+      },
+      "unitLabel": "1111",
+      "unitPlaceholder": "1111",
+      "unknownService": "1111",
+      "unsavedChanges": {
+        "banner": "1111",
+        "cancelLabel": "1111",
+        "confirmLabel": "1111",
+        "dialogMessage": "1111",
+        "dialogTitle": "1111"
+      }
+    }
+  },
+  "typeSelector": {
+    "descriptions": {
+      "fixed": "1111",
+      "hourly": "1111",
+      "usage": "1111"
+    },
+    "label": "1111",
+    "placeholder": "1111"
+  }
+}

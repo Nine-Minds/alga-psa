@@ -19,6 +19,8 @@ function normalizeQuoteItem(row: Record<string, any>): IQuoteItem {
     discount_percentage: row.discount_percentage == null ? row.discount_percentage : Number(row.discount_percentage),
     display_order: Number(row.display_order),
     tax_rate: row.tax_rate == null ? row.tax_rate : Number(row.tax_rate),
+    cost: row.cost == null ? null : Number(row.cost),
+    cost_currency: row.cost_currency ?? null,
   } as IQuoteItem;
 }
 
@@ -76,7 +78,9 @@ const QuoteItem = {
           'default_rate',
           'unit_of_measure',
           'billing_method',
-          'item_kind'
+          'item_kind',
+          'cost',
+          'cost_currency'
         )
         .first();
 
@@ -101,6 +105,8 @@ const QuoteItem = {
         resolvedUnitPrice = priceRow ? Number(priceRow.rate) : Number(service.default_rate ?? 0);
       }
 
+      const resolvedItemKind = resolvedItem.service_item_kind ?? service.item_kind ?? 'service';
+
       resolvedItem = {
         ...resolvedItem,
         service_name: resolvedItem.service_name ?? service.service_name,
@@ -108,8 +114,11 @@ const QuoteItem = {
         unit_price: resolvedUnitPrice,
         unit_of_measure: resolvedItem.unit_of_measure ?? service.unit_of_measure ?? null,
         billing_method: resolvedItem.billing_method ?? service.billing_method ?? null,
-        service_item_kind: resolvedItem.service_item_kind ?? service.item_kind ?? 'service',
+        service_item_kind: resolvedItemKind,
         description: resolvedItem.description || service.service_name,
+        // Snapshot cost for product items so markup can be calculated on the quote
+        cost: resolvedItemKind === 'product' && service.cost != null ? Number(service.cost) : (resolvedItem as any).cost ?? null,
+        cost_currency: resolvedItemKind === 'product' && service.cost_currency ? service.cost_currency : (resolvedItem as any).cost_currency ?? null,
       };
     }
 

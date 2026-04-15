@@ -785,6 +785,1413 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ]
   },
   {
+    "id": "get-_api_v1_services",
+    "method": "get",
+    "path": "/api/v1/services",
+    "displayName": "List services",
+    "summary": "List services",
+    "description": "Returns service catalog entries where item_kind is service. Use this endpoint to inspect existing service catalog records and to gather prerequisite IDs such as custom_service_type_id and category_id before creating a new service.",
+    "tags": [
+      "Services",
+      "Service Catalog"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 25
+        }
+      },
+      {
+        "name": "sort",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "service_name",
+            "billing_method",
+            "default_rate"
+          ],
+          "default": "service_name"
+        }
+      },
+      {
+        "name": "order",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "default": "asc"
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "item_kind",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "service",
+            "product",
+            "any"
+          ]
+        }
+      },
+      {
+        "name": "is_active",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "true"
+              ]
+            },
+            {
+              "type": "string",
+              "enum": [
+                "false"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "billing_method",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "fixed",
+            "hourly",
+            "usage"
+          ]
+        }
+      },
+      {
+        "name": "category_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "null"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "custom_service_type_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ServiceCatalogEntry"
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_services",
+    "method": "post",
+    "path": "/api/v1/services",
+    "displayName": "Create service",
+    "summary": "Create service",
+    "description": "Creates a new service catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Use this endpoint for fixed, hourly, or usage-based service offerings.",
+    "tags": [
+      "Services",
+      "Service Catalog"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "service_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "custom_service_type_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "billing_method": {
+          "type": "string",
+          "enum": [
+            "fixed",
+            "hourly",
+            "usage"
+          ]
+        },
+        "default_rate": {
+          "type": "number",
+          "minimum": 0
+        },
+        "unit_of_measure": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "category_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tax_rate_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 2048
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "service_name",
+        "custom_service_type_id",
+        "billing_method",
+        "default_rate",
+        "unit_of_measure"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ServiceCatalogEntry"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_services_id",
+    "method": "get",
+    "path": "/api/v1/services/{id}",
+    "displayName": "Get service",
+    "summary": "Get service",
+    "description": "Returns a single service catalog entry by UUID.",
+    "tags": [
+      "Services",
+      "Service Catalog"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Service UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ServiceCatalogEntry"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_services_id",
+    "method": "put",
+    "path": "/api/v1/services/{id}",
+    "displayName": "Update service",
+    "summary": "Update service",
+    "description": "Updates a service catalog entry by UUID.",
+    "tags": [
+      "Services",
+      "Service Catalog"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Service UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "service_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "custom_service_type_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "billing_method": {
+          "type": "string",
+          "enum": [
+            "fixed",
+            "hourly",
+            "usage"
+          ]
+        },
+        "default_rate": {
+          "type": "number",
+          "minimum": 0
+        },
+        "unit_of_measure": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "category_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tax_rate_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 2048
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ServiceCatalogEntry"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_services_id",
+    "method": "delete",
+    "path": "/api/v1/services/{id}",
+    "displayName": "Delete service",
+    "summary": "Delete service",
+    "description": "Deletes a service catalog entry by UUID.",
+    "tags": [
+      "Services",
+      "Service Catalog"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Service UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service UUID."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_products",
+    "method": "get",
+    "path": "/api/v1/products",
+    "displayName": "List products",
+    "summary": "List products",
+    "description": "Returns product catalog entries where item_kind is product. Use this endpoint to inspect existing product catalog records and to gather prerequisite IDs such as custom_service_type_id and category_id before creating a new product.",
+    "tags": [
+      "Products",
+      "Service Catalog"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 25
+        }
+      },
+      {
+        "name": "sort",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "service_name",
+            "default_rate"
+          ],
+          "default": "service_name"
+        }
+      },
+      {
+        "name": "order",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "default": "asc"
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "is_active",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "true"
+              ]
+            },
+            {
+              "type": "string",
+              "enum": [
+                "false"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "category_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "null"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "is_license",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "true"
+              ]
+            },
+            {
+              "type": "string",
+              "enum": [
+                "false"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ProductCatalogEntry"
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_products",
+    "method": "post",
+    "path": "/api/v1/products",
+    "displayName": "Create product",
+    "summary": "Create product",
+    "description": "Creates a new product catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Products are catalog entries with item_kind product and always use billing_method usage.",
+    "tags": [
+      "Products",
+      "Service Catalog"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "service_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "custom_service_type_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "billing_method": {
+          "type": "string",
+          "enum": [
+            "usage"
+          ],
+          "default": "usage"
+        },
+        "default_rate": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "default": "USD"
+        },
+        "unit_of_measure": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "category_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tax_rate_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 2048
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sku": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cost_currency": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "USD"
+        },
+        "vendor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 255
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "manufacturer": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 255
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "product_category": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 255
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "is_license": {
+          "type": "boolean",
+          "default": false
+        },
+        "license_term": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "license_billing_cadence": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "is_active": {
+          "type": "boolean",
+          "default": true
+        },
+        "prices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "currency_code": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              },
+              "rate": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "currency_code",
+              "rate"
+            ]
+          }
+        }
+      },
+      "required": [
+        "service_name",
+        "custom_service_type_id",
+        "unit_of_measure"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ProductCatalogEntry"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_products_id",
+    "method": "get",
+    "path": "/api/v1/products/{id}",
+    "displayName": "Get product",
+    "summary": "Get product",
+    "description": "Returns a single product catalog entry by UUID.",
+    "tags": [
+      "Products",
+      "Service Catalog"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Product UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Product UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ProductCatalogEntry"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_products_id",
+    "method": "put",
+    "path": "/api/v1/products/{id}",
+    "displayName": "Update product",
+    "summary": "Update product",
+    "description": "Updates a product catalog entry by UUID.",
+    "tags": [
+      "Products",
+      "Service Catalog"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Product UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Product UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "service_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "custom_service_type_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "billing_method": {
+          "type": "string",
+          "enum": [
+            "usage"
+          ],
+          "default": "usage"
+        },
+        "default_rate": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "default": "USD"
+        },
+        "unit_of_measure": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "category_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tax_rate_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 2048
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sku": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cost_currency": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "USD"
+        },
+        "vendor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 255
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "manufacturer": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 255
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "product_category": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 255
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "is_license": {
+          "type": "boolean",
+          "default": false
+        },
+        "license_term": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "license_billing_cadence": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "is_active": {
+          "type": "boolean",
+          "default": true
+        },
+        "prices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "currency_code": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              },
+              "rate": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "currency_code",
+              "rate"
+            ]
+          }
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ProductCatalogEntry"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_products_id",
+    "method": "delete",
+    "path": "/api/v1/products/{id}",
+    "displayName": "Delete product",
+    "summary": "Delete product",
+    "description": "Deletes a product catalog entry by UUID.",
+    "tags": [
+      "Products",
+      "Service Catalog"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Product UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Product UUID."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_servicetypes",
+    "method": "get",
+    "path": "/api/v1/service-types",
+    "displayName": "List service types",
+    "summary": "List service types",
+    "description": "Returns tenant service types. Use this endpoint to resolve custom_service_type_id before creating or updating services and products in the service catalog.",
+    "tags": [
+      "Service Types",
+      "Service Catalog"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "billing_method",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "fixed",
+            "hourly",
+            "usage"
+          ]
+        }
+      },
+      {
+        "name": "is_active",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean"
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ServiceTypeResource"
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_servicetypes_id",
+    "method": "get",
+    "path": "/api/v1/service-types/{id}",
+    "displayName": "Get service type",
+    "summary": "Get service type",
+    "description": "Returns a single tenant service type by UUID.",
+    "tags": [
+      "Service Types",
+      "Service Catalog"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Service type UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service type UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ServiceTypeResource"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_projects_id_taskstatusmappings",
     "method": "get",
     "path": "/api/v1/projects/{id}/task-status-mappings",
@@ -945,6 +2352,104 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "Call this only when you already know both the project UUID and phase UUID.",
       "Do not send placeholder strings for id or phaseId. Both path parameters must be UUIDs."
     ]
+  },
+  {
+    "id": "post-_api_v1_projects_id_phases_phaseid_tasks",
+    "method": "post",
+    "path": "/api/v1/projects/{id}/phases/{phaseId}/tasks",
+    "displayName": "Create project phase task",
+    "summary": "Create project phase task",
+    "description": "Creates a new task in the specified project phase. Resolve phaseId from the project phases and project_status_mapping_id from the project task status mappings before calling this endpoint.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      },
+      {
+        "name": "phaseId",
+        "in": "path",
+        "required": true,
+        "description": "Project phase UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project phase UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "task_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "description": {
+          "type": "string"
+        },
+        "assigned_to": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "estimated_hours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "due_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "priority_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "task_type_key": {
+          "type": "string",
+          "default": "general"
+        },
+        "project_status_mapping_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "wbs_code": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "task_name",
+        "project_status_mapping_id"
+      ],
+      "description": "Payload for creating a project task within a phase. Provide project_status_mapping_id as a UUID from the project task status mappings endpoint. The phaseId path parameter selects which phase will receive the task."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ProjectTaskApiResponse"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
   },
   {
     "id": "get-_api_v1_projects_tasks_taskid",
@@ -11146,7 +12651,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets",
     "displayName": "List Tickets",
     "summary": "List tickets",
-    "description": "Returns a paginated list of tickets for the current tenant. Use GET /api/v1/boards and GET /api/v1/statuses for board/status lookups instead of sampling tickets. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description.",
+    "description": "Returns a paginated list of tickets for the current tenant. Supports filtering by board, status, priority, client, assignee, category, open/closed/overdue flags, and entered/closed date ranges — see the parameters list for all available filters. For aggregate counts (e.g. how many tickets are open or high priority), prefer GET /api/v1/tickets/stats or set limit=1 and read pagination.total from the response. Use GET /api/v1/boards, GET /api/v1/statuses, and GET /api/v1/priorities for lookup data instead of sampling tickets. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description.",
     "tags": [
       "tickets"
     ],
@@ -11167,7 +12672,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "limit",
         "in": "query",
         "required": false,
-        "description": "Number of tickets per page (max 100, default 25).",
+        "description": "Number of tickets per page (max 100, default 25). Set limit=1 when you only need pagination.total for an aggregate count.",
         "schema": {
           "type": "integer",
           "minimum": 1,
@@ -11185,23 +12690,88 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
+        "name": "board_name",
+        "in": "query",
+        "required": false,
+        "description": "Filter by board display name (case-sensitive exact match). Prefer board_id when you already have a UUID.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
         "name": "status_id",
         "in": "query",
         "required": false,
-        "description": "Filter by ticket status.",
+        "description": "Filter by a single ticket status UUID.",
         "schema": {
           "type": "string",
           "format": "uuid"
         }
       },
       {
-        "name": "assigned_to",
+        "name": "status_ids",
         "in": "query",
         "required": false,
-        "description": "Filter tickets assigned to a specific technician.",
+        "description": "Filter by multiple status UUIDs as a comma-separated list (for example status_ids=uuid1,uuid2). Useful for matching several open or closed statuses at once.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "status_name",
+        "in": "query",
+        "required": false,
+        "description": "Filter by status display name (case-sensitive exact match). Prefer status_id/status_ids when you already have UUIDs.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "priority_id",
+        "in": "query",
+        "required": false,
+        "description": "Filter by ticket priority UUID. Call GET /api/v1/priorities to discover priority UUIDs.",
         "schema": {
           "type": "string",
           "format": "uuid"
+        }
+      },
+      {
+        "name": "priority_name",
+        "in": "query",
+        "required": false,
+        "description": "Filter by priority display name (case-sensitive exact match). Use this when the user asks for tickets of a specific priority like \"High\", \"Highest\", \"Medium\", or \"Low\" and you do not want to look up a UUID first.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "category_id",
+        "in": "query",
+        "required": false,
+        "description": "Filter by ticket category UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "subcategory_id",
+        "in": "query",
+        "required": false,
+        "description": "Filter by ticket subcategory UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "category_name",
+        "in": "query",
+        "required": false,
+        "description": "Filter by category display name (case-sensitive exact match).",
+        "schema": {
+          "type": "string"
         }
       },
       {
@@ -11215,12 +12785,146 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
+        "name": "client_name",
+        "in": "query",
+        "required": false,
+        "description": "Filter by client display name (case-sensitive exact match). Prefer client_id when you already have a UUID.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "description": "Filter by client location UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "contact_name_id",
+        "in": "query",
+        "required": false,
+        "description": "Filter by primary contact UUID on the ticket.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "contact_name",
+        "in": "query",
+        "required": false,
+        "description": "Filter by contact display name (case-sensitive exact match).",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "assigned_to",
+        "in": "query",
+        "required": false,
+        "description": "Filter tickets assigned to a specific technician (user UUID).",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "entered_by",
+        "in": "query",
+        "required": false,
+        "description": "Filter tickets created by a specific user UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "title",
+        "in": "query",
+        "required": false,
+        "description": "Filter by ticket title (substring match).",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "ticket_number",
+        "in": "query",
+        "required": false,
+        "description": "Filter by ticket number (for example alga0001748).",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
         "name": "is_open",
         "in": "query",
         "required": false,
         "description": "When true, only open tickets are returned.",
         "schema": {
           "type": "boolean"
+        }
+      },
+      {
+        "name": "is_closed",
+        "in": "query",
+        "required": false,
+        "description": "When true, only closed tickets are returned.",
+        "schema": {
+          "type": "boolean"
+        }
+      },
+      {
+        "name": "has_assignment",
+        "in": "query",
+        "required": false,
+        "description": "When true, only tickets that have an assignee are returned; when false, only unassigned tickets.",
+        "schema": {
+          "type": "boolean"
+        }
+      },
+      {
+        "name": "entered_from",
+        "in": "query",
+        "required": false,
+        "description": "Lower bound on entered_at as an ISO-8601 datetime (inclusive).",
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "entered_to",
+        "in": "query",
+        "required": false,
+        "description": "Upper bound on entered_at as an ISO-8601 datetime (inclusive).",
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "closed_from",
+        "in": "query",
+        "required": false,
+        "description": "Lower bound on closed_at as an ISO-8601 datetime (inclusive).",
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "closed_to",
+        "in": "query",
+        "required": false,
+        "description": "Upper bound on closed_at as an ISO-8601 datetime (inclusive).",
+        "schema": {
+          "type": "string",
+          "format": "date-time"
         }
       },
       {
@@ -11546,18 +13250,111 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_tickets_stats",
     "method": "get",
     "path": "/api/v1/tickets/stats",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "Get Ticket Stats",
+    "summary": "Aggregate ticket counts and metrics",
+    "description": "Returns pre-computed ticket counts and metrics for the current tenant in a single call. Use this whenever the user asks aggregate questions like \"how many tickets are open\", \"how many high priority tickets\", \"how many overdue tickets\", or \"how many tickets per board/status/priority/category\". This endpoint returns totals grouped by status, priority, category, and board, plus counts of open/closed/overdue/unassigned tickets and tickets created today/this week/this month. Prefer this over paginating GET /api/v1/tickets and counting rows yourself.",
     "tags": [
       "tickets"
     ],
+    "rbacResource": "ticket",
     "approvalRequired": false,
     "parameters": [],
     "responseBodySchema": {
       "type": "object",
-      "properties": {}
-    }
+      "properties": {
+        "data": {
+          "type": "object",
+          "description": "Ticket statistics for the current tenant. Priority names (e.g. \"High\", \"Medium\") are the keys in tickets_by_priority and map directly to the priority_name values used by GET /api/v1/tickets.",
+          "properties": {
+            "total_tickets": {
+              "type": "integer",
+              "description": "Total number of tickets in the tenant, regardless of status."
+            },
+            "open_tickets": {
+              "type": "integer",
+              "description": "Number of tickets that are currently open (status.is_closed = false)."
+            },
+            "closed_tickets": {
+              "type": "integer",
+              "description": "Number of tickets whose status is marked closed."
+            },
+            "overdue_tickets": {
+              "type": "integer",
+              "description": "Number of open tickets past their due/SLA date."
+            },
+            "unassigned_tickets": {
+              "type": "integer",
+              "description": "Number of open tickets with no assignee."
+            },
+            "tickets_by_status": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "description": "Map of status display name to ticket count, for example {\"New\": 42, \"In Progress\": 18, \"Closed\": 140}."
+            },
+            "tickets_by_priority": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "description": "Map of priority display name to ticket count, for example {\"High\": 12, \"Highest\": 3, \"Medium\": 55, \"Low\": 20}. These keys are the same strings accepted by the priority_name filter on GET /api/v1/tickets."
+            },
+            "tickets_by_category": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "description": "Map of category display name to ticket count."
+            },
+            "tickets_by_board": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "description": "Map of board display name to ticket count."
+            },
+            "average_resolution_time": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "Average resolution time in hours across closed tickets, or null if there are no closed tickets."
+            },
+            "tickets_created_today": {
+              "type": "integer"
+            },
+            "tickets_created_this_week": {
+              "type": "integer"
+            },
+            "tickets_created_this_month": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "total_tickets",
+            "open_tickets",
+            "closed_tickets",
+            "overdue_tickets",
+            "unassigned_tickets",
+            "tickets_by_status",
+            "tickets_by_priority",
+            "tickets_by_category",
+            "tickets_by_board",
+            "tickets_created_today",
+            "tickets_created_this_week",
+            "tickets_created_this_month"
+          ]
+        }
+      }
+    },
+    "examples": [
+      {
+        "name": "Answer \"how many high priority tickets are open\" in one call",
+        "request": {},
+        "notes": "Call this endpoint and read data.tickets_by_priority[\"High\"] for the count of high-priority tickets. Note the map covers all tickets regardless of status — if the user asks specifically about OPEN high-priority tickets and you need to scope by status, fall back to GET /api/v1/tickets?is_open=true&priority_name=High&limit=1 and read pagination.total from that response."
+      }
+    ]
   },
   {
     "id": "get-_api_v1_tickets_id",
@@ -15488,488 +17285,164 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "get-_api_v1_storage_namespaces_namespace_records",
-    "method": "get",
-    "path": "/api/v1/storage/namespaces/{namespace}/records",
-    "displayName": "List records in a namespace",
-    "summary": "List records in a namespace",
-    "tags": [
-      "Storage"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 100
-        }
-      },
-      {
-        "name": "cursor",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "keyPrefix",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "maxLength": 256
-        }
-      },
-      {
-        "name": "includeValues",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "boolean"
-        }
-      },
-      {
-        "name": "includeMetadata",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "boolean"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "$ref": "#/components/schemas/StorageListItem"
-          }
-        },
-        "nextCursor": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "items",
-        "nextCursor"
-      ]
-    },
-    "playbooks": [
-      "storage/list-namespace"
-    ],
-    "examples": [
-      {
-        "name": "List records with prefix filter",
-        "request": {
-          "params": {
-            "namespace": "integrations:zendesk"
-          },
-          "query": {
-            "prefix": "tickets/"
-          }
-        }
-      }
-    ]
-  },
-  {
-    "id": "post-_api_v1_storage_namespaces_namespace_records",
+    "id": "post-_api_extbundles_abort",
     "method": "post",
-    "path": "/api/v1/storage/namespaces/{namespace}/records",
-    "displayName": "Bulk insert or update records",
-    "summary": "Bulk insert or update records",
+    "path": "/api/ext-bundles/abort",
+    "displayName": "POST ext-bundles",
+    "summary": "POST ext-bundles",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
-      "Storage"
+      "ext-bundles"
     ],
-    "approvalRequired": true,
-    "parameters": [
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        }
-      }
-    ],
+    "approvalRequired": false,
+    "parameters": [],
     "requestBodySchema": {
       "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "key": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              },
-              "value": {},
-              "metadata": {
-                "type": "object",
-                "additionalProperties": {}
-              },
-              "ttlSeconds": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "ifRevision": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "schemaVersion": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              }
-            },
-            "required": [
-              "key"
-            ]
-          },
-          "minItems": 1
-        }
-      },
-      "required": [
-        "items"
-      ]
+      "properties": {}
     },
     "responseBodySchema": {
       "type": "object",
-      "properties": {
-        "namespace": {
-          "type": "string"
-        },
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "key": {
-                "type": "string"
-              },
-              "revision": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "ttlExpiresAt": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "format": "date-time"
-              }
-            },
-            "required": [
-              "key",
-              "revision",
-              "ttlExpiresAt"
-            ]
-          }
-        }
-      },
-      "required": [
-        "namespace",
-        "items"
-      ]
-    },
-    "playbooks": [
-      "storage/bulk-upsert-records"
-    ],
-    "examples": [
-      {
-        "name": "Bulk upsert configuration values",
-        "request": {
-          "params": {
-            "namespace": "automation:workflow"
-          },
-          "body": {
-            "records": [
-              {
-                "key": "webhook/url",
-                "value": "https://hooks.example.com/inbound",
-                "contentType": "text/plain"
-              }
-            ]
-          }
-        }
-      }
-    ]
+      "properties": {}
+    }
   },
   {
-    "id": "get-_api_v1_storage_namespaces_namespace_records_key",
+    "id": "post-_api_extbundles_finalize",
+    "method": "post",
+    "path": "/api/ext-bundles/finalize",
+    "displayName": "POST ext-bundles",
+    "summary": "POST ext-bundles",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "ext-bundles"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_extbundles_uploadproxy",
+    "method": "post",
+    "path": "/api/ext-bundles/upload-proxy",
+    "displayName": "POST ext-bundles",
+    "summary": "POST ext-bundles",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "ext-bundles"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_extensions_installinfo",
     "method": "get",
-    "path": "/api/v1/storage/namespaces/{namespace}/records/{key}",
-    "displayName": "Get a record by key",
-    "summary": "Get a record by key",
+    "path": "/api/extensions/install-info",
+    "displayName": "GET extensions",
+    "summary": "GET extensions",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
-      "Storage"
+      "extensions"
     ],
     "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        }
-      },
-      {
-        "name": "key",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256
-        }
-      },
-      {
-        "name": "if-revision-match",
-        "in": "header",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
+    "parameters": [],
     "responseBodySchema": {
       "type": "object",
-      "properties": {
-        "namespace": {
-          "type": "string"
-        },
-        "key": {
-          "type": "string"
-        },
-        "revision": {
-          "type": "integer",
-          "exclusiveMinimum": 0
-        },
-        "value": {},
-        "metadata": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "ttlExpiresAt": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "namespace",
-        "key",
-        "revision",
-        "metadata",
-        "ttlExpiresAt",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "playbooks": [
-      "storage/get-record"
-    ],
-    "examples": [
-      {
-        "name": "Retrieve a workflow record",
-        "request": {
-          "params": {
-            "namespace": "automation:workflow",
-            "key": "webhook/url"
-          }
-        }
-      }
-    ]
+      "properties": {}
+    }
   },
   {
-    "id": "put-_api_v1_storage_namespaces_namespace_records_key",
-    "method": "put",
-    "path": "/api/v1/storage/namespaces/{namespace}/records/{key}",
-    "displayName": "Create or update a record by key",
-    "summary": "Create or update a record by key",
+    "id": "get-_api_extensions_registrydbcheck",
+    "method": "get",
+    "path": "/api/extensions/registry-db-check",
+    "displayName": "GET extensions",
+    "summary": "GET extensions",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
-      "Storage"
+      "extensions"
     ],
-    "approvalRequired": true,
-    "parameters": [
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        }
-      },
-      {
-        "name": "key",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256
-        }
-      }
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_extensions_reprovision",
+    "method": "post",
+    "path": "/api/extensions/reprovision",
+    "displayName": "POST extensions",
+    "summary": "POST extensions",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "extensions"
     ],
+    "approvalRequired": false,
+    "parameters": [],
     "requestBodySchema": {
       "type": "object",
-      "properties": {
-        "value": {},
-        "metadata": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "ttlSeconds": {
-          "type": "integer",
-          "exclusiveMinimum": 0
-        },
-        "ifRevision": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "schemaVersion": {
-          "type": "integer",
-          "exclusiveMinimum": 0
-        }
-      }
+      "properties": {}
     },
     "responseBodySchema": {
       "type": "object",
-      "properties": {
-        "namespace": {
-          "type": "string"
-        },
-        "key": {
-          "type": "string"
-        },
-        "revision": {
-          "type": "integer",
-          "exclusiveMinimum": 0
-        },
-        "ttlExpiresAt": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "namespace",
-        "key",
-        "revision",
-        "ttlExpiresAt",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "playbooks": [
-      "storage/put-record"
-    ],
-    "examples": [
-      {
-        "name": "Set workflow webhook URL",
-        "request": {
-          "params": {
-            "namespace": "automation:workflow",
-            "key": "webhook/url"
-          },
-          "body": {
-            "value": "https://hooks.example.com/inbound",
-            "contentType": "text/plain"
-          }
-        }
-      }
-    ]
+      "properties": {}
+    }
   },
   {
-    "id": "delete-_api_v1_storage_namespaces_namespace_records_key",
-    "method": "delete",
-    "path": "/api/v1/storage/namespaces/{namespace}/records/{key}",
-    "displayName": "Delete a record by key",
-    "summary": "Delete a record by key",
+    "id": "post-_api_provisioning_tenants",
+    "method": "post",
+    "path": "/api/provisioning/tenants",
+    "displayName": "POST provisioning",
+    "summary": "POST provisioning",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
-      "Storage"
+      "provisioning"
     ],
     "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        }
-      },
-      {
-        "name": "key",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256
-        }
-      },
-      {
-        "name": "ifRevision",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "minimum": 0
-        }
-      }
-    ]
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_v1_auth_verify",
+    "method": "post",
+    "path": "/api/v1/auth/verify",
+    "displayName": "POST v1",
+    "summary": "POST v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "auth"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
   }
 ];
 

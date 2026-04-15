@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from 'react-i18next';
 
 export interface TicketOption {
   value: string;
@@ -25,13 +26,15 @@ const TicketSelect: React.FC<TicketSelectProps> = ({
   options,
   value,
   onValueChange,
-  placeholder = 'Select a ticket...',
+  placeholder,
   className = '',
   disabled = false,
   label,
   searchValue = '',
   onSearchChange,
 }): React.JSX.Element => {
+  const { t } = useTranslation(['features/projects', 'common']);
+  const resolvedPlaceholder = placeholder || t('ticketSelect.placeholder', 'Select a ticket...');
   const selectedOption = options.find(option => option.value === value);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,9 +70,9 @@ const TicketSelect: React.FC<TicketSelectProps> = ({
             disabled:opacity-50 disabled:cursor-not-allowed
             ${className}
           `}
-          aria-label={placeholder}
+          aria-label={resolvedPlaceholder}
         >
-          <RadixSelect.Value placeholder={placeholder} className="flex-1 text-left" />
+          <RadixSelect.Value placeholder={resolvedPlaceholder} className="flex-1 text-left" />
           <RadixSelect.Icon>
             <ChevronDown className="w-4 h-4 text-gray-500" />
           </RadixSelect.Icon>
@@ -89,7 +92,7 @@ const TicketSelect: React.FC<TicketSelectProps> = ({
                   <Input
                     ref={searchInputRef}
                     type="text"
-                    placeholder="Search tickets..."
+                    placeholder={t('ticketSelect.searchPlaceholder', 'Search tickets...')}
                     className="pl-9 w-full"
                     value={searchValue}
                     onChange={(e) => onSearchChange(e.target.value)}
@@ -100,7 +103,7 @@ const TicketSelect: React.FC<TicketSelectProps> = ({
             <RadixSelect.Viewport className="max-h-[300px] overflow-auto p-1">
               {options.length === 0 ? (
                 <div className="px-3 py-2 text-sm text-gray-500">
-                  No tickets found
+                  {t('ticketSelect.noTickets', 'No tickets found')}
                 </div>
               ) : (
                 options.map((option): React.JSX.Element => (

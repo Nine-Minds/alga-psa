@@ -27,6 +27,8 @@ export interface IQuoteItem extends TenantEntity {
   description: string;
   quantity: number;
   unit_price: number;
+  cost?: number | null;
+  cost_currency?: string | null;
   total_price: number;
   tax_amount: number;
   net_amount: number;

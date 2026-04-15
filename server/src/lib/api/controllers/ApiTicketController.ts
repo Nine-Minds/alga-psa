@@ -299,11 +299,22 @@ export class ApiTicketController extends ApiBaseController {
             order = orderRaw;
           }
 
+          const contentFormatRaw = searchParams.get('content_format');
+          let contentFormat: 'full' | 'markdown' | undefined;
+          if (contentFormatRaw !== null) {
+            if (contentFormatRaw !== 'full' && contentFormatRaw !== 'markdown') {
+              throw new ValidationError('Validation failed', [
+                { path: ['content_format'], message: "content_format must be 'full' or 'markdown'" }
+              ]);
+            }
+            contentFormat = contentFormatRaw;
+          }
+
           const ticketId = await this.extractIdFromPath(apiRequest);
           const comments = await this.ticketService.getTicketComments(
-            ticketId, 
+            ticketId,
             apiRequest.context!,
-            { limit, offset, order }
+            { limit, offset, order, contentFormat }
           );
 
           return createSuccessResponse(comments, 200, undefined, apiRequest);
@@ -400,6 +411,40 @@ export class ApiTicketController extends ApiBaseController {
           headers.set('Cache-Control', 'no-store');
 
           return new NextResponse(new Uint8Array(result.buffer), { status: 200, headers });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Delete a ticket document
+   */
+  deleteDocument() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+
+          const url = new URL(apiRequest.url || req.url);
+          const segments = url.pathname.split('/');
+          const docsIndex = segments.indexOf('documents');
+          const documentId = docsIndex >= 0 ? segments[docsIndex + 1] : undefined;
+
+          if (!documentId) {
+            throw new ValidationError('Validation failed', [
+              { path: ['documentId'], message: 'document ID is required' },
+            ]);
+          }
+
+          await this.ticketService.deleteTicketDocument(ticketId, documentId, apiRequest.context!);
+
+          return NextResponse.json(createSuccessResponse(null), { status: 200 });
         });
       } catch (error) {
         return handleApiError(error);

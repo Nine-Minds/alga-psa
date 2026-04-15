@@ -37,7 +37,9 @@
     "noSla": "Ohne SLA",
     "onTrack": "Im Plan",
     "breached": "Verletzt",
-    "paused": "Pausiert"
+    "paused": "Pausiert",
+    "allResponseStatuses": "Alle Antwortstatus",
+    "responseStatus": "Antwortstatus"
   },
   "create": {
     "title": "Support-Ticket erstellen",
@@ -189,7 +191,8 @@
     "failedToUpdateComment": "Kommentar konnte nicht aktualisiert werden",
     "failedToDeleteComment": "Kommentar konnte nicht gelöscht werden",
     "deleteOwnCommentError": "Du kannst nur deine eigenen Kommentare löschen",
-    "failedToUpdateTicketStatus": "Ticketstatus konnte nicht aktualisiert werden"
+    "failedToUpdateTicketStatus": "Ticketstatus konnte nicht aktualisiert werden",
+    "noTitle": "Kein Titel"
   },
   "conversation": {
     "comments": "Kommentare",
@@ -220,7 +223,18 @@
     "noStatusChange": "Status nicht ändern",
     "clipboardDraftCancelTitle": "Eingefügte Bilder erkannt",
     "deleteUploadedImages": "Bilder löschen",
-    "keepUploadedImages": "Bilder behalten"
+    "keepUploadedImages": "Bilder behalten",
+    "bundledUpdate": "Gebündeltes Update",
+    "clientSuffix": " (Kunde)",
+    "internalCommentTooltip": "Interner Kommentar",
+    "resolutionCommentTooltip": "Lösungskommentar",
+    "unknownUser": "Unbekannter Benutzer",
+    "editCommentAriaLabel": "Kommentar bearbeiten",
+    "deleteCommentAriaLabel": "Kommentar löschen",
+    "inboundChildReplies": "Eingehende Antworten auf untergeordnete Tickets (schreibgeschützt)",
+    "childTicket": "Untergeordnetes Ticket",
+    "ticketPrefix": "Ticket {{number}}",
+    "clipboardDraftCancelMessage": "Dieser Entwurf enthält eingefügte Bilder, die bereits als Ticket-Dokumente hochgeladen wurden. Beibehalten oder dauerhaft löschen?"
   },
   "responseState": {
     "awaitingYourResponse": "Warten auf Ihre Antwort",
@@ -423,7 +437,12 @@
       "masterTicket": "Hauptticket auswählen",
       "selectMasterTicket": "Hauptticket auswählen...",
       "syncUpdates": "Synchronisiere Aktualisierungen vom Hauptticket zu den Untertickets (öffentliche Antworten + Workflow-Änderungen)",
-      "syncUpdatesHelp": "Untertickets behalten beim Bündeln ihren aktuellen Status. Workflow-Felder sind bei Untertickets standardmäßig gesperrt. Interne Notizen bleiben auf dem Hauptticket."
+      "syncUpdatesHelp": "Untertickets behalten beim Bündeln ihren aktuellen Status. Workflow-Felder sind bei Untertickets standardmäßig gesperrt. Interne Notizen bleiben auf dem Hauptticket.",
+      "childrenDescription": "Untergeordnete behalten ihren aktuellen Status; Workflow-Felder sind bei untergeordneten Tickets gesperrt. Eingehende Antworten auf untergeordnete Tickets werden unten als schreibgeschützt angezeigt.",
+      "checkingMasters": "Vorhandene Bündel werden geprüft...",
+      "existingMasterSuffix": "(vorhandenes Hauptticket)",
+      "existingMasterLocked": "Ein ausgewähltes Ticket ist bereits ein Hauptticket. Es wird als Hauptticket verwendet; die anderen werden als Untertickets hinzugefügt.",
+      "multipleExistingMasters": "Mehrere ausgewählte Tickets sind bereits Haupttickets ({{count}}). Hebe die Bündelung aller bis auf eines auf, bevor du bündelst."
     },
     "auth": {
       "moveRequired": "Du musst angemeldet sein, um Tickets zu verschieben",
@@ -749,7 +768,8 @@
       "columns": {
         "sla": "SLA",
         "createdBy": "Erstellt von",
-        "actions": "Aktionen"
+        "actions": "Aktionen",
+        "tags": "Schlagwörter"
       },
       "requiredSuffix": "(erforderlich)",
       "tagsUnderTitle": "Unter dem Titel anzeigen",
@@ -1010,5 +1030,22 @@
     "minutes": "Minuten",
     "invalidDateTime": "Ungültiges Datum/Uhrzeit",
     "declined": "Abgelehnt"
+  },
+  "categories": {
+    "itilBadge": "ITIL"
+  },
+  "tickets": {
+    "conversation": {
+      "closeStatus": "Status schließen",
+      "noStatusChange": "Status nicht ändern"
+    }
+  },
+  "common": {
+    "continueEditing": "Bearbeitung fortsetzen"
+  },
+  "details": {
+    "bundle": {
+      "childrenDescription": "Untergeordnete Tickets, die in diesem Master-Ticket gebündelt sind"
+    }
   }
 }

@@ -1,0 +1,803 @@
+{
+  "common": {
+    "actions": {
+      "add": "Toevoegen",
+      "cancel": "Annuleren",
+      "configure": "Configureer",
+      "delete": "Verwijderen",
+      "edit": "Bewerking",
+      "openMenu": "Menu openen",
+      "remove": "Verwijderen",
+      "reset": "Opnieuw instellen",
+      "save": "Redden",
+      "saveChanges": "Wijzigingen opslaan",
+      "saveChangesDirty": "Wijzigingen opslaan *",
+      "saving": "Besparing..."
+    },
+    "errors": {
+      "errorWithMessage": "Fout: {{message}}"
+    },
+    "labels": {
+      "no": "Nee",
+      "yes": "Ja"
+    },
+    "moneyPlaceholder": "0,00",
+    "notAvailable": "N.v.t",
+    "tryAgain": "Probeer het opnieuw.",
+    "validation": {
+      "prefix": "Corrigeer het volgende:"
+    }
+  },
+  "configuration": {
+    "fixed": {
+      "basics": {
+        "billingFrequencyLabel": "Factureringsfrequentie *",
+        "billingFrequencyPlaceholder": "Selecteer de factureringsfrequentie",
+        "billingTiming": {
+          "options": {
+            "advance": "Voorschot - factuur bij aanvang van de periode",
+            "arrears": "Achterstallige betalingen - factuur na afloop van de periode"
+          }
+        },
+        "billingTimingHelp": "Voorafrekening factureert de komende periode aan het begin van elke cyclus.",
+        "billingTimingLabel": "Factureringstijdstip *",
+        "billingTimingPlaceholder": "Selecteer het factureringstijdstip",
+        "cadenceOwner": {
+          "description": "Kies welk schema de serviceperioden van deze terugkerende lijn definieert.",
+          "label": "Cadans Eigenaar",
+          "options": {
+            "client": {
+              "description": "Gebruik de factureringskalender van de klant, zodat deze terugkerende regel op één lijn blijft met de normale factuurfrequentie van de klant.",
+              "label": "Factuur volgens het factureringsschema van de klant"
+            },
+            "contract": {
+              "description": "Gebruik de eigen jubileumdata van deze contractregel. Contractcadans ondersteunt momenteel maandelijkse, driemaandelijkse, halfjaarlijkse en jaarlijkse terugkerende facturering.",
+              "label": "Factuur op contractverjaardag"
+            }
+          }
+        },
+        "description": "Geef de contractregel een naam en kies hoe deze standaard moet worden gefactureerd.",
+        "heading": "Basisprincipes van contractregels",
+        "nameLabel": "Naam contractregel *",
+        "namePlaceholder": "bijv. Beheerde ondersteuning - Goud"
+      },
+      "cardTitle": "Contractregel bewerken: {{name}} (vast)",
+      "errors": {
+        "contractLineNotFoundOrInvalidType": "Contractregel niet gevonden of ongeldig type.",
+        "failedToLoadContractLineConfiguration": "Kan de contractregelconfiguratie niet laden. Probeer het opnieuw.",
+        "failedToSaveContractLine": "Kan de contractregel niet opslaan",
+        "invalidContractLineTypeOrNotFound": "Ongeldig contractregeltype of contractregel niet gevonden."
+      },
+      "services": {
+        "associatedCardTitle": "Bijbehorende diensten"
+      },
+      "settings": {
+        "adjustForPartialPeriodsHelp": "Schakel dit in wanneer de terugkerende vergoeding moet worden aangepast aan het gedekte deel van een serviceperiode als het contract binnen die periode begint of eindigt.",
+        "adjustForPartialPeriodsLabel": "Aanpassen voor gedeeltelijke perioden",
+        "baseRateHelp": "Het totale terugkerende tarief voor alle vaste diensten samen",
+        "baseRateLabel": "Terugkerend basistarief *",
+        "billingCycleAlignment": {
+          "options": {
+            "end": "Einde van de factureringscyclus",
+            "prorated": "Proportionele dekking",
+            "start": "Begin van de factureringscyclus"
+          }
+        },
+        "billingCycleAlignmentLabel": "Factureringscyclus uitlijnen",
+        "billingCycleAlignmentPlaceholder": "Selecteer uitlijning",
+        "description": "Definieer het terugkerende basisbedrag en of de dekking voor een gedeeltelijke periode de kosten moet aanpassen. Servicetoewijzingen kunnen worden afgestemd zodra de lijn actief is.",
+        "heading": "Instellingen voor vaste kosten"
+      },
+      "validation": {
+        "baseRateRequiredForFixedLines": "Voor vaste lijnen is het basistarief vereist",
+        "billingFrequency": "Factureringsfrequentie",
+        "contractLineName": "Naam contractregel",
+        "contractLineType": "Type contractregel"
+      }
+    },
+    "hourly": {
+      "actions": {
+        "saveConfiguration": "Configuratie opslaan"
+      },
+      "basics": {
+        "billingFrequencyLabel": "Factureringsfrequentie *",
+        "billingFrequencyPlaceholder": "Selecteer de factureringsfrequentie",
+        "cardTitle": "Contractregel bewerken: {{name}} (per uur)",
+        "description": "Geef de contractregel een naam en kies hoe deze standaard moet worden gefactureerd.",
+        "heading": "Basisprincipes van contractregels",
+        "nameLabel": "Naam contractregel *",
+        "namePlaceholder": "bijv. Ondersteuning van tijd en materialen",
+        "validation": {
+          "billingFrequency": "Factureringsfrequentie",
+          "contractLineName": "Naam contractregel"
+        }
+      },
+      "errors": {
+        "cannotSaveValidationErrors": "Kan niet opslaan, er zijn validatiefouten voor de hele contractregel.",
+        "contractLineNotFoundOrInvalidType": "Contractregel niet gevonden of ongeldig type.",
+        "failedToLoadPlanConfiguration": "Kan de planconfiguratie niet laden. Probeer het opnieuw.",
+        "failedToSaveContractLine": "Kan de contractregel niet opslaan",
+        "failedToSavePlanWideConfiguration": "Kan de configuratie voor het hele abonnement niet opslaan: {{message}}",
+        "failedToSaveServiceConfiguration": "Kan serviceconfiguratie niet opslaan: {{message}}",
+        "invalidPlanTypeOrNotFound": "Ongeldig abonnementstype of abonnement niet gevonden."
+      },
+      "planWideSettings": {
+        "afterHours": {
+          "enableLabel": "Schakel de tariefmultiplier buiten kantooruren in",
+          "multiplierHelp": "Multiplier voor niet-kantooruren (bijvoorbeeld 1,5x).",
+          "multiplierLabel": "Multiplier buiten kantooruren",
+          "multiplierPlaceholder": "1.5",
+          "tooltip": "Pas een vermenigvuldiger toe op het standaarduurtarief voor werk dat buiten de gedefinieerde kantooruren wordt uitgevoerd (vereist configuratie voor Kantooruren)."
+        },
+        "overtime": {
+          "enableLabel": "Schakel overurentarieven in",
+          "rateHelp": "Tarief toegepast na drempel.",
+          "rateLabel": "Overurentarief ($/uur)",
+          "thresholdHelp": "Uren voordat OT van toepassing is.",
+          "thresholdLabel": "Drempel voor overuren (uren/periode)",
+          "thresholdPlaceholder": "40",
+          "tooltip": "Pas een ander tarief toe als het totale aantal gewerkte uren binnen de factureringsperiode van de contractregel een bepaalde drempel overschrijdt."
+        },
+        "trigger": "Uurinstellingen contractregel (overuren, buiten kantooruren)"
+      },
+      "services": {
+        "cardTitle": "Servicetarieven en instellingen",
+        "emptyState": "Er zijn momenteel geen services gekoppeld aan deze contractregel.",
+        "fallbackServiceName": "Service-ID: {{id}}",
+        "manageCardTitle": "Beheer contractlijnservices",
+        "nonHourlyServiceMessage": "Deze service (factureringsmethode: {{method}}) kan voor dit plan niet worden geconfigureerd met specifieke uurtarieven."
+      },
+      "validation": {
+        "afterHoursMultiplierMinOne": "De vermenigvuldiger buiten kantooruren moet minimaal 1 zijn",
+        "overtimeRateNonNegative": "Het overwerkpercentage kan niet negatief zijn",
+        "overtimeThresholdNonNegative": "De drempel voor overuren kan niet negatief zijn"
+      }
+    },
+    "usage": {
+      "actions": {
+        "saveAllConfigurations": "Bewaar alle configuraties"
+      },
+      "basics": {
+        "billingFrequencyLabel": "Factureringsfrequentie *",
+        "billingFrequencyPlaceholder": "Selecteer de factureringsfrequentie",
+        "cardTitle": "Contractregel bewerken: {{name}} (gebruik)",
+        "description": "Geef de contractregel een naam en kies hoe deze standaard moet worden gefactureerd.",
+        "heading": "Basisprincipes van contractregels",
+        "nameLabel": "Naam contractregel *",
+        "namePlaceholder": "bijv. Op gebruik gebaseerde services",
+        "validation": {
+          "billingFrequency": "Factureringsfrequentie",
+          "contractLineName": "Naam contractregel"
+        }
+      },
+      "errors": {
+        "failedToLoadPlanServicesOrConfigurations": "Kan planservices of configuraties niet laden. Probeer het opnieuw.",
+        "failedToSaveContractLine": "Kan de contractregel niet opslaan",
+        "failedToSaveOneOrMoreServiceConfigurations": "Kan een of meer serviceconfiguraties niet opslaan. Controleer de details en probeer het opnieuw.",
+        "invalidPlanTypeOrNotFound": "Ongeldig abonnementstype of abonnement niet gevonden.",
+        "noChangesDetected": "Geen wijzigingen gedetecteerd om op te slaan.",
+        "validationErrorDetails": "Validatiefout: {{details}}",
+        "validationErrorsInModifiedServices": "Kan niet opslaan, er zijn validatiefouten in de gewijzigde services."
+      },
+      "services": {
+        "emptyStateWithHelper": "Er zijn momenteel geen services gekoppeld aan deze contractregel. Voeg hieronder services toe om hun prijzen te configureren.",
+        "fallbackServiceName": "Service-ID: {{id}}",
+        "loadingConfiguration": "Configuratie laden...",
+        "manageCardTitle": "Beheer contractlijnservices",
+        "pricingCardTitle": "Serviceprijzen",
+        "summary": {
+          "defaultUnit": "Eenheid",
+          "loading": "Laden...",
+          "notSet": "Niet ingesteld",
+          "ratePerUnit": "{{rate}} / {{unit}}",
+          "tieredPricing": "Gedifferentieerde prijzen ({{count}}-niveaus)"
+        }
+      },
+      "validation": {
+        "baseRateNonNegative": "De basisrente kan niet negatief zijn.",
+        "baseRateRequiredWhenTieredOff": "Het basistarief is vereist wanneer gedifferentieerde prijzen zijn uitgeschakeld.",
+        "firstTierStartsAtZero": "Het eerste niveau moet vanaf 0 beginnen.",
+        "minimumUsageNonNegative": "Minimumverbruik kan niet negatief zijn.",
+        "onlyLastTierUnlimited": "Alleen het laatste niveau kan een onbeperkte bovengrens hebben.",
+        "tierGap": "Er is een opening gedetecteerd tussen niveau {{tier1}} en niveau {{tier2}}.",
+        "tierOverlap": "Niveau {{tier1}} overlapt met Niveau {{tier2}}.",
+        "tierRatesNonNegative": "Tierrentes kunnen niet negatief zijn.",
+        "tiersRequiredWhenTieredOn": "Er is ten minste één niveau vereist wanneer gelaagde prijzen zijn ingeschakeld.",
+        "tierUpperBound": "Niveau {{tier}}: Bovengrens moet >= ondergrens zijn.",
+        "unitOfMeasureRequired": "Maateenheid is vereist."
+      }
+    }
+  },
+  "dialog": {
+    "actions": {
+      "cancel": "Annuleren",
+      "createPreset": "Contractregelvoorinstelling maken",
+      "saving": "Besparing...",
+      "updatePreset": "Contractregelvoorinstelling bijwerken"
+    },
+    "basics": {
+      "billingFrequencyLabel": "Factureringsfrequentie *",
+      "billingFrequencyPlaceholder": "Selecteer de factureringsfrequentie",
+      "billingTiming": {
+        "options": {
+          "advance": "Voorschot - factuur bij aanvang van de periode",
+          "arrears": "Achterstallige betalingen - factuur na afloop van de periode"
+        }
+      },
+      "billingTimingLabel": "Factureringstijdstip *",
+      "billingTimingPlaceholder": "Selecteer het factureringstijdstip",
+      "description": "Creëer een herbruikbare sjabloon die snel kan worden toegevoegd aan contracten of contractsjablonen. Definieer het factureringsmodel, de services en de standaardtarieven die worden gekopieerd wanneer deze voorinstelling wordt gebruikt.",
+      "heading": "Basisprincipes van voorinstellingen voor contractregels",
+      "nameLabel": "Vooraf ingestelde naam contractregel *",
+      "namePlaceholder": "bijv. Beheerde ondersteuning - Goud"
+    },
+    "billingModel": {
+      "cards": {
+        "fixed": {
+          "description": "Breng elke factureringsperiode een vast bedrag in rekening.",
+          "title": "Vaste vergoeding"
+        },
+        "hourly": {
+          "description": "Facturering op basis van goedgekeurde tijdsinvoer en uuroverlays.",
+          "title": "Per uur"
+        },
+        "usage": {
+          "description": "Factuur voor verbruikte eenheden, zoals apparaten of licenties.",
+          "title": "Op gebruik gebaseerd"
+        }
+      },
+      "description": "Selecteer het factureringsgedrag dat bij dit aanbod past. Services en overlays kunnen worden toegevoegd zodra de lijn bestaat.",
+      "heading": "Kies een factureringsmodel *",
+      "timingHelp": {
+        "fixed": "Voorschotfacturen factureren de komende periode bij de start van de cyclus.",
+        "nonFixed": "Uurlijnen en lijnen op basis van verbruik factureren altijd achteraf."
+      }
+    },
+    "common": {
+      "moneyPlaceholder": "0,00",
+      "quantity": "Hoeveelheid"
+    },
+    "errors": {
+      "saveFailed": "Kan de voorinstelling van de contractregel niet opslaan"
+    },
+    "fixed": {
+      "addItem": "Artikel toevoegen",
+      "adjustForPartialPeriodsHelp": "Indien ingeschakeld, wordt de terugkerende vergoeding geschaald naar het gedekte deel van een serviceperiode wanneer het contract binnen die periode begint of eindigt.",
+      "adjustForPartialPeriodsLabel": "Aanpassen voor gedeeltelijke perioden",
+      "alertBody": "Het basistarief van de contractregel is het gefactureerde bedrag. Ook kunt u hier producten bijvoegen; producthoeveelheden worden gefactureerd als eenheden, terwijl servicehoeveelheden met een vast tarief alleen worden gebruikt voor belastingtoewijzing.",
+      "alertTitle": "Diensten met een vast tarief:",
+      "baseRateHelp": "Voorgestelde terugkerende vergoeding voor alle vaste diensten. Kan worden overschreven wanneer deze voorinstelling aan een contract wordt toegevoegd.",
+      "baseRateLabel": "Terugkerend basistarief (optioneel)",
+      "description": "Stel services in die tegen een vast terugkerend tarief worden gefactureerd, ongeacht het gebruik.",
+      "emptyState": "Er zijn nog geen vaste kostenposten toegevoegd. Klik hierboven op 'Item toevoegen' om aan de slag te gaan.",
+      "heading": "Diensten met een vast tarief",
+      "itemLabel": "Artikel {{index}}",
+      "selectItemPlaceholder": "Selecteer een artikel",
+      "servicesAndProducts": "Diensten & Producten"
+    },
+    "hourly": {
+      "addHourlyService": "Uurservice toevoegen",
+      "alertBody": "Deze diensten worden gefactureerd op basis van de daadwerkelijk bijgehouden tijd. Om het factuurbedrag te berekenen, wordt elke keerinvoer vermenigvuldigd met het uurtarief.",
+      "alertTitle": "Wat zijn uurdiensten?",
+      "description": "Configureer services die worden gefactureerd op basis van de bijgehouden tijd. Perfect voor T&M-werk (Time & Materials).",
+      "emptyState": "Er zijn nog geen uurdiensten toegevoegd. Klik hierboven op 'Uurservice toevoegen' om aan de slag te gaan.",
+      "enterHourlyRate": "Uurtarief invoeren",
+      "heading": "Diensten per uur",
+      "hourlyRateLabel": "Uurtarief",
+      "hourlyRateSummary": "{{rate}}/uur",
+      "minimumBillableTimeHelp": "bijvoorbeeld 15 minuten: elke tijd die korter is dan dit tijdstip wordt naar boven afgerond",
+      "minimumBillableTimeLabel": "Minimale factureerbare tijd (minuten)",
+      "minutesPlaceholder": "15",
+      "recommendBucketLabel": "Beveel uren aan",
+      "roundUpToNearestHelp": "bijvoorbeeld 15 minuten - de tijdinvoer wordt naar boven afgerond op het dichtstbijzijnde interval",
+      "roundUpToNearestLabel": "Naar boven afronden naar dichtstbijzijnde (minuten)",
+      "selectServicePlaceholder": "Selecteer een dienst",
+      "serviceLabel": "Onderhoud {{index}}",
+      "servicesHeading": "Diensten per uur"
+    },
+    "title": {
+      "add": "Contractregelvoorinstelling toevoegen",
+      "edit": "Contractregelvoorinstelling bewerken"
+    },
+    "usage": {
+      "addUsageService": "Voeg een op gebruik gebaseerde service toe",
+      "alertBody": "Deze services worden gefactureerd op basis van het werkelijke verbruik of de gebruiksstatistieken. Elke verbruikte eenheid wordt vermenigvuldigd met het eenheidstarief om het factuurbedrag te berekenen.",
+      "alertTitle": "Wat zijn op gebruik gebaseerde services?",
+      "defaultUnit": "eenheid",
+      "defaultUnits": "eenheden",
+      "description": "Configureer services die worden gefactureerd op basis van gebruik of verbruik.",
+      "emptyState": "Er zijn nog geen op gebruik gebaseerde services toegevoegd. Klik hierboven op 'Op gebruik gebaseerde service toevoegen' om aan de slag te gaan.",
+      "enterUnitRate": "Voer het eenheidstarief in",
+      "heading": "Op gebruik gebaseerde services",
+      "ratePerUnitLabel": "Tarief per eenheid",
+      "rateSummary": "{{rate}}/{{unit}}",
+      "recommendBucketLabel": "Aanbevolen emmer consumptie",
+      "searchServicesPlaceholder": "Zoekservices...",
+      "serviceLabel": "Onderhoud {{index}}",
+      "servicesHeading": "Op gebruik gebaseerde services",
+      "unitOfMeasureHelp": "bijvoorbeeld GB, API-oproep, transactie",
+      "unitOfMeasureLabel": "Maateenheid",
+      "unitOfMeasurePlaceholder": "bijvoorbeeld GB, API-oproep, gebruiker"
+    },
+    "validation": {
+      "billingFrequencyRequired": "Factureringsfrequentie is vereist",
+      "contractLineTypeRequired": "Contractregeltype is vereist",
+      "fixedServiceRequired": "Er is minimaal één vaste dienst of product vereist",
+      "hourlyRateRequired": "Service {{index}}: Uurtarief is vereist",
+      "hourlyServiceRequired": "Er is minimaal één uurservice vereist",
+      "nameRequired": "Vooraf ingestelde naam contractregel is vereist",
+      "prefix": "Corrigeer het volgende:",
+      "serviceSelectRequired": "Service {{index}}: Selecteer een service",
+      "unitOfMeasureRequired": "Service {{index}}: Maateenheid is vereist",
+      "unitRateRequired": "Service {{index}}: Eenheidstarief is vereist",
+      "usageServiceRequired": "Er is minimaal één op gebruik gebaseerde service vereist"
+    }
+  },
+  "forms": {
+    "bucketConfig": {
+      "labels": {
+        "allowRollover": "Laat ongebruikte {{units}} omrollen",
+        "overageRatePerUnit": "Overschrijdingspercentage per {{unit}}",
+        "totalInBucket": "Totaal {{units}} in emmer"
+      },
+      "placeholders": {
+        "overageRate": "Voer het overschrijdingstarief in",
+        "totalHours": "Voer het totaal aantal uren in"
+      },
+      "tooltips": {
+        "allowRollover": "Indien aangevinkt, kan de ongebruikte {{units}} uit de ene periode in de volgende worden gebruikt.",
+        "overageRatePerUnit": "Het tarief dat in rekening wordt gebracht voor elke gebruikte {{unit}} boven het inbegrepen bedrag. (bijvoorbeeld $)",
+        "totalInBucket": "Het totale aantal {{units}} in deze bucket per factureringsperiode."
+      },
+      "units": {
+        "defaultPlural": "Eenheden",
+        "defaultSingular": "Eenheid"
+      }
+    },
+    "editQuantity": {
+      "dialogTitle": "Servicehoeveelheid bewerken",
+      "errors": {
+        "quantityGreaterThanZero": "De hoeveelheid moet groter zijn dan nul",
+        "updateFailed": "Kan aantal niet updaten"
+      },
+      "heading": "Pas de hoeveelheid aan",
+      "helperText": "Laat dit veld leeg als u de productcatalogusprijs voor de valuta van dit contract wilt gebruiken.",
+      "labels": {
+        "quantity": "Hoeveelheid",
+        "unitPriceOverrideOptional": "Eenheidsprijs overschrijven (optioneel)"
+      }
+    },
+    "hourlyConfig": {
+      "labels": {
+        "hourlyRate": "Uurtarief ($)",
+        "minimumBillableTime": "Minimale factureerbare tijd (minuten)",
+        "roundUpToNearest": "Naar boven afronden naar dichtstbijzijnde (minuten)"
+      },
+      "placeholders": {
+        "minutes": "bijvoorbeeld 15"
+      },
+      "tooltips": {
+        "hourlyRate": "Het standaardtarief dat voor deze dienst per uur wordt berekend.",
+        "minimumBillableTime": "De minimale duur (in minuten) die voor elke tijdsinvoer in rekening wordt gebracht, ongeacht de werkelijke duur.",
+        "roundUpToNearest": "Tijdinvoer wordt naar boven afgerond op het dichtstbijzijnde gespecificeerde minuutinterval (bijvoorbeeld 15 minuten). Stel in op 1 of 0 om afronding uit te schakelen."
+      },
+      "userTypeRates": {
+        "addNewRateLabel": "Nieuw tarief toevoegen",
+        "heading": "Gebruikerstypespecifieke tarieven",
+        "options": {
+          "administrator": "Beheerder",
+          "consultant": "Consultant",
+          "engineer": "Ingenieur",
+          "projectManager": "Projectmanager",
+          "technician": "Technicus"
+        },
+        "perHourSuffix": "/uur",
+        "rateSrLabel": "Tarief ($/uur)",
+        "selectTypePlaceholder": "Selecteer type",
+        "tooltip": "Definieer verschillende uurtarieven voor specifieke gebruikerstypen die aan deze service werken. Deze overschrijven het standaarduurtarief van de service.",
+        "userTypeSrLabel": "Gebruikerstype",
+        "validation": {
+          "duplicateType": "Dit gebruikerstype heeft al een specifiek tarief.",
+          "selectTypeAndRate": "Selecteer een gebruikerstype en voer een geldig, niet-negatief tarief in."
+        }
+      }
+    },
+    "serviceForm": {
+      "errors": {
+        "failedToLoadServiceConfiguration": "Kan de serviceconfiguratie niet laden",
+        "failedToUpdateService": "Kan de service niet updaten",
+        "missingPlanOrServiceInformation": "Ontbrekende abonnements- of service-informatie"
+      },
+      "loading": "Serviceconfiguratie laden...",
+      "title": "Serviceconfiguratie bewerken"
+    },
+    "tierEditor": {
+      "actions": {
+        "addTier": "Niveau toevoegen"
+      },
+      "aria": {
+        "fromAmount": "Niveau {{tier}} Vanaf bedrag",
+        "rate": "Niveau {{tier}}-tarief",
+        "removeTier": "Niveau {{tier}} verwijderen",
+        "toAmount": "Niveau {{tier}} Naar bedrag"
+      },
+      "cardTitle": "Prijsniveaus",
+      "columns": {
+        "from": "Van ({{unit}})",
+        "ratePerUnit": "Tarief per {{unit}}",
+        "to": "Naar ({{unit}})"
+      },
+      "emptyState": "Geen niveaus gedefinieerd. Klik op ‘Niveau toevoegen’.",
+      "helperText": "Definieer gebruiksbereiken en de bijbehorende tarieven. Laat 'Aan' leeg zodat het laatste niveau onbeperkt gebruik vertegenwoordigt. Het eerste niveau moet beginnen vanaf 0. Niveaus moeten aaneengesloten zijn.",
+      "units": {
+        "defaultPlural": "Eenheden",
+        "defaultSingular": "Eenheid"
+      },
+      "unlimitedPlaceholder": "Onbeperkt"
+    },
+    "usageConfig": {
+      "labels": {
+        "defaultRatePerUnit": "Standaardtarief per eenheid",
+        "enableTieredPricing": "Schakel gedifferentieerde prijzen in voor {{serviceName}}",
+        "minimumUsage": "Minimaal gebruik",
+        "unitOfMeasure": "Maateenheid"
+      },
+      "placeholders": {
+        "minimumUsage": "0",
+        "selectUnit": "Selecteer eenheid"
+      },
+      "requiredFieldHint": "Geeft een verplicht veld aan.",
+      "tooltips": {
+        "defaultRatePerUnit": "Tarief per eenheid (gebruikt als gedifferentieerde prijzen zijn uitgeschakeld).",
+        "minimumUsage": "Minimaal factureerbare eenheden per periode.",
+        "unitOfMeasure": "bijvoorbeeld GB, Gebruiker, Apparaat."
+      }
+    }
+  },
+  "list": {
+    "actions": {
+      "addContractLine": "Contractregel toevoegen"
+    },
+    "columns": {
+      "actions": "Acties",
+      "billingFrequency": "Factureringsfrequentie",
+      "contractLineName": "Contractregelnaam",
+      "contractLineType": "Contractregeltype",
+      "isCustom": "Is op maat"
+    },
+    "deleteDialog": {
+      "defaultEntityName": "deze contractlijn"
+    },
+    "errors": {
+      "failedToAddContractLineService": "Kan contractlijnservice niet toevoegen",
+      "failedToDeleteContractLine": "Kan de contractregel niet verwijderen",
+      "failedToFetchContractLines": "Kan contractregels niet ophalen",
+      "failedToFetchContractLineServices": "Kan contractlijnservices niet ophalen",
+      "failedToRemoveContractLineService": "Kan de contractlijnservice niet verwijderen",
+      "failedToUpdateContractLineService": "Kan de contractregelservice niet updaten",
+      "failedToValidateDeletion": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
+      "unknownErrorFetchingServiceTypes": "Er is een onbekende fout opgetreden bij het ophalen van servicetypen"
+    },
+    "heading": "Contractlijnen",
+    "planServices": {
+      "actions": {
+        "addService": "Dienst toevoegen"
+      },
+      "columns": {
+        "actions": "Acties",
+        "customRate": "Aangepast tarief",
+        "quantity": "Hoeveelheid",
+        "serviceName": "Dienstnaam",
+        "unitOfMeasure": "Maateenheid"
+      },
+      "emptyStateSelectContractLine": "Selecteer een contractregel om de services ervan te beheren",
+      "heading": "Diensten plannen",
+      "selectServicePlaceholder": "Dienst selecteren...",
+      "servicesFor": "Diensten voor {{name}}"
+    },
+    "toast": {
+      "contractLineDeletedSuccessfully": "Contractregel is succesvol verwijderd"
+    }
+  },
+  "overview": {
+    "actions": {
+      "addContractLinePreset": "Contractregelvoorinstelling toevoegen"
+    },
+    "columns": {
+      "actions": "Acties",
+      "billingFrequency": "Factureringsfrequentie",
+      "contractLineName": "Contractregelnaam",
+      "contractLineType": "Contractregeltype"
+    },
+    "errors": {
+      "failedToFetchContractLinePresets": "Kan voorinstellingen voor contractregels niet ophalen",
+      "unexpectedDeleteError": "Er is een onverwachte fout opgetreden bij het verwijderen van de contractregelvoorinstelling."
+    },
+    "filters": {
+      "searchPlaceholder": "Voorinstellingen voor contractregels zoeken",
+      "type": {
+        "allTypes": "Alle soorten",
+        "selectTypePlaceholder": "Selecteer type"
+      }
+    },
+    "heading": "Voorinstellingen voor contractregels",
+    "loading": "Voorinstellingen voor contractregels laden",
+    "toast": {
+      "contractLinePresetDeletedSuccessfully": "Contractregelvoorinstelling is succesvol verwijderd"
+    }
+  },
+  "preset": {
+    "fixed": {
+      "basics": {
+        "billingFrequencyLabel": "Factureringsfrequentie *",
+        "billingFrequencyPlaceholder": "Selecteer de factureringsfrequentie",
+        "description": "Geef de contractregelvoorinstelling een naam en kies hoe deze standaard moet worden gefactureerd.",
+        "heading": "Basisprincipes van voorinstellingen voor contractregels",
+        "nameLabel": "Vooraf ingestelde naam contractregel *",
+        "namePlaceholder": "bijv. Beheerde ondersteuning - Goud"
+      },
+      "cardTitle": "Contractregelvoorinstelling bewerken: {{name}} (vast)",
+      "errors": {
+        "contractLineNotFoundOrInvalidType": "Contractregel niet gevonden of ongeldig type.",
+        "failedToLoadContractLinePresetConfiguration": "Kan de vooraf ingestelde configuratie van de contractregel niet laden. Probeer het opnieuw.",
+        "failedToSaveContractLinePreset": "Kan de voorinstelling van de contractregel niet opslaan",
+        "invalidContractLinePresetTypeOrNotFound": "Ongeldig type contractregelvoorinstelling of contractregelvoorinstelling niet gevonden."
+      },
+      "services": {
+        "associatedCardTitle": "Bijbehorende diensten"
+      },
+      "settings": {
+        "adjustForPartialPeriodsHelp": "Schakel dit in wanneer de terugkerende vergoeding moet worden aangepast aan het gedekte deel van een serviceperiode als het contract binnen die periode begint of eindigt.",
+        "adjustForPartialPeriodsLabel": "Aanpassen voor gedeeltelijke perioden",
+        "baseRateHelp": "Voorgestelde terugkerende vergoeding voor alle vaste diensten. Kan worden overschreven wanneer deze voorinstelling aan een contract wordt toegevoegd.",
+        "baseRateLabel": "Terugkerend basistarief (optioneel)",
+        "billingCycleAlignment": {
+          "options": {
+            "end": "Einde van de factureringscyclus",
+            "prorated": "Proportionele dekking",
+            "start": "Begin van de factureringscyclus"
+          }
+        },
+        "billingCycleAlignmentLabel": "Factureringscyclus uitlijnen",
+        "billingCycleAlignmentPlaceholder": "Selecteer uitlijning",
+        "billingTiming": {
+          "options": {
+            "advance": "Voorschot - factuur bij aanvang van de periode",
+            "arrears": "Achterstallige betalingen - factuur na afloop van de periode"
+          }
+        },
+        "billingTimingHelp": "Bij deze voorinstelling blijft de cadanseigenaar expliciet wanneer deze naar een terugkerende regel wordt gekopieerd. Factureringstijdstip bepaalt nog steeds of de gekopieerde terugkerende lijnfacturen aan het begin of einde van elke gedekte periode.",
+        "billingTimingLabel": "Factureringstijdstip",
+        "billingTimingPlaceholder": "Selecteer het factureringstijdstip",
+        "description": "Definieer het terugkerende basisbedrag en of de dekking voor een gedeeltelijke periode de kosten moet aanpassen. Servicetoewijzingen kunnen worden afgestemd zodra de lijn actief is.",
+        "heading": "Instellingen voor vaste kosten"
+      },
+      "validation": {
+        "billingFrequency": "Factureringsfrequentie",
+        "contractLinePresetName": "Vooraf ingestelde naam contractregel",
+        "contractLineType": "Type contractregel"
+      }
+    },
+    "hourly": {
+      "basics": {
+        "billingFrequencyLabel": "Factureringsfrequentie *",
+        "billingFrequencyPlaceholder": "Selecteer de factureringsfrequentie",
+        "cardTitle": "Contractregelvoorinstelling bewerken: {{name}} (per uur)",
+        "description": "Geef de contractregelvoorinstelling een naam en kies hoe deze standaard moet worden gefactureerd.",
+        "heading": "Basisprincipes van voorinstellingen voor contractregels",
+        "minimumBillableTimeHelp": "bijvoorbeeld 15 minuten: elke tijd die korter is dan dit tijdstip wordt naar boven afgerond",
+        "minimumBillableTimeLabel": "Minimale factureerbare tijd (minuten)",
+        "minutesPlaceholder": "bijvoorbeeld 15",
+        "nameLabel": "Vooraf ingestelde naam contractregel *",
+        "namePlaceholder": "bijv. Ondersteuning van tijd en materialen",
+        "roundUpToNearestHelp": "bijvoorbeeld 15 minuten - de tijdinvoer wordt naar boven afgerond op het dichtstbijzijnde interval",
+        "roundUpToNearestLabel": "Naar boven afronden naar dichtstbijzijnde (minuten)",
+        "validation": {
+          "billingFrequency": "Factureringsfrequentie",
+          "contractLinePresetName": "Vooraf ingestelde naam contractregel"
+        }
+      },
+      "errors": {
+        "cannotSaveValidationErrors": "Kan niet opslaan, er zijn validatiefouten voor de hele contractregel.",
+        "contractLineNotFoundOrInvalidType": "Contractregel niet gevonden of ongeldig type.",
+        "failedToLoadPlanConfiguration": "Kan de planconfiguratie niet laden. Probeer het opnieuw.",
+        "failedToSaveContractLinePreset": "Kan de voorinstelling van de contractregel niet opslaan",
+        "failedToSavePlanWideConfiguration": "Kan de configuratie voor het hele abonnement niet opslaan: {{message}}",
+        "failedToSaveServiceConfiguration": "Kan serviceconfiguratie niet opslaan: {{message}}",
+        "invalidPlanTypeOrNotFound": "Ongeldig abonnementstype of abonnement niet gevonden."
+      },
+      "services": {
+        "manageCardTitle": "Beheer vooraf ingestelde services voor contractregels"
+      },
+      "validation": {
+        "afterHoursMultiplierMinOne": "De vermenigvuldiger buiten kantooruren moet minimaal 1 zijn",
+        "overtimeRateNonNegative": "Het overwerkpercentage kan niet negatief zijn",
+        "overtimeThresholdNonNegative": "De drempel voor overuren kan niet negatief zijn"
+      }
+    },
+    "usage": {
+      "actions": {
+        "saveAllConfigurations": "Bewaar alle configuraties"
+      },
+      "basics": {
+        "billingFrequencyLabel": "Factureringsfrequentie *",
+        "billingFrequencyPlaceholder": "Selecteer de factureringsfrequentie",
+        "cardTitle": "Contractregelvoorinstelling bewerken: {{name}} (gebruik)",
+        "description": "Geef de contractregelvoorinstelling een naam en kies hoe deze standaard moet worden gefactureerd.",
+        "heading": "Basisprincipes van voorinstellingen voor contractregels",
+        "nameLabel": "Vooraf ingestelde naam contractregel *",
+        "namePlaceholder": "bijv. Op gebruik gebaseerde services",
+        "validation": {
+          "billingFrequency": "Factureringsfrequentie",
+          "contractLinePresetName": "Vooraf ingestelde naam contractregel"
+        }
+      },
+      "errors": {
+        "failedToLoadPlanServicesOrConfigurations": "Kan planservices of configuraties niet laden. Probeer het opnieuw.",
+        "failedToSaveContractLinePreset": "Kan de voorinstelling van de contractregel niet opslaan",
+        "failedToSaveOneOrMoreServiceConfigurations": "Kan een of meer serviceconfiguraties niet opslaan. Controleer de details en probeer het opnieuw.",
+        "invalidPlanTypeOrNotFound": "Ongeldig abonnementstype of abonnement niet gevonden.",
+        "noChangesDetected": "Geen wijzigingen gedetecteerd om op te slaan.",
+        "validationErrorDetails": "Validatiefout: {{details}}",
+        "validationErrorsInModifiedServices": "Kan niet opslaan, er zijn validatiefouten in de gewijzigde services."
+      },
+      "services": {
+        "fallbackServiceName": "Service-ID: {{id}}",
+        "loadingConfiguration": "Configuratie laden...",
+        "manageCardTitle": "Beheer vooraf ingestelde services voor contractregels",
+        "pricingCardTitle": "Serviceprijzen",
+        "summary": {
+          "defaultUnit": "Eenheid",
+          "loading": "Laden...",
+          "notSet": "Niet ingesteld",
+          "ratePerUnit": "{{rate}} / {{unit}}",
+          "tieredPricing": "Gedifferentieerde prijzen ({{count}}-niveaus)"
+        }
+      },
+      "validation": {
+        "baseRateNonNegative": "De basisrente kan niet negatief zijn.",
+        "baseRateRequiredWhenTieredOff": "Het basistarief is vereist wanneer gedifferentieerde prijzen zijn uitgeschakeld.",
+        "firstTierStartsAtZero": "Het eerste niveau moet vanaf 0 beginnen.",
+        "minimumUsageNonNegative": "Minimumverbruik kan niet negatief zijn.",
+        "onlyLastTierUnlimited": "Alleen het laatste niveau kan een onbeperkte bovengrens hebben.",
+        "tierGap": "Er is een opening gedetecteerd tussen niveau {{tier1}} en niveau {{tier2}}.",
+        "tierOverlap": "Niveau {{tier1}} overlapt met Niveau {{tier2}}.",
+        "tierRatesNonNegative": "Tierrentes kunnen niet negatief zijn.",
+        "tiersRequiredWhenTieredOn": "Er is ten minste één niveau vereist wanneer gelaagde prijzen zijn ingeschakeld.",
+        "tierUpperBound": "Niveau {{tier}}: Bovengrens moet >= ondergrens zijn.",
+        "unitOfMeasureRequired": "Maateenheid is vereist."
+      }
+    }
+  },
+  "router": {
+    "contractLine": {
+      "loadFailed": "Kan contractregeldetails niet laden.",
+      "loading": "Contractregel laden...",
+      "notFound": "Contractregel met ID {{id}} niet gevonden.",
+      "unsupportedType": "Onbekend of niet-ondersteund contractregeltype: {{type}}"
+    },
+    "preset": {
+      "loadFailed": "Kan de vooraf ingestelde details van de contractregel niet laden.",
+      "loading": "Contractregelvoorinstelling laden...",
+      "notFound": "Contractregelvoorinstelling met ID {{id}} niet gevonden.",
+      "unsupportedType": "Onbekend of niet-ondersteund type contractregelvoorinstelling: {{type}}"
+    }
+  },
+  "services": {
+    "generic": {
+      "addSelectedServices": "Voeg geselecteerde ({{count}}) services toe",
+      "addServicesHeading": "Services toevoegen aan contractregel",
+      "allServicesAssociated": "Alle beschikbare services zijn al aan deze contractregel gekoppeld.",
+      "badges": {
+        "billingMismatch": "Facturering komt niet overeen",
+        "defaultConfigType": "Standaard"
+      },
+      "billingMethod": {
+        "fixed": "Vaste prijs",
+        "hourly": "Per uur",
+        "usage": "Gebruik gebaseerd"
+      },
+      "columns": {
+        "actions": "Acties",
+        "billingMethod": "Factureringsmethode",
+        "customRate": "Aangepast tarief",
+        "derivedConfigType": "Afgeleid configuratietype",
+        "quantity": "Hoeveelheid",
+        "serviceName": "Dienstnaam",
+        "serviceType": "Servicetype",
+        "unitOfMeasure": "Maateenheid"
+      },
+      "emptyState": "Er zijn momenteel geen services gekoppeld aan deze contractregel.",
+      "errors": {
+        "contractLineNotFound": "Contractregel met ID {{id}} niet gevonden.",
+        "enterRateForService": "Voer een tarief in voor \"{{serviceName}}\" (geen {{currency}}-prijs geconfigureerd)",
+        "failedToAddServices": "Kan services niet toevoegen",
+        "failedToLoadServicesData": "Kan servicegegevens niet laden",
+        "failedToRemoveService": "Kan service niet verwijderen"
+      },
+      "loadingServices": "Diensten laden...",
+      "serviceToAdd": {
+        "enterRatePlaceholder": "Voer tarief in",
+        "metadata": "Servicetype: {{type}} | Methode: {{method}}",
+        "noCurrencyPrice": "Geen {{currency}}-prijs",
+        "rateDetail": "Tarief: {{symbol}}{{amount}}"
+      },
+      "unknownService": "Onbekende dienst"
+    },
+    "hourlyPreset": {
+      "addSelectedServices": "Voeg geselecteerde ({{count}}) services toe",
+      "addServicesHeading": "Services toevoegen aan contractregelvoorinstelling",
+      "allServicesAssociated": "Alle beschikbare uurdiensten zijn al aan deze voorinstelling gekoppeld.",
+      "billingMethod": {
+        "fixed": "Vaste prijs",
+        "hourly": "Per uur",
+        "usage": "Gebruik gebaseerd"
+      },
+      "emptyState": "Er zijn momenteel geen services gekoppeld aan deze contractregelvoorinstelling.",
+      "errors": {
+        "failedToLoadServicesData": "Kan servicegegevens niet laden",
+        "failedToSaveServices": "Kan services niet opslaan"
+      },
+      "hourlyRateLabel": "Uurtarief:",
+      "loadingServices": "Diensten laden...",
+      "recommendBucketLabel": "Beveel uren aan",
+      "serviceMetadata": "Servicetype: {{type}} | Methode: {{method}}",
+      "serviceToAddMetadata": "Servicetype: {{type}} | Methode: {{method}} | Standaardtarief: {{rate}}",
+      "toast": {
+        "savedSuccessfully": "Vooraf ingestelde services voor contractregels zijn succesvol opgeslagen"
+      },
+      "unknownService": "Onbekende dienst",
+      "unsavedChanges": {
+        "banner": "U heeft niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen.",
+        "cancelLabel": "Blijf op pagina",
+        "confirmLabel": "Verlaat pagina",
+        "dialogMessage": "U heeft niet-opgeslagen wijzigingen. Weet je zeker dat je deze pagina wilt verlaten? Alle wijzigingen gaan verloren.",
+        "dialogTitle": "Niet-opgeslagen wijzigingen"
+      }
+    },
+    "usagePreset": {
+      "addSelectedServices": "Voeg geselecteerde ({{count}}) services toe",
+      "addServicesHeading": "Services toevoegen aan contractregelvoorinstelling",
+      "allServicesAssociated": "Alle beschikbare, op gebruik gebaseerde services zijn al aan deze voorinstelling gekoppeld.",
+      "billingMethod": {
+        "fixed": "Vaste prijs",
+        "hourly": "Per uur",
+        "usage": "Gebruik gebaseerd"
+      },
+      "defaultUnit": "eenheid",
+      "defaultUnits": "eenheden",
+      "emptyState": "Er zijn momenteel geen services gekoppeld aan deze contractregelvoorinstelling.",
+      "errors": {
+        "failedToLoadServicesData": "Kan servicegegevens niet laden",
+        "failedToSaveServices": "Kan services niet opslaan"
+      },
+      "loadingServices": "Diensten laden...",
+      "ratePerUnitLabel": "Tarief per eenheid:",
+      "recommendBucketLabel": "Aanbevolen emmer consumptie",
+      "serviceMetadata": "Servicetype: {{type}} | Methode: {{method}}",
+      "serviceToAddMetadata": "Servicetype: {{type}} | Methode: {{method}} | Standaardtarief: {{rate}} | Eenheid: {{unit}}",
+      "toast": {
+        "savedSuccessfully": "Vooraf ingestelde services voor contractregels zijn succesvol opgeslagen"
+      },
+      "unitLabel": "Eenheid:",
+      "unitPlaceholder": "bijvoorbeeld GB, gebruiker, apparaat",
+      "unknownService": "Onbekende dienst",
+      "unsavedChanges": {
+        "banner": "U heeft niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen.",
+        "cancelLabel": "Blijf op pagina",
+        "confirmLabel": "Verlaat pagina",
+        "dialogMessage": "U heeft niet-opgeslagen wijzigingen. Weet je zeker dat je deze pagina wilt verlaten? Alle wijzigingen gaan verloren.",
+        "dialogTitle": "Niet-opgeslagen wijzigingen"
+      }
+    }
+  },
+  "typeSelector": {
+    "descriptions": {
+      "fixed": "Een contractlijn met een vaste prijs en consistente facturering, ongeacht het gebruik. Ideaal voor voorspelbare diensten.",
+      "hourly": "Tijdgebaseerde facturering met configureerbare tarieven. Het beste voor variabele werklasten, gefactureerd op basis van bestede tijd.",
+      "usage": "Op gebruik gebaseerde facturering met gelaagde prijsopties. Perfect voor diensten gemeten aan de hand van verbruik."
+    },
+    "label": "Contractregeltype",
+    "placeholder": "Selecteer het type contractregel"
+  }
+}

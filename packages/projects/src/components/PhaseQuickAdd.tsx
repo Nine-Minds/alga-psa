@@ -9,6 +9,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { addProjectPhase } from '../actions/projectActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from 'react-i18next';
 
 interface PhaseQuickAddProps {
   projectId: string;
@@ -24,6 +25,7 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
   onPhaseAdded,
   onCancel
 }) => {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [phaseName, setPhaseName] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -58,7 +60,7 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
       onPhaseAdded(newPhase);
       onClose();
     } catch (error) {
-      handleError(error, 'Failed to add phase. Please try again.');
+      handleError(error, t('projectPhases.addError', 'Failed to add phase. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -69,67 +71,79 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
     onClose();
   };
 
+  const footer = (
+    <div className="flex justify-between">
+      <Button id="cancel-phase-button" variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
+        {t('common:actions.cancel', 'Cancel')}
+      </Button>
+      <Button
+        id="save-phase-button"
+        type="button"
+        disabled={isSubmitting}
+        className={!phaseName.trim() ? 'opacity-50' : ''}
+        onClick={() => (document.getElementById('phase-quick-add-form') as HTMLFormElement | null)?.requestSubmit()}
+      >
+        {isSubmitting
+          ? t('projectPhases.adding', 'Adding...')
+          : t('common:actions.save', 'Save')}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog 
-      isOpen={true} 
+    <Dialog
+      isOpen={true}
       onClose={() => {
         setHasAttemptedSubmit(false);
         onClose();
       }}
-      title="Add New Phase"
+      title={t('projectPhases.addPhase', 'Add Phase')}
       className="max-w-2xl"
+      footer={footer}
     >
-      <DialogContent className="max-h-[80vh] overflow-y-auto">
+      <DialogContent>
           {hasAttemptedSubmit && !phaseName.trim() && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
-                Phase name is required
+                {t('projectDetail.phaseNameRequired', 'Phase name cannot be empty')}
               </AlertDescription>
             </Alert>
           )}
-          <form onSubmit={handleSubmit} className="flex flex-col">
+          <form id="phase-quick-add-form" onSubmit={handleSubmit} className="flex flex-col">
             <div className="space-y-4 mb-2 mt-2">
               <TextArea
                 value={phaseName}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPhaseName(e.target.value)}
-                placeholder="Phase name... *"
+                placeholder={t('projectPhases.phaseNamePlaceholder', 'Phase name... *')}
                 className={`w-full px-3 py-3 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg font-semibold ${hasAttemptedSubmit && !phaseName.trim() ? 'border-destructive' : 'border-gray-300'}`}
                 rows={1}
               />
               <TextArea
                 value={description}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
-                placeholder="Description"
+                placeholder={t('projectPhases.descriptionPlaceholder', 'Description')}
                 className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
                 rows={3}
               />
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('startDate', 'Start Date')}</label>
                   <DatePicker
                     value={startDate}
                     onChange={setStartDate}
-                    placeholder="Select start date"
+                    placeholder={t('quickAdd.startDatePlaceholder', 'Select start date')}
                     clearable={true}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('endDate', 'End Date')}</label>
                   <DatePicker
                     value={endDate}
                     onChange={setEndDate}
-                    placeholder="Select end date"
+                    placeholder={t('quickAdd.endDatePlaceholder', 'Select end date')}
                     clearable={true}
                   />
                 </div>
-              </div>
-              <div className="flex justify-between mt-6">
-                <Button id="cancel-phase-button" variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
-                  Cancel
-                </Button>
-                <Button id="save-phase-button" type="submit" disabled={isSubmitting} className={!phaseName.trim() ? 'opacity-50' : ''}>
-                  {isSubmitting ? 'Adding...' : 'Save'}
-                </Button>
               </div>
             </div>
           </form>

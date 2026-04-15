@@ -1,10 +1,18 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/**/*.ts', 'src/**/*.tsx'],
+  entry: [
+    'src/secrets.ts',
+    'src/lib/**/*.ts',
+    'src/persistence/**/*.ts',
+    'src/runtime/**/*.ts',
+    '!src/**/*.test.ts',
+    '!src/**/*.test.tsx',
+    '!src/**/__tests__/**',
+  ],
   format: ['esm', 'cjs'],
   dts: false,
-  bundle: false,
+  bundle: true,
   splitting: false,
   sourcemap: false,
   clean: true,

@@ -10,6 +10,7 @@ import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { DeleteEntityDialog } from '@alga-psa/ui';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import {
   Plus,
   Play,
@@ -220,6 +221,8 @@ export default function WorkflowList({
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const statusOptions = [
     { value: 'all', label: 'All statuses' },
@@ -456,21 +459,38 @@ export default function WorkflowList({
     }
   };
 
-  const handleBulkDelete = async () => {
-    for (const workflowId of selectedWorkflows) {
-      const workflow = workflows.find(w => w.workflow_id === workflowId);
-      if (workflow?.is_system) continue;
-      try {
-        const result = await deleteWorkflowDefinitionAction({ workflowId });
-        if (!result.success) {
-          console.error(`Failed to delete workflow ${workflowId}:`, result.message ?? result.code);
-        }
-      } catch (err) {
-        console.error(`Failed to delete workflow ${workflowId}:`, err);
-      }
+  const handleBulkDelete = () => {
+    if (selectedWorkflows.size === 0) return;
+    setIsBulkDeleteDialogOpen(true);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    const selectedWorkflowRecords = workflows.filter((workflow) => selectedWorkflows.has(workflow.workflow_id));
+    const eligibleWorkflows = selectedWorkflowRecords.filter((workflow) => !workflow.is_system);
+
+    if (eligibleWorkflows.length === 0) {
+      setIsBulkDeleteDialogOpen(false);
+      return;
     }
-    setSelectedWorkflows(new Set());
-    setRefreshKey((v) => v + 1);
+
+    setIsBulkDeleting(true);
+    try {
+      for (const workflow of eligibleWorkflows) {
+        try {
+          const result = await deleteWorkflowDefinitionAction({ workflowId: workflow.workflow_id });
+          if (!result.success) {
+            console.error(`Failed to delete workflow ${workflow.workflow_id}:`, result.message ?? result.code);
+          }
+        } catch (err) {
+          console.error(`Failed to delete workflow ${workflow.workflow_id}:`, err);
+        }
+      }
+      setSelectedWorkflows(new Set());
+      setRefreshKey((v) => v + 1);
+      setIsBulkDeleteDialogOpen(false);
+    } finally {
+      setIsBulkDeleting(false);
+    }
   };
 
   const handleDeleteClick = (workflow: WorkflowDefinitionListItem, e: React.MouseEvent) => {
@@ -788,6 +808,15 @@ export default function WorkflowList({
 
   // No results state
   const showNoResults = !isLoading && totalItems === 0 && hasAnyWorkflows;
+  const selectedWorkflowRecords = workflows.filter((workflow) => selectedWorkflows.has(workflow.workflow_id));
+  const bulkDeleteEligibleWorkflows = selectedWorkflowRecords.filter((workflow) => !workflow.is_system);
+  const bulkDeleteSkippedWorkflows = selectedWorkflowRecords
+    .filter((workflow) => workflow.is_system)
+    .map((workflow) => ({
+      workflowId: workflow.workflow_id,
+      name: workflow.name,
+      reason: 'System workflow'
+    }));
 
   return (
     <ReflectionContainer id="workflow-list" label="Workflow List" className="h-full min-h-0">
@@ -967,6 +996,46 @@ export default function WorkflowList({
           validationResult={deleteValidation}
           isValidating={isDeleteValidating}
           isDeleting={isDeleting}
+        />
+
+        <ConfirmationDialog
+          id="bulk-delete-workflows-dialog"
+          isOpen={isBulkDeleteDialogOpen}
+          onClose={() => setIsBulkDeleteDialogOpen(false)}
+          onConfirm={handleConfirmBulkDelete}
+          title="Delete selected workflows"
+          confirmLabel={bulkDeleteEligibleWorkflows.length > 0
+            ? `Delete ${bulkDeleteEligibleWorkflows.length} workflow${bulkDeleteEligibleWorkflows.length !== 1 ? 's' : ''}`
+            : 'Close'}
+          cancelLabel="Cancel"
+          isConfirming={isBulkDeleting}
+          message={(
+            <div className="space-y-3">
+              <p>
+                You selected <strong>{selectedWorkflowRecords.length}</strong> workflow{selectedWorkflowRecords.length !== 1 ? 's' : ''}.
+              </p>
+              <div className="space-y-1 text-sm">
+                <div>
+                  <strong>{bulkDeleteEligibleWorkflows.length}</strong> will be deleted.
+                </div>
+                <div>
+                  <strong>{bulkDeleteSkippedWorkflows.length}</strong> will be skipped.
+                </div>
+              </div>
+              {bulkDeleteSkippedWorkflows.length > 0 && (
+                <div className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3">
+                  <div className="mb-2 text-sm font-medium text-[rgb(var(--color-text-700))]">Skipped workflows</div>
+                  <ul className="space-y-1 text-sm text-[rgb(var(--color-text-600))]">
+                    {bulkDeleteSkippedWorkflows.map((workflow) => (
+                      <li key={workflow.workflowId}>
+                        <strong>{workflow.name}</strong> — {workflow.reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         />
       </div>
     </ReflectionContainer>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { getFolders, createFolder } from '../actions/documentActions';
 import { getDefaultFolders } from '../actions/defaultFolderActions';
@@ -220,8 +220,26 @@ export default function FolderSelectorModal({
     });
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="folder-selector-cancel-btn"
+        variant="outline"
+        onClick={onClose}
+      >
+        {tCommon('actions.cancel', 'Cancel')}
+      </Button>
+      <Button
+        id="folder-selector-confirm-btn"
+        onClick={handleConfirm}
+      >
+        {tCommon('actions.confirm', 'Confirm')}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog isOpen={isOpen} onClose={onClose}>
+    <Dialog isOpen={isOpen} onClose={onClose} footer={footer}>
       <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -377,21 +395,6 @@ export default function FolderSelectorModal({
           )}
         </div>
 
-        <DialogFooter>
-          <Button
-            id="folder-selector-cancel-btn"
-            variant="outline"
-            onClick={onClose}
-          >
-            {tCommon('cancel', 'Cancel')}
-          </Button>
-          <Button
-            id="folder-selector-confirm-btn"
-            onClick={handleConfirm}
-          >
-            {tCommon('confirm', 'Confirm')}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

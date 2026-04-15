@@ -1,0 +1,187 @@
+[
+  {
+    "id": "F001",
+    "description": "Create en/msp/billing-settings.json with all keys for the 17 billing/tax settings components (~480 keys organized under tabs, general, quoting, tax, payments, serviceCategories, serviceTypes, serviceCatalog, products, quickAddService, quickAddProduct, clientTaxSettings, common, import, validation, errors, toast groups)",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Update ROUTE_NAMESPACES in packages/core/src/lib/i18n/config.ts to add 'msp/billing-settings' to the '/msp/settings' entry",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Wire useTranslation('msp/billing-settings') in BillingSettings.tsx -- tab labels (General/Quoting/Tax/Payments), card titles and descriptions for all sections (Default Currency, Invoice Numbering, Zero-Dollar Invoices, Credit Expiration, Renewal Automation, Quote Numbering, Tax Regions, Payment Settings), loading text",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Wire useTranslation in DefaultCurrencySettings.tsx -- currency select label, placeholder, toast success message, error fallback strings",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Wire useTranslation in ZeroDollarInvoiceSettings.tsx -- handling option labels (Create as Draft / Create and Finalize), invoice handling select label/placeholder, suppress toggle label, help text descriptions, toast messages, error strings",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Wire useTranslation in CreditExpirationSettings.tsx -- enable toggle label, help text, expiration period label/help, notification days label/placeholder/help, save button, toast messages, error strings",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Wire useTranslation in RenewalAutomationSettings.tsx -- policy option labels (Create ticket/Queue only), due date action label/help, board/status select labels and dynamic placeholders (Loading boards.../Select board/Loading statuses.../Select status/Select a board first), status scoping help text, save/saving button, toast messages, error strings",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Wire useTranslation in ServiceCategoriesSettings.tsx -- page heading, table column titles (Name/Description/Order/Actions), action menu items (Edit/Delete), Add/Import buttons",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Wire ServiceCategoriesSettings.tsx dialog strings -- add/edit dialog title, field labels (Category Name/Description/Display Order), placeholders, display order help text, validation error ('Category name is required'), cancel/create/update buttons, toast messages (created/updated/deleted), import dialog title and content, conflict resolution dialog strings",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Wire useTranslation in ServiceTypeSettings.tsx -- card title/description, table columns (Name/Billing Method/Description/Order/Actions), billing method display labels (Fixed/Hourly/Usage), loading state, Add/Import buttons, action menu items (Edit/Delete)",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Wire ServiceTypeSettings.tsx dialog and validation strings -- add/edit dialog title, field labels (Name/Description/Billing Method/Display Order), placeholders, required-fields validation prompt, display order help text with used-orders list, delete confirmation dialog (with in-use error handling), import dialog and conflict resolution strings, toast messages",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Wire useTranslation in ServiceCatalogManager.tsx -- page heading, table columns (Service Name/Service Type/Billing Method/Pricing/Unit/Tax Rate/Actions), filter placeholders (All Service Types/All Billing Methods), loading state, action menu items (Edit/Delete)",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "Wire ServiceCatalogManager.tsx edit dialog strings -- dialog title, field labels (Service Name/Service Type/Billing Method/Description/Pricing/Unit of Measure/Tax Rate/SKU/Inventory Count/Seat Limit/License Term), pricing section header with rate type labels (Monthly/Per Hour/Usage), + Add Currency button, Remove button, pricing help text, save/cancel buttons, error messages",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "Wire useTranslation in ProductsManager.tsx -- page heading, table columns (Product/SKU/Type/Category/Label/Pricing/Tax Rate/Active/Actions), action menu items (Edit/Restore/Archive/Delete), filter option labels (All Statuses/Active/Inactive/All Categories/All Types), search placeholder, loading state, Add Product button",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "description": "Wire ProductsManager.tsx confirmation dialog strings -- archive confirmation (with product name interpolation), permanent delete dialog (checking/can-delete/cannot-delete messages with associations list, archive-instead suggestion), error messages",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "description": "Wire useTranslation in QuickAddService.tsx -- dialog title, field labels (Service Name/Service Type/Billing Method/Description/Tax Rate), pricing section (rate type labels, + Add Currency, Remove, help text), validation error list header and individual messages, cancel/save buttons",
+    "implemented": true
+  },
+  {
+    "id": "F017",
+    "description": "Wire QuickAddService.tsx conditional field labels and validation -- Unit of Measure label/placeholder/help (usage-based), Hardware fields (SKU/Inventory Count), Software License fields (Seat Limit/License Term), hardware/license validation errors, tax rate loading placeholder, error messages, toast",
+    "implemented": true
+  },
+  {
+    "id": "F018",
+    "description": "Wire useTranslation in QuickAddProduct.tsx -- dialog title (Add/Edit Product), all field labels (Product Name/Type/SKU/Category/Label/Vendor/Manufacturer/Cost/Billing Method/Pricing/Tax Rate/Active/Unit of Measure/License?/License Term/Description), pricing section strings, validation errors, cancel/create/save buttons, error messages",
+    "implemented": true
+  },
+  {
+    "id": "F019",
+    "description": "Wire useTranslation in TaxSourceSettings.tsx -- card title, tooltip content, card description, radio option labels and descriptions (Internal/External), external workflow numbered steps, accounting system note, cancel/save buttons, saving state, loading state, toast messages, error strings",
+    "implemented": true
+  },
+  {
+    "id": "F020",
+    "description": "Wire useTranslation in TaxRegionsManager.tsx -- card title, Add Tax Region button, table columns (Code/Name/Status/Actions), status badges (Active/Inactive), action menu items (Edit/Activate/Deactivate), activate/deactivate toast messages, loading state, dialog title (Add/Edit), field labels (Region Code/Region Name/Active), placeholders, cancel/save buttons, saving state, toast messages, error strings",
+    "implemented": true
+  },
+  {
+    "id": "F021",
+    "description": "Wire useTranslation in TaxThresholdEditor.tsx -- section heading, tooltip content, Add Bracket button, table columns (Min Amount/Max Amount/Rate/Actions), 'No limit' label, action menu items (Edit/Delete), bracket issues alert title, loading/empty states, calculation preview labels (title, Amount, taxable, Total Tax, Effective)",
+    "implemented": true
+  },
+  {
+    "id": "F022",
+    "description": "Wire TaxThresholdEditor.tsx dialog strings -- add/edit dialog title, field labels (Min Amount/Max Amount/Rate), max amount help text ('leave empty for no limit'), placeholders, delete confirmation dialog (with bracket range interpolation, last-bracket warning), cancel/save/delete buttons, saving/deleting states, toast messages, error strings",
+    "implemented": true
+  },
+  {
+    "id": "F023",
+    "description": "Wire useTranslation in TaxComponentEditor.tsx -- section heading, tooltip content, Add Component button, table columns (Seq/Name/Rate/Compound/Date Range/Actions), compound badges (Yes/No), date range display labels (Always/Any/Ongoing), loading/empty states, calculation preview labels (title with base amount, compound label, Total Tax, Effective)",
+    "implemented": true
+  },
+  {
+    "id": "F024",
+    "description": "Wire TaxComponentEditor.tsx dialog strings -- add/edit dialog title, field labels (Name/Rate/Sequence/Compound Tax toggle with description/Start Date/End Date), placeholders, delete confirmation (with component name interpolation), cancel/save/delete buttons, saving/deleting states, toast messages, error strings",
+    "implemented": true
+  },
+  {
+    "id": "F025",
+    "description": "Wire useTranslation in TaxHolidayManager.tsx -- section heading (with optional tax rate name interpolation), tooltip content, Add Holiday button, table columns (Start Date/End Date/Description/Status/Actions), status badges (Active/Upcoming/Expired), status summary labels, loading/empty states",
+    "implemented": true
+  },
+  {
+    "id": "F026",
+    "description": "Wire TaxHolidayManager.tsx dialog strings -- add/edit dialog title, field labels (Start Date/End Date/Description), placeholder, delete confirmation (with description and date range interpolation), cancel/save/delete buttons, saving/deleting states, toast messages, error strings",
+    "implemented": true
+  },
+  {
+    "id": "F027",
+    "description": "Wire useTranslation in TaxSettingsForm.tsx -- page title, loading state, no-settings-found message, Create Default Tax Settings button, error/success dismissible messages",
+    "implemented": true
+  },
+  {
+    "id": "F028",
+    "description": "Wire TaxSettingsForm.tsx tax exempt card -- card title, description, toggle label/tooltip, exempt/not-exempt status text, certificate field label/placeholder/help, exempt alert content, cancel/save buttons, saving state, toast messages",
+    "implemented": true
+  },
+  {
+    "id": "F029",
+    "description": "Wire TaxSettingsForm.tsx advanced tax options card -- card title/description, reverse charge toggle label/tooltip/status, tax source override label/tooltip, select options (Use Tenant Default/Alga PSA Calculates Tax/Accounting Package Calculates Tax), effective source description (with override indicator), override-not-available alert with billing settings link, reset/update buttons, updating state",
+    "implemented": true
+  },
+  {
+    "id": "F030",
+    "description": "Generate fr/msp/billing-settings.json translations for all keys in F001",
+    "implemented": true
+  },
+  {
+    "id": "F031",
+    "description": "Generate es/msp/billing-settings.json translations for all keys",
+    "implemented": true
+  },
+  {
+    "id": "F032",
+    "description": "Generate de/msp/billing-settings.json translations for all keys",
+    "implemented": true
+  },
+  {
+    "id": "F033",
+    "description": "Generate nl/msp/billing-settings.json translations for all keys",
+    "implemented": true
+  },
+  {
+    "id": "F034",
+    "description": "Generate it/msp/billing-settings.json translations for all keys (with Italian accent audit)",
+    "implemented": true
+  },
+  {
+    "id": "F035",
+    "description": "Generate pl/msp/billing-settings.json translations for all keys",
+    "implemented": true
+  },
+  {
+    "id": "F036",
+    "description": "Run `node scripts/generate-pseudo-locales.cjs` to regenerate xx/ and yy/ pseudo-locale files from updated English source (do NOT hand-edit pseudo-locales)",
+    "implemented": true
+  },
+  {
+    "id": "F037",
+    "description": "Run `node scripts/validate-translations.cjs` and resolve any key parity, interpolation variable, or accent issues across all 9 locales (exit code 0 required)",
+    "implemented": true
+  }
+]

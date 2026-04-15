@@ -13,7 +13,8 @@ import {
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -29,6 +30,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 
 const ServiceCategoriesSettings: React.FC = () => {
+  const { t } = useTranslation('msp/billing-settings');
   const [categories, setCategories] = useState<IServiceCategory[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -77,7 +79,7 @@ const ServiceCategoriesSettings: React.FC = () => {
       setCategories(allCategories);
     } catch (error) {
       console.error('Error fetching service categories:', error);
-      setError('Failed to fetch service categories');
+      setError(t('serviceCategories.errors.fetch', { defaultValue: 'Failed to fetch service categories' }));
     }
   };
 
@@ -95,14 +97,18 @@ const ServiceCategoriesSettings: React.FC = () => {
   const handleDeleteCategory = async () => {
     try {
       if (!deleteDialog.categoryId) {
-        toast.error('Category ID is missing');
+        toast.error(t('serviceCategories.errors.missingId', { defaultValue: 'Category ID is missing' }));
         return;
       }
       await deleteServiceCategory(deleteDialog.categoryId);
-      toast.success('Service category deleted successfully');
+      toast.success(t('serviceCategories.toast.deleted', {
+        defaultValue: 'Service category deleted successfully'
+      }));
       await fetchCategories();
     } catch (error) {
-      handleError(error, 'Failed to delete service category');
+      handleError(error, t('serviceCategories.errors.delete', {
+        defaultValue: 'Failed to delete service category'
+      }));
     } finally {
       setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
     }
@@ -111,20 +117,24 @@ const ServiceCategoriesSettings: React.FC = () => {
   const handleSaveCategory = async () => {
     try {
       if (!formData.category_name.trim()) {
-        setError('Category name is required');
+        setError(t('serviceCategories.errors.nameRequired', { defaultValue: 'Category name is required' }));
         return;
       }
 
       if (editingCategory) {
         if (!editingCategory.category_id) {
-          setError('Category ID is missing');
+          setError(t('serviceCategories.errors.missingId', { defaultValue: 'Category ID is missing' }));
           return;
         }
         await updateServiceCategory(editingCategory.category_id, formData);
-        toast.success('Service category updated successfully');
+        toast.success(t('serviceCategories.toast.updated', {
+          defaultValue: 'Service category updated successfully'
+        }));
       } else {
         await createServiceCategory(formData);
-        toast.success('Service category created successfully');
+        toast.success(t('serviceCategories.toast.created', {
+          defaultValue: 'Service category created successfully'
+        }));
       }
       
       setShowAddEditDialog(false);
@@ -133,7 +143,11 @@ const ServiceCategoriesSettings: React.FC = () => {
       await fetchCategories();
     } catch (error) {
       console.error('Error saving service category:', error);
-      setError(error instanceof Error ? error.message : 'Failed to save service category');
+      setError(
+        error instanceof Error
+          ? error.message
+          : t('serviceCategories.errors.save', { defaultValue: 'Failed to save service category' })
+      );
     }
   };
 
@@ -150,41 +164,45 @@ const ServiceCategoriesSettings: React.FC = () => {
         await importReferenceData('service_categories', selectedImportCategories);
       }
       
-      toast.success('Service categories imported successfully');
+      toast.success(t('serviceCategories.toast.imported', {
+        defaultValue: 'Service categories imported successfully'
+      }));
       setShowImportDialog(false);
       setSelectedImportCategories([]);
       setImportConflicts([]);
       setConflictResolutions({});
       await fetchCategories();
     } catch (error) {
-      handleError(error, 'Failed to import service categories');
+      handleError(error, t('serviceCategories.errors.import', {
+        defaultValue: 'Failed to import service categories'
+      }));
     }
   };
 
   const columns: ColumnDefinition<IServiceCategory>[] = [
     {
-      title: 'Name',
+      title: t('common.columns.name', { defaultValue: 'Name' }),
       dataIndex: 'category_name',
       render: (value: string) => (
         <span className="text-[rgb(var(--color-text-700))] font-medium">{value}</span>
       ),
     },
     {
-      title: 'Description',
+      title: t('common.columns.description', { defaultValue: 'Description' }),
       dataIndex: 'description',
       render: (value: string | null) => (
-        <span className="text-muted-foreground">{value || '-'}</span>
+        <span className="text-muted-foreground">{value || t('common.emptyValue', { defaultValue: '-' })}</span>
       ),
     },
     {
-      title: 'Order',
+      title: t('common.columns.order', { defaultValue: 'Order' }),
       dataIndex: 'display_order',
       render: (value: number) => (
         <span className="text-muted-foreground">{value}</span>
       ),
     },
     {
-      title: 'Actions',
+      title: t('common.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'category_id',
       width: '10%',
       render: (value: string | null, record: IServiceCategory) => {
@@ -200,7 +218,7 @@ const ServiceCategoriesSettings: React.FC = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => startEditing(record)}>
-                Edit
+                {t('common.actions.edit', { defaultValue: 'Edit' })}
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => setDeleteDialog({
@@ -210,7 +228,7 @@ const ServiceCategoriesSettings: React.FC = () => {
                 })}
                 className="text-red-600"
               >
-                Delete
+                {t('common.actions.delete', { defaultValue: 'Delete' })}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -222,7 +240,9 @@ const ServiceCategoriesSettings: React.FC = () => {
   return (
     <div className="bg-card p-6 rounded-lg shadow-sm">
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-[rgb(var(--color-text-800))]">Service Categories</h3>
+        <h3 className="text-lg font-semibold mb-4 text-[rgb(var(--color-text-800))]">
+          {t('serviceCategories.title', { defaultValue: 'Service Categories' })}
+        </h3>
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>{error}</AlertDescription>
@@ -248,7 +268,8 @@ const ServiceCategoriesSettings: React.FC = () => {
             }} 
             className="bg-primary-500 text-white hover:bg-primary-600"
           >
-            <Plus className="h-4 w-4 mr-2" /> Add Service Category
+            <Plus className="h-4 w-4 mr-2" />
+            {t('serviceCategories.actions.add', { defaultValue: 'Add Service Category' })}
           </Button>
           <Button 
             id="import-service-categories"
@@ -260,11 +281,15 @@ const ServiceCategoriesSettings: React.FC = () => {
                 setSelectedImportCategories([]);
                 setShowImportDialog(true);
               } catch (error) {
-                handleError(error, 'Failed to fetch available service categories for import');
+                handleError(error, t('serviceCategories.import.fetchError', {
+                  defaultValue: 'Failed to fetch available service categories for import'
+                }));
               }
             }}
           >
-            Import from Standard Categories
+            {t('serviceCategories.actions.importFromStandard', {
+              defaultValue: 'Import from Standard Categories'
+            })}
           </Button>
         </div>
       </div>
@@ -273,21 +298,47 @@ const ServiceCategoriesSettings: React.FC = () => {
         isOpen={deleteDialog.isOpen}
         onClose={() => setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' })}
         onConfirm={handleDeleteCategory}
-        title="Delete Service Category"
-        message={`Are you sure you want to delete "${deleteDialog.categoryName}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        title={t('serviceCategories.dialog.deleteTitle', { defaultValue: 'Delete Service Category' })}
+        message={t('serviceCategories.delete.message', {
+          defaultValue: 'Are you sure you want to delete "{{name}}"? This action cannot be undone.',
+          name: deleteDialog.categoryName
+        })}
+        confirmLabel={t('common.actions.delete', { defaultValue: 'Delete' })}
       />
 
       {/* Add/Edit Dialog */}
-      <Dialog 
-        isOpen={showAddEditDialog} 
+      <Dialog
+        isOpen={showAddEditDialog}
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingCategory(null);
           setFormData({ category_name: '', description: '', display_order: 0 });
           setError(null);
-        }} 
-        title={editingCategory ? "Edit Service Category" : "Add Service Category"}
+        }}
+        title={editingCategory
+          ? t('serviceCategories.dialog.editTitle', { defaultValue: 'Edit Service Category' })
+          : t('serviceCategories.dialog.addTitle', { defaultValue: 'Add Service Category' })}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-service-category"
+              variant="outline"
+              onClick={() => {
+                setShowAddEditDialog(false);
+                setEditingCategory(null);
+                setFormData({ category_name: '', description: '', display_order: 0 });
+                setError(null);
+              }}
+            >
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button id="save-service-category" onClick={handleSaveCategory}>
+              {editingCategory
+                ? t('serviceCategories.actions.update', { defaultValue: 'Update' })
+                : t('serviceCategories.actions.create', { defaultValue: 'Create' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -297,74 +348,98 @@ const ServiceCategoriesSettings: React.FC = () => {
               </Alert>
             )}
             <div>
-              <Label htmlFor="category_name">Category Name *</Label>
+              <Label htmlFor="category_name">
+                {t('serviceCategories.fields.categoryName.label', { defaultValue: 'Category Name *' })}
+              </Label>
               <Input
                 id="category_name"
                 value={formData.category_name}
                 onChange={(e) => setFormData({ ...formData, category_name: e.target.value })}
-                placeholder="Enter category name"
+                placeholder={t('serviceCategories.fields.categoryName.placeholder', {
+                  defaultValue: 'Enter category name'
+                })}
               />
             </div>
             <div>
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">
+                {t('serviceCategories.fields.description.label', { defaultValue: 'Description' })}
+              </Label>
               <Input
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Enter description"
+                placeholder={t('serviceCategories.fields.description.placeholder', {
+                  defaultValue: 'Enter description'
+                })}
               />
             </div>
             <div>
-              <Label htmlFor="display_order">Display Order</Label>
+              <Label htmlFor="display_order">
+                {t('serviceCategories.fields.displayOrder.label', { defaultValue: 'Display Order' })}
+              </Label>
               <Input
                 id="display_order"
                 type="number"
                 value={formData.display_order}
                 onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
-                placeholder="Enter display order"
+                placeholder={t('serviceCategories.fields.displayOrder.placeholder', {
+                  defaultValue: 'Enter display order'
+                })}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Controls the order in which service categories appear in dropdown menus throughout the platform. Lower numbers appear first.
+                {t('serviceCategories.fields.displayOrder.help', {
+                  defaultValue: 'Controls the order in which service categories appear in dropdown menus throughout the platform. Lower numbers appear first.'
+                })}
               </p>
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button 
-            id="cancel-service-category"
-            variant="outline" 
-            onClick={() => {
-              setShowAddEditDialog(false);
-              setEditingCategory(null);
-              setFormData({ category_name: '', description: '', display_order: 0 });
-              setError(null);
-            }}
-          >
-            Cancel
-          </Button>
-          <Button id="save-service-category" onClick={handleSaveCategory}>
-            {editingCategory ? 'Update' : 'Create'}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       {/* Import Dialog */}
-      <Dialog 
-        isOpen={showImportDialog && importConflicts.length === 0} 
+      <Dialog
+        isOpen={showImportDialog && importConflicts.length === 0}
         onClose={() => {
           setShowImportDialog(false);
           setSelectedImportCategories([]);
-        }} 
-        title="Import Standard Service Categories"
+        }}
+        title={t('serviceCategories.import.title', { defaultValue: 'Import Standard Service Categories' })}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-import"
+              variant="outline"
+              onClick={() => {
+                setShowImportDialog(false);
+                setSelectedImportCategories([]);
+              }}
+            >
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="import-selected"
+              onClick={handleImport}
+              disabled={selectedImportCategories.length === 0}
+            >
+              {t('common.actions.importSelected', { defaultValue: 'Import Selected' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
             {!availableReferenceCategories || availableReferenceCategories.length === 0 ? (
-              <p className="text-muted-foreground">No standard service categories available to import.</p>
+              <p className="text-muted-foreground">
+                {t('serviceCategories.import.empty', {
+                  defaultValue: 'No standard service categories available to import.'
+                })}
+              </p>
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Select standard service categories to import into your organization:
+                  {t('serviceCategories.import.description', {
+                    defaultValue: 'Select standard service categories to import into your organization:'
+                  })}
                 </p>
                 <div className="border rounded-md">
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
@@ -381,9 +456,9 @@ const ServiceCategoriesSettings: React.FC = () => {
                         }}
                       />
                     </div>
-                    <div className="flex-1">Name</div>
-                    <div className="flex-1">Description</div>
-                    <div className="w-20 text-center">Order</div>
+                    <div className="flex-1">{t('common.columns.name', { defaultValue: 'Name' })}</div>
+                    <div className="flex-1">{t('common.columns.description', { defaultValue: 'Description' })}</div>
+                    <div className="w-20 text-center">{t('common.columns.order', { defaultValue: 'Order' })}</div>
                   </div>
                   <div className="max-h-[300px] overflow-y-auto">
                     {availableReferenceCategories.map((category) => (
@@ -406,7 +481,7 @@ const ServiceCategoriesSettings: React.FC = () => {
                         </div>
                         <div className="flex-1">{category.category_name}</div>
                         <div className="flex-1 text-sm text-muted-foreground">
-                          {category.description || '-'}
+                          {category.description || t('common.emptyValue', { defaultValue: '-' })}
                         </div>
                         <div className="w-20 text-center text-sm text-muted-foreground">
                           {category.display_order}
@@ -419,40 +494,40 @@ const ServiceCategoriesSettings: React.FC = () => {
             )}
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button 
-            id="cancel-import"
-            variant="outline" 
-            onClick={() => {
-              setShowImportDialog(false);
-              setSelectedImportCategories([]);
-            }}
-          >
-            Cancel
-          </Button>
-          <Button 
-            id="import-selected"
-            onClick={handleImport} 
-            disabled={selectedImportCategories.length === 0}
-          >
-            Import Selected
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       {/* Conflict Resolution Dialog */}
-      <Dialog 
-        isOpen={importConflicts.length > 0} 
+      <Dialog
+        isOpen={importConflicts.length > 0}
         onClose={() => {
           setImportConflicts([]);
           setConflictResolutions({});
-        }} 
-        title="Resolve Import Conflicts"
+        }}
+        title={t('import.title', { defaultValue: 'Resolve Import Conflicts' })}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="cancel-conflicts"
+              variant="outline"
+              onClick={() => {
+                setImportConflicts([]);
+                setConflictResolutions({});
+              }}
+            >
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button id="import-with-resolutions" onClick={handleImport}>
+              {t('common.actions.importWithResolutions', { defaultValue: 'Import with Resolutions' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              The following items have conflicts. Choose how to resolve each:
+              {t('serviceCategories.conflicts.description', {
+                defaultValue: 'The following items have conflicts. Choose how to resolve each:'
+              })}
             </p>
             <div className="space-y-4 max-h-[400px] overflow-y-auto">
               {importConflicts.map((conflict) => {
@@ -467,7 +542,9 @@ const ServiceCategoriesSettings: React.FC = () => {
                     {conflict.conflictType === 'name' && (
                       <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                          A category with this name already exists.
+                          {t('serviceCategories.conflicts.nameExists', {
+                            defaultValue: 'A category with this name already exists.'
+                          })}
                         </p>
                         <div className="space-y-2">
                           <label className="flex items-center space-x-2">
@@ -480,7 +557,7 @@ const ServiceCategoriesSettings: React.FC = () => {
                                 [itemId]: { action: 'skip' }
                               })}
                             />
-                            <span>Skip this item</span>
+                            <span>{t('import.skipItem', { defaultValue: 'Skip this item' })}</span>
                           </label>
                           <label className="flex items-center space-x-2">
                             <input
@@ -492,7 +569,7 @@ const ServiceCategoriesSettings: React.FC = () => {
                                 [itemId]: { action: 'rename', newName: referenceItem.category_name + ' (2)' }
                               })}
                             />
-                            <span>Import with new name:</span>
+                            <span>{t('serviceCategories.conflicts.rename', { defaultValue: 'Import with new name:' })}</span>
                           </label>
                           {resolution?.action === 'rename' && (
                             <Input
@@ -511,7 +588,10 @@ const ServiceCategoriesSettings: React.FC = () => {
                     {conflict.conflictType === 'order' && (
                       <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                          Display order {referenceItem.display_order} is already in use.
+                          {t('serviceCategories.conflicts.orderInUse', {
+                            defaultValue: 'Display order {{displayOrder}} is already in use.',
+                            displayOrder: referenceItem.display_order
+                          })}
                         </p>
                         <label className="flex items-center space-x-2">
                           <input
@@ -523,7 +603,12 @@ const ServiceCategoriesSettings: React.FC = () => {
                               [itemId]: { action: 'reorder', newOrder: conflict.suggestedOrder }
                             })}
                           />
-                          <span>Import with order {conflict.suggestedOrder}</span>
+                          <span>
+                            {t('serviceCategories.conflicts.reorder', {
+                              defaultValue: 'Import with order {{order}}',
+                              order: conflict.suggestedOrder
+                            })}
+                          </span>
                         </label>
                       </div>
                     )}
@@ -533,21 +618,6 @@ const ServiceCategoriesSettings: React.FC = () => {
             </div>
           </div>
         </DialogContent>
-        <DialogFooter>
-          <Button 
-            id="cancel-conflicts"
-            variant="outline" 
-            onClick={() => {
-              setImportConflicts([]);
-              setConflictResolutions({});
-            }}
-          >
-            Cancel
-          </Button>
-          <Button id="import-with-resolutions" onClick={handleImport}>
-            Import with Resolutions
-          </Button>
-        </DialogFooter>
       </Dialog>
     </div>
   );

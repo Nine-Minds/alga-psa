@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Dialog, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Calendar, Zap, MousePointer, Check } from 'lucide-react';
@@ -77,6 +77,24 @@ export default function CreateWorkflowDialog({
     if (nameError) setNameError(null);
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="cancel-create-workflow"
+        variant="outline"
+        onClick={handleClose}
+      >
+        Cancel
+      </Button>
+      <Button
+        id="confirm-create-workflow"
+        onClick={handleCreate}
+      >
+        Create Workflow
+      </Button>
+    </div>
+  );
+
   return (
     <Dialog
       id="create-workflow-dialog"
@@ -85,6 +103,7 @@ export default function CreateWorkflowDialog({
       title="Create New Workflow"
       className="max-w-lg"
       draggable={false}
+      footer={footer}
     >
       <div className="space-y-6">
         {/* Workflow Name */}
@@ -156,21 +175,6 @@ export default function CreateWorkflowDialog({
         </div>
       </div>
 
-      <DialogFooter className="mt-6">
-        <Button
-          id="cancel-create-workflow"
-          variant="outline"
-          onClick={handleClose}
-        >
-          Cancel
-        </Button>
-        <Button
-          id="confirm-create-workflow"
-          onClick={handleCreate}
-        >
-          Create Workflow
-        </Button>
-      </DialogFooter>
     </Dialog>
   );
 }

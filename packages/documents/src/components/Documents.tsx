@@ -23,7 +23,7 @@ import DocumentListView from './DocumentListView';
 import ShareLinkDialog from './ShareLinkDialog';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import FolderSelectorModal from './FolderSelectorModal';
-import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, X, FolderInput, Trash2 } from 'lucide-react';
+import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, X, FolderInput, Trash2, Printer } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
 import toast from 'react-hot-toast';
@@ -1230,25 +1230,75 @@ const Documents = ({
              selectedDocument.type_name === 'text/markdown' ||
              (!selectedDocument.type_name && !selectedDocument.file_id)
             ) && (
-            <Button
-              id={`${id}-download-pdf-btn`}
-              onClick={async () => {
-                if (selectedDocument) {
-                  const downloadUrl = `/api/documents/download/${selectedDocument.document_id}?format=pdf`;
-                  const filename = `${selectedDocument.document_name || 'document'}.pdf`;
-                  try {
-                    await downloadDocument(downloadUrl, filename, true);
-                  } catch (error) {
-                    console.error('Download failed:', error);
+            <>
+              <Button
+                id={`${id}-download-pdf-btn`}
+                onClick={async () => {
+                  if (selectedDocument) {
+                    const downloadUrl = `/api/documents/download/${selectedDocument.document_id}?format=pdf`;
+                    const filename = `${selectedDocument.document_name || 'document'}.pdf`;
+                    try {
+                      await downloadDocument(downloadUrl, filename, true);
+                    } catch (error) {
+                      console.error('Download failed:', error);
+                    }
                   }
-                }
-              }}
-              variant="outline"
-              size="sm"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              PDF
-            </Button>
+                }}
+                variant="outline"
+                size="sm"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                PDF
+              </Button>
+              <Button
+                id={`${id}-download-md-btn`}
+                onClick={async () => {
+                  if (selectedDocument) {
+                    const downloadUrl = `/api/documents/download/${selectedDocument.document_id}?format=markdown`;
+                    const filename = `${selectedDocument.document_name || 'document'}.md`;
+                    try {
+                      await downloadDocument(downloadUrl, filename, true);
+                    } catch (error) {
+                      console.error('Markdown download failed:', error);
+                    }
+                  }
+                }}
+                variant="outline"
+                size="sm"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Markdown
+              </Button>
+              <Button
+                id={`${id}-print-document-btn`}
+                onClick={async () => {
+                  if (!selectedDocument) return;
+                  try {
+                    const res = await fetch(
+                      `/api/documents/download/${selectedDocument.document_id}?format=pdf`,
+                    );
+                    if (!res.ok) throw new Error(`Print fetch failed: ${res.status}`);
+                    const blob = await res.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    const printWindow = window.open(blobUrl, '_blank');
+                    if (printWindow) {
+                      printWindow.addEventListener('load', () => {
+                        printWindow.focus();
+                        printWindow.print();
+                      });
+                    }
+                    setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+                  } catch (error) {
+                    console.error('Print failed:', error);
+                  }
+                }}
+                variant="outline"
+                size="sm"
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                Print
+              </Button>
+            </>
           )}
           {!isCreatingNew && !isEditModeInDrawer && selectedDocument && (
             <Button

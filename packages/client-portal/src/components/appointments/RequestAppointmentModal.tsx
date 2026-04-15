@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import Spinner from '@alga-psa/ui/components/Spinner';
@@ -739,12 +739,61 @@ export function RequestAppointmentModal({
     }
   };
 
+  const footer = !successMessage ? (
+    <div className="flex justify-end space-x-2">
+      {currentStep > 1 && (
+        <Button
+          id="appointment-back-button"
+          type="button"
+          variant="outline"
+          onClick={handleBack}
+          disabled={isSubmitting}
+        >
+          {tCommon('common.back')}
+        </Button>
+      )}
+
+      {currentStep < TOTAL_STEPS ? (
+        <Button
+          id="appointment-next-button"
+          type="button"
+          variant="default"
+          onClick={handleNext}
+          disabled={
+            isLoading ||
+            (currentStep === 1 && !canProceedToStep2) ||
+            (currentStep === 2 && !canProceedToStep3) ||
+            (currentStep === 3 && !canProceedToStep4)
+          }
+        >
+          {tCommon('common.next')}
+        </Button>
+      ) : (
+        <Button
+          id="appointment-submit-button"
+          type="button"
+          variant="default"
+          onClick={handleSubmit}
+          disabled={isSubmitting || !canSubmit}
+        >
+          {isSubmitting
+            ? tCommon('common.submitting')
+            : isEditMode
+              ? t('step4.update')
+              : t('step4.submit')
+          }
+        </Button>
+      )}
+    </div>
+  ) : undefined;
+
   return (
     <Dialog
       isOpen={open}
       onClose={() => !isSubmitting && onOpenChange(false)}
       title={isEditMode ? t('modal.editTitle') : t('modal.title')}
       className="max-w-3xl"
+      footer={footer}
     >
       <DialogContent>
         {error && (
@@ -766,54 +815,6 @@ export function RequestAppointmentModal({
         )}
 
         {renderStepContent()}
-
-        {!successMessage && (
-          <DialogFooter className="mt-6">
-            {currentStep > 1 && (
-              <Button
-                id="appointment-back-button"
-                type="button"
-                variant="outline"
-                onClick={handleBack}
-                disabled={isSubmitting}
-              >
-                {tCommon('common.back')}
-              </Button>
-            )}
-
-            {currentStep < TOTAL_STEPS ? (
-              <Button
-                id="appointment-next-button"
-                type="button"
-                variant="default"
-                onClick={handleNext}
-                disabled={
-                  isLoading ||
-                  (currentStep === 1 && !canProceedToStep2) ||
-                  (currentStep === 2 && !canProceedToStep3) ||
-                  (currentStep === 3 && !canProceedToStep4)
-                }
-              >
-                {tCommon('common.next')}
-              </Button>
-            ) : (
-              <Button
-                id="appointment-submit-button"
-                type="button"
-                variant="default"
-                onClick={handleSubmit}
-                disabled={isSubmitting || !canSubmit}
-              >
-                {isSubmitting
-                  ? tCommon('common.submitting')
-                  : isEditMode
-                    ? t('step4.update')
-                    : t('step4.submit')
-                }
-              </Button>
-            )}
-          </DialogFooter>
-        )}
       </DialogContent>
     </Dialog>
   );

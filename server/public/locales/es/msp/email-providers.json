@@ -415,7 +415,9 @@
       },
       "status": {
         "label": "Estado *",
-        "placeholder": "Seleccionar estado"
+        "placeholder": "Seleccionar estado",
+        "selectBoardFirst": "Seleccione primero un tablero",
+        "loading": "Cargando estados..."
       },
       "priority": {
         "label": "Prioridad *",

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -42,10 +42,29 @@ export function ContractLineRateDialog({ contractLine, onClose, onSave }: Contra
       onClose={onClose}
       title={`Set Custom Rate for ${contractLine.contract_line_name}`}
       className="max-w-md"
+      footer={(
+        <div className="flex justify-end space-x-2">
+          <Button
+            id="cancel-rate-btn"
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
+          <Button
+            id="save-rate-btn"
+            type="button"
+            onClick={() => (document.getElementById('contract-plan-rate-form') as HTMLFormElement | null)?.requestSubmit()}
+          >
+            Save Rate
+          </Button>
+        </div>
+      )}
     >
       <DialogContent>
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
+
+          <form id="contract-plan-rate-form" onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -72,22 +91,6 @@ export function ContractLineRateDialog({ contractLine, onClose, onSave }: Contra
               </div>
             </div>
             
-            <DialogFooter>
-              <Button
-                id="cancel-rate-btn"
-                type="button"
-                variant="secondary"
-                onClick={onClose}
-              >
-                Cancel
-              </Button>
-              <Button
-                id="save-rate-btn"
-                type="submit"
-              >
-                Save Rate
-              </Button>
-            </DialogFooter>
           </form>
       </DialogContent>
     </Dialog>

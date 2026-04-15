@@ -220,6 +220,27 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                 isOpen={isDialogOpen}
                 onClose={() => setIsDialogOpen(false)}
                 title={t('createTicketFromAssetButton.title', { defaultValue: 'Create Ticket from Asset' })}
+                footer={(
+                    <div {...withDataAutomationId({ id: 'ticket-form-actions' })} className="flex justify-end space-x-2">
+                        <Button
+                            {...withDataAutomationId({ id: 'cancel-ticket-button' })}
+                            variant="outline"
+                            onClick={() => setIsDialogOpen(false)}
+                            disabled={isSubmitting}
+                        >
+                            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+                        </Button>
+                        <Button
+                            {...withDataAutomationId({ id: 'submit-ticket-button' })}
+                            onClick={handleSubmit}
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting
+                                ? t('createTicketFromAssetButton.actions.creating', { defaultValue: 'Creating...' })
+                                : t('createTicketFromAssetButton.actions.create', { defaultValue: 'Create Ticket' })}
+                        </Button>
+                    </div>
+                )}
             >
                 <div {...withDataAutomationId({ id: 'create-ticket-form' })} className="space-y-4">
                     <Input
@@ -280,26 +301,6 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                             : t('createTicketFromAssetButton.placeholders.selectPriority', { defaultValue: 'Select priority...' })}
                         disabled={isLoadingPriorities}
                     />
-
-                    <div {...withDataAutomationId({ id: 'ticket-form-actions' })} className="mt-4 flex justify-end space-x-2">
-                        <Button
-                            {...withDataAutomationId({ id: 'cancel-ticket-button' })}
-                            variant="outline"
-                            onClick={() => setIsDialogOpen(false)}
-                            disabled={isSubmitting}
-                        >
-                            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-                        </Button>
-                        <Button
-                            {...withDataAutomationId({ id: 'submit-ticket-button' })}
-                            onClick={handleSubmit}
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting
-                                ? t('createTicketFromAssetButton.actions.creating', { defaultValue: 'Creating...' })
-                                : t('createTicketFromAssetButton.actions.create', { defaultValue: 'Create Ticket' })}
-                        </Button>
-                    </div>
                 </div>
             </Dialog>
         </>

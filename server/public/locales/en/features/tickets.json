@@ -37,7 +37,9 @@
     "noSla": "No SLA",
     "onTrack": "On Track",
     "breached": "Breached",
-    "paused": "Paused"
+    "paused": "Paused",
+    "allResponseStatuses": "All Response Statuses",
+    "responseStatus": "Response Status"
   },
   "create": {
     "title": "Create Support Ticket",
@@ -189,7 +191,8 @@
     "failedToUpdateComment": "Failed to update comment",
     "failedToDeleteComment": "Failed to delete comment",
     "deleteOwnCommentError": "You can only delete your own comments",
-    "failedToUpdateTicketStatus": "Failed to update ticket status"
+    "failedToUpdateTicketStatus": "Failed to update ticket status",
+    "noTitle": "No title"
   },
   "conversation": {
     "comments": "Comments",
@@ -220,7 +223,18 @@
     "noStatusChange": "Do not change status",
     "clipboardDraftCancelTitle": "Pasted Images Detected",
     "deleteUploadedImages": "Delete Images",
-    "keepUploadedImages": "Keep Images"
+    "keepUploadedImages": "Keep Images",
+    "bundledUpdate": "Bundled update",
+    "clientSuffix": " (Client)",
+    "internalCommentTooltip": "Internal Comment",
+    "resolutionCommentTooltip": "Resolution Comment",
+    "unknownUser": "Unknown User",
+    "editCommentAriaLabel": "Edit comment",
+    "deleteCommentAriaLabel": "Delete comment",
+    "inboundChildReplies": "Inbound replies on child tickets (view-only)",
+    "childTicket": "Child ticket",
+    "ticketPrefix": "Ticket {{number}}",
+    "clipboardDraftCancelMessage": "This draft includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?"
   },
   "responseState": {
     "awaitingYourResponse": "Awaiting Your Response",
@@ -423,7 +437,12 @@
       "masterTicket": "Select Master Ticket",
       "selectMasterTicket": "Select master ticket...",
       "syncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-      "syncUpdatesHelp": "Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master."
+      "syncUpdatesHelp": "Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.",
+      "childrenDescription": "Children keep their current status; workflow fields are locked on children. Inbound child replies are surfaced below as view-only.",
+      "checkingMasters": "Checking existing bundles...",
+      "existingMasterSuffix": "(existing master)",
+      "existingMasterLocked": "One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.",
+      "multipleExistingMasters": "Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling."
     },
     "auth": {
       "moveRequired": "You must be logged in to move tickets",
@@ -749,7 +768,8 @@
       "columns": {
         "sla": "SLA",
         "createdBy": "Created By",
-        "actions": "Actions"
+        "actions": "Actions",
+        "tags": "Tags"
       },
       "requiredSuffix": "(required)",
       "tagsUnderTitle": "Display under Title",
@@ -1010,5 +1030,22 @@
     "minutes": "minutes",
     "invalidDateTime": "Invalid date/time",
     "declined": "Declined"
+  },
+  "categories": {
+    "itilBadge": "ITIL"
+  },
+  "tickets": {
+    "conversation": {
+      "closeStatus": "Close status",
+      "noStatusChange": "Do not change status"
+    }
+  },
+  "common": {
+    "continueEditing": "Continue Editing"
+  },
+  "details": {
+    "bundle": {
+      "childrenDescription": "Child tickets bundled in this master ticket"
+    }
   }
 }

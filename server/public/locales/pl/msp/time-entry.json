@@ -28,7 +28,8 @@
       "copyToAnotherDay": "Skopiuj na inny dzień",
       "viewDetails": "Zobacz szczegóły",
       "manageTimePeriods": "Zarządzaj okresami czasu",
-      "selectWorkItem": "Wybierz element pracy"
+      "selectWorkItem": "Wybierz element pracy",
+      "clearFilter": "Wyczyść filtr"
     },
     "states": {
       "inProgress": "W toku",
@@ -165,7 +166,8 @@
       "next": "Dalej",
       "pageInfo": "Strona {{current}} z {{total}} (łączna liczba rekordów {{records}})"
     },
-    "interactionType": "{{type}} • {{client}}"
+    "interactionType": "{{type}} • {{client}}",
+    "currentSelection": "Bieżący element pracy"
   },
   "timeSheetHeader": {
     "title": "Arkusz czasu",
@@ -202,6 +204,7 @@
       "billable": "Płatne",
       "nonBillable": "Niepodlegające rozliczeniu",
       "workItem": "Przedmiot pracy",
+      "service": "Usługa",
       "duration": "Czas trwania",
       "notes": "Notatki",
       "entryChangeSuggestion": "Sugestia zmiany wpisu",
@@ -328,6 +331,11 @@
     "dayGroup": {
       "entryOne": "{{count}} wpis",
       "entryOther": "{{count}} wpisów"
+    },
+    "focusFilter": {
+      "summary": "Wyświetlono {{count}} wpisów dla {{workItem}} w dniu {{date}}",
+      "description": "Widoczne są tylko wpisy z wybranej komórki siatki.",
+      "backToGrid": "Powrót do siatki"
     }
   },
   "selectedWorkItem": {

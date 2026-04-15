@@ -7,6 +7,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@alga-psa/ui/components
 import { useDrawer } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from 'react-i18next';
 import type { ITicketLinkedTask } from '@alga-psa/types';
 import { getLinkedTasksForTicketAction, getTaskWithDetails } from '../actions/projectTaskActions';
 import { getProjectDetails } from '../actions/projectActions';
@@ -19,6 +20,7 @@ interface TicketLinkedTasksBadgeProps {
 export default function TicketLinkedTasksBadge({
   ticketId,
 }: TicketLinkedTasksBadgeProps): React.JSX.Element | null {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [linkedTasks, setLinkedTasks] = useState<ITicketLinkedTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [openingTaskId, setOpeningTaskId] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export default function TicketLinkedTasksBadge({
       ]);
 
       if (!taskDetails) {
-        toast.error('Failed to load task');
+        toast.error(t('dialogs.ticketLinkedTasks.loadFailed', 'Failed to load task'));
         return;
       }
 
@@ -71,7 +73,7 @@ export default function TicketLinkedTasksBadge({
         (p: { phase_id: string }) => p.phase_id === task.phase_id
       );
       if (!phase) {
-        toast.error('Task phase not found');
+        toast.error(t('dialogs.ticketLinkedTasks.phaseNotFound', 'Task phase not found'));
         return;
       }
 
@@ -93,7 +95,7 @@ export default function TicketLinkedTasksBadge({
         />
       );
     } catch (error) {
-      handleError(error, 'Failed to open task');
+      handleError(error, t('dialogs.ticketLinkedTasks.openFailed', 'Failed to open task'));
     } finally {
       setOpeningTaskId(null);
     }
@@ -117,12 +119,12 @@ export default function TicketLinkedTasksBadge({
           className="flex items-center"
         >
           <ClipboardList className="h-4 w-4 mr-1" />
-          {linkedTasks.length} {linkedTasks.length === 1 ? 'Task' : 'Tasks'}
+          {linkedTasks.length} {linkedTasks.length === 1 ? t('dialogs.ticketLinkedTasks.task', 'Task') : t('dialogs.ticketLinkedTasks.tasks', 'Tasks')}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80 p-0">
         <div className="px-3 py-2 border-b border-[rgb(var(--color-border-200))]">
-          <h4 className="text-sm font-medium">Linked Project Tasks</h4>
+          <h4 className="text-sm font-medium">{t('dialogs.ticketLinkedTasks.title', 'Linked Project Tasks')}</h4>
         </div>
         <div className="max-h-60 overflow-y-auto">
           {linkedTasks.map((task) => (

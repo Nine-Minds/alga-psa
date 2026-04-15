@@ -154,7 +154,7 @@ export const addSingleTeamMember = withAuth(async (
     if (usage.limit !== null && usage.used >= usage.limit) {
       return {
         success: false,
-        error: `You've reached your internal user licence limit of ${usage.limit}. Please remove or deactivate existing users to add new ones.`
+        error: `You've reached your internal user license limit of ${usage.limit}. Please remove or deactivate existing users to add new ones.`
       };
     }
 
@@ -288,7 +288,7 @@ export const addTeamMembers = withAuth(async (
       if (canAdd === 0) {
         return { 
           success: false, 
-          error: `You've reached your internal user licence limit of ${usage.limit}. Please remove or deactivate existing users to add new ones.`
+          error: `You've reached your internal user license limit of ${usage.limit}. Please remove or deactivate existing users to add new ones.`
         };
       }
       

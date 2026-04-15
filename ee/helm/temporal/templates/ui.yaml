@@ -26,6 +26,8 @@ spec:
           env:
             - name: TEMPORAL_ADDRESS
               value: "{{ .Values.service.name }}:{{ .Values.service.port }}"
+            - name: TEMPORAL_UI_PORT
+              value: "{{ .Values.ui.service.port }}"
           ports:
             - name: http
               containerPort: {{ .Values.ui.service.port }}

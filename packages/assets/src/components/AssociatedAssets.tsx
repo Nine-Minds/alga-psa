@@ -549,6 +549,27 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                     isOpen={isAddDialogOpen}
                     onClose={handleCloseDialog}
                     title={t('associatedAssets.dialog.title', { defaultValue: 'Add Asset' })}
+                    footer={(
+                        <div className="flex justify-end space-x-3">
+                            <Button
+                                id='cancel-button'
+                                variant="outline"
+                                onClick={handleCloseDialog}
+                            >
+                                {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+                            </Button>
+                            <Button
+                                id='confirm-add-asset-button'
+                                onClick={handleAddAssets}
+                                disabled={selectedAssets.size === 0}
+                            >
+                                {t('associatedAssets.dialog.actions.addAssets', {
+                                    defaultValue: 'Add Asset{{suffix}}',
+                                    suffix: selectedAssets.size > 1 ? 's' : ''
+                                })}
+                            </Button>
+                        </div>
+                    )}
                 >
                     <div className="space-y-4" style={{ minWidth: '700px' }}>
                         {/* Search input */}
@@ -690,26 +711,6 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                             </div>
                         )}
 
-                        {/* Action buttons */}
-                        <div className="flex justify-end space-x-3 pt-2">
-                            <Button
-                                id='cancel-button'
-                                variant="outline"
-                                onClick={handleCloseDialog}
-                            >
-                                {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-                            </Button>
-                            <Button
-                                id='confirm-add-asset-button'
-                                onClick={handleAddAssets}
-                                disabled={selectedAssets.size === 0}
-                            >
-                                {t('associatedAssets.dialog.actions.addAssets', {
-                                    defaultValue: 'Add Asset{{suffix}}',
-                                    suffix: selectedAssets.size > 1 ? 's' : ''
-                                })}
-                            </Button>
-                        </div>
                     </div>
                 </Dialog>
 

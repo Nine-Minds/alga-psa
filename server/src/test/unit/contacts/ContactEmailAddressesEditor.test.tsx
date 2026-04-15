@@ -8,6 +8,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ContactEmailAddressInput } from '@alga-psa/types';
 import ContactEmailAddressesEditor from '@alga-psa/clients/components/contacts/ContactEmailAddressesEditor';
 
+vi.mock('@alga-psa/types', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...(actual as object),
+    CONTACT_EMAIL_CANONICAL_TYPES: ['work', 'personal', 'billing', 'other'],
+  };
+});
+
 vi.mock('@alga-psa/ui/components/Alert', () => ({
   Alert: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   AlertDescription: ({ children, ...props }: any) => <div {...props}>{children}</div>,
@@ -234,7 +242,7 @@ describe('ContactEmailAddressesEditor', () => {
     );
 
     const firstAdditionalRow = screen.getByTestId('contact-email-editor-additional-row-0');
-    await user.click(within(firstAdditionalRow).getByRole('button', { name: /make default/i }));
+    await user.click(within(firstAdditionalRow).getByRole('radio'));
 
     expect(
       consoleErrorSpy.mock.calls.some(([firstArg]) =>

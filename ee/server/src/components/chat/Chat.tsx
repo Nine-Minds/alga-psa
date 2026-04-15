@@ -11,7 +11,7 @@ import {
   addMessageToChatAction,
 } from '../../lib/chat-actions/chatActions';
 import { HfInference } from '@huggingface/inference';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useAIChatContext } from '@product/chat/context';
@@ -20,6 +20,12 @@ import {
   readAssistantContentFromSse,
   type SseFunctionProposal,
 } from './readAssistantContentFromSse';
+import { ChatMentionChip, type ChatMention } from './ChatMentionChip';
+import {
+  ChatMentionPopup,
+  type ChatMentionPopupHandle,
+} from './ChatMentionPopup';
+import type { MentionableEntity } from '../../lib/chat-actions/searchEntitiesForMention';
 
 import './chat.css';
 
@@ -203,6 +209,7 @@ type ChatProps = {
   hf: HfInference | null;
   initialChatId?: string | null;
   autoSendPrompt?: string | null;
+  initialMentions?: ChatMention[];
   onChatIdChange?: (chatId: string | null) => void;
   autoApprovedHttpMethods?: string[];
   onHasMessagesChange?: (hasMessages: boolean) => void;
@@ -264,6 +271,7 @@ export const Chat: React.FC<ChatProps> = ({
   hf,
   initialChatId,
   autoSendPrompt,
+  initialMentions,
   onChatIdChange,
   autoApprovedHttpMethods,
   onHasMessagesChange,
@@ -309,6 +317,9 @@ export const Chat: React.FC<ChatProps> = ({
   const [pendingFunctionAction, setPendingFunctionAction] = useState<'none' | 'approve' | 'decline'>('none');
   const [functionError, setFunctionError] = useState<string | null>(null);
   const [autoApprovedMethods, setAutoApprovedMethods] = useState<string[]>([]);
+  const [mentions, setMentions] = useState<ChatMention[]>([]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const mentionPopupRef = useRef<ChatMentionPopupHandle | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
@@ -491,6 +502,14 @@ export const Chat: React.FC<ChatProps> = ({
       setIsMultilineMode(true);
     }
     requestAnimationFrame(autoResizeTextarea);
+
+    // Detect @mention query — allow spaces so ticket titles / client names work.
+    // Negative lookahead excludes already-confirmed mentions like "@Ticket: …".
+    const cursorPos = e.target.selectionStart ?? value.length;
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const mentionMatch = textBeforeCursor.match(/(?:^|\s)@(?!\w+:\s)([^\n@]{0,60})$/);
+    setMentionQuery(mentionMatch ? mentionMatch[1] : null);
+
     if (onUserInput) {
       onUserInput();
     }
@@ -549,6 +568,55 @@ export const Chat: React.FC<ChatProps> = ({
     [],
   );
 
+  const handleMentionSelect = useCallback(
+    (entity: MentionableEntity) => {
+      // Avoid duplicate mentions
+      if (mentions.some((m) => m.type === entity.type && m.id === entity.id)) {
+        setMentionQuery(null);
+        return;
+      }
+
+      const typeLabel = entity.type.charAt(0).toUpperCase() + entity.type.slice(1);
+      const displayText = `@${typeLabel}: ${entity.displayName}`;
+
+      setMentions((prev) => [
+        ...prev,
+        { type: entity.type, id: entity.id, displayText },
+      ]);
+
+      // Replace @query text in the textarea with the display text
+      const textarea = inputRef.current;
+      if (textarea) {
+        const cursorPos = textarea.selectionStart ?? messageText.length;
+        const textBeforeCursor = messageText.slice(0, cursorPos);
+        const atIndex = textBeforeCursor.lastIndexOf('@');
+        if (atIndex !== -1) {
+          const before = messageText.slice(0, atIndex);
+          const after = messageText.slice(cursorPos);
+          const newText = `${before}${displayText} ${after}`;
+          setMessageText(newText);
+
+          // Set cursor position after the inserted text
+          requestAnimationFrame(() => {
+            if (inputRef.current) {
+              const newPos = before.length + displayText.length + 1;
+              inputRef.current.selectionStart = newPos;
+              inputRef.current.selectionEnd = newPos;
+              inputRef.current.focus();
+            }
+          });
+        }
+      }
+
+      setMentionQuery(null);
+    },
+    [mentions, messageText],
+  );
+
+  const handleMentionRemove = useCallback((mention: ChatMention) => {
+    setMentions((prev) => prev.filter((m) => !(m.type === mention.type && m.id === mention.id)));
+  }, []);
+
   const sendMessage = () => {
     const trimmedMessage = messageText.trim();
     if (!trimmedMessage.length) {
@@ -569,6 +637,12 @@ export const Chat: React.FC<ChatProps> = ({
   };
 
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // When mention popup is active, delegate navigation keys to it
+    if (mentionQuery !== null && mentionPopupRef.current) {
+      const handled = mentionPopupRef.current.handleKeyDown(e);
+      if (handled) return;
+    }
+
     if (e.key !== 'Enter') {
       return;
     }
@@ -620,7 +694,11 @@ export const Chat: React.FC<ChatProps> = ({
 
   const handleSend = useCallback(async (
     trimmedMessage: string,
-    options?: { reuseExistingUserMessage?: boolean; baseConversation?: ChatCompletionMessage[] },
+    options?: {
+      reuseExistingUserMessage?: boolean;
+      baseConversation?: ChatCompletionMessage[];
+      mentionsOverride?: ChatMention[];
+    },
   ) => {
     const reuseExistingUserMessage = options?.reuseExistingUserMessage ?? false;
     setFunctionError(null);
@@ -696,7 +774,12 @@ export const Chat: React.FC<ChatProps> = ({
       ]);
     }
 
+    // Send all mentions that have chips visible — user controls removal via chip X button
+    const activeMentions = options?.mentionsOverride ?? mentions;
+
     setMessageText('');
+    setMentions([]);
+    setMentionQuery(null);
     setIsMultilineMode(false);
     if (inputRef.current) {
       inputRef.current.style.height = '';
@@ -719,6 +802,9 @@ export const Chat: React.FC<ChatProps> = ({
         body: JSON.stringify({
           messages: conversationWithUser,
           uiContext: aiContext,
+          ...(activeMentions.length > 0
+            ? { mentions: activeMentions.map((m) => ({ type: m.type, id: m.id })) }
+            : {}),
         }),
         signal: abortController.signal,
       });
@@ -885,6 +971,7 @@ export const Chat: React.FC<ChatProps> = ({
     autoResizeTextarea,
     addAssistantMessageToPersistence,
     aiContext,
+    mentions,
   ]);
 
   useEffect(() => {
@@ -899,8 +986,8 @@ export const Chat: React.FC<ChatProps> = ({
       return;
     }
     autoSendRef.current = true;
-    void handleSend(prompt);
-  }, [autoSendPrompt, handleSend]);
+    void handleSend(prompt, { mentionsOverride: initialMentions });
+  }, [autoSendPrompt, handleSend, initialMentions]);
 
   const handleFunctionAction = useCallback(async (action: 'approve' | 'decline') => {
     if (!pendingFunction) {
@@ -1539,48 +1626,53 @@ export const Chat: React.FC<ChatProps> = ({
                     <h3 className="function-approval-title">
                       {pendingFunction.metadata.displayName}
                     </h3>
-                    {pendingFunction.metadata.description && (
-                      <p className="function-approval-description">
-                        {pendingFunction.metadata.description}
-                      </p>
-                    )}
                     {previewText && (
                       <p className="function-approval-preview">{previewText}</p>
                     )}
-                    {assistantPlanText ? (
-                      <details className="function-approval-reasoning">
-                        <summary>View assistant plan</summary>
-                        {assistantPlanItems.length ? (
-                          <ol className="function-approval-plan">
-                            {assistantPlanItems.map((item) => (
-                              <li key={item}>{item}</li>
-                            ))}
-                          </ol>
-                        ) : (
-                          <p>{assistantPlanText}</p>
+                    {(pendingFunction.metadata.description || assistantPlanText || pendingFunction.metadata.playbooks?.length || pendingArgumentEntries.length > 0) && (
+                      <details className="function-approval-details">
+                        <summary>View details</summary>
+                        {pendingFunction.metadata.description && (
+                          <p className="function-approval-description">
+                            {pendingFunction.metadata.description}
+                          </p>
+                        )}
+                        {assistantPlanText ? (
+                          <div className="function-approval-reasoning">
+                            <span className="function-arg-key">Plan</span>
+                            {assistantPlanItems.length ? (
+                              <ol className="function-approval-plan">
+                                {assistantPlanItems.map((item) => (
+                                  <li key={item}>{item}</li>
+                                ))}
+                              </ol>
+                            ) : (
+                              <p>{assistantPlanText}</p>
+                            )}
+                          </div>
+                        ) : null}
+                        {pendingFunction.metadata.playbooks?.length ? (
+                          <div className="function-approval-playbooks">
+                            <span className="function-arg-key">Playbooks</span>
+                            <span className="function-arg-value">
+                              {pendingFunction.metadata.playbooks.join(', ')}
+                            </span>
+                          </div>
+                        ) : null}
+                        {pendingArgumentEntries.length > 0 && (
+                          <div className="function-approval-arguments">
+                            <h4>Parameters</h4>
+                            <ul className="function-arg-list">
+                              {pendingArgumentEntries.map(([key, value]) => (
+                                <li key={key} className="function-arg-item">
+                                  <span className="function-arg-key">{formatArgumentKey(key)}</span>
+                                  <span className="function-arg-value">{renderArgumentValue(value)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         )}
                       </details>
-                    ) : null}
-                    {pendingFunction.metadata.playbooks?.length ? (
-                      <div className="function-approval-playbooks">
-                        <span className="function-arg-key">Playbooks</span>
-                        <span className="function-arg-value">
-                          {pendingFunction.metadata.playbooks.join(', ')}
-                        </span>
-                      </div>
-                    ) : null}
-                    {pendingArgumentEntries.length > 0 && (
-                      <div className="function-approval-arguments">
-                        <h4>Parameters</h4>
-                        <ul className="function-arg-list">
-                          {pendingArgumentEntries.map(([key, value]) => (
-                            <li key={key} className="function-arg-item">
-                              <span className="function-arg-key">{formatArgumentKey(key)}</span>
-                              <span className="function-arg-value">{renderArgumentValue(value)}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
                     )}
                     {functionError && (
                       <div className="function-approval-error">{functionError}</div>
@@ -1597,11 +1689,6 @@ export const Chat: React.FC<ChatProps> = ({
                             label={`Auto-approve future ${normalizedMethod} requests`}
                           />
                         </div>
-                        <p className="function-approval-preferences-help">
-                          {autoApprovalEnabledForMethod
-                            ? 'Future requests with this method will run automatically.'
-                            : 'Enable to approve this HTTP method without prompts.'}
-                        </p>
                       </div>
                     ) : null}
                     <div className="function-approval-status">{statusText}</div>
@@ -1642,20 +1729,41 @@ export const Chat: React.FC<ChatProps> = ({
       <footer className="chat-footer">
         <div className="chat-footer__inner">
           <div className="chat-footer__input">
-            <textarea
-              ref={inputRef}
-              id={textareaId}
-              value={messageText}
-              onChange={handleInputChange}
-              placeholder={generatingResponse ? 'Generating text...' : 'Send a message'}
-              className="chat-input"
-              onKeyDown={handleTextareaKeyDown}
-              rows={3}
-              disabled={generatingResponse || isFunction}
-              aria-label="Message Alga"
-              aria-busy={generatingResponse || isFunction}
-              data-automation-id="chat-input"
-            />
+            {mentions.length > 0 && (
+              <div className="chat-mention-chips">
+                {mentions.map((m) => (
+                  <ChatMentionChip
+                    key={`${m.type}-${m.id}`}
+                    mention={m}
+                    onRemove={handleMentionRemove}
+                  />
+                ))}
+              </div>
+            )}
+            <div className="chat-input-wrapper">
+              <textarea
+                ref={inputRef}
+                id={textareaId}
+                value={messageText}
+                onChange={handleInputChange}
+                placeholder={generatingResponse ? 'Generating text...' : 'Send a message'}
+                className="chat-input"
+                onKeyDown={handleTextareaKeyDown}
+                rows={3}
+                disabled={generatingResponse || isFunction}
+                aria-label="Message Alga"
+                aria-busy={generatingResponse || isFunction}
+                data-automation-id="chat-input"
+              />
+              {mentionQuery !== null && (
+                <ChatMentionPopup
+                  ref={mentionPopupRef}
+                  query={mentionQuery}
+                  onSelect={handleMentionSelect}
+                  onDismiss={() => setMentionQuery(null)}
+                />
+              )}
+            </div>
             <p className="chat-input__hint">
               {isMultilineMode
                 ? 'Multiline mode: Enter adds a new line. Ctrl+Enter or ⌘+Enter sends.'
@@ -1703,18 +1811,20 @@ export const Chat: React.FC<ChatProps> = ({
         onClose={closeValidationDialog}
         title="Message Required"
         id="chat-empty-message-dialog"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="chat-empty-message-dialog-ok"
+              onClick={closeValidationDialog}
+            >
+              OK
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <p className="text-sm text-gray-700">{validationMessage}</p>
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id="chat-empty-message-dialog-ok"
-            onClick={closeValidationDialog}
-          >
-            OK
-          </Button>
-        </DialogFooter>
       </Dialog>
     </div>
   );

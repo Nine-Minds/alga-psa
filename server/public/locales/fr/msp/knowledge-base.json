@@ -285,5 +285,8 @@
       "reviewOverdue": "L'examen devait être effectué le {{date}}.",
       "reviewDue": "Révision due {{date}}"
     }
+  },
+  "common": {
+    "done": "Terminé"
   }
 }

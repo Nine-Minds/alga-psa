@@ -31,6 +31,7 @@ export interface IProjectTemplateTask extends TenantEntity {
   template_phase_id: string;
   task_name: string;
   description?: string;
+  description_rich_text?: string;
   estimated_hours?: number;
   duration_days?: number;
   task_type_key?: string;

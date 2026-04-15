@@ -10,7 +10,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import {
   Building2,
@@ -32,6 +31,7 @@ import { TeamsEnterpriseIntegrationSettings } from './TeamsEnterpriseIntegration
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getVisibleIntegrationCategoryIds,
   isCalendarEnterpriseEdition,
@@ -91,6 +91,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
   canUseCipp = true,
   canUseTeams = true,
 }) => {
+  const { t } = useTranslation('msp/settings');
   const isEEAvailable = isCalendarEnterpriseEdition();
   const entraUiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
   const isEntraUiEnabled = isEEAvailable && entraUiFlag.enabled;
@@ -113,48 +114,48 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
   const categories: IntegrationCategory[] = useMemo(() => [
     {
       id: 'accounting',
-      label: 'Accounting',
-      description: 'Select an accounting package to configure synchronization for invoices, payments, and tax data.',
+      label: t('integrations.categories.accounting.label'),
+      description: t('integrations.categories.accounting.description'),
       icon: Building2,
       integrations: [
         {
           id: 'accounting-setup',
-          name: 'Accounting Integrations',
-          description: 'Configure accounting synchronization and exports',
+          name: t('integrations.items.accountingSetup.name'),
+          description: t('integrations.items.accountingSetup.description'),
           component: AccountingIntegrationsSetup,
         }
       ],
     },
     {
       id: 'rmm',
-      label: 'RMM',
-      description: 'Connect remote monitoring and management tools',
+      label: t('integrations.categories.rmm.label'),
+      description: t('integrations.categories.rmm.description'),
       icon: Monitor,
       integrations: [
         {
           id: 'rmm-setup',
-          name: 'RMM Integrations',
-          description: 'Select and configure your RMM provider',
+          name: t('integrations.items.rmmSetup.name'),
+          description: t('integrations.items.rmmSetup.description'),
           component: RmmIntegrationsSetup,
         }
       ],
     },
     {
       id: 'communication',
-      label: 'Communication',
-      description: 'Connect inbox and collaboration surfaces for ticket processing, operator workflows, and Microsoft Teams access.',
+      label: t('integrations.categories.communication.label'),
+      description: t('integrations.categories.communication.description'),
       icon: Mail,
       integrations: [
         {
           id: 'email',
-          name: 'Inbound Email',
-          description: 'Process incoming emails into tickets',
+          name: t('integrations.items.email.name'),
+          description: t('integrations.items.email.description'),
           component: () => (
             <Card>
               <CardHeader>
-                <CardTitle>Inbound Email Integration</CardTitle>
+                <CardTitle>{t('integrations.items.email.cardTitle')}</CardTitle>
                 <CardDescription>
-                  Configure email providers to automatically process incoming emails into tickets
+                  {t('integrations.items.email.cardDescription')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -165,15 +166,15 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
         },
         {
           id: 'teams',
-          name: 'Microsoft Teams',
-          description: 'Configure Teams collaboration surfaces for MSP technicians',
+          name: t('integrations.items.teams.name'),
+          description: t('integrations.items.teams.description'),
           component: canUseTeams
             ? TeamsEnterpriseIntegrationSettings
             : () => (
                 <FeatureUpgradeNotice
-                  featureName="Microsoft Teams"
+                  featureName={t('integrations.items.teams.name')}
                   requiredTier="premium"
-                  description="Configure Microsoft Teams collaboration surfaces for MSP technicians. Upgrade to Premium to unlock this feature."
+                  description={t('integrations.items.teams.upgradeDescription')}
                 />
               ),
           isEE: true,
@@ -182,41 +183,41 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
     },
     ...(isEEAvailable ? [{
       id: 'calendar',
-      label: 'Calendar',
-      description: 'Enterprise-only calendar sync for Google and Outlook keeps dispatch and client appointments aligned.',
+      label: t('integrations.categories.calendar.label'),
+      description: t('integrations.categories.calendar.description'),
       icon: Calendar,
       integrations: [
         {
           id: 'calendar-sync',
-          name: 'Calendar Sync',
-          description: 'Sync schedule entries with Google or Microsoft calendars',
+          name: t('integrations.items.calendarSync.name'),
+          description: t('integrations.items.calendarSync.description'),
           component: CalendarEnterpriseIntegrationSettings,
         },
       ],
     }] : []),
     {
       id: 'providers',
-      label: 'Providers',
+      label: t('integrations.categories.providers.label'),
       description: isEEAvailable
-        ? 'Configure shared provider credentials used by email, calendar, MSP SSO, and other integrations.'
-        : 'Configure shared provider credentials used by email, MSP SSO, and other integrations.',
+        ? t('integrations.categories.providers.description.ee')
+        : t('integrations.categories.providers.description.oss'),
       icon: Cloud,
       integrations: [
         {
           id: 'google',
-          name: 'Google',
+          name: t('integrations.items.google.name'),
           description: isEEAvailable
-            ? 'Tenant-owned Google Cloud credentials for Gmail and Calendar'
-            : 'Tenant-owned Google Cloud credentials for Gmail and MSP SSO support flows',
+            ? t('integrations.items.google.description.ee')
+            : t('integrations.items.google.description.oss'),
           component: () => (
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Provider Credentials</CardTitle>
+                  <CardTitle>{t('integrations.items.google.cardTitle')}</CardTitle>
                   <CardDescription>
                     {isEEAvailable
-                      ? 'Configure Google and Microsoft first, then connect provider accounts from the Inbound Email and Calendar integration screens. MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings.'
-                      : 'Configure Google and Microsoft first, then connect provider accounts from the Inbound Email integration screen. MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings.'}
+                      ? t('integrations.items.google.cardDescription.ee')
+                      : t('integrations.items.google.cardDescription.oss')}
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -230,21 +231,21 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
     },
     {
       id: 'identity',
-      label: 'Identity',
-      description: 'Connect identity providers for tenant discovery and contact synchronization.',
+      label: t('integrations.categories.identity.label'),
+      description: t('integrations.categories.identity.description'),
       icon: Shield,
       integrations: [
         ...(isEntraUiEnabled ? [{
           id: 'entra',
-          name: 'Microsoft Entra',
-          description: 'Discover managed Microsoft tenants and sync users to contacts',
+          name: t('integrations.items.entra.name'),
+          description: t('integrations.items.entra.description'),
           component: canUseEntraSync
             ? () => <EntraIntegrationSettings canUseCipp={canUseCipp} />
             : () => (
                 <FeatureUpgradeNotice
-                  featureName="Entra Sync"
+                  featureName={t('integrations.items.entra.name')}
                   requiredTier="premium"
-                  description="Discover managed Microsoft Entra tenants and sync users to contacts. Upgrade to Premium to unlock this feature."
+                  description={t('integrations.items.entra.upgradeDescription')}
                 />
               ),
           isEE: true,
@@ -253,20 +254,20 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
     },
     {
       id: 'payments',
-      label: 'Payments',
-      description: 'Accept online payments for invoices',
+      label: t('integrations.categories.payments.label'),
+      description: t('integrations.categories.payments.description'),
       icon: CreditCard,
       integrations: [
         ...(isEEAvailable ? [{
           id: 'stripe',
-          name: 'Stripe',
-          description: 'Accept credit card payments for invoices via Stripe',
+          name: t('integrations.items.stripe.name'),
+          description: t('integrations.items.stripe.description'),
           component: StripeConnectionSettings,
           isEE: true,
         }] : []),
       ],
     },
-  ], [canUseCipp, canUseEntraSync, canUseTeams, isEEAvailable, isEntraUiEnabled]);
+  ], [canUseCipp, canUseEntraSync, canUseTeams, isEEAvailable, isEntraUiEnabled, t]);
 
   // Filter out empty categories
   const visibleCategories = categories.filter((category) => {
@@ -289,7 +290,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
             <div className="flex items-center justify-center gap-3">
               <category.icon className="h-7 w-7 text-primary" />
               <h2 className="text-3xl font-bold tracking-tight">
-                {category.label} Integrations
+                {t('integrations.categoryHeading', { label: category.label })}
               </h2>
             </div>
             <p className="max-w-2xl text-sm text-muted-foreground">
@@ -307,10 +308,10 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
-            No integrations available in this category.
+            {t('integrations.emptyCategory')}
             {category.id === 'rmm' && !isEEAvailable && (
               <p className="mt-2 text-sm">
-                RMM integrations are available in the Enterprise edition.
+                {t('integrations.rmmEnterpriseNote')}
               </p>
             )}
           </div>
@@ -321,14 +322,6 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Beta notice */}
-      <Alert variant="info">
-        <AlertDescription>
-          Some integrations are still in development. Please work in a sandbox environment when evaluating,
-          and share your feedback to help us improve.
-        </AlertDescription>
-      </Alert>
-
       {/* Category tabs */}
       <CustomTabs
         tabs={tabContent}

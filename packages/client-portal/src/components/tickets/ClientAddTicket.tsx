@@ -3,7 +3,7 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket creation intentionally composes ticket feature actions for customer-submitted requests. */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -12,8 +12,31 @@ import { getClientTicketFormData } from '@alga-psa/tickets/actions/ticketFormAct
 import { IPriority } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
-import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { TextEditor } from '@alga-psa/ui/editor';
+import { parseTicketRichTextContent, serializeTicketRichTextContent } from '@alga-psa/tickets/lib';
+import type { PartialBlock } from '@blocknote/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+function blockNoteHasText(blocks: PartialBlock[]): boolean {
+  for (const block of blocks) {
+    const content = (block as { content?: unknown }).content;
+    if (Array.isArray(content)) {
+      for (const node of content) {
+        if (node && typeof node === 'object' && 'text' in node) {
+          const text = (node as { text?: unknown }).text;
+          if (typeof text === 'string' && text.trim().length > 0) {
+            return true;
+          }
+        }
+      }
+    }
+    const children = (block as { children?: PartialBlock[] }).children;
+    if (Array.isArray(children) && blockNoteHasText(children)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 interface ClientAddTicketProps {
   open: boolean;
@@ -29,7 +52,10 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
   const [isLoading, setIsLoading] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
+    parseTicketRichTextContent('')
+  );
+  const [descriptionEditorInstanceKey, setDescriptionEditorInstanceKey] = useState(0);
   const [priorityId, setPriorityId] = useState('');
   const [priorities, setPriorities] = useState<IPriority[]>([]);
 
@@ -64,7 +90,8 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
 
   const resetForm = () => {
     setTitle('');
-    setDescription('');
+    setDescriptionContent(parseTicketRichTextContent(''));
+    setDescriptionEditorInstanceKey((prev) => prev + 1);
     setPriorityId('');
     setError(null);
     setHasAttemptedSubmit(false);
@@ -78,7 +105,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
   const validateForm = () => {
     const validationErrors: string[] = [];
     if (!title.trim()) validationErrors.push(t('create.errors.titleRequired'));
-    if (!description.trim()) validationErrors.push(t('create.errors.descriptionRequired'));
+    if (!blockNoteHasText(descriptionContent)) validationErrors.push(t('create.errors.descriptionRequired'));
     if (!priorityId) validationErrors.push(t('create.errors.priorityRequired'));
     return validationErrors;
   };
@@ -96,7 +123,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
 
       const formData = new FormData();
       formData.append('title', title);
-      formData.append('description', description);
+      formData.append('description', serializeTicketRichTextContent(descriptionContent));
       formData.append('priority_id', priorityId);
 
       await createClientTicket(formData);
@@ -133,11 +160,34 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
     [priorities]
   );
 
+  const footer = !isLoading ? (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="cancel-ticket-button"
+        type="button"
+        variant="outline"
+        onClick={handleClose}
+      >
+        {tCommon('common.cancel')}
+      </Button>
+      <Button
+        id="submit-ticket-button"
+        type="button"
+        variant="default"
+        disabled={isSubmitting}
+        onClick={() => (document.getElementById('client-add-ticket-form') as HTMLFormElement | null)?.requestSubmit()}
+      >
+        {isSubmitting ? t('create.submitting') : t('create.submit')}
+      </Button>
+    </div>
+  ) : undefined;
+
   return (
-    <Dialog 
-      isOpen={open} 
-      onClose={handleClose} 
+    <Dialog
+      isOpen={open}
+      onClose={handleClose}
       title={t('create.title')}
+      footer={footer}
     >
       <DialogContent className="max-w-2xl">
         {isLoading ? (
@@ -152,7 +202,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <form id="client-add-ticket-form" onSubmit={handleSubmit} className="space-y-4" noValidate>
               <Input
                 id="client-ticket-title"
                 value={title}
@@ -162,16 +212,19 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
                 }}
                 placeholder={t('create.titlePlaceholder')}
               />
-              
-              <TextArea
-                id="client-ticket-description"
-                value={description}
-                onChange={(e) => {
-                  setDescription(e.target.value);
-                  clearErrorIfSubmitted();
-                }}
-                placeholder={t('create.descriptionPlaceholder')}
-              />
+
+              <div className="min-w-0 w-full">
+                <TextEditor
+                  key={`client-ticket-description-editor-${open ? descriptionEditorInstanceKey : 'closed'}`}
+                  id="client-ticket-description"
+                  initialContent={descriptionContent}
+                  onContentChange={(content) => {
+                    setDescriptionContent(content);
+                    clearErrorIfSubmitted();
+                  }}
+                  placeholder={t('create.descriptionPlaceholder')}
+                />
+              </div>
 
               <div className="relative z-10">
                 <CustomSelect
@@ -185,25 +238,6 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
                   placeholder={t('create.priorityPlaceholder')}
                 />
               </div>
-
-              <DialogFooter>
-                <Button
-                  id="cancel-ticket-button"
-                  type="button"
-                  variant="outline"
-                  onClick={handleClose}
-                >
-                  {tCommon('common.cancel')}
-                </Button>
-                <Button
-                  id="submit-ticket-button"
-                  type="submit"
-                  variant="default"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? t('create.submitting') : t('create.submit')}
-                </Button>
-              </DialogFooter>
             </form>
           </>
         )}

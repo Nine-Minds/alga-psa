@@ -227,9 +227,9 @@ export class JobRunnerFactory implements IJobRunnerFactory {
       return envType;
     }
 
-    // Default based on edition
-    // For now, default to pgboss even for EE until Temporal adapter is ready
-    return 'pgboss';
+    // Default based on edition.
+    // EE should use Temporal as the durable scheduling/execution authority by default.
+    return isEnterprise ? 'temporal' : 'pgboss';
   }
 
   /**

@@ -347,6 +347,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
     if (step.type === 'control.forEach') return 'For Each';
     if (step.type === 'control.tryCatch') return 'Try/Catch';
     if (step.type === 'event.wait') return 'Wait for Event';
+    if (step.type === 'time.wait') return 'Wait for Time';
     if (step.type === 'human.task') return 'Human Task';
     if (step.type === 'state.set') return 'Set State';
     if (step.type === 'transform.assign') return 'Assign';
@@ -1139,6 +1140,20 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
         onClose={() => setRunActionMode(null)}
         title={runActionMode === 'cancel' ? 'Cancel Run' : 'Replay Run'}
         className="max-w-2xl"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="workflow-run-action-close" variant="outline" onClick={() => setRunActionMode(null)}>
+              Close
+            </Button>
+            <Button
+              id="workflow-run-action-confirm"
+              onClick={handleRunActionConfirm}
+              disabled={!actionReasonValid || isSubmittingAction || (runActionMode === 'replay' && !!replayPayloadError)}
+            >
+              {isSubmittingAction ? 'Working...' : runActionMode === 'cancel' ? 'Confirm Cancel' : 'Start Replay'}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <DialogHeader>
@@ -1176,18 +1191,6 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
             )}
           </div>
 
-	          <div className="mt-6 flex justify-end gap-2">
-	            <Button id="workflow-run-action-close" variant="outline" onClick={() => setRunActionMode(null)}>
-	              Close
-	            </Button>
-	            <Button
-	              id="workflow-run-action-confirm"
-	              onClick={handleRunActionConfirm}
-	              disabled={!actionReasonValid || isSubmittingAction || (runActionMode === 'replay' && !!replayPayloadError)}
-	            >
-	              {isSubmittingAction ? 'Working...' : runActionMode === 'cancel' ? 'Confirm Cancel' : 'Start Replay'}
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
     </div>

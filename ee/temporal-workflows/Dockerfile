@@ -18,8 +18,10 @@ COPY packages/ /app/packages/
 COPY server/src/ /app/server/src/
 COPY server/package.json /app/server/package.json
 COPY ee/server/src/ /app/ee/server/src/
+COPY ee/packages/workflows/package.json /app/ee/packages/workflows/package.json
 COPY ee/temporal-workflows/package*.json /app/ee/temporal-workflows/
 COPY tsconfig.base.json /app/tsconfig.base.json
+COPY tsconfig.json /app/tsconfig.json
 
 WORKDIR /app/packages/integrations
 RUN npm install --ignore-scripts
@@ -44,6 +46,7 @@ RUN npm run build
 # Now build temporal-workflows
 WORKDIR /app
 COPY ee/temporal-workflows/ /app/ee/temporal-workflows/
+COPY ee/packages/workflows/ /app/ee/packages/workflows/
 # Provide source files referenced via TS path aliases
 COPY packages/ /app/packages/
 COPY package*.json /app/
@@ -53,7 +56,8 @@ WORKDIR /app/ee/temporal-workflows
 # Ensure tsc-alias is available for the build
 RUN npm install
 WORKDIR /app
-RUN npm install --ignore-scripts --workspaces=false --legacy-peer-deps
+RUN npm install --ignore-scripts --workspaces=false --legacy-peer-deps \
+    && npm install --no-save openai@^4.104.0
 
 # Build event-schemas (imported at runtime by shared/workflow/streams)
 WORKDIR /app/packages/event-schemas
@@ -115,17 +119,20 @@ COPY --from=development /app/shared /app/shared
 # Copy built temporal-workflows
 COPY --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal-workflows/node_modules
+COPY --from=development /app/ee/packages/workflows /app/ee/packages/workflows
 # Copy event-schemas dist (runtime dependency of shared/workflow/streams)
 COPY --from=development /app/packages/event-schemas/dist /app/packages/event-schemas/dist
 # Copy integrations node_modules to both locations for module resolution
 COPY --from=development /app/packages/integrations/node_modules /app/packages/integrations/node_modules
 COPY --from=development /app/packages/integrations/node_modules /app/ee/temporal-workflows/dist/packages/integrations/node_modules
 # Expose all local monorepo packages under @alga-psa/* for runtime resolution.
-RUN mkdir -p /app/node_modules/@alga-psa \
+RUN mkdir -p /app/node_modules/@alga-psa /app/ee/temporal-workflows/node_modules/@alga-psa \
     && for pkg in /app/packages/*; do \
       name="$(basename "$pkg")"; \
       ln -sfn "$pkg" "/app/node_modules/@alga-psa/$name"; \
     done \
+    && ln -sfn /app/ee/packages/workflows /app/node_modules/@alga-psa/workflows \
+    && ln -sfn /app/ee/packages/workflows /app/ee/temporal-workflows/node_modules/@alga-psa/workflows \
     && ln -sfn /app/ee/temporal-workflows/node_modules /app/packages/node_modules
 
 # Verify seeds are present in production stage

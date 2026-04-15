@@ -40,7 +40,7 @@
       "microsoft": {
         "title": "Installazione di Microsoft 365",
         "steps": {
-          "registerApp": "Registrare un'applicazione in Azure AD",
+          "registerApp": "Registra un'applicazione in Azure AD",
           "permissions": "Configura le autorizzazioni API per Mail.Read",
           "redirectUrl": "Imposta l'URL di reindirizzamento nella registrazione dell'app",
           "credentials": "Utilizza l'ID cliente e il segreto cliente nel modulo sopra"
@@ -51,7 +51,7 @@
         "enterpriseSteps": {
           "enterAddress": "Inserisci il tuo indirizzo Gmail e il nome del provider",
           "connect": "Fai clic su \"Connetti Gmail\" per autorizzare l'accesso",
-          "preferences": "Configurare le preferenze di elaborazione della posta elettronica",
+          "preferences": "Configura le preferenze di elaborazione della posta elettronica",
           "save": "Salva per completare la configurazione"
         },
         "standardSteps": {
@@ -116,7 +116,7 @@
       }
     },
     "actions": {
-      "cancel": "Cancellare"
+      "cancel": "Annulla"
     },
     "help": {
       "enterprise": "Scegli il provider già utilizzato dalla tua organizzazione. Se utilizzi Google Workspace, scegli Gmail; se utilizzi Microsoft 365, scegli Microsoft 365. Puoi modificare questa impostazione in un secondo momento rimuovendo e riconfigurando il tuo provider di posta elettronica.",
@@ -129,9 +129,9 @@
       "setup": "Configurazione {{provider}}"
     },
     "actions": {
-      "cancel": "Cancellare",
+      "cancel": "Annulla",
       "back": "Indietro",
-      "close": "Vicino"
+      "close": "Chiudi"
     }
   },
   "providerCard": {
@@ -160,11 +160,11 @@
       "testing": "Test…",
       "testConnection": "Prova connessione",
       "refreshWatch": "Aggiorna Pub/Sub e guarda",
-      "retryRenewal": "Riprovare il rinnovo",
+      "retryRenewal": "Riprova rinnovo",
       "runDiagnostics": "Esegui la diagnostica di Microsoft 365",
       "reconnectOauth": "Riconnetti OAuth",
       "resyncing": "Risincronizzazione in corso...",
-      "resyncMailbox": "Risincronizzare la casella di posta",
+      "resyncMailbox": "Risincronizza casella di posta",
       "delete": "Elimina fornitore"
     },
     "fields": {
@@ -206,9 +206,9 @@
   "forms": {
     "common": {
       "actions": {
-        "cancel": "Cancellare",
-        "saving": "Risparmio...",
-        "updateProvider": "Fornitore di aggiornamenti",
+        "cancel": "Annulla",
+        "saving": "Salvataggio...",
+        "updateProvider": "Aggiorna fornitore",
         "addProvider": "Aggiungi fornitore",
         "createProvider": "Crea fornitore",
         "manageDefaults": "Gestisci le impostazioni predefinite",
@@ -227,7 +227,7 @@
         "empty": "Nessuna impostazione predefinita disponibile"
       },
       "oauth": {
-        "authorizing": "Autorizzando...",
+        "authorizing": "Autorizzazione in corso...",
         "authorized": "Autorizzato",
         "authorizeAccess": "Autorizza l'accesso"
       }
@@ -246,7 +246,7 @@
       "requiredFields": {
         "providerName": "Nome del fornitore",
         "emailAddress": "Indirizzo e-mail",
-        "redirectUri": "Reindirizzare l'URI"
+        "redirectUri": "URI di reindirizzamento"
       },
       "basic": {
         "title": "Configurazione di base",
@@ -343,10 +343,10 @@
       },
       "basic": {
         "title": "Impostazioni di base",
-        "description": "Definire i dettagli di connessione alla casella di posta IMAP.",
+        "description": "Definisci i dettagli di connessione alla casella di posta IMAP.",
         "providerName": "Nome del fornitore",
         "mailboxAddress": "Indirizzo della casella di posta",
-        "host": "Ospite IMAP",
+        "host": "Host IMAP",
         "port": "Porta",
         "useTls": "Utilizza TLS/SSL",
         "allowStarttls": "Consenti aggiornamento STARTTLS"
@@ -387,10 +387,10 @@
     },
     "validation": {
       "nameRequired": "Il nome breve e il nome visualizzato sono obbligatori",
-      "boardRequired": "È richiesta la pensione",
+      "boardRequired": "La bacheca è obbligatoria",
       "statusRequired": "Lo stato è obbligatorio",
-      "priorityRequired": "È richiesta la priorità",
-      "clientRequired": "È richiesta la compagnia"
+      "priorityRequired": "La priorità è obbligatoria",
+      "clientRequired": "Il cliente è obbligatorio"
     },
     "fields": {
       "shortName": {
@@ -410,12 +410,14 @@
         "label": "Attivo"
       },
       "board": {
-        "label": "Asse *",
-        "placeholder": "Seleziona Bacheca"
+        "label": "Bacheca *",
+        "placeholder": "Seleziona bacheca"
       },
       "status": {
         "label": "Stato *",
-        "placeholder": "Seleziona lo stato"
+        "placeholder": "Seleziona lo stato",
+        "selectBoardFirst": "Seleziona prima la bacheca",
+        "loading": "Caricamento stati..."
       },
       "priority": {
         "label": "Priorità *",
@@ -451,9 +453,9 @@
       "default": "(Predefinito)"
     },
     "actions": {
-      "cancel": "Cancellare",
-      "updating": "Aggiornamento...",
-      "creating": "Creazione...",
+      "cancel": "Annulla",
+      "updating": "Aggiornamento in corso...",
+      "creating": "Creazione in corso...",
       "update": "Aggiorna impostazioni predefinite",
       "create": "Crea valori predefiniti"
     }

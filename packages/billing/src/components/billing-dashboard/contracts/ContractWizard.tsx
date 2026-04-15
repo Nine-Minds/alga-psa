@@ -734,6 +734,22 @@ export function ContractWizard({
     }
   };
 
+  const wizardFooter = (
+    <WizardNavigation
+      currentStep={currentStep}
+      totalSteps={STEPS.length}
+      onBack={handleBack}
+      onNext={handleNext}
+      onSkip={handleSkip}
+      onFinish={handleFinish}
+      onSaveDraft={handleSaveDraft}
+      isNextDisabled={isLoading}
+      isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
+      isLoading={isLoading}
+      showSaveDraft
+    />
+  );
+
   return (
     <>
       <Dialog
@@ -742,6 +758,7 @@ export function ContractWizard({
         title={editingContract ? 'Edit Contract' : 'Create New Contract'}
         className="max-w-4xl max-h-[90vh]"
         disableFocusTrap
+        footer={wizardFooter}
       >
         <div className="flex flex-col h-full">
           <div className="flex-shrink-0 px-6 pt-6">
@@ -767,22 +784,6 @@ export function ContractWizard({
                 <p className="text-[rgb(var(--color-destructive))] text-sm">{errors[currentStep]}</p>
               </div>
             )}
-          </div>
-
-          <div className="flex-shrink-0 px-6 pb-6 border-t border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]">
-            <WizardNavigation
-              currentStep={currentStep}
-              totalSteps={STEPS.length}
-              onBack={handleBack}
-              onNext={handleNext}
-              onSkip={handleSkip}
-              onFinish={handleFinish}
-              onSaveDraft={handleSaveDraft}
-              isNextDisabled={isLoading}
-              isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
-              isLoading={isLoading}
-              showSaveDraft
-            />
           </div>
         </div>
       </Dialog>

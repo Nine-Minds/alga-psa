@@ -954,6 +954,7 @@ export const importPhasesAndTasks = withAuth(async (
             const newTask = await ProjectTaskModel.addTask(trx, tenant, phase.phase_id, {
               task_name: taskData.task_name,
               description: taskData.description,
+              description_rich_text: null,
               assigned_to: taskData.assigned_to,
               estimated_hours: taskData.estimated_hours,
               actual_hours: taskData.actual_hours,

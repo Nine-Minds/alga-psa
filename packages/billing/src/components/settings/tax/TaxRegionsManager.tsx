@@ -36,6 +36,7 @@ import {
   createTaxRegion,
   updateTaxRegion,
 } from '@alga-psa/billing/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Zod schema for form validation
 const taxRegionSchema = z.object({
@@ -47,6 +48,7 @@ const taxRegionSchema = z.object({
 type TaxRegionFormData = z.infer<typeof taxRegionSchema>;
 
 export function TaxRegionsManager() {
+  const { t } = useTranslation('msp/billing-settings');
   const [regions, setRegions] = useState<ITaxRegion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -78,11 +80,11 @@ export function TaxRegionsManager() {
       const fetchedRegions = await getTaxRegions();
       setRegions(fetchedRegions);
     } catch (error) {
-      handleError(error, 'Failed to load tax regions.');
+      handleError(error, t('tax.regions.errors.load', { defaultValue: 'Failed to load tax regions.' }));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchRegions();
@@ -114,9 +116,12 @@ export function TaxRegionsManager() {
 
   const onSubmit = async (data: TaxRegionFormData) => {
     setIsSubmitting(true);
-    const action = editingRegion ? 'update' : 'create';
-    const successMessage = editingRegion ? 'Tax region updated successfully.' : 'Tax region created successfully.';
-    const errorMessage = editingRegion ? 'Failed to update tax region.' : 'Failed to create tax region.';
+    const successMessage = editingRegion
+      ? t('tax.regions.toast.updated', { defaultValue: 'Tax region updated successfully.' })
+      : t('tax.regions.toast.created', { defaultValue: 'Tax region created successfully.' });
+    const errorMessage = editingRegion
+      ? t('tax.regions.errors.update', { defaultValue: 'Failed to update tax region.' })
+      : t('tax.regions.errors.create', { defaultValue: 'Failed to create tax region.' });
 
     try {
       if (editingRegion) {
@@ -146,16 +151,40 @@ export function TaxRegionsManager() {
 
    const handleToggleActive = async (region: ITaxRegion) => {
     const newStatus = !region.is_active;
-    const actionText = newStatus ? 'activate' : 'deactivate';
     setIsSubmitting(true); // Use isSubmitting to disable actions during toggle
-    toast(`Attempting to ${actionText} ${region.region_name}...`); // Changed from toast.info
+    toast(
+      newStatus
+        ? t('tax.regions.toast.activatePending', {
+            name: region.region_name,
+            defaultValue: 'Attempting to activate {{name}}...'
+          })
+        : t('tax.regions.toast.deactivatePending', {
+            name: region.region_name,
+            defaultValue: 'Attempting to deactivate {{name}}...'
+          })
+    ); // Changed from toast.info
 
     try {
       await updateTaxRegion(region.region_code, { is_active: newStatus });
-      toast.success(`Tax region ${region.region_name} ${actionText}d successfully.`);
+      toast.success(
+        newStatus
+          ? t('tax.regions.toast.activated', {
+              name: region.region_name,
+              defaultValue: 'Tax region {{name}} activated successfully.'
+            })
+          : t('tax.regions.toast.deactivated', {
+              name: region.region_name,
+              defaultValue: 'Tax region {{name}} deactivated successfully.'
+            })
+      );
       await fetchRegions(); // Refresh data
     } catch (error: any) {
-      handleError(error, `Failed to ${actionText} tax region.`);
+      handleError(
+        error,
+        newStatus
+          ? t('tax.regions.errors.activate', { defaultValue: 'Failed to activate tax region.' })
+          : t('tax.regions.errors.deactivate', { defaultValue: 'Failed to deactivate tax region.' })
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -165,32 +194,36 @@ export function TaxRegionsManager() {
   // Use ColumnDefinition from the project's interface
   const columns: ColumnDefinition<ITaxRegion>[] = [
     {
-      title: 'Code',
+      title: t('common.columns.code', { defaultValue: 'Code' }),
       dataIndex: 'region_code',
     },
     {
-      title: 'Name',
+      title: t('common.columns.name', { defaultValue: 'Name' }),
       dataIndex: 'region_name',
     },
     {
-      title: 'Status',
+      title: t('common.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'is_active',
       render: (value: any) => {
         const isActive = !!value;
         return (
           <Badge variant={isActive ? 'default' : 'warning'}>
-            {isActive ? 'Active' : 'Inactive'}
+            {isActive
+              ? t('common.statuses.active', { defaultValue: 'Active' })
+              : t('common.statuses.inactive', { defaultValue: 'Inactive' })}
           </Badge>
         );
       },
     },
     {
-      title: 'Actions', // Use title
+      title: t('common.columns.actions', { defaultValue: 'Actions' }), // Use title
       dataIndex: 'actions', // Use a dummy dataIndex or omit if not needed by DataTable implementation
       render: (_: any, region: ITaxRegion) => { // Use render function
         // region is now passed directly to render
         const isActive = region.is_active;
-        const actionText = isActive ? 'Deactivate' : 'Activate';
+        const actionText = isActive
+          ? t('tax.regions.actions.deactivate', { defaultValue: 'Deactivate' })
+          : t('tax.regions.actions.activate', { defaultValue: 'Activate' });
 
         return (
           <DropdownMenu>
@@ -202,7 +235,7 @@ export function TaxRegionsManager() {
                 onClick={(e: React.MouseEvent) => e.stopPropagation()}
                 disabled={isSubmitting} // Disable during any submission
               >
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">{t('common.a11y.openMenu', { defaultValue: 'Open menu' })}</span>
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -215,11 +248,11 @@ export function TaxRegionsManager() {
                 }}
                 disabled={isSubmitting}
               >
-                Edit
+                {t('tax.regions.actions.edit', { defaultValue: 'Edit' })}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                id={`${actionText.toLowerCase()}-tax-region-menu-item-${region.region_code}`}
+                id={`${isActive ? 'deactivate' : 'activate'}-tax-region-menu-item-${region.region_code}`}
                 onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
                   handleToggleActive(region);
@@ -239,19 +272,23 @@ export function TaxRegionsManager() {
   return (
     <Card id="tax-regions-manager-card">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Manage Tax Regions</CardTitle>
+        <CardTitle>{t('tax.regions.title', { defaultValue: 'Manage Tax Regions' })}</CardTitle>
         <Button
           size="sm"
           onClick={() => handleOpenDialog()}
           id="add-tax-region-button"
         >
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Tax Region
+          {t('tax.regions.actions.add', { defaultValue: 'Add Tax Region' })}
         </Button>
       </CardHeader>
       <CardContent>
         {/* Add loading indicator */}
-        {isLoading && <div className="text-center p-4">Loading regions...</div>}
+        {isLoading && (
+          <div className="text-center p-4">
+            {t('tax.regions.loading', { defaultValue: 'Loading regions...' })}
+          </div>
+        )}
         {!isLoading && (
           <DataTable
             id="tax-regions-table"
@@ -271,7 +308,11 @@ export function TaxRegionsManager() {
       <GenericDialog
         isOpen={isDialogOpen}
         onClose={handleCloseDialog}
-        title={editingRegion ? 'Edit Tax Region' : 'Add New Tax Region'}
+        title={
+          editingRegion
+            ? t('tax.regions.dialog.editTitle', { defaultValue: 'Edit Tax Region' })
+            : t('tax.regions.dialog.addTitle', { defaultValue: 'Add New Tax Region' })
+        }
         id="tax-region-dialog" // Provide an ID for reflection
       >
         {/* Form content goes inside GenericDialog */}
@@ -280,10 +321,14 @@ export function TaxRegionsManager() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4" id="tax-region-form">
           {/* Manual Field Implementation */}
           <div className="space-y-1">
-            <Label htmlFor="tax-region-code-field">Region Code</Label>
+            <Label htmlFor="tax-region-code-field">
+              {t('tax.regions.fields.code.label', { defaultValue: 'Region Code' })}
+            </Label>
             <Input
               id="tax-region-code-field"
-              placeholder="e.g., CA, NY, VAT-UK"
+              placeholder={t('tax.regions.fields.code.placeholder', {
+                defaultValue: 'e.g., CA, NY, VAT-UK'
+              })}
               {...form.register('region_code')} // Register field
               disabled={isSubmitting}
               aria-invalid={form.formState.errors.region_code ? "true" : "false"}
@@ -296,10 +341,14 @@ export function TaxRegionsManager() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="tax-region-name-field">Region Name</Label>
+            <Label htmlFor="tax-region-name-field">
+              {t('tax.regions.fields.name.label', { defaultValue: 'Region Name' })}
+            </Label>
             <Input
               id="tax-region-name-field"
-              placeholder="e.g., California, New York, United Kingdom VAT"
+              placeholder={t('tax.regions.fields.name.placeholder', {
+                defaultValue: 'e.g., California, New York, United Kingdom VAT'
+              })}
               {...form.register('region_name')} // Register field
               disabled={isSubmitting}
               aria-invalid={form.formState.errors.region_name ? "true" : "false"}
@@ -318,7 +367,9 @@ export function TaxRegionsManager() {
               render={({ field: { onChange, value, ref } }) => (
                  <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                     <div className="space-y-0.5">
-                      <Label htmlFor="tax-region-active-field">Active</Label>
+                      <Label htmlFor="tax-region-active-field">
+                        {t('tax.regions.fields.active.label', { defaultValue: 'Active' })}
+                      </Label>
                     </div>
                       <Switch
                         id="tax-region-active-field"
@@ -342,10 +393,12 @@ export function TaxRegionsManager() {
           {/* Keep DialogFooter structure if needed within GenericDialog's children */}
           <div className="flex justify-end space-x-2 pt-4">
              <Button type="button" variant="outline" onClick={handleCloseDialog} id="tax-region-dialog-cancel-button">
-               Cancel
+               {t('tax.regions.actions.cancel', { defaultValue: 'Cancel' })}
              </Button>
              <Button type="submit" disabled={isSubmitting} id="tax-region-dialog-save-button">
-               {isSubmitting ? 'Saving...' : 'Save Changes'}
+               {isSubmitting
+                 ? t('tax.regions.actions.saving', { defaultValue: 'Saving...' })
+                 : t('tax.regions.actions.save', { defaultValue: 'Save Changes' })}
              </Button>
           </div>
         </form>

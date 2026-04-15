@@ -1246,6 +1246,94 @@
       }
     }
   },
+  "integrations": {
+    "betaNotice": "Einige Integrationen befinden sich noch in der Entwicklung. Bitte arbeiten Sie in einer Sandbox-Umgebung, wenn Sie diese evaluieren, und teilen Sie Ihr Feedback, um uns bei der Verbesserung zu helfen.",
+    "emptyCategory": "Keine Integrationen in dieser Kategorie verfügbar.",
+    "rmmEnterpriseNote": "RMM-Integrationen sind in der Enterprise-Edition verfügbar.",
+    "categoryHeading": "{{label}}-Integrationen",
+    "loading": {
+      "payments": "Zahlungseinstellungen werden geladen..."
+    },
+    "categories": {
+      "accounting": {
+        "label": "Buchhaltung",
+        "description": "Wählen Sie ein Buchhaltungspaket zur Konfiguration der Synchronisation von Rechnungen, Zahlungen und Steuerdaten."
+      },
+      "rmm": {
+        "label": "RMM",
+        "description": "Verbinden Sie Remote-Monitoring- und Management-Tools"
+      },
+      "communication": {
+        "label": "Kommunikation",
+        "description": "Verbinden Sie Posteingangs- und Kollaborationsoberflächen für Ticketverarbeitung, Operator-Workflows und Microsoft Teams-Zugriff."
+      },
+      "calendar": {
+        "label": "Kalender",
+        "description": "Enterprise-exklusive Kalendersynchronisation für Google und Outlook hält Disposition und Kundentermine synchron."
+      },
+      "providers": {
+        "label": "Anbieter",
+        "description": {
+          "ee": "Konfigurieren Sie gemeinsame Anbieter-Anmeldedaten für E-Mail, Kalender, MSP-SSO und andere Integrationen.",
+          "oss": "Konfigurieren Sie gemeinsame Anbieter-Anmeldedaten für E-Mail, MSP-SSO und andere Integrationen."
+        }
+      },
+      "identity": {
+        "label": "Identität",
+        "description": "Verbinden Sie Identitätsanbieter für Mandantenerkennung und Kontaktsynchronisation."
+      },
+      "payments": {
+        "label": "Zahlungen",
+        "description": "Akzeptieren Sie Online-Zahlungen für Rechnungen"
+      }
+    },
+    "items": {
+      "accountingSetup": {
+        "name": "Buchhaltungs-Integrationen",
+        "description": "Konfigurieren Sie Buchhaltungssynchronisation und -exporte"
+      },
+      "rmmSetup": {
+        "name": "RMM-Integrationen",
+        "description": "Wählen und konfigurieren Sie Ihren RMM-Anbieter"
+      },
+      "email": {
+        "name": "Eingehende E-Mail",
+        "description": "Verarbeiten Sie eingehende E-Mails zu Tickets",
+        "cardTitle": "Eingehende-E-Mail-Integration",
+        "cardDescription": "Konfigurieren Sie E-Mail-Anbieter, um eingehende E-Mails automatisch zu Tickets zu verarbeiten"
+      },
+      "teams": {
+        "name": "Microsoft Teams",
+        "description": "Konfigurieren Sie Teams-Kollaborationsoberflächen für MSP-Techniker",
+        "upgradeDescription": "Konfigurieren Sie Microsoft Teams-Kollaborationsoberflächen für MSP-Techniker. Upgraden Sie auf Premium, um diese Funktion freizuschalten."
+      },
+      "calendarSync": {
+        "name": "Kalendersynchronisation",
+        "description": "Synchronisieren Sie Zeitplaneinträge mit Google- oder Microsoft-Kalendern"
+      },
+      "google": {
+        "name": "Google",
+        "description": {
+          "ee": "Mandanteneigene Google Cloud-Anmeldedaten für Gmail und Kalender",
+          "oss": "Mandanteneigene Google Cloud-Anmeldedaten für Gmail und MSP-SSO-Unterstützungsabläufe"
+        },
+        "cardTitle": "Anbieter-Anmeldedaten",
+        "cardDescription": {
+          "ee": "Konfigurieren Sie zuerst Google und Microsoft, dann verbinden Sie Anbieterkonten über die Einstellungen für eingehende E-Mail und Kalender-Integration. Die MSP-SSO-Domänenerkennung verwendet diese Anbieter-Anmeldedaten mit Mandanten-Login-Domänenzuordnungen.",
+          "oss": "Konfigurieren Sie zuerst Google und Microsoft, dann verbinden Sie Anbieterkonten über die Einstellungen für eingehende E-Mail-Integration. Die MSP-SSO-Domänenerkennung verwendet diese Anbieter-Anmeldedaten mit Mandanten-Login-Domänenzuordnungen."
+        }
+      },
+      "entra": {
+        "name": "Microsoft Entra",
+        "description": "Entdecken Sie verwaltete Microsoft-Mandanten und synchronisieren Sie Benutzer zu Kontakten",
+        "upgradeDescription": "Entdecken Sie verwaltete Microsoft Entra-Mandanten und synchronisieren Sie Benutzer zu Kontakten. Upgraden Sie auf Premium, um diese Funktion freizuschalten."
+      },
+      "stripe": {
+        "name": "Stripe",
+        "description": "Akzeptieren Sie Kreditkartenzahlungen für Rechnungen über Stripe"
+      }
+    }
+  },
   "orgChart": {
     "emptyState": "Keine Benutzer verfügbar.",
     "roles": {

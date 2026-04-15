@@ -156,7 +156,9 @@
       "client": "11111",
       "tags": "11111",
       "role": "11111",
-      "notes": "11111"
+      "notes": "11111",
+      "primaryEmailLabel": "11111",
+      "additionalEmails": "11111"
     },
     "unassigned": "11111",
     "errors": {
@@ -207,7 +209,10 @@
       "clientFieldDescription": "11111",
       "noteLabel": "11111",
       "noteDescription": "11111",
-      "downloadTemplate": "11111"
+      "downloadTemplate": "11111",
+      "emailFieldsLabel": "11111",
+      "emailFieldsDescription": "11111",
+      "hybridEmailNote": "11111"
     },
     "mapping": {
       "title": "11111",
@@ -460,7 +465,8 @@
       "status": "11111",
       "notes": "11111",
       "notesPlaceholder": "11111",
-      "tags": "11111"
+      "tags": "11111",
+      "emailAddresses": "11111"
     },
     "loading": {
       "destinations": "11111"
@@ -499,7 +505,9 @@
       "createdAt": "11111",
       "updatedAt": "11111",
       "notes": "11111",
-      "tags": "11111"
+      "tags": "11111",
+      "emailAddresses": "11111",
+      "defaultEmail": "11111"
     },
     "status": {
       "active": "11111",

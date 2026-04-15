@@ -27,15 +27,27 @@
       "types": "./src/components/*.tsx"
     },
     "./runtime": {
-      "import": "./src/runtime/index.ts",
+      "import": "./dist/runtime/index.mjs",
       "types": "./src/runtime/index.ts"
+    },
+    "./runtime/core": {
+      "import": "./dist/runtime/core.mjs",
+      "types": "./src/runtime/core.ts"
+    },
+    "./runtime/bootstrap": {
+      "import": "./dist/runtime/bootstrap.mjs",
+      "types": "./src/runtime/bootstrap.ts"
+    },
+    "./runtime/worker": {
+      "import": "./dist/runtime/worker.mjs",
+      "types": "./src/runtime/worker.ts"
     },
     "./authoring": {
       "import": "./src/authoring/index.ts",
       "types": "./src/authoring/index.ts"
     },
     "./runtime/*": {
-      "import": "./src/runtime/*.ts",
+      "import": "./dist/runtime/*.mjs",
       "types": "./src/runtime/*.ts"
     },
     "./workers": {
@@ -43,11 +55,11 @@
       "types": "./src/workers/index.ts"
     },
     "./persistence": {
-      "import": "./src/persistence/index.ts",
+      "import": "./dist/persistence/index.mjs",
       "types": "./src/persistence/index.ts"
     },
     "./persistence/*": {
-      "import": "./src/persistence/*.ts",
+      "import": "./dist/persistence/*.mjs",
       "types": "./src/persistence/*.ts"
     },
     "./bundle": {
@@ -79,7 +91,7 @@
       "types": "./src/forms/*.ts"
     },
     "./lib/*": {
-      "import": "./src/lib/*.ts",
+      "import": "./dist/lib/*.mjs",
       "types": "./src/lib/*.ts"
     },
     "./models/*": {
@@ -101,6 +113,7 @@
     "ajv": "^8.12.0",
     "ajv-formats": "^2.1.1",
     "cron-parser": "^4.9.0",
+    "@temporalio/client": "~1.14.1",
     "zod": "^3.22.4",
     "zod-to-json-schema": "^3.24.6"
   },

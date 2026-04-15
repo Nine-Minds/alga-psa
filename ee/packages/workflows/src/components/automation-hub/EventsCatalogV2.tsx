@@ -9,8 +9,10 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -52,6 +54,15 @@ import {
   simulateWorkflowEventAction,
   type WorkflowEventCatalogEntryV2
 } from '@alga-psa/workflows/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import type { InputMapping } from '@alga-psa/workflows/runtime';
+import {
+  WorkflowActionInputFixedPicker,
+  WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES,
+  type WorkflowActionInputPickerField,
+  type WorkflowPickerActions,
+} from './WorkflowActionInputFixedPicker';
+import { resolveWorkflowSchemaFieldEditor } from './workflowSchemaFieldEditor';
 
 type ViewMode = 'grid' | 'list';
 type SortMode = 'category_name' | 'most_active';
@@ -205,67 +216,363 @@ const syntaxHighlightJson = (text: string) => {
   );
 };
 
-const buildDefaultValueFromSchema = (schema: any, root: any): unknown => {
-  if (!schema) return {};
-  const resolveRef = (s: any): any => {
-    if (s?.$ref && root?.definitions) {
-      const refKey = String(s.$ref).replace('#/definitions/', '');
-      return root.definitions?.[refKey] ?? s;
-    }
-    if (s?.$ref && root?.$defs) {
-      const refKey = String(s.$ref).replace('#/$defs/', '');
-      return root.$defs?.[refKey] ?? s;
-    }
-    return s;
-  };
-  const resolved = resolveRef(schema);
-  if (resolved?.default !== undefined) return resolved.default;
-  const type = Array.isArray(resolved?.type) ? resolved.type[0] : resolved?.type;
-  if (type === 'object') {
-    const props = resolved?.properties ?? {};
-    const out: Record<string, unknown> = {};
-    Object.keys(props).forEach((k) => {
-      out[k] = buildDefaultValueFromSchema(props[k], root);
-    });
-    return out;
-  }
-  if (type === 'array') return [];
-  if (type === 'string') return '';
-  if (type === 'number' || type === 'integer') return 0;
-  if (type === 'boolean') return false;
-  return null;
+type JsonSchema = {
+  type?: string | string[];
+  title?: string;
+  description?: string;
+  properties?: Record<string, JsonSchema>;
+  required?: string[];
+  enum?: Array<string | number | boolean | null>;
+  items?: JsonSchema;
+  additionalProperties?: boolean | JsonSchema;
+  anyOf?: JsonSchema[];
+  oneOf?: JsonSchema[];
+  default?: unknown;
+  examples?: unknown[];
+  example?: unknown;
+  format?: string;
+  $ref?: string;
+  definitions?: Record<string, JsonSchema>;
+  $defs?: Record<string, JsonSchema>;
+  'x-workflow-picker-kind'?: string;
+  'x-workflow-picker-dependencies'?: string[];
+  'x-workflow-picker-fixed-value-hint'?: string;
+  'x-workflow-picker-allow-dynamic-reference'?: boolean;
+  'x-workflow-editor'?: import('@alga-psa/shared/workflow/runtime').WorkflowEditorJsonSchemaMetadata;
 };
 
-const validateAgainstSchema = (schema: any, value: any, root: any, path = ''): Array<{ path: string; message: string }> => {
-  const resolveRef = (s: any): any => {
-    if (s?.$ref && root?.definitions) {
-      const refKey = String(s.$ref).replace('#/definitions/', '');
-      return root.definitions?.[refKey] ?? s;
+type ValidationIssue = { path: string; message: string };
+
+const IMPLICIT_SIMULATION_FIELD_KEYS = new Set(['tenantId']);
+const UUID_SAMPLE_VALUE = '00000000-0000-4000-8000-000000000001';
+
+const resolveSchemaRef = (schema: JsonSchema | null | undefined, root: JsonSchema | null | undefined): JsonSchema => {
+  if (!schema || typeof schema !== 'object') {
+    return {};
+  }
+
+  if (!schema.$ref?.startsWith('#/')) {
+    return schema;
+  }
+
+  if (!root || typeof root !== 'object') {
+    return schema;
+  }
+
+  const segments = schema.$ref
+    .slice(2)
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => segment.replace(/~1/g, '/').replace(/~0/g, '~'));
+
+  let current: unknown = root;
+  for (const segment of segments) {
+    if (!current || typeof current !== 'object') {
+      return schema;
     }
-    if (s?.$ref && root?.$defs) {
-      const refKey = String(s.$ref).replace('#/$defs/', '');
-      return root.$defs?.[refKey] ?? s;
-    }
-    return s;
+    current = (current as Record<string, unknown>)[segment];
+  }
+
+  return current && typeof current === 'object' ? (current as JsonSchema) : schema;
+};
+
+const normalizeSchemaType = (schema?: JsonSchema): string | undefined => {
+  if (!schema?.type) return undefined;
+  if (Array.isArray(schema.type)) {
+    return schema.type.find((value) => value !== 'null') ?? schema.type[0];
+  }
+  return schema.type;
+};
+
+const stripImplicitSimulationFields = (payload: Record<string, unknown>): Record<string, unknown> => {
+  const next = { ...payload };
+  for (const key of IMPLICIT_SIMULATION_FIELD_KEYS) {
+    delete next[key];
+  }
+  return next;
+};
+
+const applyImplicitSimulationFields = (
+  payload: Record<string, unknown>,
+  options: { tenantId?: string | null }
+): Record<string, unknown> => {
+  const next = stripImplicitSimulationFields(payload);
+  if (options.tenantId) {
+    next.tenantId = options.tenantId;
+  }
+  return next;
+};
+
+const isImplicitSimulationFieldPath = (path: Array<string | number>): boolean => (
+  path.length === 1 && typeof path[0] === 'string' && IMPLICIT_SIMULATION_FIELD_KEYS.has(path[0])
+);
+
+const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unknown => {
+  const resolved = resolveSchemaRef(schema, root);
+  if (resolved.default !== undefined) {
+    return resolved.default;
+  }
+  if (resolved.anyOf?.length) {
+    return buildDefaultValueFromSchema(resolved.anyOf[0], root);
+  }
+  if (resolved.oneOf?.length) {
+    return buildDefaultValueFromSchema(resolved.oneOf[0], root);
+  }
+  const type = normalizeSchemaType(resolved);
+  switch (type) {
+    case 'object':
+      return Object.keys(resolved.properties ?? {}).reduce<Record<string, unknown>>((acc, key) => {
+        acc[key] = buildDefaultValueFromSchema(resolved.properties?.[key] ?? {}, root);
+        return acc;
+      }, {});
+    case 'array':
+      return [];
+    case 'string':
+      return '';
+    case 'number':
+    case 'integer':
+      return 0;
+    case 'boolean':
+      return false;
+    default:
+      return null;
+  }
+};
+
+const resolveConcreteFieldSchema = (schema: JsonSchema, root: JsonSchema): JsonSchema => {
+  const resolved = resolveSchemaRef(schema, root);
+
+  if (resolved.anyOf?.length) {
+    const variant = resolved.anyOf.find((candidate) => {
+      const candidateResolved = resolveSchemaRef(candidate, root);
+      const candidateType = normalizeSchemaType(candidateResolved);
+      return candidateType && candidateType !== 'null';
+    });
+    if (variant) return resolveConcreteFieldSchema(variant, root);
+  }
+
+  if (resolved.oneOf?.length) {
+    const variant = resolved.oneOf.find((candidate) => {
+      const candidateResolved = resolveSchemaRef(candidate, root);
+      const candidateType = normalizeSchemaType(candidateResolved);
+      return candidateType && candidateType !== 'null';
+    });
+    if (variant) return resolveConcreteFieldSchema(variant, root);
+  }
+
+  return resolved;
+};
+
+const SIMULATION_PICKER_FALLBACKS: Record<string, { resource: string; fixedValueHint?: string }> = {
+  ticketid: { resource: 'ticket', fixedValueHint: 'Search tickets by number or title' },
+  actorcontactid: { resource: 'contact', fixedValueHint: 'Select Contact' },
+  contactid: { resource: 'contact', fixedValueHint: 'Select Contact' },
+  createdbyuserid: { resource: 'user', fixedValueHint: 'Select User' },
+  actoruserid: { resource: 'user', fixedValueHint: 'Select User' },
+  clientid: { resource: 'client', fixedValueHint: 'Select Client' },
+};
+
+const resolveSimulationPickerField = (
+  schema: JsonSchema,
+  rootSchema: JsonSchema,
+  path: Array<string | number>
+): WorkflowActionInputPickerField | null => {
+  const fieldKey = path[path.length - 1];
+  if (typeof fieldKey !== 'string') {
+    return null;
+  }
+
+  const concreteSchema = resolveConcreteFieldSchema(schema, rootSchema);
+  if (normalizeSchemaType(concreteSchema) !== 'string') {
+    return null;
+  }
+
+  const schemaEditor = resolveWorkflowSchemaFieldEditor(resolveSchemaRef(schema, rootSchema)) ?? resolveWorkflowSchemaFieldEditor(concreteSchema);
+  const schemaPickerResource = schemaEditor?.picker?.resource;
+  if (schemaEditor?.kind === 'picker' && schemaPickerResource && WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES.has(schemaPickerResource)) {
+    return {
+      name: fieldKey,
+      nullable: Array.isArray(schema.type) ? schema.type.includes('null') : false,
+      editor: schemaEditor,
+    };
+  }
+
+  const fallback = SIMULATION_PICKER_FALLBACKS[fieldKey.toLowerCase()];
+  if (!fallback || !WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES.has(fallback.resource)) {
+    return null;
+  }
+
+  return {
+    name: fieldKey,
+    nullable: Array.isArray(schema.type) ? schema.type.includes('null') : false,
+    editor: {
+      kind: 'picker',
+      fixedValueHint: fallback.fixedValueHint,
+      picker: {
+        resource: fallback.resource,
+      },
+    },
   };
-  const resolved = resolveRef(schema);
-  const type = Array.isArray(resolved?.type) ? resolved.type[0] : resolved?.type;
-  const errors: Array<{ path: string; message: string }> = [];
+};
+
+const buildSyntheticValueFromSchema = (schema: JsonSchema, root: JsonSchema, path: Array<string | number> = []): unknown => {
+  const resolved = resolveSchemaRef(schema, root);
+
+  if (resolved.examples?.length) return resolved.examples[0];
+  if (resolved.example !== undefined) return resolved.example;
+  if (resolved.default !== undefined) return resolved.default;
+  if (resolved.anyOf?.length) return buildSyntheticValueFromSchema(resolved.anyOf[0], root, path);
+  if (resolved.oneOf?.length) return buildSyntheticValueFromSchema(resolved.oneOf[0], root, path);
+  if (resolved.enum?.length) return resolved.enum[0];
+
+  const type = normalizeSchemaType(resolved);
+  const fieldName = String(path[path.length - 1] ?? '').toLowerCase();
+
+  switch (type) {
+    case 'object': {
+      const required = new Set(resolved.required ?? []);
+      return Object.entries(resolved.properties ?? {}).reduce<Record<string, unknown>>((acc, [key, childSchema]) => {
+        const childResolved = resolveSchemaRef(childSchema, root);
+        if (
+          required.has(key)
+          || childResolved.default !== undefined
+          || childResolved.example !== undefined
+          || childResolved.examples?.length
+          || childResolved.enum?.length
+        ) {
+          acc[key] = buildSyntheticValueFromSchema(childResolved, root, [...path, key]);
+        }
+        return acc;
+      }, {});
+    }
+    case 'array':
+      return resolved.items ? [buildSyntheticValueFromSchema(resolved.items, root, [...path, 0])] : [];
+    case 'string':
+      if (resolved.format === 'date-time') return new Date().toISOString();
+      if (resolved.format === 'date') return new Date().toISOString().slice(0, 10);
+      if (resolved.format === 'uuid') return UUID_SAMPLE_VALUE;
+      if (fieldName.endsWith('id') || fieldName === 'id') return `${fieldName || 'id'}-sample-123`;
+      if (fieldName.includes('email')) return 'sample@example.com';
+      if (fieldName.includes('name')) return 'Sample Name';
+      if (fieldName.includes('type')) return 'sample';
+      return fieldName ? `${fieldName}-sample` : 'sample';
+    case 'number':
+    case 'integer':
+      return 1;
+    case 'boolean':
+      return true;
+    default:
+      return null;
+  }
+};
+
+const isObjectRecord = (value: unknown): value is Record<string, unknown> => (
+  value != null && typeof value === 'object' && !Array.isArray(value)
+);
+
+const pruneSyntheticPickerBackedFields = (
+  schema: JsonSchema,
+  payload: Record<string, unknown>,
+  rootSchema: JsonSchema = schema,
+  path: Array<string | number> = []
+): Record<string, unknown> => {
+  const resolved = resolveSchemaRef(schema, rootSchema);
+  const next: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(payload)) {
+    const childPath = [...path, key];
+    const childSchema = resolved.properties?.[key];
+    if (!childSchema) {
+      next[key] = value;
+      continue;
+    }
+
+    if (resolveSimulationPickerField(childSchema, rootSchema, childPath)) {
+      continue;
+    }
+
+    if (isObjectRecord(value)) {
+      next[key] = pruneSyntheticPickerBackedFields(childSchema, value, rootSchema, childPath);
+      continue;
+    }
+
+    next[key] = value;
+  }
+
+  return next;
+};
+
+const buildInitialPayloadFromSchema = (schema: JsonSchema | null): Record<string, unknown> => {
+  if (!schema) return {};
+  const examples = schema.examples ?? (schema.example !== undefined ? [schema.example] : []);
+  const fromExample = examples.find((entry) => entry && typeof entry === 'object' && !Array.isArray(entry));
+  if (fromExample) {
+    return stripImplicitSimulationFields(fromExample as Record<string, unknown>);
+  }
+  const synthetic = buildSyntheticValueFromSchema(schema, schema);
+  if (synthetic && typeof synthetic === 'object' && !Array.isArray(synthetic)) {
+    return stripImplicitSimulationFields(pruneSyntheticPickerBackedFields(schema, synthetic as Record<string, unknown>));
+  }
+  const fallback = buildDefaultValueFromSchema(schema, schema);
+  return fallback && typeof fallback === 'object' && !Array.isArray(fallback)
+    ? stripImplicitSimulationFields(fallback as Record<string, unknown>)
+    : {};
+};
+
+const setDeepValue = (obj: unknown, path: Array<string | number>, nextValue: unknown): unknown => {
+  if (path.length === 0) return nextValue;
+  const [head, ...rest] = path;
+  const next = Array.isArray(obj) ? [...obj] : { ...(obj as Record<string, unknown> | null) };
+  const child = (obj as any)?.[head];
+  (next as any)[head] = rest.length ? setDeepValue(child, rest, nextValue) : nextValue;
+  return next;
+};
+
+const pathToKey = (path: Array<string | number>): string =>
+  path.reduce<string>((acc, part) => (typeof part === 'number' ? `${acc}[${part}]` : acc ? `${acc}.${part}` : String(part)), '');
+
+const toDateTimeLocalInputValue = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const fromDateTimeLocalInputValue = (value: string): string => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString();
+};
+
+const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSchema, path = ''): ValidationIssue[] => {
+  const resolved = resolveSchemaRef(schema, root);
+  const type = normalizeSchemaType(resolved);
+  const errors: ValidationIssue[] = [];
+
+  if (resolved.enum && value != null && !resolved.enum.includes(value as any)) {
+    errors.push({ path, message: 'Value must be one of the allowed options.' });
+  }
 
   if (type === 'object') {
     if (value == null || typeof value !== 'object' || Array.isArray(value)) {
       errors.push({ path, message: 'Expected object.' });
       return errors;
     }
-    const required = new Set<string>(resolved?.required ?? []);
+    const objectValue = value as Record<string, unknown>;
+    const knownProperties = resolved.properties ?? {};
+    const required = new Set(resolved.required ?? []);
     for (const key of required) {
-      const v = value?.[key];
-      if (v === undefined || v === null || v === '') {
+      const current = objectValue[key];
+      if (current === undefined || current === null || current === '') {
         errors.push({ path: path ? `${path}.${key}` : key, message: 'Required field missing.' });
       }
     }
-    for (const [key, child] of Object.entries(resolved?.properties ?? {})) {
-      errors.push(...validateAgainstSchema(child, value?.[key], root, path ? `${path}.${key}` : key));
+    for (const [key, child] of Object.entries(knownProperties)) {
+      if (objectValue[key] === undefined) continue;
+      errors.push(...validateAgainstSchema(child, objectValue[key], root, path ? `${path}.${key}` : key));
     }
     return errors;
   }
@@ -275,8 +582,8 @@ const validateAgainstSchema = (schema: any, value: any, root: any, path = ''): A
       errors.push({ path, message: 'Expected array.' });
       return errors;
     }
-    const items = resolved?.items ?? {};
-    value.forEach((entry: any, idx: number) => {
+    const items = resolved.items ?? {};
+    value.forEach((entry, idx) => {
       errors.push(...validateAgainstSchema(items, entry, root, `${path}[${idx}]`));
     });
     return errors;
@@ -289,191 +596,192 @@ const validateAgainstSchema = (schema: any, value: any, root: any, path = ''): A
   return errors;
 };
 
-const setDeepValue = (obj: any, path: Array<string | number>, nextValue: any): any => {
-  if (path.length === 0) return nextValue;
-  const [head, ...rest] = path;
-  if (typeof head === 'number') {
-    const arr = Array.isArray(obj) ? [...obj] : [];
-    arr[head] = setDeepValue(arr[head], rest, nextValue);
-    return arr;
-  }
-  const out = obj && typeof obj === 'object' && !Array.isArray(obj) ? { ...obj } : {};
-  out[head] = setDeepValue(out[head], rest, nextValue);
-  return out;
-};
-
-const pathToKey = (path: Array<string | number>) =>
-  path
-    .map((p) => (typeof p === 'number' ? `[${p}]` : p))
-    .join('.')
-    .replace(/\.\[/g, '[');
-
-const JsonEditorField: React.FC<{
-  id: string;
-  label: React.ReactNode;
-  description?: string | null;
-  value: unknown;
-  onChangeParsed: (next: any) => void;
-  minHeight?: number;
-}> = ({ id, label, description, value, onChangeParsed, minHeight = 120 }) => {
-  const [text, setText] = useState<string>(() => JSON.stringify(value ?? null, null, 2));
-  const [parseError, setParseError] = useState<string>('');
-
-  useEffect(() => {
-    setText(JSON.stringify(value ?? null, null, 2));
-    setParseError('');
-  }, [id]); // reset when field identity changes
-
-  return (
-    <div className="rounded border border-gray-200 bg-white p-3">
-      <div className="flex items-center gap-2">{label}</div>
-      {description && <div className="mt-1 text-[11px] text-gray-500">{description}</div>}
-      <TextArea
-        id={id}
-        value={text}
-        onChange={(e) => {
-          const nextText = e.target.value;
-          setText(nextText);
-          try {
-            const parsed = JSON.parse(nextText || 'null');
-            setParseError('');
-            onChangeParsed(parsed);
-          } catch {
-            setParseError('Invalid JSON.');
-          }
-        }}
-        className="font-mono text-xs mt-2"
-        style={{ minHeight }}
-      />
-      {parseError && <div className="mt-1 text-[11px] text-destructive">{parseError}</div>}
-    </div>
-  );
-};
-
 const SchemaForm: React.FC<{
-  schema: any;
-  value: any;
-  onChange: (next: any) => void;
-  maxDepth?: number;
-}> = ({ schema, value, onChange, maxDepth = 4 }) => {
-  const resolveRef = (s: any): any => {
-    if (s?.$ref && schema?.definitions) {
-      const refKey = String(s.$ref).replace('#/definitions/', '');
-      return schema.definitions?.[refKey] ?? s;
+  schema: JsonSchema;
+  value: Record<string, unknown>;
+  onChange: (next: Record<string, unknown>) => void;
+  errors: ValidationIssue[];
+  pickerActions: WorkflowPickerActions;
+}> = ({ schema, value, onChange, errors, pickerActions }) => {
+  const renderField = (
+    fieldSchema: JsonSchema,
+    rootSchema: JsonSchema,
+    currentValue: unknown,
+    path: Array<string | number>,
+    requiredSet: Set<string>
+  ): React.ReactNode => {
+    if (isImplicitSimulationFieldPath(path)) {
+      return null;
     }
-    if (s?.$ref && schema?.$defs) {
-      const refKey = String(s.$ref).replace('#/$defs/', '');
-      return schema.$defs?.[refKey] ?? s;
-    }
-    return s;
-  };
 
-  const renderField = (fieldSchema: any, path: Array<string | number>, label: string, required: boolean, depth: number) => {
-    const resolved = resolveRef(fieldSchema);
-    const type = Array.isArray(resolved?.type) ? resolved.type[0] : resolved?.type;
-    const description = typeof resolved?.description === 'string' ? resolved.description : null;
-    const current = path.reduce((acc, key) => (acc == null ? undefined : acc[key as any]), value);
-    const pathKey = pathToKey(path);
+    const resolved = resolveSchemaRef(fieldSchema, rootSchema);
+    const type = normalizeSchemaType(resolved);
+    const fieldKey = path[path.length - 1];
+    const label = resolved.title ?? (typeof fieldKey === 'string' ? fieldKey : 'Payload');
+    const isRequired = typeof fieldKey === 'string' && requiredSet.has(fieldKey);
+    const fieldPath = pathToKey(path);
+    const fieldErrors = errors.filter((err) => err.path === fieldPath);
+    const pickerField = resolveSimulationPickerField(resolved, rootSchema, path);
 
-    const header = (
-      <div className="flex items-center gap-2">
-        <div className="text-xs font-medium text-gray-800">{label}</div>
-        {required && <Badge variant="error" size="sm">required</Badge>}
-        {type && <Badge className="text-[10px] bg-gray-500/15 text-gray-600 border-gray-500/30">{String(type)}</Badge>}
+    const commonHeader = (
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium text-gray-700">
+          {label}{isRequired && <span className="text-destructive"> *</span>}
+        </label>
       </div>
     );
 
-    if (depth >= maxDepth) {
-      return (
-        <JsonEditorField
-          id={`schema-form-${pathKey}`}
-          label={header}
-          description={description || 'Max depth reached; edit as JSON.'}
-          value={current ?? null}
-          onChangeParsed={(next) => onChange(setDeepValue(value, path, next))}
-          minHeight={140}
-        />
-      );
-    }
-
     if (type === 'object') {
-      const props = resolved?.properties ?? {};
-      const req = new Set<string>(resolved?.required ?? []);
+      const required = new Set(resolved.required ?? []);
       return (
         <div className="rounded border border-gray-200 bg-white p-3 space-y-2">
-          {header}
-          {description && <div className="text-[11px] text-gray-500">{description}</div>}
+          {commonHeader}
+          {resolved.description && <div className="text-[11px] text-gray-500">{resolved.description}</div>}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {Object.entries(props).map(([k, child]) => renderField(child, [...path, k], k, req.has(k), depth + 1))}
+            {Object.entries(resolved.properties ?? {}).map(([key, child]) => (
+              <div key={`${fieldPath}.${key}`}>
+                {renderField(child, rootSchema, (currentValue as any)?.[key], [...path, key], required)}
+              </div>
+            ))}
           </div>
         </div>
       );
     }
 
     if (type === 'array') {
+      const items = Array.isArray(currentValue) ? currentValue : [];
       return (
-        <JsonEditorField
-          id={`schema-form-${pathKey}`}
-          label={header}
-          description={description}
-          value={current ?? []}
-          onChangeParsed={(next) => onChange(setDeepValue(value, path, next))}
-          minHeight={140}
-        />
+        <div className="rounded border border-gray-200 bg-white p-3 space-y-2">
+          {commonHeader}
+          {resolved.description && <div className="text-[11px] text-gray-500">{resolved.description}</div>}
+          {items.map((item, index) => (
+            <div key={`${fieldPath}.${index}`} className="flex gap-2 items-start">
+              <div className="flex-1">
+                {renderField(resolved.items ?? {}, rootSchema, item, [...path, index], new Set())}
+              </div>
+              <Button
+                id={`simulate-form-array-remove-${fieldPath || 'root'}-${index}`}
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const next = items.filter((_, idx) => idx !== index);
+                  onChange(setDeepValue(value, path, next) as Record<string, unknown>);
+                }}
+              >
+                Remove
+              </Button>
+            </div>
+          ))}
+          <Button
+            id={`simulate-form-array-add-${fieldPath || 'root'}`}
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const next = [...items, buildDefaultValueFromSchema(resolved.items ?? {}, rootSchema)];
+              onChange(setDeepValue(value, path, next) as Record<string, unknown>);
+            }}
+          >
+            Add item
+          </Button>
+        </div>
+      );
+    }
+
+    if (pickerField) {
+      return (
+        <div className="space-y-1 rounded border border-gray-200 bg-white p-3">
+          {commonHeader}
+          <WorkflowActionInputFixedPicker
+            field={pickerField}
+            value={typeof currentValue === 'string' ? currentValue : null}
+            onChange={(nextValue) => onChange(setDeepValue(value, path, nextValue) as Record<string, unknown>)}
+            idPrefix={`simulate-form-${fieldPath || 'root'}`}
+            rootInputMapping={value as InputMapping}
+            actions={pickerActions}
+          />
+          {resolved.description && <div className="text-[11px] text-gray-500">{resolved.description}</div>}
+          {fieldErrors.map((err) => (
+            <div key={`${fieldPath}-${err.message}`} className="text-xs text-destructive">{err.message}</div>
+          ))}
+        </div>
+      );
+    }
+
+    if (resolved.enum) {
+      return (
+        <div className="rounded border border-gray-200 bg-white p-3 space-y-1">
+          {commonHeader}
+          <CustomSelect
+            id={`simulate-form-${fieldPath}`}
+            options={resolved.enum.map((entry) => ({ value: String(entry), label: String(entry) }))}
+            value={currentValue == null ? '' : String(currentValue)}
+            onValueChange={(nextValue) => {
+              const actual = resolved.enum?.find((entry) => String(entry) === nextValue);
+              onChange(setDeepValue(value, path, actual ?? nextValue) as Record<string, unknown>);
+            }}
+          />
+          {resolved.description && <div className="text-[11px] text-gray-500">{resolved.description}</div>}
+        </div>
       );
     }
 
     if (type === 'boolean') {
       return (
-        <div className="rounded border border-gray-200 bg-white p-3">
-          {header}
-          {description && <div className="text-[11px] text-gray-500 mt-1">{description}</div>}
-          <label className="mt-2 inline-flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={Boolean(current)}
-              onChange={(e) => onChange(setDeepValue(value, path, e.target.checked))}
+        <div className="rounded border border-gray-200 bg-white p-3 space-y-1">
+          {commonHeader}
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={Boolean(currentValue)}
+              onCheckedChange={(checked) => onChange(setDeepValue(value, path, checked) as Record<string, unknown>)}
             />
-            {label}
-          </label>
+            <span className="text-xs text-gray-500">{Boolean(currentValue) ? 'True' : 'False'}</span>
+          </div>
+          {resolved.description && <div className="text-[11px] text-gray-500">{resolved.description}</div>}
         </div>
       );
     }
 
-    if (type === 'number' || type === 'integer') {
-      return (
-        <div className="rounded border border-gray-200 bg-white p-3">
-          {header}
-          {description && <div className="text-[11px] text-gray-500 mt-1">{description}</div>}
-          <Input
-            type="number"
-            value={current ?? 0}
-            onChange={(e) => {
-              const next = e.target.value === '' ? null : Number(e.target.value);
-              onChange(setDeepValue(value, path, Number.isNaN(next) ? null : next));
-            }}
-          />
-        </div>
-      );
-    }
+    const inputType = resolved.format === 'date-time' ? 'datetime-local' : resolved.format === 'date' ? 'date' : 'text';
+    const renderedValue = (() => {
+      if (currentValue == null) return '';
+      if (resolved.format === 'date-time' && typeof currentValue === 'string') {
+        return toDateTimeLocalInputValue(currentValue);
+      }
+      return String(currentValue);
+    })();
 
-    // default string
     return (
-      <div className="rounded border border-gray-200 bg-white p-3">
-        {header}
-        {description && <div className="text-[11px] text-gray-500 mt-1">{description}</div>}
+      <div className="rounded border border-gray-200 bg-white p-3 space-y-1">
+        {commonHeader}
         <Input
-          value={current ?? ''}
-          onChange={(e) => onChange(setDeepValue(value, path, e.target.value))}
+          id={`simulate-form-${fieldPath}`}
+          type={type === 'number' || type === 'integer' ? 'number' : inputType}
+          value={renderedValue}
+          onChange={(e) => {
+            const raw = e.target.value;
+            const parsed = raw === ''
+              ? null
+              : (type === 'number' || type === 'integer'
+                ? Number(raw)
+                : resolved.format === 'date-time'
+                  ? fromDateTimeLocalInputValue(raw)
+                  : raw);
+            onChange(setDeepValue(value, path, parsed) as Record<string, unknown>);
+          }}
         />
+        {resolved.description && <div className="text-[11px] text-gray-500">{resolved.description}</div>}
+        {fieldErrors.map((err) => (
+          <div key={`${fieldPath}-${err.message}`} className="text-xs text-destructive">{err.message}</div>
+        ))}
       </div>
     );
   };
 
-  const rootResolved = resolveRef(schema);
-  if ((Array.isArray(rootResolved?.type) ? rootResolved.type[0] : rootResolved?.type) !== 'object') {
+  const rootResolved = resolveSchemaRef(schema, schema);
+  if (normalizeSchemaType(rootResolved) !== 'object') {
     return (
       <TextArea
+        id="simulate-form-json-fallback"
         label="Payload (JSON)"
         value={JSON.stringify(value ?? {}, null, 2)}
         onChange={(e) => {
@@ -488,14 +796,14 @@ const SchemaForm: React.FC<{
     );
   }
 
-  const props = rootResolved?.properties ?? {};
-  const req = new Set<string>(rootResolved?.required ?? []);
+  const props = rootResolved.properties ?? {};
+  const req = new Set(rootResolved.required ?? []);
 
   return (
     <div className="space-y-2">
-      {Object.entries(props).map(([k, child]) => (
-        <div key={k}>
-          {renderField(child, [k], k, req.has(k), 0)}
+      {Object.entries(props).map(([key, child]) => (
+        <div key={key}>
+          {renderField(child, schema, value?.[key], [key], req)}
         </div>
       ))}
     </div>
@@ -624,7 +932,7 @@ const SimpleSeriesChart: React.FC<{ series: Array<{ day: string; count: number }
   );
 };
 
-export default function EventsCatalogV2() {
+export default function EventsCatalogV2({ pickerActions }: { pickerActions: WorkflowPickerActions }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -1028,7 +1336,17 @@ export default function EventsCatalogV2() {
       </div>
 
       {/* Details Drawer */}
-      <Dialog isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} title="Event details" className="max-w-4xl">
+      <Dialog
+        isOpen={!!selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        title="Event details"
+        className="max-w-4xl"
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button id="workflow-event-details-close" variant="ghost" onClick={() => setSelectedEvent(null)}>Close</Button>
+          </div>
+        }
+      >
         <DialogContent>
           {selectedEvent && (
             <div className="space-y-4">
@@ -1159,16 +1477,23 @@ export default function EventsCatalogV2() {
                 )}
               </Card>
 
-              <div className="flex justify-end">
-                <Button id="workflow-event-details-close" variant="ghost" onClick={() => setSelectedEvent(null)}>Close</Button>
-              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
       {/* Full Schema Modal */}
-      <Dialog isOpen={schemaModalOpen} onClose={() => setSchemaModalOpen(false)} title="Schema" className="max-w-4xl">
+      <Dialog
+        isOpen={schemaModalOpen}
+        onClose={() => setSchemaModalOpen(false)}
+        title="Schema"
+        className="max-w-4xl"
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button id="workflow-event-schema-close" variant="ghost" onClick={() => setSchemaModalOpen(false)}>Close</Button>
+          </div>
+        }
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Payload schema</DialogTitle>
@@ -1201,9 +1526,6 @@ export default function EventsCatalogV2() {
               />
             </div>
           )}
-          <DialogFooter>
-            <Button id="workflow-event-schema-close" variant="ghost" onClick={() => setSchemaModalOpen(false)}>Close</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1220,6 +1542,7 @@ export default function EventsCatalogV2() {
         eventType={simulateState.eventType}
         payloadSchemaRef={simulateState.payloadSchemaRef}
         onClose={() => setSimulateState({ open: false, eventType: null, payloadSchemaRef: null })}
+        pickerActions={pickerActions}
       />
 
       {/* Define Custom Event */}
@@ -1276,7 +1599,17 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
   }, [open, eventType]);
 
   return (
-    <Dialog isOpen={open} onClose={onClose} title="Metrics" className="max-w-4xl">
+    <Dialog
+      isOpen={open}
+      onClose={onClose}
+      title="Metrics"
+      className="max-w-4xl"
+      footer={
+        <div className="flex justify-end space-x-2">
+          <Button id="workflow-event-metrics-close" variant="ghost" onClick={onClose}>Close</Button>
+        </div>
+      }
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Metrics · {eventType ?? ''}</DialogTitle>
@@ -1412,9 +1745,6 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
             <div className="text-sm text-gray-500">No data available.</div>
           )}
         </div>
-        <DialogFooter>
-          <Button id="workflow-event-metrics-close" variant="ghost" onClick={onClose}>Close</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -1425,14 +1755,16 @@ const SimulateDialog: React.FC<{
   eventType: string | null;
   payloadSchemaRef: string | null;
   onClose: () => void;
-}> = ({ open, eventType, payloadSchemaRef, onClose }) => {
+  pickerActions: WorkflowPickerActions;
+}> = ({ open, eventType, payloadSchemaRef, onClose, pickerActions }) => {
   const [mode, setMode] = useState<'form' | 'json'>('form');
   const [schema, setSchema] = useState<any | null>(null);
   const [schemaRefOverride, setSchemaRefOverride] = useState<string>('');
   const [correlationKey, setCorrelationKey] = useState('');
   const [payloadText, setPayloadText] = useState('{}');
-  const [formValue, setFormValue] = useState<any>({});
-  const [errors, setErrors] = useState<Array<{ path: string; message: string }>>([]);
+  const [formValue, setFormValue] = useState<Record<string, unknown>>({});
+  const [errors, setErrors] = useState<ValidationIssue[]>([]);
+  const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<any | null>(null);
   const [submitError, setSubmitError] = useState<string>('');
@@ -1459,20 +1791,36 @@ const SimulateDialog: React.FC<{
   useEffect(() => {
     if (!open || !eventType) return;
     const ref = schemaRefOverride || payloadSchemaRef;
+    void getCurrentUser()
+      .then((user) => setCurrentTenantId(user?.tenant ?? null))
+      .catch(() => setCurrentTenantId(null));
     if (!ref) {
       setSchema(null);
       return;
     }
     getEventSchemaByRefAction({ schemaRef: ref })
       .then((res) => {
-        const s = (res as any)?.schema ?? null;
+        const s = ((res as any)?.schema ?? null) as JsonSchema | null;
         setSchema(s);
-        const defaults = s ? buildDefaultValueFromSchema(s, s) : {};
+        const defaults = buildInitialPayloadFromSchema(s);
         setFormValue(defaults ?? {});
         setPayloadText(JSON.stringify(defaults ?? {}, null, 2));
       })
       .catch(() => setSchema(null));
   }, [eventType, open, payloadSchemaRef, schemaRefOverride]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (mode === 'form') {
+      try {
+        setFormValue(stripImplicitSimulationFields(JSON.parse(payloadText || '{}')) as Record<string, unknown>);
+      } catch {
+        // keep existing form value
+      }
+    } else {
+      setPayloadText(JSON.stringify(stripImplicitSimulationFields(formValue ?? {}), null, 2));
+    }
+  }, [mode]);
 
   useEffect(() => {
     if (!open) return;
@@ -1493,8 +1841,15 @@ const SimulateDialog: React.FC<{
       setErrors([{ path: '', message: 'Invalid JSON.' }]);
       return;
     }
-    setErrors(validateAgainstSchema(schema, value ?? {}, schema));
-  }, [formValue, mode, open, payloadText, schema]);
+    const effectiveValue = applyImplicitSimulationFields(
+      isObjectRecord(value) ? value : {},
+      { tenantId: currentTenantId }
+    );
+    setErrors(
+      validateAgainstSchema(schema, effectiveValue, schema)
+        .filter((error) => !IMPLICIT_SIMULATION_FIELD_KEYS.has(error.path))
+    );
+  }, [currentTenantId, formValue, mode, open, payloadText, schema]);
 
   const updateCorrelationKey = (value: string) => {
     setCorrelationKey(value);
@@ -1510,7 +1865,10 @@ const SimulateDialog: React.FC<{
     setResult(null);
     setSubmitError('');
     try {
-      const payload = mode === 'json' ? JSON.parse(payloadText || '{}') : formValue;
+      const payload = applyImplicitSimulationFields(
+        mode === 'json' ? JSON.parse(payloadText || '{}') : formValue,
+        { tenantId: currentTenantId }
+      );
       if (schema && errors.length > 0) {
         toast.error('Fix schema validation errors before submitting.');
         setSubmitting(false);
@@ -1537,7 +1895,20 @@ const SimulateDialog: React.FC<{
   };
 
   return (
-    <Dialog isOpen={open} onClose={onClose} title="Simulate event" className="max-w-4xl">
+    <Dialog
+      isOpen={open}
+      onClose={onClose}
+      title="Simulate event"
+      className="max-w-4xl"
+      footer={
+        <div className="flex justify-end space-x-2">
+          <Button id="workflow-event-simulate-close" variant="ghost" onClick={onClose}>Close</Button>
+          <Button id="workflow-event-simulate-submit" onClick={submit} disabled={submitting || !eventType}>
+            {submitting ? 'Submitting…' : 'Simulate'}
+          </Button>
+        </div>
+      }
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Simulate · {eventType ?? ''}</DialogTitle>
@@ -1586,7 +1957,7 @@ const SimulateDialog: React.FC<{
           {mode === 'form' && (
             <div>
               <div className="text-xs font-medium text-gray-700 mb-2">Payload</div>
-              <SchemaForm schema={schema} value={formValue ?? {}} onChange={setFormValue} />
+              <SchemaForm schema={schema} value={formValue ?? {}} onChange={setFormValue} errors={errors} pickerActions={pickerActions} />
             </div>
           )}
 
@@ -1651,12 +2022,6 @@ const SimulateDialog: React.FC<{
           )}
         </div>
 
-        <DialogFooter>
-          <Button id="workflow-event-simulate-close" variant="ghost" onClick={onClose}>Close</Button>
-          <Button id="workflow-event-simulate-submit" onClick={submit} disabled={submitting || !eventType}>
-            {submitting ? 'Submitting…' : 'Simulate'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -1722,7 +2087,20 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
   };
 
   return (
-    <Dialog isOpen={open} onClose={() => onClose(false)} title="Define custom event" className="max-w-3xl">
+    <Dialog
+      isOpen={open}
+      onClose={() => onClose(false)}
+      title="Define custom event"
+      className="max-w-3xl"
+      footer={
+        <div className="flex justify-end space-x-2">
+          <Button id="workflow-event-custom-event-cancel" variant="ghost" onClick={() => onClose(false)}>Cancel</Button>
+          <Button id="workflow-event-custom-event-submit" onClick={submit} disabled={submitting}>
+            {submitting ? 'Creating…' : 'Create event'}
+          </Button>
+        </div>
+      }
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Define Custom Event</DialogTitle>
@@ -1774,12 +2152,6 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
           </div>
         </div>
 
-        <DialogFooter>
-          <Button id="workflow-event-custom-event-cancel" variant="ghost" onClick={() => onClose(false)}>Cancel</Button>
-          <Button id="workflow-event-custom-event-submit" onClick={submit} disabled={submitting}>
-            {submitting ? 'Creating…' : 'Create event'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

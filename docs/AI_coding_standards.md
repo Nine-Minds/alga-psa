@@ -130,36 +130,65 @@ When implementing dialogs in the application, follow these guidelines:
    - Never import Dialog directly from '@radix-ui/react-dialog'
    ```tsx
    // Good
-   import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
-   
+   import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+
    // Bad
    import * as Dialog from '@radix-ui/react-dialog';
    ```
 
-2. **Dialog Structure**
+2. **Dialog Structure — sticky footer pattern**
+
+   Action buttons (Save/Cancel/Delete/Next/Back/etc.) belong in the `footer` prop, NOT inside `DialogContent`. The Dialog renders `footer` in a sticky `border-t` strip below the scrollable body, so buttons stay pinned when the body is tall.
+
    ```tsx
-   <Dialog 
-     isOpen={isOpen} 
-     onClose={() => setIsOpen(false)}
-     title="Dialog Title"
-     className="max-w-lg"  // Use responsive width classes
-   >
-     <DialogContent>
-       {/* Dialog content */}
-     </DialogContent>
-     <DialogFooter>
-       {/* Action buttons */}
-     </DialogFooter>
-   </Dialog>
+   const footer = (
+     <div className="flex justify-end space-x-2">
+       <Button variant="ghost" onClick={onClose}>Cancel</Button>
+       <Button
+         type="button"
+         onClick={() => (document.getElementById('my-form') as HTMLFormElement | null)?.requestSubmit()}
+       >Save</Button>
+     </div>
+   );
+
+   return (
+     <Dialog
+       isOpen={isOpen}
+       onClose={() => setIsOpen(false)}
+       title="Dialog Title"
+       className="max-w-lg"
+       footer={footer}
+     >
+       <DialogContent>
+         <form id="my-form" onSubmit={handleSubmit}>
+           {/* fields */}
+         </form>
+       </DialogContent>
+     </Dialog>
+   );
    ```
 
-3. **Props and Features**
+   **Critical:** Because `footer` is rendered OUTSIDE the `<form>`, a `type="submit"` button in the footer will not trigger the form's `onSubmit`. Give the form a unique `id` and switch the Save button to `type="button"` + `onClick={() => form.requestSubmit()}`. `requestSubmit()` still runs native HTML validation and fires `onSubmit`. Enter-in-field still submits because the form's own submit event handles that.
+
+   For dialogs without a form (e.g. confirmation dialogs, pickers), put plain `onClick` handlers on the footer buttons.
+
+3. **`DialogFooter` is deprecated**
+   - Do not use `DialogFooter` in new code — it places buttons inside the scrollable body. Use the `footer` prop.
+   - Existing `DialogFooter` usages should be migrated when touched.
+
+4. **Wizards and multi-step dialogs**
+   - Put Next/Back/Finish/Skip buttons in the `footer` prop.
+   - Make `footer` a computed value (or `undefined`) so it changes per step: e.g. `footer={step === 'upload' ? undefined : stepFooter}`.
+
+5. **Props and Features**
    - `isOpen`: Boolean to control dialog visibility
    - `onClose`: Callback function when dialog should close
    - `title`: Dialog title shown in the draggable header
    - `className`: Use responsive Tailwind classes (max-w-sm, max-w-md, max-w-lg, max-w-xl, max-w-2xl)
+   - `footer`: ReactNode rendered in the sticky footer strip
    - `draggable`: Defaults to true, set to false to disable dragging
    - `hideCloseButton`: Set to true to hide the X close button
+   - `allowOverflow`: Set to true for dialogs that host dropdowns/popovers
 
 4. **Width Guidelines**
    - Use responsive max-width classes instead of fixed pixel widths
@@ -170,19 +199,11 @@ When implementing dialogs in the application, follow these guidelines:
      - `max-w-xl` (576px) - Large dialogs (complex forms)
      - `max-w-2xl` (672px) - Extra large dialogs (multi-section forms)
 
-5. **Spacing and Padding**
-   - DialogContent automatically provides padding
-   - For forms with focus rings, add `mt-2` to the first form element container to prevent cut-off
-   - Example:
-   ```tsx
-   <DialogContent>
-     <form className="space-y-4 mt-2">
-       <Input className="..." />
-     </form>
-   </DialogContent>
-   ```
+6. **Spacing and Padding**
+   - The Dialog body has built-in padding (`px-6 pt-3 pb-6`) and handles scrolling itself (`flex-1 min-h-0 overflow-y-auto`). Do NOT add `max-h-[80vh]` or `overflow-y-auto` hacks to `DialogContent` — they fight the flex layout and break footer stickiness.
+   - For forms with focus rings, add `mt-2` to the first form element container to prevent cut-off.
 
-6. **Handling Close Events**
+7. **Handling Close Events**
    - The Dialog's onClose is called with boolean false when the X button is clicked
    - Handle both MouseEvent and boolean types if needed:
    ```tsx
@@ -194,7 +215,7 @@ When implementing dialogs in the application, follow these guidelines:
    };
    ```
 
-7. **Confirmation Dialogs**
+8. **Confirmation Dialogs**
    - For simple confirmations, use the ConfirmationDialog component
    - For custom confirmations with unsaved changes:
    ```tsx
@@ -714,53 +735,69 @@ Dates and times should use the ISO8601String type in the types.d.tsx file. In th
 
 ## Internationalization (i18n)
 
-The application uses **react-i18next** for internationalization. **All client portal UI must be localized** to support multiple languages for end clients.
+The application uses **react-i18next** for internationalization. Both the **client portal** and **MSP portal** are internationalized with feature-based namespace splitting and lazy loading.
+
+See [docs/architecture/i18n.md](./architecture/i18n.md) for the full architecture guide.
 
 **Configuration:**
-- Supported locales: en, fr, es, de, nl (default: en)
-- Namespaces: `common` (shared components), `clientPortal` (client portal specific)
+- Supported locales: en, fr, es, de, nl, it, pl (+ xx, yy pseudo-locales for QA)
+- 27 namespace files per language, ~9,959 keys total
 - Translation files: `server/public/locales/{locale}/{namespace}.json`
-
-**Important**: The client portal is fully internationalized. Any component that displays in the client portal must use translation keys.
+- Central config: `packages/core/src/lib/i18n/config.ts`
+- Feature flag: `msp-i18n-enabled` gates MSP translation rollout
 
 ### Namespace Usage Guidelines
 
-**Use `clientPortal` namespace for:**
-- Client portal specific pages and features
-- Content that only client users see
-- Example: tickets, billing, projects, dashboard
+**Use `common` namespace for:**
+- Shared components used across the entire app (both portals)
+- Generic UI elements (buttons, forms, dialogs, status labels, validation)
+
+**Use `client-portal` namespace for:**
+- Client portal UI chrome (nav, dashboard, auth, profile)
+
+**Use `features/*` namespaces for:**
+- Feature areas shared by both portals (no duplication)
+- `features/tickets`, `features/projects`, `features/billing`, `features/documents`, `features/appointments`
+
+**Use `msp/core` for:**
+- MSP portal shell (nav, sidebar, header) — loads on every MSP route
+
+**Use `msp/<feature>` for:**
+- MSP-specific feature pages (settings, clients, assets, time-entry, etc.)
+- Each namespace loads only on its relevant route(s)
 
 ```tsx
 'use client';
 
-import { useTranslation } from 'server/src/lib/i18n/client';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-export function ClientTickets() {
-  const { t } = useTranslation('clientPortal');
+// MSP feature component
+export function TimeEntryForm() {
+  const { t } = useTranslation('msp/time-entry');
 
   return (
     <div>
-      <h1>{t('tickets.title')}</h1>
-      <button>{t('tickets.createButton')}</button>
+      <h1>{t('page.title')}</h1>
+      <button>{t('actions.save')}</button>
     </div>
   );
 }
-```
 
-**Use `common` namespace for:**
-- Shared components used in both MSP portal and client portal
-- Generic UI elements (buttons, forms, dialogs)
-- Reusable features like ClientLocations, DataTable
-- Example: `server/src/components/clients/ClientLocations.tsx` uses `common` because it's displayed in both MSP and client portal
+// Shared feature component (used by both portals)
+export function TicketList() {
+  const { t } = useTranslation('features/tickets');
 
-```tsx
-'use client';
+  return (
+    <div>
+      <h1>{t('list.title')}</h1>
+      <button>{t('actions.create')}</button>
+    </div>
+  );
+}
 
-import { useTranslation } from 'server/src/lib/i18n/client';
-
-// Shared component that appears in both MSP and client portal
+// Shared component used everywhere
 export function ClientLocations({ clientId }: Props) {
-  const { t } = useTranslation('common'); // Use 'common' for shared components
+  const { t } = useTranslation('common');
 
   return (
     <div>
@@ -775,33 +812,29 @@ export function ClientLocations({ clientId }: Props) {
 
 **With interpolation:**
 ```tsx
-const { t } = useTranslation('clientPortal');
+const { t } = useTranslation('features/tickets');
 <p>{t('pagination.showing', { from: 1, to: 10, total: 100 })}</p>
 ```
 
 **With fallback values:**
 ```tsx
-// Fallback displays if translation key doesn't exist
 <span>{t('tickets.messages.error', 'An error occurred')}</span>
-
-// With both interpolation and fallback
-<p>{t('pagination.showing', 'Showing {{from}} to {{to}} of {{total}} results', { from: 1, to: 10, total: 100 })}</p>
 ```
 
-**Formatting utilities:**
+**Formatting utilities (locale-aware):**
 ```tsx
-import { useFormatters } from 'server/src/lib/i18n/client';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 
-const { formatDate, formatNumber, formatCurrency } = useFormatters();
+const { formatDate, formatNumber, formatCurrency, formatRelativeTime } = useFormatters();
 <p>{formatCurrency(99.99, 'USD')}</p>
+<p>{formatDate(entry.date, { month: 'short', day: 'numeric' })}</p>
+<p>{formatRelativeTime(comment.created_at)}</p>
 ```
 
 ### Best Practices
 
-1. **Always localize client portal content**: Every user-facing string in the client portal must use translation keys
-2. **Choose the correct namespace**:
-   - `clientPortal` for client-specific content
-   - `common` for shared components between MSP and client portal
+1. **All user-facing text must use translation keys** — both client portal and MSP portal
+2. **Choose the correct namespace** — see the guide above or `ROUTE_NAMESPACES` in `packages/core/src/lib/i18n/config.ts`
 3. **Never hardcode user-facing text**:
    ```tsx
    // Bad
@@ -811,9 +844,11 @@ const { formatDate, formatNumber, formatCurrency } = useFormatters();
    <button>{t('clients.locations.buttons.save')}</button>
    ```
 4. **Use hierarchical keys**: `tickets.messages.loadingError` not `ticketsLoadingError`
-5. **Provide fallback values** for error messages and dynamic content
+5. **Use `useFormatters()`** instead of hardcoded date/number/currency formatting
 6. **Use interpolation**, not string concatenation: `{{variable}}` in translation strings
-7. **Test with different locales** to ensure layouts work with longer text (e.g., German translations)
+7. **Test with pseudo-locale `xx`** to catch missed extractions (all strings should show `11111`)
+8. **Run validation** after adding keys: `node scripts/validate-translations.cjs`
+9. **Register routes in `ROUTE_NAMESPACES`** when adding new pages that use translations
 
 # Testing Standards
 

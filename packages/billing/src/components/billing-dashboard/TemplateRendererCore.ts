@@ -265,6 +265,8 @@ function renderField(field: Field, index: number, invoiceData: InvoiceViewModel,
 function renderList(list: List, index: number, invoiceData: InvoiceViewModel): string {
   const listData = invoiceData[list.name as keyof InvoiceViewModel];
 
+  // These fallbacks become part of generated invoice HTML, not dashboard UI chrome.
+  // Template/content localization is handled separately from this billing-shell batch.
   if (!Array.isArray(listData)) {
     return `<div key="${index}">No data for list: ${list.name}</div>`;
   }
@@ -378,6 +380,8 @@ function renderValue(fieldName: string, invoiceData: InvoiceViewModel | null, va
     return obj && typeof obj === 'object' ? obj[key as keyof typeof obj] : undefined;
   }, invoiceData);
 
+  // These values are rendered into invoice output, so they are intentionally left outside
+  // the dashboard i18n namespace handled in this PRD batch.
   if (actualValue === null || actualValue === undefined) {
     return 'N/A';
   }

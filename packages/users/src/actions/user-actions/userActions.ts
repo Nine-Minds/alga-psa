@@ -35,7 +35,7 @@ const ADD_USER_VALIDATION_ERRORS = new Set([
   'Cannot assign MSP role to client portal user',
   'Cannot assign client portal role to MSP user',
   'A user with this email address already exists',
-  "You've reached your MSP user licence limit.",
+  "You've reached your MSP user license limit.",
   SOLO_USER_LIMIT_MESSAGE,
 ]);
 
@@ -149,7 +149,7 @@ export const addUser = withAuth(async (
         }
 
         if (limit !== null && used >= limit) {
-          return { success: false, error: "You've reached your MSP user licence limit." };
+          return { success: false, error: "You've reached your MSP user license limit." };
         }
 
       }
@@ -244,6 +244,17 @@ export const deleteUser = withAuth(async (
       await trx('platform_notification_recipients').where({ user_id: userId, tenant: tenantId || undefined }).del();
       await trx('user_roles').where({ user_id: userId, tenant: tenantId || undefined }).del();
       await trx('user_preferences').where({ user_id: userId, tenant: tenantId || undefined }).del();
+
+      // Delete activity group items before groups (items.group_id → groups)
+      await trx('user_activity_group_items')
+        .where({ tenant: tenantId || undefined })
+        .whereIn('group_id', function () {
+          this.select('group_id')
+            .from('user_activity_groups')
+            .where({ user_id: userId, tenant: tenantId || undefined });
+        })
+        .del();
+      await trx('user_activity_groups').where({ user_id: userId, tenant: tenantId || undefined }).del();
 
       const deleted = await trx('users').where({ user_id: userId, tenant: tenantId || undefined }).del();
       if (!deleted || deleted === 0) {

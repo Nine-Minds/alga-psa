@@ -67,7 +67,8 @@
     "loadSlotsFailed": "Nie udało się wczytać dostępnych terminów. Spróbuj ponownie.",
     "createFailed": "Nie udało się utworzyć wniosku o wizytę. Spróbuj ponownie.",
     "updateFailed": "Nie udało się zaktualizować wniosku o wizytę. Spróbuj ponownie.",
-    "loadFailed": "Nie udało się wczytać wizyt. Spróbuj ponownie."
+    "loadFailed": "Nie udało się wczytać wizyt. Spróbuj ponownie.",
+    "notFound": "Nie znaleziono wniosku o spotkanie"
   },
   "messages": {
     "requestSuccess": "Wniosek o wizytę został wysłany!",

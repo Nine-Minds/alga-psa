@@ -351,7 +351,9 @@
       "namePlaceholder": "Ordnernamen eingeben",
       "loading": "Ordner werden geladen...",
       "rootOption": "Stamm (kein Ordner)",
-      "empty": "Keine Ordner vorhanden. Dokumente werden im Stammverzeichnis gespeichert."
+      "empty": "Keine Ordner vorhanden. Dokumente werden im Stammverzeichnis gespeichert.",
+      "showAllFolders": "Alle Ordner anzeigen",
+      "showEntityFolders": "Zugehörige Ordner anzeigen"
     },
     "filters": {
       "searchLabel": "Dokumente suchen",
@@ -402,7 +404,13 @@
           "asc": "A–Z anzeigen",
           "desc": "Z–A anzeigen"
         }
-      }
+      },
+      "clientVisibility": {
+        "all": "Alle",
+        "visible": "Für Kunden sichtbar",
+        "hidden": "Nur intern"
+      },
+      "clientVisibilityLabel": "Kundensichtbarkeit"
     },
     "selector": {
       "title": "Dokumente auswählen",
@@ -442,7 +450,9 @@
       "loading": "Ordner werden geladen...",
       "title": "Ordner",
       "collapse": "Ordner einklappen",
-      "allDocuments": "Alle Dokumente"
+      "allDocuments": "Alle Dokumente",
+      "expand": "Ordner anzeigen",
+      "deleteTitle": "Ordner löschen"
     },
     "folderManager": {
       "title": "Neuen Ordner erstellen",
@@ -459,7 +469,35 @@
         "Tickets": "Tickets",
         "Time Entries": "Zeiteinträge"
       }
-    }
+    },
+    "list": {
+      "name": "Name",
+      "folder": "Ordner",
+      "size": "Größe",
+      "modified": "Geändert",
+      "visibility": "Sichtbarkeit",
+      "actions": "Aktionen"
+    },
+    "hasShareLinks": "Hat aktive Freigabelinks",
+    "visibility": {
+      "clientVisible": "Für Kunden sichtbar",
+      "internalOnly": "Intern",
+      "markedVisible": "\"{{name}}\" ist jetzt im Kundenportal sichtbar",
+      "markedHidden": "\"{{name}}\" ist jetzt im Kundenportal ausgeblendet",
+      "toggleFailed": "Fehler beim Aktualisieren der Ordnersichtbarkeit",
+      "cascadeTitle": "Dokumentsichtbarkeit aktualisieren",
+      "cascadeMakeVisible": "Möchten Sie auch alle {{count}} Dokument(e) in \"{{name}}\" im Kundenportal sichtbar machen?",
+      "cascadeMakeHidden": "Möchten Sie auch alle {{count}} Dokument(e) in \"{{name}}\" im Kundenportal ausblenden?",
+      "cascadeYes": "Ja, Dokumente aktualisieren",
+      "cascadeNo": "Nein, nur Ordner"
+    },
+    "share": "Teilen",
+    "videoPlaybackFailed": "Dieses Video kann im Browser nicht abgespielt werden",
+    "videoPlaybackIssue": "Probleme beim Abspielen des Videos?",
+    "downloadVideo": "Video herunterladen",
+    "downloadAsPdf": "Als PDF herunterladen",
+    "downloadAsMarkdown": "Als Markdown herunterladen",
+    "move": "Verschieben"
   },
   "fields": {
     "notes": "Notizen"
@@ -621,6 +659,18 @@
         },
         "noTemplates": "Erstellen Sie eine Umfragevorlage, bevor Sie Auslöser hinzufügen.",
         "prioritiesMixed": "Die ausgewählten Boards verwenden unterschiedliche Prioritätstypen. Alle Prioritäten werden angezeigt."
+      },
+      "preview": {
+        "heading": "Vorschau der Antwortseite",
+        "tabs": {
+          "survey": "Umfrageformular",
+          "thankYou": "Danke"
+        },
+        "noPrompt": "Umfrageaufforderung",
+        "commentPlaceholder": "Kundenkommentare erscheinen hier...",
+        "noThankYou": "Dankesnachricht",
+        "notice": "Diese Vorschau zeigt, was Kunden sehen, nachdem sie in ihrer E-Mail auf den Umfragelink geklickt haben.",
+        "editEmailTemplate": "Umfrage-E-Mail-Vorlage bearbeiten"
       }
     },
     "response": {
@@ -874,6 +924,11 @@
     "notSpecified": "Nicht angegeben",
     "unknown": "Unbekannt",
     "uploading": "Hochladen...",
-    "submitting": "Absenden..."
+    "submitting": "Absenden...",
+    "edited": "bearbeitet",
+    "editComment": "Kommentar bearbeiten",
+    "deleteCommentAriaLabel": "Kommentar löschen",
+    "deleteComment": "Kommentar löschen",
+    "deleteCommentConfirmation": "Möchten Sie diesen Kommentar wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
   }
 }

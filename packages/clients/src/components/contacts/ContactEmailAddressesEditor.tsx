@@ -15,7 +15,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
-import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Pencil, Plus, Trash2 } from 'lucide-react';
 
 type EditableAdditionalEmailRow = ContactEmailAddressInput & {
   _localId?: string;
@@ -41,7 +41,9 @@ export type ContactEmailAddressesEditorChange = {
 
 type NormalizedContactEmailAddresses = ContactEmailAddressesEditorChange;
 
-const CANONICAL_EMAIL_TYPE_OPTIONS = CONTACT_EMAIL_CANONICAL_TYPES.map((value) => ({
+const CANONICAL_EMAIL_TYPES: readonly ContactEmailCanonicalType[] = CONTACT_EMAIL_CANONICAL_TYPES ?? [];
+
+const CANONICAL_EMAIL_TYPE_OPTIONS = CANONICAL_EMAIL_TYPES.map((value) => ({
   value,
   label: value.charAt(0).toUpperCase() + value.slice(1),
 }));
@@ -67,7 +69,7 @@ function createRowLocalId(index: number): string {
 }
 
 function isCanonicalEmailType(value: string | null | undefined): value is ContactEmailCanonicalType {
-  return CONTACT_EMAIL_CANONICAL_TYPES.includes((value ?? '') as ContactEmailCanonicalType);
+  return CANONICAL_EMAIL_TYPES.includes((value ?? '') as ContactEmailCanonicalType);
 }
 
 function normalizeAdditionalEmailRowForDraft(
@@ -412,13 +414,14 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
             <Button
               id={`${id}-toggle-${index}`}
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={onToggleExpanded}
               disabled={disabled}
               className="inline-flex items-center gap-1.5"
+              aria-label={`Edit additional email ${index + 1}`}
             >
-              <ChevronDown className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
               Edit
             </Button>
             {showReorderControls && (
@@ -445,19 +448,19 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
                 >
                   <ArrowDown className="h-4 w-4" />
                 </Button>
-                <Button
-                  id={`${id}-remove-${index}`}
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={onRemove}
-                  disabled={disabled}
-                  aria-label={`Remove additional email ${index + 1}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
               </>
             )}
+            <Button
+              id={`${id}-remove-${index}`}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onRemove}
+              disabled={disabled}
+              aria-label={`Remove additional email ${index + 1}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </Card>
@@ -491,13 +494,14 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
             <Button
               id={`${id}-toggle-${index}`}
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={onToggleExpanded}
               disabled={disabled}
               className="inline-flex items-center gap-1.5"
+              aria-label={`Done editing additional email ${index + 1}`}
             >
-              <ChevronUp className="h-4 w-4" />
+              <Check className="h-4 w-4" />
               Done
             </Button>
           )}
@@ -525,19 +529,19 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
               >
                 <ArrowDown className="h-4 w-4" />
               </Button>
-              <Button
-                id={`${id}-remove-${index}`}
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={onRemove}
-                disabled={disabled}
-                aria-label={`Remove additional email ${index + 1}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </>
           )}
+          <Button
+            id={`${id}-remove-${index}`}
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            disabled={disabled}
+            aria-label={`Remove additional email ${index + 1}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
@@ -641,7 +645,16 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
   );
   const [touchedRowKeys, setTouchedRowKeys] = useState<Set<string>>(new Set());
   const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const promoteAnimationCleanupsRef = useRef<Array<() => void>>([]);
   const lastEmittedSignatureRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      promoteAnimationCleanupsRef.current.forEach((cleanup) => cleanup());
+      promoteAnimationCleanupsRef.current = [];
+    };
+  }, []);
 
   useEffect(() => {
     const externalSignature = buildContactEmailAddressesSignature(normalizedValue);
@@ -782,13 +795,114 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
   };
 
   const handlePromote = (index: number) => {
+    const canAnimate =
+      typeof window !== 'undefined' &&
+      typeof document !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const container = containerRef.current;
+    const primaryEl = canAnimate && container
+      ? container.querySelector<HTMLElement>(`[data-testid="${id}-primary-row"]`)
+      : null;
+    const rowEl = canAnimate && container
+      ? container.querySelector<HTMLElement>(`[data-testid="${id}-additional-row-${index}"]`)
+      : null;
+
+    const primaryRect = primaryEl?.getBoundingClientRect() ?? null;
+    const rowRect = rowEl?.getBoundingClientRect() ?? null;
+
     const promoted = promoteContactEmailRow(currentValue, index);
+    const nextRows = buildEditableAdditionalEmailRows(promoted.additional_email_addresses);
     commitValue(
       promoted.email,
       promoted.primary_email_canonical_type,
       promoted.primary_email_custom_type,
-      buildEditableAdditionalEmailRows(promoted.additional_email_addresses)
+      nextRows
     );
+
+    if (!container || !primaryEl || !rowEl || !primaryRect || !rowRect || primaryRect.width === 0 || rowRect.width === 0) {
+      return;
+    }
+    const animationContainer = container;
+
+    // Cancel any running promote animations
+    promoteAnimationCleanupsRef.current.forEach((cleanup) => cleanup());
+    promoteAnimationCleanupsRef.current = [];
+
+    const primaryClone = primaryEl.cloneNode(true) as HTMLElement;
+    const rowClone = rowEl.cloneNode(true) as HTMLElement;
+    const clones: HTMLElement[] = [primaryClone, rowClone];
+
+    const setupClone = (clone: HTMLElement, rect: DOMRect) => {
+      clone.style.position = 'fixed';
+      clone.style.top = `${rect.top}px`;
+      clone.style.left = `${rect.left}px`;
+      clone.style.width = `${rect.width}px`;
+      clone.style.height = `${rect.height}px`;
+      clone.style.margin = '0';
+      clone.style.pointerEvents = 'none';
+      clone.style.zIndex = '50';
+      clone.style.transformOrigin = 'top left';
+      clone.style.transition = 'transform 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease-out';
+      clone.style.willChange = 'transform, opacity';
+      clone.style.boxShadow = '0 16px 36px rgba(0, 0, 0, 0.18)';
+      clone.style.borderRadius = window.getComputedStyle(clone).borderRadius || '0.5rem';
+      document.body.appendChild(clone);
+    };
+
+    setupClone(primaryClone, primaryRect);
+    setupClone(rowClone, rowRect);
+
+    let finished = false;
+    const timers: number[] = [];
+    const cleanup = () => {
+      if (finished) return;
+      finished = true;
+      timers.forEach((timer) => window.clearTimeout(timer));
+      clones.forEach((clone) => clone.remove());
+      const listIndex = promoteAnimationCleanupsRef.current.indexOf(cleanup);
+      if (listIndex >= 0) {
+        promoteAnimationCleanupsRef.current.splice(listIndex, 1);
+      }
+    };
+    promoteAnimationCleanupsRef.current.push(cleanup);
+
+    requestAnimationFrame(() => {
+      if (finished) return;
+      const newPrimaryEl = animationContainer.querySelector<HTMLElement>(`[data-testid="${id}-primary-row"]`);
+      const newLastIndex = nextRows.length - 1;
+      const newLastRowEl = newLastIndex >= 0
+        ? animationContainer.querySelector<HTMLElement>(`[data-testid="${id}-additional-row-${newLastIndex}"]`)
+        : null;
+
+      if (!newPrimaryEl || !newLastRowEl) {
+        cleanup();
+        return;
+      }
+
+      const newPrimaryRect = newPrimaryEl.getBoundingClientRect();
+      const newLastRect = newLastRowEl.getBoundingClientRect();
+
+      const primaryDx = newLastRect.left - primaryRect.left;
+      const primaryDy = newLastRect.top - primaryRect.top;
+      const primarySx = Math.max(newLastRect.width / primaryRect.width, 0.05);
+      const primarySy = Math.max(newLastRect.height / primaryRect.height, 0.05);
+
+      const rowDx = newPrimaryRect.left - rowRect.left;
+      const rowDy = newPrimaryRect.top - rowRect.top;
+      const rowSx = Math.max(newPrimaryRect.width / rowRect.width, 0.05);
+      const rowSy = Math.max(newPrimaryRect.height / rowRect.height, 0.05);
+
+      primaryClone.style.transform = `translate(${primaryDx}px, ${primaryDy}px) scale(${primarySx}, ${primarySy})`;
+      rowClone.style.transform = `translate(${rowDx}px, ${rowDy}px) scale(${rowSx}, ${rowSy})`;
+    });
+
+    timers.push(window.setTimeout(() => {
+      primaryClone.style.opacity = '0';
+      rowClone.style.opacity = '0';
+    }, 420));
+    timers.push(window.setTimeout(cleanup, 640));
   };
 
   const handleMove = (index: number, direction: -1 | 1) => {
@@ -833,7 +947,7 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
   const primaryTypeValue = primaryCanonicalType === null ? 'custom' : primaryCanonicalType ?? 'work';
 
   return (
-    <div className="space-y-4">
+    <div ref={containerRef} className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <Label className="text-sm font-medium text-gray-900">

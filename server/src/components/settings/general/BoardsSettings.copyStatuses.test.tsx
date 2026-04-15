@@ -141,39 +141,32 @@ vi.mock('@alga-psa/ui/components/Switch', () => ({
   ),
 }));
 
-vi.mock('@alga-psa/ui/components/ToggleGroup', () => ({
-  ToggleGroup: ({
-    children,
-    onValueChange,
+vi.mock('@alga-psa/ui/components/ViewSwitcher', () => ({
+  __esModule: true,
+  default: ({
+    currentView,
+    onChange,
+    options,
   }: {
-    children: React.ReactNode;
-    onValueChange?: (value: string) => void;
+    currentView: string;
+    onChange: (value: string) => void;
+    options: Array<{ value: string; label: string; id?: string; disabled?: boolean }>;
   }) => (
     <div>
-      {React.Children.map(children, (child) => {
-        if (!React.isValidElement<{ value?: string }>(child)) {
-          return child;
-        }
-
-        return React.cloneElement(child as React.ReactElement<any>, {
-          onClick: () => {
-            if (child.props.value) {
-              onValueChange?.(child.props.value);
-            }
-          },
-        });
-      })}
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          data-testid={option.id}
+          data-value={option.value}
+          aria-pressed={currentView === option.value}
+          disabled={option.disabled}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
     </div>
-  ),
-  ToggleGroupItem: ({
-    children,
-    value,
-    onClick,
-    id,
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { value: string; id?: string }) => (
-    <button type="button" data-testid={id} onClick={onClick} data-value={value}>
-      {children}
-    </button>
   ),
 }));
 

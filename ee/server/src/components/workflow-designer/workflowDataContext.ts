@@ -584,7 +584,7 @@ export const buildDataContext = (
         }
       }
 
-      if (step.type === 'transform.assign' || step.type === 'event.wait') {
+      if (step.type === 'transform.assign' || step.type === 'event.wait' || step.type === 'time.wait') {
         const config = (step as NodeStep).config as { assign?: Record<string, { $expr: string }> } | undefined;
         if (config?.assign) {
           for (const path of Object.keys(config.assign)) {

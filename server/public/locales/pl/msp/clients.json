@@ -136,9 +136,9 @@
     "backToClients": "Powrót do Klientów",
     "openInNewTab": "Otwórz w nowej karcie",
     "addTicket": "Dodaj bilet",
-    "details": "Bliższe dane",
-    "contacts": "Łączność",
-    "assets": "Aktywa",
+    "details": "Szczegóły",
+    "contacts": "Kontakty",
+    "assets": "Zasoby",
     "documents": "Dokumenty",
     "billing": "Rozliczenia",
     "interactions": "Interakcje",
@@ -254,7 +254,11 @@
     "clientCreatedContactFailed": "Klient utworzył, ale nie dodał kontaktu.",
     "usersLoadError": "Nie udało się załadować użytkowników do wyboru Menedżera konta.",
     "countriesLoadError": "Nie udało się wczytać krajów.",
-    "phoneTypeSuggestionsError": "Nie udało się wczytać sugestii typu telefonu kontaktowego."
+    "phoneTypeSuggestionsError": "Nie udało się wczytać sugestii typu telefonu kontaktowego.",
+    "created": "\"{{name}}\" został utworzony. Dodaj kolejnego klienta poniżej.",
+    "createAndAddAnother": "Utwórz + Dodaj kolejnego",
+    "createAndView": "Utwórz + Wyświetl klienta",
+    "additionalDetails": "Dodatkowe szczegóły"
   },
   "clientCreatedDialog": {
     "title": "Klient utworzony",

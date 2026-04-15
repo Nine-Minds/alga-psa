@@ -7,7 +7,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
   DialogDescription,
 } from "@alga-psa/ui/components/Dialog";
 import { Button } from "@alga-psa/ui/components/Button";
@@ -107,8 +106,18 @@ export function WorkflowTasksSectionFiltersDialog({
     setSelectedPriority('all');
   };
 
+  const footer = (
+    <div className="flex justify-between w-full">
+      <Button id="workflow-task-filter-clear" variant="outline" onClick={handleClear}>Reset</Button>
+      <div>
+        <Button id="workflow-task-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>Cancel</Button>
+        <Button id="workflow-task-filter-apply" onClick={handleApply}>Apply Filters</Button>
+      </div>
+    </div>
+  );
+
   return (
-    <Dialog isOpen={isOpen} onClose={() => onOpenChange(false)}>
+    <Dialog isOpen={isOpen} onClose={() => onOpenChange(false)} footer={footer}>
       <DialogContent className="sm:max-w-[700]">
         <DialogHeader>
           <DialogTitle>Filter Workflow Tasks</DialogTitle>
@@ -196,15 +205,6 @@ export function WorkflowTasksSectionFiltersDialog({
             />
           </div>
         </div>
-        <DialogFooter>
-          <div className="flex justify-between w-full">
-            <Button id="workflow-task-filter-clear" variant="outline" onClick={handleClear}>Reset</Button>
-            <div>
-              <Button id="workflow-task-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button id="workflow-task-filter-apply" onClick={handleApply}>Apply Filters</Button>
-            </div>
-          </div>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
