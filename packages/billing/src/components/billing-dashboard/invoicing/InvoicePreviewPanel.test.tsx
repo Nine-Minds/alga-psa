@@ -53,6 +53,10 @@ vi.mock('../PaperInvoice', () => ({
   },
 }));
 
+vi.mock('./DraftInvoiceDetailsCard', () => ({
+  default: () => <div data-automation-id="draft-invoice-details-card-mock" />,
+}));
+
 vi.mock('./PurchaseOrderSummaryBanner', () => ({
   PurchaseOrderSummaryBanner: () => <div data-automation-id="po-summary-banner-mock" />,
 }));

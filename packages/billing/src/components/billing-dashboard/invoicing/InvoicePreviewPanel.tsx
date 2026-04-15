@@ -6,8 +6,9 @@ import { Card } from '@alga-psa/ui/components/Card';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { FileText, Settings } from 'lucide-react';
-import type { IInvoiceTemplate, IQuote, TaxSource } from '@alga-psa/types';
+import type { IInvoiceTemplate, IQuote, TaxSource, InvoiceViewModel as DbInvoiceViewModel } from '@alga-psa/types';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
+import type { DraftInvoicePropertiesUpdateResult } from '@alga-psa/billing/actions/invoiceModification';
 import {
   getInvoiceForRendering,
   getInvoicePurchaseOrderSummary,
@@ -24,6 +25,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
 import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
+import DraftInvoiceDetailsCard from './DraftInvoiceDetailsCard';
 
 interface InvoicePreviewPanelProps {
   invoiceId: string | null;
@@ -36,8 +38,10 @@ interface InvoicePreviewPanelProps {
   onEmail?: () => Promise<void>;
   onEdit?: () => void;
   onUnfinalize?: () => Promise<void>;
+  onDraftInvoiceUpdated?: (updated: DraftInvoicePropertiesUpdateResult) => Promise<void> | void;
   isFinalized: boolean;
   creditApplied?: number;
+  draftInvoiceSummary?: DbInvoiceViewModel | null;
 }
 
 const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
@@ -51,8 +55,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   onEmail,
   onEdit,
   onUnfinalize,
+  onDraftInvoiceUpdated,
   isFinalized,
-  creditApplied = 0
+  creditApplied = 0,
+  draftInvoiceSummary = null
 }) => {
   const router = useRouter();
   const [detailedInvoiceData, setDetailedInvoiceData] = useState<WasmInvoiceViewModel | null>(null);
@@ -64,6 +70,8 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [taxSource, setTaxSource] = useState<TaxSource>('internal');
   const [sourceQuote, setSourceQuote] = useState<IQuote | null>(null);
+  const [previewRefreshCounter, setPreviewRefreshCounter] = useState(0);
+  const [draftInvoiceEditorSummary, setDraftInvoiceEditorSummary] = useState<DbInvoiceViewModel | null>(draftInvoiceSummary);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   // Match invoice/PDF rendering: honor an explicit URL template selection first,
@@ -98,6 +106,17 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     resizeObserver.observe(container);
     return () => resizeObserver.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!invoiceId) {
+      setDraftInvoiceEditorSummary(null);
+      return;
+    }
+
+    if (draftInvoiceSummary?.invoice_id === invoiceId) {
+      setDraftInvoiceEditorSummary(draftInvoiceSummary);
+    }
+  }, [draftInvoiceSummary, invoiceId]);
 
   useEffect(() => {
     const loadInvoiceData = async () => {
@@ -150,7 +169,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     };
 
     loadInvoiceData();
-  }, [invoiceId]);
+  }, [invoiceId, previewRefreshCounter]);
 
   useEffect(() => {
     let isMounted = true;
@@ -203,6 +222,24 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     }
   };
 
+  const handleDraftInvoiceUpdated = async (updated: DraftInvoicePropertiesUpdateResult) => {
+    setDraftInvoiceEditorSummary((current) => {
+      if (!current || current.invoice_id !== updated.invoiceId) {
+        return current;
+      }
+
+      return {
+        ...current,
+        invoice_number: updated.invoiceNumber,
+        invoice_date: updated.invoiceDate,
+        due_date: updated.dueDate,
+      };
+    });
+
+    setPreviewRefreshCounter((current) => current + 1);
+    await onDraftInvoiceUpdated?.(updated);
+  };
+
   // Calculate scale based on container width
   const paperShellChromePx = 24;
   const baseInvoiceWidth = resolvedPreviewPrintSettings.pageWidthPx + paperShellChromePx;
@@ -225,6 +262,13 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   return (
     <Card className="h-full">
       <div className="p-6" ref={containerRef}>
+        {!isFinalized && draftInvoiceEditorSummary ? (
+          <DraftInvoiceDetailsCard
+            invoice={draftInvoiceEditorSummary}
+            onSaved={handleDraftInvoiceUpdated}
+          />
+        ) : null}
+
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-semibold">Invoice Preview</h3>
