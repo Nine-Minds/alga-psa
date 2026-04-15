@@ -361,7 +361,7 @@
   {
     "id": "T043",
     "description": "Unit: ContractDetailSwitcher.i18n.test -- error messages and loading text render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
