@@ -433,7 +433,7 @@
   {
     "id": "T052",
     "description": "Unit: UsageBasedServicesStep.i18n.test -- step heading, unit rate/measure labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
