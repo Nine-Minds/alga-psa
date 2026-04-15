@@ -62,4 +62,29 @@ describe('Contracts i18n wiring contract', () => {
     );
     expect(getLeaf(en, 'contractDetail.alerts.saveSuccess')).toBe('Contract saved successfully!');
   });
+
+  it('T004: ContractDetail details-card labels and edit/save/cancel actions use msp/contracts keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/ContractDetail.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keys = [
+      'contractDetail.detailsCard.title',
+      'contractDetail.detailsCard.contractNameLabel',
+      'contractDetail.detailsCard.descriptionLabel',
+      'contractDetail.detailsCard.actions.editName',
+      'contractDetail.detailsCard.actions.saveName',
+      'contractDetail.detailsCard.actions.cancelName',
+      'contractDetail.detailsCard.actions.editDescription',
+      'contractDetail.detailsCard.actions.saveDescription',
+      'contractDetail.detailsCard.actions.cancelDescription',
+      'contractDetail.labels.noDescription',
+    ];
+
+    for (const key of keys) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });
