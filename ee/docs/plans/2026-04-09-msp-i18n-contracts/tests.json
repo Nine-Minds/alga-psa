@@ -172,7 +172,7 @@
   {
     "id": "T020",
     "description": "Unit: ContractLines.i18n.test -- section header, Add/Create buttons, column labels, empty state render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
