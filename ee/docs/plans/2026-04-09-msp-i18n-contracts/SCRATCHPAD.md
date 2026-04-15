@@ -375,3 +375,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/BillingFrequencyOverrideSelect.i18n.test.ts` (pass; 1 file, 1 test).
 - **(2026-04-15)** `T046` completed: added `packages/billing/tests/billing-dashboard/ServicePicker.i18n.test.ts` verifying picker placeholder/search/empty states are sourced from `servicePicker.*` translation keys and exist in `en/msp/contracts.json`.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ServicePicker.i18n.test.ts` (pass; 1 file, 1 test).
+- **(2026-04-15)** `T047` completed: added `packages/billing/tests/billing-dashboard/ContractBasicsStep.i18n.test.ts` with assertions covering translated heading/description, template picker labels/loading copy, client picker labels/hint, and contract-name field copy in `ContractBasicsStep.tsx`.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractBasicsStep.i18n.test.ts` (pass; 1 file, 1 test).

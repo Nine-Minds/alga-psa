@@ -393,7 +393,7 @@
   {
     "id": "T047",
     "description": "Unit: ContractBasicsStep.i18n.test -- step heading, template picker labels, client picker label render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]
