@@ -568,7 +568,19 @@
       "unnamedLine": "Unnamed line"
     }
   },
-  "contractLineRate": {},
+  "contractLineRate": {
+    "actions": {
+      "cancel": "Cancel",
+      "saveRate": "Save Rate"
+    },
+    "fields": {
+      "rate": "Rate"
+    },
+    "title": "Set Custom Rate for {{name}}",
+    "validation": {
+      "validRateRequired": "Please enter a valid rate (must be a non-negative number)"
+    }
+  },
   "addLines": {
     "actions": {
       "addPlural": "Add ({{count}}) Presets",

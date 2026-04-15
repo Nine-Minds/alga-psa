@@ -209,3 +209,6 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** `F048` completed in `ContractDetailSwitcher.tsx`: wired `useTranslation('msp/contracts')` and localized all loading/error states (`missing contract id`, `contract not found`, `unable/failed to load details`, `no contract selected`, `Loading contract...`).
 - **(2026-04-14)** Added `detailSwitcher.errors.*` + `detailSwitcher.loading.contract` keys in `server/public/locales/en/msp/contracts.json`.
 - **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractDetailSwitcher.tsx` (pass) and `jq empty server/public/locales/en/msp/contracts.json` (pass).
+- **(2026-04-14)** `F049` completed in `ContractLineRateDialog.tsx` and `ContractPlanRateDialog.tsx`: wired `useTranslation('msp/contracts')` in both dialogs and localized interpolated title, rate field label, validation fallback, and Save Rate/Cancel actions.
+- **(2026-04-14)** Added shared `contractLineRate.*` keys in `server/public/locales/en/msp/contracts.json`.
+- **(2026-04-14)** Verification: `npx eslint packages/billing/src/components/billing-dashboard/contracts/ContractLineRateDialog.tsx packages/billing/src/components/billing-dashboard/contracts/ContractPlanRateDialog.tsx` (pass) and `jq empty server/public/locales/en/msp/contracts.json` (pass).

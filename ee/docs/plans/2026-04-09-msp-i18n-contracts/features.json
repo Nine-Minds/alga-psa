@@ -242,7 +242,7 @@
   {
     "id": "F049",
     "description": "Wire useTranslation('msp/contracts') in ContractLineRateDialog.tsx and ContractPlanRateDialog.tsx -- translate dialog title with interpolation ('Set Custom Rate for {{name}}'), Rate label, validation error, and Save Rate / Cancel buttons",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F050",
