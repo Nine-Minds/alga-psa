@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { X, Package, Activity, BarChart3, Sparkles } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ServiceItem {
   id: string;
@@ -31,6 +32,7 @@ export function TemplateServicePreviewSection({
   onQuantityChange,
   onRemoveService,
 }: TemplateServicePreviewSectionProps) {
+  const { t } = useTranslation('msp/contracts');
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     serviceId: string;
@@ -55,13 +57,13 @@ export function TemplateServicePreviewSection({
   const getServiceTypeLabel = () => {
     switch (serviceType) {
       case 'fixed':
-        return 'Fixed Fee';
+        return t('templatePreview.serviceType.fixedFee', { defaultValue: 'Fixed Fee' });
       case 'products':
-        return 'Products';
+        return t('templatePreview.serviceType.products', { defaultValue: 'Products' });
       case 'hourly':
-        return 'Hourly';
+        return t('templatePreview.serviceType.hourly', { defaultValue: 'Hourly' });
       case 'usage':
-        return 'Usage-Based';
+        return t('templatePreview.serviceType.usageBased', { defaultValue: 'Usage-Based' });
     }
   };
 
@@ -100,7 +102,11 @@ export function TemplateServicePreviewSection({
         <ServiceIcon className="h-4 w-4" />
         <AlertDescription>
           <h4 className="text-sm font-semibold mb-3">
-            Selected {getServiceTypeLabel()} Services ({services.length})
+            {t('templatePreview.selectedHeading', {
+              type: getServiceTypeLabel(),
+              count: services.length,
+              defaultValue: 'Selected {{type}} Services ({{count}})',
+            })}
           </h4>
 
           <div className="space-y-2">
@@ -126,7 +132,7 @@ export function TemplateServicePreviewSection({
                 {onQuantityChange && service.quantity !== undefined && (
                   <div className="flex items-center gap-2">
                     <Label htmlFor={`preview-quantity-${service.id}`} className="text-xs text-[rgb(var(--color-text-500))]">
-                      Qty:
+                      {t('templatePreview.labels.qty', { defaultValue: 'Qty:' })}
                     </Label>
                     <Input
                       id={`preview-quantity-${service.id}`}
@@ -159,10 +165,17 @@ export function TemplateServicePreviewSection({
         isOpen={confirmDialog?.isOpen ?? false}
         onClose={() => setConfirmDialog(null)}
         onConfirm={handleConfirmRemove}
-        title="Remove Contract Line Preset"
-        message={`Are you sure you want to remove "${confirmDialog?.serviceName}" from "${confirmDialog?.presetName}"? This will remove all other services associated with this contract line preset as well.`}
-        confirmLabel="Remove All"
-        cancelLabel="Cancel"
+        title={t('templatePreview.removeDialog.title', {
+          defaultValue: 'Remove Contract Line Preset',
+        })}
+        message={t('templatePreview.removeDialog.message', {
+          serviceName: confirmDialog?.serviceName,
+          presetName: confirmDialog?.presetName,
+          defaultValue:
+            'Are you sure you want to remove "{{serviceName}}" from "{{presetName}}"? This will remove all other services associated with this contract line preset as well.',
+        })}
+        confirmLabel={t('templatePreview.removeDialog.confirm', { defaultValue: 'Remove All' })}
+        cancelLabel={t('templatePreview.removeDialog.cancel', { defaultValue: 'Cancel' })}
         id="remove-preset-service-confirmation"
       />
     </>

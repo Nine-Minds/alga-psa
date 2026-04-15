@@ -1,39 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { getContractOverview } from '@alga-psa/billing/actions/contractActions';
 import type { IContractOverview, IContractLineOverview } from '@alga-psa/billing/actions/contractActions';
 import { Package, Clock, Activity, Coins, Layers3, ChevronDown, ChevronRight } from 'lucide-react';
-import { cn } from '@alga-psa/ui/lib/utils';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 interface ContractOverviewProps {
   contractId: string;
   onNavigateToLines?: () => void;
 }
-
-const formatCurrency = (cents: number | null, currencyCode: string = 'USD'): string => {
-  if (cents === null) return '—';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currencyCode,
-    minimumFractionDigits: 2
-  }).format(cents / 100);
-};
-
-const formatFrequency = (frequency: string): string => {
-  const map: Record<string, string> = {
-    'weekly': 'Weekly',
-    'monthly': 'Monthly',
-    'quarterly': 'Quarterly',
-    'semi-annually': 'Semi-Annually',
-    'semi_annually': 'Semi-Annually',
-    'annually': 'Annually'
-  };
-  return map[frequency] || frequency;
-};
 
 const getTypeIcon = (type: 'Fixed' | 'Hourly' | 'Usage') => {
   switch (type) {
@@ -62,7 +42,24 @@ const ContractLineCard: React.FC<{
   isExpanded: boolean;
   onToggle: () => void;
   currencyCode: string;
-}> = ({ line, isExpanded, onToggle, currencyCode }) => {
+  formatCurrencyCents: (cents: number | null, currencyCode?: string) => string;
+  formatFrequencyLabel: (frequency: string) => string;
+  formatServiceCountLabel: (count: number) => string;
+  formatContractLineType: (value: string) => string;
+  includedServicesLabel: string;
+  noServicesConfiguredLabel: string;
+}> = ({
+  line,
+  isExpanded,
+  onToggle,
+  currencyCode,
+  formatCurrencyCents,
+  formatFrequencyLabel,
+  formatServiceCountLabel,
+  formatContractLineType,
+  includedServicesLabel,
+  noServicesConfiguredLabel,
+}) => {
   return (
     <div className="border border-[rgb(var(--color-border-200))] rounded-lg overflow-hidden">
       <button
@@ -76,14 +73,14 @@ const ContractLineCard: React.FC<{
             <div className="font-medium text-[rgb(var(--color-text-900))]">{line.contract_line_name}</div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Badge variant={getTypeBadgeVariant(line.contract_line_type)} className="text-xs">
-                {line.contract_line_type}
+                {formatContractLineType(line.contract_line_type)}
               </Badge>
               <span>•</span>
-              <span>{formatFrequency(line.billing_frequency)}</span>
+              <span>{formatFrequencyLabel(line.billing_frequency)}</span>
               {line.base_rate !== null && line.contract_line_type === 'Fixed' && (
                 <>
                   <span>•</span>
-                  <span className="font-medium text-[rgb(var(--color-text-700))]">{formatCurrency(line.base_rate, currencyCode)}</span>
+                  <span className="font-medium text-[rgb(var(--color-text-700))]">{formatCurrencyCents(line.base_rate, currencyCode)}</span>
                 </>
               )}
             </div>
@@ -92,7 +89,7 @@ const ContractLineCard: React.FC<{
         <div className="flex items-center gap-2">
           {line.services.length > 0 && (
             <span className="text-sm text-muted-foreground">
-              {line.services.length} service{line.services.length !== 1 ? 's' : ''}
+              {formatServiceCountLabel(line.services.length)}
             </span>
           )}
           {isExpanded ? (
@@ -105,7 +102,7 @@ const ContractLineCard: React.FC<{
 
       {isExpanded && line.services.length > 0 && (
         <div className="border-t border-[rgb(var(--color-border-200))] bg-muted p-3">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Included Services</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">{includedServicesLabel}</div>
           <div className="space-y-2">
             {line.services.map((service) => (
               <div
@@ -119,7 +116,7 @@ const ContractLineCard: React.FC<{
                   )}
                   {service.custom_rate !== null && (
                     <span className="font-medium text-[rgb(var(--color-text-700))]">
-                      {formatCurrency(service.custom_rate, currencyCode)}
+                      {formatCurrencyCents(service.custom_rate, currencyCode)}
                       {line.contract_line_type === 'Hourly' && '/hr'}
                       {line.contract_line_type === 'Usage' && service.unit_of_measure && `/${service.unit_of_measure}`}
                     </span>
@@ -133,7 +130,7 @@ const ContractLineCard: React.FC<{
 
       {isExpanded && line.services.length === 0 && (
         <div className="border-t border-[rgb(var(--color-border-200))] bg-muted p-3">
-          <div className="text-sm text-muted-foreground italic">No services configured</div>
+          <div className="text-sm text-muted-foreground italic">{noServicesConfiguredLabel}</div>
         </div>
       )}
     </div>
@@ -144,6 +141,10 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
   contractId,
   onNavigateToLines
 }) => {
+  const { t } = useTranslation('msp/contracts');
+  const { formatCurrency } = useFormatters();
+  const formatBillingFrequency = useFormatBillingFrequency();
+  const formatContractLineType = useFormatContractLineType();
   const [overview, setOverview] = useState<IContractOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -165,7 +166,11 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
       }
     } catch (err) {
       console.error('Error loading contract overview:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load overview');
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('contractOverview.errors.failedToLoadOverview', { defaultValue: 'Failed to load overview' })
+      );
     } finally {
       setIsLoading(false);
     }
@@ -182,6 +187,32 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
       return next;
     });
   };
+
+  const formatCurrencyCents = useCallback((cents: number | null, currencyCode: string = 'USD'): string => {
+    if (cents === null) {
+      return t('common.moneyPlaceholder', { defaultValue: '—' });
+    }
+    return formatCurrency(cents / 100, currencyCode, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }, [formatCurrency, t]);
+  const formatFrequencyLabel = useCallback((value: string): string => {
+    const formatted = formatBillingFrequency(value);
+    if (formatted !== value) {
+      return formatted;
+    }
+    return t(`contractOverview.frequency.${value}`, {
+      defaultValue: value.replace(/_/g, ' '),
+    });
+  }, [formatBillingFrequency, t]);
+  const formatServiceCountLabel = useCallback((count: number): string => (
+    count === 1
+      ? t('contractOverview.lines.serviceCountOne', { count, defaultValue: '{{count}} service' })
+      : t('contractOverview.lines.serviceCountOther', { count, defaultValue: '{{count}} services' })
+  ), [t]);
+  const includedServicesLabel = t('contractOverview.lines.includedServices', { defaultValue: 'Included Services' });
+  const noServicesConfiguredLabel = t('contractOverview.lines.noServicesConfigured', { defaultValue: 'No services configured' });
 
   if (isLoading) {
     return (
@@ -223,7 +254,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <Layers3 className="h-4 w-4 text-indigo-600" />
-          What's Included
+          {t('contractOverview.title', { defaultValue: "What's Included" })}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -233,18 +264,20 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
           <div className="bg-success/10 border border-success/30 rounded-lg p-3">
             <div className="flex items-center gap-2 text-sm text-success mb-1">
               <Coins className="h-4 w-4" />
-              <span>Est. Monthly Value</span>
+              <span>{t('contractOverview.stats.estimatedMonthlyValue', { defaultValue: 'Est. Monthly Value' })}</span>
             </div>
             <div className="text-xl font-bold text-foreground">
               {overview.totalEstimatedMonthlyValue !== null ? (
-                formatCurrency(overview.totalEstimatedMonthlyValue, overview.currencyCode)
+                formatCurrencyCents(overview.totalEstimatedMonthlyValue, overview.currencyCode)
               ) : (
-                <span className="text-base font-normal text-success">Variable</span>
+                <span className="text-base font-normal text-success">
+                  {t('contractOverview.stats.variable', { defaultValue: 'Variable' })}
+                </span>
               )}
             </div>
             {hasVariableComponents && overview.totalEstimatedMonthlyValue !== null && (
               <div className="text-xs text-success mt-1">
-                + variable (hourly/usage)
+                {t('contractOverview.stats.variableSuffix', { defaultValue: '+ variable (hourly/usage)' })}
               </div>
             )}
           </div>
@@ -253,7 +286,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
           <div className="bg-muted border border-[rgb(var(--color-border-200))] rounded-lg p-3">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <Layers3 className="h-4 w-4" />
-              <span>Contract Lines</span>
+              <span>{t('contractOverview.stats.contractLines', { defaultValue: 'Contract Lines' })}</span>
             </div>
             <div className="text-xl font-bold text-[rgb(var(--color-text-900))]">
               {overview.contractLines.length}
@@ -264,7 +297,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                 onClick={onNavigateToLines}
                 className="text-xs text-blue-600 hover:text-blue-800 mt-1"
               >
-                View details →
+                {t('contractOverview.stats.viewDetails', { defaultValue: 'View details' })} →
               </button>
             )}
           </div>
@@ -273,20 +306,20 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
           <div className="bg-muted border border-[rgb(var(--color-border-200))] rounded-lg p-3">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <Package className="h-4 w-4" />
-              <span>Total Services</span>
+              <span>{t('contractOverview.stats.totalServices', { defaultValue: 'Total Services' })}</span>
             </div>
             <div className="text-xl font-bold text-[rgb(var(--color-text-900))]">
               {overview.serviceCount}
             </div>
             <div className="flex flex-wrap gap-1 mt-1">
               {overview.hasFixedServices && (
-                <Badge variant="info" className="text-xs">Fixed</Badge>
+                <Badge variant="info" className="text-xs">{formatContractLineType('Fixed')}</Badge>
               )}
               {overview.hasHourlyServices && (
-                <Badge variant="success" className="text-xs">Hourly</Badge>
+                <Badge variant="success" className="text-xs">{formatContractLineType('Hourly')}</Badge>
               )}
               {overview.hasUsageServices && (
-                <Badge variant="warning" className="text-xs">Usage</Badge>
+                <Badge variant="warning" className="text-xs">{formatContractLineType('Usage')}</Badge>
               )}
             </div>
           </div>
@@ -296,7 +329,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
         {overview.contractLines.length > 0 ? (
           <div className="space-y-2">
             <div className="text-sm font-medium text-[rgb(var(--color-text-700))] flex items-center justify-between">
-              <span>Contract Lines</span>
+              <span>{t('contractOverview.stats.contractLines', { defaultValue: 'Contract Lines' })}</span>
               {overview.contractLines.length > 3 && (
                 <button
                   type="button"
@@ -309,7 +342,9 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                   }}
                   className="text-xs text-blue-600 hover:text-blue-800"
                 >
-                  {expandedLines.size === overview.contractLines.length ? 'Collapse all' : 'Expand all'}
+                  {expandedLines.size === overview.contractLines.length
+                    ? t('contractOverview.lines.collapseAll', { defaultValue: 'Collapse all' })
+                    : t('contractOverview.lines.expandAll', { defaultValue: 'Expand all' })}
                 </button>
               )}
             </div>
@@ -321,6 +356,12 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                   isExpanded={expandedLines.has(line.contract_line_id)}
                   onToggle={() => toggleLine(line.contract_line_id)}
                   currencyCode={overview.currencyCode}
+                  formatCurrencyCents={formatCurrencyCents}
+                  formatFrequencyLabel={formatFrequencyLabel}
+                  formatServiceCountLabel={formatServiceCountLabel}
+                  formatContractLineType={formatContractLineType}
+                  includedServicesLabel={includedServicesLabel}
+                  noServicesConfiguredLabel={noServicesConfiguredLabel}
                 />
               ))}
             </div>
@@ -328,9 +369,13 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
         ) : (
           <div className="text-center py-6 bg-muted rounded-lg border border-dashed border-[rgb(var(--color-border-300))]">
             <Layers3 className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-muted-foreground font-medium">No contract lines yet</p>
+            <p className="text-muted-foreground font-medium">
+              {t('contractOverview.lines.noContractLinesYet', { defaultValue: 'No contract lines yet' })}
+            </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Add contract lines to define what's included in this contract
+              {t('contractOverview.lines.noContractLinesDescription', {
+                defaultValue: "Add contract lines to define what's included in this contract",
+              })}
             </p>
             {onNavigateToLines && (
               <button
@@ -338,7 +383,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                 onClick={onNavigateToLines}
                 className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium"
               >
-                Add Contract Lines →
+                {t('contractOverview.lines.addContractLines', { defaultValue: 'Add Contract Lines' })} →
               </button>
             )}
           </div>

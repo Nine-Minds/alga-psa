@@ -20,7 +20,19 @@ export const HardwareSpecsPanel: React.FC<HardwareSpecsPanelProps> = ({
     return <Card className="h-64 animate-pulse bg-gray-50" />;
   }
 
-  if (!data) {
+  const fallbackData = asset?.workstation || asset?.server
+    ? {
+        cpu_utilization_percent: asset?.workstation?.cpu_utilization_percent ?? asset?.server?.cpu_usage_percent ?? null,
+        memory_utilization_percent: asset?.workstation?.memory_usage_percent ?? asset?.server?.memory_usage_percent ?? null,
+        memory_used_gb: asset?.workstation?.memory_used_gb ?? asset?.server?.memory_used_gb ?? null,
+        memory_total_gb: asset?.workstation?.ram_gb ?? asset?.server?.ram_gb ?? null,
+        storage: asset?.workstation?.disk_usage ?? asset?.server?.disk_usage ?? [],
+      }
+    : null;
+
+  const effectiveData = data ?? fallbackData;
+
+  if (!effectiveData) {
     return (
       <Card className="bg-white">
         <CardHeader>
@@ -59,12 +71,12 @@ export const HardwareSpecsPanel: React.FC<HardwareSpecsPanelProps> = ({
                  </span>
                  <div className="w-32">
                    <UtilizationBar 
-                     value={data.cpu_utilization_percent} 
+                     value={effectiveData.cpu_utilization_percent} 
                      showLabel={false}
                      size="sm"
                    />
                  </div>
-                 <span className="text-sm text-gray-900">{data.cpu_utilization_percent}%</span>
+                 <span className="text-sm text-gray-900">{effectiveData.cpu_utilization_percent ?? '—'}{effectiveData.cpu_utilization_percent != null ? '%' : ''}</span>
                </div>
             </div>
           </div>
@@ -76,10 +88,10 @@ export const HardwareSpecsPanel: React.FC<HardwareSpecsPanelProps> = ({
             </span>
             <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                <span className="text-sm text-gray-900 min-w-[120px]">
-                 {data.memory_total_gb
+                 {effectiveData.memory_total_gb
                    ? t('hardwareSpecsPanel.values.unifiedMemory', {
                      defaultValue: '{{size}}GB Unified Memory',
-                     size: data.memory_total_gb
+                     size: effectiveData.memory_total_gb
                    })
                    : t('hardwareSpecsPanel.values.unknown', { defaultValue: 'Unknown' })}
                </span>
@@ -89,17 +101,17 @@ export const HardwareSpecsPanel: React.FC<HardwareSpecsPanelProps> = ({
                  </span>
                  <div className="w-32">
                    <UtilizationBar 
-                     value={data.memory_utilization_percent} 
+                     value={effectiveData.memory_utilization_percent} 
                      showLabel={false}
                      size="sm"
                    />
                  </div>
                  <span className="text-sm text-gray-900">
-                   {data.memory_utilization_percent}% 
-                   {data.memory_used_gb
+                   {effectiveData.memory_utilization_percent ?? '—'}{effectiveData.memory_utilization_percent != null ? '%' : ''} 
+                   {effectiveData.memory_used_gb
                      ? t('hardwareSpecsPanel.values.memoryUsed', {
                        defaultValue: ' ({{size}}GB Used)',
-                       size: data.memory_used_gb.toFixed(1)
+                       size: effectiveData.memory_used_gb.toFixed(1)
                      })
                      : ''}
                  </span>
@@ -109,7 +121,7 @@ export const HardwareSpecsPanel: React.FC<HardwareSpecsPanelProps> = ({
 
           {/* Storage */}
           <div>
-             {data.storage.map((drive, index) => (
+             {effectiveData.storage.map((drive, index) => (
               <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2 last:mb-0">
                  <span className="text-sm font-bold text-gray-700 w-16 shrink-0">
                    {t('hardwareSpecsPanel.fields.storage', { defaultValue: 'Storage' })}:
@@ -134,7 +146,7 @@ export const HardwareSpecsPanel: React.FC<HardwareSpecsPanelProps> = ({
                  </div>
               </div>
              ))}
-             {data.storage.length === 0 && (
+             {effectiveData.storage.length === 0 && (
                <p className="text-sm text-gray-500">
                  {t('hardwareSpecsPanel.emptyStorage', { defaultValue: 'No storage drives detected' })}
                </p>

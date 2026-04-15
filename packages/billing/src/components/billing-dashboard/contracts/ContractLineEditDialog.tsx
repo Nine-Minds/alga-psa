@@ -9,6 +9,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import { getCurrencySymbol } from '@alga-psa/core';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ContractLineEditDialogProps {
   line: {
@@ -26,6 +27,7 @@ interface ContractLineEditDialogProps {
 }
 
 export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: ContractLineEditDialogProps) {
+  const { t } = useTranslation('msp/contracts');
   const initialRateCents =
     line.rate !== undefined && line.rate !== null
       ? Math.round(Number(line.rate))
@@ -47,7 +49,9 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
 
     const dollars = Number.parseFloat(rateInput);
     if (!Number.isFinite(dollars) || dollars < 0) {
-      setError('Please enter a valid rate (must be a non-negative number)');
+      setError(t('contractLineEdit.validation.validRateRequired', {
+        defaultValue: 'Please enter a valid rate (must be a non-negative number)',
+      }));
       return;
     }
 
@@ -57,7 +61,9 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
     try {
       await onSave(line.contract_line_id, rateCents, billingTiming);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save changes');
+      setError(err instanceof Error ? err.message : t('contractLineEdit.errors.failedToSaveChanges', {
+        defaultValue: 'Failed to save changes',
+      }));
       setIsSaving(false);
     }
   };
@@ -66,7 +72,10 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
     <Dialog
       isOpen={true}
       onClose={onClose}
-      title={`Edit Contract Line: ${line.contract_line_name}`}
+      title={t('contractLineEdit.title', {
+        defaultValue: 'Edit Contract Line: {{name}}',
+        name: line.contract_line_name ?? t('contractLineEdit.values.unnamedLine', { defaultValue: 'Unnamed line' }),
+      })}
       className="max-w-md"
       footer={(
         <div className="flex justify-end space-x-2">
@@ -77,7 +86,7 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
             onClick={onClose}
             disabled={isSaving}
           >
-            Cancel
+            {t('contractLineEdit.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button
             id="save-edit-line-btn"
@@ -85,7 +94,9 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
             onClick={() => (document.getElementById('contract-line-edit-form') as HTMLFormElement | null)?.requestSubmit()}
             disabled={isSaving}
           >
-            {isSaving ? 'Saving...' : 'Save Changes'}
+            {isSaving
+              ? t('contractLineEdit.actions.saving', { defaultValue: 'Saving...' })
+              : t('contractLineEdit.actions.saveChanges', { defaultValue: 'Save Changes' })}
           </Button>
         </div>
       )}
@@ -101,10 +112,10 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
 
           {/* Custom Rate Section */}
           <div className="space-y-4">
-            <h4 className="font-medium text-sm">Pricing</h4>
+            <h4 className="font-medium text-sm">{t('contractLineEdit.sections.pricing', { defaultValue: 'Pricing' })}</h4>
 
             <div>
-              <Label htmlFor="contract-line-rate">Rate</Label>
+              <Label htmlFor="contract-line-rate">{t('contractLineEdit.fields.rate', { defaultValue: 'Rate' })}</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                   {currencySymbol}
@@ -142,28 +153,42 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
 
           {/* Billing Timing Section */}
           <div className="space-y-4 border-t pt-4">
-            <h4 className="font-medium text-sm">Billing Timing</h4>
+            <h4 className="font-medium text-sm">
+              {t('contractLineEdit.sections.billingTiming', { defaultValue: 'Billing Timing' })}
+            </h4>
 
             <div>
-              <Label htmlFor="billing-timing">When should this line be billed?</Label>
+              <Label htmlFor="billing-timing">
+                {t('contractLineEdit.fields.billingTimingQuestion', {
+                  defaultValue: 'When should this line be billed?',
+                })}
+              </Label>
               <CustomSelect
                 value={billingTiming}
                 onValueChange={(value) => setBillingTiming(value as 'arrears' | 'advance')}
                 options={[
                   {
-                    label: 'In Arrears (at end of billing period)',
+                    label: t('contractLineEdit.timingOptions.arrears', {
+                      defaultValue: 'In Arrears (at end of billing period)',
+                    }),
                     value: 'arrears'
                   },
                   {
-                    label: 'In Advance (at start of billing period)',
+                    label: t('contractLineEdit.timingOptions.advance', {
+                      defaultValue: 'In Advance (at start of billing period)',
+                    }),
                     value: 'advance'
                   }
                 ]}
               />
               <p className="text-xs text-muted-foreground mt-2">
                 {billingTiming === 'arrears'
-                  ? 'Charges will be billed after the service is provided'
-                  : 'Charges will be billed before the service is provided'}
+                  ? t('contractLineEdit.timingDescriptions.arrears', {
+                    defaultValue: 'Charges will be billed after the service is provided',
+                  })
+                  : t('contractLineEdit.timingDescriptions.advance', {
+                    defaultValue: 'Charges will be billed before the service is provided',
+                  })}
               </p>
             </div>
           </div>

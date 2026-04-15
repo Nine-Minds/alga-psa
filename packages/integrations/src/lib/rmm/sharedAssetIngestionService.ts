@@ -71,7 +71,7 @@ async function upsertAssetExtension(
   if (!table) return;
 
   const ext = args.snapshot.extension ?? {};
-  const patch = {
+  const patch: Record<string, unknown> = {
     os_type: ext.osType ?? null,
     os_version: ext.osVersion ?? null,
     agent_version: ext.agentVersion ?? null,
@@ -87,8 +87,28 @@ async function upsertAssetExtension(
     pending_software_patches: ext.pendingSoftwarePatches ?? null,
     failed_patches: ext.failedPatches ?? null,
     last_patch_scan_at: parseIsoDate(ext.lastPatchScanAt),
-    system_info: ext.systemInfo ?? null,
+    system_info: ext.systemInfo ? JSON.stringify(ext.systemInfo) : null,
   };
+
+  if (typeof ext.cpuModel !== 'undefined') {
+    patch.cpu_model = ext.cpuModel ?? null;
+  }
+
+  if (typeof ext.cpuCores !== 'undefined') {
+    patch.cpu_cores = ext.cpuCores ?? null;
+  }
+
+  if (typeof ext.ramGb !== 'undefined') {
+    patch.ram_gb = ext.ramGb ?? null;
+  }
+
+  if (typeof ext.diskUsage !== 'undefined') {
+    patch.disk_usage = ext.diskUsage ? JSON.stringify(ext.diskUsage) : null;
+  }
+
+  if (typeof ext.installedSoftware !== 'undefined') {
+    patch.installed_software = JSON.stringify(ext.installedSoftware ?? []);
+  }
 
   await trx(table)
     .insert({
@@ -242,6 +262,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
     if (existingAsset?.asset_id) {
       const assetId = String(existingAsset.asset_id);
       const assetPatch: Record<string, unknown> = {
+        asset_type: assetType,
         name: snapshot.displayName,
         serial_number: snapshot.serialNumber ?? '',
         status: assetStatus,
@@ -265,7 +286,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
       await upsertAssetExtension(trx, {
         tenant,
         assetId,
-        assetType: normalizeAssetType(existingAsset.asset_type),
+        assetType,
         snapshot,
       });
 

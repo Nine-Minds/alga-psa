@@ -11,6 +11,7 @@ import { Plus, X, Activity } from 'lucide-react';
 import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from '../../BucketOverlayFields';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TemplateHourlyServicesStepProps {
   data: TemplateWizardData;
@@ -21,6 +22,8 @@ export function TemplateHourlyServicesStep({
   data,
   updateData,
 }: TemplateHourlyServicesStepProps) {
+  const { t } = useTranslation('msp/contracts');
+
   const handleAddService = () => {
     updateData({
       hourly_services: [
@@ -85,14 +88,16 @@ export function TemplateHourlyServicesStep({
       if (service.service_id) {
         items.push({
           id: `service-${service.service_id}`,
-          name: service.service_name || 'Unknown Service',
+          name:
+            service.service_name ||
+            t('templateHourly.preview.unknownService', { defaultValue: 'Unknown Service' }),
           serviceId: service.service_id,
         });
       }
     }
 
     return items;
-  }, [data.hourly_services]);
+  }, [data.hourly_services, t]);
 
   const handlePreviewRemoveService = (itemId: string) => {
     if (itemId.startsWith('service-')) {
@@ -109,15 +114,26 @@ export function TemplateHourlyServicesStep({
     <ReflectionContainer id="template-hourly-services-step">
       <div className="space-y-6">
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">Hourly Services</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            {t('templateHourly.heading', { defaultValue: 'Hourly Services' })}
+          </h3>
           <p className="text-sm text-[rgb(var(--color-text-500))]">
-            Select services that are billed based on time tracked. Rates will be determined by the service's pricing in the client's currency when the contract is created.
+            {t('templateHourly.description', {
+              defaultValue:
+                "Select services that are billed based on time tracked. Rates will be determined by the service's pricing in the client's currency when the contract is created.",
+            })}
           </p>
         </div>
 
         <div className="p-4 bg-accent-50 border border-accent-200 rounded-md mb-6">
           <p className="text-sm text-accent-900">
-            <strong>What are Hourly Services?</strong> These services are billed based on actual time tracked. Each time entry will be multiplied by the service's hourly rate to calculate the invoice amount.
+            <strong>
+              {t('templateHourly.info.title', { defaultValue: 'What are Hourly Services?' })}
+            </strong>{' '}
+            {t('templateHourly.info.description', {
+              defaultValue:
+                "These services are billed based on actual time tracked. Each time entry will be multiplied by the service's hourly rate to calculate the invoice amount.",
+            })}
           </p>
         </div>
 
@@ -130,11 +146,15 @@ export function TemplateHourlyServicesStep({
         {/* Time rounding settings - shown once if any hourly services are added */}
         {data.hourly_services.length > 0 && (
           <div className="p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-[rgb(var(--color-border-50))]">
-            <h4 className="text-sm font-medium mb-3">Time Rounding Settings</h4>
+            <h4 className="text-sm font-medium mb-3">
+              {t('templateHourly.rounding.heading', { defaultValue: 'Time Rounding Settings' })}
+            </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="template-min-time" className="text-sm">
-                  Minimum Billable Time (minutes)
+                  {t('templateHourly.rounding.minimumBillableTime', {
+                    defaultValue: 'Minimum Billable Time (minutes)',
+                  })}
                 </Label>
                 <Input
                   id="template-min-time"
@@ -149,13 +169,22 @@ export function TemplateHourlyServicesStep({
                       ),
                     })
                   }
-                  placeholder="15"
+                  placeholder={t('templateHourly.rounding.defaultIntervalPlaceholder', {
+                    defaultValue: '15',
+                  })}
                 />
-                <p className="text-xs text-[rgb(var(--color-text-400))]">e.g., 15 minutes - any time entry less than this will be rounded up</p>
+                <p className="text-xs text-[rgb(var(--color-text-400))]">
+                  {t('templateHourly.rounding.minimumBillableTimeHelp', {
+                    defaultValue:
+                      'Example: 15 minutes. Any time entry below this threshold is rounded up.',
+                  })}
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="template-round-up" className="text-sm">
-                  Round Up To Nearest (minutes)
+                  {t('templateHourly.rounding.roundUpToNearest', {
+                    defaultValue: 'Round Up To Nearest (minutes)',
+                  })}
                 </Label>
                 <Input
                   id="template-round-up"
@@ -170,9 +199,16 @@ export function TemplateHourlyServicesStep({
                       ),
                     })
                   }
-                  placeholder="15"
+                  placeholder={t('templateHourly.rounding.defaultIntervalPlaceholder', {
+                    defaultValue: '15',
+                  })}
                 />
-                <p className="text-xs text-[rgb(var(--color-text-400))]">e.g., 15 minutes - time entries will be rounded up to the nearest interval</p>
+                <p className="text-xs text-[rgb(var(--color-text-400))]">
+                  {t('templateHourly.rounding.roundUpToNearestHelp', {
+                    defaultValue:
+                      'Example: 15 minutes. Time entries are rounded up to the nearest interval.',
+                  })}
+                </p>
               </div>
             </div>
           </div>
@@ -181,7 +217,7 @@ export function TemplateHourlyServicesStep({
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
-            Services
+            {t('templateHourly.fields.services', { defaultValue: 'Services' })}
           </Label>
 
           {data.hourly_services.map((service, index) => (
@@ -192,7 +228,10 @@ export function TemplateHourlyServicesStep({
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`template-hourly-service-${index}`} className="text-sm">
-                    Service {index + 1}
+                    {t('templateHourly.fields.serviceNumber', {
+                      index: index + 1,
+                      defaultValue: 'Service {{index}}',
+                    })}
                   </Label>
                   <ServiceCatalogPicker
                     id={`template-hourly-service-${index}`}
@@ -200,13 +239,17 @@ export function TemplateHourlyServicesStep({
                     selectedLabel={service.service_name}
                     onSelect={(item) => handleServiceChange(index, item)}
                     itemKinds={['service']}
-                    placeholder="Select a service"
+                    placeholder={t('templateHourly.placeholders.selectService', {
+                      defaultValue: 'Select a service',
+                    })}
                   />
                 </div>
 
                 <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
                   <SwitchWithLabel
-                    label="Set bucket of hours"
+                    label={t('templateHourly.fields.setBucketOfHours', {
+                      defaultValue: 'Set bucket of hours',
+                    })}
                     checked={Boolean(service.bucket_overlay)}
                     onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
                   />
@@ -243,7 +286,7 @@ export function TemplateHourlyServicesStep({
             className="inline-flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Add Service
+            {t('templateHourly.actions.addService', { defaultValue: 'Add Service' })}
           </Button>
         </div>
       </div>

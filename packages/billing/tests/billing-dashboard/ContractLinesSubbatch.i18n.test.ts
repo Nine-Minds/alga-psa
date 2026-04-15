@@ -588,6 +588,10 @@ describe('MSP contract-lines sub-batch i18n wiring contract', () => {
 
   it('T052: ROUTE_NAMESPACES includes msp/contract-lines on billing route', () => {
     const configSource = read('../../../core/src/lib/i18n/config.ts');
-    expect(configSource).toContain("'/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/reports', 'msp/billing', 'msp/contract-lines']");
+    // Match the /msp/billing entry and assert msp/contract-lines is in its list.
+    // Loose match so follow-on batches (msp/contracts, etc.) can extend the route without breaking this test.
+    const match = configSource.match(/'\/msp\/billing'\s*:\s*\[([^\]]+)\]/);
+    expect(match).not.toBeNull();
+    expect(match![1]).toContain("'msp/contract-lines'");
   });
 });

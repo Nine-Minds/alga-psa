@@ -12,8 +12,9 @@ import { IContract } from '@alga-psa/types';
 import { updateContract } from '@alga-psa/billing/actions/contractActions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 interface ContractFormProps {
   contract: IContract;
@@ -21,6 +22,8 @@ interface ContractFormProps {
 }
 
 const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated }) => {
+  const { t } = useTranslation('msp/contracts');
+  const billingFrequencyOptions = useBillingFrequencyOptions();
   const [contractName, setContractName] = useState(contract.contract_name);
   const [description, setDescription] = useState(contract.contract_description ?? '');
   const [status, setStatus] = useState<string>(contract.status);
@@ -43,10 +46,10 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
 
     const errors: string[] = [];
     if (!contractName.trim()) {
-      errors.push('Contract name');
+      errors.push(t('contractForm.validation.contractName', { defaultValue: 'Contract name' }));
     }
     if (!billingFrequency) {
-      errors.push('Billing frequency');
+      errors.push(t('contractForm.validation.billingFrequency', { defaultValue: 'Billing frequency' }));
     }
 
     if (errors.length > 0) {
@@ -77,7 +80,9 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
       onContractUpdated();
     } catch (error) {
       console.error('Error updating contract:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update contract';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('contractForm.errors.failedToUpdateContract', { defaultValue: 'Failed to update contract' });
       setValidationErrors([errorMessage]);
     } finally {
       setIsSaving(false);
@@ -88,12 +93,16 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
     <Card size="2">
       <Box p="4">
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          <h3 className="text-lg font-medium mb-4">Contract Details</h3>
+          <h3 className="text-lg font-medium mb-4">
+            {t('contractForm.heading', { defaultValue: 'Contract Details' })}
+          </h3>
 
           {hasAttemptedSubmit && validationErrors.length > 0 && (
             <Alert variant="destructive">
               <AlertDescription>
-                <p className="font-medium mb-2">Please fill in the required fields:</p>
+                <p className="font-medium mb-2">
+                  {t('contractForm.validation.requiredFields', { defaultValue: 'Please fill in the required fields:' })}
+                </p>
                 <ul className="list-disc list-inside space-y-1">
                   {validationErrors.map((err, index) => (
                     <li key={index}>{err}</li>
@@ -104,7 +113,9 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
           )}
 
           <div>
-            <Label htmlFor="contract-name">Contract Name *</Label>
+            <Label htmlFor="contract-name">
+              {t('contractForm.fields.contractName', { defaultValue: 'Contract Name' })} *
+            </Label>
             <Input
               id="contract-name"
               value={contractName}
@@ -112,26 +123,28 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
                 setContractName(e.target.value);
                 clearErrorIfSubmitted();
               }}
-              placeholder="Enter contract name"
+              placeholder={t('contractForm.fields.contractNamePlaceholder', { defaultValue: 'Enter contract name' })}
               required
               className={hasAttemptedSubmit && !contractName.trim() ? 'border-red-500' : ''}
             />
           </div>
 
           <div>
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t('contractForm.fields.description', { defaultValue: 'Description' })}</Label>
             <TextArea
               id="description"
               value={description}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
-              placeholder="Enter contract description"
+              placeholder={t('contractForm.fields.descriptionPlaceholder', { defaultValue: 'Enter contract description' })}
               className="min-h-[100px]"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="billing-frequency">Billing Frequency *</Label>
+              <Label htmlFor="billing-frequency">
+                {t('contractForm.fields.billingFrequency', { defaultValue: 'Billing Frequency' })} *
+              </Label>
               <CustomSelect
                 id="billing-frequency"
                 value={billingFrequency}
@@ -139,40 +152,44 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
                   setBillingFrequency(value);
                   clearErrorIfSubmitted();
                 }}
-                options={BILLING_FREQUENCY_OPTIONS}
-                placeholder="Select billing frequency"
+                options={billingFrequencyOptions}
+                placeholder={t('contractForm.fields.billingFrequencyPlaceholder', { defaultValue: 'Select billing frequency' })}
                 className={hasAttemptedSubmit && !billingFrequency ? 'ring-1 ring-red-500' : ''}
               />
             </div>
             <div>
-              <Label htmlFor="currency-code">Currency</Label>
+              <Label htmlFor="currency-code">{t('contractForm.fields.currency', { defaultValue: 'Currency' })}</Label>
               <CustomSelect
                 id="currency-code"
                 value={currencyCode}
                 onValueChange={setCurrencyCode}
                 options={CURRENCY_OPTIONS}
-                placeholder="Select currency"
+                placeholder={t('contractForm.fields.currencyPlaceholder', { defaultValue: 'Select currency' })}
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="status">Status</Label>
+            <Label htmlFor="status">{t('contractForm.fields.status', { defaultValue: 'Status' })}</Label>
             <CustomSelect
               id="status"
               value={status}
               onValueChange={(value) => setStatus(value)}
               options={[
-                { value: 'active', label: 'Active' },
-                { value: 'draft', label: 'Draft' },
-                { value: 'terminated', label: 'Terminated' },
-                ...(contract.status === 'expired' ? [{ value: 'expired', label: 'Expired' }] : [])
+                { value: 'active', label: t('contractForm.status.active', { defaultValue: 'Active' }) },
+                { value: 'draft', label: t('contractForm.status.draft', { defaultValue: 'Draft' }) },
+                { value: 'terminated', label: t('contractForm.status.terminated', { defaultValue: 'Terminated' }) },
+                ...(contract.status === 'expired'
+                  ? [{ value: 'expired', label: t('contractForm.status.expired', { defaultValue: 'Expired' }) }]
+                  : [])
               ]}
               disabled={contract.status === 'expired'}
             />
             {contract.status === 'expired' && (
               <p className="text-xs text-muted-foreground mt-1">
-                Expired contracts cannot be changed to another status
+                {t('contractForm.status.expiredHelper', {
+                  defaultValue: 'Expired contracts cannot be changed to another status',
+                })}
               </p>
             )}
           </div>
@@ -184,7 +201,9 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
               disabled={isSaving}
               className={!contractName.trim() || !billingFrequency ? 'opacity-50' : ''}
             >
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving
+                ? t('contractForm.actions.saving', { defaultValue: 'Saving...' })
+                : t('contractForm.actions.saveChanges', { defaultValue: 'Save Changes' })}
               {!isSaving && <Save className="ml-2 h-4 w-4" />}
             </Button>
           </div>

@@ -7,6 +7,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ContractLineRateDialogProps {
   contractLine: {
@@ -20,6 +21,7 @@ interface ContractLineRateDialogProps {
 }
 
 export function ContractLineRateDialog({ contractLine, onClose, onSave }: ContractLineRateDialogProps) {
+  const { t } = useTranslation('msp/contracts');
   const [rate, setRate] = useState<number>(
     contractLine.rate !== undefined && contractLine.rate !== null ? contractLine.rate : 0
   );
@@ -29,7 +31,9 @@ export function ContractLineRateDialog({ contractLine, onClose, onSave }: Contra
     e.preventDefault();
 
     if (isNaN(rate) || rate < 0) {
-      setError('Please enter a valid rate (must be a non-negative number)');
+      setError(t('contractLineRate.validation.validRateRequired', {
+        defaultValue: 'Please enter a valid rate (must be a non-negative number)',
+      }));
       return;
     }
 
@@ -40,7 +44,10 @@ export function ContractLineRateDialog({ contractLine, onClose, onSave }: Contra
     <Dialog
       isOpen={true}
       onClose={onClose}
-      title={`Set Custom Rate for ${contractLine.contract_line_name}`}
+      title={t('contractLineRate.title', {
+        defaultValue: 'Set Custom Rate for {{name}}',
+        name: contractLine.contract_line_name,
+      })}
       className="max-w-md"
       footer={(
         <div className="flex justify-end space-x-2">
@@ -50,14 +57,14 @@ export function ContractLineRateDialog({ contractLine, onClose, onSave }: Contra
             variant="secondary"
             onClick={onClose}
           >
-            Cancel
+            {t('contractLineRate.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button
             id="save-rate-btn"
             type="button"
             onClick={() => (document.getElementById('contract-plan-rate-form') as HTMLFormElement | null)?.requestSubmit()}
           >
-            Save Rate
+            {t('contractLineRate.actions.saveRate', { defaultValue: 'Save Rate' })}
           </Button>
         </div>
       )}
@@ -73,7 +80,7 @@ export function ContractLineRateDialog({ contractLine, onClose, onSave }: Contra
             )}
             
             <div>
-              <Label htmlFor="custom-rate">Rate</Label>
+              <Label htmlFor="custom-rate">{t('contractLineRate.fields.rate', { defaultValue: 'Rate' })}</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
                 <Input

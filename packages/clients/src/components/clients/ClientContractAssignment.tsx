@@ -3,28 +3,24 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Plus, MoreVertical, Calendar, AlertCircle } from 'lucide-react';
+import { Plus, MoreVertical, Calendar, AlertCircle, Wand2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
-import { IContract } from '@alga-psa/types';
 import { IClientContract } from '@alga-psa/types';
-import { getContractsAsync } from '../../lib/billingHelpers';
 import {
   getClientContracts,
   getDetailedClientContract,
-  assignContractToClient,
   updateClientContract,
   deactivateClientContract,
-  applyContractToClient
 } from '@alga-psa/clients/actions';
 import { getClientById } from '@alga-psa/clients/actions';
+import { useClientCrossFeature } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ClientContractDialog, ClientContractDialogSubmission } from './ClientContractDialog';
@@ -44,14 +40,14 @@ interface DetailedClientContract extends IClientContract {
 
 const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ clientId, onAssignmentsChanged }) => {
   const { t } = useTranslation('msp/clients');
+  const { renderContractWizard, renderContractQuickAdd } = useClientCrossFeature();
   const [clientContracts, setClientContracts] = useState<DetailedClientContract[]>([]);
-  const [availableContracts, setAvailableContracts] = useState<IContract[]>([]);
-  const [selectedContractToAdd, setSelectedContractToAdd] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [clientName, setClientName] = useState<string>('');
-  const [editingContract, setEditingContract] = useState<DetailedClientContract | null>(null); // Keep state for editing dialog
-  // Remove state for separate details dialog
+  const [editingContract, setEditingContract] = useState<DetailedClientContract | null>(null);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -78,13 +74,8 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
       const client = await getClientById(clientId);
       setClientName(client?.client_name || '');
 
-      // Get all contracts and client contracts
-      const [contracts, clientContractsData] = await Promise.all([
-        getContractsAsync(),
-        getClientContracts(clientId)
-      ]);
+      const clientContractsData = await getClientContracts(clientId);
 
-      // Get detailed information for each client contract
       const detailedContracts: DetailedClientContract[] = [];
       for (const contract of clientContractsData) {
         if (contract.client_contract_id) {
@@ -102,14 +93,6 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
       }
 
       setClientContracts(detailedContracts);
-      setAvailableContracts(contracts.filter(c => c.is_active));
-
-      const activeContracts = contracts.filter((c) => c.is_active);
-      if (activeContracts.length > 0) {
-        setSelectedContractToAdd(activeContracts[0].contract_id || null);
-      } else {
-        setSelectedContractToAdd(null);
-      }
     } catch (error) {
       console.error('Error fetching data:', error);
       setError(t('clientContractAssignment.loadError', { defaultValue: 'Failed to load contracts data' }));
@@ -118,48 +101,16 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     }
   };
 
-  const handleAddContract = async (payload: ClientContractDialogSubmission) => {
-    if (!clientId || !selectedContractToAdd) return;
-    
-    try {
-      const createdAssignment = await assignContractToClient(
-        clientId,
-        selectedContractToAdd,
-        payload.startDate,
-        payload.endDate,
-        payload.endDate
-          ? {
-              renewal_mode: payload.renewal_mode,
-              notice_period_days: payload.notice_period_days,
-              renewal_term_months: payload.renewal_term_months,
-              use_tenant_renewal_defaults: payload.use_tenant_renewal_defaults,
-            }
-          : undefined
-      );
-      
-      if (createdAssignment.client_contract_id) {
-        await applyContractToClient(createdAssignment.client_contract_id);
-      }
-      
-      await fetchData(); // Refresh data
-      await onAssignmentsChanged?.();
-    } catch (error: any) {
-      console.error('Error adding contract to client:', error);
-      // Try to extract backend error message
-      let errorMsg = t('clientContractAssignment.addError', { defaultValue: 'Failed to add contract to client' });
-      if (error?.message) {
-        errorMsg = error.message;
-      } else if (typeof error === 'string') {
-        errorMsg = error;
-      } else if (error?.response?.data?.message) {
-        errorMsg = error.response.data.message;
-      }
-      // Replace clientId with clientName in error message if present
-      if (clientName && errorMsg.includes(clientId)) {
-        errorMsg = errorMsg.replaceAll(clientId, clientName);
-      }
-      setError(errorMsg);
-    }
+  const handleWizardComplete = async () => {
+    setIsWizardOpen(false);
+    await fetchData();
+    await onAssignmentsChanged?.();
+  };
+
+  const handleQuickAddSaved = async () => {
+    setIsQuickAddOpen(false);
+    await fetchData();
+    await onAssignmentsChanged?.();
   };
 
   const handleDeactivateContract = async (clientContractId: string) => {
@@ -279,14 +230,34 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     },
     {
       title: t('clientContractAssignment.status', { defaultValue: 'Status' }),
-      dataIndex: 'is_active',
-      render: (value) => (
-        <Badge variant={value ? 'success' : 'default-muted'}>
-          {value
-            ? t('common.states.active', { defaultValue: 'Active' })
-            : t('common.states.inactive', { defaultValue: 'Inactive' })}
-        </Badge>
-      ),
+      dataIndex: 'assignment_status',
+      render: (_value, record) => {
+        const rec = record as any;
+        const rawStatus: string = (rec.assignment_status ?? rec.contract_status ?? (record.is_active ? 'active' : 'inactive')).toString().toLowerCase();
+        const variantByStatus: Record<string, 'success' | 'warning' | 'default-muted' | 'error' | 'info'> = {
+          active: 'success',
+          draft: 'default-muted',
+          expired: 'error',
+          terminated: 'warning',
+          archived: 'default-muted',
+          published: 'success',
+          inactive: 'default-muted',
+        };
+        const labelByStatus: Record<string, string> = {
+          active: t('common.states.active', { defaultValue: 'Active' }),
+          draft: t('common.states.draft', { defaultValue: 'Draft' }),
+          expired: t('common.states.expired', { defaultValue: 'Expired' }),
+          terminated: t('common.states.terminated', { defaultValue: 'Terminated' }),
+          archived: t('common.states.archived', { defaultValue: 'Archived' }),
+          published: t('common.states.published', { defaultValue: 'Published' }),
+          inactive: t('common.states.inactive', { defaultValue: 'Inactive' }),
+        };
+        return (
+          <Badge variant={variantByStatus[rawStatus] ?? 'default-muted'}>
+            {labelByStatus[rawStatus] ?? rawStatus}
+          </Badge>
+        );
+      },
     },
     {
       title: t('clientContractAssignment.contractLines', { defaultValue: 'Contract Lines' }),
@@ -340,8 +311,6 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     },
   ];
 
-  const selectableContracts = availableContracts;
-
   return (
     <Card size="2">
       <Box p="4">
@@ -379,34 +348,45 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
               )}
             </div>
             
-            <div className="flex space-x-2 mt-4">
-              <CustomSelect
-                options={selectableContracts.map(c => ({
-                  value: c.contract_id!,
-                  label: c.contract_name
-                }))}
-                onValueChange={setSelectedContractToAdd}
-                value={selectedContractToAdd || ''}
-                placeholder={t('clientContractAssignment.selectContract', { defaultValue: 'Select contract...' })}
-                className="flex-grow"
-              />
-              <ClientContractDialog
-                onContractAssigned={handleAddContract}
-                triggerButton={
-                  <Button
-                    id="assign-contract-button"
-                    disabled={!selectedContractToAdd || selectableContracts.length === 0}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    {t('clientContractAssignment.assignContract', { defaultValue: 'Assign Contract' })}
-                  </Button>
-                }
-              />
+            <div className="flex flex-wrap gap-2 mt-4 justify-end">
+              <Button
+                id="quick-add-contract-button"
+                variant="outline"
+                className="inline-flex items-center gap-2"
+                onClick={() => setIsQuickAddOpen(true)}
+                disabled={!renderContractQuickAdd}
+              >
+                <Plus className="h-4 w-4" />
+                {t('clientContractAssignment.quickAdd', { defaultValue: 'Quick Add' })}
+              </Button>
+              <Button
+                id="create-contract-button"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                onClick={() => setIsWizardOpen(true)}
+                disabled={!renderContractWizard}
+              >
+                <Wand2 className="h-4 w-4" />
+                {t('clientContractAssignment.createContract', { defaultValue: 'Create Contract' })}
+              </Button>
             </div>
           </>
         )}
       </Box>
-      
+
+      {renderContractWizard?.({
+        open: isWizardOpen,
+        onOpenChange: setIsWizardOpen,
+        onComplete: handleWizardComplete,
+        clientId,
+      })}
+
+      {renderContractQuickAdd?.({
+        open: isQuickAddOpen,
+        onOpenChange: setIsQuickAddOpen,
+        onSaved: handleQuickAddSaved,
+        clientId,
+      })}
+
       {editingContract && (
         <ClientContractDialog
           isOpen={true}

@@ -28,6 +28,7 @@ export const AssetDashboardGrid: React.FC<AssetDashboardGridProps> = ({
       {/* Left Column (2/3 width on large screens) */}
       <div className="lg:col-span-2 flex flex-col gap-6">
         <RmmVitalsPanel 
+          asset={asset}
           data={rmmData} 
           isLoading={isLoading} 
           onRefresh={onRefreshRmm}

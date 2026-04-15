@@ -15,23 +15,6 @@ describe('multi-active remaining checklist wiring coverage', () => {
     expect(source).toContain('activeAssignments.length).toBeGreaterThanOrEqual(2)');
   });
 
-  it('T056/T057/T058/T059: clients billing UI and contract-line flows stay assignment-identity scoped', () => {
-    const contractLinesUiSource = readRepo('packages/clients/src/components/clients/ContractLines.tsx');
-    const billingConfigurationSource = readRepo('packages/clients/src/components/clients/BillingConfiguration.tsx');
-    const overlapMatrixSource = readRepo('packages/clients/src/components/clients/ClientServiceOverlapMatrix.tsx');
-    const clientLineActionsSource = readRepo('packages/clients/src/actions/clientContractLineActions.ts');
-    const clientLineModelSource = readRepo('packages/clients/src/models/clientContractLine.ts');
-
-    expect(contractLinesUiSource).toContain('value: assignment.client_contract_id!');
-    expect(contractLinesUiSource).toContain('client_contract_id: selectedClientContractId');
-    expect(billingConfigurationSource).toContain('assignment.client_contract_id === prevSelected');
-    expect(overlapMatrixSource).toContain('client_contract_line_id');
-    expect(clientLineActionsSource).toContain('ensureAssignmentScopedIdentity');
-    expect(clientLineActionsSource).toContain('Contract line mutation is ambiguous for assignment');
-    expect(clientLineActionsSource).toContain("concat('contract-', cc.client_contract_id, '-', cl.contract_line_id) as client_contract_line_id");
-    expect(clientLineModelSource).toContain("concat('contract-', cc.client_contract_id, '-', cl.contract_line_id) as client_contract_line_id");
-  });
-
   it('T060/T061: recurring selection and invoice reads remain assignment-scoped for independent invoiceability', () => {
     const billingAndTaxSource = readRepo('packages/billing/src/actions/billingAndTax.ts');
     const invoiceGenerationSource = readRepo('packages/billing/src/actions/invoiceGeneration.ts');

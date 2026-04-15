@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Lang-pack validation: `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs` passes for all 9 locales after each namespace update (covers key parity, missing/extra keys, interpolation variables, pseudo-locale patterns, Italian accents). Single check, run on every commit.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",
@@ -18,7 +18,7 @@
   {
     "id": "T002",
     "description": "Unit: ContractDetail.i18n.test -- tab labels (Overview, Contract Lines, Pricing Schedules, Documents, Invoices) render via t() in en",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
@@ -26,7 +26,7 @@
   {
     "id": "T003",
     "description": "Unit: ContractDetail.i18n.test -- unsaved changes alert and save success alert render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
@@ -34,7 +34,7 @@
   {
     "id": "T004",
     "description": "Unit: ContractDetail.i18n.test -- Contract Details card labels, edit/save/cancel buttons render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
@@ -42,7 +42,7 @@
   {
     "id": "T005",
     "description": "Unit: ContractDetail.i18n.test -- Contract Header card renders translated status, billing, currency, renewal labels",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
@@ -50,7 +50,7 @@
   {
     "id": "T006",
     "description": "Unit: ContractDetail.i18n.test -- Client Ownership and Assignment cards render translated labels, PO fields, empty state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
@@ -58,7 +58,7 @@
   {
     "id": "T007",
     "description": "Unit: ContractDetail.i18n.test -- Quick Actions buttons, save/cancel row, and confirmation dialogs render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
@@ -66,7 +66,7 @@
   {
     "id": "T008",
     "description": "Unit: ContractDetail.i18n.test -- invoice tab column headers and empty/loading states render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
@@ -74,7 +74,7 @@
   {
     "id": "T009",
     "description": "Unit: ContractDetail.i18n.test -- pseudo-locale (xx) shows no bare English leakage across all tabs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",
@@ -86,7 +86,7 @@
   {
     "id": "T010",
     "description": "Unit: ContractDialog.i18n.test -- dialog title, form field labels, and validation errors render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
@@ -94,7 +94,7 @@
   {
     "id": "T011",
     "description": "Unit: ContractDialog.i18n.test -- PO section labels and preset picker section render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
@@ -102,7 +102,7 @@
   {
     "id": "T012",
     "description": "Unit: ContractDialog.i18n.test -- pseudo-locale (xx) coverage for all visible strings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F017",
@@ -112,7 +112,7 @@
   {
     "id": "T013",
     "description": "Unit: ContractTemplateDetail.i18n.test -- page header, back button, tab labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
@@ -120,7 +120,7 @@
   {
     "id": "T014",
     "description": "Unit: ContractTemplateDetail.i18n.test -- contract lines section columns, actions, and inline editing labels render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
@@ -128,7 +128,7 @@
   {
     "id": "T015",
     "description": "Unit: ContractTemplateDetail.i18n.test -- billing timing and cadence owner options render translated labels",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
@@ -136,7 +136,7 @@
   {
     "id": "T016",
     "description": "Unit: ContractTemplateDetail.i18n.test -- pseudo-locale (xx) coverage",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F020",
@@ -146,7 +146,7 @@
   {
     "id": "T017",
     "description": "Unit: CreateCustomContractLineDialog.i18n.test -- dialog title, type selector labels, service picker labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -154,7 +154,7 @@
   {
     "id": "T018",
     "description": "Unit: CreateCustomContractLineDialog.i18n.test -- bucket overlay, proration, and validation messages render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -162,7 +162,7 @@
   {
     "id": "T019",
     "description": "Unit: CreateCustomContractLineDialog.i18n.test -- pseudo-locale (xx) coverage",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F023",
@@ -172,7 +172,7 @@
   {
     "id": "T020",
     "description": "Unit: ContractLines.i18n.test -- section header, Add/Create buttons, column labels, empty state render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
@@ -180,7 +180,7 @@
   {
     "id": "T021",
     "description": "Unit: ContractLines.i18n.test -- inline edit fields, service config details, delete confirmation render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -188,7 +188,7 @@
   {
     "id": "T022",
     "description": "Unit: ContractLines.i18n.test -- pseudo-locale (xx) coverage for expanded line details",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025",
       "F026",
@@ -198,7 +198,7 @@
   {
     "id": "T023",
     "description": "Unit: AddContractLinesDialog.i18n.test -- dialog title, search, filter, preset labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
@@ -206,7 +206,7 @@
   {
     "id": "T024",
     "description": "Unit: AddContractLinesDialog.i18n.test -- expanded preset details and empty/loading states render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
@@ -214,7 +214,7 @@
   {
     "id": "T025",
     "description": "Unit: Contracts.i18n.test -- sub-tab labels, New Contract/Template buttons, search placeholders render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -222,7 +222,7 @@
   {
     "id": "T026",
     "description": "Unit: Contracts.i18n.test -- row action menus, confirmation dialogs, toast messages render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -230,7 +230,7 @@
   {
     "id": "T027",
     "description": "Unit: Contracts.i18n.test -- column headers for all three sub-tabs render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
@@ -238,7 +238,7 @@
   {
     "id": "T028",
     "description": "Unit: Contracts.i18n.test -- pseudo-locale (xx) coverage",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F031",
@@ -248,7 +248,7 @@
   {
     "id": "T029",
     "description": "Unit: ClientContractsTab.i18n.test -- column headers, status badges, search placeholder render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -256,7 +256,7 @@
   {
     "id": "T030",
     "description": "Unit: ClientContractsTab.i18n.test -- empty state, terminate dialog, and error alert render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -264,7 +264,7 @@
   {
     "id": "T031",
     "description": "Unit: ContractWizard.i18n.test -- step labels render via t() in the wizard progress component",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
@@ -272,7 +272,7 @@
   {
     "id": "T032",
     "description": "Unit: ContractWizard.i18n.test -- validation errors and save/draft buttons render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -280,7 +280,7 @@
   {
     "id": "T033",
     "description": "Unit: ContractOverview.i18n.test -- stat cards (Est. Monthly Value, Contract Lines, Total Services) render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]
@@ -288,7 +288,7 @@
   {
     "id": "T034",
     "description": "Unit: ContractOverview.i18n.test -- line cards with service count interpolation and empty state render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
@@ -296,7 +296,7 @@
   {
     "id": "T035",
     "description": "Unit: PricingSchedules.i18n.test -- section title, columns, actions, empty state render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039",
       "F040"
@@ -305,7 +305,7 @@
   {
     "id": "T036",
     "description": "Unit: TemplatesTab.i18n.test -- columns, status badges, search, actions render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
@@ -313,7 +313,7 @@
   {
     "id": "T037",
     "description": "Unit: ContractForm.i18n.test -- form heading, field labels, status options, validation messages render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
@@ -321,7 +321,7 @@
   {
     "id": "T038",
     "description": "Unit: QuickStartGuide.i18n.test -- step headings, descriptions, billing model labels, best practices render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
@@ -329,7 +329,7 @@
   {
     "id": "T039",
     "description": "Unit: QuickStartGuide.i18n.test -- pseudo-locale (xx) covers all visible text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
@@ -337,7 +337,7 @@
   {
     "id": "T040",
     "description": "Unit: BucketOverlayFields.i18n.test -- included units label, overage rate label, rollover checkbox label render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
@@ -345,7 +345,7 @@
   {
     "id": "T041",
     "description": "Unit: ContractLineEditDialog.i18n.test -- dialog title with interpolation, rate/timing labels, timing options render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]
@@ -353,7 +353,7 @@
   {
     "id": "T042",
     "description": "Unit: ContractHeader.i18n.test -- stat labels, status badges, Template/Client-owned badges, PO alert render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
@@ -361,7 +361,7 @@
   {
     "id": "T043",
     "description": "Unit: ContractDetailSwitcher.i18n.test -- error messages and loading text render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
@@ -369,7 +369,7 @@
   {
     "id": "T044",
     "description": "Unit: ContractLineRateDialog.i18n.test -- dialog title with interpolation, rate label, validation error, buttons render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
@@ -377,7 +377,7 @@
   {
     "id": "T045",
     "description": "Unit: BillingFrequencyOverrideSelect.i18n.test -- label, description with interpolation, placeholder with interpolation render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
@@ -385,7 +385,7 @@
   {
     "id": "T046",
     "description": "Unit: ServicePicker.i18n.test -- placeholder and empty message render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
@@ -393,7 +393,7 @@
   {
     "id": "T047",
     "description": "Unit: ContractBasicsStep.i18n.test -- step heading, template picker labels, client picker label render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]
@@ -401,7 +401,7 @@
   {
     "id": "T048",
     "description": "Unit: ContractBasicsStep.i18n.test -- renewal section, PO fields, cadence owner options render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
@@ -409,7 +409,7 @@
   {
     "id": "T049",
     "description": "Unit: FixedFeeServicesStep.i18n.test -- step heading, service picker, rate/proration labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
@@ -417,7 +417,7 @@
   {
     "id": "T050",
     "description": "Unit: ProductsStep.i18n.test -- step heading, service picker, quantity/rate labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]
@@ -425,7 +425,7 @@
   {
     "id": "T051",
     "description": "Unit: HourlyServicesStep.i18n.test -- step heading, rate/minimum/rounding labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
@@ -433,7 +433,7 @@
   {
     "id": "T052",
     "description": "Unit: UsageBasedServicesStep.i18n.test -- step heading, unit rate/measure labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
@@ -441,7 +441,7 @@
   {
     "id": "T053",
     "description": "Unit: ReviewContractStep.i18n.test -- Contract Basics section labels and fallback values render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
@@ -449,7 +449,7 @@
   {
     "id": "T054",
     "description": "Unit: ReviewContractStep.i18n.test -- service summary sections with rates and bucket summaries render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]
@@ -457,7 +457,7 @@
   {
     "id": "T055",
     "description": "Unit: TemplateWizard.i18n.test -- step labels and validation messages render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]
@@ -465,7 +465,7 @@
   {
     "id": "T056",
     "description": "Unit: TemplateContractBasicsStep.i18n.test -- step heading, name/notes/frequency labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
@@ -473,7 +473,7 @@
   {
     "id": "T057",
     "description": "Unit: TemplateFixedFeeServicesStep.i18n.test -- step heading, service picker, preview render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ]
@@ -481,7 +481,7 @@
   {
     "id": "T058",
     "description": "Unit: TemplateProductsStep.i18n.test -- step heading, service picker, preview render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
@@ -489,7 +489,7 @@
   {
     "id": "T059",
     "description": "Unit: TemplateHourlyServicesStep.i18n.test -- step heading, service picker, bucket/minimum/rounding labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
@@ -497,7 +497,7 @@
   {
     "id": "T060",
     "description": "Unit: TemplateUsageBasedServicesStep.i18n.test -- step heading, service picker, unit measure/bucket labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]
@@ -505,7 +505,7 @@
   {
     "id": "T061",
     "description": "Unit: TemplateReviewContractStep.i18n.test -- review heading, section labels, service summaries render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]
@@ -513,7 +513,7 @@
   {
     "id": "T062",
     "description": "Unit: TemplateServicePreviewSection.i18n.test -- service type labels, heading with interpolation, remove confirmation dialog render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]
@@ -521,7 +521,7 @@
   {
     "id": "T063",
     "description": "Integration: /msp/billing?tab=contracts loads Contracts.tsx in en with no hardcoded English visible in template/client/draft sub-tabs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F031",
@@ -534,7 +534,7 @@
   {
     "id": "T064",
     "description": "Integration: /msp/billing?tab=contracts loads in de with translated sub-tab labels, column headers, and action menus",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F031",
@@ -544,7 +544,7 @@
   {
     "id": "T065",
     "description": "Integration: /msp/billing?tab=contracts&contractId=<id> contract detail page renders all tabs translated in de with no English leakage",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",
@@ -560,7 +560,7 @@
   {
     "id": "T066",
     "description": "Integration: contract creation wizard renders all step labels and form fields translated in de",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F052",
@@ -576,7 +576,7 @@
   {
     "id": "T067",
     "description": "Integration: template creation wizard renders all step labels and form fields translated in de",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060",
       "F061",
@@ -591,7 +591,7 @@
   {
     "id": "T068",
     "description": "Integration: contract detail QuickStartGuide renders fully translated in de with no English leakage",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
@@ -599,7 +599,7 @@
   {
     "id": "T069",
     "description": "Integration: currency amounts in contract detail and review steps use locale-aware formatting (not hardcoded 'en-US')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F059"

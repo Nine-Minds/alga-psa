@@ -23,6 +23,7 @@ import { PricingScheduleDialog } from './PricingScheduleDialog';
 import { formatCurrency } from '@alga-psa/core';
 import { toPlainDate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface PricingSchedulesProps {
   contractId: string;
@@ -30,6 +31,7 @@ interface PricingSchedulesProps {
 }
 
 const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadOnly = false }) => {
+  const { t } = useTranslation('msp/contracts');
   const [schedules, setSchedules] = useState<IContractPricingSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +53,9 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
       setSchedules(data);
     } catch (error) {
       console.error('Error fetching pricing schedules:', error);
-      setError('Failed to load pricing schedules');
+      setError(t('pricingSchedules.list.errors.failedToLoadPricingSchedules', {
+        defaultValue: 'Failed to load pricing schedules',
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +65,9 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
     if (isReadOnly) {
       return;
     }
-    if (!confirm('Are you sure you want to delete this pricing schedule?')) {
+    if (!confirm(t('pricingSchedules.list.dialogs.confirmDeleteSchedule', {
+      defaultValue: 'Are you sure you want to delete this pricing schedule?',
+    }))) {
       return;
     }
 
@@ -70,7 +76,9 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
       fetchSchedules();
     } catch (error) {
       console.error('Error deleting pricing schedule:', error);
-      setError('Failed to delete pricing schedule');
+      setError(t('pricingSchedules.list.errors.failedToDeletePricingSchedule', {
+        defaultValue: 'Failed to delete pricing schedule',
+      }));
     }
   };
 
@@ -102,29 +110,35 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
 
   const scheduleColumns: ColumnDefinition<IContractPricingSchedule>[] = [
     {
-      title: 'Effective Date',
+      title: t('pricingSchedules.list.columns.effectiveDate', { defaultValue: 'Effective Date' }),
       dataIndex: 'effective_date',
       render: (value) => toPlainDate(value as string).toLocaleString()
     },
     {
-      title: 'End Date',
+      title: t('pricingSchedules.list.columns.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
-      render: (value) => value ? toPlainDate(value as string).toLocaleString() : 'Ongoing'
+      render: (value) => value
+        ? toPlainDate(value as string).toLocaleString()
+        : t('pricingSchedules.list.values.ongoing', { defaultValue: 'Ongoing' })
     },
     {
-      title: 'Custom Rate',
+      title: t('pricingSchedules.list.columns.customRate', { defaultValue: 'Custom Rate' }),
       dataIndex: 'custom_rate',
       render: (value) => value !== undefined && value !== null
         ? formatCurrency(value / 100)
-        : <span className="text-muted-foreground">Use default rate</span>
+        : (
+          <span className="text-muted-foreground">
+            {t('pricingSchedules.list.values.useDefaultRate', { defaultValue: 'Use default rate' })}
+          </span>
+        )
     },
     {
-      title: 'Notes',
+      title: t('pricingSchedules.list.columns.notes', { defaultValue: 'Notes' }),
       dataIndex: 'notes',
-      render: (value) => value || <span className="text-muted-foreground">-</span>
+      render: (value) => value || <span className="text-muted-foreground">{t('common.notAvailable', { defaultValue: '-' })}</span>
     },
     {
-      title: 'Actions',
+      title: t('pricingSchedules.list.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'schedule_id',
       render: (value, record) => (
         <DropdownMenu>
@@ -136,7 +150,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
               onClick={(e) => e.stopPropagation()}
               disabled={isReadOnly}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('common.actions.openMenu', { defaultValue: 'Open menu' })}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -146,7 +160,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
               onClick={() => handleEdit(record)}
               disabled={isReadOnly}
             >
-              Edit Schedule
+              {t('pricingSchedules.list.actions.editSchedule', { defaultValue: 'Edit Schedule' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-pricing-schedule-${value}`}
@@ -154,7 +168,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
               onClick={(e) => { e.stopPropagation(); handleDelete(value as string); }}
               disabled={isReadOnly}
             >
-              Delete Schedule
+              {t('pricingSchedules.list.actions.deleteSchedule', { defaultValue: 'Delete Schedule' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -167,9 +181,15 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
       <Card size="2">
         <Box p="4">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">Pricing Schedules</h3>
+            <h3 className="text-lg font-medium">
+              {t('pricingSchedules.list.title', { defaultValue: 'Pricing Schedules' })}
+            </h3>
             {isReadOnly ? (
-              <p className="text-sm text-muted-foreground">This system-managed default contract is attribution-only. Pricing schedule authoring is disabled.</p>
+              <p className="text-sm text-muted-foreground">
+                {t('pricingSchedules.list.readOnlyNotice', {
+                  defaultValue: 'This system-managed default contract is attribution-only. Pricing schedule authoring is disabled.',
+                })}
+              </p>
             ) : null}
             <Button
               id="add-pricing-schedule-button"
@@ -177,7 +197,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
               disabled={isReadOnly}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Schedule
+              {t('pricingSchedules.list.actions.addSchedule', { defaultValue: 'Add Schedule' })}
             </Button>
           </div>
 
@@ -193,16 +213,20 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
               layout="stacked"
               className="py-10 text-muted-foreground"
               spinnerProps={{ size: 'md' }}
-              text="Loading pricing schedules"
+              text={t('pricingSchedules.list.loading', { defaultValue: 'Loading pricing schedules' })}
             />
           ) : (
             <>
               {schedules.length === 0 ? (
                 <div className="text-center py-8">
                   <Calendar className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-2">No pricing schedules yet</p>
+                  <p className="text-muted-foreground mb-2">
+                    {t('pricingSchedules.list.empty.noPricingSchedules', { defaultValue: 'No pricing schedules yet' })}
+                  </p>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Add pricing schedules to define time-based rate changes for this contract
+                    {t('pricingSchedules.list.empty.description', {
+                      defaultValue: 'Add pricing schedules to define time-based rate changes for this contract',
+                    })}
                   </p>
                 </div>
               ) : (
@@ -211,7 +235,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
                   <div className="mb-6 p-4 bg-muted rounded-lg">
                     <h4 className="text-sm font-medium mb-3 flex items-center">
                       <Calendar className="h-4 w-4 mr-2" />
-                      Pricing Timeline
+                      {t('pricingSchedules.list.timeline.title', { defaultValue: 'Pricing Timeline' })}
                     </h4>
                     <div className="relative">
                       {/* Timeline line */}
@@ -233,14 +257,17 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
                                       <span className="text-muted-foreground"> → {toPlainDate(schedule.end_date).toLocaleString()}</span>
                                     )}
                                     {!schedule.end_date && index === schedules.length - 1 && (
-                                      <span className="text-muted-foreground"> → Ongoing</span>
+                                      <span className="text-muted-foreground">
+                                        {' '}
+                                        → {t('pricingSchedules.list.values.ongoing', { defaultValue: 'Ongoing' })}
+                                      </span>
                                     )}
                                   </div>
                                   <div className="text-sm text-muted-foreground mt-1 flex items-center">
                                     <Coins className="h-3 w-3 mr-1" />
                                     {schedule.custom_rate !== undefined && schedule.custom_rate !== null
                                       ? formatCurrency(schedule.custom_rate / 100)
-                                      : 'Default rate'}
+                                      : t('pricingSchedules.list.values.defaultRate', { defaultValue: 'Default rate' })}
                                   </div>
                                 </div>
                               </div>
