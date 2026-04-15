@@ -457,7 +457,7 @@
   {
     "id": "T055",
     "description": "Unit: TemplateWizard.i18n.test -- step labels and validation messages render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]

@@ -391,3 +391,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ReviewContractStep.i18n.test.ts` (pass; 1 file, 1 test).
 - **(2026-04-15)** `T054` completed: extended `packages/billing/tests/billing-dashboard/ReviewContractStep.i18n.test.ts` with coverage for fixed/products/hourly/usage summary sections, rate and bucket interpolation keys, PO summary labels, monthly-total card, and final checklist copy.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ReviewContractStep.i18n.test.ts` (pass; 1 file, 2 tests).
+- **(2026-04-15)** `T055` completed: added `packages/billing/tests/billing-dashboard/TemplateWizard.i18n.test.ts` verifying template-wizard step labels/actions/validation/errors are translation-key driven, including dynamic recurring line-type/frequency lookups and locale-key presence.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/TemplateWizard.i18n.test.ts` (pass; 1 file, 1 test).
