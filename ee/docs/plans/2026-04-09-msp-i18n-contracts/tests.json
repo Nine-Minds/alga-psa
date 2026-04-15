@@ -521,7 +521,7 @@
   {
     "id": "T063",
     "description": "Integration: /msp/billing?tab=contracts loads Contracts.tsx in en with no hardcoded English visible in template/client/draft sub-tabs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F031",
