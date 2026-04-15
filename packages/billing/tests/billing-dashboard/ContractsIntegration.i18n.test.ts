@@ -304,4 +304,30 @@ describe('Contracts integration i18n coverage', () => {
       expect((xxValue as string)).toContain('11111');
     }
   });
+
+  it("T069: contract detail + review currency formatting is locale-aware and does not hardcode 'en-US'", () => {
+    const contractDetailSource = read('../../src/components/billing-dashboard/contracts/ContractDetail.tsx');
+    const reviewSource = read('../../src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.tsx');
+
+    const disallowedPatterns = [
+      "new Intl.NumberFormat('en-US'",
+      '"en-US"',
+      'formatCurrencyFromMinorUnits(',
+    ];
+
+    for (const pattern of disallowedPatterns) {
+      expect(contractDetailSource).not.toContain(pattern);
+      expect(reviewSource).not.toContain(pattern);
+    }
+
+    expect(contractDetailSource).toContain('useFormatters');
+    expect(contractDetailSource).toContain('const { formatCurrency } = useFormatters();');
+    expect(contractDetailSource).toContain('const formatMinorCurrency = useCallback(');
+    expect(contractDetailSource).toContain('return formatCurrency(majorUnits, currencyCode);');
+
+    expect(reviewSource).toContain('useFormatters');
+    expect(reviewSource).toContain('const { formatCurrency } = useFormatters();');
+    expect(reviewSource).toContain('const formatMinorCurrency = (minorUnits: number | null | undefined) => {');
+    expect(reviewSource).toContain('return formatCurrency(amount / 100, {');
+  });
 });

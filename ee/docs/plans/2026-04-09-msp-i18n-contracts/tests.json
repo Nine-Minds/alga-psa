@@ -599,7 +599,7 @@
   {
     "id": "T069",
     "description": "Integration: currency amounts in contract detail and review steps use locale-aware formatting (not hardcoded 'en-US')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F059"
