@@ -112,7 +112,7 @@
   {
     "id": "T013",
     "description": "Unit: ContractTemplateDetail.i18n.test -- page header, back button, tab labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
