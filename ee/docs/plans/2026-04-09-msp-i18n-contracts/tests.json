@@ -18,7 +18,7 @@
   {
     "id": "T002",
     "description": "Unit: ContractDetail.i18n.test -- tab labels (Overview, Contract Lines, Pricing Schedules, Documents, Invoices) render via t() in en",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
