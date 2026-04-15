@@ -409,7 +409,7 @@
   {
     "id": "T049",
     "description": "Unit: FixedFeeServicesStep.i18n.test -- step heading, service picker, rate/proration labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]

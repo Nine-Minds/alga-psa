@@ -379,3 +379,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractBasicsStep.i18n.test.ts` (pass; 1 file, 1 test).
 - **(2026-04-15)** `T048` completed: extended `packages/billing/tests/billing-dashboard/ContractBasicsStep.i18n.test.ts` to assert renewal-mode/cadence-owner/PO copy and summary labels are translated in `ContractBasicsStep.tsx`, including pluralized locale coverage for `noticePeriodDays_*` and `renewalTermMonths_*`.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractBasicsStep.i18n.test.ts` (pass; 1 file, 2 tests).
+- **(2026-04-15)** `T049` completed: added `packages/billing/tests/billing-dashboard/FixedFeeServicesStep.i18n.test.ts` covering translated heading/description, base-rate + proration labels, service picker labels, empty state, and alternate billing-frequency label in `FixedFeeServicesStep.tsx`.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/FixedFeeServicesStep.i18n.test.ts` (pass; 1 file, 1 test).
