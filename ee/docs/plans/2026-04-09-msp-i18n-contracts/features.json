@@ -332,6 +332,6 @@
   {
     "id": "F067",
     "description": "Wire useTranslation('msp/contracts') in TemplateServicePreviewSection.tsx -- translate service type labels (Fixed Fee/Products/Hourly/Usage-Based), 'Selected {type} Services ({count})' heading with interpolation, Qty label, remove confirmation dialog (title, message with interpolation, confirm/cancel labels)",
-    "implemented": false
+    "implemented": true
   }
 ]

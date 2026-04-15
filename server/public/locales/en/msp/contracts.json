@@ -1925,5 +1925,22 @@
       "period": "Period: {{period}}"
     }
   },
-  "templatePreview": {}
+  "templatePreview": {
+    "serviceType": {
+      "fixedFee": "Fixed Fee",
+      "products": "Products",
+      "hourly": "Hourly",
+      "usageBased": "Usage-Based"
+    },
+    "selectedHeading": "Selected {{type}} Services ({{count}})",
+    "labels": {
+      "qty": "Qty:"
+    },
+    "removeDialog": {
+      "title": "Remove Contract Line Preset",
+      "message": "Are you sure you want to remove \"{{serviceName}}\" from \"{{presetName}}\"? This will remove all other services associated with this contract line preset as well.",
+      "confirm": "Remove All",
+      "cancel": "Cancel"
+    }
+  }
 }
