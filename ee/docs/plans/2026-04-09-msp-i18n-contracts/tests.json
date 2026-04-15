@@ -128,7 +128,7 @@
   {
     "id": "T015",
     "description": "Unit: ContractTemplateDetail.i18n.test -- billing timing and cadence owner options render translated labels",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]

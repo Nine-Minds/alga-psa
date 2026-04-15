@@ -308,3 +308,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractTemplateDetail.i18n.test.ts` (pass; 1 file, 1 test).
 - **(2026-04-15)** `T014` completed: extended `ContractTemplateDetail.i18n.test.ts` with template composition + service-manager coverage for grouped line headings, empty states, service-count copy, inline service labels, bucket/minutes formatting labels, and service management action text.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractTemplateDetail.i18n.test.ts` (pass; 1 file, 2 tests).
+- **(2026-04-15)** `T015` completed: extended `ContractTemplateDetail.i18n.test.ts` to validate translated cadence labels in `ContractTemplateDetail.tsx` and billing-timing option/description labels used in the template line edit flow (`ContractLineEditDialog.tsx`).
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractTemplateDetail.i18n.test.ts` (pass; 1 file, 3 tests).

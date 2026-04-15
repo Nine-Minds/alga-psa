@@ -92,4 +92,39 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T015: cadence and billing-timing option labels resolve via translation keys', () => {
+    const templateSource = read('../../src/components/billing-dashboard/contracts/ContractTemplateDetail.tsx');
+    const lineEditSource = read('../../src/components/billing-dashboard/contracts/ContractLineEditDialog.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const templateKeyChecks = [
+      'templateDetail.form.recommendedBillingFrequencyLabel',
+      'templateDetail.form.recommendedBillingFrequencyPlaceholder',
+      'templateDetail.guidance.recommendedCadenceLabel',
+      'templateDetail.guidance.recommendedCadencePlaceholder',
+      'templateDetail.guidance.noCadenceProvided',
+    ];
+
+    for (const key of templateKeyChecks) {
+      expect(templateSource).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+
+    const billingTimingKeyChecks = [
+      'contractLineEdit.sections.billingTiming',
+      'contractLineEdit.fields.billingTimingQuestion',
+      'contractLineEdit.timingOptions.arrears',
+      'contractLineEdit.timingOptions.advance',
+      'contractLineEdit.timingDescriptions.arrears',
+      'contractLineEdit.timingDescriptions.advance',
+    ];
+
+    for (const key of billingTimingKeyChecks) {
+      expect(lineEditSource).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });
