@@ -111,7 +111,7 @@ ContactDetails.tsx (tab "Portal")
   └─ ContactPortalTab.tsx
        ├─ State: selectedVisibilityGroupId, visibilityGroups[], visibilityBoards[]
        │         editingVisibilityGroupId, form fields (name/desc/boardIds)
-       ├─ On mount: loads groups + boards for contact's client
+       ├─ On mount: loads groups for the contact's client + active boards for the tenant
        ├─ Assignment dropdown → assignClientPortalVisibilityGroupToContact (immediate)
        ├─ CRUD form → create/updateClientPortalVisibilityGroupForContact
        └─ Group list → edit (loads into form) / delete (with guardrails)
@@ -119,7 +119,8 @@ ContactDetails.tsx (tab "Portal")
 Server actions (contactActions.tsx):
   ├─ resolveContactAndVerifyPermission → contact:update permission + resolves client_id
   ├─ ensureContactPortalGroupsScope → group belongs to same client
-  └─ All ops scoped to (tenant, client_id)
+  ├─ Group ownership and assignment checks scoped to (tenant, client_id)
+  └─ Board pickers/validation scoped to tenant board IDs, excluding inactive boards
 
 DB tables:
   ├─ client_portal_visibility_groups (tenant, client_id, group_id, name, description)

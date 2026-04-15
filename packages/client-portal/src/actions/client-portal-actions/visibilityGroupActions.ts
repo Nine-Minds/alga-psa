@@ -59,10 +59,9 @@ function toInt(value: unknown): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-async function ensureBoardsBelongToClient(
+async function ensureBoardsAreActiveInTenant(
   trx: Knex.Transaction,
   tenant: string,
-  clientId: string,
   boardIds: string[]
 ) {
   if (!boardIds.length) {
@@ -71,7 +70,7 @@ async function ensureBoardsBelongToClient(
 
   const rows = await trx('boards')
     .where({ tenant })
-    .where({ client_id: clientId })
+    .andWhere('is_inactive', false)
     .whereIn('board_id', boardIds)
     .select('board_id');
 
@@ -291,10 +290,10 @@ export const getClientPortalVisibilityGroupBoards = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const { clientId } = await resolveManagementScope(trx, tenant, currentUser, targetClientId, targetContactId);
+    await resolveManagementScope(trx, tenant, currentUser, targetClientId, targetContactId);
 
     return trx('boards')
-      .where({ tenant, client_id: clientId })
+      .where({ tenant })
       .andWhere('is_inactive', false)
       .select('board_id', 'board_name');
   });
@@ -338,7 +337,7 @@ export const createClientPortalVisibilityGroup = withAuth(async (
     );
 
     const boardIds = uniqueItems(payload.boardIds);
-    await ensureBoardsBelongToClient(trx, tenant, clientId, boardIds);
+    await ensureBoardsAreActiveInTenant(trx, tenant, boardIds);
 
     const [group] = await trx('client_portal_visibility_groups')
       .insert({
@@ -384,7 +383,7 @@ export const updateClientPortalVisibilityGroup = withAuth(async (
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const { clientId } = await resolveManagementScope(trx, tenant, currentUser);
     const boardIds = uniqueItems(payload.boardIds);
-    await ensureBoardsBelongToClient(trx, tenant, clientId, boardIds);
+    await ensureBoardsAreActiveInTenant(trx, tenant, boardIds);
 
     const existing = await trx('client_portal_visibility_groups')
       .where({ tenant, group_id: groupId, client_id: clientId })

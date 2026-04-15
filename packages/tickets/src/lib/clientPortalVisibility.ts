@@ -59,8 +59,7 @@ export async function getClientContactVisibilityContext(
     })
     .where({
       'cvgb.tenant': tenant,
-      'cvgb.group_id': contact.portal_visibility_group_id,
-      'b.client_id': contact.client_id
+      'cvgb.group_id': contact.portal_visibility_group_id
     })
     .select('cvgb.board_id')
     .then((rows) => rows.map((row) => row.board_id));

@@ -109,11 +109,15 @@ export const getClientTicketFormData = withAuth(async (_user, { tenant }): Promi
       );
 
       const allowedBoards = visibility.visibleBoardIds === null
-        ? await trx('boards').where({ tenant }).select('board_id', 'board_name')
+        ? await trx('boards')
+          .where({ tenant })
+          .andWhere('is_inactive', false)
+          .select('board_id', 'board_name')
         : visibility.visibleBoardIds.length === 0
           ? []
           : await trx('boards')
             .where({ tenant })
+            .andWhere('is_inactive', false)
             .whereIn('board_id', visibility.visibleBoardIds)
             .select('board_id', 'board_name');
 

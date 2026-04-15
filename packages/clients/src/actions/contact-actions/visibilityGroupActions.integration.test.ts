@@ -34,7 +34,7 @@ type VisibilityState = {
   boards: Array<{
     tenant: string;
     board_id: string;
-    client_id: string;
+    is_inactive?: boolean;
   }>;
   groupBoards: Array<{
     tenant: string;
@@ -102,7 +102,7 @@ function createVisibilityTrx(state: VisibilityState) {
                   return (
                     row.tenant === filters['cvgb.tenant'] &&
                     row.group_id === filters['cvgb.group_id'] &&
-                    board?.client_id === filters['b.client_id']
+                    board?.tenant === filters['cvgb.tenant']
                   );
                 })
                 .map((row) => ({ board_id: row.board_id })),
@@ -136,8 +136,8 @@ describe('contactActions visibility group integration', () => {
         { tenant: 'tenant-1', group_id: 'group-2', client_id: 'client-a' },
       ],
       boards: [
-        { tenant: 'tenant-1', board_id: 'board-1', client_id: 'client-a' },
-        { tenant: 'tenant-1', board_id: 'board-2', client_id: 'client-a' },
+        { tenant: 'tenant-1', board_id: 'board-1' },
+        { tenant: 'tenant-1', board_id: 'board-2' },
       ],
       groupBoards: [
         { tenant: 'tenant-1', group_id: 'group-1', board_id: 'board-1' },
@@ -159,5 +159,47 @@ describe('contactActions visibility group integration', () => {
     const updatedVisibility = await getClientContactVisibilityContext(trx, 'tenant-1', 'contact-1');
     expect(updatedVisibility.visibilityGroupId).toBe('group-2');
     expect(updatedVisibility.visibleBoardIds).toEqual(['board-2']);
+  });
+
+  it('T001: MSP board loading returns active tenant boards without requiring board client ownership', async () => {
+    const boardsWhereMock = vi.fn(() => ({
+      andWhere: vi.fn(() => ({
+        select: vi.fn().mockResolvedValue([
+          { board_id: 'board-1', board_name: 'General Support' },
+          { board_id: 'board-2', board_name: 'Projects' },
+        ]),
+      })),
+    }));
+
+    withTransactionMock.mockImplementation(async (_db: any, callback: (innerTrx: any) => Promise<unknown>) =>
+      callback(
+        ((table: string) => {
+          if (table === 'contacts') {
+            return {
+              where: () => ({
+                first: async () => ({ contact_name_id: 'contact-1', client_id: 'client-a' }),
+              }),
+            };
+          }
+
+          if (table === 'boards') {
+            return {
+              where: boardsWhereMock,
+            };
+          }
+
+          throw new Error(`Unexpected table: ${table}`);
+        }) as any
+      )
+    );
+
+    const { getClientPortalVisibilityBoardsByClient } = await import('./contactActions');
+    const boards = await getClientPortalVisibilityBoardsByClient('contact-1');
+
+    expect(boardsWhereMock).toHaveBeenCalledWith({ tenant: 'tenant-1' });
+    expect(boards).toEqual([
+      { board_id: 'board-1', board_name: 'General Support' },
+      { board_id: 'board-2', board_name: 'Projects' },
+    ]);
   });
 });

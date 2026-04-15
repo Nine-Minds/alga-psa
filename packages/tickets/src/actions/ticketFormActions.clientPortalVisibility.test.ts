@@ -68,11 +68,13 @@ describe('client ticket form visibility restrictions', () => {
         if (table === 'boards') {
           return {
             where: vi.fn().mockReturnValue({
-              whereIn: vi.fn().mockReturnValue({
-                select: vi.fn().mockResolvedValue([
-                  { board_id: 'board-2', board_name: 'HR' },
-                  { board_id: 'board-3', board_name: 'Support' },
-                ]),
+              andWhere: vi.fn().mockReturnValue({
+                whereIn: vi.fn().mockReturnValue({
+                  select: vi.fn().mockResolvedValue([
+                    { board_id: 'board-2', board_name: 'HR' },
+                    { board_id: 'board-3', board_name: 'Support' },
+                  ]),
+                }),
               }),
             }),
           };
@@ -114,11 +116,13 @@ describe('client ticket form visibility restrictions', () => {
         if (table === 'boards') {
           return {
             where: vi.fn().mockReturnValue({
-              whereIn: vi.fn().mockReturnValue({
-                select: vi.fn().mockResolvedValue([
-                  { board_id: 'board-7', board_name: 'VIP' },
-                  { board_id: 'board-9', board_name: 'General' },
-                ]),
+              andWhere: vi.fn().mockReturnValue({
+                whereIn: vi.fn().mockReturnValue({
+                  select: vi.fn().mockResolvedValue([
+                    { board_id: 'board-7', board_name: 'VIP' },
+                    { board_id: 'board-9', board_name: 'General' },
+                  ]),
+                }),
               }),
             }),
           };
@@ -141,5 +145,52 @@ describe('client ticket form visibility restrictions', () => {
     await getClientTicketFormData();
 
     expect(getPrioritiesByBoardTypeMock).toHaveBeenCalledWith('board-7', 'ticket');
+  });
+
+  it('T008: ticket creation board options exclude inactive boards even when visibility group includes them', async () => {
+    const activeFilterMock = vi.fn(() => ({
+      whereIn: vi.fn().mockReturnValue({
+        select: vi.fn().mockResolvedValue([
+          { board_id: 'board-active', board_name: 'Active Board' },
+        ]),
+      }),
+    }));
+
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
+      const trx = (table: string) => {
+        if (table === 'users') {
+          return {
+            where: vi.fn().mockReturnValue({
+              first: vi.fn().mockResolvedValue({ contact_id: 'contact-1' }),
+            }),
+          };
+        }
+
+        if (table === 'boards') {
+          return {
+            where: vi.fn().mockReturnValue({
+              andWhere: activeFilterMock,
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table: ${table}`);
+      };
+
+      return callback(trx);
+    });
+
+    getClientContactVisibilityContextMock.mockResolvedValue({
+      contactId: 'contact-1',
+      clientId: 'client-1',
+      visibilityGroupId: 'group-1',
+      visibleBoardIds: ['board-active', 'board-inactive'],
+    });
+
+    const { getClientTicketFormData } = await import('./ticketFormActions');
+    const formData = await getClientTicketFormData();
+
+    expect(formData.boards).toEqual([{ board_id: 'board-active', board_name: 'Active Board' }]);
+    expect(activeFilterMock).toHaveBeenCalledWith('is_inactive', false);
   });
 });

@@ -931,13 +931,15 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         ? await trx('boards')
             .where({
               tenant,
-              is_default: true
+              is_default: true,
+              is_inactive: false
             })
             .first()
         : await trx('boards')
             .where({
               tenant,
-              board_id: assignedBoardId
+              board_id: assignedBoardId,
+              is_inactive: false
             })
             .first();
 

@@ -1552,10 +1552,10 @@ export const getClientPortalVisibilityBoardsByClient = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-      const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+      await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
 
       return trx('boards')
-        .where({ tenant, client_id: clientId })
+        .where({ tenant })
         .andWhere('is_inactive', false)
         .select('board_id', 'board_name');
     });
@@ -1619,7 +1619,8 @@ export const createClientPortalVisibilityGroupForContact = withAuth(async (
 
     if (boardIds.length > 0) {
       const validBoardCount = await trx('boards')
-        .where({ tenant, client_id: clientId })
+        .where({ tenant })
+        .andWhere('is_inactive', false)
         .whereIn('board_id', boardIds)
         .count('* as count')
         .first();
@@ -1683,7 +1684,8 @@ export const updateClientPortalVisibilityGroupForContact = withAuth(async (
 
     if (boardIds.length > 0) {
       const validBoardCount = await trx('boards')
-        .where({ tenant, client_id: clientId })
+        .where({ tenant })
+        .andWhere('is_inactive', false)
         .whereIn('board_id', boardIds)
         .count('* as count')
         .first();

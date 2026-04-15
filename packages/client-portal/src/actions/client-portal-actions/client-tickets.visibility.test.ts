@@ -407,6 +407,56 @@ describe('client portal ticket visibility enforcement', () => {
     expect(createTicketWithRetryMock).not.toHaveBeenCalled();
   });
 
+  it('T008: client portal ticket creation rejects inactive boards even when they appear in visibility memberships', async () => {
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
+      const trx = (table: string) => {
+        if (table === 'users') {
+          return makeUserQuery();
+        }
+
+        if (table === 'boards') {
+          return {
+            where: vi.fn().mockReturnValue({
+              first: vi.fn().mockResolvedValue(undefined),
+            }),
+          };
+        }
+
+        if (table === 'statuses') {
+          return {
+            where: vi.fn().mockReturnValue({
+              first: vi.fn().mockResolvedValue({ status_id: 'status-1' }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table: ${table}`);
+      };
+
+      return callback(trx);
+    });
+
+    getVisibilityContextMock.mockResolvedValue({
+      contactId: 'contact-1',
+      clientId: 'client-1',
+      visibilityGroupId: 'group-1',
+      visibleBoardIds: ['board-inactive'],
+    });
+
+    const formData = new FormData();
+    formData.append('title', 'Inactive board ticket');
+    formData.append('description', 'Should fail');
+    formData.append('priority_id', 'priority-1');
+    formData.append('board_id', 'board-inactive');
+
+    const { createClientTicket } = await import('./client-tickets');
+
+    await expect(createClientTicket(formData)).rejects.toThrow(
+      'Visibility group assignment is invalid for this contact.'
+    );
+    expect(createTicketWithRetryMock).not.toHaveBeenCalled();
+  });
+
   it('T016: unassigned contacts can still create tickets with unrestricted behavior', async () => {
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
       const trx = (table: string) => {

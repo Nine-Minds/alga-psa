@@ -36,7 +36,7 @@ type UserModelState = {
   boards: Array<{
     tenant: string;
     board_id: string;
-    client_id: string;
+    is_inactive?: boolean;
   }>;
   groupBoards: Array<{
     tenant: string;
@@ -143,7 +143,7 @@ function createUserModelTrx(state: UserModelState) {
                   return (
                     row.tenant === filters['cvgb.tenant'] &&
                     row.group_id === filters['cvgb.group_id'] &&
-                    board?.client_id === filters['b.client_id']
+                    board?.tenant === filters['cvgb.tenant']
                   );
                 })
                 .map((row) => ({ board_id: row.board_id })),
@@ -185,7 +185,6 @@ describe('portal user creation preserves client portal visibility assignments', 
         {
           tenant: 'tenant-1',
           board_id: 'board-1',
-          client_id: 'client-a',
         },
       ],
       groupBoards: [

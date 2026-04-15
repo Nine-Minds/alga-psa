@@ -110,6 +110,30 @@ describe('client portal visibility resolver', () => {
     ).rejects.toThrow(VISIBILITY_GROUP_MISMATCH_ERROR);
   });
 
+  it('T011: returns an empty board list when an assigned visibility group has no board memberships', async () => {
+    const trx = buildTrx({
+      contact: {
+        contact_name_id: 'contact-1',
+        client_id: 'client-1',
+        portal_visibility_group_id: 'group-empty',
+      },
+      group: {
+        group_id: 'group-empty',
+        client_id: 'client-1',
+      },
+      boardIds: [],
+    });
+
+    await expect(
+      getClientContactVisibilityContext(trx, 'tenant-1', 'contact-1')
+    ).resolves.toEqual({
+      contactId: 'contact-1',
+      clientId: 'client-1',
+      visibilityGroupId: 'group-empty',
+      visibleBoardIds: [],
+    });
+  });
+
   it('fails closed for restricted groups with no valid boards and keeps the query chainable', () => {
     const query = makeQueryBuilder();
     expect(applyVisibilityBoardFilter(query, [])).toBe(query);

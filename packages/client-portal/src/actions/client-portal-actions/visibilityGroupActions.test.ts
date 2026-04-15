@@ -190,6 +190,53 @@ describe('client portal visibility group actions', () => {
     ).rejects.toThrow('Cannot manage visibility groups for another client');
   });
 
+  it('T002: client portal admin board loading returns active tenant boards without requiring board client ownership', async () => {
+    const boardsWhereMock = vi.fn(() => ({
+      andWhere: vi.fn(() => ({
+        select: vi.fn().mockResolvedValue([
+          { board_id: boardIdOne, board_name: 'General Support' },
+          { board_id: boardIdTwo, board_name: 'Projects' },
+        ]),
+      })),
+    }));
+
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
+      const trx = (table: string) => {
+        if (table === 'contacts') {
+          return {
+            where: vi.fn(() => ({
+              select: vi.fn(() => ({
+                first: vi.fn().mockResolvedValue({
+                  client_id: clientId,
+                  is_client_admin: true,
+                }),
+              })),
+            })),
+          };
+        }
+
+        if (table === 'boards') {
+          return {
+            where: boardsWhereMock,
+          };
+        }
+
+        throw new Error(`Unexpected table: ${table}`);
+      };
+
+      return callback(trx);
+    });
+
+    const { getClientPortalVisibilityGroupBoards } = await import('./visibilityGroupActions');
+    const boards = await getClientPortalVisibilityGroupBoards();
+
+    expect(boardsWhereMock).toHaveBeenCalledWith({ tenant: 'tenant-1' });
+    expect(boards).toEqual([
+      { board_id: boardIdOne, board_name: 'General Support' },
+      { board_id: boardIdTwo, board_name: 'Projects' },
+    ]);
+  });
+
   it('T021: client portal admin can create a visibility group with selected board membership', async () => {
     const insertGroupMock = vi.fn().mockReturnValue({
       returning: vi.fn().mockResolvedValue([{ group_id: 'group-new' }]),
@@ -214,7 +261,7 @@ describe('client portal visibility group actions', () => {
         if (table === 'boards') {
           return {
             where: vi.fn(() => ({
-              where: vi.fn(() => ({
+              andWhere: vi.fn(() => ({
                 whereIn: vi.fn(() => ({
                   select: vi.fn().mockResolvedValue([
                     { board_id: boardIdOne },
@@ -283,7 +330,7 @@ describe('client portal visibility group actions', () => {
         if (table === 'boards') {
           return {
             where: vi.fn(() => ({
-              where: vi.fn(() => ({
+              andWhere: vi.fn(() => ({
                 whereIn: vi.fn(() => ({
                   select: vi.fn().mockResolvedValue([
                     { board_id: boardIdThree },
@@ -358,7 +405,7 @@ describe('client portal visibility group actions', () => {
         if (table === 'boards') {
           return {
             where: vi.fn(() => ({
-              where: vi.fn(() => ({
+              andWhere: vi.fn(() => ({
                 whereIn: vi.fn(() => ({
                   select: vi.fn().mockResolvedValue([{ board_id: boardIdOne }]),
                 })),
@@ -381,6 +428,52 @@ describe('client portal visibility group actions', () => {
         name: 'Invalid',
         description: null,
         boardIds: [boardIdOne, crossClientBoardId],
+      })
+    ).rejects.toThrow('One or more boards are invalid for this tenant');
+  });
+
+  it('T003: client portal admin cannot include inactive boards when creating a visibility group', async () => {
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
+      const trx = (table: string) => {
+        if (table === 'contacts') {
+          return {
+            where: vi.fn(() => ({
+              select: vi.fn(() => ({
+                first: vi.fn().mockResolvedValue({
+                  client_id: clientId,
+                  is_client_admin: true,
+                }),
+              })),
+            })),
+          };
+        }
+
+        if (table === 'boards') {
+          return {
+            where: vi.fn(() => ({
+              andWhere: vi.fn(() => ({
+                whereIn: vi.fn(() => ({
+                  select: vi.fn().mockResolvedValue([{ board_id: boardIdOne }]),
+                })),
+              })),
+            })),
+          };
+        }
+
+        throw new Error(`Unexpected table: ${table}`);
+      };
+
+      return callback(trx);
+    });
+
+    const { createClientPortalVisibilityGroup } = await import('./visibilityGroupActions');
+
+    await expect(
+      createClientPortalVisibilityGroup({
+        clientId,
+        name: 'Inactive Board Rejection',
+        description: null,
+        boardIds: [boardIdOne, boardIdTwo],
       })
     ).rejects.toThrow('One or more boards are invalid for this tenant');
   });
