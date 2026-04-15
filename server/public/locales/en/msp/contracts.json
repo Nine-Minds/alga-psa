@@ -1426,7 +1426,26 @@
       "serviceItemLabel": "Service {{index}}"
     }
   },
-  "wizardProducts": {},
+  "wizardProducts": {
+    "actions": {
+      "addProduct": "Add Product"
+    },
+    "description": "Attach products that will be billed each cycle. Products use the catalog price for the contract currency unless you enter an override.",
+    "emptyState": "No products attached yet. Add a product if you want it to bill every cycle.",
+    "heading": "Products",
+    "labels": {
+      "defaultCatalogPrice": "Default catalog price:",
+      "overrideUnitPriceOptional": "Override unit price (optional)",
+      "productItem": "Product {{index}}",
+      "products": "Products",
+      "quantity": "Quantity",
+      "selectProductPlaceholder": "Select a product"
+    },
+    "validation": {
+      "noDefaultPriceEnterUnitPrice": "No default price set. Enter a unit price.",
+      "productMissingPrice": "This product has no default price and no override. It cannot be billed until you enter a unit price."
+    }
+  },
   "wizardHourly": {},
   "wizardUsage": {},
   "wizardReview": {},

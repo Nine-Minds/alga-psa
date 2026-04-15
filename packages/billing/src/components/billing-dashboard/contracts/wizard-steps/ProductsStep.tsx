@@ -10,6 +10,7 @@ import { getCurrencySymbol } from '@alga-psa/core';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
 import type { ContractWizardData } from '../ContractWizard';
 import { Plus, X, Package } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ProductsStepProps {
   data: ContractWizardData;
@@ -17,6 +18,7 @@ interface ProductsStepProps {
 }
 
 export function ProductsStep({ data, updateData }: ProductsStepProps) {
+  const { t } = useTranslation('msp/contracts');
   const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
   // Track default rates from catalog for display
   const [catalogRates, setCatalogRates] = useState<Record<number, number>>({});
@@ -108,23 +110,26 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
     <ReflectionContainer id="products-step">
       <div className="space-y-6">
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">Products</h3>
+          <h3 className="text-lg font-semibold mb-2">{t('wizardProducts.heading', { defaultValue: 'Products' })}</h3>
           <p className="text-sm text-[rgb(var(--color-text-500))]">
-            Attach products that will be billed each cycle. Products use the catalog price for the
-            contract currency unless you enter an override.
+            {t('wizardProducts.description', {
+              defaultValue: 'Attach products that will be billed each cycle. Products use the catalog price for the contract currency unless you enter an override.',
+            })}
           </p>
         </div>
 
         {data.product_services.length === 0 ? (
           <div className="text-sm text-muted-foreground">
-            No products attached yet. Add a product if you want it to bill every cycle.
+            {t('wizardProducts.emptyState', {
+              defaultValue: 'No products attached yet. Add a product if you want it to bill every cycle.',
+            })}
           </div>
         ) : null}
 
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Products
+            {t('wizardProducts.labels.products', { defaultValue: 'Products' })}
           </Label>
 
           {data.product_services.map((line, index) => {
@@ -137,24 +142,29 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
                 className="flex items-start gap-3 p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-[rgb(var(--color-border-50))]"
               >
                 <div className="flex-1 space-y-3">
-                  <div className="space-y-2">
-                    <Label htmlFor={`product-${index}`} className="text-sm">
-                      Product {index + 1}
-                    </Label>
-                    <ServiceCatalogPicker
+                <div className="space-y-2">
+                  <Label htmlFor={`product-${index}`} className="text-sm">
+                    {t('wizardProducts.labels.productItem', {
+                      defaultValue: 'Product {{index}}',
+                      index: index + 1,
+                    })}
+                  </Label>
+                  <ServiceCatalogPicker
                       id={`product-select-${index}`}
                       value={line.service_id}
                       selectedLabel={line.service_name}
                       onSelect={(item) => handleProductChange(index, item)}
                       itemKinds={['product']}
-                      placeholder="Select a product"
+                      placeholder={t('wizardProducts.labels.selectProductPlaceholder', {
+                        defaultValue: 'Select a product',
+                      })}
                     />
                   </div>
 
                   <div className="flex items-end gap-4 flex-wrap">
                     <div className="space-y-2">
                       <Label htmlFor={`product-quantity-${index}`} className="text-sm">
-                        Quantity
+                        {t('wizardProducts.labels.quantity', { defaultValue: 'Quantity' })}
                       </Label>
                       <Input
                         id={`product-quantity-${index}`}
@@ -170,7 +180,9 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
 
                     <div className="space-y-2">
                       <Label htmlFor={`product-rate-${index}`} className="text-sm">
-                        Override unit price (optional)
+                        {t('wizardProducts.labels.overrideUnitPriceOptional', {
+                          defaultValue: 'Override unit price (optional)',
+                        })}
                       </Label>
                       <div className="relative w-40">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-400))]">
@@ -189,12 +201,15 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
                       </div>
                       {catalogRate !== null && catalogRate > 0 ? (
                         <div className="text-xs text-muted-foreground">
-                          Default catalog price: {currencySymbol}
+                          {t('wizardProducts.labels.defaultCatalogPrice', { defaultValue: 'Default catalog price:' })}{' '}
+                          {currencySymbol}
                           {(catalogRate / 100).toFixed(2)}
                         </div>
                       ) : line.service_id ? (
                         <div className="text-xs text-amber-700">
-                          No default price set. Enter a unit price.
+                          {t('wizardProducts.validation.noDefaultPriceEnterUnitPrice', {
+                            defaultValue: 'No default price set. Enter a unit price.',
+                          })}
                         </div>
                       ) : null}
                     </div>
@@ -203,8 +218,9 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
                   {isMissingPrice ? (
                     <Alert variant="destructive">
                       <AlertDescription>
-                        This product has no default price and no override. It cannot be
-                        billed until you enter a unit price.
+                        {t('wizardProducts.validation.productMissingPrice', {
+                          defaultValue: 'This product has no default price and no override. It cannot be billed until you enter a unit price.',
+                        })}
                       </AlertDescription>
                     </Alert>
                   ) : null}
@@ -232,11 +248,10 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
             className="flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Add Product
+            {t('wizardProducts.actions.addProduct', { defaultValue: 'Add Product' })}
           </Button>
         </div>
       </div>
     </ReflectionContainer>
   );
 }
-

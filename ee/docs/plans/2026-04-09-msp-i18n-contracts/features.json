@@ -272,7 +272,7 @@
   {
     "id": "F055",
     "description": "Wire useTranslation('msp/contracts') in ProductsStep.tsx -- translate step heading, description, service picker, quantity/rate fields, and empty state",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F056",
