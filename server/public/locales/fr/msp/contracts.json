@@ -46,7 +46,8 @@
       "clientContracts": "Contrats clients",
       "drafts": "Brouillons",
       "templates": "Modèles"
-    }
+    },
+    "moneyPlaceholder": "—"
   },
   "status": {
     "active": "Actif",

@@ -46,7 +46,8 @@
       "clientContracts": "Klantcontracten",
       "drafts": "Concepten",
       "templates": "Sjablonen"
-    }
+    },
+    "moneyPlaceholder": "—"
   },
   "status": {
     "active": "Actief",

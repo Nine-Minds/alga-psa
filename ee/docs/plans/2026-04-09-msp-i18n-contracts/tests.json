@@ -280,7 +280,7 @@
   {
     "id": "T033",
     "description": "Unit: ContractOverview.i18n.test -- stat cards (Est. Monthly Value, Contract Lines, Total Services) render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]

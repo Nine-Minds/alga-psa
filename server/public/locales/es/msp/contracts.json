@@ -46,7 +46,8 @@
       "clientContracts": "Contratos de clientes",
       "drafts": "Damas",
       "templates": "Plantillas"
-    }
+    },
+    "moneyPlaceholder": "—"
   },
   "status": {
     "active": "Activo",

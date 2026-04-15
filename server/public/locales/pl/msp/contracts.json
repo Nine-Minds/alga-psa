@@ -46,7 +46,8 @@
       "clientContracts": "Umowy klienckie",
       "drafts": "Warcaby",
       "templates": "Szablony"
-    }
+    },
+    "moneyPlaceholder": "—"
   },
   "status": {
     "active": "Aktywny",
