@@ -1166,6 +1166,9 @@
     "title": "Quick Start Guide"
   },
   "servicePicker": {
+    "emptyMessage": "No service found.",
+    "placeholder": "Select service...",
+    "searchPlaceholder": "Search services...",
     "catalog": {
       "badges": {
         "product": "Product",

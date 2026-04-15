@@ -252,7 +252,7 @@
   {
     "id": "F051",
     "description": "Wire useTranslation('msp/contracts') in ServicePicker.tsx -- translate placeholder ('Select service...'), search placeholder ('Search services...'), and empty message ('No service found.')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F052",
