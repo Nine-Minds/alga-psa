@@ -528,17 +528,18 @@ export class TaniumGatewayClient {
         if (!node?.id) continue;
 
         const installedApplications = Array.isArray(node.installedApplications)
-          ? node.installedApplications
-              .map((application) => {
-                const name = String(application?.name || '').trim();
-                if (!name) return null;
-                return {
-                  name,
-                  version: application?.version ?? null,
-                  uninstallable: typeof application?.uninstallable === 'boolean' ? application.uninstallable : null,
-                } satisfies TaniumInstalledApplication;
-              })
-              .filter((application): application is TaniumInstalledApplication => application !== null)
+          ? node.installedApplications.reduce<TaniumInstalledApplication[]>((acc, application) => {
+              const name = String(application?.name || '').trim();
+              if (!name) return acc;
+
+              acc.push({
+                name,
+                version: application?.version ?? null,
+                uninstallable: typeof application?.uninstallable === 'boolean' ? application.uninstallable : null,
+              });
+
+              return acc;
+            }, [])
           : [];
 
         const metadata: Record<string, unknown> = {
