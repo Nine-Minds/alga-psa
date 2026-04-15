@@ -43,4 +43,23 @@ describe('Contracts i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBe(fallback);
     }
   });
+
+  it('T003: ContractDetail unsaved + save-success alerts use msp/contracts keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/ContractDetail.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    expect(source).toContain(
+      "t('contractDetail.alerts.unsavedChanges', {"
+    );
+    expect(source).toContain(
+      "t('contractDetail.alerts.saveSuccess', {"
+    );
+
+    expect(getLeaf(en, 'contractDetail.alerts.unsavedChanges')).toBe(
+      'You have unsaved changes. Click "Save Changes" to apply them.'
+    );
+    expect(getLeaf(en, 'contractDetail.alerts.saveSuccess')).toBe('Contract saved successfully!');
+  });
 });

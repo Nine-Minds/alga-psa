@@ -283,3 +283,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-14)** Locale maintenance note: this pass only backfilled missing keys for parity; existing translated values were preserved, and newly introduced keys currently default to English text until follow-up translation refresh.
 - **(2026-04-14)** `T002` completed: added `packages/billing/tests/billing-dashboard/ContractsSubbatch.i18n.test.ts` with a ContractDetail tab-label wiring assertion (`contractDetail.tabs.overview|lines|pricing|documents|invoices`) validating both source `t(...)` usage and English locale key presence.
 - **(2026-04-14)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractsSubbatch.i18n.test.ts` (pass; 1 file, 1 test).
+- **(2026-04-14)** `T003` completed: extended `ContractsSubbatch.i18n.test.ts` with ContractDetail alert-key coverage (`contractDetail.alerts.unsavedChanges`, `contractDetail.alerts.saveSuccess`) and English-locale value assertions.
+- **(2026-04-14)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractsSubbatch.i18n.test.ts` (pass; 1 file, 2 tests).

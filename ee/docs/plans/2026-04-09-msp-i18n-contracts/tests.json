@@ -26,7 +26,7 @@
   {
     "id": "T003",
     "description": "Unit: ContractDetail.i18n.test -- unsaved changes alert and save success alert render translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
