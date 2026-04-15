@@ -2,201 +2,201 @@
   {
     "id": "F001",
     "description": "ContractLineDialog.tsx: Wire useTranslation('msp/contract-lines') and translate dialog title, preset basics section (name label, frequency label, billing timing label), placeholder text, and validation error prefix ('Please correct the following')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F002",
     "description": "ContractLineDialog.tsx: Translate billing model selector (section heading, Fixed Fee/Hourly/Usage-Based card titles and descriptions), billing timing options labels and helper text ('Hourly and usage-based lines always bill in arrears', 'Advance billing invoices the upcoming period')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F003",
     "description": "ContractLineDialog.tsx: Translate type-specific config sections -- Fixed (alert info, 'Services & Products', 'Item N', 'Add Item', empty state, 'Recurring Base Rate', proration label/description), Hourly (alert info, 'Minimum Billable Time', 'Round Up To Nearest', 'Hourly Services', 'Service N', rate labels, bucket switch, 'Add Hourly Service', empty state), Usage (alert info, 'Usage-Based Services', 'Service N', 'Rate per Unit', 'Unit of Measure', bucket switch, 'Add Usage-Based Service', empty state) -- plus Cancel/Submit button text with saving state",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F004",
     "description": "HourlyContractLineConfiguration.tsx: Wire useTranslation and translate plan basics section (card title with interpolated plan name, section heading, labels, placeholders), plan-wide hourly settings accordion trigger text, overtime section (switch label, tooltip, rate/threshold labels and helper text), after-hours section (switch label, tooltip, multiplier label and helper text)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F005",
     "description": "HourlyContractLineConfiguration.tsx: Translate service rates accordion (card title 'Service Rates & Settings', service name fallback, non-hourly service message with interpolated billing method), save button text with loading state, manage services card title, empty state messages, error messages, and Reset/Save Changes buttons",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F006",
     "description": "UsageContractLineConfiguration.tsx: Wire useTranslation and translate plan basics section (card title with interpolated plan name and '(Usage)' suffix, section heading, labels, placeholders), Reset/Save Changes buttons with saving state",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F007",
     "description": "UsageContractLineConfiguration.tsx: Translate service pricing card (title, save error alert), accordion service summary text ('Tiered Pricing (N tiers)', 'Not Set', 'Loading...', 'Loading configuration...'), Save All Configurations button, manage services card title, empty state with helper text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F008",
     "description": "UsageContractLinePresetConfiguration.tsx: Wire useTranslation and translate preset basics section (card title with interpolated preset name, 'Contract Line Preset Basics' heading, 'Contract Line Preset Name *' label, description text), Reset/Save Changes buttons",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F009",
     "description": "UsageContractLinePresetConfiguration.tsx: Translate service pricing card, accordion summaries, Save All Configurations button, manage preset services card title, empty state, and all error/validation messages ('No changes detected to save', 'Cannot save, validation errors exist')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F010",
     "description": "HourlyContractLinePresetConfiguration.tsx: Wire useTranslation and translate preset basics section (card title with interpolated preset name and '(Hourly)' suffix, labels, Minimum Billable Time / Round Up To Nearest with helper text), Reset/Save Changes buttons",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F011",
     "description": "HourlyContractLinePresetConfiguration.tsx: Translate manage preset services card title, error states ('Contract line not found or invalid type', 'Invalid plan type or plan not found', 'Failed to load plan configuration'), and all shared validation/save error messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F012",
     "description": "UsageContractLinePresetServicesList.tsx: Wire useTranslation and translate table column headers (Service Name, Service Type, Billing Method, Rate, Unit, Actions), action menu items (Edit Rate, Remove, Configure bucket), empty state messages, and 'Add Services' section heading",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F013",
     "description": "UsageContractLinePresetServicesList.tsx: Translate service addition UI (checkbox list labels with 'Service Type: X | Method: Y | Rate: Z', 'Add Selected (N) Services' button), bucket overlay switch labels, save/discard buttons, unsaved changes confirmation dialog, toast messages, and error alerts",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F014",
     "description": "HourlyContractLinePresetServicesList.tsx: Wire useTranslation and translate table column headers, action menu items, empty state messages, and 'Add Services' section heading",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F015",
     "description": "HourlyContractLinePresetServicesList.tsx: Translate service addition UI, bucket overlay switch labels, save/discard buttons, unsaved changes confirmation dialog, toast messages, and error alerts",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F016",
     "description": "GenericContractLineServicesList.tsx: Wire useTranslation and translate table column headers ('Service Name', 'Service Type', 'Billing Method', 'Derived Config Type', 'Quantity', 'Unit of Measure', 'Custom Rate', 'Actions'), billing method display labels ('Fixed Price', 'Hourly', 'Usage Based'), config type badge text, and screen reader text ('Open menu')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F017",
     "description": "GenericContractLineServicesList.tsx: Translate action menu items ('Configure', 'Remove'), 'Add Services to Contract Line' heading, empty states ('No services currently associated...', 'All available services are already associated...', 'Loading services...'), service list item detail text ('Service Type: X | Method: Y | Rate: Z', 'No {currency} price'), 'Enter rate' placeholder, 'Add Selected (N) Services' button, billing mismatch badge, and error alerts",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F018",
     "description": "ContractLines.tsx: Wire useTranslation and translate table column headers ('Contract Line Name', 'Billing Frequency', 'Contract Line Type', 'Is Custom', 'Actions'), Yes/No boolean display, action menu items ('Edit', 'Delete'), 'Contract Lines' heading, 'Add Contract Line' button text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F019",
     "description": "ContractLines.tsx: Translate plan services section ('Plan Services' heading, 'Services for {name}' subheading, 'Select a contract line to manage its services' empty state), service table column headers ('Service Name', 'Quantity', 'Unit of Measure', 'Custom Rate', 'Actions'), 'Remove' action, 'Select service...' placeholder, 'Add Service' button, toast messages, and error messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F020",
     "description": "FixedContractLineConfiguration.tsx: Wire useTranslation and translate card title with interpolated plan name, contract line basics section (heading, description, labels for name/frequency/billing timing/cadence owner), cadence owner radio option labels and descriptions, billing timing helper text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F021",
     "description": "FixedContractLineConfiguration.tsx: Translate fixed fee settings section (heading, description, 'Recurring Base Rate *' label, helper text, 'Adjust for Partial Periods' label/description, billing cycle alignment options), associated services card title, Reset/Save Changes buttons, validation errors, and error states",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F022",
     "description": "FixedContractLinePresetConfiguration.tsx: Wire useTranslation and translate card title with interpolated preset name, preset basics section ('Contract Line Preset Basics' heading, description, name/frequency labels), billing timing label and helper text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F023",
     "description": "FixedContractLinePresetConfiguration.tsx: Translate fixed fee settings section (heading, description, 'Recurring Base Rate (Optional)' label, helper text about overriding, proration label/description), billing cycle alignment options ('Start of Billing Cycle', 'End of Billing Cycle', 'Proportional Coverage'), associated services card title, Reset/Save Changes buttons, validation/error messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F024",
     "description": "ServiceHourlyConfigForm.tsx: Wire useTranslation and translate form field labels ('Hourly Rate ($)', 'Minimum Billable Time (minutes)', 'Round Up To Nearest (minutes)'), tooltip content strings (standard rate explanation, minimum duration explanation, rounding explanation), validation error display, and placeholder text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F025",
     "description": "ServiceHourlyConfigForm.tsx: Translate user type specific rates section ('User Type Specific Rates' label, tooltip, existing rate display with interpolated values, 'Add New Rate' label, user type select placeholder, 'Add' button), user type option labels ('Technician', 'Engineer', 'Consultant', 'Project Manager', 'Administrator'), and validation error messages ('Please select a user type...', 'This user type already has a specific rate')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F026",
     "description": "ContractLineServiceForm.tsx: Wire useTranslation and translate dialog title ('Edit Service Configuration'), loading state text ('Loading service configuration...'), error messages ('Missing plan or service information', 'Failed to load service configuration', 'Failed to update service')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F027",
     "description": "ContractLinesOverview.tsx: Wire useTranslation and translate page heading ('Contract Line Presets'), 'Add Contract Line Preset' button, table column headers ('Contract Line Name', 'Billing Frequency', 'Contract Line Type', 'Actions'), action menu items ('Edit', 'Delete'), screen reader text ('Open menu')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F028",
     "description": "ContractLinesOverview.tsx: Translate filter section (search placeholder 'Search contract line presets', type filter 'All types' option, 'Reset' clear-filters button text), loading indicator text ('Loading contract line presets'), toast messages ('Contract line preset deleted successfully'), and error alerts",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F029",
     "description": "ServiceTierEditor.tsx: Wire useTranslation and translate card title ('Pricing Tiers'), 'Add Tier' button, column headers ('From (Units)', 'To (Units)', 'Rate per Unit' with interpolated unit), empty state ('No tiers defined. Click \"Add Tier\".'), helper text about tier rules, aria-labels ('Tier N From Amount', 'Tier N To Amount', 'Tier N Rate', 'Remove Tier N'), and 'Unlimited' placeholder",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F030",
     "description": "ServiceUsageConfigForm.tsx: Wire useTranslation and translate form labels ('Default Rate per Unit', 'Unit of Measure', 'Minimum Usage'), tooltip content strings (rate explanation, unit explanation, minimum billable explanation), required field indicator text, tiered pricing switch label ('Enable Tiered Pricing for {serviceName}'), and placeholder text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F031",
     "description": "ServiceBucketConfigForm.tsx: Wire useTranslation and translate labels ('Total {Units} in Bucket', 'Overage Rate per {Unit}', 'Allow unused {units} to roll over'), tooltip content strings with interpolated unit names, placeholder text ('Enter total hours', 'Enter overage rate'), and dynamic unit pluralization",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F032",
     "description": "EditContractLineServiceQuantityDialog.tsx: Wire useTranslation and translate dialog title ('Edit Service Quantity'), 'Adjust Quantity' heading, 'Quantity' label, 'Unit price override (optional)' label, helper text ('Leave blank to use the product catalog price...'), validation error ('Quantity must be greater than zero'), Cancel/Save button text, and error fallback ('Failed to update quantity')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F033",
     "description": "ContractLineTypeSelector.tsx: Wire useTranslation and translate 'Contract Line Type' label, plan type descriptions (Fixed/Hourly/Usage descriptions used in cards and dropdown), and 'Select contract line type' placeholder",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F034",
     "description": "ContractLineTypeRouter.tsx: Wire useTranslation and translate loading text ('Loading Contract Line...'), error messages ('Contract line with ID {id} not found', 'Failed to load contract line details', 'Unknown or unsupported contract line type: {type}')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F035",
     "description": "ContractLinePresetTypeRouter.tsx: Wire useTranslation and translate loading text ('Loading Contract Line Preset...'), error messages ('Contract line preset with ID {id} not found', 'Failed to load contract line preset details', 'Unknown or unsupported contract line preset type: {type}')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F036",
     "description": "Create msp/contract-lines.json namespace file in server/public/locales/en/ with all extracted keys organized by component area",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F037",
     "description": "Generate translations for all 7 production languages (fr, es, de, nl, it, pl) for the msp/contract-lines namespace",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F038",
     "description": "Generate pseudo-locale files (xx, yy) for msp/contract-lines namespace",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F039",
     "description": "Run validate-translations.cjs and fix any validation errors across all locale files for msp/contract-lines",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F040",
     "description": "Update ROUTE_NAMESPACES to load msp/contract-lines namespace for billing-related routes",
-    "implemented": false
+    "implemented": true
   }
 ]

@@ -35,6 +35,8 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
   scrollContainerProps,
   scrollContainerFooter,
 }: WorkflowDesignerPaletteProps<TItem>): React.ReactElement {
+  let paletteIndex = 0;
+
   return (
     <aside
       className={`pointer-events-auto w-56 max-h-[calc(100vh-220px)] bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-hidden flex flex-col min-h-0 z-40 ${visible ? '' : 'hidden'}`}
@@ -63,15 +65,20 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
         id="workflow-designer-palette-scroll"
         ref={scrollContainerRef}
         {...scrollContainerProps}
-        className="flex-1 min-h-0 overflow-y-auto p-3 space-y-4"
+        className="flex-1 min-h-0 overflow-y-auto pl-3 pr-5 py-3 space-y-4"
+        style={{ scrollbarGutter: 'stable' }}
       >
         {Object.entries(groupedPaletteItems).map(([category, items]) => (
           <div key={category}>
             <div className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-2">
               {category}
             </div>
-            <div className="grid grid-cols-4 gap-1">
-              {items.map((item, itemIndex) => renderItem(item, category, itemIndex))}
+            <div className="grid grid-cols-2 gap-2">
+              {items.map((item) => {
+                const currentPaletteIndex = paletteIndex;
+                paletteIndex += 1;
+                return renderItem(item, category, currentPaletteIndex);
+              })}
             </div>
           </div>
         ))}

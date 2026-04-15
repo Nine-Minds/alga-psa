@@ -27,9 +27,58 @@ The entire contract management UI -- detail pages, create/edit wizards, template
 - Translating server-side contract actions or API responses.
 - Translating `@alga-psa/types` interface constants (e.g., status enums in shared types).
 - Refactoring component architecture or splitting large components.
-- Translating `contractsTabs.ts` exported string constants (those are tab labels consumed by parent components; they should be translated at point-of-use, not in the constant definition).
-- Translating billing frequency display labels in `@alga-psa/billing/constants/billing` (shared constant, separate effort).
 - Translating currency option labels from `@alga-psa/core` (shared constant, separate effort).
+
+## In scope: shared enum label migration (carried over from contract-lines batch)
+
+The contract-lines batch (2026-04-09-msp-i18n-contract-lines, shipped 2026-04-14) adopted a localized option-hook pattern for shared billing enums and migrated every in-scope call site. See [`.ai/translation/enum-labels-pattern.md`](../../../../.ai/translation/enum-labels-pattern.md) for the full recipe and [the contract-lines SCRATCHPAD follow-up note](../2026-04-09-msp-i18n-contract-lines/SCRATCHPAD.md#follow-up-enum-labels-from-alga-psabillingconstantsbilling) for the decision trail.
+
+**The contract-lines batch left the deprecated `BILLING_FREQUENCY_*`, `CONTRACT_LINE_TYPE_*`, and `PLAN_TYPE_*` exports in `packages/billing/src/constants/billing.ts` in place as `@deprecated` backwards-compat shims specifically so this batch can clean them up.** Every import of those constants in this batch's file list must be migrated to the published hooks from `@alga-psa/billing/hooks/useBillingEnumOptions`:
+
+| Hook | Replaces |
+|---|---|
+| `useBillingFrequencyOptions()` | `BILLING_FREQUENCY_OPTIONS` in `<CustomSelect options={...}>` |
+| `useFormatBillingFrequency()` | `BILLING_FREQUENCY_DISPLAY[value]` in table `render` callbacks and inline label lookups |
+| `useContractLineTypeOptions()` | `PLAN_TYPE_OPTIONS` / `CONTRACT_LINE_TYPE_OPTIONS` in `<CustomSelect>` and filter dropdowns |
+| `useFormatContractLineType()` | `PLAN_TYPE_DISPLAY[value]` / `CONTRACT_LINE_TYPE_DISPLAY[value]` in table renderers |
+
+**Call sites this batch owns** (enumerated during the contract-lines audit on 2026-04-14):
+
+| File | Line(s) | Current import | Target hook |
+|---|---|---|---|
+| `ContractForm.tsx` | 142 | `BILLING_FREQUENCY_OPTIONS` | `useBillingFrequencyOptions` |
+| `ContractDialog.tsx` | 588 | `BILLING_FREQUENCY_OPTIONS` | `useBillingFrequencyOptions` |
+| `ContractDialog.tsx` | 773 | `CONTRACT_LINE_TYPE_DISPLAY` (option-builder) | `useContractLineTypeOptions` |
+| `ContractDetail.tsx` | 1510 | `BILLING_FREQUENCY_OPTIONS` | `useBillingFrequencyOptions` |
+| `ContractTemplateDetail.tsx` | 709, 790 | `BILLING_FREQUENCY_OPTIONS` | `useBillingFrequencyOptions` |
+| `wizard-steps/ContractBasicsStep.tsx` | 260 | `BILLING_FREQUENCY_OPTIONS` | `useBillingFrequencyOptions` |
+| `wizard-steps/ReviewContractStep.tsx` | 22 (import), 148 | `BILLING_FREQUENCY_OPTIONS` (lookup by value) | `useBillingFrequencyOptions` + `.find(opt => opt.value === ...)` |
+| `wizard-steps/ReviewContractStep.tsx` | 303, 387, 429 | `BILLING_FREQUENCY_DISPLAY[...]` (override display in three review blocks) | `useFormatBillingFrequency` |
+| `template-wizard/steps/TemplateContractBasicsStep.tsx` | 81 | `BILLING_FREQUENCY_OPTIONS` | `useBillingFrequencyOptions` |
+| `AddContractLinesDialog.tsx` | 392 | `CONTRACT_LINE_TYPE_DISPLAY` (option-builder) | `useContractLineTypeOptions` |
+| `CreateCustomContractLineDialog.tsx` | 854 | `BILLING_FREQUENCY_OPTIONS` | `useBillingFrequencyOptions` |
+| `BillingFrequencyOverrideSelect.tsx` | 24, 27, 72 | `BILLING_FREQUENCY_OPTIONS` + `BILLING_FREQUENCY_DISPLAY` | `useBillingFrequencyOptions` + `useFormatBillingFrequency` |
+
+Line numbers are as of 2026-04-14; expect small drift if this batch runs later. Use the audit greps in [`.ai/translation/enum-labels-pattern.md`](../../../../.ai/translation/enum-labels-pattern.md#finding-latent-gaps) to recover exact positions.
+
+**`contractsTabs.ts` (Templates / Client Contracts / Drafts):** The `CONTRACT_SUBTAB_LABELS` constant is the same anti-pattern but has a wrinkle — it is used both as display text and as an identifier in `CONTRACT_LABEL_TO_SUBTAB`. Migrate by (a) keeping `CONTRACT_SUBTAB_LABELS` as value-to-value mapping for the identifier lookup, (b) adding enum keys under `msp/contracts.json` `enums.contractSubtab.*` (or `common.tabs.*` in the namespace), and (c) adding a small `useContractSubtabLabels()` helper inside `Contracts.tsx` / `ClientContractsTab.tsx` consumers that maps `ContractSubTab` values to localized labels via `t()`. Do NOT add `useTranslation` to `contractsTabs.ts` itself (it is not a React file).
+
+### Cross-package cleanup: `ClientServiceOverlapMatrix` + `getPlanTypeDisplayAsync`
+
+One more latent consumer lives **outside this batch's normal file list** but belongs in the same cleanup PR that removes the deprecated constants. The already-shipped `msp-i18n-clients` batch wired `ClientServiceOverlapMatrix.tsx` to `useTranslation('msp/clients')`, but its contract-line-type badge still renders English because the label arrives via a server-action RPC with a hardcoded English map:
+
+| File | Line | Issue |
+|---|---|---|
+| `packages/clients/src/lib/billingHelpers.ts` | 366 | `getPlanTypeDisplayAsync` is a `withAuthCheck` server action that returns `{ Fixed: 'Fixed', Hourly: 'Hourly', Usage: 'Usage Based' }`. No tenant/session dependency — it has no business being a server action. |
+| `packages/clients/src/components/clients/ClientServiceOverlapMatrix.tsx` | 41-46 | `useEffect` loads `planTypeDisplay` state from `getPlanTypeDisplayAsync()` and renders it in the type badge. |
+
+**Migration:**
+1. Delete `getPlanTypeDisplayAsync` from `billingHelpers.ts` (verify no other consumers: `rg -n 'getPlanTypeDisplayAsync' packages/ server/ ee/`).
+2. In `ClientServiceOverlapMatrix.tsx`: remove the import, the `planTypeDisplay` state, the `useEffect`, and the `setPlanTypeDisplay` call. Import `useFormatContractLineType` from `@alga-psa/billing/hooks/useBillingEnumOptions`, add `const formatContractLineType = useFormatContractLineType();` at the top of the component body, and replace the `planTypeDisplay[value]` lookup with `formatContractLineType(value)`.
+3. Verify `features/billing` is loaded on whichever route renders the overlap matrix. If that route currently only loads `msp/clients`, add `features/billing` to its `ROUTE_NAMESPACES` entry in `packages/core/src/lib/i18n/config.ts`.
+4. Run `node scripts/validate-translations.cjs` and confirm `rg -n 'getPlanTypeDisplayAsync'` returns no matches.
+
+No new translation keys are needed — `enums.contractLineType.*` already exists in `features/billing.json` across all 9 locales from the contract-lines batch. This cleanup is ~30 LOC across 2 files and should land in the same PR that removes the deprecated `*_DISPLAY` / `*_OPTIONS` exports from `packages/billing/src/constants/billing.ts` (see acceptance criterion 14).
 
 ## File Inventory
 
@@ -160,4 +209,6 @@ The `/msp/billing` route entry should add `msp/contracts`:
 9. `npm run build` succeeds with no TypeScript errors.
 10. No hardcoded English strings remain in the 37 wired component files (verified by grep for bare string literals in JSX).
 11. Interpolation variables (e.g., `{{count}}`, `{{name}}`) are used for dynamic values in pluralized or parameterized strings rather than template literals.
-12. `contractsTabs.ts` string constants are translated at their consumption point in `Contracts.tsx` / `ClientContractsTab.tsx`, not in the constant definition file.
+12. `contractsTabs.ts` string constants are translated at their consumption point via a `useContractSubtabLabels()` helper in `Contracts.tsx` / `ClientContractsTab.tsx`, not in the constant definition file. The `CONTRACT_LABEL_TO_SUBTAB` value-to-value mapping stays intact for identifier lookup.
+13. All call sites in the "Shared enum label migration" table above import hooks from `@alga-psa/billing/hooks/useBillingEnumOptions` and use the result in `<CustomSelect>` / `render` callbacks. Zero imports of `BILLING_FREQUENCY_OPTIONS`, `BILLING_FREQUENCY_DISPLAY`, `PLAN_TYPE_OPTIONS`, `PLAN_TYPE_DISPLAY`, or `CONTRACT_LINE_TYPE_DISPLAY` remain in the files owned by this batch (verify with `rg -n '_DISPLAY|_OPTIONS' packages/billing/src/components/billing-dashboard/contracts/`).
+14. After this batch merges, the `@deprecated` aliases in `packages/billing/src/constants/billing.ts` should be removed (leaving only `BILLING_FREQUENCY_VALUES`, `CONTRACT_LINE_TYPE_VALUES`, `*_LABEL_DEFAULTS`, and the TypeScript types). If any consumer outside the billing package still imports them, flag it and migrate in a follow-up — do not leave stale deprecated exports indefinitely.

@@ -120,5 +120,17 @@
     "awaitingResponse": "{{count}} quote(s) awaiting your response",
     "noPending": "No pending quotes",
     "viewAll": "View All Quotes"
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "annually": "Annually"
+    },
+    "contractLineType": {
+      "Fixed": "Fixed",
+      "Hourly": "Hourly",
+      "Usage": "Usage Based"
+    }
   }
 }

@@ -200,7 +200,7 @@ export type EventWaitConfig = z.infer<typeof eventWaitConfigSchema>;
 
 export const timeWaitConfigSchema = z.object({
   mode: z.enum(['duration', 'until']),
-  durationMs: z.number().int().positive().optional(),
+  durationMs: z.number().int().positive().safe().optional(),
   until: exprSchema.optional(),
   assign: z.record(exprSchema).optional()
 }).strict().superRefine((config, ctx) => {

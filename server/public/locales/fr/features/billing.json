@@ -120,5 +120,17 @@
     "awaitingResponse": "{{count}} devis en attente de votre réponse",
     "noPending": "Aucun devis en attente",
     "viewAll": "Voir tous les devis"
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "Mensuel",
+      "quarterly": "Trimestriel",
+      "annually": "Annuel"
+    },
+    "contractLineType": {
+      "Fixed": "Forfait",
+      "Hourly": "Horaire",
+      "Usage": "À l'usage"
+    }
   }
 }

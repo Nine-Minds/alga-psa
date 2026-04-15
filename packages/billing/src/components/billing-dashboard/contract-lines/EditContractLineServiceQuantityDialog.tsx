@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface EditPlanServiceQuantityDialogProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export const EditPlanServiceQuantityDialog: React.FC<EditPlanServiceQuantityDial
   currentUnitRateCents,
   onSave
 }) => {
+  const { t } = useTranslation('msp/contract-lines');
   const [quantity, setQuantity] = useState<number>(currentQuantity);
   const [rateInput, setRateInput] = useState<string>('');
   const [saving, setSaving] = useState(false);
@@ -47,7 +49,9 @@ export const EditPlanServiceQuantityDialog: React.FC<EditPlanServiceQuantityDial
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (Number.isNaN(quantity) || quantity <= 0) {
-      setError('Quantity must be greater than zero');
+      setError(t('forms.editQuantity.errors.quantityGreaterThanZero', {
+        defaultValue: 'Quantity must be greater than zero',
+      }));
       return;
     }
 
@@ -67,24 +71,28 @@ export const EditPlanServiceQuantityDialog: React.FC<EditPlanServiceQuantityDial
       await onSave({ quantity, unitRateCents });
       onOpenChange(false);
     } catch (err: any) {
-      console.error('Failed to update quantity', err);
-      setError(err?.message ?? 'Failed to update quantity');
+      console.error(t('forms.editQuantity.errors.updateFailed', { defaultValue: 'Failed to update quantity' }), err);
+      setError(err?.message ?? t('forms.editQuantity.errors.updateFailed', { defaultValue: 'Failed to update quantity' }));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={() => onOpenChange(false)} title="Edit Service Quantity">
+    <Dialog
+      isOpen={isOpen}
+      onClose={() => onOpenChange(false)}
+      title={t('forms.editQuantity.dialogTitle', { defaultValue: 'Edit Service Quantity' })}
+    >
       <form onSubmit={handleSubmit}>
         <DialogHeader>
-          <DialogTitle>Adjust Quantity</DialogTitle>
+          <DialogTitle>{t('forms.editQuantity.heading', { defaultValue: 'Adjust Quantity' })}</DialogTitle>
         </DialogHeader>
         <DialogContent className="space-y-4">
           <div>
             <p className="text-sm text-muted-foreground">{serviceName}</p>
             <label className="block text-sm font-medium mt-3" htmlFor="service-quantity-input">
-              Quantity
+              {t('forms.editQuantity.labels.quantity', { defaultValue: 'Quantity' })}
             </label>
             <Input
               id="service-quantity-input"
@@ -97,7 +105,9 @@ export const EditPlanServiceQuantityDialog: React.FC<EditPlanServiceQuantityDial
             {currentUnitRateCents !== undefined && (
               <>
                 <label className="block text-sm font-medium mt-4" htmlFor="service-rate-input">
-                  Unit price override (optional)
+                  {t('forms.editQuantity.labels.unitPriceOverrideOptional', {
+                    defaultValue: 'Unit price override (optional)',
+                  })}
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -120,7 +130,9 @@ export const EditPlanServiceQuantityDialog: React.FC<EditPlanServiceQuantityDial
                   />
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Leave blank to use the product catalog price for this contract&apos;s currency.
+                  {t('forms.editQuantity.helperText', {
+                    defaultValue: "Leave blank to use the product catalog price for this contract's currency.",
+                  })}
                 </p>
               </>
             )}
@@ -136,14 +148,14 @@ export const EditPlanServiceQuantityDialog: React.FC<EditPlanServiceQuantityDial
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            Cancel
+            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button
             id="edit-plan-service-quantity-save"
             type="submit"
             disabled={saving}
           >
-            Save
+            {t('common.actions.save', { defaultValue: 'Save' })}
           </Button>
         </DialogFooter>
       </form>

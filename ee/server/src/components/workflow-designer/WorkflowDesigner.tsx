@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, Draggable, Droppable, DropResult, type DraggableProvided } from '@hello-pangea/dnd';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
@@ -39,6 +39,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { analytics } from '@alga-psa/analytics/client';
 import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
@@ -137,6 +138,12 @@ import {
 } from '@alga-psa/workflows/authoring';
 import { validateExpressionSource } from '@alga-psa/workflows/authoring';
 import { partitionStepExpressionValidations, validateStepExpressions } from './expressionValidation';
+import {
+  composeTimeWaitDurationMs,
+  decomposeTimeWaitDurationMs,
+  formatTimeWaitDurationPart,
+  parseTimeWaitDurationPart,
+} from './timeWaitDuration';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 type WorkflowDefinitionRecord = {
@@ -1062,6 +1069,48 @@ const buildExpressionContext = (
 };
 
 const ensureExpr = (value: Expr | undefined): Expr => ({ $expr: value?.$expr ?? '' });
+
+const buildFixedTimeWaitUntilExpr = (value: Date): Expr => ({
+  $expr: JSON.stringify(value.toISOString())
+});
+
+const parseStringLiteralExpression = (value: string | undefined): string | null => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    return typeof parsed === 'string' ? parsed : null;
+  } catch {
+    // Fall through to single-quoted string support for older/manual expressions.
+  }
+
+  if (trimmed.startsWith("'") && trimmed.endsWith("'")) {
+    return trimmed.slice(1, -1).replace(/\\'/g, "'");
+  }
+
+  return null;
+};
+
+const parseFixedTimeWaitUntilExpr = (value: Expr | undefined): Date | null => {
+  const literal = parseStringLiteralExpression(value?.$expr);
+  if (!literal) {
+    return null;
+  }
+
+  const parsedDate = new Date(literal);
+  return Number.isFinite(parsedDate.getTime()) ? parsedDate : null;
+};
+
+const inferTimeWaitUntilAuthoringMode = (config: Record<string, unknown> | null): 'fixed' | 'expression' => {
+  if (!config || config.mode !== 'until') {
+    return 'fixed';
+  }
+
+  return parseFixedTimeWaitUntilExpr(config.until as Expr | undefined) ? 'fixed' : 'expression';
+};
 
 /**
  * Generate a smart default saveAs variable name from an action ID.
@@ -3152,6 +3201,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     return groupPaletteItemsByCategory(paletteItems);
   }, [paletteItems]);
 
+  const flatPaletteItems = useMemo(() => {
+    return Object.values(groupedPaletteItems).flat();
+  }, [groupedPaletteItems]);
+
   const handlePipeSelect = (pipePath: string) => {
     setSelectedPipePath(pipePath);
   };
@@ -3284,6 +3337,46 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     }
   };
 
+  const renderPaletteItem = (
+    item: typeof paletteItems[0],
+    dragProvided: DraggableProvided,
+    isDragging: boolean
+  ) => {
+    const itemWithAction = item as typeof item & {
+      actionId?: string;
+      actionVersion?: number;
+      groupKey?: string;
+      groupLabel?: string;
+      tileKind?: 'core-object' | 'transform' | 'app' | 'ai';
+    };
+
+    return (
+      <PaletteItemWithTooltip
+        item={itemWithAction}
+        icon={getPaletteIcon(item)}
+        isDragging={isDragging}
+        provided={dragProvided}
+        disabled={!canManage || registryError}
+        onClick={() => {
+          if (itemWithAction.groupKey) {
+            handleAddStep(
+              'action.call',
+              buildGroupedActionStepConfig(itemWithAction, { generateSaveAsName }),
+              itemWithAction.label
+            );
+          } else if (itemWithAction.actionId) {
+            handleAddStep('action.call', {
+              actionId: itemWithAction.actionId,
+              version: itemWithAction.actionVersion
+            });
+          } else {
+            handleAddStep(item.type as Step['type']);
+          }
+        }}
+      />
+    );
+  };
+
   const showInitialDesignerSkeleton = isLoading && !activeDefinition;
 
   const designerContent = (
@@ -3292,7 +3385,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 	      <div ref={designerFloatAnchorRef} className="relative flex flex-col flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-[rgb(var(--color-background))]">
         <div className="sticky top-4 z-20 h-0 pointer-events-none">
           {/* Floating Icon-Grid Palette (left) */}
-          <Droppable droppableId="palette" isDropDisabled={true}>
+          <Droppable
+            droppableId="palette"
+            isDropDisabled={true}
+            renderClone={(dragProvided, snapshot, rubric) => {
+              const item = flatPaletteItems[rubric.source.index];
+              if (!item) return <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} />;
+              return renderPaletteItem(item, dragProvided, snapshot.isDragging);
+            }}
+          >
             {(provided) => (
               <WorkflowDesignerPalette
                 visible={Boolean(designerFloatAnchorRect)}
@@ -3305,47 +3406,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                 scrollContainerRef={provided.innerRef}
                 scrollContainerProps={provided.droppableProps}
                 scrollContainerFooter={provided.placeholder}
-                renderItem={(item, _category, itemIndex) => (
+                renderItem={(item, _category, paletteIndex) => (
                   <Draggable
                     key={item.id}
                     draggableId={getPaletteDraggableId(item)}
-                    index={itemIndex}
+                    index={paletteIndex}
                     isDragDisabled={!canManage || registryError}
                   >
-                    {(dragProvided, snapshot) => {
-                      const itemWithAction = item as typeof item & {
-                        actionId?: string;
-                        actionVersion?: number;
-                        groupKey?: string;
-                        groupLabel?: string;
-                        tileKind?: 'core-object' | 'transform' | 'app' | 'ai';
-                      };
-                      return (
-                        <PaletteItemWithTooltip
-                          item={itemWithAction}
-                          icon={getPaletteIcon(item)}
-                          isDragging={snapshot.isDragging}
-                          provided={dragProvided}
-                          disabled={!canManage || registryError}
-                          onClick={() => {
-                            if (itemWithAction.groupKey) {
-                              handleAddStep(
-                                'action.call',
-                                buildGroupedActionStepConfig(itemWithAction, { generateSaveAsName }),
-                                itemWithAction.label
-                              );
-                            } else if (itemWithAction.actionId) {
-                              handleAddStep('action.call', {
-                                actionId: itemWithAction.actionId,
-                                version: itemWithAction.actionVersion
-                              });
-                            } else {
-                              handleAddStep(item.type as Step['type']);
-                            }
-                          }}
-                        />
-                      );
-                    }}
+                    {(dragProvided, snapshot) => renderPaletteItem(item, dragProvided, snapshot.isDragging)}
                   </Draggable>
                 )}
               />
@@ -5857,6 +5925,12 @@ export const StepConfigPanel: React.FC<{
   const timeWaitConfig = step.type === 'time.wait'
     ? removeInvalidWaitConfigFields((((step as NodeStep).config as Record<string, unknown> | undefined) ?? {}))
     : null;
+  const timeWaitDurationParts = useMemo(
+    () => decomposeTimeWaitDurationMs(typeof timeWaitConfig?.durationMs === 'number' ? timeWaitConfig.durationMs : undefined),
+    [timeWaitConfig?.durationMs]
+  );
+  const [timeWaitUntilAuthoringMode, setTimeWaitUntilAuthoringMode] = useState<'fixed' | 'expression'>(() => inferTimeWaitUntilAuthoringMode(timeWaitConfig));
+  const previousTimeWaitStepIdRef = useRef<string | null>(null);
   const selectedWaitEventName = typeof eventWaitConfig?.eventName === 'string' ? eventWaitConfig.eventName : '';
   const selectedWaitEventOption = useMemo(
     () => eventCatalogOptions.find((option) => option.event_type === selectedWaitEventName) ?? null,
@@ -5864,6 +5938,21 @@ export const StepConfigPanel: React.FC<{
   );
   const [eventWaitPayloadSchema, setEventWaitPayloadSchema] = useState<JsonSchema | null>(null);
   const [eventWaitPayloadSchemaStatus, setEventWaitPayloadSchemaStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+
+  useEffect(() => {
+    if (step.type !== 'time.wait') {
+      previousTimeWaitStepIdRef.current = null;
+      return;
+    }
+
+    if (previousTimeWaitStepIdRef.current === step.id) {
+      return;
+    }
+
+    previousTimeWaitStepIdRef.current = step.id;
+    const nextTimeWaitConfig = removeInvalidWaitConfigFields((((step as NodeStep).config as Record<string, unknown> | undefined) ?? {}));
+    setTimeWaitUntilAuthoringMode(inferTimeWaitUntilAuthoringMode(nextTimeWaitConfig));
+  }, [removeInvalidWaitConfigFields, step]);
 
   useEffect(() => {
     if (step.type !== 'event.wait') return;
@@ -5917,6 +6006,22 @@ export const StepConfigPanel: React.FC<{
       config: removeInvalidWaitConfigFields(nextConfig)
     });
   }, [onChange, removeInvalidWaitConfigFields, step]);
+
+  const updateTimeWaitDurationPart = useCallback((unit: 'days' | 'hours' | 'minutes' | 'seconds', raw: string) => {
+    if (!timeWaitConfig) {
+      return;
+    }
+
+    const nextDurationMs = composeTimeWaitDurationMs({
+      ...timeWaitDurationParts,
+      [unit]: parseTimeWaitDurationPart(raw)
+    });
+
+    updateWaitNodeConfig({
+      ...timeWaitConfig,
+      durationMs: nextDurationMs
+    });
+  }, [timeWaitConfig, timeWaitDurationParts, updateWaitNodeConfig]);
 
   const eventFilters = useMemo(() => {
     if (!eventWaitConfig) return [] as EventWaitFilterClause[];
@@ -6426,62 +6531,131 @@ export const StepConfigPanel: React.FC<{
         </div>
       )}
 
-      {step.type === 'time.wait' && timeWaitConfig && (
-        <div className="space-y-3">
-          <CustomSelect
-            id={`time-wait-mode-${step.id}`}
-            label="Mode"
-            options={[
-              { value: 'duration', label: 'Duration' },
-              { value: 'until', label: 'Until' }
-            ]}
-            value={typeof timeWaitConfig.mode === 'string' ? timeWaitConfig.mode : 'duration'}
-            onValueChange={(mode) => updateWaitNodeConfig({
-              ...timeWaitConfig,
-              mode,
-              durationMs: mode === 'duration' ? (timeWaitConfig.durationMs ?? 1000) : undefined,
-              until: mode === 'until' ? (timeWaitConfig.until ?? { $expr: '' }) : undefined
-            })}
-            disabled={!editable}
-          />
-          {(timeWaitConfig.mode ?? 'duration') === 'duration' ? (
-            <Input
-              id={`time-wait-duration-${step.id}`}
-              label="Duration (ms)"
-              type="number"
-              value={typeof timeWaitConfig.durationMs === 'number' ? timeWaitConfig.durationMs : ''}
-              disabled={!editable}
-              onChange={(event) => {
-                const raw = event.target.value.trim();
+      {step.type === 'time.wait' && timeWaitConfig && (() => {
+        const fixedUntilValue = parseFixedTimeWaitUntilExpr(timeWaitConfig.until as Expr | undefined) ?? undefined;
+
+        return (
+          <div className="space-y-3">
+            <CustomSelect
+              id={`time-wait-mode-${step.id}`}
+              label="Mode"
+              options={[
+                { value: 'duration', label: 'Duration' },
+                { value: 'until', label: 'Until' }
+              ]}
+              value={typeof timeWaitConfig.mode === 'string' ? timeWaitConfig.mode : 'duration'}
+              onValueChange={(mode) => {
+                if (mode === 'until') {
+                  setTimeWaitUntilAuthoringMode('fixed');
+                }
                 updateWaitNodeConfig({
                   ...timeWaitConfig,
-                  durationMs: raw ? Number(raw) : undefined
+                  mode,
+                  durationMs: mode === 'duration' ? (timeWaitConfig.durationMs ?? 1000) : undefined,
+                  until: mode === 'until' ? (timeWaitConfig.until ?? { $expr: '' }) : undefined
                 });
               }}
+              disabled={!editable}
             />
-          ) : (
-            <ExpressionField
-              idPrefix={`time-wait-until-${step.id}`}
-              label="Until expression"
-              value={ensureExpr((timeWaitConfig.until as Expr | undefined) ?? { $expr: '' })}
-              onChange={(untilExpr) => updateWaitNodeConfig({ ...timeWaitConfig, until: untilExpr })}
+            {(timeWaitConfig.mode ?? 'duration') === 'duration' ? (
+              <div className="space-y-2">
+                <Label>Duration</Label>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <Input
+                    id={`time-wait-duration-days-${step.id}`}
+                    label="Days"
+                    type="number"
+                    value={formatTimeWaitDurationPart(timeWaitDurationParts.days)}
+                    disabled={!editable}
+                    onChange={(event) => updateTimeWaitDurationPart('days', event.target.value)}
+                  />
+                  <Input
+                    id={`time-wait-duration-hours-${step.id}`}
+                    label="Hours"
+                    type="number"
+                    value={formatTimeWaitDurationPart(timeWaitDurationParts.hours)}
+                    disabled={!editable}
+                    onChange={(event) => updateTimeWaitDurationPart('hours', event.target.value)}
+                  />
+                  <Input
+                    id={`time-wait-duration-minutes-${step.id}`}
+                    label="Minutes"
+                    type="number"
+                    value={formatTimeWaitDurationPart(timeWaitDurationParts.minutes)}
+                    disabled={!editable}
+                    onChange={(event) => updateTimeWaitDurationPart('minutes', event.target.value)}
+                  />
+                  <Input
+                    id={`time-wait-duration-seconds-${step.id}`}
+                    label="Seconds"
+                    type="number"
+                    value={formatTimeWaitDurationPart(timeWaitDurationParts.seconds)}
+                    disabled={!editable}
+                    onChange={(event) => updateTimeWaitDurationPart('seconds', event.target.value)}
+                  />
+                </div>
+                <p className="text-xs text-[rgb(var(--color-text-500))]">
+                  Stored as milliseconds in the workflow definition. Use fixed units only.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <CustomSelect
+                  id={`time-wait-until-authoring-mode-${step.id}`}
+                  label="Until input"
+                  options={[
+                    { value: 'fixed', label: 'Specific date & time' },
+                    { value: 'expression', label: 'Advanced expression' }
+                  ]}
+                  value={timeWaitUntilAuthoringMode}
+                  onValueChange={(value) => setTimeWaitUntilAuthoringMode(value === 'expression' ? 'expression' : 'fixed')}
+                  disabled={!editable}
+                />
+
+                {timeWaitUntilAuthoringMode === 'fixed' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor={`time-wait-until-picker-${step.id}`}>Specific date & time</Label>
+                    <DateTimePicker
+                      id={`time-wait-until-picker-${step.id}`}
+                      label="Specific date & time"
+                      value={fixedUntilValue}
+                      onChange={(value) => updateWaitNodeConfig({
+                        ...timeWaitConfig,
+                        until: value ? buildFixedTimeWaitUntilExpr(value) : { $expr: '' }
+                      })}
+                      disabled={!editable}
+                      clearable
+                    />
+                    <div className="text-xs text-[rgb(var(--color-text-500))]">
+                      Stored as an absolute timestamp using your current browser timezone.
+                    </div>
+                  </div>
+                ) : (
+                  <ExpressionField
+                    idPrefix={`time-wait-until-${step.id}`}
+                    label="Until expression"
+                    value={ensureExpr((timeWaitConfig.until as Expr | undefined) ?? { $expr: '' })}
+                    onChange={(untilExpr) => updateWaitNodeConfig({ ...timeWaitConfig, until: untilExpr })}
+                    fieldOptions={enhancedFieldOptions}
+                    context={expressionContext}
+                    disabled={!editable}
+                  />
+                )}
+              </div>
+            )}
+
+            <MappingExprEditor
+              idPrefix={`time-wait-assign-${step.id}`}
+              label="Assign on resume"
+              value={(timeWaitConfig.assign as Record<string, Expr>) ?? {}}
+              onChange={(assign) => updateWaitNodeConfig({ ...timeWaitConfig, assign })}
               fieldOptions={enhancedFieldOptions}
               context={expressionContext}
               disabled={!editable}
             />
-          )}
-
-          <MappingExprEditor
-            idPrefix={`time-wait-assign-${step.id}`}
-            label="Assign on resume"
-            value={(timeWaitConfig.assign as Record<string, Expr>) ?? {}}
-            onChange={(assign) => updateWaitNodeConfig({ ...timeWaitConfig, assign })}
-            fieldOptions={enhancedFieldOptions}
-            context={expressionContext}
-            disabled={!editable}
-          />
-        </div>
-      )}
+          </div>
+        );
+      })()}
 
       {nodeSchema
         && step.type !== 'control.return'
@@ -6604,7 +6778,7 @@ const FIELD_METADATA: Record<string, { label: string; description?: string; adva
   filters: { label: 'Payload Filters', description: 'Optional event payload filters (AND semantics)' },
   timeoutMs: { label: 'Timeout (ms)', description: 'Maximum time to wait in milliseconds', advanced: true },
   mode: { label: 'Wait Mode', description: 'Duration or until time' },
-  durationMs: { label: 'Duration (ms)', description: 'Relative duration in milliseconds' },
+  durationMs: { label: 'Duration', description: 'Relative duration stored in milliseconds' },
   until: { label: 'Until', description: 'Expression resolving to an absolute date/time' },
   state: { label: 'State Name', description: 'The state to transition to' },
   assign: { label: 'Assignments', description: 'Variables to assign' },

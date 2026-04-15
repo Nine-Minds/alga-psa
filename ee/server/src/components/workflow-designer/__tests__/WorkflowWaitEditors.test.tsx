@@ -54,6 +54,18 @@ vi.mock('@alga-psa/ui/components/TextArea', () => ({
   )
 }));
 
+vi.mock('@alga-psa/ui/components/DateTimePicker', () => ({
+  DateTimePicker: ({ id, value, onChange, disabled }: any) => (
+    <input
+      id={id}
+      data-testid={id}
+      value={value instanceof Date ? value.toISOString() : ''}
+      onChange={(event) => onChange?.(event.target.value ? new Date(event.target.value) : undefined)}
+      disabled={disabled}
+    />
+  )
+}));
+
 vi.mock('@alga-psa/ui/components/Card', () => ({
   Card: ({ children }: any) => <div>{children}</div>
 }));
@@ -344,8 +356,140 @@ describe('Workflow wait editors', () => {
       />
     );
 
-    fireEvent.change(screen.getByTestId('time-wait-duration-time-step'), { target: { value: '9000' } });
-    expect(onChangeTime).toHaveBeenCalled();
+    fireEvent.change(screen.getByTestId('time-wait-duration-minutes-time-step'), { target: { value: '2' } });
+    expect(onChangeTime).toHaveBeenCalledWith(expect.objectContaining({
+      config: expect.objectContaining({
+        mode: 'duration',
+        durationMs: 121000
+      })
+    }));
+  });
+
+  it('decomposes duration waits into day/hour/minute/second fields', () => {
+    render(
+      <StepConfigPanel
+        {...baseProps}
+        step={{
+          id: 'time-step-parts',
+          type: 'time.wait',
+          config: { mode: 'duration', durationMs: 90061000 }
+        } as any}
+        eventCatalogOptions={[]}
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('time-wait-duration-days-time-step-parts')).toHaveValue(1);
+    expect(screen.getByTestId('time-wait-duration-hours-time-step-parts')).toHaveValue(1);
+    expect(screen.getByTestId('time-wait-duration-minutes-time-step-parts')).toHaveValue(1);
+    expect(screen.getByTestId('time-wait-duration-seconds-time-step-parts')).toHaveValue(1);
+  });
+
+  it('renders fixed-date authoring for parseable until literals and advanced authoring for dynamic expressions', () => {
+    render(
+      <StepConfigPanel
+        {...baseProps}
+        step={{
+          id: 'time-fixed-step',
+          type: 'time.wait',
+          config: { mode: 'until', until: { $expr: '"2026-04-14T17:00:00.000Z"' } }
+        } as any}
+        eventCatalogOptions={[]}
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('time-wait-until-authoring-mode-time-fixed-step')).toHaveValue('fixed');
+    expect(screen.getByTestId('time-wait-until-picker-time-fixed-step')).toHaveValue('2026-04-14T17:00:00.000Z');
+
+    render(
+      <StepConfigPanel
+        {...baseProps}
+        step={{
+          id: 'time-expression-step',
+          type: 'time.wait',
+          config: { mode: 'until', until: { $expr: 'payload.runAt' } }
+        } as any}
+        eventCatalogOptions={[]}
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('time-wait-until-authoring-mode-time-expression-step')).toHaveValue('expression');
+    expect(screen.getByTestId('Until expression')).toHaveValue('payload.runAt');
+  });
+
+  it('writes picker-authored until values as quoted ISO expressions and preserves them when switching to advanced mode', () => {
+    const onChange = vi.fn();
+
+    render(
+      <StepConfigPanel
+        {...baseProps}
+        step={{
+          id: 'time-picker-step',
+          type: 'time.wait',
+          config: { mode: 'until', until: { $expr: '' } }
+        } as any}
+        eventCatalogOptions={[]}
+        onChange={onChange}
+      />
+    );
+
+    fireEvent.change(screen.getByTestId('time-wait-until-picker-time-picker-step'), {
+      target: { value: '2026-04-14T17:00:00.000Z' }
+    });
+
+    const lastPickerCall = onChange.mock.calls.at(-1)?.[0];
+    expect(lastPickerCall?.config?.until).toEqual({ $expr: '"2026-04-14T17:00:00.000Z"' });
+
+    render(
+      <StepConfigPanel
+        {...baseProps}
+        step={{
+          id: 'time-picker-preserve-step',
+          type: 'time.wait',
+          config: { mode: 'until', until: { $expr: '"2026-04-14T17:00:00.000Z"' } }
+        } as any}
+        eventCatalogOptions={[]}
+        onChange={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByTestId('time-wait-until-authoring-mode-time-picker-preserve-step'), {
+      target: { value: 'expression' }
+    });
+
+    expect(screen.getByTestId('Until expression')).toHaveValue('"2026-04-14T17:00:00.000Z"');
+  });
+
+  it('keeps dynamic advanced expressions until the user explicitly overwrites them from the fixed picker', () => {
+    const onChange = vi.fn();
+
+    render(
+      <StepConfigPanel
+        {...baseProps}
+        step={{
+          id: 'time-dynamic-step',
+          type: 'time.wait',
+          config: { mode: 'until', until: { $expr: 'payload.runAt' } }
+        } as any}
+        eventCatalogOptions={[]}
+        onChange={onChange}
+      />
+    );
+
+    fireEvent.change(screen.getByTestId('time-wait-until-authoring-mode-time-dynamic-step'), {
+      target: { value: 'fixed' }
+    });
+
+    expect(screen.getByTestId('time-wait-until-picker-time-dynamic-step')).toHaveValue('');
+
+    fireEvent.change(screen.getByTestId('time-wait-until-picker-time-dynamic-step'), {
+      target: { value: '2026-05-01T09:15:00.000Z' }
+    });
+
+    const lastCall = onChange.mock.calls.at(-1)?.[0];
+    expect(lastCall?.config?.until).toEqual({ $expr: '"2026-05-01T09:15:00.000Z"' });
   });
 
   it('T009: wait-filter editor renders typed picker when schema field has picker metadata', async () => {

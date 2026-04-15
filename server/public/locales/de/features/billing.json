@@ -120,5 +120,17 @@
     "awaitingResponse": "{{count}} Angebot(e) warten auf Ihre Antwort",
     "noPending": "Keine ausstehenden Angebote",
     "viewAll": "Alle Angebote anzeigen"
+  },
+  "enums": {
+    "billingFrequency": {
+      "monthly": "Monatlich",
+      "quarterly": "Vierteljährlich",
+      "annually": "Jährlich"
+    },
+    "contractLineType": {
+      "Fixed": "Festpreis",
+      "Hourly": "Stündlich",
+      "Usage": "Nutzungsbasiert"
+    }
   }
 }

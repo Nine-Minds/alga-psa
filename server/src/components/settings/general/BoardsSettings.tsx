@@ -494,12 +494,27 @@ const BoardsSettings: React.FC = () => {
     shouldManageTicketStatuses ? getManagedTicketStatusValidationError(formData.ticket_statuses) : null
   ), [formData.ticket_statuses, shouldManageTicketStatuses]);
 
+  const trimmedBoardName = formData.board_name.trim();
+  const isDuplicateBoardName = useMemo(() => {
+    if (!trimmedBoardName) return false;
+    const target = trimmedBoardName.toLowerCase();
+    return boards.some((board) =>
+      board.board_id !== editingBoard?.board_id &&
+      (board.board_name || '').trim().toLowerCase() === target
+    );
+  }, [boards, editingBoard, trimmedBoardName]);
+
   const handleSaveBoard = async () => {
     try {
       setError(null);
 
       if (!formData.board_name.trim()) {
         setError(t('ticketing.boards.messages.error.nameRequired'));
+        return;
+      }
+
+      if (isDuplicateBoardName) {
+        setError('A board with this name already exists.');
         return;
       }
 
@@ -666,6 +681,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.name'),
       dataIndex: 'board_name',
+      width: '18%',
       render: (value: string) => (
         <span className="text-gray-700 font-medium">{value}</span>
       ),
@@ -673,6 +689,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.description'),
       dataIndex: 'description',
+      width: '20%',
       render: (value: string | null) => (
         <span className="text-gray-600">{value || '-'}</span>
       ),
@@ -680,6 +697,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.status'),
       dataIndex: 'is_inactive',
+      width: '10%',
       render: (value: boolean, record: IBoard) => (
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-600">
@@ -705,6 +723,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.default'),
       dataIndex: 'is_default',
+      width: '8%',
       render: (value: boolean, record: IBoard) => (
         <div className="flex items-center space-x-2">
           <Switch
@@ -734,6 +753,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.defaultAgent'),
       dataIndex: 'default_assigned_to',
+      width: '10%',
       render: (value: string | null, record: IBoard) => {
         const team = record.default_assigned_team_id
           ? teams.find(t => t.team_id === record.default_assigned_team_id)
@@ -752,6 +772,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.defaultPriority'),
       dataIndex: 'default_priority_id',
+      width: '10%',
       render: (value: string | null) => {
         if (!value) return <span className="text-gray-400">-</span>;
         const pr = priorities.find(p => p.priority_id === value);
@@ -764,6 +785,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.boardManager'),
       dataIndex: 'manager_user_id',
+      width: '10%',
       render: (value: string | null) => {
         if (!value) return <span className="text-gray-400">-</span>;
         const user = users.find(u => u.user_id === value);
@@ -777,6 +799,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.order'),
       dataIndex: 'display_order',
+      width: '5%',
       render: (value: number) => (
         <span className="text-gray-600">{value}</span>
       ),
@@ -784,6 +807,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.itilBoard'),
       dataIndex: 'category_type',
+      width: '6%',
       render: (_, record: IBoard) => (
         record.category_type === 'itil' && record.priority_type === 'itil' ? (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/15 text-blue-600">
@@ -797,7 +821,7 @@ const BoardsSettings: React.FC = () => {
     {
       title: t('ticketing.boards.table.actions'),
       dataIndex: 'board_id',
-      width: '10%',
+      width: '3%',
       render: (value: string, record: IBoard) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -966,7 +990,15 @@ const BoardsSettings: React.FC = () => {
             <Button
               id="save-board-button"
               onClick={handleSaveBoard}
-              disabled={isLoadingBoardStatuses || (shouldManageTicketStatuses && Boolean(ticketStatusValidationError))}
+              disabled={
+                isLoadingBoardStatuses ||
+                !trimmedBoardName ||
+                isDuplicateBoardName ||
+                (shouldManageTicketStatuses && Boolean(ticketStatusValidationError)) ||
+                (!editingBoard &&
+                  formData.status_seed_mode === 'copy_existing' &&
+                  !formData.copy_ticket_statuses_from_board_id)
+              }
             >
               {editingBoard ? t('ticketing.boards.actions.update') : t('ticketing.boards.actions.create')}
             </Button>
@@ -981,13 +1013,18 @@ const BoardsSettings: React.FC = () => {
               </Alert>
             )}
             <div>
-              <Label htmlFor="board_name">{t('ticketing.boards.fields.boardName.label')}</Label>
+              <Label htmlFor="board_name" required>{t('ticketing.boards.fields.boardName.label')}</Label>
               <Input
                 id="board_name"
                 value={formData.board_name}
                 onChange={(e) => setFormData({ ...formData, board_name: e.target.value })}
                 placeholder={t('ticketing.boards.fields.boardName.placeholder')}
               />
+              {isDuplicateBoardName && (
+                <p className="text-sm text-red-600 mt-1" data-testid="board-name-duplicate-error">
+                  A board with this name already exists.
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="description">{t('ticketing.boards.fields.description.label')}</Label>
@@ -1212,7 +1249,7 @@ const BoardsSettings: React.FC = () => {
 
             {!editingBoard && (
               <div>
-                <Label>Ticket status setup</Label>
+                <Label required>Ticket status setup</Label>
                 <ViewSwitcher
                   currentView={formData.status_seed_mode}
                   onChange={(value) => {
@@ -1243,7 +1280,7 @@ const BoardsSettings: React.FC = () => {
 
             {!editingBoard && formData.status_seed_mode === 'copy_existing' && (
               <div>
-                <Label htmlFor="copy-ticket-statuses-select">Copy ticket statuses from</Label>
+                <Label htmlFor="copy-ticket-statuses-select" required>Copy ticket statuses from</Label>
                 <CustomSelect
                   id="copy-ticket-statuses-select"
                   value={formData.copy_ticket_statuses_from_board_id}
@@ -1282,26 +1319,21 @@ const BoardsSettings: React.FC = () => {
 
             {shouldManageTicketStatuses && (
               <div className="space-y-3 rounded-md border border-gray-200 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>
-                      {editingBoard
-                        ? 'Board ticket statuses'
-                        : formData.status_seed_mode === 'copy_existing'
-                          ? 'Copied ticket statuses'
-                          : 'Inline ticket statuses'}
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {editingBoard
-                        ? 'Edit the ticket lifecycle for this board only.'
-                        : formData.status_seed_mode === 'copy_existing'
-                          ? 'Review and adjust the copied lifecycle before saving the new board.'
-                          : 'Author the board&apos;s initial ticket lifecycle before saving.'}
-                    </p>
-                  </div>
-                  <Button id="add-inline-ticket-status-button" type="button" variant="outline" onClick={addManagedTicketStatus}>
-                    Add Status
-                  </Button>
+                <div>
+                  <Label>
+                    {editingBoard
+                      ? 'Board ticket statuses'
+                      : formData.status_seed_mode === 'copy_existing'
+                        ? 'Copied ticket statuses'
+                        : 'Inline ticket statuses'}
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {editingBoard
+                      ? 'Edit the ticket lifecycle for this board only.'
+                      : formData.status_seed_mode === 'copy_existing'
+                        ? 'Review and adjust the copied lifecycle before saving the new board.'
+                        : 'Author the board&apos;s initial ticket lifecycle before saving.'}
+                  </p>
                 </div>
 
                 {isLoadingBoardStatuses ? (
@@ -1368,6 +1400,14 @@ const BoardsSettings: React.FC = () => {
                     </div>
                   </div>
                 ))}
+
+                {!isLoadingBoardStatuses && (
+                  <div className="flex justify-start">
+                    <Button id="add-inline-ticket-status-button" type="button" variant="outline" onClick={addManagedTicketStatus}>
+                      Add Status
+                    </Button>
+                  </div>
+                )}
 
                 {ticketStatusValidationError && !isLoadingBoardStatuses && (
                   <p className="text-sm text-red-600" data-testid="ticket-status-validation-error">

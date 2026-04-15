@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.0.19-rc5",
+  "version": "1.0.20-rc5",
   "private": true,
   "type": "module",
   "engines": {
@@ -122,7 +122,7 @@
     "@wasmer/sdk": "^0.9.0",
     "archiver": "^7.0.1",
     "autoprefixer": "^10.4.21",
-    "axios": "^1.13.6",
+    "axios": "^1.15.0",
     "class-variance-authority": "^0.7.0",
     "clean": "^4.0.2",
     "clsx": "^2.1.1",

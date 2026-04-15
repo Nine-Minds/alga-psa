@@ -94,8 +94,10 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     loadData();
   }, [currentPage, pageSize, debouncedSearchTerm, refreshTrigger]);
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (options: { silent?: boolean } = {}) => {
+    if (!options.silent) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const [paginatedResult, fetchedTemplates] = await Promise.all([
@@ -125,7 +127,9 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       console.error('Error fetching draft invoices data:', err);
       setError('Failed to load draft invoices. Please try again.');
     } finally {
-      setIsLoading(false);
+      if (!options.silent) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -486,8 +490,12 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
                 onFinalize={handleFinalizeFromPreview}
                 onReverse={handleReverseFromPreview}
                 onDownload={handleDownload}
+                onDraftInvoiceUpdated={async () => {
+                  await loadData({ silent: true });
+                }}
                 isFinalized={false}
                 creditApplied={selectedInvoice?.credit_applied || 0}
+                draftInvoiceSummary={selectedInvoice}
               />
             </div>
           </Panel>
