@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -13,42 +13,58 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { TemplateWizardData } from '../TemplateWizard';
 import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection';
 import { getRecurringAuthoringPreview } from '../../recurringAuthoringPreview';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TemplateFixedFeeServicesStepProps {
   data: TemplateWizardData;
   updateData: (data: Partial<TemplateWizardData>) => void;
 }
 
-const CADENCE_OWNER_OPTIONS = [
-  {
-    value: 'client',
-    label: 'Invoice on client billing schedule',
-    description:
-      'Use the client billing calendar so contracts created from this template stay aligned with the client’s normal invoice cadence.',
-  },
-  {
-    value: 'contract',
-    label: 'Invoice on contract anniversary',
-    description:
-      'Use this contract line’s own anniversary dates. Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing.',
-  },
-];
-
-const BILLING_TIMING_OPTIONS = [
-  {
-    value: 'arrears',
-    label: 'Arrears – invoice after the period closes',
-  },
-  {
-    value: 'advance',
-    label: 'Advance – invoice at the start of the period',
-  },
-] as const;
-
 export function TemplateFixedFeeServicesStep({
   data,
   updateData,
 }: TemplateFixedFeeServicesStepProps) {
+  const { t } = useTranslation('msp/contracts');
+  const cadenceOwnerOptions = useMemo(() => ([
+    {
+      value: 'client',
+      label: t('templateFixed.cadenceOwner.client.label', {
+        defaultValue: 'Invoice on client billing schedule',
+      }),
+      description: t('templateFixed.cadenceOwner.client.description', {
+        defaultValue:
+          'Use the client billing calendar so contracts created from this template stay aligned with the client billing cadence.',
+      }),
+    },
+    {
+      value: 'contract',
+      label: t('templateFixed.cadenceOwner.contract.label', {
+        defaultValue: 'Invoice on contract anniversary',
+      }),
+      description: t('templateFixed.cadenceOwner.contract.description', {
+        defaultValue:
+          'Use this contract line anniversary schedule. Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing.',
+      }),
+    },
+  ]), [t]);
+  const billingTimingOptions = useMemo(
+    () => ([
+      {
+        value: 'arrears',
+        label: t('templateFixed.billingTiming.arrears', {
+          defaultValue: 'Arrears - invoice after the period closes',
+        }),
+      },
+      {
+        value: 'advance',
+        label: t('templateFixed.billingTiming.advance', {
+          defaultValue: 'Advance - invoice at the start of the period',
+        }),
+      },
+    ]),
+    [t]
+  );
+
   const recurringPreview = getRecurringAuthoringPreview({
     cadenceOwner: data.cadence_owner,
     billingTiming: data.billing_timing,
@@ -100,7 +116,9 @@ export function TemplateFixedFeeServicesStep({
       if (service.service_id) {
         items.push({
           id: `service-${service.service_id}`,
-          name: service.service_name || 'Unknown Service',
+          name:
+            service.service_name ||
+            t('templateFixed.preview.unknownService', { defaultValue: 'Unknown Service' }),
           quantity: service.quantity ?? 1,
           serviceId: service.service_id,
         });
@@ -108,7 +126,7 @@ export function TemplateFixedFeeServicesStep({
     }
 
     return items;
-  }, [data.fixed_services]);
+  }, [data.fixed_services, t]);
 
   const handlePreviewQuantityChange = (itemId: string, quantity: number) => {
     if (itemId.startsWith('service-')) {
@@ -135,29 +153,45 @@ export function TemplateFixedFeeServicesStep({
     <ReflectionContainer id="template-fixed-fee-services-step">
       <div className="space-y-6">
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">Fixed Fee Services</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            {t('templateFixed.heading', { defaultValue: 'Fixed Fee Services' })}
+          </h3>
           <p className="text-sm text-[rgb(var(--color-text-500))]">
-            Configure services that are billed at a fixed rate each billing cycle. You can still track time, but billing is based on this flat amount.
+            {t('templateFixed.description', {
+              defaultValue:
+                'Configure services that are billed at a fixed rate each billing cycle. You can still track time, but billing is based on this flat amount.',
+            })}
           </p>
         </div>
 
         <div className="p-4 bg-accent-50 border border-accent-200 rounded-md">
           <p className="text-sm text-accent-900">
-            <strong>What are Fixed Fee Services?</strong> These services have a set recurring price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.
+            <strong>
+              {t('templateFixed.info.title', { defaultValue: 'What are Fixed Fee Services?' })}
+            </strong>{' '}
+            {t('templateFixed.info.description', {
+              defaultValue:
+                "These services have a set recurring price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.",
+            })}
           </p>
         </div>
 
         <div className="space-y-3">
           <div>
-            <Label className="text-sm font-medium">Cadence Owner</Label>
+            <Label className="text-sm font-medium">
+              {t('templateFixed.cadenceOwner.label', { defaultValue: 'Cadence Owner' })}
+            </Label>
             <p className="text-xs text-[rgb(var(--color-text-400))] mt-1">
-              Choose which schedule should define recurring service periods for contracts created from this template.
+              {t('templateFixed.cadenceOwner.help', {
+                defaultValue:
+                  'Choose which schedule should define recurring service periods for contracts created from this template.',
+              })}
             </p>
           </div>
           <RadioGroup
             id="template-wizard-cadence-owner"
             name="template-wizard-cadence-owner"
-            options={CADENCE_OWNER_OPTIONS}
+            options={cadenceOwnerOptions}
             value={data.cadence_owner ?? 'client'}
             onChange={(value) =>
               updateData({ cadence_owner: value as TemplateWizardData['cadence_owner'] })
@@ -168,7 +202,7 @@ export function TemplateFixedFeeServicesStep({
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="template-fixed-billing-timing" className="text-sm font-medium">
-              Billing Timing
+              {t('templateFixed.fields.billingTiming', { defaultValue: 'Billing Timing' })}
             </Label>
             <CustomSelect
               id="template-fixed-billing-timing"
@@ -176,11 +210,13 @@ export function TemplateFixedFeeServicesStep({
               onValueChange={(value) =>
                 updateData({ billing_timing: value as TemplateWizardData['billing_timing'] })
               }
-              options={BILLING_TIMING_OPTIONS.map((option) => ({
+              options={billingTimingOptions.map((option) => ({
                 value: option.value,
                 label: option.label,
               }))}
-              placeholder="Select billing timing"
+              placeholder={t('templateFixed.placeholders.billingTiming', {
+                defaultValue: 'Select billing timing',
+              })}
             />
             <p className="text-xs text-[rgb(var(--color-text-400))]">
               {recurringPreview.firstInvoiceSummary}
@@ -190,7 +226,9 @@ export function TemplateFixedFeeServicesStep({
           <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-[rgb(var(--color-border-50))] space-y-3">
             <div className="flex items-center justify-between">
               <Label htmlFor="template-fixed-enable-proration" className="text-sm font-medium">
-                Adjust for Partial Periods
+                {t('templateFixed.fields.adjustPartialPeriods', {
+                  defaultValue: 'Adjust for Partial Periods',
+                })}
               </Label>
               <Switch
                 id="template-fixed-enable-proration"
@@ -199,24 +237,43 @@ export function TemplateFixedFeeServicesStep({
               />
             </div>
             <p className="text-xs text-[rgb(var(--color-text-400))]">
-              Use this when contracts created from the template should scale the recurring fee if service starts or ends inside a period.
+              {t('templateFixed.help.adjustPartialPeriods', {
+                defaultValue:
+                  'Use this when contracts created from the template should scale the recurring fee if service starts or ends inside a period.',
+              })}
             </p>
           </div>
         </div>
 
         <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-[rgb(var(--color-border-50))] space-y-2 text-sm">
-          <p><strong>Cadence Owner:</strong> {recurringPreview.cadenceOwnerLabel}</p>
+          <p>
+            <strong>{t('templateFixed.preview.cadenceOwnerLabel', { defaultValue: 'Cadence Owner:' })}</strong>{' '}
+            {recurringPreview.cadenceOwnerLabel}
+          </p>
           <p>{recurringPreview.cadenceOwnerSummary}</p>
-          <p><strong>Billing Timing:</strong> {recurringPreview.billingTimingLabel}</p>
+          <p>
+            <strong>{t('templateFixed.preview.billingTimingLabel', { defaultValue: 'Billing Timing:' })}</strong>{' '}
+            {recurringPreview.billingTimingLabel}
+          </p>
           <p>{recurringPreview.billingTimingSummary}</p>
           <p>{recurringPreview.partialPeriodSummary}</p>
-          <p><strong>{recurringPreview.materializedPeriodsHeading}:</strong></p>
+          <p>
+            <strong>{recurringPreview.materializedPeriodsHeading}:</strong>
+          </p>
           <p>{recurringPreview.materializedPeriodsSummary}</p>
           <ul className="list-disc pl-5 space-y-1">
             {recurringPreview.materializedPeriods.map((period) => (
               <li key={`${period.servicePeriodLabel}:${period.invoiceWindowLabel}`}>
-                <span><strong>Service:</strong> {period.servicePeriodLabel}</span>
-                <span className="block"><strong>Invoice window:</strong> {period.invoiceWindowLabel}</span>
+                <span>
+                  <strong>{t('templateFixed.preview.serviceLabel', { defaultValue: 'Service:' })}</strong>{' '}
+                  {period.servicePeriodLabel}
+                </span>
+                <span className="block">
+                  <strong>
+                    {t('templateFixed.preview.invoiceWindowLabel', { defaultValue: 'Invoice window:' })}
+                  </strong>{' '}
+                  {period.invoiceWindowLabel}
+                </span>
               </li>
             ))}
           </ul>
@@ -232,7 +289,7 @@ export function TemplateFixedFeeServicesStep({
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Services
+            {t('templateFixed.fields.services', { defaultValue: 'Services' })}
           </Label>
 
           {data.fixed_services.map((service, index) => (
@@ -243,7 +300,10 @@ export function TemplateFixedFeeServicesStep({
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`template-fixed-service-${index}`} className="text-sm">
-                    Service {index + 1}
+                    {t('templateFixed.fields.serviceNumber', {
+                      index: index + 1,
+                      defaultValue: 'Service {{index}}',
+                    })}
                   </Label>
                   <ServiceCatalogPicker
                     id={`template-fixed-service-${index}`}
@@ -251,13 +311,17 @@ export function TemplateFixedFeeServicesStep({
                     selectedLabel={service.service_name}
                     onSelect={(item) => handleServiceChange(index, item)}
                     itemKinds={['service']}
-                    placeholder="Select a service"
+                    placeholder={t('templateFixed.placeholders.selectService', {
+                      defaultValue: 'Select a service',
+                    })}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor={`template-fixed-quantity-${index}`} className="text-sm">
-                    Quantity (Optional)
+                    {t('templateFixed.fields.quantityOptional', {
+                      defaultValue: 'Quantity (Optional)',
+                    })}
                   </Label>
                   <Input
                     id={`template-fixed-quantity-${index}`}
@@ -269,7 +333,11 @@ export function TemplateFixedFeeServicesStep({
                     }
                     className="w-24"
                   />
-                  <p className="text-xs text-[rgb(var(--color-text-400))]">Suggested quantity when creating contracts</p>
+                  <p className="text-xs text-[rgb(var(--color-text-400))]">
+                    {t('templateFixed.help.quantity', {
+                      defaultValue: 'Suggested quantity when creating contracts',
+                    })}
+                  </p>
                 </div>
               </div>
 
@@ -294,7 +362,7 @@ export function TemplateFixedFeeServicesStep({
             className="inline-flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Add Service
+            {t('templateFixed.actions.addService', { defaultValue: 'Add Service' })}
           </Button>
         </div>
       </div>

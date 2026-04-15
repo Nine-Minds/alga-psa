@@ -1731,7 +1731,55 @@
       "billingFrequency": "Sets the default cadence when the template is applied. It can still be adjusted per client."
     }
   },
-  "templateFixed": {},
+  "templateFixed": {
+    "heading": "Fixed Fee Services",
+    "description": "Configure services that are billed at a fixed rate each billing cycle. You can still track time, but billing is based on this flat amount.",
+    "info": {
+      "title": "What are Fixed Fee Services?",
+      "description": "These services have a set recurring price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked."
+    },
+    "cadenceOwner": {
+      "label": "Cadence Owner",
+      "help": "Choose which schedule should define recurring service periods for contracts created from this template.",
+      "client": {
+        "label": "Invoice on client billing schedule",
+        "description": "Use the client billing calendar so contracts created from this template stay aligned with the client billing cadence."
+      },
+      "contract": {
+        "label": "Invoice on contract anniversary",
+        "description": "Use this contract line anniversary schedule. Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing."
+      }
+    },
+    "billingTiming": {
+      "arrears": "Arrears - invoice after the period closes",
+      "advance": "Advance - invoice at the start of the period"
+    },
+    "fields": {
+      "billingTiming": "Billing Timing",
+      "adjustPartialPeriods": "Adjust for Partial Periods",
+      "services": "Services",
+      "serviceNumber": "Service {{index}}",
+      "quantityOptional": "Quantity (Optional)"
+    },
+    "placeholders": {
+      "billingTiming": "Select billing timing",
+      "selectService": "Select a service"
+    },
+    "help": {
+      "adjustPartialPeriods": "Use this when contracts created from the template should scale the recurring fee if service starts or ends inside a period.",
+      "quantity": "Suggested quantity when creating contracts"
+    },
+    "preview": {
+      "unknownService": "Unknown Service",
+      "cadenceOwnerLabel": "Cadence Owner:",
+      "billingTimingLabel": "Billing Timing:",
+      "serviceLabel": "Service:",
+      "invoiceWindowLabel": "Invoice window:"
+    },
+    "actions": {
+      "addService": "Add Service"
+    }
+  },
   "templateProducts": {},
   "templateHourly": {},
   "templateUsage": {},

@@ -307,7 +307,7 @@
   {
     "id": "F062",
     "description": "Wire useTranslation('msp/contracts') in TemplateFixedFeeServicesStep.tsx -- translate step heading, description, service picker, quantity field, preview section, and empty state",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F063",
