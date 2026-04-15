@@ -3,6 +3,7 @@
 import React, { useCallback, useRef } from 'react';
 import AsyncSearchableSelect, { SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import { getServiceById, searchServiceCatalogForPicker, CatalogPickerItem } from '@alga-psa/billing/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type BillingMethod = 'fixed' | 'hourly' | 'usage';
 type ItemKind = 'service' | 'product';
@@ -101,14 +102,16 @@ export function ServiceCatalogPicker({
   itemKinds,
   isActive = true,
   currencyCode,
-  placeholder = 'Select item...',
+  placeholder,
   label,
   id,
   className,
   disabled,
   debounceMs = 300,
 }: ServiceCatalogPickerProps): React.JSX.Element {
+  const { t } = useTranslation('msp/contracts');
   const lastItemsByIdRef = useRef<Record<string, ServiceCatalogPickerItem>>({});
+  const resolvedPlaceholder = placeholder ?? t('servicePicker.catalog.placeholder', { defaultValue: 'Select item...' });
 
   const loadOptions = useCallback(
     async ({ search, page, limit }: { search: string; page: number; limit: number }) => {
@@ -134,13 +137,19 @@ export function ServiceCatalogPicker({
           ? `${item.service_name} (${item.sku})`
           : item.service_name,
         badge: item.item_kind === 'product'
-          ? { text: 'Product', variant: 'primary' as const }
-          : { text: 'Service', variant: 'default' as const },
+          ? {
+            text: t('servicePicker.catalog.badges.product', { defaultValue: 'Product' }),
+            variant: 'primary' as const,
+          }
+          : {
+            text: t('servicePicker.catalog.badges.service', { defaultValue: 'Service' }),
+            variant: 'default' as const,
+          },
       }));
 
       return { options, total: result.totalCount };
     },
-    [billingMethods, itemKinds, isActive, currencyCode]
+    [billingMethods, currencyCode, isActive, itemKinds, t]
   );
 
   const handleChange = useCallback(
@@ -188,11 +197,11 @@ export function ServiceCatalogPicker({
       loadOptions={loadOptions}
       limit={10}
       debounceMs={debounceMs}
-      placeholder={placeholder}
+      placeholder={resolvedPlaceholder}
       className={className}
       dropdownMode="overlay"
-      searchPlaceholder="Search items..."
-      emptyMessage="No matching items."
+      searchPlaceholder={t('servicePicker.catalog.searchPlaceholder', { defaultValue: 'Search items...' })}
+      emptyMessage={t('servicePicker.catalog.emptyMessage', { defaultValue: 'No matching items.' })}
       disabled={disabled}
       showMoreIndicator
       footerContent={onAddCustom ? ({ search, close }) => {
@@ -209,11 +218,22 @@ export function ServiceCatalogPicker({
             }}
           >
             <span className="inline-flex items-center rounded bg-[rgb(var(--color-border-100))] px-1.5 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))]">
-              Custom
+              {t('servicePicker.catalog.custom.badge', { defaultValue: 'Custom' })}
             </span>
             {trimmed
-              ? <span>Add &ldquo;{trimmed}&rdquo; as custom item</span>
-              : <span className="text-[rgb(var(--color-text-400))]">Type a name to add a custom item</span>
+              ? (
+                <span>
+                  {t('servicePicker.catalog.custom.addAsCustomItem', {
+                    defaultValue: 'Add “{{name}}” as custom item',
+                    name: trimmed,
+                  })}
+                </span>
+              )
+              : (
+                <span className="text-[rgb(var(--color-text-400))]">
+                  {t('servicePicker.catalog.custom.typeNameHint', { defaultValue: 'Type a name to add a custom item' })}
+                </span>
+              )
             }
           </button>
         );

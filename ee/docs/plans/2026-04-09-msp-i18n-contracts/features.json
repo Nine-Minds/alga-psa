@@ -207,7 +207,7 @@
   {
     "id": "F042",
     "description": "Wire useTranslation('msp/contracts') in ServiceCatalogPicker.tsx -- translate search placeholder, category filter, empty results message, and selection controls",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F043",

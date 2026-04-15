@@ -997,7 +997,22 @@
     }
   },
   "quickStart": {},
-  "servicePicker": {},
+  "servicePicker": {
+    "catalog": {
+      "badges": {
+        "product": "Product",
+        "service": "Service"
+      },
+      "custom": {
+        "addAsCustomItem": "Add “{{name}}” as custom item",
+        "badge": "Custom",
+        "typeNameHint": "Type a name to add a custom item"
+      },
+      "emptyMessage": "No matching items.",
+      "placeholder": "Select item...",
+      "searchPlaceholder": "Search items..."
+    }
+  },
   "bucketOverlay": {},
   "frequencyOverride": {},
   "wizard": {
