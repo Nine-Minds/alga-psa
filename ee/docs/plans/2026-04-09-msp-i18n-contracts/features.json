@@ -212,7 +212,7 @@
   {
     "id": "F043",
     "description": "Wire useTranslation('msp/contracts') in ContractForm.tsx -- translate form heading ('Contract Details'), field labels (Contract Name, Description, Billing Frequency, Currency, Status), status options (Active/Draft/Terminated/Expired), validation messages ('Please fill in the required fields'), expired status note, placeholder texts, and Save Changes button (including 'Saving...' state)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F044",

@@ -396,7 +396,39 @@
       "startDate": "Start date"
     }
   },
-  "contractForm": {},
+  "contractForm": {
+    "actions": {
+      "saveChanges": "Save Changes",
+      "saving": "Saving..."
+    },
+    "errors": {
+      "failedToUpdateContract": "Failed to update contract"
+    },
+    "fields": {
+      "billingFrequency": "Billing Frequency",
+      "billingFrequencyPlaceholder": "Select billing frequency",
+      "contractName": "Contract Name",
+      "contractNamePlaceholder": "Enter contract name",
+      "currency": "Currency",
+      "currencyPlaceholder": "Select currency",
+      "description": "Description",
+      "descriptionPlaceholder": "Enter contract description",
+      "status": "Status"
+    },
+    "heading": "Contract Details",
+    "status": {
+      "active": "Active",
+      "draft": "Draft",
+      "expired": "Expired",
+      "expiredHelper": "Expired contracts cannot be changed to another status",
+      "terminated": "Terminated"
+    },
+    "validation": {
+      "billingFrequency": "Billing frequency",
+      "contractName": "Contract name",
+      "requiredFields": "Please fill in the required fields:"
+    }
+  },
   "contractLines": {
     "actions": {
       "addFromPresets": "Add from Presets",
