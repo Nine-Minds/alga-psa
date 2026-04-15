@@ -789,6 +789,29 @@ spec:
                 key: IPINFO_API_TOKEN
           {{- end }}
 
+          # ----------- MICROSOFT TEAMS BOT ----------------
+          {{- if .Values.secrets.TEAMS_BOT_APP_ID }}
+          - name: TEAMS_BOT_APP_ID
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: TEAMS_BOT_APP_ID
+          {{- end }}
+          {{- if .Values.secrets.TEAMS_BOT_APP_TENANT_ID }}
+          - name: TEAMS_BOT_APP_TENANT_ID
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: TEAMS_BOT_APP_TENANT_ID
+          {{- end }}
+          {{- if .Values.secrets.TEAMS_BOT_APP_PASSWORD }}
+          - name: TEAMS_BOT_APP_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: TEAMS_BOT_APP_PASSWORD
+          {{- end }}
+
           # ----------- SECRET PROVIDER ----------------
           # Composite secret provider configuration
           - name: SECRET_READ_CHAIN

@@ -50,6 +50,7 @@
     "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "@microsoft/teams-js": "^2.28.0",
+    "jose": "^5.9.6",
     "lucide-react": "^0.428.0"
   },
   "peerDependencies": {
