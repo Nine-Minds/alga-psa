@@ -202,7 +202,7 @@
   {
     "id": "F041",
     "description": "Wire useTranslation('msp/contracts') in TemplatesTab.tsx -- translate column headers (Template Name, Description, Status, Billing Frequency, Actions), status badges, search placeholder, New Template button, row actions (View, Delete), and empty/loading/error states",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F042",

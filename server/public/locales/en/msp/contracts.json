@@ -891,7 +891,45 @@
       "windowPlaceholder": "Select renewal window"
     }
   },
-  "templatesTab": {},
+  "templatesTab": {
+    "actions": {
+      "createTemplate": "Create Template",
+      "delete": "Delete",
+      "edit": "Edit"
+    },
+    "columns": {
+      "actions": "Actions",
+      "description": "Description",
+      "status": "Status",
+      "templateName": "Template Name"
+    },
+    "empty": {
+      "createFirstTemplate": "Create your first template to get started.",
+      "noSearchMatches": "No templates match your search",
+      "noTemplates": "No templates yet",
+      "tryDifferentSearch": "Try a different search term."
+    },
+    "errors": {
+      "failedToDeleteContract": "Failed to delete contract",
+      "failedToFetchTemplates": "Failed to fetch templates"
+    },
+    "loading": "Loading templates...",
+    "search": {
+      "ariaLabel": "Search contract templates",
+      "placeholder": "Search templates..."
+    },
+    "status": {
+      "active": "Active",
+      "archived": "Archived",
+      "draft": "Draft",
+      "expired": "Expired",
+      "published": "Published",
+      "terminated": "Terminated"
+    },
+    "values": {
+      "noDescription": "No description"
+    }
+  },
   "detailSwitcher": {},
   "templateDetail": {
     "backToTemplates": "Back to Templates",
