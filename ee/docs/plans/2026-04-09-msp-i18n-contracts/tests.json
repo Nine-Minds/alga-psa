@@ -544,7 +544,7 @@
   {
     "id": "T065",
     "description": "Integration: /msp/billing?tab=contracts&contractId=<id> contract detail page renders all tabs translated in de with no English leakage",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",

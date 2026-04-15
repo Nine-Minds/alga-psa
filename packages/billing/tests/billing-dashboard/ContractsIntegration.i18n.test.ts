@@ -116,4 +116,45 @@ describe('Contracts integration i18n coverage', () => {
       expect(contractsSource).toContain(`t('${key}'`);
     }
   });
+
+  it('T065: contract detail route wiring resolves German translations across detail, lines, and pricing tabs', () => {
+    const contractDetailSource = read('../../src/components/billing-dashboard/contracts/ContractDetail.tsx');
+    const contractLinesSource = read('../../src/components/billing-dashboard/contracts/ContractLines.tsx');
+    const pricingSchedulesSource = read('../../src/components/billing-dashboard/contracts/PricingSchedules.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+    const de = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/de/msp/contracts.json'
+    );
+
+    expect(contractDetailSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(contractLinesSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(pricingSchedulesSource).toContain("const { t } = useTranslation('msp/contracts');");
+
+    const keySet = new Set<string>([
+      ...getTranslationKeys(contractDetailSource),
+      ...getTranslationKeys(contractLinesSource),
+      ...getTranslationKeys(pricingSchedulesSource),
+    ]);
+
+    expect(keySet.size).toBeGreaterThan(200);
+
+    for (const key of keySet) {
+      expect(getLeaf(en, key)).toBeDefined();
+      expect(getLeaf(de, key)).toBeDefined();
+    }
+
+    const translatedTabKeys = [
+      'contractDetail.tabs.overview',
+      'contractDetail.tabs.lines',
+      'contractDetail.tabs.pricing',
+      'contractDetail.tabs.documents',
+      'contractDetail.tabs.invoices',
+    ];
+
+    for (const key of translatedTabKeys) {
+      expect(getLeaf(de, key)).not.toBe(getLeaf(en, key));
+    }
+  });
 });
