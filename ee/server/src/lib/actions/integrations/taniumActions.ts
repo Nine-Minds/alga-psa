@@ -464,14 +464,14 @@ export const getTaniumOrganizationMappings = withAdvancedAssetsAccess(async (use
         'rom.auto_sync_assets',
         'rom.auto_create_tickets',
         'rom.last_synced_at',
-        'c.company_name as client_name',
+        'c.client_name as client_name',
       ])
       .orderBy('rom.external_organization_name', 'asc');
 
     const clients = await knex('clients')
       .where({ tenant })
-      .select(['client_id', 'company_name'])
-      .orderBy('company_name', 'asc');
+      .select(['client_id', 'client_name'])
+      .orderBy('client_name', 'asc');
 
     return { success: true, mappings: rows, clients };
   } catch (error) {
