@@ -1266,6 +1266,30 @@
     }
   },
   "wizardBasics": {
+    "additionalDescription": {
+      "hint": "Internal notes or contract details.",
+      "label": "Description (Optional)",
+      "placeholder": "Add any additional notes about this contract..."
+    },
+    "billingFrequency": {
+      "hint": "How often should this contract be billed?",
+      "label": "Billing Frequency",
+      "placeholder": "Select billing frequency"
+    },
+    "cadenceOwner": {
+      "description": "Sets the default cadence owner applied to recurring lines created in this wizard.",
+      "label": "Recurring Cadence Default",
+      "options": {
+        "client": {
+          "description": "Use the client billing calendar so recurring lines stay aligned with the client’s normal invoice cadence.",
+          "label": "Invoice on client billing schedule"
+        },
+        "contract": {
+          "description": "Use contract-anniversary service periods for recurring lines that should follow the contract timeline.",
+          "label": "Invoice on contract anniversary"
+        }
+      }
+    },
     "client": {
       "chooseClientHint": "Choose the client this contract is for.",
       "clientLabel": "Client",
@@ -1277,8 +1301,81 @@
       "label": "Contract Name",
       "placeholder": "e.g., Standard MSP Services, Premium Support Package"
     },
+    "currency": {
+      "hint": "Currency for this contract. Defaults to the client's preferred currency.",
+      "label": "Currency",
+      "placeholder": "Select currency"
+    },
+    "dates": {
+      "endDateAfterStartValidation": "End date must be after start date",
+      "endDateLabel": "End Date (Optional)",
+      "endDateOngoingHint": "Leave blank for an ongoing contract.",
+      "endDateTooltip": "Leave blank for ongoing contracts that don't have a fixed end date. You can always set an end date later when the contract is terminated or expires.",
+      "startDateHint": "When does this contract become active?",
+      "startDateLabel": "Start Date"
+    },
     "description": "Choose a template (optional), select the client, and set foundational contract details. Service details load in the next steps.",
     "heading": "Contract Basics",
+    "po": {
+      "amountHint": "Total authorized amount on the purchase order.",
+      "amountLabel": "PO Amount",
+      "noteLabel": "Note:",
+      "noteText": "PO enforcement will apply when invoice automation is enabled. Configure now to stay ahead.",
+      "numberHint": "Client's purchase order reference number.",
+      "numberLabel": "PO Number",
+      "numberPlaceholder": "e.g., PO-2024-12345",
+      "requireForInvoicing": "Require Purchase Order for invoicing",
+      "requireHint": "Block invoice generation if PO is not provided.",
+      "requireTooltip": "When enabled, invoices cannot be generated for this contract unless a PO number is provided.",
+      "title": "Purchase Order (Optional)"
+    },
+    "renewal": {
+      "evergreen": {
+        "description": "This contract is ongoing. Configure annual review cadence and notice timing.",
+        "title": "Evergreen Review Settings"
+      },
+      "fixedTerm": {
+        "description": "This contract has a fixed end date. Configure renewal behavior and notice timing.",
+        "title": "Renewal Settings"
+      },
+      "modeLabel": "Renewal Mode",
+      "modeOptions": {
+        "auto": "Auto Renew",
+        "manual": "Manual Renewal",
+        "none": "No Renewal"
+      },
+      "modePlaceholder": "Select renewal mode",
+      "noticePeriodLabel": "Notice Period (Days)",
+      "noticePeriodPlaceholder": "e.g., 30",
+      "termLabel": "Renewal Term (Months)",
+      "termPlaceholder": "e.g., 12",
+      "useTenantDefaultsDescription": "Apply organization-level renewal settings unless explicitly overridden.",
+      "useTenantDefaultsLabel": "Use Tenant Renewal Defaults"
+    },
+    "summary": {
+      "labels": {
+        "billingFrequency": "Billing Frequency:",
+        "client": "Client:",
+        "contract": "Contract:",
+        "currency": "Currency:",
+        "noticePeriod": "Notice Period:",
+        "period": "Period:",
+        "poAmount": "PO Amount:",
+        "poNumber": "PO Number:",
+        "poRequired": "PO Required:",
+        "renewalMode": "Renewal Mode:",
+        "renewalTerm": "Renewal Term:"
+      },
+      "title": "Contract Summary",
+      "values": {
+        "notSelected": "Not selected",
+        "noticePeriodDays_one": "{{count}} day",
+        "noticePeriodDays_other": "{{count}} days",
+        "ongoing": "Ongoing",
+        "renewalTermMonths_one": "{{count}} month",
+        "renewalTermMonths_other": "{{count}} months"
+      }
+    },
     "template": {
       "loadingTemplateDetails": "Loading template details…",
       "loadingTemplates": "Loading templates…",

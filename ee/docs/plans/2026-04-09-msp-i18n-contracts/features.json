@@ -262,7 +262,7 @@
   {
     "id": "F053",
     "description": "Wire useTranslation('msp/contracts') in ContractBasicsStep.tsx -- translate date fields (Start Date, End Date), renewal section (Renewal Mode options: No Renewal/Manual/Auto, Use Tenant Defaults toggle, Notice Period, Renewal Term), cadence owner radio options, billing timing, and PO section (PO Required toggle, PO Number, PO Amount)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F054",

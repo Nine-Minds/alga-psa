@@ -11,9 +11,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import {
   Calendar,
   Building2,
@@ -30,7 +28,8 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { IClient } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useBillingFrequencyOptions, useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 type TemplateOption = {
   contract_id: string;
@@ -56,21 +55,6 @@ const parseLocalYMD = (ymd?: string): Date | undefined => {
   return isNaN(d.getTime()) ? undefined : d;
 };
 
-const CADENCE_OWNER_OPTIONS = [
-  {
-    value: 'client',
-    label: 'Invoice on client billing schedule',
-    description:
-      'Use the client billing calendar so recurring lines stay aligned with the client’s normal invoice cadence.',
-  },
-  {
-    value: 'contract',
-    label: 'Invoice on contract anniversary',
-    description:
-      'Use contract-anniversary service periods for recurring lines that should follow the contract timeline.',
-  },
-];
-
 export function ContractBasicsStep({
   data,
   updateData,
@@ -82,6 +66,9 @@ export function ContractBasicsStep({
   templateError,
 }: ContractBasicsStepProps) {
   const { t } = useTranslation('msp/contracts');
+  const { formatCurrency } = useFormatters();
+  const billingFrequencyOptions = useBillingFrequencyOptions();
+  const formatBillingFrequency = useFormatBillingFrequency();
   const { renderQuickAddClient } = useQuickAddClient();
   const [clients, setClients] = useState<IClient[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
@@ -131,10 +118,44 @@ export function ContractBasicsStep({
     label: template.contract_name,
   }));
   const renewalModeOptions = [
-    { value: 'none', label: 'No Renewal' },
-    { value: 'manual', label: 'Manual Renewal' },
-    { value: 'auto', label: 'Auto Renew' },
+    {
+      value: 'none',
+      label: t('wizardBasics.renewal.modeOptions.none', { defaultValue: 'No Renewal' }),
+    },
+    {
+      value: 'manual',
+      label: t('wizardBasics.renewal.modeOptions.manual', { defaultValue: 'Manual Renewal' }),
+    },
+    {
+      value: 'auto',
+      label: t('wizardBasics.renewal.modeOptions.auto', { defaultValue: 'Auto Renew' }),
+    },
   ];
+  const cadenceOwnerOptions = useMemo(
+    () => [
+      {
+        value: 'client',
+        label: t('wizardBasics.cadenceOwner.options.client.label', {
+          defaultValue: 'Invoice on client billing schedule',
+        }),
+        description: t('wizardBasics.cadenceOwner.options.client.description', {
+          defaultValue:
+            'Use the client billing calendar so recurring lines stay aligned with the client’s normal invoice cadence.',
+        }),
+      },
+      {
+        value: 'contract',
+        label: t('wizardBasics.cadenceOwner.options.contract.label', {
+          defaultValue: 'Invoice on contract anniversary',
+        }),
+        description: t('wizardBasics.cadenceOwner.options.contract.description', {
+          defaultValue:
+            'Use contract-anniversary service periods for recurring lines that should follow the contract timeline.',
+        }),
+      },
+    ],
+    [t]
+  );
 
   const selectedTemplate = selectedTemplateId
     ? templates.find((template) => template.contract_id === selectedTemplateId)
@@ -275,30 +296,36 @@ export function ContractBasicsStep({
       <div className="space-y-2">
         <Label htmlFor="billing-frequency" className="flex items-center gap-2">
           <Repeat className="h-4 w-4" />
-          Billing Frequency *
+          {t('wizardBasics.billingFrequency.label', { defaultValue: 'Billing Frequency' })} *
         </Label>
         <CustomSelect
           id="billing-frequency"
-          options={BILLING_FREQUENCY_OPTIONS}
+          options={billingFrequencyOptions}
           onValueChange={(value: string) => updateData({ billing_frequency: value })}
           value={data.billing_frequency}
-          placeholder="Select billing frequency"
+          placeholder={t('wizardBasics.billingFrequency.placeholder', { defaultValue: 'Select billing frequency' })}
           className="w-full"
         />
-        <p className="text-xs text-[rgb(var(--color-text-400))]">How often should this contract be billed?</p>
+        <p className="text-xs text-[rgb(var(--color-text-400))]">
+          {t('wizardBasics.billingFrequency.hint', { defaultValue: 'How often should this contract be billed?' })}
+        </p>
       </div>
 
       <div className="space-y-3 border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-[rgb(var(--color-surface-50))]">
         <div>
-          <Label className="text-sm font-medium">Recurring Cadence Default</Label>
+          <Label className="text-sm font-medium">
+            {t('wizardBasics.cadenceOwner.label', { defaultValue: 'Recurring Cadence Default' })}
+          </Label>
           <p className="text-xs text-[rgb(var(--color-text-400))] mt-1">
-            Sets the default cadence owner applied to recurring lines created in this wizard.
+            {t('wizardBasics.cadenceOwner.description', {
+              defaultValue: 'Sets the default cadence owner applied to recurring lines created in this wizard.',
+            })}
           </p>
         </div>
         <RadioGroup
           id="contract-basics-cadence-owner"
           name="contract-basics-cadence-owner"
-          options={CADENCE_OWNER_OPTIONS}
+          options={cadenceOwnerOptions}
           value={data.cadence_owner ?? 'client'}
           onChange={(value) =>
             updateData({ cadence_owner: value as ContractWizardData['cadence_owner'] })
@@ -309,25 +336,27 @@ export function ContractBasicsStep({
       <div className="space-y-2">
         <Label htmlFor="currency" className="flex items-center gap-2">
           <Coins className="h-4 w-4" />
-          Currency *
+          {t('wizardBasics.currency.label', { defaultValue: 'Currency' })} *
         </Label>
         <CustomSelect
           id="currency"
           options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
           onValueChange={(value: string) => updateData({ currency_code: value })}
           value={data.currency_code}
-          placeholder="Select currency"
+          placeholder={t('wizardBasics.currency.placeholder', { defaultValue: 'Select currency' })}
           className="w-full"
         />
         <p className="text-xs text-[rgb(var(--color-text-400))]">
-          Currency for this contract. Defaults to the client's preferred currency.
+          {t('wizardBasics.currency.hint', {
+            defaultValue: 'Currency for this contract. Defaults to the client\'s preferred currency.',
+          })}
         </p>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="start_date" className="flex items-center gap-2">
           <Calendar className="h-4 w-4" />
-          Start Date *
+          {t('wizardBasics.dates.startDateLabel', { defaultValue: 'Start Date' })} *
         </Label>
         <DatePicker
           id="start-date"
@@ -338,16 +367,23 @@ export function ContractBasicsStep({
           }}
           className="w-full"
         />
-        <p className="text-xs text-[rgb(var(--color-text-400))]">When does this contract become active?</p>
+        <p className="text-xs text-[rgb(var(--color-text-400))]">
+          {t('wizardBasics.dates.startDateHint', { defaultValue: 'When does this contract become active?' })}
+        </p>
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Label htmlFor="end_date" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
-            End Date (Optional)
+            {t('wizardBasics.dates.endDateLabel', { defaultValue: 'End Date (Optional)' })}
           </Label>
-          <Tooltip content="Leave blank for ongoing contracts that don't have a fixed end date. You can always set an end date later when the contract is terminated or expires.">
+          <Tooltip
+            content={t('wizardBasics.dates.endDateTooltip', {
+              defaultValue:
+                'Leave blank for ongoing contracts that don\'t have a fixed end date. You can always set an end date later when the contract is terminated or expires.',
+            })}
+          >
             <HelpCircle className="h-4 w-4 text-[rgb(var(--color-text-300))] cursor-help" />
           </Tooltip>
         </div>
@@ -362,10 +398,14 @@ export function ContractBasicsStep({
           clearable
         />
         {endDate && startDate && endDate < startDate && (
-          <p className="text-xs text-red-600">End date must be after start date</p>
+          <p className="text-xs text-red-600">
+            {t('wizardBasics.dates.endDateAfterStartValidation', { defaultValue: 'End date must be after start date' })}
+          </p>
         )}
         {!(endDate && startDate && endDate < startDate) && (
-          <p className="text-xs text-[rgb(var(--color-text-400))]">Leave blank for an ongoing contract.</p>
+          <p className="text-xs text-[rgb(var(--color-text-400))]">
+            {t('wizardBasics.dates.endDateOngoingHint', { defaultValue: 'Leave blank for an ongoing contract.' })}
+          </p>
         )}
       </div>
 
@@ -376,18 +416,24 @@ export function ContractBasicsStep({
         >
           <div className="flex items-center gap-2">
             <Repeat className="h-4 w-4 text-[rgb(var(--color-primary-600))]" />
-            <h4 className="text-sm font-semibold">Renewal Settings</h4>
+            <h4 className="text-sm font-semibold">
+              {t('wizardBasics.renewal.fixedTerm.title', { defaultValue: 'Renewal Settings' })}
+            </h4>
           </div>
           <p className="text-xs text-[rgb(var(--color-text-500))]">
-            This contract has a fixed end date. Configure renewal behavior and notice timing.
+            {t('wizardBasics.renewal.fixedTerm.description', {
+              defaultValue: 'This contract has a fixed end date. Configure renewal behavior and notice timing.',
+            })}
           </p>
           <div className="flex items-center justify-between rounded-md border border-[rgb(var(--color-border-200))] p-3">
             <div className="space-y-1">
               <Label htmlFor="use-tenant-renewal-defaults-fixed" className="text-xs font-medium">
-                Use Tenant Renewal Defaults
+                {t('wizardBasics.renewal.useTenantDefaultsLabel', { defaultValue: 'Use Tenant Renewal Defaults' })}
               </Label>
               <p className="text-xs text-[rgb(var(--color-text-500))]">
-                Apply organization-level renewal settings unless explicitly overridden.
+                {t('wizardBasics.renewal.useTenantDefaultsDescription', {
+                  defaultValue: 'Apply organization-level renewal settings unless explicitly overridden.',
+                })}
               </p>
             </div>
             <Switch
@@ -400,7 +446,7 @@ export function ContractBasicsStep({
           </div>
           <div className="space-y-2">
             <Label htmlFor="renewal-mode-fixed" className="text-xs font-medium">
-              Renewal Mode
+              {t('wizardBasics.renewal.modeLabel', { defaultValue: 'Renewal Mode' })}
             </Label>
             <CustomSelect
               id="renewal-mode-fixed"
@@ -411,14 +457,14 @@ export function ContractBasicsStep({
                   renewal_mode: value as NonNullable<ContractWizardData['renewal_mode']>,
                 })
               }
-              placeholder="Select renewal mode"
+              placeholder={t('wizardBasics.renewal.modePlaceholder', { defaultValue: 'Select renewal mode' })}
               className="w-full"
             />
           </div>
           {isRenewalEnabled && (
             <div className="space-y-2">
               <Label htmlFor="notice-period-fixed" className="text-xs font-medium">
-                Notice Period (Days)
+                {t('wizardBasics.renewal.noticePeriodLabel', { defaultValue: 'Notice Period (Days)' })}
               </Label>
               <Input
                 id="notice-period-fixed"
@@ -437,7 +483,7 @@ export function ContractBasicsStep({
                     notice_period_days: Number.isFinite(parsed) ? Math.max(0, parsed) : undefined,
                   });
                 }}
-                placeholder="e.g., 30"
+                placeholder={t('wizardBasics.renewal.noticePeriodPlaceholder', { defaultValue: 'e.g., 30' })}
                 className="w-full"
               />
             </div>
@@ -445,7 +491,7 @@ export function ContractBasicsStep({
           {isAutoRenew && (
             <div className="space-y-2">
               <Label htmlFor="renewal-term-fixed" className="text-xs font-medium">
-                Renewal Term (Months)
+                {t('wizardBasics.renewal.termLabel', { defaultValue: 'Renewal Term (Months)' })}
               </Label>
               <Input
                 id="renewal-term-fixed"
@@ -465,7 +511,7 @@ export function ContractBasicsStep({
                       Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
                   });
                 }}
-                placeholder="e.g., 12"
+                placeholder={t('wizardBasics.renewal.termPlaceholder', { defaultValue: 'e.g., 12' })}
                 className="w-full"
               />
             </div>
@@ -480,18 +526,24 @@ export function ContractBasicsStep({
         >
           <div className="flex items-center gap-2">
             <Repeat className="h-4 w-4 text-[rgb(var(--color-primary-600))]" />
-            <h4 className="text-sm font-semibold">Evergreen Review Settings</h4>
+            <h4 className="text-sm font-semibold">
+              {t('wizardBasics.renewal.evergreen.title', { defaultValue: 'Evergreen Review Settings' })}
+            </h4>
           </div>
           <p className="text-xs text-[rgb(var(--color-text-500))]">
-            This contract is ongoing. Configure annual review cadence and notice timing.
+            {t('wizardBasics.renewal.evergreen.description', {
+              defaultValue: 'This contract is ongoing. Configure annual review cadence and notice timing.',
+            })}
           </p>
           <div className="flex items-center justify-between rounded-md border border-[rgb(var(--color-border-200))] p-3">
             <div className="space-y-1">
               <Label htmlFor="use-tenant-renewal-defaults-evergreen" className="text-xs font-medium">
-                Use Tenant Renewal Defaults
+                {t('wizardBasics.renewal.useTenantDefaultsLabel', { defaultValue: 'Use Tenant Renewal Defaults' })}
               </Label>
               <p className="text-xs text-[rgb(var(--color-text-500))]">
-                Apply organization-level renewal settings unless explicitly overridden.
+                {t('wizardBasics.renewal.useTenantDefaultsDescription', {
+                  defaultValue: 'Apply organization-level renewal settings unless explicitly overridden.',
+                })}
               </p>
             </div>
             <Switch
@@ -504,7 +556,7 @@ export function ContractBasicsStep({
           </div>
           <div className="space-y-2">
             <Label htmlFor="renewal-mode-evergreen" className="text-xs font-medium">
-              Renewal Mode
+              {t('wizardBasics.renewal.modeLabel', { defaultValue: 'Renewal Mode' })}
             </Label>
             <CustomSelect
               id="renewal-mode-evergreen"
@@ -515,14 +567,14 @@ export function ContractBasicsStep({
                   renewal_mode: value as NonNullable<ContractWizardData['renewal_mode']>,
                 })
               }
-              placeholder="Select renewal mode"
+              placeholder={t('wizardBasics.renewal.modePlaceholder', { defaultValue: 'Select renewal mode' })}
               className="w-full"
             />
           </div>
           {isRenewalEnabled && (
             <div className="space-y-2">
               <Label htmlFor="notice-period-evergreen" className="text-xs font-medium">
-                Notice Period (Days)
+                {t('wizardBasics.renewal.noticePeriodLabel', { defaultValue: 'Notice Period (Days)' })}
               </Label>
               <Input
                 id="notice-period-evergreen"
@@ -541,7 +593,7 @@ export function ContractBasicsStep({
                     notice_period_days: Number.isFinite(parsed) ? Math.max(0, parsed) : undefined,
                   });
                 }}
-                placeholder="e.g., 30"
+                placeholder={t('wizardBasics.renewal.noticePeriodPlaceholder', { defaultValue: 'e.g., 30' })}
                 className="w-full"
               />
             </div>
@@ -549,7 +601,7 @@ export function ContractBasicsStep({
           {isAutoRenew && (
             <div className="space-y-2">
               <Label htmlFor="renewal-term-evergreen" className="text-xs font-medium">
-                Renewal Term (Months)
+                {t('wizardBasics.renewal.termLabel', { defaultValue: 'Renewal Term (Months)' })}
               </Label>
               <Input
                 id="renewal-term-evergreen"
@@ -569,7 +621,7 @@ export function ContractBasicsStep({
                       Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
                   });
                 }}
-                placeholder="e.g., 12"
+                placeholder={t('wizardBasics.renewal.termPlaceholder', { defaultValue: 'e.g., 12' })}
                 className="w-full"
               />
             </div>
@@ -578,21 +630,29 @@ export function ContractBasicsStep({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description (Optional)</Label>
+        <Label htmlFor="description">
+          {t('wizardBasics.additionalDescription.label', { defaultValue: 'Description (Optional)' })}
+        </Label>
         <TextArea
           id="description"
           value={data.description || ''}
           onChange={(e) => updateData({ description: e.target.value })}
-          placeholder="Add any additional notes about this contract..."
+          placeholder={t('wizardBasics.additionalDescription.placeholder', {
+            defaultValue: 'Add any additional notes about this contract...',
+          })}
           className="min-h-[100px] w-full"
         />
-        <p className="text-xs text-[rgb(var(--color-text-400))]">Internal notes or contract details.</p>
+        <p className="text-xs text-[rgb(var(--color-text-400))]">
+          {t('wizardBasics.additionalDescription.hint', { defaultValue: 'Internal notes or contract details.' })}
+        </p>
       </div>
 
       <div className="border-t pt-6 space-y-4">
         <div className="flex items-center gap-2 mb-4">
           <FileCheck className="h-5 w-5 text-[rgb(var(--color-text-600))]" />
-          <h4 className="text-base font-semibold">Purchase Order (Optional)</h4>
+          <h4 className="text-base font-semibold">
+            {t('wizardBasics.po.title', { defaultValue: 'Purchase Order (Optional)' })}
+          </h4>
         </div>
 
         <div className="space-y-2">
@@ -600,13 +660,18 @@ export function ContractBasicsStep({
             <div className="space-y-1 flex-1">
               <div className="flex items-center gap-2">
                 <Label htmlFor="po_required" className="text-sm font-medium">
-                  Require Purchase Order for invoicing
+                  {t('wizardBasics.po.requireForInvoicing', { defaultValue: 'Require Purchase Order for invoicing' })}
                 </Label>
-                <Tooltip content="When enabled, invoices cannot be generated for this contract unless a PO number is provided.">
+                <Tooltip content={t('wizardBasics.po.requireTooltip', {
+                  defaultValue:
+                    'When enabled, invoices cannot be generated for this contract unless a PO number is provided.',
+                })}>
                   <HelpCircle className="h-4 w-4 text-[rgb(var(--color-text-300))] cursor-help" />
                 </Tooltip>
               </div>
-              <p className="text-xs text-[rgb(var(--color-text-400))]">Block invoice generation if PO is not provided.</p>
+              <p className="text-xs text-[rgb(var(--color-text-400))]">
+                {t('wizardBasics.po.requireHint', { defaultValue: 'Block invoice generation if PO is not provided.' })}
+              </p>
             </div>
             <Switch
               id="po_required"
@@ -617,8 +682,12 @@ export function ContractBasicsStep({
           <Alert variant="info">
             <Info className="h-4 w-4" />
             <AlertDescription className="text-xs">
-              <span className="font-medium">Note:</span> PO enforcement will apply when invoice
-              automation is enabled. Configure now to stay ahead.
+              <span className="font-medium">
+                {t('wizardBasics.po.noteLabel', { defaultValue: 'Note:' })}
+              </span>{' '}
+              {t('wizardBasics.po.noteText', {
+                defaultValue: 'PO enforcement will apply when invoice automation is enabled. Configure now to stay ahead.',
+              })}
             </AlertDescription>
           </Alert>
         </div>
@@ -626,20 +695,24 @@ export function ContractBasicsStep({
         {data.po_required && (
           <div className="space-y-4 pl-4 border-l-2 border-blue-200">
             <div className="space-y-2">
-              <Label htmlFor="po_number">PO Number *</Label>
+              <Label htmlFor="po_number">
+                {t('wizardBasics.po.numberLabel', { defaultValue: 'PO Number' })} *
+              </Label>
               <Input
                 id="po_number"
                 type="text"
                 value={data.po_number || ''}
                 onChange={(e) => updateData({ po_number: e.target.value })}
-                placeholder="e.g., PO-2024-12345"
+                placeholder={t('wizardBasics.po.numberPlaceholder', { defaultValue: 'e.g., PO-2024-12345' })}
                 className="w-full"
               />
-              <p className="text-xs text-[rgb(var(--color-text-400))]">Client's purchase order reference number.</p>
+              <p className="text-xs text-[rgb(var(--color-text-400))]">
+                {t('wizardBasics.po.numberHint', { defaultValue: 'Client\'s purchase order reference number.' })}
+              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="po_amount">PO Amount</Label>
+              <Label htmlFor="po_amount">{t('wizardBasics.po.amountLabel', { defaultValue: 'PO Amount' })}</Label>
               <div className="flex h-10 items-center rounded-md border border-[rgb(var(--color-border-400))] shadow-sm focus-within:border-transparent focus-within:ring-2 focus-within:ring-[rgb(var(--color-primary-500))]">
                 <span className="shrink-0 pl-3 pr-1 text-[rgb(var(--color-text-400))]">
                   {currencySymbol}
@@ -674,7 +747,7 @@ export function ContractBasicsStep({
                 />
               </div>
               <p className="text-xs text-[rgb(var(--color-text-400))]">
-                Total authorized amount on the purchase order.
+                {t('wizardBasics.po.amountHint', { defaultValue: 'Total authorized amount on the purchase order.' })}
               </p>
             </div>
           </div>
@@ -684,72 +757,81 @@ export function ContractBasicsStep({
       {data.client_id && data.contract_name && data.start_date && (
         <Alert variant="info" className="mt-6">
           <AlertDescription>
-            <h4 className="text-sm font-semibold mb-2">Contract Summary</h4>
+            <h4 className="text-sm font-semibold mb-2">
+              {t('wizardBasics.summary.title', { defaultValue: 'Contract Summary' })}
+            </h4>
             <div className="text-sm space-y-1">
               <p>
-                <strong>Client:</strong>{' '}
-                {clients.find((c) => c.client_id === data.client_id)?.client_name || 'Not selected'}
+                <strong>{t('wizardBasics.summary.labels.client', { defaultValue: 'Client:' })}</strong>{' '}
+                {clients.find((c) => c.client_id === data.client_id)?.client_name
+                  || t('wizardBasics.summary.values.notSelected', { defaultValue: 'Not selected' })}
               </p>
               <p>
-                <strong>Contract:</strong> {data.contract_name}
+                <strong>{t('wizardBasics.summary.labels.contract', { defaultValue: 'Contract:' })}</strong> {data.contract_name}
               </p>
               <p>
-                <strong>Billing Frequency:</strong>{' '}
-                {BILLING_FREQUENCY_OPTIONS.find((opt) => opt.value === data.billing_frequency)
-                  ?.label || data.billing_frequency}
+                <strong>{t('wizardBasics.summary.labels.billingFrequency', { defaultValue: 'Billing Frequency:' })}</strong>{' '}
+                {formatBillingFrequency(data.billing_frequency)}
               </p>
               <p>
-                <strong>Currency:</strong>{' '}
+                <strong>{t('wizardBasics.summary.labels.currency', { defaultValue: 'Currency:' })}</strong>{' '}
                 {CURRENCY_OPTIONS.find((opt) => opt.value === data.currency_code)?.label ||
                   data.currency_code}
               </p>
               <p>
-                <strong>Period:</strong>{' '}
+                <strong>{t('wizardBasics.summary.labels.period', { defaultValue: 'Period:' })}</strong>{' '}
                 {formatDateFns(parseLocalYMD(data.start_date)!, 'MM/dd/yyyy')}
                 {data.end_date
                   ? ` - ${formatDateFns(parseLocalYMD(data.end_date)!, 'MM/dd/yyyy')}`
-                  : ' (Ongoing)'}
+                  : ` (${t('wizardBasics.summary.values.ongoing', { defaultValue: 'Ongoing' })})`}
               </p>
               {data.renewal_mode && (
                 <p>
-                  <strong>Renewal Mode:</strong>{' '}
+                  <strong>{t('wizardBasics.summary.labels.renewalMode', { defaultValue: 'Renewal Mode:' })}</strong>{' '}
                   {data.renewal_mode === 'none'
-                    ? 'No Renewal'
+                    ? t('wizardBasics.renewal.modeOptions.none', { defaultValue: 'No Renewal' })
                     : data.renewal_mode === 'manual'
-                      ? 'Manual Renewal'
-                      : 'Auto Renew'}
+                      ? t('wizardBasics.renewal.modeOptions.manual', { defaultValue: 'Manual Renewal' })
+                      : t('wizardBasics.renewal.modeOptions.auto', { defaultValue: 'Auto Renew' })}
                 </p>
               )}
               {data.renewal_mode && data.renewal_mode !== 'none' && data.notice_period_days !== undefined && (
                 <p>
-                  <strong>Notice Period:</strong> {data.notice_period_days} day
-                  {data.notice_period_days === 1 ? '' : 's'}
+                  <strong>{t('wizardBasics.summary.labels.noticePeriod', { defaultValue: 'Notice Period:' })}</strong>{' '}
+                  {t('wizardBasics.summary.values.noticePeriodDays', {
+                    defaultValue: '{{count}} day',
+                    count: data.notice_period_days,
+                  })}
                 </p>
               )}
               {data.renewal_mode === 'auto' && data.renewal_term_months !== undefined && (
                 <p>
-                  <strong>Renewal Term:</strong> {data.renewal_term_months} month
-                  {data.renewal_term_months === 1 ? '' : 's'}
+                  <strong>{t('wizardBasics.summary.labels.renewalTerm', { defaultValue: 'Renewal Term:' })}</strong>{' '}
+                  {t('wizardBasics.summary.values.renewalTermMonths', {
+                    defaultValue: '{{count}} month',
+                    count: data.renewal_term_months,
+                  })}
                 </p>
               )}
               {data.po_required && (
                 <>
                   <p>
-                    <strong>PO Required:</strong> Yes
+                    <strong>{t('wizardBasics.summary.labels.poRequired', { defaultValue: 'PO Required:' })}</strong>{' '}
+                    {t('common.labels.yes', { defaultValue: 'Yes' })}
                   </p>
                   {data.po_number && (
                     <p>
-                      <strong>PO Number:</strong> {data.po_number}
+                      <strong>{t('wizardBasics.summary.labels.poNumber', { defaultValue: 'PO Number:' })}</strong> {data.po_number}
                     </p>
                   )}
                   {data.po_amount && (
                     <p>
-                      <strong>PO Amount:</strong>{' '}
-                      {formatCurrencyFromMinorUnits(
-                        data.po_amount,
-                        'en-US',
-                        currencyMeta.currencyCode
-                      )}
+                      <strong>{t('wizardBasics.summary.labels.poAmount', { defaultValue: 'PO Amount:' })}</strong>{' '}
+                      {formatCurrency(data.po_amount / currencyMeta.minorUnitFactor, {
+                        currency: currencyMeta.currencyCode,
+                        minimumFractionDigits: currencyMeta.fractionDigits,
+                        maximumFractionDigits: currencyMeta.fractionDigits,
+                      })}
                     </p>
                   )}
                 </>
