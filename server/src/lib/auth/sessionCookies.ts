@@ -78,12 +78,17 @@ export function getSessionCookieName(): string {
 export function getSessionCookieConfig(): CookieOption {
   const environment = process.env.NODE_ENV ?? 'development';
   const secure = environment === 'production';
+  // See packages/auth/src/lib/session.ts for the reasoning — opt-in
+  // SameSite=None is required for Microsoft Teams iframe hosting.
+  const crossSiteAllowed = process.env.TEAMS_IFRAME_SESSION_COOKIE === 'true';
+  const sameSite: CookieOption['options']['sameSite'] =
+    crossSiteAllowed && secure ? 'none' : 'lax';
 
   return {
     name: getSessionCookieName(),
     options: {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite,
       path: '/',
       secure,
     },
