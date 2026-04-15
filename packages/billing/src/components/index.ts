@@ -11,6 +11,8 @@ export { default as PaperInvoice } from './billing-dashboard/PaperInvoice';
 export { TemplateRenderer } from './billing-dashboard/TemplateRenderer';
 export { PurchaseOrderSummaryBanner } from './billing-dashboard/invoicing/PurchaseOrderSummaryBanner';
 export { ServiceCatalogPicker, type ServiceCatalogPickerItem } from './billing-dashboard/contracts/ServiceCatalogPicker';
+export { ContractWizard } from './billing-dashboard/contracts/ContractWizard';
+export { ContractDialog } from './billing-dashboard/contracts/ContractDialog';
 export { default as CreditsPage } from './credits/CreditsPage';
 export { default as TaxSettingsForm } from './tax/TaxSettingsForm';
 

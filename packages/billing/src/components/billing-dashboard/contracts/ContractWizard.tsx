@@ -224,6 +224,7 @@ interface ContractWizardProps {
   onOpenChange: (open: boolean) => void;
   onComplete?: (data: ContractWizardData) => void;
   editingContract?: ContractWizardData | null;
+  initialClientId?: string;
 }
 
 export function ContractWizard({
@@ -231,6 +232,7 @@ export function ContractWizard({
   onOpenChange,
   onComplete,
   editingContract = null,
+  initialClientId,
 }: ContractWizardProps) {
   const { t } = useTranslation('msp/contracts');
   const initialWizardDataRef = useRef<ContractWizardData | null>(null);
@@ -279,6 +281,9 @@ export function ContractWizard({
     setCurrentStep(0);
 
     const initialWizardData = buildInitialContractWizardData(editingContract);
+    if (!editingContract && initialClientId) {
+      initialWizardData.client_id = initialClientId;
+    }
     initialWizardDataRef.current = deepClone(initialWizardData);
 
     if (editingContract) {
@@ -317,7 +322,7 @@ export function ContractWizard({
         })
         .catch(() => {});
     }
-  }, [open, editingContract, t]);
+  }, [open, editingContract, initialClientId, t]);
 
   const resetWizard = () => {
     setWizardData(createDefaultContractWizardData());

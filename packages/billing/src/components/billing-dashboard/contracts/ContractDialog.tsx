@@ -46,9 +46,20 @@ interface ContractDialogProps {
   editingContract?: IContract | null;
   onClose?: () => void;
   triggerButton?: React.ReactNode;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  initialClientId?: string;
 }
 
-export function ContractDialog({ onContractSaved, editingContract, onClose, triggerButton }: ContractDialogProps) {
+export function ContractDialog({
+  onContractSaved,
+  editingContract,
+  onClose,
+  triggerButton,
+  isOpen: externalIsOpen,
+  onOpenChange: externalOnOpenChange,
+  initialClientId,
+}: ContractDialogProps) {
   const { t } = useTranslation('msp/contracts');
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const contractLineTypeOptions = useContractLineTypeOptions();
@@ -58,11 +69,20 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
     { value: 'none', label: t('renewal.modes.none', { defaultValue: 'Non-renewing' }) },
   ];
 
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = externalIsOpen !== undefined;
+  const open = isControlled ? externalIsOpen : internalOpen;
+  const setOpen = (next: boolean) => {
+    if (isControlled) {
+      externalOnOpenChange?.(next);
+    } else {
+      setInternalOpen(next);
+    }
+  };
   const [contractName, setContractName] = useState(editingContract?.contract_name ?? '');
   const [contractDescription, setContractDescription] = useState(editingContract?.contract_description ?? '');
   const [status, setStatus] = useState<string>(editingContract?.status ?? 'active');
-  const [clientId, setClientId] = useState<string>('');
+  const [clientId, setClientId] = useState<string>(initialClientId ?? '');
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -115,8 +135,11 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
     if (open) {
       loadClients();
       loadContractLinePresets();
+      if (initialClientId) {
+        setClientId(initialClientId);
+      }
     }
-  }, [open]);
+  }, [open, initialClientId]);
 
   const loadClients = async () => {
     try {

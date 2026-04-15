@@ -3,7 +3,6 @@
 import { withTransaction } from '@alga-psa/db';
 import { auditLog } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
-import ClientContractLine from '../models/clientContractLine';
 import { IInvoice, IInvoiceCharge } from '@alga-psa/types';
 import { ITransaction, ICreditTracking } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
