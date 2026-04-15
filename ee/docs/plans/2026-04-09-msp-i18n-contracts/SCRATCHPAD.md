@@ -365,3 +365,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/BucketOverlayFields.i18n.test.ts` (pass; 1 file, 1 test).
 - **(2026-04-15)** `T041` completed: added `packages/billing/tests/billing-dashboard/ContractLineEditDialog.i18n.test.ts` with translation-key assertions for dialog title interpolation, pricing/timing section labels, timing options/descriptions, validation/error copy, and save/cancel states.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractLineEditDialog.i18n.test.ts` (pass; 1 file, 1 test).
+- **(2026-04-15)** `T042` completed: added `packages/billing/tests/billing-dashboard/ContractHeader.i18n.test.ts` with translation-key checks for stat labels, status badges, template/client-owned badges, ongoing/not-available values, and PO-required alert copy.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ContractHeader.i18n.test.ts` (pass; 1 file, 1 test).

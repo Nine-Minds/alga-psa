@@ -353,7 +353,7 @@
   {
     "id": "T042",
     "description": "Unit: ContractHeader.i18n.test -- stat labels, status badges, Template/Client-owned badges, PO alert render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
