@@ -86,7 +86,8 @@
     },
     "labels": {
       "billingFrequency": "Factureringsfrequentie",
-      "timing": "Factureringstijdstip"
+      "timing": "Factureringstijdstip",
+      "cadenceOwner": "Cadence Owner"
     },
     "timing": {
       "advance": "Van tevoren",

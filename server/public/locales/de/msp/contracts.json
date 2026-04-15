@@ -86,7 +86,8 @@
     },
     "labels": {
       "billingFrequency": "Abrechnungshäufigkeit",
-      "timing": "Abrechnungszeitpunkt"
+      "timing": "Abrechnungszeitpunkt",
+      "cadenceOwner": "Cadence Owner"
     },
     "timing": {
       "advance": "Im voraus",

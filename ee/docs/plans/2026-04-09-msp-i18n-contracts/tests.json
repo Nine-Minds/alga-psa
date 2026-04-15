@@ -180,7 +180,7 @@
   {
     "id": "T021",
     "description": "Unit: ContractLines.i18n.test -- inline edit fields, service config details, delete confirmation render translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]

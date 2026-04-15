@@ -86,7 +86,8 @@
     },
     "labels": {
       "billingFrequency": "Frequenza di fatturazione",
-      "timing": "Tempistiche di fatturazione"
+      "timing": "Tempistiche di fatturazione",
+      "cadenceOwner": "Cadence Owner"
     },
     "timing": {
       "advance": "In anticipo",

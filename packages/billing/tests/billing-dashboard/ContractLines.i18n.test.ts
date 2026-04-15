@@ -60,4 +60,61 @@ describe('ContractLines i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T021: inline edit fields, service details, and delete confirmation use translated keys', () => {
+    const source = read('../../src/components/billing-dashboard/contracts/ContractLines.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/contracts.json'
+    );
+
+    const keyChecks = [
+      'contractLines.dialogs.confirmRemove',
+      'contractLines.configuration.title',
+      'contractLines.configuration.description',
+      'contractLines.configuration.minimumBillableTime',
+      'contractLines.configuration.roundUpToNearest',
+      'contractLines.configuration.minutesValue',
+      'contractLines.configuration.fixedInfo',
+      'contractLines.configuration.fixedInfoHeading',
+      'contractLines.configuration.fixedInfoDetails',
+      'contractLines.configuration.usageInfo',
+      'contractLines.services.title',
+      'contractLines.services.empty',
+      'contractLines.services.typeLabel',
+      'contractLines.services.quantityShort',
+      'contractLines.services.quantity',
+      'contractLines.services.quantityTaxAllocation',
+      'contractLines.services.hourlyRate',
+      'contractLines.services.unitRate',
+      'contractLines.services.rateTaxAllocation',
+      'contractLines.services.unitOfMeasure',
+      'contractLines.services.unitPlaceholder',
+      'contractLines.bucket.enableTracking',
+      'contractLines.bucket.title',
+      'contractLines.bucket.included',
+      'contractLines.bucket.hoursValue',
+      'contractLines.bucket.unitsValue',
+      'contractLines.bucket.overageRate',
+      'contractLines.bucket.hour',
+      'contractLines.bucket.defaultUnit',
+      'contractLines.bucket.defaultUnits',
+      'contractLines.bucket.billingPeriod',
+      'contractLines.bucket.rolloverEnabled',
+      'billing.labels.timing',
+      'billing.labels.cadenceOwner',
+      'billing.timing.arrears',
+      'billing.timing.advance',
+      'billing.cadenceOwner.client',
+      'billing.cadenceOwner.contract',
+      'common.actions.save',
+      'common.actions.saving',
+      'common.actions.cancel',
+      'contractLines.errors.cannotEditWithInvoices',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });

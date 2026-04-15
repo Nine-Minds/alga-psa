@@ -86,7 +86,8 @@
     },
     "labels": {
       "billingFrequency": "Fréquence de facturation",
-      "timing": "Calendrier de facturation"
+      "timing": "Calendrier de facturation",
+      "cadenceOwner": "Cadence Owner"
     },
     "timing": {
       "advance": "À l'avance",

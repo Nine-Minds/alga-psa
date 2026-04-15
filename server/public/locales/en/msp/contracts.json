@@ -86,7 +86,8 @@
     },
     "labels": {
       "billingFrequency": "Billing Frequency",
-      "timing": "Billing Timing"
+      "timing": "Billing Timing",
+      "cadenceOwner": "Cadence Owner"
     },
     "timing": {
       "advance": "In Advance",

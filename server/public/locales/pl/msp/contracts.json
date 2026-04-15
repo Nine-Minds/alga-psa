@@ -86,7 +86,8 @@
     },
     "labels": {
       "billingFrequency": "Częstotliwość rozliczeń",
-      "timing": "Termin rozliczeń"
+      "timing": "Termin rozliczeń",
+      "cadenceOwner": "Cadence Owner"
     },
     "timing": {
       "advance": "Z góry",
