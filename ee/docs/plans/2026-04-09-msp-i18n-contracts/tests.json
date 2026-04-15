@@ -425,7 +425,7 @@
   {
     "id": "T051",
     "description": "Unit: HourlyServicesStep.i18n.test -- step heading, rate/minimum/rounding labels render via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]

@@ -383,3 +383,5 @@ MD && git add ee/docs/plans/2026-04-09-msp-i18n-contracts/features.json ee/docs/
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/FixedFeeServicesStep.i18n.test.ts` (pass; 1 file, 1 test).
 - **(2026-04-15)** `T050` completed: added `packages/billing/tests/billing-dashboard/ProductsStep.i18n.test.ts` with assertions for translated step heading/description, product picker labels, quantity/override-rate/default-price copy, validation messages, add action, and empty state in `ProductsStep.tsx`.
 - **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/ProductsStep.i18n.test.ts` (pass; 1 file, 1 test).
+- **(2026-04-15)** `T051` completed: added `packages/billing/tests/billing-dashboard/HourlyServicesStep.i18n.test.ts` validating translated step/explainer copy, minimum-time and round-up labels/hints, service picker/hourly-rate labels, add action, empty state, and alternate frequency label.
+- **(2026-04-15)** Verification: `cd packages/billing && npx vitest run tests/billing-dashboard/HourlyServicesStep.i18n.test.ts` (pass; 1 file, 1 test).
