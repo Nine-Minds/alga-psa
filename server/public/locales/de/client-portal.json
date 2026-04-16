@@ -362,7 +362,8 @@
     "tabs": {
       "account": "Konto",
       "clientDetails": "Unternehmensdetails",
-      "userManagement": "Benutzerverwaltung"
+      "userManagement": "Benutzerverwaltung",
+      "visibilityGroups": "Visibility Groups"
     },
     "fields": {
       "clientLogo": "Unternehmenslogo",
@@ -421,6 +422,41 @@
       "emailExists": "Ein Kontakt mit dieser E-Mail-Adresse existiert bereits",
       "createError": "Benutzer konnte nicht erstellt werden",
       "deleteError": "Benutzer konnte nicht gelöscht werden"
+    },
+    "visibilityGroups": {
+      "title": "Sichtbarkeitsgruppen",
+      "description": "Verwalten Sie, auf welche Ticket-Boards jeder Portal-Kontakt zugreifen kann.",
+      "nameLabel": "Name",
+      "descriptionLabel": "Beschreibung",
+      "boardLabel": "Boards",
+      "noBoards": "Es sind keine Boards verfügbar",
+      "loadError": "Sichtbarkeitsgruppen konnten nicht geladen werden",
+      "empty": "Noch keine Sichtbarkeitsgruppen.",
+      "loading": "Sichtbarkeitsgruppen werden geladen...",
+      "boardCount": "Boards",
+      "assignmentCount": "zugewiesene Kontakte",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "deleteDialogTitle": "Sichtbarkeitsgruppe löschen",
+      "deleteConfirm": "Diese Sichtbarkeitsgruppe löschen?",
+      "deleteAssignedError": "Diese Sichtbarkeitsgruppe ist noch einem oder mehreren Kontakten zugewiesen.",
+      "deleteMissingError": "Diese Sichtbarkeitsgruppe existiert nicht mehr.",
+      "deleteSuccess": "Sichtbarkeitsgruppe gelöscht",
+      "deleteError": "Sichtbarkeitsgruppe konnte nicht gelöscht werden",
+      "save": "Gruppe speichern",
+      "create": "Gruppe erstellen",
+      "nameRequired": "Name der Sichtbarkeitsgruppe ist erforderlich",
+      "saveError": "Sichtbarkeitsgruppe konnte nicht gespeichert werden",
+      "updateSuccess": "Sichtbarkeitsgruppe aktualisiert",
+      "createSuccess": "Sichtbarkeitsgruppe erstellt",
+      "assignmentsTitle": "Kontozuordnungen",
+      "assignmentsDescription": "Weisen Sie jedem Kontakt eine Sichtbarkeitsgruppe zu oder behalten Sie vollen Zugriff.",
+      "noContacts": "Keine Kontakte vorhanden.",
+      "assignmentLabel": "Zugewiesene Gruppe",
+      "fullAccess": "Vollzugriff",
+      "cancel": "Abbrechen",
+      "assignSuccess": "Kontaktzuweisung für die Sichtbarkeit aktualisiert",
+      "assignError": "Sichtbarkeitsgruppe konnte nicht zugewiesen werden"
     },
     "messages": {
       "saveChanges": "Änderungen speichern",

@@ -46,14 +46,17 @@
     "titlePlaceholder": "Titre du ticket",
     "descriptionPlaceholder": "Décrivez votre problème...",
     "priorityPlaceholder": "Sélectionner la priorité",
+    "noBoardsAvailable": "No ticket boards are available for your account. Contact your administrator.",
     "submit": "Créer un ticket",
     "submitting": "Création en cours...",
     "errors": {
       "titleRequired": "Le titre est obligatoire",
       "descriptionRequired": "La description est obligatoire",
       "priorityRequired": "Veuillez sélectionner une priorité",
-      "createFailed": "Échec de la création du ticket. Veuillez réessayer."
-    }
+      "createFailed": "Échec de la création du ticket. Veuillez réessayer.",
+      "boardRequired": "Veuillez sélectionner un tableau"
+    },
+    "boardPlaceholder": "Sélectionner un tableau"
   },
   "status": {
     "open": "Ouvert",

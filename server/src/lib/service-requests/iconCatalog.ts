@@ -16,6 +16,7 @@ export const SERVICE_REQUEST_ICON_OPTIONS: ServiceRequestIconOption[] = [
   { value: 'server', label: 'Server' },
   { value: 'network', label: 'Network' },
   { value: 'wifi', label: 'Wi-Fi' },
+  { value: 'app-window', label: 'Software' },
   { value: 'mail', label: 'Email' },
   { value: 'phone', label: 'Phone' },
   { value: 'folder-open', label: 'Shared Files' },

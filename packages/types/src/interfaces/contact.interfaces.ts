@@ -72,6 +72,7 @@ export interface IContact extends TenantEntity, ITaggable {
 
   avatarUrl?: string | null;
   is_client_admin?: boolean;
+  portal_visibility_group_id?: string | null;
 
   [key: string]: any;
 }

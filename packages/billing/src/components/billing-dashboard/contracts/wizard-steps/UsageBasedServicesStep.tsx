@@ -12,6 +12,7 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface UsageBasedServicesStepProps {
   data: ContractWizardData;
@@ -19,6 +20,7 @@ interface UsageBasedServicesStepProps {
 }
 
 export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesStepProps) {
+  const { t } = useTranslation('msp/contracts');
   const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
 
   useEffect(() => {
@@ -114,22 +116,29 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-2">Usage-Based Services</h3>
+        <h3 className="text-lg font-semibold mb-2">
+          {t('wizardUsage.heading', { defaultValue: 'Usage-Based Services' })}
+        </h3>
         <p className="text-sm text-[rgb(var(--color-text-500))]">
-          Configure services that are billed based on usage or consumption. Perfect for metered services like data transfer, API calls, or storage.
+          {t('wizardUsage.description', {
+            defaultValue: 'Configure services that are billed based on usage or consumption. Perfect for metered services like data transfer, API calls, or storage.',
+          })}
         </p>
       </div>
 
       <div className="p-4 bg-[rgb(var(--color-accent-50))] border border-[rgb(var(--color-accent-200))] rounded-md mb-6">
         <p className="text-sm text-[rgb(var(--color-accent-800))]">
-          <strong>What are Usage-Based Services?</strong> These services are billed based on actual consumption or usage metrics. Each unit consumed will be multiplied by the unit rate to calculate the invoice amount.
+          <strong>{t('wizardUsage.explainer.title', { defaultValue: 'What are Usage-Based Services?' })}</strong>{' '}
+          {t('wizardUsage.explainer.description', {
+            defaultValue: 'These services are billed based on actual consumption or usage metrics. Each unit consumed will be multiplied by the unit rate to calculate the invoice amount.',
+          })}
         </p>
       </div>
 
       <div className="space-y-4">
         <Label className="text-sm flex items-center gap-2">
           <Activity className="h-4 w-4" />
-          Services
+          {t('wizardUsage.labels.services', { defaultValue: 'Services' })}
         </Label>
 
         {(data.usage_services ?? []).map((service, index) => (
@@ -140,7 +149,10 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
             <div className="flex-1 space-y-3">
               <div className="space-y-2">
                 <Label htmlFor={`usage-service-${index}`} className="text-sm">
-                  Service {index + 1}
+                  {t('wizardUsage.labels.serviceItem', {
+                    defaultValue: 'Service {{index}}',
+                    index: index + 1,
+                  })}
                 </Label>
                 <ServiceCatalogPicker
                   id={`usage-service-${index}`}
@@ -148,7 +160,9 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                   selectedLabel={service.service_name}
                   onSelect={(item) => handleServiceChange(index, item)}
                   itemKinds={['service']}
-                  placeholder="Select a service"
+                  placeholder={t('wizardUsage.labels.selectServicePlaceholder', {
+                    defaultValue: 'Select a service',
+                  })}
                 />
               </div>
 
@@ -156,7 +170,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                 <div className="space-y-2">
                   <Label htmlFor={`unit-rate-${index}`} className="text-sm flex items-center gap-2">
                     <Coins className="h-3 w-3" />
-                    Rate per Unit
+                    {t('wizardUsage.labels.ratePerUnit', { defaultValue: 'Rate per Unit' })}
                   </Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-400))]">
@@ -186,35 +200,43 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                           setRateInputs((prev) => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
                         }
                       }}
-                      placeholder="0.00"
+                      placeholder={t('wizardUsage.labels.ratePerUnitPlaceholder', { defaultValue: '0.00' })}
                       className="pl-10"
                     />
                   </div>
                   <p className="text-xs text-[rgb(var(--color-text-400))]">
                     {service.unit_rate
-                      ? `${formatCurrency(service.unit_rate)}/${service.unit_of_measure || 'unit'}`
-                      : 'Enter the unit rate'}
+                      ? t('wizardUsage.labels.ratePerUnitValue', {
+                        defaultValue: '{{rate}}/{{unit}}',
+                        rate: formatCurrency(service.unit_rate),
+                        unit: service.unit_of_measure || t('wizardUsage.values.defaultUnit', { defaultValue: 'unit' }),
+                      })
+                      : t('wizardUsage.labels.enterUnitRate', { defaultValue: 'Enter the unit rate' })}
                   </p>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor={`unit-measure-${index}`} className="text-sm">
-                    Unit of Measure
+                    {t('wizardUsage.labels.unitOfMeasure', { defaultValue: 'Unit of Measure' })}
                   </Label>
                   <Input
                     id={`unit-measure-${index}`}
                     type="text"
                     value={service.unit_of_measure ?? 'unit'}
                     onChange={(event) => handleUnitChange(index, event.target.value)}
-                    placeholder="e.g., GB, API call, user"
+                    placeholder={t('wizardUsage.labels.unitOfMeasurePlaceholder', {
+                      defaultValue: 'e.g., GB, API call, user',
+                    })}
                   />
-                  <p className="text-xs text-[rgb(var(--color-text-400))]">Choose the unit this service bills on.</p>
+                  <p className="text-xs text-[rgb(var(--color-text-400))]">
+                    {t('wizardUsage.labels.unitOfMeasureHint', { defaultValue: 'Choose the unit this service bills on.' })}
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
                 <SwitchWithLabel
-                  label="Set bucket allocation"
+                  label={t('wizardUsage.labels.setBucketAllocation', { defaultValue: 'Set bucket allocation' })}
                   checked={Boolean(service.bucket_overlay)}
                   onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
                 />
@@ -252,15 +274,16 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
           className="w-full"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Usage-Based Service
+          {t('wizardUsage.actions.addUsageBasedService', { defaultValue: 'Add Usage-Based Service' })}
         </Button>
       </div>
 
       {(data.usage_services?.length ?? 0) === 0 && (
         <div className="p-4 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-md">
           <p className="text-sm text-[rgb(var(--color-text-500))] text-center">
-            No usage-based services added yet. Click “Add Usage-Based Service” above or “Skip” if
-            you don’t need consumption billing.
+            {t('wizardUsage.emptyState', {
+              defaultValue: 'No usage-based services added yet. Click “Add Usage-Based Service” above or “Skip” if you don’t need consumption billing.',
+            })}
           </p>
         </div>
       )}
@@ -268,18 +291,27 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
       {(data.usage_services?.length ?? 0) > 0 && (
         <Alert variant="info" className="mt-6">
           <AlertDescription>
-            <h4 className="text-sm font-semibold mb-2">Usage-Based Summary</h4>
+            <h4 className="text-sm font-semibold mb-2">
+              {t('wizardUsage.summary.title', { defaultValue: 'Usage-Based Summary' })}
+            </h4>
             <div className="text-sm space-y-1">
               <p>
-                <strong>Services:</strong> {data.usage_services?.length ?? 0}
+                <strong>{t('wizardUsage.summary.labels.services', { defaultValue: 'Services:' })}</strong>{' '}
+                {data.usage_services?.length ?? 0}
               </p>
               <div className="mt-2 space-y-1">
                 {data.usage_services?.map(
                   (service, idx) =>
                     service.unit_rate && (
                       <p key={idx} className="text-xs">
-                        • {service.service_name || `Service ${idx + 1}`}: {formatCurrency(service.unit_rate)}/
-                        {service.unit_of_measure || 'unit'}
+                        • {service.service_name || t('wizardUsage.labels.serviceItem', {
+                          defaultValue: 'Service {{index}}',
+                          index: idx + 1,
+                        })}: {t('wizardUsage.labels.ratePerUnitValue', {
+                          defaultValue: '{{rate}}/{{unit}}',
+                          rate: formatCurrency(service.unit_rate),
+                          unit: service.unit_of_measure || t('wizardUsage.values.defaultUnit', { defaultValue: 'unit' }),
+                        })}
                       </p>
                     )
                 )}
@@ -294,7 +326,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
           contractBillingFrequency={data.billing_frequency}
           value={data.usage_billing_frequency}
           onChange={(value) => updateData({ usage_billing_frequency: value })}
-          label="Alternate Billing Frequency (Optional)"
+          label={t('wizardUsage.alternateFrequencyLabel', { defaultValue: 'Alternate Billing Frequency (Optional)' })}
         />
       )}
     </div>

@@ -39,9 +39,9 @@ function withAdvancedAssetsAccess<TArgs extends unknown[], TResult>(
 
 function inferTaniumAssetType(endpoint: TaniumEndpointRecord): NormalizedRmmExternalDeviceSnapshot['assetType'] {
   const fingerprint = [
+    endpoint.name,
     endpoint.osName,
     endpoint.osVersion,
-    endpoint.metadata ? JSON.stringify(endpoint.metadata) : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -81,6 +81,9 @@ function mapEndpointToSnapshot(args: {
 }): NormalizedRmmExternalDeviceSnapshot {
   const endpoint = args.endpoint;
   const isOffline = endpoint.online === false;
+  const uptimeSeconds = endpoint.lastRebootAt
+    ? Math.max(0, Math.floor((Date.now() - new Date(endpoint.lastRebootAt).getTime()) / 1000))
+    : null;
 
   return {
     provider: PROVIDER,
@@ -100,7 +103,19 @@ function mapEndpointToSnapshot(args: {
       osType: endpoint.osName ?? null,
       osVersion: endpoint.osVersion ?? null,
       currentUser: endpoint.currentUser ?? null,
+      uptimeSeconds: Number.isFinite(uptimeSeconds) ? uptimeSeconds : null,
       lanIp: endpoint.ipAddress ?? null,
+      wanIp: endpoint.wanIpAddress ?? null,
+      lastRebootAt: endpoint.lastRebootAt ?? null,
+      cpuModel: endpoint.cpuModel ?? null,
+      cpuCores: endpoint.cpuLogicalProcessors ?? null,
+      ramGb: endpoint.memoryTotalGb ?? null,
+      diskUsage: endpoint.diskUsage ?? [],
+      installedSoftware: endpoint.installedApplications?.map((application) => ({
+        name: application.name,
+        version: application.version ?? null,
+      })) ?? [],
+      systemInfo: endpoint.metadata ?? null,
     },
     metadata: endpoint.metadata ?? {},
   };
@@ -464,14 +479,14 @@ export const getTaniumOrganizationMappings = withAdvancedAssetsAccess(async (use
         'rom.auto_sync_assets',
         'rom.auto_create_tickets',
         'rom.last_synced_at',
-        'c.company_name as client_name',
+        'c.client_name as client_name',
       ])
       .orderBy('rom.external_organization_name', 'asc');
 
     const clients = await knex('clients')
       .where({ tenant })
-      .select(['client_id', 'company_name'])
-      .orderBy('company_name', 'asc');
+      .select(['client_id', 'client_name'])
+      .orderBy('client_name', 'asc');
 
     return { success: true, mappings: rows, clients };
   } catch (error) {
@@ -556,22 +571,6 @@ export const triggerTaniumFullSync = withAdvancedAssetsAccess(async (user, { ten
       assetApiUrl: taniumSettings.asset_api_url || undefined,
     });
 
-    const gatewayEndpoints = await client.listEndpoints();
-    const endpointsByScope = new Map<string, TaniumEndpointRecord[]>();
-    for (const endpoint of gatewayEndpoints) {
-      if (!endpoint.computerGroupId) {
-        continue;
-      }
-
-      const groupKey = String(endpoint.computerGroupId);
-      const bucket = endpointsByScope.get(groupKey);
-      if (bucket) {
-        bucket.push(endpoint);
-      } else {
-        endpointsByScope.set(groupKey, [endpoint]);
-      }
-    }
-
     let processed = 0;
     let created = 0;
     let updated = 0;
@@ -581,7 +580,7 @@ export const triggerTaniumFullSync = withAdvancedAssetsAccess(async (user, { ten
     for (const scope of mappedScopes) {
       const externalScopeId = String(scope.external_organization_id);
       const resolvedClientId = String(scope.client_id);
-      let endpoints = endpointsByScope.get(externalScopeId) ?? [];
+      let endpoints = await client.listEndpoints({ computerGroupId: externalScopeId });
 
       if (endpoints.length === 0 && useAssetApiFallback) {
         const fallbackEndpoints = await client.listAgedOutAssetFallback({ computerGroupId: externalScopeId });

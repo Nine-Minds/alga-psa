@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import type { BillingCycleType, IPersistedRecurringObligationRef } from '@alga-psa/types';
 
 import { materializeClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
@@ -45,8 +46,12 @@ function resolvePreviewBillingFrequency(value: string | undefined): Extract<
   }
 }
 
-function formatPreviewRange(start: string, end: string) {
-  return `${start.slice(0, 10)} to ${end.slice(0, 10)}`;
+function formatPreviewRange(start: string, end: string, t: TFunction) {
+  return t('recurringPreview.rangeSeparator', {
+    defaultValue: '{{start}} to {{end}}',
+    start: start.slice(0, 10),
+    end: end.slice(0, 10),
+  });
 }
 
 function buildPreviewSourceObligation(cadenceOwner: 'client' | 'contract'): IPersistedRecurringObligationRef {
@@ -62,6 +67,7 @@ function buildMaterializedPreviewPeriods(input: {
   cadenceOwner: 'client' | 'contract';
   billingTiming: 'arrears' | 'advance';
   billingFrequency: Extract<BillingCycleType, 'monthly' | 'quarterly' | 'annually'>;
+  t: TFunction;
 }): RecurringAuthoringPreviewPeriod[] {
   const duePosition = input.billingTiming === 'advance' ? 'advance' : 'arrears';
   const sourceObligation = buildPreviewSourceObligation(input.cadenceOwner);
@@ -95,16 +101,19 @@ function buildMaterializedPreviewPeriods(input: {
     servicePeriodLabel: formatPreviewRange(
       record.servicePeriod.start,
       record.servicePeriod.end,
+      input.t,
     ),
     invoiceWindowLabel: formatPreviewRange(
       record.invoiceWindow.start,
       record.invoiceWindow.end,
+      input.t,
     ),
   }));
 }
 
 export function getRecurringAuthoringPreview(
   input: RecurringAuthoringPreviewInput,
+  t: TFunction,
 ): RecurringAuthoringPreview {
   const cadenceOwner = input.cadenceOwner === 'contract' ? 'contract' : 'client';
   const billingTiming = input.billingTiming === 'advance' ? 'advance' : 'arrears';
@@ -113,36 +122,68 @@ export function getRecurringAuthoringPreview(
 
   return {
     cadenceOwnerLabel:
-      cadenceOwner === 'contract' ? 'Contract anniversary' : 'Client billing schedule',
+      cadenceOwner === 'contract'
+        ? t('recurringPreview.cadenceOwner.contract.label', { defaultValue: 'Contract anniversary' })
+        : t('recurringPreview.cadenceOwner.client.label', { defaultValue: 'Client billing schedule' }),
     cadenceOwnerSummary:
       cadenceOwner === 'contract'
-        ? 'Service periods and invoice windows follow the contract anniversary dates.'
-        : 'Service periods and invoice windows stay aligned to the client billing calendar.',
-    billingTimingLabel: billingTiming === 'advance' ? 'Advance' : 'Arrears',
+        ? t('recurringPreview.cadenceOwner.contract.summary', {
+            defaultValue: 'Service periods and invoice windows follow the contract anniversary dates.',
+          })
+        : t('recurringPreview.cadenceOwner.client.summary', {
+            defaultValue: 'Service periods and invoice windows stay aligned to the client billing calendar.',
+          }),
+    billingTimingLabel:
+      billingTiming === 'advance'
+        ? t('recurringPreview.billingTiming.advance.label', { defaultValue: 'Advance' })
+        : t('recurringPreview.billingTiming.arrears.label', { defaultValue: 'Arrears' }),
     billingTimingSummary:
       billingTiming === 'advance'
-        ? 'Invoices post at the opening of the due service period.'
-        : 'Invoices post after the covered service period closes.',
+        ? t('recurringPreview.billingTiming.advance.summary', {
+            defaultValue: 'Invoices post at the opening of the due service period.',
+          })
+        : t('recurringPreview.billingTiming.arrears.summary', {
+            defaultValue: 'Invoices post after the covered service period closes.',
+          }),
     firstInvoiceSummary:
       cadenceOwner === 'contract'
         ? billingTiming === 'advance'
-          ? 'First invoice: bill on the contract anniversary window that opens the first covered service period.'
-          : 'First invoice: bill on the next contract anniversary window after the first covered service period closes.'
+          ? t('recurringPreview.firstInvoice.contract.advance', {
+              defaultValue: 'First invoice: bill on the contract anniversary window that opens the first covered service period.',
+            })
+          : t('recurringPreview.firstInvoice.contract.arrears', {
+              defaultValue: 'First invoice: bill on the next contract anniversary window after the first covered service period closes.',
+            })
         : billingTiming === 'advance'
-          ? 'First invoice: bill on the first client billing schedule window covering the service period.'
-          : 'First invoice: bill on the next client billing schedule window after the first covered service period closes.',
+          ? t('recurringPreview.firstInvoice.client.advance', {
+              defaultValue: 'First invoice: bill on the first client billing schedule window covering the service period.',
+            })
+          : t('recurringPreview.firstInvoice.client.arrears', {
+              defaultValue: 'First invoice: bill on the next client billing schedule window after the first covered service period closes.',
+            }),
     partialPeriodSummary: enableProration
-      ? 'Partial periods adjust the recurring fee to the covered portion of the service period.'
-      : 'Partial periods keep the full recurring fee even when contract dates land inside a service period.',
-    materializedPeriodsHeading: 'Illustrative future materialized periods',
+      ? t('recurringPreview.partialPeriod.prorated', {
+          defaultValue: 'Partial periods adjust the recurring fee to the covered portion of the service period.',
+        })
+      : t('recurringPreview.partialPeriod.full', {
+          defaultValue: 'Partial periods keep the full recurring fee even when contract dates land inside a service period.',
+        }),
+    materializedPeriodsHeading: t('recurringPreview.materializedPeriods.heading', {
+      defaultValue: 'Illustrative future materialized periods',
+    }),
     materializedPeriodsSummary:
       cadenceOwner === 'contract'
-        ? 'If you save this recurring line, future periods would materialize on an anniversary-style preview anchored to the 8th before invoice generation.'
-        : 'If you save this recurring line, future periods would materialize on the client billing schedule preview before invoice generation.',
+        ? t('recurringPreview.materializedPeriods.summary.contract', {
+            defaultValue: 'If you save this recurring line, future periods would materialize on an anniversary-style preview anchored to the 8th before invoice generation.',
+          })
+        : t('recurringPreview.materializedPeriods.summary.client', {
+            defaultValue: 'If you save this recurring line, future periods would materialize on the client billing schedule preview before invoice generation.',
+          }),
     materializedPeriods: buildMaterializedPreviewPeriods({
       cadenceOwner,
       billingTiming,
       billingFrequency,
+      t,
     }),
   };
 }

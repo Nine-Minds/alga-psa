@@ -46,7 +46,7 @@ describe('TaniumIntegrationSettings UI flow', () => {
           auto_sync_assets: true,
         },
       ],
-      clients: [{ client_id: 'client_1', company_name: 'Client One' }],
+      clients: [{ client_id: 'client_1', client_name: 'Client One' }],
     });
     actions.saveTaniumConfiguration.mockResolvedValue({ success: true });
     actions.testTaniumConnection.mockResolvedValue({ success: true });

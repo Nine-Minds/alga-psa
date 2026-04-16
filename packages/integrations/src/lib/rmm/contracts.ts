@@ -1,4 +1,4 @@
-import type { RmmAgentStatus, RmmProvider } from '@alga-psa/types';
+import type { RmmAgentStatus, RmmProvider, RmmStorageInfo } from '@alga-psa/types';
 
 export type NormalizedRmmScopeKind = 'organization' | 'site' | 'group' | 'custom';
 
@@ -30,6 +30,11 @@ export interface NormalizedRmmDeviceExtensionSnapshot {
   pendingSoftwarePatches?: number | null;
   failedPatches?: number | null;
   lastPatchScanAt?: string | null;
+  cpuModel?: string | null;
+  cpuCores?: number | null;
+  ramGb?: number | null;
+  diskUsage?: RmmStorageInfo[] | null;
+  installedSoftware?: unknown[] | null;
   systemInfo?: Record<string, unknown> | null;
 }
 

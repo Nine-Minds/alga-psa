@@ -1,0 +1,113 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed integration: MSP-side board loading returns active tenant boards for a contact's client context without querying `boards.client_id`.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F013"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed integration: client portal admin board loading returns active tenant boards for the acting admin's client scope without querying `boards.client_id`.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F013"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed integration: group create/update accepts active tenant board IDs and rejects invalid or inactive board IDs.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F013"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Guard: assigning a group from another client to a contact still fails based on `group.client_id` and `contact.client_id`.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F008"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed integration: the shared visibility resolver returns unrestricted access for unassigned contacts and the stored allowed board IDs for restricted contacts without requiring `boards.client_id`.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008",
+      "F015"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Integration: client portal ticket list still scopes to the contact's client and applies allowed-board filtering for a restricted contact.",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Integration: client portal ticket detail and ticket documents/comments fail closed for a hidden-board ticket while still allowing a visible-board ticket for the same client.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Integration: client portal ticket creation only offers allowed active boards to a restricted contact and rejects manual submission to a disallowed board.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F014"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Integration: ticket-backed dashboard counts and summaries continue to reflect only the visible boards for a restricted contact.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Regression: unassigned contacts still retain full ticket visibility and full ticket creation behavior within their own client.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F011",
+      "F015"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Regression: empty-group and pre-invite assignment behavior still work after the model correction.",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Smoke readiness: Emerald City seeded scenario can create groups, assign restricted/full-access/pre-invite contacts, and exercise restricted vs unrestricted visibility without false empty board states.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F011",
+      "F015",
+      "F016"
+    ]
+  }
+]

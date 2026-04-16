@@ -16,6 +16,7 @@ import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
 import { createTag } from '@alga-psa/tags/actions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { hasPermissionAsync } from '../../lib/authHelpers';
+import type { IBoard } from '@alga-psa/types';
 import { ContactModel, CreateContactInput, UpdateContactInput } from '@alga-psa/shared/models/contactModel';
 import { withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -1439,4 +1440,373 @@ export const getUserByContactId = withAuth(async (
       error: error instanceof Error ? error.message : 'Failed to get user'
     };
   }
+});
+
+type VisibilityGroupListItem = {
+  group_id: string;
+  name: string;
+  description: string | null;
+  board_count: number;
+};
+
+type VisibilityGroupPayload = {
+  name: string;
+  description?: string | null;
+  boardIds?: string[];
+};
+
+async function resolveContactClientId(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactId: string
+): Promise<string> {
+  const contact = await trx('contacts')
+    .where({ tenant, contact_name_id: contactId })
+    .first('contact_name_id', 'client_id');
+
+  if (!contact?.client_id) {
+    throw new Error('Contact not found');
+  }
+
+  return contact.client_id;
+}
+
+async function resolveContactAndVerifyPermission(
+  user: any,
+  trx: Knex.Transaction,
+  tenant: string,
+  contactId: string
+): Promise<string> {
+  const hasUpdatePermission = await hasPermissionAsync(user, 'contact', 'update');
+  if (!hasUpdatePermission) {
+    throw new Error('Permission denied: Cannot update contacts');
+  }
+
+  return resolveContactClientId(trx, tenant, contactId);
+}
+
+async function ensureContactPortalGroupsScope(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  groupId: string
+): Promise<void> {
+  const group = await trx('client_portal_visibility_groups')
+    .where({ tenant, client_id: clientId, group_id: groupId })
+    .first('group_id');
+
+  if (!group) {
+    throw new Error('Assigned visibility group is invalid for this contact');
+  }
+}
+
+export const getClientPortalVisibilityGroupsForContact = withAuth(async (
+  user,
+  { tenant },
+  contactId: string
+): Promise<VisibilityGroupListItem[]> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+
+      const groups = await trx('client_portal_visibility_groups')
+        .where({ tenant, client_id: clientId })
+        .select('group_id', 'name', 'description')
+        .orderBy('name');
+
+      const boardCounts = groups.length
+        ? await trx('client_portal_visibility_group_boards')
+          .where({ tenant })
+          .whereIn('group_id', groups.map((group) => group.group_id))
+          .count('board_id as board_count')
+          .select('group_id')
+          .groupBy('group_id')
+        : [];
+
+      const boardCountRows = boardCounts as Array<{ group_id: string; board_count: string | number }>;
+      const boardCountMap = new Map<string, number>(
+        boardCountRows.map((row) => [
+          row.group_id,
+          Number(row.board_count)
+        ])
+      );
+
+      return groups.map((group) => ({
+        ...group,
+        board_count: boardCountMap.get(group.group_id) || 0
+      }));
+    });
+  } catch (error) {
+    console.error('[contactActions.getClientPortalVisibilityGroupsForContact]', error);
+    throw error;
+  }
+});
+
+export const getClientPortalVisibilityBoardsByClient = withAuth(async (
+  user,
+  { tenant },
+  contactId: string
+): Promise<IBoard[]> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+      await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+
+      return trx('boards')
+        .where({ tenant })
+        .andWhere('is_inactive', false)
+        .select('board_id', 'board_name');
+    });
+  } catch (error) {
+    console.error('[contactActions.getClientPortalVisibilityBoardsByClient]', error);
+    throw error;
+  }
+});
+
+export const getClientPortalVisibilityGroupById = withAuth(async (
+  user,
+  { tenant },
+  contactId: string,
+  groupId: string
+): Promise<{ group_id: string; name: string; description: string | null; board_ids: string[] }> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+
+      const group = await trx('client_portal_visibility_groups')
+        .where({ tenant, client_id: clientId, group_id: groupId })
+        .first('group_id', 'name', 'description');
+
+      if (!group) {
+        throw new Error('Visibility group not found');
+      }
+
+      const rows = await trx('client_portal_visibility_group_boards')
+        .where({ tenant, group_id: groupId })
+        .select('board_id');
+
+      return {
+        ...group,
+        board_ids: rows.map((row) => row.board_id)
+      };
+    });
+  } catch (error) {
+    console.error('[contactActions.getClientPortalVisibilityGroupById]', error);
+    throw error;
+  }
+});
+
+async function ensureBoardsAreActiveInTenant(
+  trx: Knex.Transaction,
+  tenant: string,
+  boardIds: string[]
+): Promise<void> {
+  if (boardIds.length === 0) {
+    return;
+  }
+
+  const validBoardCount = await trx('boards')
+    .where({ tenant })
+    .andWhere('is_inactive', false)
+    .whereIn('board_id', boardIds)
+    .count('* as count')
+    .first();
+
+  if (Number(validBoardCount?.count || 0) !== boardIds.length) {
+    throw new Error('One or more boards are invalid for this tenant');
+  }
+}
+
+async function ensureBoardsAreActiveOrAlreadyAssignedToGroup(
+  trx: Knex.Transaction,
+  tenant: string,
+  groupId: string,
+  boardIds: string[]
+): Promise<void> {
+  if (boardIds.length === 0) {
+    return;
+  }
+
+  const activeRows = await trx('boards')
+    .where({ tenant })
+    .andWhere('is_inactive', false)
+    .whereIn('board_id', boardIds)
+    .select('board_id');
+
+  const existingMembershipRows = await trx('client_portal_visibility_group_boards')
+    .where({ tenant, group_id: groupId })
+    .whereIn('board_id', boardIds)
+    .select('board_id');
+
+  const allowedBoardIds = new Set<string>([
+    ...activeRows.map((row) => row.board_id),
+    ...existingMembershipRows.map((row) => row.board_id),
+  ]);
+
+  if (boardIds.some((boardId) => !allowedBoardIds.has(boardId))) {
+    throw new Error('One or more boards are invalid for this tenant');
+  }
+}
+
+export const createClientPortalVisibilityGroupForContact = withAuth(async (
+  user,
+  { tenant },
+  contactId: string,
+  input: VisibilityGroupPayload
+): Promise<{ group_id: string }> => {
+  const name = input.name?.trim();
+  if (!name) {
+    throw new Error('Validation error: Group name is required');
+  }
+
+  const { knex } = await createTenantKnex();
+  const boardIds = Array.from(new Set((input.boardIds ?? []).filter(Boolean)));
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+
+    await ensureBoardsAreActiveInTenant(trx, tenant, boardIds);
+
+    const [group] = await trx('client_portal_visibility_groups')
+      .insert({
+        tenant,
+        client_id: clientId,
+        name,
+        description: input.description?.trim() || null,
+      })
+      .returning('group_id');
+
+    if (!group?.group_id) {
+      throw new Error('Failed to create visibility group');
+    }
+
+    if (boardIds.length > 0) {
+      await trx('client_portal_visibility_group_boards')
+        .insert(boardIds.map((boardId) => ({
+          tenant,
+          group_id: group.group_id,
+          board_id: boardId
+        })));
+    }
+
+    return { group_id: group.group_id };
+  });
+});
+
+export const updateClientPortalVisibilityGroupForContact = withAuth(async (
+  user,
+  { tenant },
+  contactId: string,
+  groupId: string,
+  input: VisibilityGroupPayload
+): Promise<void> => {
+  const name = input.name?.trim();
+  if (!name) {
+    throw new Error('Validation error: Group name is required');
+  }
+
+  const boardIds = Array.from(new Set((input.boardIds ?? []).filter(Boolean)));
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+
+    const existing = await trx('client_portal_visibility_groups')
+      .where({ tenant, client_id: clientId, group_id: groupId })
+      .first('group_id');
+
+    if (!existing) {
+      throw new Error('Visibility group not found');
+    }
+
+    await ensureBoardsAreActiveOrAlreadyAssignedToGroup(trx, tenant, groupId, boardIds);
+
+    await trx('client_portal_visibility_groups')
+      .where({ tenant, group_id: groupId })
+      .update({
+        name,
+        description: input.description?.trim() || null,
+        updated_at: new Date().toISOString()
+      });
+
+    await trx('client_portal_visibility_group_boards')
+      .where({ tenant, group_id: groupId })
+      .delete();
+
+    if (boardIds.length > 0) {
+      await trx('client_portal_visibility_group_boards')
+        .insert(boardIds.map((boardId) => ({
+          tenant,
+          group_id: groupId,
+          board_id: boardId
+        })));
+    }
+  });
+});
+
+export const deleteClientPortalVisibilityGroupForContact = withAuth(async (
+  user,
+  { tenant },
+  contactId: string,
+  groupId: string
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+
+    const existing = await trx('client_portal_visibility_groups')
+      .where({ tenant, client_id: clientId, group_id: groupId })
+      .first('group_id');
+
+    if (!existing) {
+      throw new Error('Visibility group not found');
+    }
+
+    const assignedCount = await trx('contacts')
+      .where({ tenant, client_id: clientId, portal_visibility_group_id: groupId })
+      .count('contact_name_id as count')
+      .first();
+
+    if (Number(assignedCount?.count || 0) > 0) {
+      throw new Error('Cannot delete visibility group while it is assigned to contacts');
+    }
+
+    await trx('client_portal_visibility_group_boards')
+      .where({ tenant, group_id: groupId })
+      .delete();
+
+    await trx('client_portal_visibility_groups')
+      .where({ tenant, group_id: groupId })
+      .delete();
+  });
+});
+
+export const assignClientPortalVisibilityGroupToContact = withAuth(async (
+  user,
+  { tenant },
+  contactId: string,
+  groupId: string | null
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+
+    if (groupId) {
+      await ensureContactPortalGroupsScope(trx, tenant, clientId, groupId);
+    }
+
+    await trx('contacts')
+      .where({ tenant, contact_name_id: contactId })
+      .update({
+        portal_visibility_group_id: groupId,
+        updated_at: new Date().toISOString()
+      });
+  });
 });

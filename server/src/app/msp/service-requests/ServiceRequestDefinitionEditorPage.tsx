@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useDrawer } from '@alga-psa/ui';
 import { useParams } from 'next/navigation';
+import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import {
   addServiceRequestFormFieldAction,
   getServiceRequestDefinitionSubmissionDetailAction,
@@ -26,7 +28,12 @@ import {
   validateServiceRequestDefinitionForPublishAction,
 } from './actions';
 import { Card } from '@alga-psa/ui/components/Card';
+import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Input } from '@alga-psa/ui/components/Input';
+import { MspTicketDetailsContainerClient } from '@alga-psa/msp-composition/tickets';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { toast } from 'react-hot-toast';
 import { ServiceRequestCard } from '../../client-portal/request-services/ServiceRequestCard';
 import { ServiceRequestIconPicker } from './ServiceRequestIconPicker';
@@ -37,8 +44,14 @@ import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { CategoryPicker } from '@alga-psa/tickets/components';
+import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { calculateItilPriority, ItilLabels } from '@alga-psa/tickets/lib/itilUtils';
 import type { IBoard, IPriority, ITicketCategory, ITicketStatus, IUser } from '@alga-psa/types';
+import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
+import {
+  buildTicketRoutingExecutionConfig,
+  getServiceRequestDraftLifecycleLabel,
+} from '../../../lib/service-requests/editorHelpers';
 
 interface EditorData {
   definitionId: string;
@@ -109,9 +122,13 @@ interface DefinitionSubmissionDetail extends DefinitionSubmissionRow {
   definition_version_id: string;
   submitted_payload: Record<string, unknown>;
   execution_error_summary: string | null;
+  requester_user_name: string | null;
+  client_name: string | null;
+  contact_name: string | null;
+  created_ticket_display: string | null;
 }
 
-function FieldRow({ label, value }: { label: string; value: string }) {
+function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[180px_1fr] gap-3 text-sm">
       <div className="font-medium text-[rgb(var(--color-text-700))]">{label}</div>
@@ -151,11 +168,25 @@ const FORM_FIELD_TYPES: Array<FormField['type']> = [
   'file-upload',
 ];
 
+const FORM_FIELD_TYPE_OPTIONS: SelectOption[] = FORM_FIELD_TYPES.map((fieldType) => ({
+  value: fieldType,
+  label: fieldType,
+}));
+
+const CHECKBOX_DEFAULT_OPTIONS: SelectOption[] = [
+  { value: '', label: 'No default' },
+  { value: 'true', label: 'Checked' },
+  { value: 'false', label: 'Unchecked' },
+];
+
 function getSchemaFields(schema: Record<string, unknown>): FormField[] {
-  if (!Array.isArray((schema as any)?.fields)) {
+  const fields = schema.fields;
+  if (!Array.isArray(fields)) {
     return [];
   }
-  return (schema as any).fields.filter((field: unknown) => field && typeof field === 'object');
+  return fields.filter(
+    (field): field is FormField => Boolean(field && typeof field === 'object')
+  );
 }
 
 function parseSelectOptionsText(optionsText: string): FormFieldOption[] {
@@ -188,6 +219,10 @@ function formatSelectOptionsText(options: FormFieldOption[] | undefined): string
 function getSelectedIconLabel(iconValue: string): string {
   const match = SERVICE_REQUEST_ICON_OPTIONS.find((option) => option.value === iconValue);
   return match?.label ?? 'No icon selected';
+}
+
+function getCheckboxDefaultValue(defaultValue: FormField['defaultValue']): string {
+  return typeof defaultValue === 'boolean' ? String(defaultValue) : '';
 }
 
 function getDefaultStatus(statuses: ITicketStatus[]): ITicketStatus | null {
@@ -249,6 +284,313 @@ const ITIL_URGENCY_OPTIONS: SelectOption[] = [
   { value: '5', label: '5 - Low (Work continues normally)' },
 ];
 
+interface FormFieldEditorCardProps {
+  definitionId: string;
+  field: FormField;
+  index: number;
+  allFields: FormField[];
+  reloadDefinitionEditorState: (definitionId: string) => Promise<void>;
+}
+
+function FormFieldEditorCard({
+  definitionId,
+  field,
+  index,
+  allFields,
+  reloadDefinitionEditorState,
+}: FormFieldEditorCardProps) {
+  const key = field.key ?? `field_${index}`;
+  const [labelValue, setLabelValue] = useState(field.label ?? key);
+  const [helpTextValue, setHelpTextValue] = useState(field.helpText ?? '');
+  const [defaultStringValue, setDefaultStringValue] = useState(
+    typeof field.defaultValue === 'string' ? field.defaultValue : ''
+  );
+  const [defaultCheckboxValue, setDefaultCheckboxValue] = useState(
+    getCheckboxDefaultValue(field.defaultValue)
+  );
+  const [optionsTextValue, setOptionsTextValue] = useState(formatSelectOptionsText(field.options));
+
+  useEffect(() => {
+    setLabelValue(field.label ?? key);
+  }, [field.label, key]);
+
+  useEffect(() => {
+    setHelpTextValue(field.helpText ?? '');
+  }, [field.helpText]);
+
+  useEffect(() => {
+    setDefaultStringValue(typeof field.defaultValue === 'string' ? field.defaultValue : '');
+    setDefaultCheckboxValue(getCheckboxDefaultValue(field.defaultValue));
+  }, [field.defaultValue]);
+
+  useEffect(() => {
+    setOptionsTextValue(formatSelectOptionsText(field.options));
+  }, [field.options]);
+
+  return (
+    <div
+      key={`${key}-${index}`}
+      className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-3 shadow-sm space-y-3"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-medium">
+          {field.type} · <span className="font-mono">{key}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            id={`service-request-form-move-up-${key}`}
+            variant="soft"
+            size="sm"
+            className="gap-1.5"
+            onClick={async () => {
+              const nextKeys = allFields.map((candidate) => candidate.key);
+              const currentIndex = nextKeys.indexOf(key);
+              if (currentIndex <= 0) {
+                return;
+              }
+              [nextKeys[currentIndex - 1], nextKeys[currentIndex]] = [
+                nextKeys[currentIndex],
+                nextKeys[currentIndex - 1],
+              ];
+              await reorderServiceRequestFormFieldsAction(definitionId, nextKeys);
+              await reloadDefinitionEditorState(definitionId);
+            }}
+          >
+            <ChevronUp className="h-4 w-4" />
+            Move Up
+          </Button>
+          <Button
+            id={`service-request-form-move-down-${key}`}
+            variant="soft"
+            size="sm"
+            className="gap-1.5"
+            onClick={async () => {
+              const nextKeys = allFields.map((candidate) => candidate.key);
+              const currentIndex = nextKeys.indexOf(key);
+              if (currentIndex < 0 || currentIndex >= nextKeys.length - 1) {
+                return;
+              }
+              [nextKeys[currentIndex], nextKeys[currentIndex + 1]] = [
+                nextKeys[currentIndex + 1],
+                nextKeys[currentIndex],
+              ];
+              await reorderServiceRequestFormFieldsAction(definitionId, nextKeys);
+              await reloadDefinitionEditorState(definitionId);
+            }}
+          >
+            <ChevronDown className="h-4 w-4" />
+            Move Down
+          </Button>
+          <Button
+            id={`service-request-form-remove-field-${key}`}
+            variant="destructive"
+            size="sm"
+            className="gap-1.5"
+            onClick={async () => {
+              await removeServiceRequestFormFieldAction(definitionId, key);
+              await reloadDefinitionEditorState(definitionId);
+              toast.success('Field removed');
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            Remove
+          </Button>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+        <Input
+          label="Label"
+          containerClassName="mb-0"
+          value={labelValue}
+          onChange={(event) => setLabelValue(event.target.value)}
+          onBlur={async (event) => {
+            await updateServiceRequestFormFieldAction(definitionId, key, {
+              label: event.target.value.trim() || key,
+            });
+            await reloadDefinitionEditorState(definitionId);
+          }}
+        />
+        <Input
+          label="Help Text"
+          containerClassName="mb-0"
+          value={helpTextValue}
+          onChange={(event) => setHelpTextValue(event.target.value)}
+          onBlur={async (event) => {
+            const value = event.target.value.trim();
+            await updateServiceRequestFormFieldAction(definitionId, key, {
+              helpText: value.length > 0 ? value : null,
+            });
+            await reloadDefinitionEditorState(definitionId);
+          }}
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:items-end">
+        <Checkbox
+          id={`service-request-form-required-${key}`}
+          label="Required"
+          containerClassName="mb-0 min-h-10"
+          checked={Boolean(field.required)}
+          onChange={async (event) => {
+            await updateServiceRequestFormFieldAction(definitionId, key, {
+              required: event.target.checked,
+            });
+            await reloadDefinitionEditorState(definitionId);
+          }}
+        />
+        {field.type !== 'file-upload' && (
+          <>
+            {field.type === 'checkbox' ? (
+              <CustomSelect
+                id={`service-request-form-default-value-${key}`}
+                label="Default Value"
+                value={defaultCheckboxValue}
+                options={CHECKBOX_DEFAULT_OPTIONS}
+                onValueChange={async (value) => {
+                  setDefaultCheckboxValue(value);
+                  await updateServiceRequestFormFieldAction(definitionId, key, {
+                    defaultValue: value === '' ? null : value === 'true',
+                  });
+                  await reloadDefinitionEditorState(definitionId);
+                }}
+              />
+            ) : (
+              <Input
+                label="Default Value"
+                containerClassName="mb-0"
+                value={defaultStringValue}
+                onChange={(event) => setDefaultStringValue(event.target.value)}
+                onBlur={async (event) => {
+                  const value = event.target.value.trim();
+                  await updateServiceRequestFormFieldAction(definitionId, key, {
+                    defaultValue: value.length > 0 ? value : null,
+                  });
+                  await reloadDefinitionEditorState(definitionId);
+                }}
+              />
+            )}
+          </>
+        )}
+      </div>
+      {field.type === 'select' && (
+        <TextArea
+          label="Options (one per line: value:label)"
+          wrapperClassName="mb-0"
+          className="font-mono min-h-[84px]"
+          value={optionsTextValue}
+          onChange={(event) => setOptionsTextValue(event.target.value)}
+          onBlur={async (event) => {
+            await updateServiceRequestFormFieldAction(definitionId, key, {
+              options: parseSelectOptionsText(event.target.value),
+            });
+            await reloadDefinitionEditorState(definitionId);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function FormFieldPreview({
+  field,
+  index,
+}: {
+  field: FormField;
+  index: number;
+}) {
+  const key = field.key ?? `field_${index}`;
+  const label = field.label ?? key;
+  const helpText = field.helpText ?? null;
+  const required = Boolean(field.required);
+  const defaultStringValue = typeof field.defaultValue === 'string' ? field.defaultValue : '';
+  const defaultBooleanValue = typeof field.defaultValue === 'boolean' ? field.defaultValue : false;
+  const labelWithRequired = `${label}${required ? ' *' : ''}`;
+
+  if (field.type === 'long-text') {
+    return (
+      <div key={key} className="space-y-1">
+        <TextArea
+          label={labelWithRequired}
+          wrapperClassName="mb-0"
+          value={defaultStringValue}
+          readOnly
+          disabled
+          rows={4}
+        />
+        {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
+      </div>
+    );
+  }
+
+  if (field.type === 'select') {
+    return (
+      <div key={key} className="space-y-1">
+        <CustomSelect
+          id={`service-request-form-preview-${key}`}
+          label={labelWithRequired}
+          value={defaultStringValue || null}
+          options={(field.options ?? []).map((option) => ({
+            value: option.value,
+            label: option.label,
+          }))}
+          onValueChange={() => {}}
+          placeholder="Select an option"
+          disabled
+        />
+        {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
+      </div>
+    );
+  }
+
+  if (field.type === 'checkbox') {
+    return (
+      <Checkbox
+        key={key}
+        id={`service-request-form-preview-checkbox-${key}`}
+        containerClassName="mb-0 items-start"
+        checked={defaultBooleanValue}
+        disabled
+        onChange={() => {}}
+        label={
+          <span className="text-sm">
+            <span className="font-medium">{labelWithRequired}</span>
+            {helpText && (
+              <span className="block text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>
+            )}
+          </span>
+        }
+      />
+    );
+  }
+
+  if (field.type === 'file-upload') {
+    return (
+      <div key={key} className="space-y-1">
+        <Input
+          label={labelWithRequired}
+          containerClassName="mb-0"
+          type="file"
+          disabled
+        />
+        {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
+      </div>
+    );
+  }
+
+  return (
+    <div key={key} className="space-y-1">
+      <Input
+        label={labelWithRequired}
+        containerClassName="mb-0"
+        type={field.type === 'date' ? 'date' : 'text'}
+        value={defaultStringValue}
+        readOnly
+        disabled
+      />
+      {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
+    </div>
+  );
+}
+
 export default function ServiceRequestDefinitionEditorPage() {
   const params = useParams();
   const definitionId = String(params?.definitionId ?? '');
@@ -299,12 +641,15 @@ export default function ServiceRequestDefinitionEditorPage() {
   const [ticketRoutingSelectedCategories, setTicketRoutingSelectedCategories] = useState<string[]>([]);
   const [ticketRoutingLoading, setTicketRoutingLoading] = useState(false);
   const [newFieldType, setNewFieldType] = useState<FormField['type']>('short-text');
+  const { openDrawer, replaceDrawer } = useDrawer();
 
   const isWorkflowBackedExecution = data?.execution.showWorkflowExecutionConfigPanel === true;
   const isTicketOnlyExecution = data?.execution.executionProvider === 'ticket-only';
   const hasLivePublishedVersion = Boolean(data?.publish.publishedVersionNumber);
-  const draftLifecycleLabel =
-    data?.lifecycleState === 'draft' && hasLivePublishedVersion ? 'draft changes' : data?.lifecycleState;
+  const draftLifecycleLabel = getServiceRequestDraftLifecycleLabel(
+    data?.lifecycleState,
+    hasLivePublishedVersion
+  );
   const calculatedItilPriority = useMemo(() => {
     const impact = Number.parseInt(ticketRoutingConfigInput.itilImpact, 10);
     const urgency = Number.parseInt(ticketRoutingConfigInput.itilUrgency, 10);
@@ -326,6 +671,16 @@ export default function ServiceRequestDefinitionEditorPage() {
       })),
     [ticketRoutingStatuses]
   );
+  const basicsCategoryOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: '', label: 'Uncategorized' },
+      ...data?.basics.availableCategories.map((category) => ({
+        value: category.categoryId,
+        label: category.categoryName,
+      })) ?? [],
+    ],
+    [data?.basics.availableCategories]
+  );
   const ticketPriorityOptions = useMemo(
     () =>
       ticketRoutingPriorities.map((priority) => ({
@@ -337,6 +692,49 @@ export default function ServiceRequestDefinitionEditorPage() {
       })),
     [ticketRoutingPriorities]
   );
+
+  const openTicketDrawer = async (ticketId: string | null) => {
+    if (!ticketId) {
+      return;
+    }
+
+    openDrawer(
+      <div className="p-4 text-sm text-[rgb(var(--color-text-600))]">Loading…</div>,
+      undefined,
+      undefined,
+      '900px'
+    );
+
+    try {
+      const [ticketData, surveySummary] = await Promise.all([
+        getConsolidatedTicketData(ticketId),
+        getSurveyTicketSummary(ticketId).catch((error) => {
+          console.error('[ServiceRequestDefinitionEditorPage] Failed to load survey summary', error);
+          return null;
+        }),
+      ]);
+
+      replaceDrawer(
+        <div className="bg-gray-100">
+          <MspTicketDetailsContainerClient
+            ticketData={ticketData}
+            surveySummary={surveySummary ?? null}
+          />
+        </div>,
+        undefined,
+        '900px'
+      );
+    } catch (error) {
+      console.error('[ServiceRequestDefinitionEditorPage] Failed to load ticket drawer', error);
+      replaceDrawer(
+        <div className="p-4 text-sm text-[rgb(var(--color-danger-600))]">
+          {error instanceof Error ? error.message : 'Failed to load ticket details.'}
+        </div>,
+        undefined,
+        '900px'
+      );
+    }
+  };
 
   const loadTicketRoutingReferenceData = async (boardId?: string) => {
     const referenceData = await getServiceRequestTicketRoutingReferenceDataAction();
@@ -564,41 +962,12 @@ export default function ServiceRequestDefinitionEditorPage() {
       (category) => category.category_id === selectedCategoryId
     );
 
-    const nextExecutionConfig: Record<string, unknown> = {};
-    const addStringConfig = (key: string, value: string) => {
-      const trimmedValue = value.trim();
-      if (trimmedValue.length > 0) {
-        nextExecutionConfig[key] = trimmedValue;
-      }
-    };
-
-    addStringConfig('boardId', ticketRoutingConfigInput.boardId);
-    addStringConfig('statusId', ticketRoutingConfigInput.statusId);
-    addStringConfig('priorityId', ticketRoutingConfigInput.priorityId);
-    addStringConfig('assignedToUserId', ticketRoutingConfigInput.assignedToUserId);
-    addStringConfig('titleFieldKey', ticketRoutingConfigInput.titleFieldKey);
-    addStringConfig('descriptionPrefix', ticketRoutingConfigInput.descriptionPrefix);
-
-    if (selectedCategory) {
-      if (selectedCategory.parent_category) {
-        nextExecutionConfig.categoryId = selectedCategory.parent_category;
-        nextExecutionConfig.subcategoryId = selectedCategory.category_id;
-      } else {
-        nextExecutionConfig.categoryId = selectedCategory.category_id;
-      }
-    }
-
-    const boardPriorityType = ticketRoutingBoardConfig?.priority_type;
-    if (boardPriorityType === 'itil') {
-      const impact = Number.parseInt(ticketRoutingConfigInput.itilImpact, 10);
-      const urgency = Number.parseInt(ticketRoutingConfigInput.itilUrgency, 10);
-      if (Number.isInteger(impact)) {
-        nextExecutionConfig.itilImpact = impact;
-      }
-      if (Number.isInteger(urgency)) {
-        nextExecutionConfig.itilUrgency = urgency;
-      }
-    }
+    const nextExecutionConfig = buildTicketRoutingExecutionConfig({
+      existingExecutionConfig: data.execution.executionConfig,
+      ticketRoutingConfigInput,
+      selectedCategory,
+      boardPriorityType: ticketRoutingBoardConfig?.priority_type ?? null,
+    });
 
     await updateServiceRequestExecutionConfigAction(data.definitionId, nextExecutionConfig);
     await reloadDefinitionEditorState(data.definitionId);
@@ -616,9 +985,12 @@ export default function ServiceRequestDefinitionEditorPage() {
   return (
     <div className="p-6 space-y-4">
       <div>
+        <div className="mb-3">
+          <BackNav href="/msp/service-requests">Back to Service Requests</BackNav>
+        </div>
         <h1 className="text-2xl font-semibold">{data.basics.name}</h1>
         <p className="text-sm text-[rgb(var(--color-text-600))]">
-          Definition ID: {data.definitionId} · Current state: {draftLifecycleLabel}
+          Current state: {draftLifecycleLabel}
         </p>
         <div className="mt-3 flex gap-2">
           <Button
@@ -657,21 +1029,19 @@ export default function ServiceRequestDefinitionEditorPage() {
       <Card id="service-request-editor-basics" className="p-4 space-y-3">
         <h2 className="text-lg font-semibold">Basics</h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Name</span>
-            <input
-              id="service-request-basics-name"
-              className="border rounded px-3 py-2 text-sm"
-              value={basicsInput.name}
-              onChange={(event) =>
-                setBasicsInput((previous) => ({
-                  ...previous,
-                  name: event.target.value,
-                }))
-              }
-            />
-          </label>
-          <label className="grid gap-1 text-sm md:col-span-2">
+          <Input
+            id="service-request-basics-name"
+            label="Name"
+            containerClassName="mb-0"
+            value={basicsInput.name}
+            onChange={(event) =>
+              setBasicsInput((previous) => ({
+                ...previous,
+                name: event.target.value,
+              }))
+            }
+          />
+          <div className="grid gap-1 text-sm md:col-span-2">
             <span className="font-medium">Icon</span>
             <ServiceRequestIconPicker
               selectedIcon={basicsInput.icon}
@@ -688,12 +1058,13 @@ export default function ServiceRequestDefinitionEditorPage() {
             >
               Selected: {getSelectedIconLabel(basicsInput.icon)}
             </span>
-          </label>
-          <label className="grid gap-1 text-sm md:col-span-2">
-            <span className="font-medium">Description</span>
-            <textarea
+          </div>
+          <div className="md:col-span-2">
+            <TextArea
               id="service-request-basics-description"
-              className="border rounded px-3 py-2 text-sm min-h-[96px]"
+              label="Description"
+              wrapperClassName="mb-0"
+              className="min-h-[96px]"
               value={basicsInput.description}
               onChange={(event) =>
                 setBasicsInput((previous) => ({
@@ -702,43 +1073,32 @@ export default function ServiceRequestDefinitionEditorPage() {
                 }))
               }
             />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Category</span>
-            <select
-              id="service-request-basics-category"
-              className="border rounded px-3 py-2 text-sm"
-              value={basicsInput.categoryId}
-              onChange={(event) =>
-                setBasicsInput((previous) => ({
-                  ...previous,
-                  categoryId: event.target.value,
-                }))
-              }
-            >
-              <option value="">Uncategorized</option>
-              {data.basics.availableCategories.map((category) => (
-                <option key={category.categoryId} value={category.categoryId}>
-                  {category.categoryName}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Sort Order</span>
-            <input
-              id="service-request-basics-sort-order"
-              className="border rounded px-3 py-2 text-sm"
-              type="number"
-              value={basicsInput.sortOrder}
-              onChange={(event) =>
-                setBasicsInput((previous) => ({
-                  ...previous,
-                  sortOrder: event.target.value,
-                }))
-              }
-            />
-          </label>
+          </div>
+          <CustomSelect
+            id="service-request-basics-category"
+            label="Category"
+            value={basicsInput.categoryId}
+            options={basicsCategoryOptions}
+            onValueChange={(value) =>
+              setBasicsInput((previous) => ({
+                ...previous,
+                categoryId: value,
+              }))
+            }
+          />
+          <Input
+            id="service-request-basics-sort-order"
+            label="Sort Order"
+            containerClassName="mb-0"
+            type="number"
+            value={basicsInput.sortOrder}
+            onChange={(event) =>
+              setBasicsInput((previous) => ({
+                ...previous,
+                sortOrder: event.target.value,
+              }))
+            }
+          />
         </div>
         <div>
           <Button
@@ -849,206 +1209,52 @@ export default function ServiceRequestDefinitionEditorPage() {
         <h2 className="text-lg font-semibold">Form</h2>
         <div className="rounded border p-3 bg-[rgb(var(--color-background-100))] space-y-3">
           <div className="text-sm font-semibold">Author Fields</div>
-          <div className="flex items-center gap-2">
-            <select
-              id="service-request-form-new-field-type"
-              className="border rounded px-3 py-2 text-sm"
-              value={newFieldType}
-              onChange={(event) => setNewFieldType(event.target.value as FormField['type'])}
-            >
-              {FORM_FIELD_TYPES.map((fieldType) => (
-                <option key={fieldType} value={fieldType}>
-                  {fieldType}
-                </option>
-              ))}
-            </select>
-            <Button
-              id="service-request-form-add-field"
-              variant="outline"
-              onClick={async () => {
-                try {
-                  await addServiceRequestFormFieldAction(data.definitionId, newFieldType);
-                  await reloadDefinitionEditorState(data.definitionId);
-                  toast.success('Field added');
-                } catch (error) {
-                  console.error('Failed to add form field', error);
-                  toast.error('Failed to add form field');
-                }
-              }}
-            >
-              Add Field
-            </Button>
+          <div className="flex flex-wrap items-start gap-2">
+            <div className="min-w-[220px] flex-1">
+              <CustomSelect
+                id="service-request-form-new-field-type"
+                label="Field Type"
+                value={newFieldType}
+                options={FORM_FIELD_TYPE_OPTIONS}
+                onValueChange={(value) => setNewFieldType(value as FormField['type'])}
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="mb-1 text-sm font-medium invisible select-none">Field Type</span>
+              <Button
+                id="service-request-form-add-field"
+                variant="default"
+                className="h-10 gap-1.5"
+                onClick={async () => {
+                  try {
+                    await addServiceRequestFormFieldAction(data.definitionId, newFieldType);
+                    await reloadDefinitionEditorState(data.definitionId);
+                    toast.success('Field added');
+                  } catch (error) {
+                    console.error('Failed to add form field', error);
+                    toast.error('Failed to add form field');
+                  }
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                Add Field
+              </Button>
+            </div>
           </div>
           <div className="space-y-3">
             {getSchemaFields(data.form.schema).length === 0 ? (
               <div className="text-sm text-[rgb(var(--color-text-600))]">No fields configured.</div>
             ) : (
-              getSchemaFields(data.form.schema).map((field, index, allFields) => {
-                const key = field.key ?? `field_${index}`;
-                const optionsText = formatSelectOptionsText(field.options);
-                return (
-                  <div key={`${key}-${index}`} className="rounded border bg-white p-3 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-sm font-medium">
-                        {field.type} · <span className="font-mono">{key}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          id={`service-request-form-move-up-${key}`}
-                          variant="outline"
-                          onClick={async () => {
-                            const nextKeys = allFields.map((candidate) => candidate.key);
-                            const currentIndex = nextKeys.indexOf(key);
-                            if (currentIndex <= 0) {
-                              return;
-                            }
-                            [nextKeys[currentIndex - 1], nextKeys[currentIndex]] = [
-                              nextKeys[currentIndex],
-                              nextKeys[currentIndex - 1],
-                            ];
-                            await reorderServiceRequestFormFieldsAction(data.definitionId, nextKeys);
-                            await reloadDefinitionEditorState(data.definitionId);
-                          }}
-                        >
-                          Move Up
-                        </Button>
-                        <Button
-                          id={`service-request-form-move-down-${key}`}
-                          variant="outline"
-                          onClick={async () => {
-                            const nextKeys = allFields.map((candidate) => candidate.key);
-                            const currentIndex = nextKeys.indexOf(key);
-                            if (currentIndex < 0 || currentIndex >= nextKeys.length - 1) {
-                              return;
-                            }
-                            [nextKeys[currentIndex], nextKeys[currentIndex + 1]] = [
-                              nextKeys[currentIndex + 1],
-                              nextKeys[currentIndex],
-                            ];
-                            await reorderServiceRequestFormFieldsAction(data.definitionId, nextKeys);
-                            await reloadDefinitionEditorState(data.definitionId);
-                          }}
-                        >
-                          Move Down
-                        </Button>
-                        <Button
-                          id={`service-request-form-remove-field-${key}`}
-                          variant="outline"
-                          onClick={async () => {
-                            await removeServiceRequestFormFieldAction(data.definitionId, key);
-                            await reloadDefinitionEditorState(data.definitionId);
-                            toast.success('Field removed');
-                          }}
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                      <label className="grid gap-1 text-sm">
-                        <span className="font-medium">Label</span>
-                        <input
-                          defaultValue={field.label ?? key}
-                          className="border rounded px-2 py-1"
-                          onBlur={async (event) => {
-                            await updateServiceRequestFormFieldAction(data.definitionId, key, {
-                              label: event.target.value.trim() || key,
-                            });
-                            await reloadDefinitionEditorState(data.definitionId);
-                          }}
-                        />
-                      </label>
-                      <label className="grid gap-1 text-sm">
-                        <span className="font-medium">Help Text</span>
-                        <input
-                          defaultValue={field.helpText ?? ''}
-                          className="border rounded px-2 py-1"
-                          onBlur={async (event) => {
-                            const value = event.target.value.trim();
-                            await updateServiceRequestFormFieldAction(data.definitionId, key, {
-                              helpText: value.length > 0 ? value : null,
-                            });
-                            await reloadDefinitionEditorState(data.definitionId);
-                          }}
-                        />
-                      </label>
-                    </div>
-                    <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          defaultChecked={Boolean(field.required)}
-                          onChange={async (event) => {
-                            await updateServiceRequestFormFieldAction(data.definitionId, key, {
-                              required: event.target.checked,
-                            });
-                            await reloadDefinitionEditorState(data.definitionId);
-                          }}
-                        />
-                        <span>Required</span>
-                      </label>
-                      {field.type !== 'file-upload' && (
-                        <label className="grid gap-1 text-sm">
-                          <span className="font-medium">Default Value</span>
-                          {field.type === 'checkbox' ? (
-                            <select
-                              defaultValue={
-                                typeof field.defaultValue === 'boolean'
-                                  ? String(field.defaultValue)
-                                  : ''
-                              }
-                              className="border rounded px-2 py-1"
-                              onChange={async (event) => {
-                                const value = event.target.value;
-                                await updateServiceRequestFormFieldAction(data.definitionId, key, {
-                                  defaultValue:
-                                    value === ''
-                                      ? null
-                                      : value === 'true',
-                                });
-                                await reloadDefinitionEditorState(data.definitionId);
-                              }}
-                            >
-                              <option value="">No default</option>
-                              <option value="true">Checked</option>
-                              <option value="false">Unchecked</option>
-                            </select>
-                          ) : (
-                            <input
-                              defaultValue={
-                                typeof field.defaultValue === 'string' ? field.defaultValue : ''
-                              }
-                              className="border rounded px-2 py-1"
-                              onBlur={async (event) => {
-                                const value = event.target.value.trim();
-                                await updateServiceRequestFormFieldAction(data.definitionId, key, {
-                                  defaultValue: value.length > 0 ? value : null,
-                                });
-                                await reloadDefinitionEditorState(data.definitionId);
-                              }}
-                            />
-                          )}
-                        </label>
-                      )}
-                    </div>
-                    {field.type === 'select' && (
-                      <label className="grid gap-1 text-sm">
-                        <span className="font-medium">Options (one per line: value:label)</span>
-                        <textarea
-                          className="border rounded px-2 py-1 font-mono min-h-[84px]"
-                          defaultValue={optionsText}
-                          onBlur={async (event) => {
-                            await updateServiceRequestFormFieldAction(data.definitionId, key, {
-                              options: parseSelectOptionsText(event.target.value),
-                            });
-                            await reloadDefinitionEditorState(data.definitionId);
-                          }}
-                        />
-                      </label>
-                    )}
-                  </div>
-                );
-              })
+              getSchemaFields(data.form.schema).map((field, index, allFields) => (
+                <FormFieldEditorCard
+                  key={`${field.key ?? `field_${index}`}-${index}`}
+                  definitionId={data.definitionId}
+                  field={field}
+                  index={index}
+                  allFields={allFields}
+                  reloadDefinitionEditorState={reloadDefinitionEditorState}
+                />
+              ))
             )}
           </div>
         </div>
@@ -1056,113 +1262,13 @@ export default function ServiceRequestDefinitionEditorPage() {
           <div className="text-sm font-medium mb-2">Rendered Form Preview</div>
           {getSchemaFields(data.form.schema).length > 0 ? (
             <form className="space-y-3">
-              {getSchemaFields(data.form.schema).map((field, index) => {
-                const key = field.key ?? `field_${index}`;
-                const label = field.label ?? key;
-                const helpText = field.helpText ?? null;
-                const required = Boolean(field.required);
-                const defaultStringValue =
-                  typeof field.defaultValue === 'string' ? field.defaultValue : '';
-                const defaultBooleanValue =
-                  typeof field.defaultValue === 'boolean' ? field.defaultValue : false;
-
-                if (field.type === 'long-text') {
-                  return (
-                    <label key={key} className="block space-y-1">
-                      <span className="text-sm font-medium">
-                        {label}
-                        {required ? ' *' : ''}
-                      </span>
-                      <textarea
-                        disabled
-                        rows={4}
-                        defaultValue={defaultStringValue}
-                        className="w-full rounded border p-2 text-sm bg-gray-50"
-                      />
-                      {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
-                    </label>
-                  );
-                }
-
-                if (field.type === 'select') {
-                  return (
-                    <label key={key} className="block space-y-1">
-                      <span className="text-sm font-medium">
-                        {label}
-                        {required ? ' *' : ''}
-                      </span>
-                      <select
-                        disabled
-                        defaultValue={defaultStringValue}
-                        className="w-full rounded border p-2 text-sm bg-gray-50"
-                      >
-                        <option value="">Select an option</option>
-                        {(field.options ?? []).map((option, optionIndex) => (
-                          <option key={`${key}-option-${optionIndex}`} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
-                    </label>
-                  );
-                }
-
-                if (field.type === 'checkbox') {
-                  return (
-                    <label key={key} className="flex items-start gap-2">
-                      <input
-                        type="checkbox"
-                        disabled
-                        defaultChecked={defaultBooleanValue}
-                        className="mt-1"
-                      />
-                      <span className="text-sm">
-                        <span className="font-medium">
-                          {label}
-                          {required ? ' *' : ''}
-                        </span>
-                        {helpText && (
-                          <span className="block text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>
-                        )}
-                      </span>
-                    </label>
-                  );
-                }
-
-                if (field.type === 'file-upload') {
-                  return (
-                    <label key={key} className="block space-y-1">
-                      <span className="text-sm font-medium">
-                        {label}
-                        {required ? ' *' : ''}
-                      </span>
-                      <input
-                        disabled
-                        type="file"
-                        className="w-full rounded border p-2 text-sm bg-gray-50"
-                      />
-                      {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
-                    </label>
-                  );
-                }
-
-                return (
-                  <label key={key} className="block space-y-1">
-                    <span className="text-sm font-medium">
-                      {label}
-                      {required ? ' *' : ''}
-                    </span>
-                    <input
-                      disabled
-                      type={field.type === 'date' ? 'date' : 'text'}
-                      defaultValue={defaultStringValue}
-                      className="w-full rounded border p-2 text-sm bg-gray-50"
-                    />
-                    {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
-                  </label>
-                );
-              })}
+              {getSchemaFields(data.form.schema).map((field, index) => (
+                <FormFieldPreview
+                  key={field.key ?? `field_${index}`}
+                  field={field}
+                  index={index}
+                />
+              ))}
             </form>
           ) : (
             <ul className="space-y-1 text-sm">
@@ -1694,10 +1800,40 @@ export default function ServiceRequestDefinitionEditorPage() {
           <div className="rounded border p-3 bg-[rgb(var(--color-background-100))] space-y-2">
             <div className="text-sm font-semibold">Submission Detail</div>
             <FieldRow label="Submission ID" value={selectedSubmissionDetail.submission_id} />
-            <FieldRow label="Requester User" value={selectedSubmissionDetail.requester_user_id ?? '-'} />
-            <FieldRow label="Client" value={selectedSubmissionDetail.client_id} />
-            <FieldRow label="Contact" value={selectedSubmissionDetail.contact_id ?? '-'} />
-            <FieldRow label="Ticket Reference" value={selectedSubmissionDetail.created_ticket_id ?? '-'} />
+            <FieldRow
+              label="Requester User"
+              value={
+                selectedSubmissionDetail.requester_user_name ??
+                selectedSubmissionDetail.requester_user_id ??
+                '-'
+              }
+            />
+            <FieldRow
+              label="Client"
+              value={selectedSubmissionDetail.client_name ?? selectedSubmissionDetail.client_id ?? '-'}
+            />
+            <FieldRow
+              label="Contact"
+              value={selectedSubmissionDetail.contact_name ?? selectedSubmissionDetail.contact_id ?? '-'}
+            />
+            <FieldRow
+              label="Ticket Reference"
+              value={
+                selectedSubmissionDetail.created_ticket_id ? (
+                  <Button
+                    id={`service-request-submission-ticket-${selectedSubmissionDetail.submission_id}`}
+                    type="button"
+                    variant="ghost"
+                    className="h-auto p-0 text-[rgb(var(--color-primary-600))] hover:bg-transparent hover:underline"
+                    onClick={() => openTicketDrawer(selectedSubmissionDetail.created_ticket_id)}
+                  >
+                    {selectedSubmissionDetail.created_ticket_display ?? selectedSubmissionDetail.created_ticket_id}
+                  </Button>
+                ) : (
+                  '-'
+                )
+              }
+            />
             <FieldRow label="Workflow Reference" value={selectedSubmissionDetail.workflow_execution_id ?? '-'} />
             <FieldRow
               label="Execution Error"

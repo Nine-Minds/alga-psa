@@ -7,6 +7,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Info, Coins } from 'lucide-react';
 import { BucketOverlayInput } from './ContractWizard';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type BucketOverlayMode = 'hours' | 'usage';
 
@@ -29,6 +30,7 @@ export function BucketOverlayFields({
   automationId,
   billingFrequency = 'monthly'
 }: BucketOverlayFieldsProps) {
+  const { t } = useTranslation('msp/contracts');
   const [overageRateInput, setOverageRateInput] = useState<string>('');
 
   useEffect(() => {
@@ -41,10 +43,10 @@ export function BucketOverlayFields({
   }, [value.overage_rate]);
   const resolvedUnitLabel =
     mode === 'hours'
-      ? 'hours'
+      ? t('bucketOverlay.units.hours', { defaultValue: 'hours' })
       : unitLabel && unitLabel.trim().length > 0
         ? unitLabel
-        : 'units';
+        : t('bucketOverlay.units.units', { defaultValue: 'units' });
 
   const includedDisplay =
     value.total_minutes == null
@@ -100,9 +102,17 @@ export function BucketOverlayFields({
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Label className="font-medium">
-            Included {resolvedUnitLabel}
+            {t('bucketOverlay.includedLabel', {
+              defaultValue: 'Included {{units}}',
+              units: resolvedUnitLabel,
+            })}
           </Label>
-          <Tooltip content={`Amount of ${resolvedUnitLabel} included each billing period before overages apply.`}>
+          <Tooltip
+            content={t('bucketOverlay.includedTooltip', {
+              defaultValue: 'Amount of {{units}} included each billing period before overages apply.',
+              units: resolvedUnitLabel,
+            })}
+          >
             <Info className="h-4 w-4 text-primary-500" />
           </Tooltip>
         </div>
@@ -113,7 +123,9 @@ export function BucketOverlayFields({
           min={0}
           step={mode === 'hours' ? 0.25 : 1}
           value={includedDisplay}
-          placeholder={mode === 'hours' ? 'e.g., 40' : 'e.g., 1000'}
+          placeholder={mode === 'hours'
+            ? t('bucketOverlay.includedPlaceholderHours', { defaultValue: 'e.g., 40' })
+            : t('bucketOverlay.includedPlaceholderUnits', { defaultValue: 'e.g., 1000' })}
           onChange={(event) => handleIncludedChange(event.target.value)}
           disabled={disabled}
         />
@@ -123,12 +135,21 @@ export function BucketOverlayFields({
         <div className="flex items-center gap-2">
           <Label className="font-medium flex items-center gap-1">
             <Coins className="h-4 w-4 text-primary-500" />
-            Overage Rate
+            {t('bucketOverlay.overageRateLabel', { defaultValue: 'Overage Rate' })}
             <span className="text-xs text-muted-foreground">
-              / {mode === 'hours' ? 'hour' : resolvedUnitLabel}
+              / {mode === 'hours'
+                ? t('bucketOverlay.units.hour', { defaultValue: 'hour' })
+                : resolvedUnitLabel}
             </span>
           </Label>
-          <Tooltip content={`Charge applied for each ${mode === 'hours' ? 'hour' : resolvedUnitLabel} beyond the included amount.`}>
+          <Tooltip
+            content={t('bucketOverlay.overageRateTooltip', {
+              defaultValue: 'Charge applied for each {{unit}} beyond the included amount.',
+              unit: mode === 'hours'
+                ? t('bucketOverlay.units.hour', { defaultValue: 'hour' })
+                : resolvedUnitLabel,
+            })}
+          >
             <Info className="h-4 w-4 text-primary-500" />
           </Tooltip>
         </div>
@@ -175,10 +196,15 @@ export function BucketOverlayFields({
         />
         <div className="flex flex-col">
           <Label htmlFor={automationId ? `${automationId}-rollover` : 'allow-rollover'} className="font-medium">
-            Allow unused {resolvedUnitLabel} to roll over
+            {t('bucketOverlay.rolloverLabel', {
+              defaultValue: 'Allow unused {{units}} to roll over',
+              units: resolvedUnitLabel,
+            })}
           </Label>
           <p className="text-xs text-muted-foreground">
-            If enabled, any unused balance carries into the next period.
+            {t('bucketOverlay.rolloverDescription', {
+              defaultValue: 'If enabled, any unused balance carries into the next period.',
+            })}
           </p>
         </div>
       </div>

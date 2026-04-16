@@ -33,10 +33,25 @@ describe('service request template instantiation', () => {
     });
 
     const templates = listServiceRequestTemplateOptions();
+    expect(templates).toHaveLength(6);
+    expect(templates.map((template) => template.templateName)).toEqual([
+      'New Hire Onboarding',
+      'Employee Offboarding',
+      'Access Request',
+      'Hardware Request',
+      'Software / License Request',
+      'Shared Mailbox / Distribution List Request',
+    ]);
+
     const newHireTemplate = templates.find(
       (template) => template.providerKey === 'ce-starter-pack' && template.templateId === 'new-hire'
     );
+    const hardwareTemplate = templates.find(
+      (template) =>
+        template.providerKey === 'ce-starter-pack' && template.templateId === 'hardware-request'
+    );
     expect(newHireTemplate).toBeDefined();
+    expect(hardwareTemplate).toBeDefined();
 
     const blankDraft = await createBlankServiceRequestDefinition({
       knex: db,
@@ -76,14 +91,43 @@ describe('service request template instantiation', () => {
       createdBy: actor,
     });
 
+    const hardwareDraft = await createServiceRequestDefinitionFromTemplate({
+      knex: db,
+      tenant,
+      templateProviderKey: hardwareTemplate!.providerKey,
+      templateId: hardwareTemplate!.templateId,
+      createdBy: actor,
+    });
+
     const storedB = await db('service_request_definitions')
       .where({ tenant, definition_id: templateDraftB.definition_id })
-      .first('name', 'execution_config');
+      .first('name', 'category_id', 'execution_config');
 
-    expect(storedB?.name).toBe('New Hire Request');
+    const storedHardware = await db('service_request_definitions')
+      .where({ tenant, definition_id: hardwareDraft.definition_id })
+      .first('name', 'category_id', 'form_schema', 'execution_config');
+
+    expect(storedB?.name).toBe('New Hire Onboarding');
+    expect(storedB?.category_id).toBeNull();
     expect(storedB?.execution_config).toEqual({
-      titleTemplate: 'New Hire Setup: {{employee_name}}',
+      titleTemplate: 'New Hire Onboarding: {{employee_name}}',
       includeFormResponsesInDescription: true,
+    });
+
+    expect(storedHardware?.name).toBe('Hardware Request');
+    expect(storedHardware?.category_id).toBeNull();
+    expect(storedHardware?.execution_config).toEqual({
+      titleTemplate: 'Hardware Request: {{requested_for}} - {{hardware_type}}',
+      includeFormResponsesInDescription: true,
+    });
+    expect(storedHardware?.form_schema).toMatchObject({
+      fields: expect.arrayContaining([
+        expect.objectContaining({
+          key: 'quantity',
+          type: 'short-text',
+          defaultValue: '1',
+        }),
+      ]),
     });
   });
 });

@@ -46,14 +46,17 @@
     "titlePlaceholder": "Tytuł zgłoszenia",
     "descriptionPlaceholder": "Opisz problem...",
     "priorityPlaceholder": "Wybierz priorytet",
+    "noBoardsAvailable": "No ticket boards are available for your account. Contact your administrator.",
     "submit": "Utwórz zgłoszenie",
     "submitting": "Tworzenie...",
     "errors": {
       "titleRequired": "Tytuł jest wymagany",
       "descriptionRequired": "Opis jest wymagany",
       "priorityRequired": "Wybierz priorytet",
-      "createFailed": "Nie udało się utworzyć zgłoszenia. Spróbuj ponownie."
-    }
+      "createFailed": "Nie udało się utworzyć zgłoszenia. Spróbuj ponownie.",
+      "boardRequired": "Wybierz tablicę"
+    },
+    "boardPlaceholder": "Wybierz tablicę"
   },
   "status": {
     "open": "Otwarte",

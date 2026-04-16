@@ -17,6 +17,8 @@ import { createTenantKnex, getConnection, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import {
+  applyVisibilityBoardFilter,
+  getClientContactVisibilityContext,
   getTicketOrigin,
   parseTicketStatusFilterValue,
 } from '@alga-psa/tickets/lib';
@@ -26,14 +28,62 @@ const clientTicketSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   priority_id: z.string(),
+  board_id: z.string().optional(),
 });
+
+const VISIBILITY_NOT_FOUND_ERROR =
+  'Visibility group assignment is invalid for this contact.';
+
+async function resolvePortalVisibility(
+  trx: Knex.Transaction,
+  tenant: string,
+  userId: string
+) {
+  const userRecord = await trx('users')
+    .where({
+      user_id: userId,
+      tenant
+    })
+    .first();
+
+  if (!userRecord?.contact_id) {
+    throw new Error('User not associated with a contact');
+  }
+
+  const visibility = await getClientContactVisibilityContext(trx, tenant, userRecord.contact_id);
+  return { userRecord, visibility };
+}
+
+async function resolveVisibleTicket(
+  trx: Knex.Transaction,
+  tenant: string,
+  userContactId: string,
+  ticketId: string
+) {
+  const visibility = await getClientContactVisibilityContext(trx, tenant, userContactId);
+
+  const ticket = await trx('tickets as t')
+    .select('t.ticket_id')
+    .where({
+      't.ticket_id': ticketId,
+      't.tenant': tenant,
+      't.client_id': visibility.clientId
+    })
+    .modify((queryBuilder: Knex.QueryBuilder) => {
+      applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds, 't.board_id');
+    })
+    .first();
+
+  if (!ticket) {
+    throw new Error('Ticket not found or access denied');
+  }
+
+  return ticket;
+}
 
 export const getClientTickets = withAuth(async (user, { tenant }, status: string): Promise<ITicketListItem[]> => {
   try {
-    console.log('Debug - Full user:', JSON.stringify(user, null, 2));
-
     if (!user.user_id) {
-      console.error('User object:', user);
       throw new Error('User ID not found in session');
     }
 
@@ -58,34 +108,10 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       throw new Error('Insufficient permissions to view tickets');
     }
 
-    console.log('Debug - User ID:', user.user_id);
-    console.log('Debug - Tenant:', tenant);
-    console.log('Debug - Client user:', user.user_id);
     const parsedStatusFilter = parseTicketStatusFilterValue(status);
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get user's client_id
-      const userRecord = await trx('users')
-        .where({
-          user_id: user.user_id,
-          tenant: tenant
-        })
-        .first();
-
-      if (!userRecord?.contact_id) {
-        throw new Error('User not associated with a contact');
-      }
-
-      const contact = await trx('contacts')
-        .where({
-          contact_name_id: userRecord.contact_id,
-          tenant: tenant
-        })
-        .first();
-
-      if (!contact?.client_id) {
-        throw new Error('Contact not associated with a client');
-      }
+      const { visibility } = await resolvePortalVisibility(trx, tenant, user.user_id);
 
       let query = trx('tickets as t')
       .select(
@@ -153,8 +179,10 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       })
       .where({
         't.tenant': tenant,
-        't.client_id': contact.client_id
+        't.client_id': visibility.clientId
       });
+
+      applyVisibilityBoardFilter(query, visibility.visibleBoardIds);
 
     // Filter by status
     if (parsedStatusFilter.kind === 'all') {
@@ -181,11 +209,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       closed_at: ticket.closed_at instanceof Date ? ticket.closed_at.toISOString() : ticket.closed_at,
     }));
   } catch (error) {
-    console.error('Failed to fetch client tickets - Full error:', error);
-    if (error instanceof Error) {
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-    }
+    console.error('Failed to fetch client tickets:', error);
     throw error; // Throw the original error to see the actual issue
   }
 });
@@ -218,28 +242,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
     }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get user's client_id
-      const userRecord = await trx('users')
-        .where({
-          user_id: user.user_id,
-          tenant: tenant
-        })
-        .first();
-
-      if (!userRecord?.contact_id) {
-        throw new Error('User not associated with a contact');
-      }
-
-      const contact = await trx('contacts')
-        .where({
-          contact_name_id: userRecord.contact_id,
-          tenant: tenant
-        })
-        .first();
-
-      if (!contact?.client_id) {
-        throw new Error('Contact not associated with a client');
-      }
+      const { visibility } = await resolvePortalVisibility(trx, tenant, user.user_id);
 
       // Get ticket details with related data
       const [ticket, conversations, documents, users] = await Promise.all([
@@ -272,7 +275,10 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         .where({
           't.ticket_id': ticketId,
           't.tenant': tenant,
-          't.client_id': contact.client_id
+          't.client_id': visibility.clientId
+        })
+        .modify((ticketQuery: Knex.QueryBuilder) => {
+          applyVisibilityBoardFilter(ticketQuery, visibility.visibleBoardIds);
         })
         .first(),
 
@@ -474,6 +480,8 @@ export const addClientTicketComment = withAuth(async (
         throw new Error('User not associated with a contact');
       }
 
+      await resolveVisibleTicket(trx, tenant, userRecord.contact_id, ticketId);
+
       let markdownContent = "";
       try {
         markdownContent = await convertBlockNoteToMarkdown(content);
@@ -590,6 +598,8 @@ export const updateClientTicketComment = withAuth(async (
         throw new Error('Comment not found or not authorized to edit');
       }
 
+      await resolveVisibleTicket(trx, tenant, userRecord.contact_id, comment.ticket_id);
+
       let updatesWithMarkdown = { ...updates };
       if (updates.note) {
         try {
@@ -663,13 +673,12 @@ export const updateTicketStatus = withAuth(async (
         throw new Error('User not associated with a contact');
       }
 
-      // Verify the ticket belongs to the user's client
-      const ticket = await trx('tickets')
-        .where({
-          ticket_id: ticketId,
-          tenant: tenant
-        })
-        .first();
+      const ticket = await resolveVisibleTicket(
+        trx,
+        tenant,
+        userRecord.contact_id,
+        ticketId
+      );
 
       if (!ticket) {
         throw new Error('Ticket not found');
@@ -782,6 +791,8 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
         throw new Error('Comment not found or not authorized to delete');
       }
 
+      await resolveVisibleTicket(trx, tenant, userRecord.contact_id, comment.ticket_id);
+
       await trx('comments')
         .where({
           comment_id: commentId,
@@ -821,34 +832,17 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
 
     const documents = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Verify user has access to this ticket
-      const userRecord = await trx('users')
-        .where({
-          user_id: user.user_id,
-          tenant: tenant
-        })
-        .first();
-
-      if (!userRecord?.contact_id) {
-        throw new Error('User not associated with a contact');
-      }
-
-      const contact = await trx('contacts')
-        .where({
-          contact_name_id: userRecord.contact_id,
-          tenant: tenant
-        })
-        .first();
-
-      if (!contact?.client_id) {
-        throw new Error('Contact not associated with a client');
-      }
+      const { visibility } = await resolvePortalVisibility(trx, tenant, user.user_id);
 
       // Verify ticket belongs to user's client
       const ticket = await trx('tickets')
         .where({
           ticket_id: ticketId,
           tenant: tenant,
-          client_id: contact.client_id
+          client_id: visibility.clientId
+        })
+        .modify((queryBuilder: Knex.QueryBuilder) => {
+          applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds);
         })
         .first();
 
@@ -906,73 +900,84 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
     }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get user's contact and client information
-      const userRecord = await trx('users')
-        .where({
-          user_id: user.user_id,
-          tenant: tenant
-        })
-        .first();
-
-      if (!userRecord?.contact_id) {
-        throw new Error('User not associated with a contact');
-      }
-
-      const contact = await trx('contacts')
-        .where({
-          contact_name_id: userRecord.contact_id,
-          tenant: tenant
-        })
-        .first();
-
-      if (!contact?.client_id) {
-        throw new Error('Contact not associated with a client');
-      }
-
-      // Fetch default board for client portal tickets
-      const defaultBoard = await trx('boards')
-        .where({
-          tenant,
-          is_default: true
-        })
-        .first();
-
-      if (!defaultBoard) {
-        throw new Error('No default board configured for tickets');
-      }
-
-      // Fetch default status for tickets
-      const defaultStatusId = await TicketModel.getDefaultStatusId(
-        tenant,
-        trx,
-        defaultBoard.board_id
-      );
-
-      if (!defaultStatusId) {
-        throw new Error('No default status configured for tickets');
-      }
+      const { visibility } = await resolvePortalVisibility(trx, tenant, user.user_id);
 
       // Validate input data using shared validation approach
       const validatedData = validateData(clientTicketSchema, {
         title: data.get('title'),
         description: data.get('description'),
         priority_id: data.get('priority_id'),
+        board_id: data.get('board_id')
+          ? data.get('board_id')?.toString()
+          : undefined
       });
+
+      const requestedBoardId = validatedData.board_id?.trim() || null;
+      let assignedBoardId: string | null = requestedBoardId;
+
+      if (visibility.visibleBoardIds !== null && visibility.visibleBoardIds.length === 0) {
+        throw new Error('Selected visibility group does not allow any boards');
+      }
+
+      if (visibility.visibleBoardIds !== null) {
+        if (!requestedBoardId) {
+          assignedBoardId = visibility.visibleBoardIds[0] || null;
+        } else if (!visibility.visibleBoardIds.includes(requestedBoardId)) {
+          throw new Error(VISIBILITY_NOT_FOUND_ERROR);
+        }
+      }
+
+      const resolvedBoard = !assignedBoardId
+        ? await trx('boards')
+            .where({
+              tenant,
+              is_default: true,
+              is_inactive: false
+            })
+            .first()
+        : await trx('boards')
+            .where({
+              tenant,
+              board_id: assignedBoardId,
+              is_inactive: false
+            })
+            .first();
+
+      if (!resolvedBoard) {
+        throw new Error(
+          assignedBoardId
+            ? VISIBILITY_NOT_FOUND_ERROR
+            : 'No default board configured for tickets'
+        );
+      }
+
+      assignedBoardId = resolvedBoard.board_id;
+
+      // Fetch default status for tickets
+      const defaultStatusId = await TicketModel.getDefaultStatusId(
+        tenant,
+        trx,
+        resolvedBoard.board_id
+      );
+
+      if (!defaultStatusId) {
+        throw new Error('No default status configured for tickets');
+      }
 
       // Convert to TicketModel input format
       const createTicketInput: CreateTicketInput = {
         title: validatedData.title,
         description: validatedData.description,
         priority_id: validatedData.priority_id,
-        client_id: contact.client_id,
-        contact_id: userRecord.contact_id, // Maps to contact_name_id in database
+        client_id: visibility.clientId,
+        contact_id: visibility.contactId, // Maps to contact_name_id in database
         entered_by: user.user_id,
         source: 'client_portal',
         ticket_origin: TICKET_ORIGINS.CLIENT_PORTAL,
-        board_id: defaultBoard.board_id,
+        board_id: resolvedBoard.board_id,
         status_id: defaultStatusId,
-        // Auto-assign to board's default agent if configured
-        assigned_to: defaultBoard.default_assigned_to || undefined
+        // Auto-assign from the resolved board after visibility checks.
+        assigned_to: resolvedBoard.default_assigned_to ?? undefined
       };
 
       // Create adapters for client portal context
@@ -1019,6 +1024,12 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
     return result;
   } catch (error) {
     console.error('Failed to create client ticket:', error);
+    if (error instanceof Error && (
+      error.message === VISIBILITY_NOT_FOUND_ERROR ||
+      error.message === 'Selected visibility group does not allow any boards'
+    )) {
+      throw error;
+    }
     throw new Error('Failed to create ticket');
   }
 });

@@ -12,6 +12,7 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface HourlyServicesStepProps {
   data: ContractWizardData;
@@ -19,6 +20,7 @@ interface HourlyServicesStepProps {
 }
 
 export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps) {
+  const { t } = useTranslation('msp/contracts');
   const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
 
   useEffect(() => {
@@ -107,15 +109,22 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-2">Hourly Services</h3>
+        <h3 className="text-lg font-semibold mb-2">
+          {t('wizardHourly.heading', { defaultValue: 'Hourly Services' })}
+        </h3>
         <p className="text-sm text-[rgb(var(--color-text-500))]">
-          Configure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.
+          {t('wizardHourly.description', {
+            defaultValue: 'Configure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.',
+          })}
         </p>
       </div>
 
       <div className="p-4 bg-[rgb(var(--color-accent-50))] border border-[rgb(var(--color-accent-200))] rounded-md mb-6">
         <p className="text-sm text-[rgb(var(--color-accent-800))]">
-          <strong>What are Hourly Services?</strong> These services are billed based on actual time tracked. Each time entry will be multiplied by the hourly rate to calculate the invoice amount.
+          <strong>{t('wizardHourly.explainer.title', { defaultValue: 'What are Hourly Services?' })}</strong>{' '}
+          {t('wizardHourly.explainer.description', {
+            defaultValue: 'These services are billed based on actual time tracked. Each time entry will be multiplied by the hourly rate to calculate the invoice amount.',
+          })}
         </p>
       </div>
 
@@ -123,7 +132,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
         <div className="space-y-2">
           <Label htmlFor="minimum-billable-time" className="flex items-center gap-2 font-semibold">
             <Clock className="h-4 w-4" />
-            Minimum Billable Time (minutes)
+            {t('wizardHourly.minimumBillableTime.label', { defaultValue: 'Minimum Billable Time (minutes)' })}
           </Label>
           <Input
             id="minimum-billable-time"
@@ -135,16 +144,18 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                 minimum_billable_time: Math.max(0, Number(event.target.value) || 0),
               })
             }
-            placeholder="15"
+            placeholder={t('wizardHourly.minimumBillableTime.placeholder', { defaultValue: '15' })}
           />
           <p className="text-xs text-[rgb(var(--color-text-400))]">
-            e.g., 15 minutes - any time entry less than this will be rounded up
+            {t('wizardHourly.minimumBillableTime.hint', {
+              defaultValue: 'e.g., 15 minutes - any time entry less than this will be rounded up',
+            })}
           </p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="round-up-to" className="flex items-center gap-2 font-semibold">
             <Clock className="h-4 w-4" />
-            Round Up To Nearest (minutes)
+            {t('wizardHourly.roundUpToNearest.label', { defaultValue: 'Round Up To Nearest (minutes)' })}
           </Label>
           <Input
             id="round-up-to"
@@ -156,10 +167,12 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                 round_up_to_nearest: Math.max(0, Number(event.target.value) || 0),
               })
             }
-            placeholder="15"
+            placeholder={t('wizardHourly.roundUpToNearest.placeholder', { defaultValue: '15' })}
           />
           <p className="text-xs text-[rgb(var(--color-text-400))]">
-            e.g., 15 minutes - time entries will be rounded up to the nearest interval
+            {t('wizardHourly.roundUpToNearest.hint', {
+              defaultValue: 'e.g., 15 minutes - time entries will be rounded up to the nearest interval',
+            })}
           </p>
         </div>
       </div>
@@ -167,7 +180,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
       <div className="space-y-4">
         <Label className="flex items-center gap-2 font-semibold">
           <Clock className="h-4 w-4" />
-          Hourly Services
+          {t('wizardHourly.labels.hourlyServices', { defaultValue: 'Hourly Services' })}
         </Label>
 
         {data.hourly_services.map((service, index) => (
@@ -178,7 +191,10 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
             <div className="flex-1 space-y-3">
               <div className="space-y-2">
                 <Label htmlFor={`hourly-service-${index}`} className="text-sm">
-                  Service {index + 1}
+                  {t('wizardHourly.labels.serviceItem', {
+                    defaultValue: 'Service {{index}}',
+                    index: index + 1,
+                  })}
                 </Label>
                 <ServiceCatalogPicker
                   id={`hourly-service-${index}`}
@@ -186,14 +202,14 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                   selectedLabel={service.service_name}
                   onSelect={(item) => handleServiceChange(index, item)}
                   itemKinds={['service']}
-                  placeholder="Select a service"
+                  placeholder={t('wizardHourly.labels.selectServicePlaceholder', { defaultValue: 'Select a service' })}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor={`hourly-rate-${index}`} className="text-sm flex items-center gap-2">
                   <Coins className="h-3 w-3" />
-                  Hourly Rate
+                  {t('wizardHourly.labels.hourlyRate', { defaultValue: 'Hourly Rate' })}
                 </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-400))]">
@@ -223,20 +239,23 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                         setRateInputs((prev) => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
                       }
                     }}
-                    placeholder="0.00"
+                    placeholder={t('wizardHourly.labels.hourlyRatePlaceholder', { defaultValue: '0.00' })}
                     className="pl-10"
                   />
                 </div>
                 <p className="text-xs text-[rgb(var(--color-text-400))]">
                   {service.hourly_rate
-                    ? `${formatCurrency(service.hourly_rate)}/hour`
-                    : 'Enter the hourly rate'}
+                    ? t('wizardHourly.labels.hourlyRatePerHour', {
+                      defaultValue: '{{rate}}/hour',
+                      rate: formatCurrency(service.hourly_rate),
+                    })
+                    : t('wizardHourly.labels.enterHourlyRate', { defaultValue: 'Enter the hourly rate' })}
                 </p>
               </div>
 
               <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
                 <SwitchWithLabel
-                  label="Set bucket of hours"
+                  label={t('wizardHourly.labels.setBucketOfHours', { defaultValue: 'Set bucket of hours' })}
                   checked={Boolean(service.bucket_overlay)}
                   onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
                 />
@@ -273,15 +292,16 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
           className="w-full"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Hourly Service
+          {t('wizardHourly.actions.addHourlyService', { defaultValue: 'Add Hourly Service' })}
         </Button>
       </div>
 
       {data.hourly_services.length === 0 && (
         <div className="p-4 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-md">
           <p className="text-sm text-[rgb(var(--color-text-500))] text-center">
-            No hourly services added yet. Click “Add Hourly Service” above or “Skip” if you don’t
-            need time & materials billing.
+            {t('wizardHourly.emptyState', {
+              defaultValue: 'No hourly services added yet. Click “Add Hourly Service” above or “Skip” if you don’t need time & materials billing.',
+            })}
           </p>
         </div>
       )}
@@ -289,19 +309,30 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
       {data.hourly_services.length > 0 && (
         <Alert variant="info" className="mt-6">
           <AlertDescription>
-            <h4 className="text-sm font-semibold mb-2">Hourly Services Summary</h4>
+            <h4 className="text-sm font-semibold mb-2">
+              {t('wizardHourly.summary.title', { defaultValue: 'Hourly Services Summary' })}
+            </h4>
             <div className="text-sm space-y-1">
               <p>
-                <strong>Services:</strong> {data.hourly_services.length}
+                <strong>{t('wizardHourly.summary.labels.services', { defaultValue: 'Services:' })}</strong>{' '}
+                {data.hourly_services.length}
               </p>
               {data.minimum_billable_time !== undefined && (
                 <p>
-                  <strong>Minimum Time:</strong> {data.minimum_billable_time} minutes
+                  <strong>{t('wizardHourly.summary.labels.minimumTime', { defaultValue: 'Minimum Time:' })}</strong>{' '}
+                  {t('wizardHourly.summary.values.minutes', {
+                    defaultValue: '{{count}} minutes',
+                    count: data.minimum_billable_time,
+                  })}
                 </p>
               )}
               {data.round_up_to_nearest !== undefined && (
                 <p>
-                  <strong>Round Up:</strong> Every {data.round_up_to_nearest} minutes
+                  <strong>{t('wizardHourly.summary.labels.roundUp', { defaultValue: 'Round Up:' })}</strong>{' '}
+                  {t('wizardHourly.summary.values.everyMinutes', {
+                    defaultValue: 'Every {{count}} minutes',
+                    count: data.round_up_to_nearest,
+                  })}
                 </p>
               )}
             </div>
@@ -314,7 +345,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
           contractBillingFrequency={data.billing_frequency}
           value={data.hourly_billing_frequency}
           onChange={(value) => updateData({ hourly_billing_frequency: value })}
-          label="Alternate Billing Frequency (Optional)"
+          label={t('wizardHourly.alternateFrequencyLabel', { defaultValue: 'Alternate Billing Frequency (Optional)' })}
         />
       )}
     </div>

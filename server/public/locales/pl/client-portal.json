@@ -362,7 +362,8 @@
     "tabs": {
       "account": "Konto",
       "clientDetails": "Dane klienta",
-      "userManagement": "Zarządzanie użytkownikami"
+      "userManagement": "Zarządzanie użytkownikami",
+      "visibilityGroups": "Visibility Groups"
     },
     "fields": {
       "clientLogo": "Logo klienta",
@@ -421,6 +422,41 @@
       "emailExists": "Kontakt z tym adresem e-mail już istnieje",
       "createError": "Nie udało się utworzyć użytkownika",
       "deleteError": "Nie udało się usunąć użytkownika"
+    },
+    "visibilityGroups": {
+      "title": "Visibility Groups",
+      "description": "Manage which ticket boards each client portal contact can access.",
+      "nameLabel": "Name",
+      "descriptionLabel": "Description",
+      "boardLabel": "Boards",
+      "noBoards": "No boards are available",
+      "loadError": "Unable to load visibility groups",
+      "empty": "No visibility groups yet.",
+      "loading": "Loading groups...",
+      "boardCount": "boards",
+      "assignmentCount": "assigned contacts",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteDialogTitle": "Delete visibility group",
+      "deleteConfirm": "Delete this visibility group?",
+      "deleteAssignedError": "This visibility group is still assigned to one or more contacts.",
+      "deleteMissingError": "This visibility group no longer exists.",
+      "deleteSuccess": "Visibility group deleted",
+      "deleteError": "Unable to delete visibility group",
+      "save": "Save group",
+      "create": "Create group",
+      "nameRequired": "Visibility group name is required",
+      "saveError": "Unable to save visibility group",
+      "updateSuccess": "Visibility group updated",
+      "createSuccess": "Visibility group created",
+      "assignmentsTitle": "Contact assignments",
+      "assignmentsDescription": "Assign each contact a visibility group or keep full access.",
+      "noContacts": "No contacts available.",
+      "assignmentLabel": "Assigned group",
+      "fullAccess": "Full access",
+      "cancel": "Cancel",
+      "assignSuccess": "Contact visibility assignment updated",
+      "assignError": "Unable to assign visibility group"
     },
     "messages": {
       "saveChanges": "Zapisz zmiany",

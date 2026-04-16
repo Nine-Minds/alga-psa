@@ -330,7 +330,7 @@ const ClientContract = {
         .leftJoin('contracts as c', function joinContracts() {
           this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
         })
-        .where({ 'cc.client_id': clientId, 'cc.tenant': tenant, 'cc.is_active': true })
+        .where({ 'cc.client_id': clientId, 'cc.tenant': tenant })
         .orderBy('cc.start_date', 'desc');
 
       const rows = await withRenewalDefaultsJoin(baseQuery).select([
@@ -443,14 +443,14 @@ const ClientContract = {
 
       const normalized = normalizeClientContract(clientContract) as any;
 
-      const assignmentContractLines = await db('client_contract_lines as ccl')
+      const assignmentContractLines = await db('client_contracts as cc')
         .join('contract_lines as cl', function joinContractLines() {
-          this.on('ccl.contract_line_id', '=', 'cl.contract_line_id').andOn('ccl.tenant', '=', 'cl.tenant');
+          this.on('cc.contract_id', '=', 'cl.contract_id').andOn('cc.tenant', '=', 'cl.tenant');
         })
         .where({
-          'ccl.client_contract_id': clientContractId,
-          'ccl.tenant': tenant,
-          'ccl.is_active': true,
+          'cc.client_contract_id': clientContractId,
+          'cc.tenant': tenant,
+          'cl.is_active': true,
         })
         .distinct('cl.contract_line_id', 'cl.contract_line_name')
         .select('cl.contract_line_name');

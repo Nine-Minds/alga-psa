@@ -10,6 +10,7 @@ import ContractTemplateDetail from './ContractTemplateDetail';
 import ContractDetail from './ContractDetail';
 import { getClientContractByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { IClient, IDocument } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ViewMode = 'loading' | 'template' | 'client' | 'error';
 
@@ -27,6 +28,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
   currentUserId,
   renderClientDetails
 }) => {
+  const { t } = useTranslation('msp/contracts');
   const router = useRouter();
   const searchParams = useSearchParams();
   const contractId = searchParams?.get('contractId') ?? null;
@@ -43,7 +45,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
       if (!contractId && !clientContractId) {
         if (isMounted) {
           setViewMode('error');
-          setError('Missing contract identifier');
+          setError(t('detailSwitcher.errors.missingContractIdentifier', { defaultValue: 'Missing contract identifier' }));
         }
         return;
       }
@@ -75,7 +77,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
 
         if (!contractId) {
           setViewMode('error');
-          setError('Contract not found');
+          setError(t('detailSwitcher.errors.contractNotFound', { defaultValue: 'Contract not found' }));
           return;
         }
 
@@ -87,7 +89,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
 
         if (!contract) {
           setViewMode('error');
-          setError('Contract not found');
+          setError(t('detailSwitcher.errors.contractNotFound', { defaultValue: 'Contract not found' }));
           return;
         }
 
@@ -97,7 +99,9 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
         console.error('Failed to determine contract type', contractError);
         if (isMounted) {
           setViewMode('error');
-          setError('Unable to load contract details');
+          setError(t('detailSwitcher.errors.unableToLoadContractDetails', {
+            defaultValue: 'Unable to load contract details',
+          }));
         }
       }
     };
@@ -107,12 +111,12 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [clientContractId, contractId, router, searchParams]);
+  }, [clientContractId, contractId, router, searchParams, t]);
 
   if (!contractId && !clientContractId) {
     return (
       <Alert variant="destructive">
-        <AlertDescription>No contract selected.</AlertDescription>
+        <AlertDescription>{t('detailSwitcher.errors.noContractSelected', { defaultValue: 'No contract selected.' })}</AlertDescription>
       </Alert>
     );
   }
@@ -124,7 +128,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
           className="py-12 text-muted-foreground"
           layout="stacked"
           spinnerProps={{ size: 'md' }}
-          text="Loading contract..."
+          text={t('detailSwitcher.loading.contract', { defaultValue: 'Loading contract...' })}
         />
       </div>
     );
@@ -134,7 +138,9 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
     return (
       <div className="p-6">
         <Alert variant="destructive">
-          <AlertDescription>{error ?? 'Failed to load contract details'}</AlertDescription>
+          <AlertDescription>
+            {error ?? t('detailSwitcher.errors.failedToLoadContractDetails', { defaultValue: 'Failed to load contract details' })}
+          </AlertDescription>
         </Alert>
       </div>
     );

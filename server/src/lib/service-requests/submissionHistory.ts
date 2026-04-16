@@ -68,6 +68,10 @@ export interface ServiceRequestAdminDefinitionSubmissionDetail
   definition_version_id: string;
   submitted_payload: Record<string, unknown>;
   execution_error_summary: string | null;
+  requester_user_name: string | null;
+  client_name: string | null;
+  contact_name: string | null;
+  created_ticket_display: string | null;
 }
 
 export async function listServiceRequestSubmissionsForDefinition(
@@ -102,26 +106,75 @@ export async function getServiceRequestSubmissionDetailForDefinition(
   definitionId: string,
   submissionId: string
 ): Promise<ServiceRequestAdminDefinitionSubmissionDetail | null> {
-  const row = await knex('service_request_submissions')
+  const row = await knex('service_request_submissions as submission')
+    .leftJoin('users as requester', function joinRequester() {
+      this.on('requester.tenant', '=', 'submission.tenant').andOn(
+        'requester.user_id',
+        '=',
+        'submission.requester_user_id'
+      );
+    })
+    .leftJoin('clients as client', function joinClient() {
+      this.on('client.tenant', '=', 'submission.tenant').andOn(
+        'client.client_id',
+        '=',
+        'submission.client_id'
+      );
+    })
+    .leftJoin('contacts as contact', function joinContact() {
+      this.on('contact.tenant', '=', 'submission.tenant').andOn(
+        'contact.contact_name_id',
+        '=',
+        'submission.contact_id'
+      );
+    })
+    .leftJoin('tickets as ticket', function joinTicket() {
+      this.on('ticket.tenant', '=', 'submission.tenant').andOn(
+        'ticket.ticket_id',
+        '=',
+        'submission.created_ticket_id'
+      );
+    })
     .where({
-      tenant,
-      definition_id: definitionId,
-      submission_id: submissionId,
+      'submission.tenant': tenant,
+      'submission.definition_id': definitionId,
+      'submission.submission_id': submissionId,
     })
     .first(
-      'submission_id',
-      'request_name',
-      'requester_user_id',
-      'client_id',
-      'contact_id',
-      'definition_id',
-      'definition_version_id',
-      'submitted_payload',
-      'execution_status',
-      'execution_error_summary',
-      'created_ticket_id',
-      'workflow_execution_id',
-      'created_at as submitted_at'
+      'submission.submission_id',
+      'submission.request_name',
+      'submission.requester_user_id',
+      'submission.client_id',
+      'submission.contact_id',
+      'submission.definition_id',
+      'submission.definition_version_id',
+      'submission.submitted_payload',
+      'submission.execution_status',
+      'submission.execution_error_summary',
+      'submission.created_ticket_id',
+      'submission.workflow_execution_id',
+      'submission.created_at as submitted_at',
+      'client.client_name as client_name',
+      'contact.full_name as contact_name',
+      knex.raw(`
+        COALESCE(
+          NULLIF(TRIM(CONCAT(COALESCE(requester.first_name, ''), ' ', COALESCE(requester.last_name, ''))), ''),
+          requester.username,
+          requester.email,
+          requester.user_id::text
+        ) as requester_user_name
+      `),
+      knex.raw(`
+        CASE
+          WHEN ticket.ticket_number IS NOT NULL AND ticket.title IS NOT NULL AND LENGTH(TRIM(ticket.title)) > 0
+            THEN CONCAT('#', ticket.ticket_number, ' · ', ticket.title)
+          WHEN ticket.ticket_number IS NOT NULL
+            THEN CONCAT('#', ticket.ticket_number)
+          WHEN ticket.title IS NOT NULL AND LENGTH(TRIM(ticket.title)) > 0
+            THEN ticket.title
+          ELSE NULL
+        END as created_ticket_display
+      `)
     );
 
   return (row as ServiceRequestAdminDefinitionSubmissionDetail | undefined) ?? null;

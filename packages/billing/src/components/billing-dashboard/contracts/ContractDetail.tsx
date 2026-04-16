@@ -47,7 +47,7 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { fetchInvoicesByContract } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 
-import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
@@ -60,7 +60,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { cn } from '@alga-psa/ui/lib/utils';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const formatDate = (value?: string | Date | null): string => {
   if (!value) {
@@ -79,13 +79,6 @@ const formatDate = (value?: string | Date | null): string => {
 
 const normalizeRenewalMode = (value: unknown): 'none' | 'manual' | 'auto' | undefined => {
   return value === 'none' || value === 'manual' || value === 'auto' ? value : undefined;
-};
-
-const formatRenewalModeLabel = (value: unknown): string => {
-  const mode = normalizeRenewalMode(value);
-  if (mode === 'auto') return 'Auto-renew';
-  if (mode === 'none') return 'Non-renewing';
-  return 'Manual renewal';
 };
 
 function getCurrencyMeta(currencyCode: string): { fractionDigits: number; symbol: string } {
@@ -140,6 +133,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   serverUserId,
   renderClientDetails
 }) => {
+  const { t } = useTranslation('msp/contracts');
+  const { formatCurrency } = useFormatters();
+  const billingFrequencyOptions = useBillingFrequencyOptions();
   const searchParams = useSearchParams();
   const router = useRouter();
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
@@ -206,7 +202,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
   const currencyMeta = useMemo(() => {
     const currencyCode = contract?.currency_code ?? 'USD';
-    const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode });
+    const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode });
     const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
     const symbol =
       formatter.formatToParts(0).find((part) => part.type === 'currency')?.value ?? currencyCode;
@@ -218,14 +214,19 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       symbol,
     };
   }, [contract?.currency_code]);
+  const formatMinorCurrency = useCallback((amountMinorUnits: number, currencyCode: string) => {
+    const { fractionDigits } = getCurrencyMeta(currencyCode);
+    const majorUnits = Number(amountMinorUnits) / Math.pow(10, fractionDigits);
+    return formatCurrency(majorUnits, currencyCode);
+  }, [formatCurrency]);
 
   const renewalModeOptions = useMemo(
     () => [
-      { value: 'manual', label: 'Manual renewal' },
-      { value: 'auto', label: 'Auto-renew' },
-      { value: 'none', label: 'Non-renewing' },
+      { value: 'manual', label: t('renewal.modes.manual', { defaultValue: 'Manual renewal' }) },
+      { value: 'auto', label: t('renewal.modes.auto', { defaultValue: 'Auto-renew' }) },
+      { value: 'none', label: t('renewal.modes.none', { defaultValue: 'Non-renewing' }) },
     ],
-    []
+    [t]
   );
   const primaryAssignment =
     assignments.find((assignment) => assignment.client_contract_id === clientContractId) ??
@@ -237,6 +238,18 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const isSystemManagedDefault = contract?.is_system_managed_default === true;
   const primaryAssignmentUsesTenantRenewalDefaults =
     primaryAssignment?.use_tenant_renewal_defaults !== false;
+  const formatStatusLabel = useCallback((status?: string) => {
+    if (status === 'active') return t('status.active', { defaultValue: 'Active' });
+    if (status === 'terminated') return t('status.terminated', { defaultValue: 'Terminated' });
+    if (status === 'expired') return t('status.expired', { defaultValue: 'Expired' });
+    return t('status.draft', { defaultValue: 'Draft' });
+  }, [t]);
+  const formatRenewalModeLabelInHeader = useCallback((value: unknown): string => {
+    const mode = normalizeRenewalMode(value);
+    if (mode === 'auto') return t('renewal.modes.auto', { defaultValue: 'Auto-renew' });
+    if (mode === 'none') return t('renewal.modes.none', { defaultValue: 'Non-renewing' });
+    return t('renewal.modes.manual', { defaultValue: 'Manual renewal' });
+  }, [t]);
 
   useEffect(() => {
     let isMounted = true;
@@ -743,10 +756,18 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
     const errors: string[] = [];
     if (!editContractName.trim()) {
-      errors.push('Contract name');
+      errors.push(
+        t('contractDetail.validation.contractName', {
+          defaultValue: 'Contract name',
+        })
+      );
     }
     if (!editBillingFrequency) {
-      errors.push('Billing frequency');
+      errors.push(
+        t('contractDetail.validation.billingFrequency', {
+          defaultValue: 'Billing frequency',
+        })
+      );
     }
 
     if (errors.length > 0) {
@@ -845,7 +866,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error('Error updating contract:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update contract';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('contractDetail.validation.failedToUpdate', {
+          defaultValue: 'Failed to update contract',
+        });
       setValidationErrors([errorMessage]);
     } finally {
       setIsSaving(false);
@@ -1043,7 +1068,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     if (!defaultTemplateId) {
       openDrawer(
         <div className="p-4 text-sm text-red-600">
-          No invoice templates are available for preview.
+          {t('contractDetail.invoices.noTemplatesAvailable', {
+            defaultValue: 'No invoice templates are available for preview.',
+          })}
         </div>,
         undefined,
         undefined,
@@ -1063,41 +1090,39 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       undefined,
       '1100px'
     );
-  }, [invoiceTemplates, openDrawer]);
+  }, [invoiceTemplates, openDrawer, t]);
 
   const invoiceColumns = useMemo<ColumnDefinition<BillingInvoiceViewModel>[]>(() => [
     {
-      title: 'Invoice #',
+      title: t('contractDetail.invoices.columns.invoiceNumber', { defaultValue: 'Invoice #' }),
       dataIndex: 'invoice_number',
-      render: (value) => value || '—',
+      render: (value) => value || t('common.empty.notAvailable', { defaultValue: 'N/A' }),
     },
     {
-      title: 'Status',
+      title: t('contractDetail.invoices.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       render: (value) => renderInvoiceStatusBadge(value),
     },
     {
-      title: 'Invoice Date',
+      title: t('contractDetail.invoices.columns.invoiceDate', { defaultValue: 'Invoice Date' }),
       dataIndex: 'invoice_date',
       render: (value) => formatDate(value),
     },
     {
-      title: 'Due Date',
+      title: t('contractDetail.invoices.columns.dueDate', { defaultValue: 'Due Date' }),
       dataIndex: 'due_date',
       render: (value) => formatDate(value),
     },
     {
-      title: 'Amount',
+      title: t('contractDetail.invoices.columns.amount', { defaultValue: 'Amount' }),
       dataIndex: 'total_amount',
-      render: (value, record) =>
-        formatCurrencyFromMinorUnits(
-          Number(value),
-          'en-US',
-          record.currencyCode || 'USD'
-        ),
+      render: (value, record) => formatMinorCurrency(
+        Number(value),
+        record.currencyCode || 'USD'
+      ),
     },
     {
-      title: 'Preview',
+      title: t('contractDetail.invoices.columns.preview', { defaultValue: 'Preview' }),
       dataIndex: 'invoice_id',
       width: '120px',
       render: (_, record) => (
@@ -1111,11 +1136,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           }}
         >
           <Eye className="h-4 w-4 mr-1" />
-          Preview
+          {t('contractDetail.invoices.preview', { defaultValue: 'Preview' })}
         </Button>
       ),
     },
-  ], [handleOpenInvoicePreview, renderInvoiceStatusBadge]);
+  ], [formatMinorCurrency, handleOpenInvoicePreview, renderInvoiceStatusBadge, t]);
 
   if (isLoading) {
     return (
@@ -1252,11 +1277,21 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-4 flex flex-wrap gap-2">
-          <TabsTrigger value="edit">Overview</TabsTrigger>
-          <TabsTrigger value="lines" disabled={isSystemManagedDefault}>Contract Lines</TabsTrigger>
-          <TabsTrigger value="pricing" disabled={isSystemManagedDefault}>Pricing Schedules</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="edit">
+            {t('contractDetail.tabs.overview', { defaultValue: 'Overview' })}
+          </TabsTrigger>
+          <TabsTrigger value="lines" disabled={isSystemManagedDefault}>
+            {t('contractDetail.tabs.lines', { defaultValue: 'Contract Lines' })}
+          </TabsTrigger>
+          <TabsTrigger value="pricing" disabled={isSystemManagedDefault}>
+            {t('contractDetail.tabs.pricing', { defaultValue: 'Pricing Schedules' })}
+          </TabsTrigger>
+          <TabsTrigger value="documents">
+            {t('contractDetail.tabs.documents', { defaultValue: 'Documents' })}
+          </TabsTrigger>
+          <TabsTrigger value="invoices">
+            {t('contractDetail.tabs.invoices', { defaultValue: 'Invoices' })}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="edit">
@@ -1264,7 +1299,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
             {hasUnsavedChanges && (
               <Alert variant="warning">
                 <AlertDescription>
-                  You have unsaved changes. Click "Save Changes" to apply them.
+                  {t('contractDetail.alerts.unsavedChanges', {
+                    defaultValue: 'You have unsaved changes. Click "Save Changes" to apply them.',
+                  })}
                 </AlertDescription>
               </Alert>
             )}
@@ -1272,7 +1309,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
             {saveSuccess && (
               <Alert variant="success">
                 <AlertDescription>
-                  Contract saved successfully!
+                  {t('contractDetail.alerts.saveSuccess', {
+                    defaultValue: 'Contract saved successfully!',
+                  })}
                 </AlertDescription>
               </Alert>
             )}
@@ -1281,10 +1320,26 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
               <Alert variant="info" data-testid="system-managed-default-contract-alert">
                 <AlertDescription>
                   <div className="space-y-1">
-                    <div className="font-medium">System-managed default contract</div>
-                    <div>Created automatically for uncontracted work.</div>
-                    <div>This contract is attribution-only and does not control recurring billing behavior.</div>
-                    <div>To configure custom billing behavior, create or edit a normal user-authored contract.</div>
+                    <div className="font-medium">
+                      {t('contractDetail.systemManaged.title', {
+                        defaultValue: 'System-managed default contract',
+                      })}
+                    </div>
+                    <div>
+                      {t('contractDetail.systemManaged.createdAutomatically', {
+                        defaultValue: 'Created automatically for uncontracted work.',
+                      })}
+                    </div>
+                    <div>
+                      {t('contractDetail.systemManaged.attributionOnly', {
+                        defaultValue: 'This contract is attribution-only and does not control recurring billing behavior.',
+                      })}
+                    </div>
+                    <div>
+                      {t('contractDetail.systemManaged.configureCustom', {
+                        defaultValue: 'To configure custom billing behavior, create or edit a normal user-authored contract.',
+                      })}
+                    </div>
                   </div>
                 </AlertDescription>
               </Alert>
@@ -1299,7 +1354,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                       <p>{validationErrors[0]}</p>
                     ) : (
                       <>
-                        <p className="font-medium mb-2">Please fix the following errors:</p>
+                        <p className="font-medium mb-2">
+                          {t('contractDetail.validation.fixErrors', {
+                            defaultValue: 'Please fix the following errors:',
+                          })}
+                        </p>
                         <ul className="list-disc list-inside space-y-1">
                           {validationErrors.map((err, index) => (
                             <li key={index}>{err}</li>
@@ -1317,15 +1376,23 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <Pencil className="h-4 w-4 text-blue-600" />
-                      Contract Details
+                      {t('contractDetail.detailsCard.title', { defaultValue: 'Contract Details' })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <Label htmlFor="edit-contract-name">Contract Name *</Label>
+                        <Label htmlFor="edit-contract-name">
+                          {t('contractDetail.detailsCard.contractNameLabel', {
+                            defaultValue: 'Contract Name *',
+                          })}
+                        </Label>
                         {isSystemManagedDefault ? (
-                          <Badge variant="info">System-managed default</Badge>
+                          <Badge variant="info">
+                            {t('contractDetail.labels.systemManagedDefault', {
+                              defaultValue: 'System-managed default',
+                            })}
+                          </Badge>
                         ) : null}
                         {!isEditingName && (
                           <Button
@@ -1336,13 +1403,23 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             onClick={() => setIsEditingName(true)}
                             className="h-5 w-5 p-0"
                             disabled={isSystemManagedDefault}
+                            aria-label={t('contractDetail.detailsCard.actions.editName', {
+                              defaultValue: 'Edit contract name',
+                            })}
+                            title={t('contractDetail.detailsCard.actions.editName', {
+                              defaultValue: 'Edit contract name',
+                            })}
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
                         )}
                       </div>
                       {isSystemManagedDefault ? (
-                        <p className="text-xs text-muted-foreground">Created automatically for uncontracted work</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t('contractDetail.systemManaged.createdAutomatically', {
+                            defaultValue: 'Created automatically for uncontracted work.',
+                          })}
+                        </p>
                       ) : null}
                       {isEditingName ? (
                         <div className="flex items-center gap-2">
@@ -1353,7 +1430,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                               setEditContractName(e.target.value);
                               clearErrorIfSubmitted();
                             }}
-                            placeholder="Enter contract name"
+                            placeholder={t('contractDetail.detailsCard.contractNamePlaceholder', {
+                              defaultValue: 'Enter contract name',
+                            })}
                             required
                             className={hasAttemptedSubmit && !editContractName.trim() ? 'border-red-500' : ''}
                           />
@@ -1362,6 +1441,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             type="button"
                             size="sm"
                             onClick={() => setIsEditingName(false)}
+                            aria-label={t('contractDetail.detailsCard.actions.saveName', {
+                              defaultValue: 'Save contract name',
+                            })}
+                            title={t('contractDetail.detailsCard.actions.saveName', {
+                              defaultValue: 'Save contract name',
+                            })}
                           >
                             <Check className="h-4 w-4" />
                           </Button>
@@ -1374,6 +1459,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                               setEditContractName(contract.contract_name);
                               setIsEditingName(false);
                             }}
+                            aria-label={t('contractDetail.detailsCard.actions.cancelName', {
+                              defaultValue: 'Cancel contract name',
+                            })}
+                            title={t('contractDetail.detailsCard.actions.cancelName', {
+                              defaultValue: 'Cancel contract name',
+                            })}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -1384,7 +1475,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <Label htmlFor="edit-description">Description</Label>
+                        <Label htmlFor="edit-description">
+                          {t('contractDetail.detailsCard.descriptionLabel', {
+                            defaultValue: 'Description',
+                          })}
+                        </Label>
                         {!isEditingDescription && (
                           <Button
                             id="edit-description-btn"
@@ -1394,6 +1489,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             onClick={() => setIsEditingDescription(true)}
                             className="h-5 w-5 p-0"
                             disabled={isSystemManagedDefault}
+                            aria-label={t('contractDetail.detailsCard.actions.editDescription', {
+                              defaultValue: 'Edit contract description',
+                            })}
+                            title={t('contractDetail.detailsCard.actions.editDescription', {
+                              defaultValue: 'Edit contract description',
+                            })}
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
@@ -1405,7 +1506,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             id="edit-description"
                             value={editDescription}
                             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditDescription(e.target.value)}
-                            placeholder="Enter contract description"
+                            placeholder={t('contractDetail.detailsCard.descriptionPlaceholder', {
+                              defaultValue: 'Enter contract description',
+                            })}
                             className="min-h-[100px]"
                           />
                           <div className="flex gap-2">
@@ -1414,6 +1517,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                               type="button"
                               size="sm"
                               onClick={() => setIsEditingDescription(false)}
+                              aria-label={t('contractDetail.detailsCard.actions.saveDescription', {
+                                defaultValue: 'Save description',
+                              })}
+                              title={t('contractDetail.detailsCard.actions.saveDescription', {
+                                defaultValue: 'Save description',
+                              })}
                             >
                               <Check className="h-4 w-4" />
                             </Button>
@@ -1426,13 +1535,21 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 setEditDescription(contract.contract_description ?? '');
                                 setIsEditingDescription(false);
                               }}
+                              aria-label={t('contractDetail.detailsCard.actions.cancelDescription', {
+                                defaultValue: 'Cancel description edits',
+                              })}
+                              title={t('contractDetail.detailsCard.actions.cancelDescription', {
+                                defaultValue: 'Cancel description edits',
+                              })}
                             >
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
                       ) : (
-                        <p className="text-base text-[rgb(var(--color-text-700))]">{editDescription || 'No description'}</p>
+                        <p className="text-base text-[rgb(var(--color-text-700))]">
+                          {editDescription || t('contractDetail.labels.noDescription', { defaultValue: 'No description' })}
+                        </p>
                       )}
                     </div>
                   </CardContent>
@@ -1442,14 +1559,16 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <FileText className="h-4 w-4 text-purple-600" />
-                      Contract Header
+                      {t('contractDetail.headerCard.title', { defaultValue: 'Contract Header' })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm text-[rgb(var(--color-text-700))]">
                     <div className="space-y-2">
                       <div className="space-y-1">
                         <span className="text-xs text-muted-foreground">
-                          {isLiveClientContract ? 'Assignment Status' : 'Status'}
+                          {isLiveClientContract
+                            ? t('contractDetail.headerCard.assignmentStatus', { defaultValue: 'Assignment Status' })
+                            : t('common.labels.status', { defaultValue: 'Status' })}
                         </span>
                         {isLiveClientContract ? (
                           <>
@@ -1464,16 +1583,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                       : 'default-muted'
                               }
                             >
-                              {primaryAssignmentStatus === 'active'
-                                ? 'Active'
-                                : primaryAssignmentStatus === 'terminated'
-                                  ? 'Terminated'
-                                  : primaryAssignmentStatus === 'expired'
-                                    ? 'Expired'
-                                    : 'Draft'}
+                              {formatStatusLabel(primaryAssignmentStatus)}
                             </Badge>
                             <p className="text-xs text-muted-foreground">
-                              Live client status is controlled by the assignment lifecycle below.
+                              {t('contractDetail.headerCard.assignmentLifecycleHint', {
+                                defaultValue: 'Live client status is controlled by the assignment lifecycle below.',
+                              })}
                             </p>
                           </>
                         ) : (
@@ -1483,23 +1598,31 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                               value={editStatus}
                               onValueChange={(value) => setEditStatus(value)}
                               options={[
-                                { value: 'active', label: 'Active' },
-                                { value: 'draft', label: 'Draft' },
-                                { value: 'terminated', label: 'Terminated' },
-                                ...(contract.status === 'expired' ? [{ value: 'expired', label: 'Expired' }] : [])
+                                { value: 'active', label: t('status.active', { defaultValue: 'Active' }) },
+                                { value: 'draft', label: t('status.draft', { defaultValue: 'Draft' }) },
+                                { value: 'terminated', label: t('status.terminated', { defaultValue: 'Terminated' }) },
+                                ...(contract.status === 'expired'
+                                  ? [{ value: 'expired', label: t('status.expired', { defaultValue: 'Expired' }) }]
+                                  : [])
                               ]}
                               disabled={contract.status === 'expired' || isSystemManagedDefault}
                             />
                             {contract.status === 'expired' && (
                               <p className="text-xs text-muted-foreground">
-                                Expired contracts cannot be changed to another status
+                                {t('contractDetail.headerCard.expiredStatusNote', {
+                                  defaultValue: 'Expired contracts cannot be changed to another status',
+                                })}
                               </p>
                             )}
                           </>
                         )}
                       </div>
                       <div className="space-y-1">
-                        <span className="text-xs text-muted-foreground">Billing Frequency *</span>
+                        <span className="text-xs text-muted-foreground">
+                          {t('contractDetail.headerCard.billingFrequencyLabel', {
+                            defaultValue: 'Billing Frequency *',
+                          })}
+                        </span>
                         <CustomSelect
                           id="edit-billing-frequency"
                           value={editBillingFrequency}
@@ -1507,41 +1630,49 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             setEditBillingFrequency(value);
                             clearErrorIfSubmitted();
                           }}
-                          options={BILLING_FREQUENCY_OPTIONS}
-                          placeholder="Select billing frequency"
+                          options={billingFrequencyOptions}
+                          placeholder={t('contractDetail.headerCard.billingFrequencyPlaceholder', {
+                            defaultValue: 'Select billing frequency',
+                          })}
                           className={hasAttemptedSubmit && !editBillingFrequency ? 'ring-1 ring-red-500' : ''}
                           disabled={isSystemManagedDefault}
                         />
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Currency</span>
+                      <span>{t('common.labels.currency', { defaultValue: 'Currency' })}</span>
                       <span className="font-medium">{contract.currency_code || 'USD'}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Created</span>
+                      <span>{t('common.labels.created', { defaultValue: 'Created' })}</span>
                       <span className="font-medium">{formatDate(contract.created_at)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Last Updated</span>
+                      <span>{t('common.labels.lastUpdated', { defaultValue: 'Last Updated' })}</span>
                       <span className="font-medium">{formatDate(contract.updated_at)}</span>
                     </div>
                     {primaryAssignment && (
                       <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-surface-50))] p-3 space-y-1.5">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Renewal</p>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          {t('contractDetail.headerCard.renewalHeading', { defaultValue: 'Renewal' })}
+                        </p>
                         <div className="flex items-center justify-between">
-                          <span>Mode</span>
+                          <span>{t('renewal.labels.mode', { defaultValue: 'Renewal Mode' })}</span>
                           <span className="font-medium">
                             {primaryAssignment.end_date
-                              ? formatRenewalModeLabel(primaryAssignmentRenewalMode)
-                              : 'Ongoing (no end date)'}
+                              ? formatRenewalModeLabelInHeader(primaryAssignmentRenewalMode)
+                              : t('contractDetail.headerCard.ongoingNoEndDate', {
+                                defaultValue: 'Ongoing (no end date)',
+                              })}
                           </span>
                         </div>
                         {primaryAssignment.end_date && (
                           <div className="flex items-center justify-between">
-                            <span>Source</span>
+                            <span>{t('renewal.labels.source', { defaultValue: 'Renewal Source' })}</span>
                             <span className="font-medium">
-                              {primaryAssignmentUsesTenantRenewalDefaults ? 'Tenant defaults' : 'Custom settings'}
+                              {primaryAssignmentUsesTenantRenewalDefaults
+                                ? t('contractDetail.headerCard.tenantDefaults', { defaultValue: 'Tenant defaults' })
+                                : t('contractDetail.headerCard.customSettings', { defaultValue: 'Custom settings' })}
                             </span>
                           </div>
                         )}
@@ -1549,15 +1680,23 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           primaryAssignmentRenewalMode !== 'none' &&
                           primaryAssignmentNoticePeriod !== undefined && (
                             <div className="flex items-center justify-between">
-                              <span>Notice</span>
+                              <span>{t('contractDetail.headerCard.notice', { defaultValue: 'Notice' })}</span>
                               <span className="font-medium">
-                                {primaryAssignmentNoticePeriod} day{primaryAssignmentNoticePeriod === 1 ? '' : 's'}
+                                {primaryAssignmentNoticePeriod === 1
+                                  ? t('contractDetail.headerCard.noticeDay', {
+                                    count: primaryAssignmentNoticePeriod,
+                                    defaultValue: '{{count}} day',
+                                  })
+                                  : t('contractDetail.headerCard.noticeDays', {
+                                    count: primaryAssignmentNoticePeriod,
+                                    defaultValue: '{{count}} days',
+                                  })}
                               </span>
                             </div>
                           )}
                         {primaryAssignment.end_date && primaryAssignment.decision_due_date && (
                           <div className="flex items-center justify-between">
-                            <span>Decision Due</span>
+                            <span>{t('renewal.labels.decisionDue', { defaultValue: 'Decision Due' })}</span>
                             <span className="font-medium">{formatDate(primaryAssignment.decision_due_date)}</span>
                           </div>
                         )}
@@ -1565,7 +1704,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     )}
                     {editDescription && (
                       <div>
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Description</p>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                          {t('common.labels.description', { defaultValue: 'Description' })}
+                        </p>
                         <p className="text-sm text-[rgb(var(--color-text-800))]">{editDescription}</p>
                       </div>
                     )}
@@ -1576,27 +1717,43 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <Users className="h-4 w-4 text-emerald-600" />
-                      Client Ownership
+                      {t('contractDetail.clientOwnership.title', {
+                        defaultValue: 'Client Ownership',
+                      })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm text-[rgb(var(--color-text-700))]">
                     {isSystemManagedDefault ? (
                       <p className="text-xs text-muted-foreground">
-                        Ownership is system-managed for this default contract.
+                        {t('contractDetail.clientOwnership.systemManaged', {
+                          defaultValue: 'Ownership is system-managed for this default contract.',
+                        })}
                       </p>
                     ) : null}
                     {assignments.length === 0 ? (
-                      <p className="text-muted-foreground">No client assigned to this contract yet.</p>
+                      <p className="text-muted-foreground">
+                        {t('contractDetail.labels.noClientAssigned', {
+                          defaultValue: 'No client assigned',
+                        })}
+                      </p>
                     ) : (
                       <>
                         <div className="flex items-center justify-between">
-                          <span>Owner Client</span>
+                          <span>
+                            {t('contractDetail.clientOwnership.ownerClient', {
+                              defaultValue: 'Owner Client',
+                            })}
+                          </span>
                           <span className="font-medium">
                             {primaryAssignment?.client_name || primaryAssignment?.client_id || contract.owner_client_id || '—'}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span>Client Name</span>
+                          <span>
+                            {t('contractDetail.clientOwnership.clientName', {
+                              defaultValue: 'Client Name',
+                            })}
+                          </span>
                           <button
                             type="button"
                             onClick={() => handleOpenClientDrawer(assignments[0].client_id)}
@@ -1606,46 +1763,57 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           </button>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span>Assignment Status</span>
+                          <span>
+                            {t('contractDetail.clientOwnership.assignmentStatus', {
+                              defaultValue: 'Assignment Status',
+                            })}
+                          </span>
                           <Badge variant={
                             primaryAssignmentStatus === 'active' ? 'success' :
                             primaryAssignmentStatus === 'terminated' ? 'warning' :
                             primaryAssignmentStatus === 'expired' ? 'error' :
                             'default-muted'
                           }>
-                            {primaryAssignmentStatus === 'active' ? 'Active' :
-                             primaryAssignmentStatus === 'terminated' ? 'Terminated' :
-                             primaryAssignmentStatus === 'expired' ? 'Expired' :
-                             'Draft'}
+                            {formatStatusLabel(primaryAssignmentStatus)}
                           </Badge>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span>Start Date</span>
+                          <span>
+                            {t('contractDetail.clientOwnership.startDate', {
+                              defaultValue: 'Start Date',
+                            })}
+                          </span>
                           <span className="font-medium">{formatDate(assignments[0].start_date)}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span>End Date</span>
+                          <span>
+                            {t('contractDetail.clientOwnership.endDate', {
+                              defaultValue: 'End Date',
+                            })}
+                          </span>
                           <span className="font-medium">
-                            {assignments[0].end_date ? formatDate(assignments[0].end_date) : 'Ongoing'}
+                            {assignments[0].end_date
+                              ? formatDate(assignments[0].end_date)
+                              : t('common.empty.ongoing', { defaultValue: 'Ongoing' })}
                           </span>
                         </div>
                     {assignments[0].po_required && (
                       <>
                             <div className="flex items-center justify-between">
-                              <span>PO Number</span>
+                              <span>{t('po.labels.number', { defaultValue: 'PO Number' })}</span>
                               <span className="font-medium">
-                                {assignments[0].po_number || <span className="text-orange-600">Required</span>}
+                                {assignments[0].po_number || (
+                                  <span className="text-orange-600">
+                                    {t('contractDetail.clientOwnership.required', { defaultValue: 'Required' })}
+                                  </span>
+                                )}
                               </span>
                             </div>
                             {assignments[0].po_amount != null && (
                               <div className="flex items-center justify-between">
-                                <span>PO Amount</span>
+                                <span>{t('po.labels.amount', { defaultValue: 'PO Amount' })}</span>
                                 <span className="font-medium">
-                                  {formatCurrencyFromMinorUnits(
-                                    Number(assignments[0].po_amount),
-                                    'en-US',
-                                    currencyMeta.currencyCode
-                                  )}
+                                  {formatMinorCurrency(Number(assignments[0].po_amount), currencyMeta.currencyCode)}
                                 </span>
                               </div>
                             )}
@@ -1669,13 +1837,17 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <Users className="h-4 w-4 text-sky-600" />
-                    Client Assignment
+                    {t('contractDetail.clientAssignment.title', {
+                      defaultValue: 'Client Assignment',
+                    })}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {assignments.length === 0 ? (
                     <div className="py-6 text-sm text-muted-foreground">
-                      This contract is not assigned to a client yet.
+                      {t('contractDetail.clientAssignment.empty', {
+                        defaultValue: 'This contract is not assigned to a client yet.',
+                      })}
                     </div>
                   ) : (
                     assignments.map((assignment) => {
@@ -1694,7 +1866,10 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 {assignment.client_name || assignment.client_id}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                Client Contract ID: {assignment.client_contract_id}
+                                {t('contractDetail.clientAssignment.clientContractId', {
+                                  defaultValue: 'Client Contract ID: {{id}}',
+                                  id: assignment.client_contract_id,
+                                })}
                               </p>
                             </div>
                             {isEditing ? (
@@ -1707,7 +1882,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                   className="gap-2"
                                 >
                                   <Check className="h-4 w-4" />
-                                  Save
+                                  {t('common.actions.save', { defaultValue: 'Save' })}
                                 </Button>
                                 <Button
                                   id={`cancel-assignment-${assignment.client_contract_id}`}
@@ -1718,7 +1893,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                   className="gap-2"
                                 >
                                   <X className="h-4 w-4" />
-                                  Cancel
+                                  {t('common.actions.cancel', { defaultValue: 'Cancel' })}
                                 </Button>
                               </div>
                             ) : (
@@ -1732,7 +1907,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 disabled={isSystemManagedDefault}
                               >
                                 <Pencil className="h-4 w-4" />
-                                Edit
+                                {t('common.actions.edit', { defaultValue: 'Edit' })}
                               </Button>
                             )}
                           </div>
@@ -1740,14 +1915,18 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           <div className="grid gap-4 md:grid-cols-2">
                             <div>
                               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                Start Date
+                                {t('contractDetail.clientAssignment.startDate', {
+                                  defaultValue: 'Start Date',
+                                })}
                               </Label>
                               {isEditing ? (
                                 <div
                                   className="mt-1 w-full md:w-56"
                                   title={
                                     contract.status === 'active'
-                                      ? 'Start date cannot be changed for active contracts'
+                                      ? t('contractDetail.clientAssignment.startDateLocked', {
+                                        defaultValue: 'Start date cannot be changed for active contracts',
+                                      })
                                       : undefined
                                   }
                                 >
@@ -1762,8 +1941,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                       )
                                     }
                                     className="w-full"
-                                    placeholder="Select start date"
-                                    label="Assignment start date"
+                                    placeholder={t('contractDetail.clientAssignment.selectStartDate', {
+                                      defaultValue: 'Select start date',
+                                    })}
+                                    label={t('contractDetail.clientAssignment.startDateLabel', {
+                                      defaultValue: 'Assignment start date',
+                                    })}
                                     disabled={contract.status === 'active'}
                                   />
                                 </div>
@@ -1775,7 +1958,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             </div>
                             <div>
                               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                End Date
+                                {t('contractDetail.clientAssignment.endDate', {
+                                  defaultValue: 'End Date',
+                                })}
                               </Label>
                               {isEditing ? (
                                 <div className="mt-1 w-full md:w-56">
@@ -1790,14 +1975,20 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                       )
                                     }
                                     className="w-full"
-                                    placeholder="Ongoing"
-                                    label="Assignment end date"
+                                    placeholder={t('common.empty.ongoing', {
+                                      defaultValue: 'Ongoing',
+                                    })}
+                                    label={t('contractDetail.clientAssignment.endDateLabel', {
+                                      defaultValue: 'Assignment end date',
+                                    })}
                                     clearable
                                   />
                                 </div>
                               ) : (
                                 <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-                                  {editData.end_date ? formatDate(editData.end_date) : 'Ongoing'}
+                                  {editData.end_date
+                                    ? formatDate(editData.end_date)
+                                    : t('common.empty.ongoing', { defaultValue: 'Ongoing' })}
                                 </p>
                               )}
                             </div>
@@ -1806,7 +1997,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
                               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                Renewal Handling
+                                {t('contractDetail.clientAssignment.renewalHandling', {
+                                  defaultValue: 'Renewal Handling',
+                                })}
                               </Label>
                               {isEditing ? (
                                 <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-surface-50))] p-3">
@@ -1815,7 +2008,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                       htmlFor={`assignment-use-tenant-renewal-defaults-${assignment.client_contract_id}`}
                                       className="text-sm"
                                     >
-                                      Use tenant renewal defaults
+                                      {t('contractDetail.clientAssignment.useTenantRenewalDefaults', {
+                                        defaultValue: 'Use tenant renewal defaults',
+                                      })}
                                     </Label>
                                     <Switch
                                       id={`assignment-use-tenant-renewal-defaults-${assignment.client_contract_id}`}
@@ -1833,7 +2028,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                   {editData.use_tenant_renewal_defaults === false && (
                                     <div className="space-y-2">
                                       <Label htmlFor={`assignment-renewal-mode-${assignment.client_contract_id}`} className="text-sm">
-                                        Renewal Mode
+                                        {t('renewal.labels.mode', { defaultValue: 'Renewal Mode' })}
                                       </Label>
                                       <CustomSelect
                                         id={`assignment-renewal-mode-${assignment.client_contract_id}`}
@@ -1847,7 +2042,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                           )
                                         }
                                         className="w-full"
-                                        placeholder="Select renewal mode"
+                                        placeholder={t('contractDetail.clientAssignment.selectRenewalMode', {
+                                          defaultValue: 'Select renewal mode',
+                                        })}
                                       />
                                     </div>
                                   )}
@@ -1856,7 +2053,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                     (normalizeRenewalMode(editData.renewal_mode) ?? 'manual') !== 'none' && (
                                       <div className="space-y-2">
                                         <Label htmlFor={`assignment-notice-period-${assignment.client_contract_id}`} className="text-sm">
-                                          Notice Period (Days)
+                                          {t('contractDetail.clientAssignment.noticePeriodDays', {
+                                            defaultValue: 'Notice Period (Days)',
+                                          })}
                                         </Label>
                                         <Input
                                           id={`assignment-notice-period-${assignment.client_contract_id}`}
@@ -1875,13 +2074,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                               return;
                                             }
                                             const parsed = Number.parseInt(raw, 10);
-                                            handleAssignmentFieldChange(
+                                          handleAssignmentFieldChange(
                                               assignment.client_contract_id,
                                               'notice_period_days',
                                               Number.isFinite(parsed) ? Math.max(0, parsed) : undefined
                                             );
                                           }}
-                                          placeholder="e.g., 30"
+                                          placeholder={t('contractDetail.clientAssignment.noticePeriodPlaceholder', {
+                                            defaultValue: 'e.g., 30',
+                                          })}
                                         />
                                       </div>
                                     )}
@@ -1890,7 +2091,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                     (normalizeRenewalMode(editData.renewal_mode) ?? 'manual') === 'auto' && (
                                       <div className="space-y-2">
                                         <Label htmlFor={`assignment-renewal-term-${assignment.client_contract_id}`} className="text-sm">
-                                          Renewal Term (Months)
+                                          {t('contractDetail.clientAssignment.renewalTermMonths', {
+                                            defaultValue: 'Renewal Term (Months)',
+                                          })}
                                         </Label>
                                         <Input
                                           id={`assignment-renewal-term-${assignment.client_contract_id}`}
@@ -1915,7 +2118,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                               Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
                                             );
                                           }}
-                                          placeholder="e.g., 12"
+                                          placeholder={t('contractDetail.clientAssignment.renewalTermPlaceholder', {
+                                            defaultValue: 'e.g., 12',
+                                          })}
                                         />
                                       </div>
                                     )}
@@ -1923,7 +2128,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                   {editData.use_tenant_renewal_defaults === false && (
                                     <div className="space-y-2">
                                       <Label htmlFor={`assignment-renewal-ticket-board-${assignment.client_contract_id}`} className="text-sm">
-                                        Renewal Ticket Board
+                                        {t('contractDetail.clientAssignment.renewalTicketBoard', {
+                                          defaultValue: 'Renewal Ticket Board',
+                                        })}
                                       </Label>
                                       <CustomSelect
                                         id={`assignment-renewal-ticket-board-${assignment.client_contract_id}`}
@@ -1937,7 +2144,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                           )
                                         }
                                         className="w-full"
-                                        placeholder="Select board"
+                                        placeholder={t('contractDetail.clientAssignment.selectBoard', {
+                                          defaultValue: 'Select board',
+                                        })}
                                       />
                                     </div>
                                   )}
@@ -1945,7 +2154,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                   {editData.use_tenant_renewal_defaults === false && (
                                     <div className="space-y-2">
                                       <Label htmlFor={`assignment-renewal-ticket-status-${assignment.client_contract_id}`} className="text-sm">
-                                        Renewal Ticket Status
+                                        {t('contractDetail.clientAssignment.renewalTicketStatus', {
+                                          defaultValue: 'Renewal Ticket Status',
+                                        })}
                                       </Label>
                                       <CustomSelect
                                         id={`assignment-renewal-ticket-status-${assignment.client_contract_id}`}
@@ -1961,8 +2172,16 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                         className="w-full"
                                         placeholder={
                                           editData.renewal_ticket_board_id
-                                            ? (loadingRenewalTicketStatuses ? 'Loading statuses...' : 'Select status')
-                                            : 'Select a board first'
+                                            ? (loadingRenewalTicketStatuses
+                                              ? t('contractDetail.clientAssignment.loadingStatuses', {
+                                                defaultValue: 'Loading statuses...',
+                                              })
+                                              : t('contractDetail.clientAssignment.selectStatus', {
+                                                defaultValue: 'Select status',
+                                              }))
+                                            : t('contractDetail.clientAssignment.selectBoardFirst', {
+                                              defaultValue: 'Select a board first',
+                                            })
                                         }
                                         disabled={!editData.renewal_ticket_board_id || loadingRenewalTicketStatuses}
                                       />
@@ -1972,20 +2191,33 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                               ) : (
                                 <div className="space-y-1">
                                   <p className="text-sm text-[rgb(var(--color-text-800))]">
-                                    {formatRenewalModeLabel(
+                                    {formatRenewalModeLabelInHeader(
                                       editData.effective_renewal_mode ?? editData.renewal_mode
                                     )}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
                                     {editData.use_tenant_renewal_defaults !== false
-                                      ? 'Using tenant defaults'
-                                      : 'Using custom assignment settings'}
+                                      ? t('contractDetail.clientAssignment.usingTenantDefaults', {
+                                        defaultValue: 'Using tenant defaults',
+                                      })
+                                      : t('contractDetail.clientAssignment.usingCustomSettings', {
+                                        defaultValue: 'Using custom assignment settings',
+                                      })}
                                   </p>
                                   {(editData.effective_notice_period_days ?? editData.notice_period_days) !== undefined && (
                                     <p className="text-xs text-muted-foreground">
-                                      Notice:{' '}
-                                      {editData.effective_notice_period_days ?? editData.notice_period_days} day
-                                      {(editData.effective_notice_period_days ?? editData.notice_period_days) === 1 ? '' : 's'}
+                                      {t('contractDetail.clientAssignment.noticePrefix', {
+                                        defaultValue: 'Notice:',
+                                      })}{' '}
+                                      {(editData.effective_notice_period_days ?? editData.notice_period_days) === 1
+                                        ? t('contractDetail.headerCard.noticeDay', {
+                                          count: editData.effective_notice_period_days ?? editData.notice_period_days,
+                                          defaultValue: '{{count}} day',
+                                        })
+                                        : t('contractDetail.headerCard.noticeDays', {
+                                          count: editData.effective_notice_period_days ?? editData.notice_period_days,
+                                          defaultValue: '{{count}} days',
+                                        })}
                                     </p>
                                   )}
                                 </div>
@@ -1993,10 +2225,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             </div>
                             <div className="space-y-2">
                               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                Decision Due
+                                {t('renewal.labels.decisionDue', { defaultValue: 'Decision Due' })}
                               </Label>
                               <p className="text-sm text-[rgb(var(--color-text-800))]">
-                                {editData.decision_due_date ? formatDate(editData.decision_due_date) : '—'}
+                                {editData.decision_due_date
+                                  ? formatDate(editData.decision_due_date)
+                                  : t('common.empty.notAvailable', { defaultValue: 'N/A' })}
                               </p>
                             </div>
                           </div>
@@ -2005,7 +2239,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             <div className="grid gap-4 md:grid-cols-2">
                               <div>
                                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  PO Required
+                                  {t('po.labels.required', { defaultValue: 'PO Required' })}
                                 </Label>
                                 {isEditing ? (
                                   <div className="mt-2">
@@ -2023,13 +2257,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                   </div>
                                 ) : (
                                   <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-                                    {editData.po_required ? 'Yes' : 'No'}
+                                    {editData.po_required
+                                      ? t('common.labels.yes', { defaultValue: 'Yes' })
+                                      : t('common.labels.no', { defaultValue: 'No' })}
                                   </p>
                                 )}
                               </div>
                               <div>
                                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  PO Number
+                                  {t('po.labels.number', { defaultValue: 'PO Number' })}
                                 </Label>
                                 {isEditing ? (
                                   <Input
@@ -2041,7 +2277,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                         e.target.value || null
                                       )
                                     }
-                                    placeholder="PO Number"
+                                    placeholder={t('po.labels.number', { defaultValue: 'PO Number' })}
                                     className="mt-1 w-full max-w-xs"
                                     disabled={!editData.po_required}
                                   />
@@ -2049,9 +2285,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                   <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                     {editData.po_required
                                       ? editData.po_number || (
-                                          <span className="text-orange-600">Required</span>
+                                          <span className="text-orange-600">
+                                            {t('contractDetail.clientAssignment.required', {
+                                              defaultValue: 'Required',
+                                            })}
+                                          </span>
                                         )
-                                      : 'Not required'}
+                                      : t('contractDetail.clientAssignment.notRequired', {
+                                        defaultValue: 'Not required',
+                                      })}
                                   </p>
                                 )}
                               </div>
@@ -2062,7 +2304,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             <div className="grid gap-4 md:grid-cols-2">
                               <div>
                                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  PO Amount
+                                  {t('po.labels.amount', { defaultValue: 'PO Amount' })}
                                 </Label>
                                 {isEditing ? (
                                   <div className="relative mt-1 w-full max-w-xs">
@@ -2122,12 +2364,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 ) : (
                                   <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                     {editData.po_amount != null
-                                      ? formatCurrencyFromMinorUnits(
-                                          Number(editData.po_amount),
-                                          'en-US',
-                                          currencyMeta.currencyCode
-                                        )
-                                      : '—'}
+                                      ? formatMinorCurrency(Number(editData.po_amount), currencyMeta.currencyCode)
+                                      : t('common.empty.notAvailable', { defaultValue: 'N/A' })}
                                   </p>
                                 )}
                               </div>
@@ -2144,7 +2382,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <Package className="h-4 w-4 text-purple-600" />
-                    Quick Actions
+                    {t('contractDetail.quickActions.title', { defaultValue: 'Quick Actions' })}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-3">
@@ -2155,7 +2393,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     disabled={isSystemManagedDefault}
                   >
                     <Layers3 className="mr-2 h-4 w-4" />
-                    Manage Contract Lines
+                    {t('contractDetail.quickActions.manageContractLines', {
+                      defaultValue: 'Manage Contract Lines',
+                    })}
                   </Button>
                   <Button
                     id="edit-manage-pricing"
@@ -2164,15 +2404,17 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     disabled={isSystemManagedDefault}
                   >
                     <CalendarClock className="mr-2 h-4 w-4" />
-                    Manage Pricing Schedules
+                    {t('contractDetail.quickActions.managePricingSchedules', {
+                      defaultValue: 'Manage Pricing Schedules',
+                    })}
                   </Button>
                   <Button id="edit-view-documents" variant="outline" onClick={() => handleTabChange('documents')}>
                     <File className="mr-2 h-4 w-4" />
-                    View Documents
+                    {t('contractDetail.quickActions.viewDocuments', { defaultValue: 'View Documents' })}
                   </Button>
                   <Button id="edit-view-invoices" variant="outline" onClick={() => handleTabChange('invoices')}>
                     <FileText className="mr-2 h-4 w-4" />
-                    View Invoices
+                    {t('contractDetail.quickActions.viewInvoices', { defaultValue: 'View Invoices' })}
                   </Button>
                   {!isSystemManagedDefault ? (
                     <Button
@@ -2181,7 +2423,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                       onClick={() => setShowDeleteConfirm(true)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Contract
+                      {t('contractDetail.quickActions.deleteContract', {
+                        defaultValue: 'Delete Contract',
+                      })}
                     </Button>
                   ) : null}
                 </CardContent>
@@ -2194,7 +2438,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   variant="outline"
                   onClick={handleCancelClick}
                 >
-                  Cancel
+                  {t('common.actions.cancel', { defaultValue: 'Cancel' })}
                 </Button>
                 <Button
                   id="save-edit-contract-btn"
@@ -2203,7 +2447,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   className={!editContractName.trim() || !editBillingFrequency ? 'opacity-50' : ''}
                 >
                   <span className={hasUnsavedChanges ? 'font-bold' : ''}>
-                    {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
+                    {isSaving
+                      ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                      : hasUnsavedChanges
+                        ? t('common.actions.saveChangesDirty', { defaultValue: 'Save Changes *' })
+                        : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
                   </span>
                   {!isSaving && <Save className="ml-2 h-4 w-4" />}
                 </Button>
@@ -2235,7 +2483,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           }) : (
             <Card>
               <CardContent className="py-6 text-center text-muted-foreground">
-                Loading documents...
+                {t('contractDetail.documents.loading', { defaultValue: 'Loading documents...' })}
               </CardContent>
             </Card>
           )}
@@ -2246,13 +2494,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
             <CardHeader>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <FileText className="h-4 w-4 text-blue-600" />
-                Contract Invoices
+                {t('contractDetail.invoices.title', { defaultValue: 'Contract Invoices' })}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  Select an invoice to open a full preview in the drawer.
+                  {t('contractDetail.invoices.selectForPreview', {
+                    defaultValue: 'Select an invoice to open a full preview in the drawer.',
+                  })}
                 </p>
                 <Button
                   id="contract-invoices-refresh"
@@ -2261,7 +2511,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   onClick={() => void loadContractInvoices()}
                   disabled={isLoadingInvoices}
                 >
-                  Refresh
+                  {t('common.actions.refresh', { defaultValue: 'Refresh' })}
                 </Button>
               </div>
 
@@ -2273,11 +2523,16 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
               {isLoadingInvoices ? (
                 <div className="py-10">
-                  <LoadingIndicator text="Loading contract invoices..." spinnerProps={{ size: 'sm' }} />
+                  <LoadingIndicator
+                    text={t('contractDetail.invoices.loading', { defaultValue: 'Loading invoices...' })}
+                    spinnerProps={{ size: 'sm' }}
+                  />
                 </div>
               ) : contractInvoices.length === 0 ? (
                 <div className="py-10 text-center text-sm text-muted-foreground">
-                  No invoices are associated with this contract yet.
+                  {t('contractDetail.invoices.empty', {
+                    defaultValue: 'No invoices found for this contract.',
+                  })}
                 </div>
               ) : (
                 <DataTable
@@ -2297,30 +2552,38 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         isOpen={showCancelConfirm}
         onClose={handleCancelDismiss}
         onConfirm={handleCancelConfirm}
-        title="Discard Changes"
-        message="Are you sure you want to discard all changes? Any unsaved changes will be lost."
-        confirmLabel="Discard Changes"
-        cancelLabel="Continue Editing"
+        title={t('contractDetail.dialogs.discard.title', { defaultValue: 'Discard Changes' })}
+        message={t('contractDetail.dialogs.discard.message', {
+          defaultValue: 'Are you sure you want to discard all changes? Any unsaved changes will be lost.',
+        })}
+        confirmLabel={t('contractDetail.dialogs.discard.confirm', { defaultValue: 'Discard Changes' })}
+        cancelLabel={t('contractDetail.dialogs.discard.cancel', { defaultValue: 'Continue Editing' })}
       />
 
       <ConfirmationDialog
         isOpen={showNavigateAwayConfirm}
         onClose={handleNavigateAwayDismiss}
         onConfirm={handleNavigateAwayConfirm}
-        title="Unsaved Changes"
-        message="You have unsaved changes. Are you sure you want to leave this page? All changes will be lost."
-        confirmLabel="Leave Page"
-        cancelLabel="Stay on Page"
+        title={t('contractDetail.dialogs.unsaved.title', { defaultValue: 'Unsaved Changes' })}
+        message={t('contractDetail.dialogs.unsaved.message', {
+          defaultValue: 'You have unsaved changes. Are you sure you want to leave this page? All changes will be lost.',
+        })}
+        confirmLabel={t('contractDetail.dialogs.unsaved.confirm', { defaultValue: 'Leave Page' })}
+        cancelLabel={t('contractDetail.dialogs.unsaved.cancel', { defaultValue: 'Stay on Page' })}
       />
 
       <ConfirmationDialog
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDeleteContract}
-        title="Delete Contract"
-        message="Are you sure you want to delete this contract? This action cannot be undone and will remove all associated data."
-        confirmLabel={isDeleting ? 'Deleting…' : 'Delete Contract'}
-        cancelLabel="Cancel"
+        title={t('contractDetail.dialogs.delete.title', { defaultValue: 'Delete Contract' })}
+        message={t('contractDetail.dialogs.delete.message', {
+          defaultValue: 'Are you sure you want to delete this contract? This action cannot be undone and will remove all associated data.',
+        })}
+        confirmLabel={isDeleting
+          ? t('contractDetail.dialogs.delete.deleting', { defaultValue: 'Deleting…' })
+          : t('contractDetail.dialogs.delete.confirm', { defaultValue: 'Delete Contract' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
         isConfirming={isDeleting}
       />
     </div>

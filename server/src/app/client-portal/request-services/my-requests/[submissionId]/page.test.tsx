@@ -32,10 +32,6 @@ vi.mock('../actions', () => ({
     getMyServiceRequestSubmissionDetailAction(...args),
 }));
 
-vi.mock('@alga-psa/ui/components/feature-flags/FeatureFlagPageWrapper', () => ({
-  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
 describe('MyRequestDetailPage', () => {
   beforeEach(() => {
     getMyServiceRequestSubmissionDetailAction.mockReset();

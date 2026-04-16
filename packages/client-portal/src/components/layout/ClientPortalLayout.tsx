@@ -40,7 +40,6 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   const { branding } = useBranding();
   const { enabled: knowledgeBaseEnabled } = useFeatureFlag('knowledge-base', { defaultValue: false });
   const { enabled: documentFeaturesEnabled } = useFeatureFlag('document-folder-templates', { defaultValue: false });
-  const { enabled: serviceRequestsEnabled } = useFeatureFlag('service-requests', { defaultValue: false });
 
   // Use SWR hook for contact avatar - automatically updates when invalidated
   const { avatarUrl } = useContactAvatar(userData?.contact_id ?? undefined, userData?.tenant);
@@ -131,14 +130,12 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                 >
                   {t('nav.projects')}
                 </Link>
-                {serviceRequestsEnabled && (
-                  <Link
-                    href="/client-portal/request-services"
-                    className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
-                  >
-                    {t('nav.requestServices', 'Request Services')}
-                  </Link>
-                )}
+                <Link
+                  href="/client-portal/request-services"
+                  className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
+                >
+                  {t('nav.requestServices', 'Request Services')}
+                </Link>
                 {documentFeaturesEnabled && (
                   <Link
                     href="/client-portal/documents"

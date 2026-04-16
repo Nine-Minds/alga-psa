@@ -72,6 +72,10 @@ function createStoreWithBuiltIns(): ServiceRequestProviderRegistryStore {
 function getOrCreateStore(): ServiceRequestProviderRegistryStore {
   if (!globalThis.__algaServiceRequestProviderRegistry) {
     globalThis.__algaServiceRequestProviderRegistry = createStoreWithBuiltIns();
+  } else {
+    // Re-register built-ins on access so dev hot reloads refresh updated provider definitions
+    // without dropping any separately-registered enterprise providers stored in the singleton.
+    registerStoreProviders(globalThis.__algaServiceRequestProviderRegistry, builtInRegistrations);
   }
   return globalThis.__algaServiceRequestProviderRegistry;
 }

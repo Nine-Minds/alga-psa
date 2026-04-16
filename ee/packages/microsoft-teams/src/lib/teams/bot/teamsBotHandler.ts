@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getTeamsRuntimeAvailability } from '../getTeamsRuntimeAvailability';
 import { buildTeamsAvailabilityJsonResponse } from '../teamsAvailabilityResponses';
+import { sendBotActivity, isBotConnectorConfigured } from './teamsBotConnector';
+import { verifyTeamsBotRequest } from './teamsBotJwtVerifier';
 import {
   executeTeamsAction,
   listAvailableTeamsActions,
@@ -19,10 +21,16 @@ import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';
 
 export interface TeamsBotActivity {
   type?: string;
+  id?: string | null;
+  serviceUrl?: string | null;
   text?: string | null;
   from?: {
     id?: string | null;
     aadObjectId?: string | null;
+    name?: string | null;
+  } | null;
+  recipient?: {
+    id?: string | null;
     name?: string | null;
   } | null;
   conversation?: {
@@ -1118,6 +1126,19 @@ export async function handleTeamsBotActivity(
 export async function handleTeamsBotActivityRequest(
   request: Request
 ): Promise<NextResponse> {
+  // Verify inbound JWT before we read the body so attackers can't blast
+  // payloads at the action registry. In unconfigured environments (no bot
+  // credentials in env) verification is skipped, in which case the handler
+  // still runs but sendBotActivity becomes a no-op and no reply is produced.
+  const verification = await verifyTeamsBotRequest(request.headers.get('authorization'));
+  if (verification.status === 'rejected') {
+    console.warn('[teams-bot] rejected inbound request', { reason: verification.reason });
+    return NextResponse.json(
+      { error: 'unauthorized', message: 'Bot Framework request verification failed.' },
+      { status: 401 }
+    );
+  }
+
   let activity: TeamsBotActivity;
   try {
     activity = (await request.json()) as TeamsBotActivity;
@@ -1143,10 +1164,38 @@ export async function handleTeamsBotActivityRequest(
   }
 
   const response = await handleTeamsBotActivity(activity, { tenantIdHint });
-  return NextResponse.json(response, {
-    status: 200,
-    headers: {
-      'Cache-Control': 'no-store',
-    },
-  });
+
+  // Deliver the reply back to Teams via the Bot Framework connector. For a
+  // normal `message` activity Teams ignores the HTTP response body entirely
+  // and only sees what arrives via the connector POST. If credentials are
+  // not configured we skip sending and return 200 so Teams doesn't retry.
+  const serviceUrl = normalizeOptionalString(activity.serviceUrl);
+  const conversationId = normalizeOptionalString(activity.conversation?.id);
+  const replyToId = normalizeOptionalString(activity.id);
+
+  if (serviceUrl && conversationId && isBotConnectorConfigured()) {
+    try {
+      const result = await sendBotActivity({
+        serviceUrl,
+        conversationId,
+        replyToId,
+        activity: response,
+      });
+      if (result.status === 'skipped' && result.reason) {
+        console.warn('[teams-bot] reply skipped', { reason: result.reason });
+      }
+    } catch (err) {
+      console.error('[teams-bot] failed to send reply', err);
+    }
+  }
+
+  return NextResponse.json(
+    { status: 'ok' },
+    {
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    }
+  );
 }

@@ -362,7 +362,8 @@
     "tabs": {
       "account": "Account",
       "clientDetails": "Client Details",
-      "userManagement": "User Management"
+      "userManagement": "User Management",
+      "visibilityGroups": "Visibility Groups"
     },
     "fields": {
       "clientLogo": "Client Logo",
@@ -433,6 +434,41 @@
       "clientNotFound": "Client not found",
       "detailsLoadError": "Failed to load client details",
       "updateError": "Failed to update client details"
+    },
+    "visibilityGroups": {
+      "title": "Visibility Groups",
+      "description": "Manage which ticket boards each client portal contact can access.",
+      "nameLabel": "Name",
+      "descriptionLabel": "Description",
+      "boardLabel": "Boards",
+      "noBoards": "No boards are available",
+      "loadError": "Unable to load visibility groups",
+      "empty": "No visibility groups yet.",
+      "loading": "Loading groups...",
+      "boardCount": "boards",
+      "assignmentCount": "assigned contacts",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteDialogTitle": "Delete visibility group",
+      "deleteConfirm": "Delete this visibility group?",
+      "deleteAssignedError": "This visibility group is still assigned to one or more contacts.",
+      "deleteMissingError": "This visibility group no longer exists.",
+      "deleteSuccess": "Visibility group deleted",
+      "deleteError": "Unable to delete visibility group",
+      "save": "Save group",
+      "create": "Create group",
+      "nameRequired": "Visibility group name is required",
+      "saveError": "Unable to save visibility group",
+      "updateSuccess": "Visibility group updated",
+      "createSuccess": "Visibility group created",
+      "assignmentsTitle": "Contact assignments",
+      "assignmentsDescription": "Assign each contact a visibility group or keep full access.",
+      "noContacts": "No contacts available.",
+      "assignmentLabel": "Assigned group",
+      "fullAccess": "Full access",
+      "cancel": "Cancel",
+      "assignSuccess": "Contact visibility assignment updated",
+      "assignError": "Unable to assign visibility group"
     }
   },
   "notifications": {

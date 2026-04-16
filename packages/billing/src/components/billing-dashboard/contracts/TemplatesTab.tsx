@@ -24,6 +24,7 @@ import {
 } from '@alga-psa/billing/actions/contractActions';
 import { TemplateWizard } from './template-wizard/TemplateWizard';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TemplatesTabProps {
   onRefreshNeeded?: () => void;
@@ -31,6 +32,7 @@ interface TemplatesTabProps {
 }
 
 const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTrigger }) => {
+  const { t } = useTranslation('msp/contracts');
   const router = useRouter();
   const [templateContracts, setTemplateContracts] = useState<IContract[]>([]);
   const [showTemplateWizard, setShowTemplateWizard] = useState(false);
@@ -50,7 +52,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
       setError(null);
     } catch (err) {
       console.error('Error fetching templates:', err);
-      setError('Failed to fetch templates');
+      setError(t('templatesTab.errors.failedToFetchTemplates', { defaultValue: 'Failed to fetch templates' }));
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +64,9 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
       await fetchTemplates();
       onRefreshNeeded?.();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete contract';
+      const message = err instanceof Error
+        ? err.message
+        : t('templatesTab.errors.failedToDeleteContract', { defaultValue: 'Failed to delete contract' });
       toast.error(message);
     }
   };
@@ -79,12 +83,12 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
   const renderStatusBadge = (status: string) => {
     const normalized = (status || 'draft').toLowerCase();
     const statusConfig: Record<string, { variant: 'success' | 'default-muted' | 'warning' | 'error' | 'info'; label: string }> = {
-      active: { variant: 'success', label: 'Active' },
-      draft: { variant: 'default-muted', label: 'Draft' },
-      terminated: { variant: 'warning', label: 'Terminated' },
-      expired: { variant: 'error', label: 'Expired' },
-      published: { variant: 'success', label: 'Published' },
-      archived: { variant: 'default-muted', label: 'Archived' },
+      active: { variant: 'success', label: t('templatesTab.status.active', { defaultValue: 'Active' }) },
+      draft: { variant: 'default-muted', label: t('templatesTab.status.draft', { defaultValue: 'Draft' }) },
+      terminated: { variant: 'warning', label: t('templatesTab.status.terminated', { defaultValue: 'Terminated' }) },
+      expired: { variant: 'error', label: t('templatesTab.status.expired', { defaultValue: 'Expired' }) },
+      published: { variant: 'success', label: t('templatesTab.status.published', { defaultValue: 'Published' }) },
+      archived: { variant: 'default-muted', label: t('templatesTab.status.archived', { defaultValue: 'Archived' }) },
     };
     const config = statusConfig[normalized] ?? statusConfig.draft;
     return <Badge variant={config.variant}>{config.label}</Badge>;
@@ -92,22 +96,24 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
 
   const templateColumns: ColumnDefinition<IContract>[] = [
     {
-      title: 'Template Name',
+      title: t('templatesTab.columns.templateName', { defaultValue: 'Template Name' }),
       dataIndex: 'contract_name',
     },
     {
-      title: 'Description',
+      title: t('templatesTab.columns.description', { defaultValue: 'Description' }),
       dataIndex: 'contract_description',
       render: (value: string | null) =>
-        typeof value === 'string' && value.trim().length > 0 ? value : 'No description',
+        typeof value === 'string' && value.trim().length > 0
+          ? value
+          : t('templatesTab.values.noDescription', { defaultValue: 'No description' }),
     },
     {
-      title: 'Status',
+      title: t('templatesTab.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       render: renderStatusBadge,
     },
     {
-      title: 'Actions',
+      title: t('templatesTab.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'contract_id',
       render: (value, record) => (
         <DropdownMenu>
@@ -118,7 +124,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
               className="h-8 w-8 p-0"
               onClick={(event) => event.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('common.actions.openMenu', { defaultValue: 'Open menu' })}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -132,7 +138,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
                 }
               }}
             >
-              Edit
+              {t('templatesTab.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id="delete-contract-menu-item"
@@ -144,7 +150,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
                 }
               }}
             >
-              Delete
+              {t('templatesTab.actions.delete', { defaultValue: 'Delete' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -171,7 +177,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
             className="py-12 text-muted-foreground"
             layout="stacked"
             spinnerProps={{ size: 'md' }}
-            text="Loading templates..."
+            text={t('templatesTab.loading', { defaultValue: 'Loading templates...' })}
             textClassName="text-muted-foreground"
           />
         </Box>
@@ -203,11 +209,11 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
               />
               <Input
                 type="text"
-                placeholder="Search templates..."
+                placeholder={t('templatesTab.search.placeholder', { defaultValue: 'Search templates...' })}
                 value={templateSearchTerm}
                 onChange={(event) => setTemplateSearchTerm(event.target.value)}
                 className="pl-10"
-                aria-label="Search contract templates"
+                aria-label={t('templatesTab.search.ariaLabel', { defaultValue: 'Search contract templates' })}
               />
             </div>
             <div className="flex flex-wrap gap-2">
@@ -217,18 +223,33 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
                 className="inline-flex items-center gap-2"
               >
                 <Sparkles className="h-4 w-4" />
-                Create Template
+                {t('templatesTab.actions.createTemplate', { defaultValue: 'Create Template' })}
               </Button>
             </div>
           </div>
 
-          <DataTable
-            data={filteredTemplateContracts}
-            columns={templateColumns}
-            pagination
-            onRowClick={(record) => navigateToContract(record.contract_id)}
-            rowClassName={() => 'cursor-pointer'}
-          />
+          {filteredTemplateContracts.length === 0 ? (
+            <div className="rounded-md border border-dashed border-[rgb(var(--color-border-300))] py-10 text-center">
+              <p className="text-sm font-medium text-muted-foreground">
+                {templateSearchTerm
+                  ? t('templatesTab.empty.noSearchMatches', { defaultValue: 'No templates match your search' })
+                  : t('templatesTab.empty.noTemplates', { defaultValue: 'No templates yet' })}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {templateSearchTerm
+                  ? t('templatesTab.empty.tryDifferentSearch', { defaultValue: 'Try a different search term.' })
+                  : t('templatesTab.empty.createFirstTemplate', { defaultValue: 'Create your first template to get started.' })}
+              </p>
+            </div>
+          ) : (
+            <DataTable
+              data={filteredTemplateContracts}
+              columns={templateColumns}
+              pagination
+              onRowClick={(record) => navigateToContract(record.contract_id)}
+              rowClassName={() => 'cursor-pointer'}
+            />
+          )}
         </Box>
       </Card>
       <TemplateWizard

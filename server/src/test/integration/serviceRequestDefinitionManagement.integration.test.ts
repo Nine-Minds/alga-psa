@@ -36,6 +36,7 @@ describe('service request definition management', () => {
     });
 
     const templates = listServiceRequestTemplateOptions();
+    expect(templates).toHaveLength(6);
     const starterTemplate = templates.find(
       (template) => template.providerKey === 'ce-starter-pack' && template.templateId === 'new-hire'
     );

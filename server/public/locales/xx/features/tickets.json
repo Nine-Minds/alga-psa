@@ -46,14 +46,17 @@
     "titlePlaceholder": "11111",
     "descriptionPlaceholder": "11111",
     "priorityPlaceholder": "11111",
+    "noBoardsAvailable": "11111",
     "submit": "11111",
     "submitting": "11111",
     "errors": {
       "titleRequired": "11111",
       "descriptionRequired": "11111",
       "priorityRequired": "11111",
-      "createFailed": "11111"
-    }
+      "createFailed": "11111",
+      "boardRequired": "11111"
+    },
+    "boardPlaceholder": "11111"
   },
   "status": {
     "open": "11111",

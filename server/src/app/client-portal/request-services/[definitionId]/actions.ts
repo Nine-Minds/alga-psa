@@ -13,6 +13,24 @@ import {
   type ServiceRequestPortalDefinitionDetail,
 } from '../../../../lib/service-requests';
 
+function buildRequestServiceDefinitionRedirectUrl(
+  definitionId: string,
+  params: Record<string, string | null | undefined>
+): string {
+  const search = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === 'string' && value.length > 0) {
+      search.set(key, value);
+    }
+  }
+
+  const query = search.toString();
+  return query.length > 0
+    ? `/client-portal/request-services/${definitionId}?${query}`
+    : `/client-portal/request-services/${definitionId}`;
+}
+
 export const getRequestServiceDefinitionDetailAction = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: AuthContext,
@@ -45,11 +63,11 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
   formData: FormData
 ): Promise<void> => {
   if (currentUser.user_type !== 'client') {
-    redirect(`/client-portal/request-services/${definitionId}?error=forbidden`);
+    redirect(buildRequestServiceDefinitionRedirectUrl(definitionId, { error: 'forbidden' }));
   }
 
   const { knex } = await createTenantKnex();
-  await withTransaction(knex, async (trx) => {
+  const outcome = await withTransaction(knex, async (trx) => {
     const clientId = await getAuthenticatedClientId(trx, currentUser.user_id, tenant);
     const detail = await getVisiblePublishedServiceRequestDefinitionDetail(
       trx,
@@ -63,7 +81,10 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
     );
 
     if (!detail) {
-      redirect(`/client-portal/request-services/${definitionId}?error=not_visible`);
+      return {
+        status: 'error' as const,
+        message: 'not_visible',
+      };
     }
 
     const fields = Array.isArray((detail.formSchema as any)?.fields)
@@ -112,18 +133,13 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
       visibleFieldKeys: detail.visibleFieldKeys,
     });
     if (validationErrors.length > 0) {
-      redirect(
-        `/client-portal/request-services/${definitionId}?error=${encodeURIComponent(
-          `Submission validation failed: ${validationErrors.join('; ')}`
-        )}`
-      );
+      return {
+        status: 'error' as const,
+        message: `Submission validation failed: ${validationErrors.join('; ')}`,
+      };
     }
 
     const uploadedFileIds: string[] = [];
-
-    let result:
-      | Awaited<ReturnType<typeof submitPortalServiceRequest>>
-      | null = null;
 
     try {
       const attachments: {
@@ -152,7 +168,7 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
         });
       }
 
-      result = await submitPortalServiceRequest({
+      const result = await submitPortalServiceRequest({
         knex: trx,
         tenant,
         definitionId,
@@ -162,21 +178,38 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
         payload,
         attachments,
       });
+
+      return {
+        status: 'success' as const,
+        submissionId: result.submissionId,
+        createdTicketId: result.createdTicketId ?? null,
+      };
     } catch (error) {
       await Promise.allSettled(
         uploadedFileIds.map((fileId) =>
           StorageService.deleteFile(fileId, currentUser.user_id)
         )
       );
-      const message = error instanceof Error ? error.message : 'submit_failed';
-      redirect(`/client-portal/request-services/${definitionId}?error=${encodeURIComponent(message)}`);
-    }
 
-    const search = new URLSearchParams();
-    search.set('submitted', result!.submissionId);
-    if (result?.createdTicketId) {
-      search.set('ticketId', result.createdTicketId);
+      return {
+        status: 'error' as const,
+        message: error instanceof Error ? error.message : 'submit_failed',
+      };
     }
-    redirect(`/client-portal/request-services/${definitionId}?${search.toString()}`);
   });
+
+  if (outcome.status === 'error') {
+    redirect(
+      buildRequestServiceDefinitionRedirectUrl(definitionId, {
+        error: outcome.message,
+      })
+    );
+  }
+
+  redirect(
+    buildRequestServiceDefinitionRedirectUrl(definitionId, {
+      submitted: outcome.submissionId,
+      ticketId: outcome.createdTicketId,
+    })
+  );
 });

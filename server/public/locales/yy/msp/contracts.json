@@ -1,0 +1,2036 @@
+{
+  "common": {
+    "actions": {
+      "back": "55555",
+      "cancel": "55555",
+      "close": "55555",
+      "create": "55555",
+      "delete": "55555",
+      "discard": "55555",
+      "edit": "55555",
+      "refresh": "55555",
+      "remove": "55555",
+      "retry": "55555",
+      "save": "55555",
+      "saveChanges": "55555",
+      "saveChangesDirty": "55555",
+      "saving": "55555",
+      "view": "55555",
+      "openMenu": "55555"
+    },
+    "alerts": {
+      "saveSuccess": "55555",
+      "systemManagedDefault": "55555"
+    },
+    "empty": {
+      "none": "55555",
+      "notAvailable": "55555",
+      "notSpecified": "55555",
+      "ongoing": "55555"
+    },
+    "errors": {
+      "failedToLoad": "55555",
+      "failedToSave": "55555",
+      "validationPrefix": "55555"
+    },
+    "labels": {
+      "created": "55555",
+      "currency": "55555",
+      "description": "55555",
+      "lastUpdated": "55555",
+      "name": "55555",
+      "no": "55555",
+      "status": "55555",
+      "yes": "55555"
+    },
+    "tabs": {
+      "clientContracts": "55555",
+      "drafts": "55555",
+      "templates": "55555"
+    },
+    "moneyPlaceholder": "55555",
+    "notAvailable": "55555"
+  },
+  "status": {
+    "active": "55555",
+    "draft": "55555",
+    "expired": "55555",
+    "terminated": "55555"
+  },
+  "renewal": {
+    "labels": {
+      "decisionDue": "55555",
+      "mode": "55555",
+      "noticeDays": "55555",
+      "source": "55555",
+      "termMonths": "55555"
+    },
+    "modes": {
+      "auto": "55555",
+      "manual": "55555",
+      "none": "55555"
+    },
+    "source": {
+      "contract": "55555",
+      "tenantDefault": "55555"
+    }
+  },
+  "billing": {
+    "cadenceOwner": {
+      "client": "55555",
+      "contract": "55555"
+    },
+    "frequency": {
+      "annually": "55555",
+      "biweekly": "55555",
+      "monthly": "55555",
+      "quarterly": "55555",
+      "weekly": "55555"
+    },
+    "labels": {
+      "billingFrequency": "55555",
+      "timing": "55555",
+      "cadenceOwner": "55555"
+    },
+    "timing": {
+      "advance": "55555",
+      "arrears": "55555"
+    }
+  },
+  "po": {
+    "labels": {
+      "amount": "55555",
+      "number": "55555",
+      "required": "55555"
+    }
+  },
+  "contractDetail": {
+    "alerts": {
+      "saveSuccess": "55555",
+      "unsavedChanges": "55555"
+    },
+    "cards": {
+      "assignment": "55555",
+      "clientOwnership": "55555",
+      "contractDetails": "55555",
+      "header": "55555",
+      "quickActions": "55555",
+      "renewalHandling": "55555"
+    },
+    "clientAssignment": {
+      "clientContractId": "55555 {{id}} 55555",
+      "empty": "55555",
+      "endDate": "55555",
+      "endDateLabel": "55555",
+      "loadingStatuses": "55555",
+      "notRequired": "55555",
+      "noticePeriodDays": "55555",
+      "noticePeriodPlaceholder": "55555",
+      "noticePrefix": "55555",
+      "renewalHandling": "55555",
+      "renewalTermMonths": "55555",
+      "renewalTermPlaceholder": "55555",
+      "renewalTicketBoard": "55555",
+      "renewalTicketStatus": "55555",
+      "required": "55555",
+      "selectBoard": "55555",
+      "selectBoardFirst": "55555",
+      "selectRenewalMode": "55555",
+      "selectStartDate": "55555",
+      "selectStatus": "55555",
+      "startDate": "55555",
+      "startDateLabel": "55555",
+      "startDateLocked": "55555",
+      "title": "55555",
+      "useTenantRenewalDefaults": "55555",
+      "usingCustomSettings": "55555",
+      "usingTenantDefaults": "55555"
+    },
+    "clientOwnership": {
+      "assignmentStatus": "55555",
+      "clientName": "55555",
+      "endDate": "55555",
+      "ownerClient": "55555",
+      "required": "55555",
+      "startDate": "55555",
+      "systemManaged": "55555",
+      "title": "55555"
+    },
+    "detailsCard": {
+      "actions": {
+        "cancelDescription": "55555",
+        "cancelName": "55555",
+        "editDescription": "55555",
+        "editName": "55555",
+        "saveDescription": "55555",
+        "saveName": "55555"
+      },
+      "contractNameLabel": "55555",
+      "contractNamePlaceholder": "55555",
+      "descriptionLabel": "55555",
+      "descriptionPlaceholder": "55555",
+      "title": "55555"
+    },
+    "headerCard": {
+      "assignmentLifecycleHint": "55555",
+      "assignmentStatus": "55555",
+      "billingFrequencyLabel": "55555",
+      "billingFrequencyPlaceholder": "55555",
+      "customSettings": "55555",
+      "expiredStatusNote": "55555",
+      "notice": "55555",
+      "noticeDay": "55555 {{count}} 55555",
+      "noticeDays": "55555 {{count}} 55555",
+      "ongoingNoEndDate": "55555",
+      "renewalHeading": "55555",
+      "tenantDefaults": "55555",
+      "title": "55555"
+    },
+    "dialogs": {
+      "delete": {
+        "cancel": "55555",
+        "confirm": "55555",
+        "deleting": "55555",
+        "description": "55555",
+        "message": "55555",
+        "title": "55555"
+      },
+      "discard": {
+        "cancel": "55555",
+        "confirm": "55555",
+        "description": "55555",
+        "message": "55555",
+        "title": "55555"
+      },
+      "leave": {
+        "confirm": "55555",
+        "description": "55555",
+        "title": "55555"
+      },
+      "unsaved": {
+        "cancel": "55555",
+        "confirm": "55555",
+        "message": "55555",
+        "title": "55555"
+      }
+    },
+    "invoices": {
+      "columns": {
+        "amount": "55555",
+        "createdAt": "55555",
+        "dueDate": "55555",
+        "invoiceDate": "55555",
+        "invoiceNumber": "55555",
+        "preview": "55555",
+        "status": "55555"
+      },
+      "empty": "55555",
+      "loading": "55555",
+      "noTemplatesAvailable": "55555",
+      "preview": "55555",
+      "selectForPreview": "55555",
+      "title": "55555"
+    },
+    "labels": {
+      "client": "55555",
+      "contractName": "55555",
+      "description": "55555",
+      "noClientAssigned": "55555",
+      "noDescription": "55555",
+      "systemManagedDefault": "55555",
+      "useTenantDefaults": "55555"
+    },
+    "quickActions": {
+      "deleteContract": "55555",
+      "manageContractLines": "55555",
+      "managePricingSchedules": "55555",
+      "title": "55555",
+      "viewDocuments": "55555",
+      "viewInvoices": "55555"
+    },
+    "systemManaged": {
+      "attributionOnly": "55555",
+      "configureCustom": "55555",
+      "createdAutomatically": "55555",
+      "title": "55555"
+    },
+    "tabs": {
+      "documents": "55555",
+      "invoices": "55555",
+      "lines": "55555",
+      "overview": "55555",
+      "pricing": "55555"
+    },
+    "validation": {
+      "billingFrequencyRequired": "55555",
+      "billingFrequency": "55555",
+      "contractName": "55555",
+      "contractNameRequired": "55555",
+      "failedToUpdate": "55555",
+      "fixErrors": "55555"
+    },
+    "documents": {
+      "loading": "55555"
+    }
+  },
+  "contractHeader": {
+    "badges": {
+      "clientOwned": "55555",
+      "template": "55555"
+    },
+    "labels": {
+      "billingFrequency": "55555",
+      "contractLines": "55555",
+      "currency": "55555",
+      "endDate": "55555",
+      "lastUpdated": "55555",
+      "startDate": "55555"
+    },
+    "po": {
+      "prefix": "55555",
+      "requiredForContract": "55555"
+    },
+    "status": {
+      "active": "55555",
+      "draft": "55555",
+      "expired": "55555",
+      "terminated": "55555"
+    },
+    "values": {
+      "ongoing": "55555"
+    }
+  },
+  "contractOverview": {
+    "errors": {
+      "failedToLoadOverview": "55555"
+    },
+    "frequency": {
+      "annually": "55555",
+      "biweekly": "55555",
+      "semi_annually": "55555",
+      "weekly": "55555"
+    },
+    "lines": {
+      "addContractLines": "55555",
+      "collapseAll": "55555",
+      "expandAll": "55555",
+      "includedServices": "55555",
+      "noContractLinesDescription": "55555",
+      "noContractLinesYet": "55555",
+      "noServicesConfigured": "55555",
+      "serviceCountOne": "55555 {{count}} 55555",
+      "serviceCountOther": "55555 {{count}} 55555"
+    },
+    "stats": {
+      "contractLines": "55555",
+      "estimatedMonthlyValue": "55555",
+      "totalServices": "55555",
+      "variable": "55555",
+      "variableSuffix": "55555",
+      "viewDetails": "55555"
+    },
+    "title": "55555"
+  },
+  "contractDialog": {
+    "actions": {
+      "createContract": "55555",
+      "saveAsDraft": "55555",
+      "updateContract": "55555"
+    },
+    "documents": {
+      "loading": "55555"
+    },
+    "form": {
+      "billingFrequencyLabel": "55555",
+      "billingFrequencyPlaceholder": "55555",
+      "clientLabel": "55555",
+      "clientPlaceholder": "55555",
+      "contractNameLabel": "55555",
+      "contractNamePlaceholder": "55555",
+      "currencyHint": "55555",
+      "descriptionLabel": "55555",
+      "descriptionPlaceholder": "55555",
+      "endDateHint": "55555",
+      "endDateLabel": "55555",
+      "noticePeriodLabel": "55555",
+      "noticePeriodPlaceholder": "55555",
+      "renewalModePlaceholder": "55555",
+      "renewalSettingsDescription": "55555",
+      "renewalSettingsTitle": "55555",
+      "renewalTermLabel": "55555",
+      "renewalTermPlaceholder": "55555",
+      "selectClientFirst": "55555",
+      "startDateLabel": "55555",
+      "useTenantDefaultsDescription": "55555",
+      "useTenantDefaultsLabel": "55555"
+    },
+    "po": {
+      "amountLabel": "55555",
+      "amountPlaceholder": "55555",
+      "comingSoon": "55555",
+      "noteLabel": "55555",
+      "numberLabel": "55555",
+      "numberPlaceholder": "55555",
+      "requirePurchaseOrder": "55555",
+      "requirePurchaseOrderTooltip": "55555"
+    },
+    "presetDetails": {
+      "defaultBaseRate": "55555",
+      "defaultRatePlaceholder": "55555 {{rate}} 55555",
+      "defaultRateValue": "55555 {{rate}} 55555",
+      "enterBaseRate": "55555",
+      "fixedRateConfiguration": "55555",
+      "fixedServicesReferenceHelp": "55555",
+      "hourlyRate": "55555",
+      "leaveBlankDefaultRate": "55555",
+      "minimumBillableMinutes": "55555",
+      "noServicesConfigured": "55555",
+      "notSet": "55555",
+      "overrideBaseRate": "55555",
+      "quantity": "55555",
+      "quantityShort": "55555 {{quantity}} 55555",
+      "ratePerUnit": "55555",
+      "roundUpToNearestMinutes": "55555",
+      "servicesConfiguration": "55555",
+      "servicesHourlyRates": "55555",
+      "servicesIncludedReference": "55555",
+      "timeBillingConfiguration": "55555",
+      "unitOfMeasure": "55555",
+      "unitOfMeasureHint": "55555"
+    },
+    "presets": {
+      "allTypes": "55555",
+      "empty": "55555",
+      "heading": "55555",
+      "headingTooltip": "55555",
+      "loading": "55555",
+      "noMatches": "55555",
+      "resetFilters": "55555",
+      "searchPlaceholder": "55555",
+      "selectedPlural": "55555 {{count}} 55555",
+      "selectedSingle": "55555 {{count}} 55555",
+      "serviceCountPlural": "55555 {{count}} 55555",
+      "serviceCountSingle": "55555 {{count}} 55555",
+      "typePlaceholder": "55555"
+    },
+    "title": {
+      "create": "55555",
+      "edit": "55555"
+    },
+    "validation": {
+      "billingFrequency": "55555",
+      "client": "55555",
+      "contractName": "55555",
+      "failedToSave": "55555",
+      "noticePeriodInvalid": "55555",
+      "poNumberRequired": "55555",
+      "renewalTermInvalid": "55555",
+      "requiredFields": "55555",
+      "startDate": "55555"
+    }
+  },
+  "contractForm": {
+    "actions": {
+      "saveChanges": "55555",
+      "saving": "55555"
+    },
+    "errors": {
+      "failedToUpdateContract": "55555"
+    },
+    "fields": {
+      "billingFrequency": "55555",
+      "billingFrequencyPlaceholder": "55555",
+      "contractName": "55555",
+      "contractNamePlaceholder": "55555",
+      "currency": "55555",
+      "currencyPlaceholder": "55555",
+      "description": "55555",
+      "descriptionPlaceholder": "55555",
+      "status": "55555"
+    },
+    "heading": "55555",
+    "status": {
+      "active": "55555",
+      "draft": "55555",
+      "expired": "55555",
+      "expiredHelper": "55555",
+      "terminated": "55555"
+    },
+    "validation": {
+      "billingFrequency": "55555",
+      "contractName": "55555",
+      "requiredFields": "55555"
+    }
+  },
+  "contractLines": {
+    "actions": {
+      "addFromPresets": "55555",
+      "collapseLine": "55555",
+      "createCustom": "55555",
+      "expandLine": "55555"
+    },
+    "bucket": {
+      "billingPeriod": "55555 {{period}} 55555",
+      "defaultUnit": "55555",
+      "defaultUnits": "55555",
+      "enableTracking": "55555",
+      "hour": "55555",
+      "hoursValue": "55555 {{hours}} 55555",
+      "included": "55555 {{value}} 55555",
+      "overageRate": "55555 {{rate}} 55555 {{unit}} 55555",
+      "rolloverEnabled": "55555",
+      "title": "55555",
+      "unitsValue": "55555 {{count}} 55555 {{units}} 55555"
+    },
+    "columns": {
+      "actions": "55555",
+      "frequency": "55555",
+      "name": "55555",
+      "rate": "55555",
+      "services": "55555",
+      "type": "55555"
+    },
+    "configuration": {
+      "description": "55555",
+      "fixedInfo": "55555",
+      "fixedInfoDetails": "55555",
+      "fixedInfoHeading": "55555",
+      "minimumBillableTime": "55555",
+      "minutesValue": "55555 {{count}} 55555",
+      "roundUpToNearest": "55555",
+      "title": "55555",
+      "usageInfo": "55555"
+    },
+    "customRate": "55555",
+    "description": {
+      "default": "55555",
+      "readOnly": "55555"
+    },
+    "dialogs": {
+      "confirmRemove": "55555 {{name}} 55555"
+    },
+    "empty": {
+      "noneAdded": "55555",
+      "selectAbove": "55555"
+    },
+    "errors": {
+      "cannotEditWithInvoices": "55555",
+      "failedToCheckEditable": "55555",
+      "failedToLoad": "55555",
+      "failedToRefresh": "55555",
+      "failedToRemove": "55555",
+      "failedToUpdate": "55555"
+    },
+    "loading": {
+      "contractLines": "55555",
+      "inline": "55555"
+    },
+    "serviceCountPlural": "55555 {{count}} 55555",
+    "serviceCountSingle": "55555 {{count}} 55555",
+    "services": {
+      "empty": "55555",
+      "hourlyRate": "55555",
+      "quantity": "55555",
+      "quantityShort": "55555 {{quantity}} 55555",
+      "quantityTaxAllocation": "55555",
+      "rateTaxAllocation": "55555",
+      "title": "55555 {{count}} 55555",
+      "typeLabel": "55555 {{type}} 55555",
+      "unitOfMeasure": "55555",
+      "unitPlaceholder": "55555",
+      "unitRate": "55555"
+    },
+    "title": "55555"
+  },
+  "contractLineEdit": {
+    "actions": {
+      "cancel": "55555",
+      "saveChanges": "55555",
+      "saving": "55555"
+    },
+    "errors": {
+      "failedToSaveChanges": "55555"
+    },
+    "fields": {
+      "billingTimingQuestion": "55555",
+      "rate": "55555"
+    },
+    "sections": {
+      "billingTiming": "55555",
+      "pricing": "55555"
+    },
+    "timingDescriptions": {
+      "advance": "55555",
+      "arrears": "55555"
+    },
+    "timingOptions": {
+      "advance": "55555",
+      "arrears": "55555"
+    },
+    "title": "55555 {{name}} 55555",
+    "validation": {
+      "validRateRequired": "55555"
+    },
+    "values": {
+      "unnamedLine": "55555"
+    }
+  },
+  "contractLineRate": {
+    "actions": {
+      "cancel": "55555",
+      "saveRate": "55555"
+    },
+    "fields": {
+      "rate": "55555"
+    },
+    "title": "55555 {{name}} 55555",
+    "validation": {
+      "validRateRequired": "55555"
+    }
+  },
+  "addLines": {
+    "actions": {
+      "addPlural": "55555 {{count}} 55555",
+      "addSingle": "55555 {{count}} 55555",
+      "adding": "55555"
+    },
+    "empty": {
+      "noMatches": "55555",
+      "noneAvailable": "55555"
+    },
+    "errors": {
+      "failedToAddPresets": "55555",
+      "failedToLoadPresetDetails": "55555",
+      "failedToLoadPresets": "55555"
+    },
+    "filters": {
+      "allTypes": "55555",
+      "reset": "55555",
+      "searchPlaceholder": "55555",
+      "typePlaceholder": "55555"
+    },
+    "fixedConfig": {
+      "defaultBaseRate": "55555",
+      "defaultRatePlaceholder": "55555 {{rate}} 55555",
+      "enterBaseRate": "55555",
+      "leaveBlankDefault": "55555",
+      "notSet": "55555",
+      "overrideBaseRate": "55555",
+      "title": "55555"
+    },
+    "hourlyConfig": {
+      "defaultRate": "55555 {{rate}} 55555",
+      "hourlyRate": "55555",
+      "minimumBillableMinutes": "55555",
+      "roundUpToNearest": "55555",
+      "servicesAndRates": "55555",
+      "title": "55555"
+    },
+    "loading": "55555",
+    "selectPresetsTitle": "55555",
+    "selection": {
+      "deselectPreset": "55555",
+      "selectPreset": "55555",
+      "selectedPlural": "55555 {{count}} 55555",
+      "selectedSingle": "55555 {{count}} 55555"
+    },
+    "serviceCountPlural": "55555 {{count}} 55555",
+    "serviceCountSingle": "55555 {{count}} 55555",
+    "services": {
+      "configuration": "55555",
+      "empty": "55555",
+      "fixedReferenceHelp": "55555",
+      "includedReference": "55555",
+      "quantityShort": "55555 {{quantity}} 55555",
+      "unknownService": "55555"
+    },
+    "title": "55555",
+    "usageConfig": {
+      "defaultRate": "55555 {{rate}} 55555",
+      "quantity": "55555",
+      "ratePerUnit": "55555",
+      "unitHint": "55555",
+      "unitOfMeasure": "55555",
+      "unitPlaceholder": "55555"
+    }
+  },
+  "createCustomLine": {
+    "addBucketOfConsumption": "55555",
+    "addBucketOfHours": "55555",
+    "addHourlyService": "55555",
+    "addItem": "55555",
+    "addUsageService": "55555",
+    "adjustForPartialPeriods": "55555",
+    "adjustForPartialPeriodsHelp": "55555",
+    "basicsDescription": "55555",
+    "basicsTitle": "55555",
+    "billingFrequencyLabel": "55555",
+    "billingFrequencyPlaceholder": "55555",
+    "billingModel": {
+      "fixedDescription": "55555",
+      "fixedTitle": "55555",
+      "hourlyDescription": "55555",
+      "hourlyTitle": "55555",
+      "usageDescription": "55555",
+      "usageTitle": "55555"
+    },
+    "billingTiming": {
+      "advance": "55555",
+      "arrears": "55555"
+    },
+    "billingTimingHelp": "55555",
+    "chooseBillingModel": "55555",
+    "chooseBillingModelDescription": "55555",
+    "contractLineNameLabel": "55555",
+    "contractLineNamePlaceholder": "55555",
+    "create": "55555",
+    "creating": "55555",
+    "defaultUnit": "55555",
+    "defaultUnits": "55555",
+    "enterHourlyRate": "55555",
+    "enterUnitRate": "55555",
+    "fixedServicesAlertBaseRate": "55555",
+    "fixedServicesAlertHeading": "55555",
+    "fixedServicesAlertProducts": "55555",
+    "fixedServicesDescription": "55555",
+    "fixedServicesTitle": "55555",
+    "hourlyRateDisplay": "55555 {{rate}} 55555",
+    "hourlyRateLabel": "55555",
+    "hourlyServicesAlertDescription": "55555",
+    "hourlyServicesAlertHeading": "55555",
+    "hourlyServicesDescription": "55555",
+    "hourlyServicesLabel": "55555",
+    "hourlyServicesTitle": "55555",
+    "itemLabel": "55555 {{index}} 55555",
+    "moneyPlaceholder": "55555",
+    "minimumBillableTimeLabel": "55555",
+    "noFixedItems": "55555",
+    "noHourlyServices": "55555",
+    "noUsageServices": "55555",
+    "quantityLabel": "55555",
+    "ratePerUnitLabel": "55555",
+    "recurringBaseRateHelp": "55555",
+    "recurringBaseRateLabel": "55555",
+    "roundUpToNearestLabel": "55555",
+    "selectItemPlaceholder": "55555",
+    "selectServicePlaceholder": "55555",
+    "serviceLabel": "55555 {{index}} 55555",
+    "servicesAndProductsLabel": "55555",
+    "title": "55555",
+    "unitOfMeasureLabel": "55555",
+    "unitOfMeasurePlaceholder": "55555",
+    "unitRateDisplay": "55555 {{rate}} 55555 {{unit}} 55555",
+    "usageServicesAlertDescription": "55555",
+    "usageServicesAlertHeading": "55555",
+    "usageServicesDescription": "55555",
+    "usageServicesLabel": "55555",
+    "usageServicesTitle": "55555",
+    "validation": {
+      "billingFrequencyRequired": "55555",
+      "contractLineNameRequired": "55555",
+      "contractLineTypeRequired": "55555",
+      "failedToCreate": "55555",
+      "fixedServiceRequired": "55555",
+      "fixedServiceSelectRequired": "55555 {{index}} 55555",
+      "hourlyRateRequired": "55555 {{index}} 55555",
+      "hourlyServiceRequired": "55555",
+      "hourlyServiceSelectRequired": "55555 {{index}} 55555",
+      "unitOfMeasureRequired": "55555 {{index}} 55555",
+      "unitRateRequired": "55555 {{index}} 55555",
+      "usageServiceRequired": "55555",
+      "usageServiceSelectRequired": "55555 {{index}} 55555"
+    }
+  },
+  "pricingSchedules": {
+    "list": {
+      "actions": {
+        "addSchedule": "55555",
+        "deleteSchedule": "55555",
+        "editSchedule": "55555"
+      },
+      "columns": {
+        "actions": "55555",
+        "customRate": "55555",
+        "effectiveDate": "55555",
+        "endDate": "55555",
+        "notes": "55555"
+      },
+      "dialogs": {
+        "confirmDeleteSchedule": "55555"
+      },
+      "empty": {
+        "description": "55555",
+        "noPricingSchedules": "55555"
+      },
+      "errors": {
+        "failedToDeletePricingSchedule": "55555",
+        "failedToLoadPricingSchedules": "55555"
+      },
+      "loading": "55555",
+      "readOnlyNotice": "55555",
+      "timeline": {
+        "title": "55555"
+      },
+      "title": "55555",
+      "values": {
+        "defaultRate": "55555",
+        "ongoing": "55555",
+        "useDefaultRate": "55555"
+      }
+    },
+    "dialog": {
+      "actions": {
+        "addSchedule": "55555",
+        "cancel": "55555",
+        "saving": "55555",
+        "updateSchedule": "55555"
+      },
+      "durationUnits": {
+        "days": "55555",
+        "months": "55555",
+        "weeks": "55555",
+        "years": "55555"
+      },
+      "errors": {
+        "failedToSavePricingSchedule": "55555"
+      },
+      "fields": {
+        "customRate": "55555",
+        "customRatePlaceholder": "55555",
+        "duration": "55555",
+        "durationPlaceholder": "55555",
+        "effectiveDate": "55555",
+        "endDate": "55555",
+        "hasEndDate": "55555",
+        "notes": "55555",
+        "notesPlaceholder": "55555",
+        "unit": "55555",
+        "useDefaultRate": "55555",
+        "useDuration": "55555"
+      },
+      "title": {
+        "addPricingSchedule": "55555",
+        "editPricingSchedule": "55555"
+      },
+      "validation": {
+        "customRatePositive": "55555",
+        "customRateRequired": "55555",
+        "durationPositive": "55555",
+        "durationRequired": "55555",
+        "effectiveDateRequired": "55555",
+        "endDateAfterEffectiveDate": "55555",
+        "endDateRequiredWhenEnabled": "55555"
+      }
+    }
+  },
+  "contractsList": {
+    "actions": {
+      "deleting": "55555",
+      "createContract": "55555",
+      "createTemplate": "55555",
+      "openMenu": "55555",
+      "quickAdd": "55555",
+      "resume": "55555",
+      "restore": "55555",
+      "setToActive": "55555",
+      "terminate": "55555"
+    },
+    "columns": {
+      "actions": "55555",
+      "client": "55555",
+      "contractName": "55555",
+      "created": "55555",
+      "description": "55555",
+      "endDate": "55555",
+      "lastModified": "55555",
+      "sourceTemplate": "55555",
+      "startDate": "55555",
+      "status": "55555"
+    },
+    "dialogs": {
+      "deleteClient": {
+        "clientSuffix": "55555 {{clientName}} 55555",
+        "message": "55555 {{contractName}} 55555 {{clientSuffix}} 55555",
+        "title": "55555"
+      },
+      "deleteTemplate": {
+        "message": "55555 {{contractName}} 55555",
+        "title": "55555"
+      },
+      "discardDraft": {
+        "message": "55555 {{contractName}} 55555 {{clientName}} 55555",
+        "title": "55555"
+      }
+    },
+    "drafts": {
+      "badgeCount": "55555 {{count}} 55555"
+    },
+    "empty": {
+      "dash": "55555",
+      "noClientContracts": "55555",
+      "noDescription": "55555",
+      "noDraftMatches": "55555",
+      "noDrafts": "55555",
+      "noTemplates": "55555",
+      "unknownClient": "55555",
+      "untitledContract": "55555",
+      "untitledDraft": "55555",
+      "untitledTemplate": "55555"
+    },
+    "errors": {
+      "failedToFetch": "55555"
+    },
+    "heading": {
+      "description": "55555",
+      "title": "55555"
+    },
+    "loading": {
+      "contracts": "55555"
+    },
+    "search": {
+      "clientContractsAriaLabel": "55555",
+      "clientContractsPlaceholder": "55555",
+      "draftsAriaLabel": "55555",
+      "draftsPlaceholder": "55555",
+      "templatesAriaLabel": "55555",
+      "templatesPlaceholder": "55555"
+    },
+    "status": {
+      "archived": "55555",
+      "published": "55555"
+    },
+    "toasts": {
+      "draftDiscarded": "55555",
+      "failedToActivateContract": "55555",
+      "failedToDeleteContract": "55555",
+      "failedToDiscardDraft": "55555",
+      "failedToRestoreContract": "55555",
+      "failedToResumeDraft": "55555",
+      "failedToTerminateContract": "55555"
+    }
+  },
+  "clientContracts": {
+    "actions": {
+      "viewDetails": "55555"
+    },
+    "columns": {
+      "actions": "55555",
+      "billingFrequency": "55555",
+      "client": "55555",
+      "contractName": "55555",
+      "endDate": "55555",
+      "poIndicator": "55555",
+      "sourceTemplate": "55555",
+      "startDate": "55555",
+      "status": "55555"
+    },
+    "dialogs": {
+      "terminate": {
+        "clientSuffix": "55555 {{clientName}} 55555",
+        "message": "55555 {{contractName}} 55555 {{clientSuffix}} 55555",
+        "title": "55555"
+      }
+    },
+    "empty": {
+      "noMatches": "55555"
+    },
+    "errors": {
+      "failedToFetch": "55555"
+    },
+    "loading": "55555",
+    "po": {
+      "notRequired": "55555",
+      "required": "55555"
+    },
+    "search": {
+      "ariaLabel": "55555",
+      "placeholder": "55555"
+    },
+    "tabs": {
+      "contracts": "55555",
+      "upcomingRenewals": "55555 {{count}} 55555"
+    },
+    "toasts": {
+      "failedToActivate": "55555",
+      "failedToDelete": "55555",
+      "failedToMarkNonRenewing": "55555",
+      "failedToMarkRenewing": "55555",
+      "failedToRestore": "55555",
+      "failedToResumeDraft": "55555",
+      "failedToTerminate": "55555"
+    },
+    "upcoming": {
+      "actions": {
+        "markNonRenewing": "55555",
+        "markRenewing": "55555",
+        "openMenu": "55555"
+      },
+      "columns": {
+        "actions": "55555",
+        "client": "55555",
+        "contract": "55555",
+        "daysUntilDue": "55555",
+        "decisionDue": "55555",
+        "status": "55555",
+        "type": "55555"
+      },
+      "description": "55555",
+      "empty": "55555",
+      "filterAriaLabel": "55555",
+      "filterPlaceholder": "55555",
+      "status": {
+        "completed": "55555",
+        "nonRenewing": "55555",
+        "pending": "55555",
+        "renewing": "55555",
+        "snoozed": "55555"
+      },
+      "title": "55555",
+      "type": {
+        "evergreen": "55555",
+        "fixedTerm": "55555"
+      },
+      "window": {
+        "all": "55555",
+        "next30": "55555",
+        "next60": "55555",
+        "next90": "55555"
+      },
+      "windowPlaceholder": "55555"
+    }
+  },
+  "templatesTab": {
+    "actions": {
+      "createTemplate": "55555",
+      "delete": "55555",
+      "edit": "55555"
+    },
+    "columns": {
+      "actions": "55555",
+      "description": "55555",
+      "status": "55555",
+      "templateName": "55555"
+    },
+    "empty": {
+      "createFirstTemplate": "55555",
+      "noSearchMatches": "55555",
+      "noTemplates": "55555",
+      "tryDifferentSearch": "55555"
+    },
+    "errors": {
+      "failedToDeleteContract": "55555",
+      "failedToFetchTemplates": "55555"
+    },
+    "loading": "55555",
+    "search": {
+      "ariaLabel": "55555",
+      "placeholder": "55555"
+    },
+    "status": {
+      "active": "55555",
+      "archived": "55555",
+      "draft": "55555",
+      "expired": "55555",
+      "published": "55555",
+      "terminated": "55555"
+    },
+    "values": {
+      "noDescription": "55555"
+    }
+  },
+  "detailSwitcher": {
+    "errors": {
+      "contractNotFound": "55555",
+      "failedToLoadContractDetails": "55555",
+      "missingContractIdentifier": "55555",
+      "noContractSelected": "55555",
+      "unableToLoadContractDetails": "55555"
+    },
+    "loading": {
+      "contract": "55555"
+    }
+  },
+  "templateDetail": {
+    "backToTemplates": "55555",
+    "backToTemplatesArrow": "55555",
+    "composition": {
+      "addContractLinesBeforeManaging": "55555",
+      "additionalPlans": "55555",
+      "bucketSummary": "55555 {{minutes}} 55555 {{overage}} 55555",
+      "closeManager": "55555",
+      "editRate": "55555",
+      "fixedFeeBundles": "55555",
+      "fixedFeeRate": "55555",
+      "hourlyPlans": "55555",
+      "manageServices": "55555",
+      "manageTemplateServices": "55555",
+      "minimumTimeLabel": "55555",
+      "minutesValue": "55555 {{count}} 55555",
+      "noFixedFeeLines": "55555",
+      "noHourlyLines": "55555",
+      "noServicesAssigned": "55555",
+      "noUsageLines": "55555",
+      "notSet": "55555",
+      "quantityLabel": "55555",
+      "roundUpLabel": "55555",
+      "serviceCountPlural": "55555 {{count}} 55555",
+      "serviceCountSingle": "55555 {{count}} 55555",
+      "serviceFallback": "55555",
+      "title": "55555",
+      "unitLabel": "55555",
+      "usageBasedPlans": "55555"
+    },
+    "editBasicsTitle": "55555",
+    "editGuidanceTitle": "55555",
+    "failedToLoadTemplate": "55555",
+    "form": {
+      "currencyPlaceholder": "55555",
+      "internalNotesLabel": "55555",
+      "internalNotesPlaceholder": "55555",
+      "recommendedBillingFrequencyLabel": "55555",
+      "recommendedBillingFrequencyPlaceholder": "55555",
+      "templateNameLabel": "55555",
+      "templateNamePlaceholder": "55555"
+    },
+    "guidance": {
+      "noCadenceProvided": "55555",
+      "recommendedCadenceLabel": "55555",
+      "recommendedCadencePlaceholder": "55555",
+      "tagsHint": "55555",
+      "tagsLabel": "55555",
+      "tagsPlaceholder": "55555",
+      "title": "55555",
+      "usageNotesLabel": "55555",
+      "usageNotesPlaceholder": "55555"
+    },
+    "loadingTemplate": "55555",
+    "servicesLabel": "55555",
+    "templateBadge": "55555",
+    "templateNotFound": "55555",
+    "templateSnapshotTitle": "55555",
+    "validation": {
+      "billingFrequencyRequired": "55555",
+      "failedToUpdateBasics": "55555",
+      "failedToUpdateGuidance": "55555",
+      "templateNameRequired": "55555"
+    },
+    "clientAssignments": {
+      "title": "55555",
+      "totalAssignments": "55555",
+      "activeClients": "55555",
+      "purchaseOrders": "55555",
+      "poRequiredCount": "55555 {{count}} 55555",
+      "noPoRequirements": "55555",
+      "noClientContracts": "55555",
+      "reviewBelow": "55555"
+    },
+    "assignmentDetails": {
+      "title": "55555",
+      "empty": "55555",
+      "contractId": "55555 {{id}} 55555",
+      "ongoing": "55555",
+      "notRequired": "55555",
+      "columns": {
+        "client": "55555",
+        "status": "55555",
+        "start": "55555",
+        "end": "55555",
+        "poRequired": "55555",
+        "poNumber": "55555",
+        "poAmount": "55555"
+      },
+      "status": {
+        "active": "55555",
+        "inactive": "55555"
+      }
+    }
+  },
+  "quickStart": {
+    "actions": {
+      "createFirstContract": "55555",
+      "dismiss": "55555",
+      "minimize": "55555",
+      "showGuide": "55555"
+    },
+    "badge": {
+      "new": "55555"
+    },
+    "bestPractices": {
+      "items": {
+        "clearNames": "55555",
+        "endDates": "55555",
+        "partialPeriodAdjustment": "55555",
+        "poNumbers": "55555"
+      },
+      "title": "55555"
+    },
+    "billingModels": {
+      "bucketHours": {
+        "description": "55555",
+        "label": "55555"
+      },
+      "fixedFee": {
+        "description": "55555",
+        "label": "55555"
+      },
+      "hourly": {
+        "description": "55555",
+        "label": "55555"
+      },
+      "usageBased": {
+        "description": "55555",
+        "label": "55555"
+      }
+    },
+    "steps": {
+      "configureBilling": {
+        "description": "55555",
+        "title": "55555"
+      },
+      "createContract": {
+        "description": "55555",
+        "requiredFields": "55555",
+        "title": "55555"
+      },
+      "reviewCreate": {
+        "description": "55555",
+        "tip": "55555",
+        "title": "55555"
+      }
+    },
+    "subtitle": "55555",
+    "title": "55555"
+  },
+  "servicePicker": {
+    "emptyMessage": "55555",
+    "placeholder": "55555",
+    "searchPlaceholder": "55555",
+    "catalog": {
+      "badges": {
+        "product": "55555",
+        "service": "55555"
+      },
+      "custom": {
+        "addAsCustomItem": "55555 {{name}} 55555",
+        "badge": "55555",
+        "typeNameHint": "55555"
+      },
+      "emptyMessage": "55555",
+      "placeholder": "55555",
+      "searchPlaceholder": "55555"
+    }
+  },
+  "bucketOverlay": {
+    "includedLabel": "55555 {{units}} 55555",
+    "includedPlaceholderHours": "55555",
+    "includedPlaceholderUnits": "55555",
+    "includedTooltip": "55555 {{units}} 55555",
+    "overageRateLabel": "55555",
+    "overageRateTooltip": "55555 {{unit}} 55555",
+    "rolloverDescription": "55555",
+    "rolloverLabel": "55555 {{units}} 55555",
+    "units": {
+      "hour": "55555",
+      "hours": "55555",
+      "units": "55555"
+    }
+  },
+  "frequencyOverride": {
+    "confirmation": "55555 {{lineFrequency}} 55555 {{contractFrequency}} 55555",
+    "description": "55555 {{frequency}} 55555",
+    "label": "55555",
+    "optionAlreadySetForContract": "55555 {{label}} 55555",
+    "placeholder": "55555 {{frequency}} 55555"
+  },
+  "wizard": {
+    "dialogs": {
+      "unsavedChanges": {
+        "cancel": "55555",
+        "confirm": "55555",
+        "message": "55555",
+        "title": "55555"
+      }
+    },
+    "errors": {
+      "failedToCreateContract": "55555",
+      "failedToLoadTemplateDetails": "55555",
+      "failedToLoadTemplates": "55555",
+      "failedToSaveDraft": "55555"
+    },
+    "steps": {
+      "contractBasics": "55555",
+      "fixedFeeServices": "55555",
+      "hourlyServices": "55555",
+      "products": "55555",
+      "reviewCreate": "55555",
+      "usageBasedServices": "55555"
+    },
+    "title": {
+      "createNewContract": "55555",
+      "editContract": "55555"
+    },
+    "validation": {
+      "addAtLeastOneService": "55555",
+      "baseRateRequiredWhenFixedServices": "55555",
+      "billingFrequencyRequired": "55555",
+      "clientRequired": "55555",
+      "contractNameRequired": "55555",
+      "noticePeriodRange": "55555 {{min}} 55555 {{max}} 55555",
+      "noticePeriodWholeNumber": "55555",
+      "recurring": {
+        "frequency": {
+          "annually": "55555",
+          "biweekly": "55555",
+          "monthly": "55555",
+          "quarterly": "55555",
+          "semi-annually": "55555",
+          "weekly": "55555"
+        },
+        "lineType": {
+          "fixed": "55555",
+          "hourly": "55555",
+          "product": "55555",
+          "usage": "55555"
+        }
+      },
+      "renewalModeRequiredWithEndDate": "55555",
+      "renewalTermPositiveWhole": "55555",
+      "selectClientBeforeDraft": "55555",
+      "selectProductForEachLine": "55555",
+      "startDateRequired": "55555",
+      "unsupportedRecurringAuthoringCombination": "55555 {{lineType}} 55555 {{supportedFrequencies}} 55555 {{billingFrequency}} 55555"
+    },
+    "nav": {
+      "back": "55555",
+      "next": "55555",
+      "skip": "55555",
+      "finish": "55555",
+      "saveDraft": "55555",
+      "saving": "55555",
+      "completing": "55555"
+    }
+  },
+  "wizardBasics": {
+    "additionalDescription": {
+      "hint": "55555",
+      "label": "55555",
+      "placeholder": "55555"
+    },
+    "billingFrequency": {
+      "hint": "55555",
+      "label": "55555",
+      "placeholder": "55555"
+    },
+    "cadenceOwner": {
+      "description": "55555",
+      "label": "55555",
+      "options": {
+        "client": {
+          "description": "55555",
+          "label": "55555"
+        },
+        "contract": {
+          "description": "55555",
+          "label": "55555"
+        }
+      }
+    },
+    "client": {
+      "chooseClientHint": "55555",
+      "clientLabel": "55555",
+      "loadingClients": "55555",
+      "selectClient": "55555"
+    },
+    "contractName": {
+      "hint": "55555",
+      "label": "55555",
+      "placeholder": "55555"
+    },
+    "currency": {
+      "hint": "55555",
+      "label": "55555",
+      "placeholder": "55555"
+    },
+    "dates": {
+      "endDateAfterStartValidation": "55555",
+      "endDateLabel": "55555",
+      "endDateOngoingHint": "55555",
+      "endDateTooltip": "55555",
+      "startDateHint": "55555",
+      "startDateLabel": "55555"
+    },
+    "description": "55555",
+    "heading": "55555",
+    "po": {
+      "amountHint": "55555",
+      "amountLabel": "55555",
+      "noteLabel": "55555",
+      "noteText": "55555",
+      "numberHint": "55555",
+      "numberLabel": "55555",
+      "numberPlaceholder": "55555",
+      "requireForInvoicing": "55555",
+      "requireHint": "55555",
+      "requireTooltip": "55555",
+      "title": "55555"
+    },
+    "renewal": {
+      "evergreen": {
+        "description": "55555",
+        "title": "55555"
+      },
+      "fixedTerm": {
+        "description": "55555",
+        "title": "55555"
+      },
+      "modeLabel": "55555",
+      "modeOptions": {
+        "auto": "55555",
+        "manual": "55555",
+        "none": "55555"
+      },
+      "modePlaceholder": "55555",
+      "noticePeriodLabel": "55555",
+      "noticePeriodPlaceholder": "55555",
+      "termLabel": "55555",
+      "termPlaceholder": "55555",
+      "useTenantDefaultsDescription": "55555",
+      "useTenantDefaultsLabel": "55555"
+    },
+    "summary": {
+      "labels": {
+        "billingFrequency": "55555",
+        "client": "55555",
+        "contract": "55555",
+        "currency": "55555",
+        "noticePeriod": "55555",
+        "period": "55555",
+        "poAmount": "55555",
+        "poNumber": "55555",
+        "poRequired": "55555",
+        "renewalMode": "55555",
+        "renewalTerm": "55555"
+      },
+      "title": "55555",
+      "values": {
+        "notSelected": "55555",
+        "noticePeriodDays_one": "55555 {{count}} 55555",
+        "noticePeriodDays_other": "55555 {{count}} 55555",
+        "ongoing": "55555",
+        "renewalTermMonths_one": "55555 {{count}} 55555",
+        "renewalTermMonths_other": "55555 {{count}} 55555"
+      }
+    },
+    "template": {
+      "loadingTemplateDetails": "55555",
+      "loadingTemplates": "55555",
+      "prefillHint": "55555",
+      "preview": {
+        "billingCadenceLabel": "55555",
+        "notSpecified": "55555",
+        "templateLabel": "55555"
+      },
+      "selectTemplateOptional": "55555",
+      "startFromTemplate": "55555"
+    }
+  },
+  "wizardFixed": {
+    "alternateFrequencyLabel": "55555",
+    "baseRate": {
+      "hint": "55555",
+      "label": "55555",
+      "placeholder": "55555"
+    },
+    "description": "55555",
+    "emptyState": "55555",
+    "explainer": {
+      "description": "55555",
+      "title": "55555"
+    },
+    "heading": "55555",
+    "preview": {
+      "labels": {
+        "billingTiming": "55555",
+        "cadenceOwner": "55555",
+        "invoiceWindow": "55555",
+        "recurringRate": "55555",
+        "service": "55555",
+        "services": "55555"
+      },
+      "title": "55555"
+    },
+    "proration": {
+      "label": "55555",
+      "tooltip": "55555"
+    },
+    "services": {
+      "addService": "55555",
+      "label": "55555",
+      "quantityLabel": "55555",
+      "selectServicePlaceholder": "55555",
+      "serviceItemLabel": "55555 {{index}} 55555"
+    }
+  },
+  "wizardProducts": {
+    "actions": {
+      "addProduct": "55555"
+    },
+    "description": "55555",
+    "emptyState": "55555",
+    "heading": "55555",
+    "labels": {
+      "defaultCatalogPrice": "55555",
+      "overrideUnitPriceOptional": "55555",
+      "productItem": "55555 {{index}} 55555",
+      "products": "55555",
+      "quantity": "55555",
+      "selectProductPlaceholder": "55555"
+    },
+    "validation": {
+      "noDefaultPriceEnterUnitPrice": "55555",
+      "productMissingPrice": "55555"
+    }
+  },
+  "wizardHourly": {
+    "actions": {
+      "addHourlyService": "55555"
+    },
+    "alternateFrequencyLabel": "55555",
+    "description": "55555",
+    "emptyState": "55555",
+    "explainer": {
+      "description": "55555",
+      "title": "55555"
+    },
+    "heading": "55555",
+    "labels": {
+      "enterHourlyRate": "55555",
+      "hourlyRate": "55555",
+      "hourlyRatePerHour": "55555 {{rate}} 55555",
+      "hourlyRatePlaceholder": "55555",
+      "hourlyServices": "55555",
+      "selectServicePlaceholder": "55555",
+      "serviceItem": "55555 {{index}} 55555",
+      "setBucketOfHours": "55555"
+    },
+    "minimumBillableTime": {
+      "hint": "55555",
+      "label": "55555",
+      "placeholder": "55555"
+    },
+    "roundUpToNearest": {
+      "hint": "55555",
+      "label": "55555",
+      "placeholder": "55555"
+    },
+    "summary": {
+      "labels": {
+        "minimumTime": "55555",
+        "roundUp": "55555",
+        "services": "55555"
+      },
+      "title": "55555",
+      "values": {
+        "everyMinutes": "55555 {{count}} 55555",
+        "minutes": "55555 {{count}} 55555"
+      }
+    }
+  },
+  "wizardUsage": {
+    "actions": {
+      "addUsageBasedService": "55555"
+    },
+    "alternateFrequencyLabel": "55555",
+    "description": "55555",
+    "emptyState": "55555",
+    "explainer": {
+      "description": "55555",
+      "title": "55555"
+    },
+    "heading": "55555",
+    "labels": {
+      "enterUnitRate": "55555",
+      "ratePerUnit": "55555",
+      "ratePerUnitPlaceholder": "55555",
+      "ratePerUnitValue": "55555 {{rate}} 55555 {{unit}} 55555",
+      "selectServicePlaceholder": "55555",
+      "serviceItem": "55555 {{index}} 55555",
+      "services": "55555",
+      "setBucketAllocation": "55555",
+      "unitOfMeasure": "55555",
+      "unitOfMeasureHint": "55555",
+      "unitOfMeasurePlaceholder": "55555"
+    },
+    "summary": {
+      "labels": {
+        "services": "55555"
+      },
+      "title": "55555"
+    },
+    "values": {
+      "defaultUnit": "55555"
+    }
+  },
+  "wizardReview": {
+    "heading": "55555",
+    "description": "55555",
+    "sections": {
+      "contractBasics": "55555",
+      "fixedFeeServices": "55555",
+      "products": "55555",
+      "hourlyServices": "55555",
+      "usageBasedServices": "55555"
+    },
+    "fields": {
+      "client": "55555",
+      "contractName": "55555",
+      "billingFrequency": "55555",
+      "currency": "55555",
+      "startDate": "55555",
+      "endDate": "55555",
+      "renewalMode": "55555",
+      "noticePeriod": "55555",
+      "renewalTerm": "55555"
+    },
+    "fallback": {
+      "notSelected": "55555",
+      "notSpecified": "55555",
+      "ongoing": "55555",
+      "notApplicable": "55555"
+    },
+    "renewalMode": {
+      "none": "55555",
+      "manual": "55555",
+      "auto": "55555"
+    },
+    "noticePeriod": {
+      "one": "55555 {{count}} 55555",
+      "other": "55555 {{count}} 55555"
+    },
+    "renewalTerm": {
+      "one": "55555 {{count}} 55555",
+      "other": "55555 {{count}} 55555"
+    },
+    "common": {
+      "yes": "55555",
+      "no": "55555",
+      "enabled": "55555",
+      "disabled": "55555",
+      "bucketLabel": "55555",
+      "billingFrequencyOverrideLabel": "55555",
+      "serviceQuantityRow": "55555 {{serviceName}} 55555 {{quantity}} 55555",
+      "unitSingular": "55555",
+      "unitsFallback": "55555",
+      "hourSingular": "55555"
+    },
+    "po": {
+      "title": "55555",
+      "requiredLabel": "55555",
+      "numberLabel": "55555",
+      "amountLabel": "55555"
+    },
+    "bucket": {
+      "includedHours": "55555 {{formattedValue}} 55555",
+      "includedUnits": "55555 {{formattedValue}} 55555 {{unitLabel}} 55555",
+      "overageLabel": "55555 {{rate}} 55555 {{unit}} 55555",
+      "rolloverEnabled": "55555",
+      "rolloverDisabled": "55555",
+      "summaryWithOverage": "55555 {{included}} 55555 {{overage}} 55555 {{rollover}} 55555",
+      "summaryWithoutOverage": "55555 {{included}} 55555 {{rollover}} 55555"
+    },
+    "fixed": {
+      "badgeCount": {
+        "one": "55555 {{count}} 55555",
+        "other": "55555 {{count}} 55555"
+      },
+      "monthlyBaseRate": "55555",
+      "partialPeriodAdjustment": "55555"
+    },
+    "recurring": {
+      "cadenceOwner": {
+        "label": "55555",
+        "contractAnniversary": "55555",
+        "clientBillingSchedule": "55555"
+      },
+      "firstInvoice": {
+        "contract": {
+          "advance": "55555",
+          "arrears": "55555"
+        },
+        "client": {
+          "advance": "55555",
+          "arrears": "55555"
+        }
+      },
+      "partialPeriod": {
+        "enabled": "55555",
+        "disabled": "55555"
+      },
+      "materialized": {
+        "heading": "55555",
+        "serviceLabel": "55555",
+        "invoiceWindowLabel": "55555",
+        "summary": {
+          "contract": "55555",
+          "client": "55555"
+        }
+      }
+    },
+    "products": {
+      "badgeCount": {
+        "one": "55555 {{count}} 55555",
+        "other": "55555 {{count}} 55555"
+      },
+      "overrideRate": "55555 {{rate}} 55555 {{currencyCode}} 55555"
+    },
+    "hourly": {
+      "badgeCount": {
+        "one": "55555 {{count}} 55555",
+        "other": "55555 {{count}} 55555"
+      },
+      "servicesAndRates": "55555",
+      "serviceRateRow": "55555 {{serviceName}} 55555 {{rate}} 55555",
+      "minimumTimeLabel": "55555",
+      "roundUpLabel": "55555",
+      "minutesValue": "55555 {{count}} 55555"
+    },
+    "usage": {
+      "badgeCount": {
+        "one": "55555 {{count}} 55555",
+        "other": "55555 {{count}} 55555"
+      },
+      "serviceRateRow": "55555 {{serviceName}} 55555 {{rate}} 55555 {{unit}} 55555"
+    },
+    "total": {
+      "title": "55555",
+      "description": "55555",
+      "perMonth": "55555"
+    },
+    "finalChecklist": {
+      "title": "55555",
+      "itemRates": "55555",
+      "itemPo": "55555",
+      "itemDates": "55555",
+      "itemEditLater": "55555"
+    }
+  },
+  "templateWizard": {
+    "title": {
+      "createContractTemplate": "55555"
+    },
+    "steps": {
+      "templateBasics": "55555",
+      "fixedFeeBlocks": "55555",
+      "products": "55555",
+      "hourlyBlocks": "55555",
+      "usageBasedBlocks": "55555",
+      "reviewPublish": "55555"
+    },
+    "actions": {
+      "continue": "55555",
+      "publishTemplate": "55555"
+    },
+    "errors": {
+      "failedToCreateTemplate": "55555"
+    },
+    "validation": {
+      "templateNameRequired": "55555",
+      "billingFrequencyRequired": "55555",
+      "duplicateNameExists": "55555",
+      "templateNameAlreadyInUse": "55555",
+      "atLeastOneServiceRequired": "55555",
+      "unsupportedRecurringAuthoringCombination": "55555 {{lineType}} 55555 {{supportedFrequencies}} 55555 {{billingFrequency}} 55555",
+      "recurring": {
+        "frequency": {
+          "monthly": "55555",
+          "quarterly": "55555",
+          "semi-annually": "55555",
+          "annually": "55555",
+          "weekly": "55555",
+          "biweekly": "55555"
+        },
+        "lineType": {
+          "fixed": "55555",
+          "product": "55555",
+          "hourly": "55555",
+          "usage": "55555"
+        }
+      }
+    }
+  },
+  "templateBasics": {
+    "heading": "55555",
+    "description": "55555",
+    "fields": {
+      "templateName": "55555",
+      "internalNotes": "55555",
+      "recommendedBillingFrequency": "55555"
+    },
+    "placeholders": {
+      "templateName": "55555",
+      "internalNotes": "55555",
+      "billingFrequency": "55555"
+    },
+    "help": {
+      "templateName": "55555",
+      "internalNotes": "55555",
+      "billingFrequency": "55555"
+    }
+  },
+  "templateFixed": {
+    "heading": "55555",
+    "description": "55555",
+    "info": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "cadenceOwner": {
+      "label": "55555",
+      "help": "55555",
+      "client": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "contract": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "billingTiming": {
+      "arrears": "55555",
+      "advance": "55555"
+    },
+    "fields": {
+      "billingTiming": "55555",
+      "adjustPartialPeriods": "55555",
+      "services": "55555",
+      "serviceNumber": "55555 {{index}} 55555",
+      "quantityOptional": "55555"
+    },
+    "placeholders": {
+      "billingTiming": "55555",
+      "selectService": "55555"
+    },
+    "help": {
+      "adjustPartialPeriods": "55555",
+      "quantity": "55555"
+    },
+    "preview": {
+      "unknownService": "55555",
+      "cadenceOwnerLabel": "55555",
+      "billingTimingLabel": "55555",
+      "serviceLabel": "55555",
+      "invoiceWindowLabel": "55555"
+    },
+    "actions": {
+      "addService": "55555"
+    }
+  },
+  "templateProducts": {
+    "heading": "55555",
+    "description": "55555",
+    "fields": {
+      "products": "55555",
+      "productNumber": "55555 {{index}} 55555",
+      "quantityOptional": "55555"
+    },
+    "placeholders": {
+      "selectProduct": "55555"
+    },
+    "help": {
+      "quantity": "55555"
+    },
+    "actions": {
+      "addProduct": "55555"
+    },
+    "preview": {
+      "unknownProduct": "55555"
+    }
+  },
+  "templateHourly": {
+    "heading": "55555",
+    "description": "55555",
+    "info": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "rounding": {
+      "heading": "55555",
+      "minimumBillableTime": "55555",
+      "minimumBillableTimeHelp": "55555",
+      "roundUpToNearest": "55555",
+      "roundUpToNearestHelp": "55555",
+      "defaultIntervalPlaceholder": "55555"
+    },
+    "fields": {
+      "services": "55555",
+      "serviceNumber": "55555 {{index}} 55555",
+      "setBucketOfHours": "55555"
+    },
+    "placeholders": {
+      "selectService": "55555"
+    },
+    "preview": {
+      "unknownService": "55555"
+    },
+    "actions": {
+      "addService": "55555"
+    }
+  },
+  "templateUsage": {
+    "heading": "55555",
+    "description": "55555",
+    "info": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "fields": {
+      "services": "55555",
+      "serviceNumber": "55555 {{index}} 55555",
+      "unitOfMeasureOptional": "55555",
+      "setBucketAllocation": "55555"
+    },
+    "placeholders": {
+      "selectService": "55555",
+      "unitOfMeasure": "55555"
+    },
+    "help": {
+      "unitOfMeasure": "55555"
+    },
+    "preview": {
+      "unknownService": "55555"
+    },
+    "actions": {
+      "addService": "55555"
+    }
+  },
+  "templateReview": {
+    "heading": "55555",
+    "description": "55555",
+    "sections": {
+      "basics": "55555",
+      "fixedFeeServices": "55555",
+      "products": "55555",
+      "hourlyServices": "55555",
+      "usageBasedServices": "55555"
+    },
+    "fields": {
+      "templateName": "55555",
+      "billingFrequency": "55555",
+      "internalNotes": "55555"
+    },
+    "fallback": {
+      "none": "55555",
+      "noNotes": "55555",
+      "unnamedService": "55555",
+      "unnamedProduct": "55555"
+    },
+    "empty": {
+      "fixed": "55555",
+      "products": "55555",
+      "hourly": "55555",
+      "usage": "55555"
+    },
+    "common": {
+      "quantity": "55555",
+      "bucket": "55555",
+      "enabled": "55555",
+      "disabled": "55555"
+    },
+    "fixed": {
+      "cadenceOwnerLabel": "55555",
+      "cadenceOwner": {
+        "contract": "55555",
+        "client": "55555"
+      },
+      "billingTimingLabel": "55555",
+      "billingTiming": {
+        "advance": "55555",
+        "arrears": "55555"
+      },
+      "partialPeriodLabel": "55555",
+      "serviceLabel": "55555",
+      "invoiceWindowLabel": "55555"
+    },
+    "hourly": {
+      "minimumBillableTimeLabel": "55555",
+      "roundUpLabel": "55555",
+      "minutes": "55555 {{count}} 55555"
+    },
+    "usage": {
+      "unitLabel": "55555"
+    },
+    "bucket": {
+      "hoursIncluded": "55555 {{value}} 55555",
+      "unitsIncluded": "55555 {{value}} 55555 {{unit}} 55555",
+      "unitsFallback": "55555",
+      "overage": "55555 {{amount}} 55555 {{unit}} 55555",
+      "hourSingular": "55555",
+      "unitSingular": "55555",
+      "rolloverEnabled": "55555",
+      "period": "55555 {{period}} 55555"
+    }
+  },
+  "templatePreview": {
+    "serviceType": {
+      "fixedFee": "55555",
+      "products": "55555",
+      "hourly": "55555",
+      "usageBased": "55555"
+    },
+    "selectedHeading": "55555 {{type}} 55555 {{count}} 55555",
+    "labels": {
+      "qty": "55555"
+    },
+    "removeDialog": {
+      "title": "55555",
+      "message": "55555 {{serviceName}} 55555 {{presetName}} 55555",
+      "confirm": "55555",
+      "cancel": "55555"
+    }
+  },
+  "recurringPreview": {
+    "rangeSeparator": "55555 {{start}} 55555 {{end}} 55555",
+    "cadenceOwner": {
+      "contract": {
+        "label": "55555",
+        "summary": "55555"
+      },
+      "client": {
+        "label": "55555",
+        "summary": "55555"
+      }
+    },
+    "billingTiming": {
+      "advance": {
+        "label": "55555",
+        "summary": "55555"
+      },
+      "arrears": {
+        "label": "55555",
+        "summary": "55555"
+      }
+    },
+    "firstInvoice": {
+      "contract": {
+        "advance": "55555",
+        "arrears": "55555"
+      },
+      "client": {
+        "advance": "55555",
+        "arrears": "55555"
+      }
+    },
+    "partialPeriod": {
+      "prorated": "55555",
+      "full": "55555"
+    },
+    "materializedPeriods": {
+      "heading": "55555",
+      "summary": {
+        "contract": "55555",
+        "client": "55555"
+      }
+    }
+  }
+}

@@ -1,0 +1,79 @@
+.container {
+  position: relative;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.paletteToggle {
+  position: absolute;
+  top: 12px;
+  right: -12px;
+  z-index: 10;
+}
+
+/* Clips the sliding card so its translateX animation cannot bleed past
+   the palette's left edge into the app sidebar. */
+.clipper {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+}
+
+.card {
+  background-color: rgb(var(--color-card));
+  border: 1px solid rgb(var(--color-border-200));
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-radius: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cardVisible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.cardHidden {
+  opacity: 0;
+  transform: translateX(-100%);
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  border-width: 0;
+}
+
+.scrollArea {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--color-border-200)) transparent;
+}
+
+.scrollArea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollArea::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.scrollArea::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-border-200));
+  border-radius: 3px;
+}
+
+.scrollArea::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-border-300));
+}

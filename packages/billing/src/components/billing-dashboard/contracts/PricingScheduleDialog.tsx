@@ -15,6 +15,7 @@ import {
 } from '@alga-psa/billing/actions/contractPricingScheduleActions';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface PricingScheduleDialogProps {
   contractId: string;
@@ -29,6 +30,7 @@ export function PricingScheduleDialog({
   onClose,
   onSave
 }: PricingScheduleDialogProps) {
+  const { t } = useTranslation('msp/contracts');
   const [effectiveDate, setEffectiveDate] = useState<Date | undefined>(
     schedule?.effective_date ? new Date(schedule.effective_date) : undefined
   );
@@ -75,37 +77,49 @@ export function PricingScheduleDialog({
     setError(null);
 
     if (!effectiveDate) {
-      setError('Effective date is required');
+      setError(t('pricingSchedules.dialog.validation.effectiveDateRequired', { defaultValue: 'Effective date is required' }));
       return;
     }
 
     if (useDuration && !durationValue) {
-      setError('Duration value is required when using duration');
+      setError(t('pricingSchedules.dialog.validation.durationRequired', {
+        defaultValue: 'Duration value is required when using duration',
+      }));
       return;
     }
 
     if (useDuration && parseInt(durationValue) <= 0) {
-      setError('Duration must be a positive number');
+      setError(t('pricingSchedules.dialog.validation.durationPositive', {
+        defaultValue: 'Duration must be a positive number',
+      }));
       return;
     }
 
     if (!useDuration && hasEndDate && !endDate) {
-      setError('End date is required when "Has end date" is enabled');
+      setError(t('pricingSchedules.dialog.validation.endDateRequiredWhenEnabled', {
+        defaultValue: 'End date is required when "Has end date" is enabled',
+      }));
       return;
     }
 
     if (!useDuration && hasEndDate && endDate && endDate <= effectiveDate) {
-      setError('End date must be after effective date');
+      setError(t('pricingSchedules.dialog.validation.endDateAfterEffectiveDate', {
+        defaultValue: 'End date must be after effective date',
+      }));
       return;
     }
 
     if (!useDefaultRate && !customRate) {
-      setError('Custom rate is required when not using default rate');
+      setError(t('pricingSchedules.dialog.validation.customRateRequired', {
+        defaultValue: 'Custom rate is required when not using default rate',
+      }));
       return;
     }
 
     if (!useDefaultRate && parseFloat(customRate) < 0) {
-      setError('Custom rate must be a positive number');
+      setError(t('pricingSchedules.dialog.validation.customRatePositive', {
+        defaultValue: 'Custom rate must be a positive number',
+      }));
       return;
     }
 
@@ -131,7 +145,13 @@ export function PricingScheduleDialog({
       onSave();
     } catch (err) {
       console.error('Error saving pricing schedule:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save pricing schedule');
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('pricingSchedules.dialog.errors.failedToSavePricingSchedule', {
+            defaultValue: 'Failed to save pricing schedule',
+          })
+      );
     } finally {
       setIsSaving(false);
     }
@@ -141,7 +161,9 @@ export function PricingScheduleDialog({
     <Dialog
       isOpen={true}
       onClose={onClose}
-      title={schedule ? 'Edit Pricing Schedule' : 'Add Pricing Schedule'}
+      title={schedule
+        ? t('pricingSchedules.dialog.title.editPricingSchedule', { defaultValue: 'Edit Pricing Schedule' })
+        : t('pricingSchedules.dialog.title.addPricingSchedule', { defaultValue: 'Add Pricing Schedule' })}
       className="max-w-lg"
       footer={(
         <div className="flex justify-end space-x-2">
@@ -152,7 +174,7 @@ export function PricingScheduleDialog({
             onClick={onClose}
             disabled={isSaving}
           >
-            Cancel
+            {t('pricingSchedules.dialog.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button
             id="save-pricing-schedule-btn"
@@ -160,7 +182,11 @@ export function PricingScheduleDialog({
             onClick={() => (document.getElementById('pricing-schedule-form') as HTMLFormElement | null)?.requestSubmit()}
             disabled={isSaving}
           >
-            {isSaving ? 'Saving...' : schedule ? 'Update Schedule' : 'Add Schedule'}
+            {isSaving
+              ? t('pricingSchedules.dialog.actions.saving', { defaultValue: 'Saving...' })
+              : schedule
+                ? t('pricingSchedules.dialog.actions.updateSchedule', { defaultValue: 'Update Schedule' })
+                : t('pricingSchedules.dialog.actions.addSchedule', { defaultValue: 'Add Schedule' })}
           </Button>
         </div>
       )}
@@ -174,7 +200,9 @@ export function PricingScheduleDialog({
           )}
 
           <div>
-            <Label htmlFor="effective-date">Effective Date *</Label>
+            <Label htmlFor="effective-date">
+              {t('pricingSchedules.dialog.fields.effectiveDate', { defaultValue: 'Effective Date' })} *
+            </Label>
             <DatePicker
               value={effectiveDate}
               onChange={setEffectiveDate}
@@ -184,7 +212,7 @@ export function PricingScheduleDialog({
 
           <div>
             <SwitchWithLabel
-              label="Use duration"
+              label={t('pricingSchedules.dialog.fields.useDuration', { defaultValue: 'Use duration' })}
               checked={useDuration}
               onCheckedChange={(checked) => {
                 setUseDuration(checked);
@@ -199,28 +227,44 @@ export function PricingScheduleDialog({
           {useDuration && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="duration-value">Duration *</Label>
+                <Label htmlFor="duration-value">
+                  {t('pricingSchedules.dialog.fields.duration', { defaultValue: 'Duration' })} *
+                </Label>
                 <Input
                   id="duration-value"
                   type="number"
                   min="1"
                   value={durationValue}
                   onChange={(e) => setDurationValue(e.target.value)}
-                  placeholder="e.g., 6"
+                  placeholder={t('pricingSchedules.dialog.fields.durationPlaceholder', { defaultValue: 'e.g., 6' })}
                   className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
               <div>
-                <Label htmlFor="duration-unit">Unit *</Label>
+                <Label htmlFor="duration-unit">
+                  {t('pricingSchedules.dialog.fields.unit', { defaultValue: 'Unit' })} *
+                </Label>
                 <CustomSelect
                   id="duration-unit"
                   value={durationUnit}
                   onValueChange={(value) => setDurationUnit(value as 'days' | 'weeks' | 'months' | 'years')}
                   options={[
-                    { value: 'days', label: 'Days' },
-                    { value: 'weeks', label: 'Weeks' },
-                    { value: 'months', label: 'Months' },
-                    { value: 'years', label: 'Years' }
+                    {
+                      value: 'days',
+                      label: t('pricingSchedules.dialog.durationUnits.days', { defaultValue: 'Days' }),
+                    },
+                    {
+                      value: 'weeks',
+                      label: t('pricingSchedules.dialog.durationUnits.weeks', { defaultValue: 'Weeks' }),
+                    },
+                    {
+                      value: 'months',
+                      label: t('pricingSchedules.dialog.durationUnits.months', { defaultValue: 'Months' }),
+                    },
+                    {
+                      value: 'years',
+                      label: t('pricingSchedules.dialog.durationUnits.years', { defaultValue: 'Years' }),
+                    }
                   ]}
                 />
               </div>
@@ -231,7 +275,7 @@ export function PricingScheduleDialog({
             <>
               <div>
                 <SwitchWithLabel
-                  label="Has end date"
+                  label={t('pricingSchedules.dialog.fields.hasEndDate', { defaultValue: 'Has end date' })}
                   checked={hasEndDate}
                   onCheckedChange={(checked) => {
                     setHasEndDate(checked);
@@ -244,7 +288,7 @@ export function PricingScheduleDialog({
 
               {hasEndDate && (
                 <div>
-                  <Label htmlFor="end-date">End Date</Label>
+                  <Label htmlFor="end-date">{t('pricingSchedules.dialog.fields.endDate', { defaultValue: 'End Date' })}</Label>
                   <DatePicker
                     value={endDate}
                     onChange={setEndDate}
@@ -257,7 +301,7 @@ export function PricingScheduleDialog({
 
           <div>
             <SwitchWithLabel
-              label="Use default rate"
+              label={t('pricingSchedules.dialog.fields.useDefaultRate', { defaultValue: 'Use default rate' })}
               checked={useDefaultRate}
               onCheckedChange={(checked) => {
                 setUseDefaultRate(checked);
@@ -270,7 +314,9 @@ export function PricingScheduleDialog({
 
           {!useDefaultRate && (
             <div>
-              <Label htmlFor="custom-rate">Custom Rate *</Label>
+              <Label htmlFor="custom-rate">
+                {t('pricingSchedules.dialog.fields.customRate', { defaultValue: 'Custom Rate' })} *
+              </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
                 <Input
@@ -281,19 +327,21 @@ export function PricingScheduleDialog({
                   value={customRate}
                   onChange={(e) => setCustomRate(e.target.value)}
                   className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  placeholder="0.00"
+                  placeholder={t('pricingSchedules.dialog.fields.customRatePlaceholder', { defaultValue: '0.00' })}
                 />
               </div>
             </div>
           )}
 
           <div>
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">{t('pricingSchedules.dialog.fields.notes', { defaultValue: 'Notes' })}</Label>
             <TextArea
               id="notes"
               value={notes}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
-              placeholder="Add notes about this pricing change (e.g., 'Annual rate increase')"
+              placeholder={t('pricingSchedules.dialog.fields.notesPlaceholder', {
+                defaultValue: "Add notes about this pricing change (e.g., 'Annual rate increase')",
+              })}
               className="min-h-[80px]"
             />
           </div>

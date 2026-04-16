@@ -1,21 +1,37 @@
-import { useState } from 'react';
+import { createElement } from 'react';
+import { toast as hotToast } from 'react-hot-toast';
 
 interface ToastOptions {
   title: string;
-  description: string;
+  description?: string;
   variant?: 'default' | 'destructive';
 }
 
-export function useToast() {
-  const [toasts, setToasts] = useState<ToastOptions[]>([]);
+function renderToastContent({ title, description }: ToastOptions) {
+  return createElement(
+    'div',
+    { className: 'flex flex-col gap-0.5' },
+    createElement('span', { className: 'font-medium' }, title),
+    description
+      ? createElement('span', { className: 'text-sm opacity-90' }, description)
+      : null
+  );
+}
 
-  const toast = (options: ToastOptions) => {
-    setToasts((prev) => [...prev, options]);
-    // Remove toast after 3 seconds
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t !== options));
-    }, 3000);
+export function useToast() {
+  const toast = (options: ToastOptions | string) => {
+    if (typeof options === 'string') {
+      return hotToast(options);
+    }
+
+    const content = renderToastContent(options);
+
+    if (options.variant === 'destructive') {
+      return hotToast.error(content);
+    }
+
+    return hotToast.success(content);
   };
 
-  return { toast, toasts };
+  return { toast, toasts: [] as ToastOptions[] };
 }

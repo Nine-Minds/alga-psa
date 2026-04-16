@@ -35,6 +35,8 @@ export async function unarchiveServiceRequestDefinition(
 ): Promise<void> {
   await knex('service_request_definitions').where({ tenant, definition_id: definitionId }).update({
     lifecycle_state: 'draft',
+    published_by: null,
+    published_at: null,
     updated_by: updatedBy ?? null,
     updated_at: knex.fn.now(),
   });
@@ -47,6 +49,7 @@ export async function listPublishedServiceRequestDefinitions(
   return (await knex('service_request_definitions as definition')
     .where('definition.tenant', tenant)
     .whereNot('definition.lifecycle_state', 'archived')
+    .whereNotNull('definition.published_at')
     .whereExists(function publishedVersionExists() {
       this.select(knex.raw('1'))
         .from('service_request_definition_versions as version')

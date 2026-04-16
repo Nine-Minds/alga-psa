@@ -46,14 +46,17 @@
     "titlePlaceholder": "Titel van ticket",
     "descriptionPlaceholder": "Beschrijf je probleem...",
     "priorityPlaceholder": "Selecteer prioriteit",
+    "noBoardsAvailable": "No ticket boards are available for your account. Contact your administrator.",
     "submit": "Ticket aanmaken",
     "submitting": "Bezig met aanmaken...",
     "errors": {
       "titleRequired": "Titel is verplicht",
       "descriptionRequired": "Beschrijving is verplicht",
       "priorityRequired": "Selecteer een prioriteit",
-      "createFailed": "Ticket aanmaken is mislukt. Probeer het opnieuw."
-    }
+      "createFailed": "Ticket aanmaken is mislukt. Probeer het opnieuw.",
+      "boardRequired": "Selecteer een board"
+    },
+    "boardPlaceholder": "Board selecteren"
   },
   "status": {
     "open": "Open",

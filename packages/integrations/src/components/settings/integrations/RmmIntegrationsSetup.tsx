@@ -52,7 +52,7 @@ function IntegrationBanner({ option }: { option: RmmIntegrationOption }) {
       case 'ninjaone':
         return <BannerIcon className="bg-slate-900 text-xl font-bold text-white">N</BannerIcon>;
       case 'tanium':
-        return <BannerIcon className="bg-emerald-700 text-sm font-semibold text-white">Tanium</BannerIcon>;
+        return <BannerIcon className="bg-red-600 text-xl font-bold text-white">T</BannerIcon>;
       default:
         return <BannerIcon className="bg-muted text-foreground">RMM</BannerIcon>;
     }

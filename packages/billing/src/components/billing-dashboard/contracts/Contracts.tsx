@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -18,6 +18,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IContract, IContractWithClient } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
@@ -37,11 +38,13 @@ import { TemplateWizard } from './template-wizard/TemplateWizard';
 import { ContractDialog } from './ContractDialog';
 import { updateClientContractForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import {
+  type ContractSubTab,
   getDraftTabBadgeCount,
   normalizeContractSubtab,
 } from './contractsTabs';
 
 const Contracts: React.FC = () => {
+  const { t } = useTranslation('msp/contracts');
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -85,6 +88,15 @@ const Contracts: React.FC = () => {
   const [draftCurrentPage, setDraftCurrentPage] = useState(1);
   const [draftPageSize, setDraftPageSize] = useState(10);
 
+  const contractSubtabLabels = useMemo<Record<ContractSubTab, string>>(
+    () => ({
+      templates: t('common.tabs.templates', { defaultValue: 'Templates' }),
+      'client-contracts': t('common.tabs.clientContracts', { defaultValue: 'Client Contracts' }),
+      drafts: t('common.tabs.drafts', { defaultValue: 'Drafts' }),
+    }),
+    [t]
+  );
+
   // Handle page size change for templates - reset to page 1
   const handleTemplatePageSizeChange = (newPageSize: number) => {
     setTemplatePageSize(newPageSize);
@@ -121,7 +133,7 @@ const Contracts: React.FC = () => {
       setError(null);
     } catch (err) {
       console.error('Error fetching contracts:', err);
-      setError('Failed to fetch contracts');
+      setError(t('contractsList.errors.failedToFetch', { defaultValue: 'Failed to fetch contracts' }));
     } finally {
       setIsLoading(false);
     }
@@ -151,7 +163,9 @@ const Contracts: React.FC = () => {
       await fetchContracts();
       setContractToDelete(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete contract';
+      const message = err instanceof Error
+        ? err.message
+        : t('contractsList.toasts.failedToDeleteContract', { defaultValue: 'Failed to delete contract' });
       toast.error(message);
     } finally {
       setIsDeletingContract(false);
@@ -169,7 +183,9 @@ const Contracts: React.FC = () => {
       setDraftToResume(draftData);
       setShowClientWizard(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to resume draft';
+      const message = err instanceof Error
+        ? err.message
+        : t('contractsList.toasts.failedToResumeDraft', { defaultValue: 'Failed to resume draft' });
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -186,10 +202,10 @@ const Contracts: React.FC = () => {
         return;
       }
       await fetchContracts();
-      toast.success('Draft discarded');
+      toast.success(t('contractsList.toasts.draftDiscarded', { defaultValue: 'Draft discarded' }));
       setDraftToDiscard(null);
     } catch (err) {
-      handleError(err, 'Failed to discard draft');
+      handleError(err, t('contractsList.toasts.failedToDiscardDraft', { defaultValue: 'Failed to discard draft' }));
     } finally {
       setIsDiscardingDraft(false);
     }
@@ -203,7 +219,9 @@ const Contracts: React.FC = () => {
       await updateClientContractForBilling(clientContractId, { is_active: false });
       await fetchContracts();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to terminate contract';
+      const message = err instanceof Error
+        ? err.message
+        : t('contractsList.toasts.failedToTerminateContract', { defaultValue: 'Failed to terminate contract' });
       toast.error(message);
     }
   };
@@ -216,7 +234,9 @@ const Contracts: React.FC = () => {
       await updateClientContractForBilling(clientContractId, { is_active: true });
       await fetchContracts();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to restore contract';
+      const message = err instanceof Error
+        ? err.message
+        : t('contractsList.toasts.failedToRestoreContract', { defaultValue: 'Failed to restore contract' });
       toast.error(message);
     }
   };
@@ -229,7 +249,9 @@ const Contracts: React.FC = () => {
       await updateClientContractForBilling(clientContractId, { is_active: true });
       await fetchContracts();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to activate contract';
+      const message = err instanceof Error
+        ? err.message
+        : t('contractsList.toasts.failedToActivateContract', { defaultValue: 'Failed to activate contract' });
       toast.error(message);
     }
   };
@@ -251,38 +273,40 @@ const Contracts: React.FC = () => {
     }
   };
 
-const renderStatusBadge = (status: string) => {
-  const normalized = (status || 'draft').toLowerCase();
-  const statusConfig: Record<string, { variant: 'success' | 'default-muted' | 'warning' | 'error' | 'info'; label: string }> = {
-    active: { variant: 'success', label: 'Active' },
-    draft: { variant: 'default-muted', label: 'Draft' },
-    terminated: { variant: 'warning', label: 'Terminated' },
-    expired: { variant: 'error', label: 'Expired' },
-    published: { variant: 'success', label: 'Published' },
-    archived: { variant: 'default-muted', label: 'Archived' },
+  const renderStatusBadge = (status: string) => {
+    const normalized = (status || 'draft').toLowerCase();
+    const statusConfig: Record<string, { variant: 'success' | 'default-muted' | 'warning' | 'error' | 'info'; label: string }> = {
+      active: { variant: 'success', label: t('status.active', { defaultValue: 'Active' }) },
+      draft: { variant: 'default-muted', label: t('status.draft', { defaultValue: 'Draft' }) },
+      terminated: { variant: 'warning', label: t('status.terminated', { defaultValue: 'Terminated' }) },
+      expired: { variant: 'error', label: t('status.expired', { defaultValue: 'Expired' }) },
+      published: { variant: 'success', label: t('contractsList.status.published', { defaultValue: 'Published' }) },
+      archived: { variant: 'default-muted', label: t('contractsList.status.archived', { defaultValue: 'Archived' }) },
+    };
+    const config = statusConfig[normalized] ?? statusConfig.draft;
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
-  const config = statusConfig[normalized] ?? statusConfig.draft;
-  return <Badge variant={config.variant}>{config.label}</Badge>;
-};
 
   const templateColumns: ColumnDefinition<IContract>[] = [
     {
-      title: 'Contract Name',
+      title: t('contractsList.columns.contractName', { defaultValue: 'Contract Name' }),
       dataIndex: 'contract_name',
     },
     {
-      title: 'Description',
+      title: t('contractsList.columns.description', { defaultValue: 'Description' }),
       dataIndex: 'contract_description',
       render: (value: string | null) =>
-        typeof value === 'string' && value.trim().length > 0 ? value : 'No description',
+        typeof value === 'string' && value.trim().length > 0
+          ? value
+          : t('contractsList.empty.noDescription', { defaultValue: 'No description' }),
     },
     {
-      title: 'Status',
+      title: t('contractsList.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'assignment_status',
       render: (value: string | null, record) => renderStatusBadge(value ?? record.status),
     },
     {
-      title: 'Actions',
+      title: t('contractsList.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'contract_id',
       render: (value, record) => (
         <DropdownMenu>
@@ -293,7 +317,9 @@ const renderStatusBadge = (status: string) => {
               className="h-8 w-8 p-0"
               onClick={(event) => event.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">
+                {t('contractsList.actions.openMenu', { defaultValue: 'Open menu' })}
+              </span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -307,7 +333,7 @@ const renderStatusBadge = (status: string) => {
                 }
               }}
             >
-              Edit
+              {t('common.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id="delete-template-contract-menu-item"
@@ -317,13 +343,14 @@ const renderStatusBadge = (status: string) => {
                 if (record.contract_id) {
                   setContractToDelete({
                     contractId: record.contract_id,
-                    contractName: (record.contract_name?.trim() || 'Untitled template'),
+                    contractName: (record.contract_name?.trim()
+                      || t('contractsList.empty.untitledTemplate', { defaultValue: 'Untitled template' })),
                     kind: 'template',
                   });
                 }
               }}
             >
-              Delete
+              {t('common.actions.delete', { defaultValue: 'Delete' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -333,56 +360,60 @@ const renderStatusBadge = (status: string) => {
 
   const clientContractColumns: ColumnDefinition<IContractWithClient>[] = [
     {
-      title: 'Client',
+      title: t('contractsList.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
       render: (value: string | null) =>
-        typeof value === 'string' && value.trim().length > 0 ? value : '—',
+        typeof value === 'string' && value.trim().length > 0
+          ? value
+          : t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
-      title: 'Source Template',
+      title: t('contractsList.columns.sourceTemplate', { defaultValue: 'Source Template' }),
       dataIndex: 'template_contract_name',
       render: (value: string | null) =>
-        value && value.trim().length > 0 ? value : '—',
+        value && value.trim().length > 0 ? value : t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
-      title: 'Contract Name',
+      title: t('contractsList.columns.contractName', { defaultValue: 'Contract Name' }),
       dataIndex: 'contract_name',
       render: (value: string | null) =>
-        typeof value === 'string' && value.trim().length > 0 ? value : '—',
+        typeof value === 'string' && value.trim().length > 0
+          ? value
+          : t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
-      title: 'Start Date',
+      title: t('contractsList.columns.startDate', { defaultValue: 'Start Date' }),
       dataIndex: 'start_date',
       render: (value: any) => {
-        if (!value) return '—';
+        if (!value) return t('contractsList.empty.dash', { defaultValue: '—' });
         try {
           const date = new Date(value);
-          return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+          return isNaN(date.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : date.toLocaleDateString();
         } catch {
-          return '—';
+          return t('contractsList.empty.dash', { defaultValue: '—' });
         }
       },
     },
     {
-      title: 'End Date',
+      title: t('contractsList.columns.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
       render: (value: any) => {
-        if (!value) return '—';
+        if (!value) return t('contractsList.empty.dash', { defaultValue: '—' });
         try {
           const date = new Date(value);
-          return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+          return isNaN(date.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : date.toLocaleDateString();
         } catch {
-          return '—';
+          return t('contractsList.empty.dash', { defaultValue: '—' });
         }
       },
     },
     {
-      title: 'Status',
+      title: t('contractsList.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       render: renderStatusBadge,
     },
     {
-      title: 'Actions',
+      title: t('contractsList.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'contract_id',
       render: (value, record) => {
         const liveStatus = record.assignment_status ?? record.status;
@@ -396,7 +427,9 @@ const renderStatusBadge = (status: string) => {
                 className="h-8 w-8 p-0"
                 onClick={(event) => event.stopPropagation()}
               >
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">
+                  {t('contractsList.actions.openMenu', { defaultValue: 'Open menu' })}
+                </span>
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -413,7 +446,9 @@ const renderStatusBadge = (status: string) => {
                   navigateToContract(record.contract_id, record.client_contract_id);
                 }}
               >
-                {isDraft ? 'Resume' : 'Edit'}
+                {isDraft
+                  ? t('contractsList.actions.resume', { defaultValue: 'Resume' })
+                  : t('common.actions.edit', { defaultValue: 'Edit' })}
               </DropdownMenuItem>
             {liveStatus === 'active' && (
               <DropdownMenuItem
@@ -424,7 +459,7 @@ const renderStatusBadge = (status: string) => {
                   void handleTerminateContract(record.client_contract_id);
                 }}
               >
-                Terminate
+                {t('contractsList.actions.terminate', { defaultValue: 'Terminate' })}
               </DropdownMenuItem>
             )}
             {liveStatus === 'terminated' && (
@@ -436,7 +471,7 @@ const renderStatusBadge = (status: string) => {
                   void handleRestoreContract(record.client_contract_id);
                 }}
               >
-                Restore
+                {t('contractsList.actions.restore', { defaultValue: 'Restore' })}
               </DropdownMenuItem>
             )}
             {liveStatus === 'draft' && (
@@ -448,7 +483,7 @@ const renderStatusBadge = (status: string) => {
                   void handleSetToActive(record.client_contract_id);
                 }}
               >
-                Set to Active
+                {t('contractsList.actions.setToActive', { defaultValue: 'Set to Active' })}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
@@ -459,14 +494,15 @@ const renderStatusBadge = (status: string) => {
                 if (record.contract_id) {
                   setContractToDelete({
                     contractId: record.contract_id,
-                    contractName: (record.contract_name?.trim() || 'Untitled contract'),
+                    contractName: (record.contract_name?.trim()
+                      || t('contractsList.empty.untitledContract', { defaultValue: 'Untitled contract' })),
                     kind: 'client',
                     clientName: record.client_name?.trim() || undefined,
                   });
                 }
               }}
             >
-              Delete
+              {t('common.actions.delete', { defaultValue: 'Delete' })}
             </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -511,11 +547,11 @@ const renderStatusBadge = (status: string) => {
           />
           <Input
             type="text"
-            placeholder="Search templates..."
+            placeholder={t('contractsList.search.templatesPlaceholder', { defaultValue: 'Search templates...' })}
             value={templateSearchTerm}
             onChange={(event) => setTemplateSearchTerm(event.target.value)}
             className="pl-10"
-            aria-label="Search contract templates"
+            aria-label={t('contractsList.search.templatesAriaLabel', { defaultValue: 'Search contract templates' })}
           />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -525,23 +561,29 @@ const renderStatusBadge = (status: string) => {
             className="inline-flex items-center gap-2"
           >
             <Sparkles className="h-4 w-4" />
-            Create Template
+            {t('contractsList.actions.createTemplate', { defaultValue: 'Create Template' })}
           </Button>
         </div>
       </div>
 
-      <DataTable
-        id="contracts-table"
-        data={filteredTemplateContracts}
-        columns={templateColumns}
-        pagination={true}
-        currentPage={templateCurrentPage}
-        onPageChange={setTemplateCurrentPage}
-        pageSize={templatePageSize}
-        onItemsPerPageChange={handleTemplatePageSizeChange}
-        onRowClick={(record) => navigateToContract(record.contract_id)}
-        rowClassName={() => 'cursor-pointer'}
-      />
+      {filteredTemplateContracts.length === 0 ? (
+        <div className="py-8 text-center text-muted-foreground">
+          {t('contractsList.empty.noTemplates', { defaultValue: 'No templates match your search.' })}
+        </div>
+      ) : (
+        <DataTable
+          id="contracts-table"
+          data={filteredTemplateContracts}
+          columns={templateColumns}
+          pagination={true}
+          currentPage={templateCurrentPage}
+          onPageChange={setTemplateCurrentPage}
+          pageSize={templatePageSize}
+          onItemsPerPageChange={handleTemplatePageSizeChange}
+          onRowClick={(record) => navigateToContract(record.contract_id)}
+          rowClassName={() => 'cursor-pointer'}
+        />
+      )}
     </>
   );
 
@@ -555,11 +597,13 @@ const renderStatusBadge = (status: string) => {
           />
           <Input
             type="text"
-            placeholder="Search by client or contract..."
+            placeholder={t('contractsList.search.clientContractsPlaceholder', {
+              defaultValue: 'Search by client or contract...',
+            })}
             value={clientSearchTerm}
             onChange={(event) => setClientSearchTerm(event.target.value)}
             className="pl-10"
-            aria-label="Search client contracts"
+            aria-label={t('contractsList.search.clientContractsAriaLabel', { defaultValue: 'Search client contracts' })}
           />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -572,7 +616,7 @@ const renderStatusBadge = (status: string) => {
                 className="inline-flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
-                Quick Add
+                {t('contractsList.actions.quickAdd', { defaultValue: 'Quick Add' })}
               </Button>
             }
           />
@@ -582,28 +626,46 @@ const renderStatusBadge = (status: string) => {
             className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
           >
             <Wand2 className="h-4 w-4" />
-            Create Contract
+            {t('contractsList.actions.createContract', { defaultValue: 'Create Contract' })}
           </Button>
         </div>
       </div>
 
-      <DataTable
-        id="client-contracts-table"
-        data={filteredClientContracts}
-        columns={clientContractColumns}
-        pagination={true}
-        currentPage={clientCurrentPage}
-        onPageChange={setClientCurrentPage}
-        pageSize={clientPageSize}
-        onItemsPerPageChange={handleClientPageSizeChange}
-        onRowClick={(record) => navigateToContract(record.contract_id, record.client_contract_id)}
-        rowClassName={() => 'cursor-pointer'}
-      />
+      {filteredClientContracts.length === 0 ? (
+        <div className="py-8 text-center text-muted-foreground">
+          {t('contractsList.empty.noClientContracts', {
+            defaultValue: 'No client contracts match your search.',
+          })}
+        </div>
+      ) : (
+        <DataTable
+          id="client-contracts-table"
+          data={filteredClientContracts}
+          columns={clientContractColumns}
+          pagination={true}
+          currentPage={clientCurrentPage}
+          onPageChange={setClientCurrentPage}
+          pageSize={clientPageSize}
+          onItemsPerPageChange={handleClientPageSizeChange}
+          onRowClick={(record) => navigateToContract(record.contract_id, record.client_contract_id)}
+          rowClassName={() => 'cursor-pointer'}
+        />
+      )}
     </>
   );
 
-  const renderDraftsTab = () => (
-    <>
+  const renderDraftsTab = () => {
+    const filteredDraftContracts = draftContracts.filter((contract) => {
+      if (!draftSearchTerm) return true;
+      const search = draftSearchTerm.toLowerCase();
+      return (
+        contract.contract_name?.toLowerCase().includes(search) ||
+        contract.client_name?.toLowerCase().includes(search)
+      );
+    });
+
+    return (
+      <>
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="relative max-w-md w-full">
           <Search
@@ -612,71 +674,74 @@ const renderStatusBadge = (status: string) => {
           />
           <Input
             type="text"
-            placeholder="Search drafts..."
+            placeholder={t('contractsList.search.draftsPlaceholder', { defaultValue: 'Search drafts...' })}
             value={draftSearchTerm}
             onChange={(event) => setDraftSearchTerm(event.target.value)}
             className="pl-10"
-            aria-label="Search draft contracts"
+            aria-label={t('contractsList.search.draftsAriaLabel', { defaultValue: 'Search draft contracts' })}
           />
         </div>
       </div>
 
       {draftContracts.length === 0 ? (
         <div className="py-8 text-center text-muted-foreground">
-          No draft contracts. Start creating a new contract to save as draft.
+          {t('contractsList.empty.noDrafts', {
+            defaultValue: 'No draft contracts. Start creating a new contract to save as draft.',
+          })}
+        </div>
+      ) : filteredDraftContracts.length === 0 ? (
+        <div className="py-8 text-center text-muted-foreground">
+          {t('contractsList.empty.noDraftMatches', { defaultValue: 'No draft contracts match your search.' })}
         </div>
       ) : (
         <DataTable
           id="draft-contracts-table"
-          data={draftContracts.filter((contract) => {
-            if (!draftSearchTerm) return true;
-            const search = draftSearchTerm.toLowerCase();
-            return (
-              contract.contract_name?.toLowerCase().includes(search) ||
-              contract.client_name?.toLowerCase().includes(search)
-            );
-          })}
+          data={filteredDraftContracts}
           columns={[
             {
-              title: 'Contract Name',
+              title: t('contractsList.columns.contractName', { defaultValue: 'Contract Name' }),
               dataIndex: 'contract_name',
               render: (value: string | null) =>
-                typeof value === 'string' && value.trim().length > 0 ? value : '—',
+                typeof value === 'string' && value.trim().length > 0
+                  ? value
+                  : t('contractsList.empty.dash', { defaultValue: '—' }),
             },
             {
-              title: 'Client',
+              title: t('contractsList.columns.client', { defaultValue: 'Client' }),
               dataIndex: 'client_name',
               render: (value: string | null) =>
-                typeof value === 'string' && value.trim().length > 0 ? value : '—',
+                typeof value === 'string' && value.trim().length > 0
+                  ? value
+                  : t('contractsList.empty.dash', { defaultValue: '—' }),
             },
             {
-              title: 'Created',
+              title: t('contractsList.columns.created', { defaultValue: 'Created' }),
               dataIndex: 'created_at',
               render: (value: any) => {
-                if (!value) return '—';
+                if (!value) return t('contractsList.empty.dash', { defaultValue: '—' });
                 try {
                   const date = new Date(value);
-                  return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+                  return isNaN(date.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : date.toLocaleDateString();
                 } catch {
-                  return '—';
+                  return t('contractsList.empty.dash', { defaultValue: '—' });
                 }
               },
             },
             {
-              title: 'Last Modified',
+              title: t('contractsList.columns.lastModified', { defaultValue: 'Last Modified' }),
               dataIndex: 'updated_at',
               render: (value: any) => {
-                if (!value) return '—';
+                if (!value) return t('contractsList.empty.dash', { defaultValue: '—' });
                 try {
                   const date = new Date(value);
-                  return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+                  return isNaN(date.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : date.toLocaleDateString();
                 } catch {
-                  return '—';
+                  return t('contractsList.empty.dash', { defaultValue: '—' });
                 }
               },
             },
             {
-              title: 'Actions',
+              title: t('contractsList.columns.actions', { defaultValue: 'Actions' }),
               dataIndex: 'contract_id',
               render: (value, record) => (
                 <DropdownMenu>
@@ -687,7 +752,9 @@ const renderStatusBadge = (status: string) => {
                       className="h-8 w-8 p-0"
                       onClick={(event) => event.stopPropagation()}
                     >
-                      <span className="sr-only">Open menu</span>
+                      <span className="sr-only">
+                        {t('contractsList.actions.openMenu', { defaultValue: 'Open menu' })}
+                      </span>
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -701,7 +768,7 @@ const renderStatusBadge = (status: string) => {
                         }
                       }}
                     >
-                      Resume
+                      {t('contractsList.actions.resume', { defaultValue: 'Resume' })}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       id="discard-draft-menu-item"
@@ -711,13 +778,15 @@ const renderStatusBadge = (status: string) => {
                         if (record.contract_id) {
                           setDraftToDiscard({
                             contractId: record.contract_id,
-                            contractName: record.contract_name || 'Untitled draft',
-                            clientName: record.client_name || 'Unknown client',
+                            contractName: record.contract_name
+                              || t('contractsList.empty.untitledDraft', { defaultValue: 'Untitled draft' }),
+                            clientName: record.client_name
+                              || t('contractsList.empty.unknownClient', { defaultValue: 'Unknown client' }),
                           });
                         }
                       }}
                     >
-                      Discard
+                      {t('common.actions.discard', { defaultValue: 'Discard' })}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -732,17 +801,27 @@ const renderStatusBadge = (status: string) => {
           initialSorting={[{ id: 'updated_at', desc: true }]}
         />
       )}
-    </>
-  );
+      </>
+    );
+  };
 
   const tabs = [
-    { id: 'templates', label: 'Templates', content: renderTemplateTab() },
-    { id: 'client-contracts', label: 'Client Contracts', content: renderClientContractsTab() },
+    { id: 'templates', label: contractSubtabLabels.templates, content: renderTemplateTab() },
+    { id: 'client-contracts', label: contractSubtabLabels['client-contracts'], content: renderClientContractsTab() },
     {
       id: 'drafts',
-      label: 'Drafts',
+      label: contractSubtabLabels.drafts,
       icon: draftBadgeCount != null ? (
-        <Badge variant="default-muted" className="ml-2 order-last">{draftBadgeCount}</Badge>
+        <Badge
+          variant="default-muted"
+          className="ml-2 order-last"
+          aria-label={t('contractsList.drafts.badgeCount', {
+            defaultValue: '{{count}} draft contracts',
+            count: draftBadgeCount,
+          })}
+        >
+          {draftBadgeCount}
+        </Badge>
       ) : undefined,
       content: renderDraftsTab(),
     },
@@ -755,10 +834,12 @@ const renderStatusBadge = (status: string) => {
           <div className="flex justify-between items-center mb-4">
             <div className="space-y-1">
               <Heading as="h3" size="4">
-                Contracts
+                {t('contractsList.heading.title', { defaultValue: 'Contracts' })}
               </Heading>
               <p className="text-sm text-muted-foreground">
-                Templates are reusable definitions. Client contracts are client-owned instances.
+                {t('contractsList.heading.description', {
+                  defaultValue: 'Templates are reusable definitions. Client contracts are client-owned instances.',
+                })}
               </p>
             </div>
           </div>
@@ -774,7 +855,7 @@ const renderStatusBadge = (status: string) => {
               className="py-12 text-muted-foreground"
               layout="stacked"
               spinnerProps={{ size: 'md' }}
-              text="Loading contracts..."
+              text={t('contractsList.loading.contracts', { defaultValue: 'Loading contracts...' })}
               textClassName="text-muted-foreground"
             />
           ) : (
@@ -818,14 +899,18 @@ const renderStatusBadge = (status: string) => {
         isOpen={!!draftToDiscard}
         onClose={() => setDraftToDiscard(null)}
         onConfirm={handleConfirmDiscardDraft}
-        title="Discard Draft Contract?"
+        title={t('contractsList.dialogs.discardDraft.title', { defaultValue: 'Discard Draft Contract?' })}
         message={
           draftToDiscard
-            ? `This will permanently delete the draft "${draftToDiscard.contractName}" for ${draftToDiscard.clientName}.\nThis action cannot be undone.`
+            ? t('contractsList.dialogs.discardDraft.message', {
+              defaultValue: 'This will permanently delete the draft "{{contractName}}" for {{clientName}}.\nThis action cannot be undone.',
+              contractName: draftToDiscard.contractName,
+              clientName: draftToDiscard.clientName,
+            })
             : ''
         }
-        cancelLabel="Cancel"
-        confirmLabel="Discard"
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        confirmLabel={t('common.actions.discard', { defaultValue: 'Discard' })}
         isConfirming={isDiscardingDraft}
       />
       <ConfirmationDialog
@@ -839,20 +924,32 @@ const renderStatusBadge = (status: string) => {
         onConfirm={confirmDeleteContract}
         title={
           contractToDelete?.kind === 'client'
-            ? 'Delete client contract?'
-            : 'Delete contract template?'
+            ? t('contractsList.dialogs.deleteClient.title', { defaultValue: 'Delete client contract?' })
+            : t('contractsList.dialogs.deleteTemplate.title', { defaultValue: 'Delete contract template?' })
         }
         message={
           contractToDelete
             ? contractToDelete.kind === 'client'
-              ? `Are you sure you want to permanently delete the client contract "${contractToDelete.contractName}"${
-                  contractToDelete.clientName ? ` for ${contractToDelete.clientName}` : ''
-                }? This action cannot be undone.`
-              : `Are you sure you want to permanently delete the template "${contractToDelete.contractName}"? This action cannot be undone.`
+              ? t('contractsList.dialogs.deleteClient.message', {
+                defaultValue: 'Are you sure you want to permanently delete the client contract "{{contractName}}"{{clientSuffix}}? This action cannot be undone.',
+                contractName: contractToDelete.contractName,
+                clientSuffix: contractToDelete.clientName
+                  ? t('contractsList.dialogs.deleteClient.clientSuffix', {
+                    defaultValue: ' for {{clientName}}',
+                    clientName: contractToDelete.clientName,
+                  })
+                  : '',
+              })
+              : t('contractsList.dialogs.deleteTemplate.message', {
+                defaultValue: 'Are you sure you want to permanently delete the template "{{contractName}}"? This action cannot be undone.',
+                contractName: contractToDelete.contractName,
+              })
             : ''
         }
-        cancelLabel="Cancel"
-        confirmLabel={isDeletingContract ? 'Deleting…' : 'Delete'}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        confirmLabel={isDeletingContract
+          ? t('contractsList.actions.deleting', { defaultValue: 'Deleting…' })
+          : t('common.actions.delete', { defaultValue: 'Delete' })}
         isConfirming={isDeletingContract}
       />
     </>
