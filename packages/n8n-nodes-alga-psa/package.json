@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-alga-psa",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Alga PSA community node for n8n",
   "license": "MIT",
   "main": "dist/nodes/AlgaPsa/AlgaPsa.node.js",

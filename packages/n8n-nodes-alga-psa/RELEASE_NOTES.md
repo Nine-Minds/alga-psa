@@ -1,5 +1,22 @@
 # Release Notes
 
+## 0.4.0
+
+Feature release of the `Alga PSA` n8n community node.
+
+### Added
+
+- First-pass `Project Task` CRUD support: `Create`, `Get`, `List`, `Update`, and `Delete`
+- Project Task create required fields: `task_name`, `projectTaskProjectId`, `projectTaskPhaseId`, and `projectTaskStatusMappingId`
+- Project Task create/update optional fields: `description`, `assigned_to`, `estimated_hours`, `due_date`, `priority_id`, `task_type_key`, `wbs_code`, and comma-separated `tags` (update also accepts `task_name` and `project_status_mapping_id`)
+- Project Task list pagination (`page`, `limit`) scoped to a selected project
+- New lookup dropdowns backed by `searchProjects`, `searchProjectPhases`, and `searchProjectTaskStatusMappings` (phases and status mappings are scoped to the currently-selected project; empty selections fall back to manual UUID entry)
+
+### Notes
+
+- Checklist items, task dependencies, and ticket-task links are intentionally out of scope for the first pass and can be added in a follow-up
+- Project Task responses follow the existing node normalization rules for `{ data: ... }`, list pagination, delete success payloads, and continue-on-fail item errors
+
 ## 0.3.0
 
 Feature release of the `Alga PSA` n8n community node.
