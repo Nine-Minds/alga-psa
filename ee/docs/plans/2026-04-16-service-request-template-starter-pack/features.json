@@ -1,0 +1,52 @@
+[
+  {
+    "id": "F001",
+    "description": "Expand the CE starter template provider from one template to six common MSP service templates.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Keep all built-in starter templates CE-safe by using ticket-only execution, basic form behavior, and all-authenticated-client-users visibility.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Implement the New Hire Onboarding starter template with the agreed metadata, balanced field set, and ticket title template.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Implement the Employee Offboarding starter template with the agreed metadata, balanced field set, and ticket title template.",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Implement the Access Request starter template with the agreed metadata, balanced field set, and ticket title template.",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Implement the Hardware Request starter template with the agreed metadata, balanced field set, and ticket title template.",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Implement the Software / License Request starter template with the agreed metadata, balanced field set, and ticket title template.",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Implement the Shared Mailbox / Distribution List Request starter template with the agreed metadata, balanced field set, and ticket title template.",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Leave built-in template categories unset instead of matching or creating tenant service categories.",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Update automated tests to cover expanded template discovery, CE-safe draft validity, and representative instantiation behavior.",
+    "implemented": true
+  }
+]
