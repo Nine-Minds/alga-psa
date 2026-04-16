@@ -103,6 +103,89 @@ describe('convertHtmlToBlockNote', () => {
     expect(allText).not.toContain('MsoNormal');
     expect(allText).not.toContain('@font-face');
   });
+
+  it('should strip Outlook conditional comments with CSS inside style tags', async () => {
+    // Outlook/Word emails wrap CSS in <!--[if ...]> ... <![endif]--> and
+    // also use <!-- ... --> inside <style> tags
+    const html = `
+      <html><head>
+      <!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/></o:OfficeDocumentSettings></xml><![endif]-->
+      <!--[if !mso]><style>v\\:* {behavior:url(#default#VML);}</style><![endif]-->
+      <style>
+      <!--
+       /* Font Definitions */
+       @font-face {font-family:"Cambria Math"; panose-1:2 4 5 3 5 4 6 3 2 4;}
+       @font-face {font-family:Calibri; panose-1:2 15 5 2 2 2 4 3 2 4;}
+       /* Style Definitions */
+       p.MsoNormal, li.MsoNormal, div.MsoNormal {margin:0in; font-size:11.0pt; font-family:"Calibri",sans-serif; color:windowtext;}
+       span.EmailStyle17 {mso-style-type:personal-compose; font-family:"Calibri",sans-serif;}
+      -->
+      </style>
+      </head><body>
+      <div class=WordSection1>
+      <p class=MsoNormal>Hello from Outlook</p>
+      </div>
+      </body></html>
+    `;
+    const result = await convertHtmlToBlockNote(html);
+
+    const allText = result
+      .flatMap(b => (b.content || []))
+      .filter((c: any) => c.type === 'text')
+      .map((c: any) => c.text)
+      .join(' ');
+    expect(allText).toContain('Hello from Outlook');
+    expect(allText).not.toContain('font-family');
+    expect(allText).not.toContain('@font-face');
+    expect(allText).not.toContain('Cambria Math');
+    expect(allText).not.toContain('MsoNormal');
+    expect(allText).not.toContain('OfficeDocumentSettings');
+  });
+
+  it('should strip Outlook conditional PIs without comment markers', async () => {
+    // Some Outlook emails use <![if ...]>...<![endif]> without -- prefix
+    const html = `
+      <html><head>
+      <![if !supportMisalignedColumns]>
+      <style>
+       .MsoTableGrid { border-collapse:collapse; }
+      </style>
+      <![endif]>
+      </head><body>
+      <p>Content after PI</p>
+      </body></html>
+    `;
+    const result = await convertHtmlToBlockNote(html);
+
+    const allText = result
+      .flatMap(b => (b.content || []))
+      .filter((c: any) => c.type === 'text')
+      .map((c: any) => c.text)
+      .join(' ');
+    expect(allText).toContain('Content after PI');
+    expect(allText).not.toContain('MsoTableGrid');
+    expect(allText).not.toContain('border-collapse');
+  });
+
+  it('should parse HTML tables into table blocks', async () => {
+    const html = `
+      <table border="1">
+        <tr><th></th><th>Column 1</th><th>Column 2</th><th>Column3</th></tr>
+        <tr><td>Row 1</td><td>some</td><td>text</td><td>to</td></tr>
+        <tr><td>Row 2</td><td>fill</td><td>in</td><td>cells</td></tr>
+      </table>
+    `;
+    const result = await convertHtmlToBlockNote(html);
+
+    const tableBlock = result.find(b => b.type === 'table');
+    expect(tableBlock).toBeDefined();
+
+    // Table should have structured content, not flat text
+    const content = tableBlock?.content as any;
+    expect(content).toBeDefined();
+    expect(content.rows).toBeDefined();
+    expect(content.rows.length).toBeGreaterThanOrEqual(2);
+  });
 });
 
 describe('convertMarkdownToBlocks', () => {
