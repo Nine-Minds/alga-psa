@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useDrawer } from '@alga-psa/ui';
 import { useParams } from 'next/navigation';
 import {
   addServiceRequestFormFieldAction,
@@ -27,6 +28,7 @@ import {
 } from './actions';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
+import { MspTicketDetailsContainerClient } from '@alga-psa/msp-composition/tickets';
 import { toast } from 'react-hot-toast';
 import { ServiceRequestCard } from '../../client-portal/request-services/ServiceRequestCard';
 import { ServiceRequestIconPicker } from './ServiceRequestIconPicker';
@@ -37,8 +39,10 @@ import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { CategoryPicker } from '@alga-psa/tickets/components';
+import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { calculateItilPriority, ItilLabels } from '@alga-psa/tickets/lib/itilUtils';
 import type { IBoard, IPriority, ITicketCategory, ITicketStatus, IUser } from '@alga-psa/types';
+import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
 import {
   buildTicketRoutingExecutionConfig,
   getServiceRequestDraftLifecycleLabel,
@@ -113,9 +117,13 @@ interface DefinitionSubmissionDetail extends DefinitionSubmissionRow {
   definition_version_id: string;
   submitted_payload: Record<string, unknown>;
   execution_error_summary: string | null;
+  requester_user_name: string | null;
+  client_name: string | null;
+  contact_name: string | null;
+  created_ticket_display: string | null;
 }
 
-function FieldRow({ label, value }: { label: string; value: string }) {
+function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[180px_1fr] gap-3 text-sm">
       <div className="font-medium text-[rgb(var(--color-text-700))]">{label}</div>
@@ -303,6 +311,7 @@ export default function ServiceRequestDefinitionEditorPage() {
   const [ticketRoutingSelectedCategories, setTicketRoutingSelectedCategories] = useState<string[]>([]);
   const [ticketRoutingLoading, setTicketRoutingLoading] = useState(false);
   const [newFieldType, setNewFieldType] = useState<FormField['type']>('short-text');
+  const { openDrawer, replaceDrawer } = useDrawer();
 
   const isWorkflowBackedExecution = data?.execution.showWorkflowExecutionConfigPanel === true;
   const isTicketOnlyExecution = data?.execution.executionProvider === 'ticket-only';
@@ -343,6 +352,49 @@ export default function ServiceRequestDefinitionEditorPage() {
       })),
     [ticketRoutingPriorities]
   );
+
+  const openTicketDrawer = async (ticketId: string | null) => {
+    if (!ticketId) {
+      return;
+    }
+
+    openDrawer(
+      <div className="p-4 text-sm text-[rgb(var(--color-text-600))]">Loading…</div>,
+      undefined,
+      undefined,
+      '900px'
+    );
+
+    try {
+      const [ticketData, surveySummary] = await Promise.all([
+        getConsolidatedTicketData(ticketId),
+        getSurveyTicketSummary(ticketId).catch((error) => {
+          console.error('[ServiceRequestDefinitionEditorPage] Failed to load survey summary', error);
+          return null;
+        }),
+      ]);
+
+      replaceDrawer(
+        <div className="bg-gray-100">
+          <MspTicketDetailsContainerClient
+            ticketData={ticketData}
+            surveySummary={surveySummary ?? null}
+          />
+        </div>,
+        undefined,
+        '900px'
+      );
+    } catch (error) {
+      console.error('[ServiceRequestDefinitionEditorPage] Failed to load ticket drawer', error);
+      replaceDrawer(
+        <div className="p-4 text-sm text-[rgb(var(--color-danger-600))]">
+          {error instanceof Error ? error.message : 'Failed to load ticket details.'}
+        </div>,
+        undefined,
+        '900px'
+      );
+    }
+  };
 
   const loadTicketRoutingReferenceData = async (boardId?: string) => {
     const referenceData = await getServiceRequestTicketRoutingReferenceDataAction();
@@ -1671,10 +1723,40 @@ export default function ServiceRequestDefinitionEditorPage() {
           <div className="rounded border p-3 bg-[rgb(var(--color-background-100))] space-y-2">
             <div className="text-sm font-semibold">Submission Detail</div>
             <FieldRow label="Submission ID" value={selectedSubmissionDetail.submission_id} />
-            <FieldRow label="Requester User" value={selectedSubmissionDetail.requester_user_id ?? '-'} />
-            <FieldRow label="Client" value={selectedSubmissionDetail.client_id} />
-            <FieldRow label="Contact" value={selectedSubmissionDetail.contact_id ?? '-'} />
-            <FieldRow label="Ticket Reference" value={selectedSubmissionDetail.created_ticket_id ?? '-'} />
+            <FieldRow
+              label="Requester User"
+              value={
+                selectedSubmissionDetail.requester_user_name ??
+                selectedSubmissionDetail.requester_user_id ??
+                '-'
+              }
+            />
+            <FieldRow
+              label="Client"
+              value={selectedSubmissionDetail.client_name ?? selectedSubmissionDetail.client_id ?? '-'}
+            />
+            <FieldRow
+              label="Contact"
+              value={selectedSubmissionDetail.contact_name ?? selectedSubmissionDetail.contact_id ?? '-'}
+            />
+            <FieldRow
+              label="Ticket Reference"
+              value={
+                selectedSubmissionDetail.created_ticket_id ? (
+                  <Button
+                    id={`service-request-submission-ticket-${selectedSubmissionDetail.submission_id}`}
+                    type="button"
+                    variant="ghost"
+                    className="h-auto p-0 text-[rgb(var(--color-primary-600))] hover:bg-transparent hover:underline"
+                    onClick={() => openTicketDrawer(selectedSubmissionDetail.created_ticket_id)}
+                  >
+                    {selectedSubmissionDetail.created_ticket_display ?? selectedSubmissionDetail.created_ticket_id}
+                  </Button>
+                ) : (
+                  '-'
+                )
+              }
+            />
             <FieldRow label="Workflow Reference" value={selectedSubmissionDetail.workflow_execution_id ?? '-'} />
             <FieldRow
               label="Execution Error"

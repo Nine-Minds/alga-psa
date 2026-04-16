@@ -46,6 +46,38 @@ describe('service request admin submissions', () => {
       },
     ]);
 
+    await db('users').insert({
+      tenant,
+      user_id: requesterUserId,
+      username: 'casey.requester',
+      hashed_password: 'not-used',
+      email: 'casey.requester@example.com',
+      first_name: 'Casey',
+      last_name: 'Requester',
+      user_type: 'internal',
+    });
+
+    await db('clients').insert({
+      tenant,
+      client_id: clientId,
+      client_name: 'Emerald City',
+    });
+
+    await db('contacts').insert({
+      tenant,
+      contact_name_id: contactId,
+      full_name: 'Casey Parker',
+      client_id: clientId,
+    });
+
+    await db('tickets').insert({
+      tenant,
+      ticket_id: createdTicketId,
+      ticket_number: 'TIC001036',
+      title: 'New Hire Setup: Casey Parker',
+      client_id: clientId,
+    });
+
     await db('service_request_definitions').insert([
       {
         tenant,
@@ -154,6 +186,10 @@ describe('service request admin submissions', () => {
         employee_name: 'Casey Parker',
         access_level: 'standard',
       },
+      requester_user_name: 'Casey Requester',
+      client_name: 'Emerald City',
+      contact_name: 'Casey Parker',
+      created_ticket_display: '#TIC001036 · New Hire Setup: Casey Parker',
       created_ticket_id: createdTicketId,
       workflow_execution_id: 'wf_exec_1234',
     });
