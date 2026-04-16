@@ -155,6 +155,16 @@ describe('service request basic form builder', () => {
       },
     });
 
+    await db('service_request_definitions')
+      .where({ tenant, definition_id: definition.definition_id })
+      .update({
+        execution_config: {
+          boardId: 'board-123',
+          statusId: 'status-123',
+          priorityId: 'priority-123',
+        },
+      });
+
     const version = await publishServiceRequestDefinitionWithValidation({
       knex: db,
       tenant,

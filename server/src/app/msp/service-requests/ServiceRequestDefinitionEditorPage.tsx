@@ -39,6 +39,10 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions
 import { CategoryPicker } from '@alga-psa/tickets/components';
 import { calculateItilPriority, ItilLabels } from '@alga-psa/tickets/lib/itilUtils';
 import type { IBoard, IPriority, ITicketCategory, ITicketStatus, IUser } from '@alga-psa/types';
+import {
+  buildTicketRoutingExecutionConfig,
+  getServiceRequestDraftLifecycleLabel,
+} from '../../../lib/service-requests/editorHelpers';
 
 interface EditorData {
   definitionId: string;
@@ -303,8 +307,10 @@ export default function ServiceRequestDefinitionEditorPage() {
   const isWorkflowBackedExecution = data?.execution.showWorkflowExecutionConfigPanel === true;
   const isTicketOnlyExecution = data?.execution.executionProvider === 'ticket-only';
   const hasLivePublishedVersion = Boolean(data?.publish.publishedVersionNumber);
-  const draftLifecycleLabel =
-    data?.lifecycleState === 'draft' && hasLivePublishedVersion ? 'draft changes' : data?.lifecycleState;
+  const draftLifecycleLabel = getServiceRequestDraftLifecycleLabel(
+    data?.lifecycleState,
+    hasLivePublishedVersion
+  );
   const calculatedItilPriority = useMemo(() => {
     const impact = Number.parseInt(ticketRoutingConfigInput.itilImpact, 10);
     const urgency = Number.parseInt(ticketRoutingConfigInput.itilUrgency, 10);
@@ -564,41 +570,12 @@ export default function ServiceRequestDefinitionEditorPage() {
       (category) => category.category_id === selectedCategoryId
     );
 
-    const nextExecutionConfig: Record<string, unknown> = {};
-    const addStringConfig = (key: string, value: string) => {
-      const trimmedValue = value.trim();
-      if (trimmedValue.length > 0) {
-        nextExecutionConfig[key] = trimmedValue;
-      }
-    };
-
-    addStringConfig('boardId', ticketRoutingConfigInput.boardId);
-    addStringConfig('statusId', ticketRoutingConfigInput.statusId);
-    addStringConfig('priorityId', ticketRoutingConfigInput.priorityId);
-    addStringConfig('assignedToUserId', ticketRoutingConfigInput.assignedToUserId);
-    addStringConfig('titleFieldKey', ticketRoutingConfigInput.titleFieldKey);
-    addStringConfig('descriptionPrefix', ticketRoutingConfigInput.descriptionPrefix);
-
-    if (selectedCategory) {
-      if (selectedCategory.parent_category) {
-        nextExecutionConfig.categoryId = selectedCategory.parent_category;
-        nextExecutionConfig.subcategoryId = selectedCategory.category_id;
-      } else {
-        nextExecutionConfig.categoryId = selectedCategory.category_id;
-      }
-    }
-
-    const boardPriorityType = ticketRoutingBoardConfig?.priority_type;
-    if (boardPriorityType === 'itil') {
-      const impact = Number.parseInt(ticketRoutingConfigInput.itilImpact, 10);
-      const urgency = Number.parseInt(ticketRoutingConfigInput.itilUrgency, 10);
-      if (Number.isInteger(impact)) {
-        nextExecutionConfig.itilImpact = impact;
-      }
-      if (Number.isInteger(urgency)) {
-        nextExecutionConfig.itilUrgency = urgency;
-      }
-    }
+    const nextExecutionConfig = buildTicketRoutingExecutionConfig({
+      existingExecutionConfig: data.execution.executionConfig,
+      ticketRoutingConfigInput,
+      selectedCategory,
+      boardPriorityType: ticketRoutingBoardConfig?.priority_type ?? null,
+    });
 
     await updateServiceRequestExecutionConfigAction(data.definitionId, nextExecutionConfig);
     await reloadDefinitionEditorState(data.definitionId);
