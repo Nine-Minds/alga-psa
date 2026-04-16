@@ -48,6 +48,7 @@ export async function listVisibleServiceRequestCatalogItems(
   const definitionRows = (await knex('service_request_definitions as definition')
     .where('definition.tenant', context.tenant)
     .whereNot('definition.lifecycle_state', 'archived')
+    .whereNotNull('definition.published_at')
     .whereExists(function publishedVersionExists() {
       this.select(knex.raw('1'))
         .from('service_request_definition_versions as version')
