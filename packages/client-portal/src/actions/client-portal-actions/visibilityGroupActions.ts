@@ -239,14 +239,20 @@ export const getClientPortalVisibilityGroups = withAuth(async (
         .groupBy('portal_visibility_group_id')
       : [];
 
+    const boardCountRows = boardCounts as Array<{ group_id: string; board_count: string | number }>;
+    const assignmentCountRows = assignmentCounts as Array<{
+      portal_visibility_group_id: string | null;
+      assigned_contact_count: string | number;
+    }>;
+
     const boardCountMap = new Map<string, number>(
-      boardCounts.map((row: { group_id: string; board_count: string | number }) => [
+      boardCountRows.map((row) => [
         row.group_id,
         toInt(row.board_count)
       ])
     );
     const assignmentCountMap = new Map<string, number>(
-      assignmentCounts.map((row: { portal_visibility_group_id: string | null; assigned_contact_count: string | number }) => [
+      assignmentCountRows.map((row) => [
         String(row.portal_visibility_group_id),
         toInt(row.assigned_contact_count)
       ])

@@ -1525,8 +1525,9 @@ export const getClientPortalVisibilityGroupsForContact = withAuth(async (
           .groupBy('group_id')
         : [];
 
+      const boardCountRows = boardCounts as Array<{ group_id: string; board_count: string | number }>;
       const boardCountMap = new Map<string, number>(
-        boardCounts.map((row: { group_id: string; board_count: string | number }) => [
+        boardCountRows.map((row) => [
           row.group_id,
           Number(row.board_count)
         ])

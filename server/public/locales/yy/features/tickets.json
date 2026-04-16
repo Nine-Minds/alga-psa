@@ -53,8 +53,10 @@
       "titleRequired": "55555",
       "descriptionRequired": "55555",
       "priorityRequired": "55555",
-      "createFailed": "55555"
-    }
+      "createFailed": "55555",
+      "boardRequired": "Ɏɏƴƴƴ"
+    },
+    "boardPlaceholder": "Ɏɏƴƴƴ"
   },
   "status": {
     "open": "55555",

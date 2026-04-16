@@ -296,14 +296,19 @@ export function VisibilityGroupsSettings() {
               <div className="mt-2 flex flex-col gap-2 rounded-md border p-3">
                 {boards.length > 0 ? (
                   boards.map((board) => {
-                    const checked = boardIds.includes(board.board_id);
+                    if (!board.board_id) {
+                      return null;
+                    }
+
+                    const boardId = board.board_id;
+                    const checked = boardIds.includes(boardId);
                     return (
-                      <label key={board.board_id} className="flex items-center gap-2 text-sm">
+                      <label key={boardId} className="flex items-center gap-2 text-sm">
                         <input
                           type="checkbox"
                           checked={checked}
                           disabled={isSaving || isLoading}
-                          onChange={() => handleSelectBoards(board.board_id)}
+                          onChange={() => handleSelectBoards(boardId)}
                         />
                         <span>{board.board_name}</span>
                       </label>
@@ -317,13 +322,13 @@ export function VisibilityGroupsSettings() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button type="submit" disabled={isSaving || isLoading}>
+              <Button id="visibility-group-submit" type="submit" disabled={isSaving || isLoading}>
                 {editingGroupId
                   ? t('clientSettings.visibilityGroups.save', 'Save group')
                   : t('clientSettings.visibilityGroups.create', 'Create group')}
               </Button>
               {editingGroupId ? (
-                <Button type="button" variant="outline" onClick={resetForm} disabled={isSaving || isLoading}>
+                <Button id="visibility-group-cancel" type="button" variant="outline" onClick={resetForm} disabled={isSaving || isLoading}>
                   {t('clientSettings.visibilityGroups.cancel', 'Cancel')}
                 </Button>
               ) : null}
@@ -348,6 +353,7 @@ export function VisibilityGroupsSettings() {
                     </div>
                     <div className="flex gap-2">
                       <Button
+                        id={`visibility-group-edit-${group.group_id}`}
                         type="button"
                         size="sm"
                         variant="outline"
@@ -357,6 +363,7 @@ export function VisibilityGroupsSettings() {
                         {t('clientSettings.visibilityGroups.edit', 'Edit')}
                       </Button>
                       <Button
+                        id={`visibility-group-delete-${group.group_id}`}
                         type="button"
                         size="sm"
                         variant="destructive"

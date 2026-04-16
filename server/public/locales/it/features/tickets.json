@@ -53,8 +53,10 @@
       "titleRequired": "Il titolo è obbligatorio",
       "descriptionRequired": "La descrizione è obbligatoria",
       "priorityRequired": "Seleziona una priorità",
-      "createFailed": "Impossibile creare il ticket. Riprova."
-    }
+      "createFailed": "Impossibile creare il ticket. Riprova.",
+      "boardRequired": "Seleziona una bacheca"
+    },
+    "boardPlaceholder": "Seleziona bacheca"
   },
   "status": {
     "open": "Aperto",

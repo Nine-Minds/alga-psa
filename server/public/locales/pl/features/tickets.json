@@ -53,8 +53,10 @@
       "titleRequired": "Tytuł jest wymagany",
       "descriptionRequired": "Opis jest wymagany",
       "priorityRequired": "Wybierz priorytet",
-      "createFailed": "Nie udało się utworzyć zgłoszenia. Spróbuj ponownie."
-    }
+      "createFailed": "Nie udało się utworzyć zgłoszenia. Spróbuj ponownie.",
+      "boardRequired": "Wybierz tablicę"
+    },
+    "boardPlaceholder": "Wybierz tablicę"
   },
   "status": {
     "open": "Otwarte",

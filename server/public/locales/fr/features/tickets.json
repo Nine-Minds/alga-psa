@@ -53,8 +53,10 @@
       "titleRequired": "Le titre est obligatoire",
       "descriptionRequired": "La description est obligatoire",
       "priorityRequired": "Veuillez sélectionner une priorité",
-      "createFailed": "Échec de la création du ticket. Veuillez réessayer."
-    }
+      "createFailed": "Échec de la création du ticket. Veuillez réessayer.",
+      "boardRequired": "Veuillez sélectionner un tableau"
+    },
+    "boardPlaceholder": "Sélectionner un tableau"
   },
   "status": {
     "open": "Ouvert",
