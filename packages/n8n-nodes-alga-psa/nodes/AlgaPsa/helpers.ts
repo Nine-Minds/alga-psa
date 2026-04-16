@@ -335,6 +335,81 @@ export function buildContactUpdatePayload(additionalFields: IDataObject = {}): I
   });
 }
 
+function normalizeOptionalNumber(value: unknown, fieldName: string): number | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  const parsed = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`${fieldName} must be a number`);
+  }
+
+  if (parsed < 0) {
+    throw new Error(`${fieldName} must be a non-negative number`);
+  }
+
+  return parsed;
+}
+
+function normalizeOptionalString(value: unknown): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const trimmed = String(value).trim();
+  return trimmed === '' ? undefined : trimmed;
+}
+
+export function buildProjectTaskCreatePayload(input: {
+  taskName: string;
+  statusMappingId: string;
+  additionalFields?: IDataObject;
+}): IDataObject {
+  const additional = input.additionalFields ?? {};
+
+  return compactObject({
+    task_name: input.taskName,
+    project_status_mapping_id: input.statusMappingId,
+    description: normalizeOptionalString(additional.description),
+    assigned_to: normalizeOptionalUuid(additional.assigned_to, 'assigned_to'),
+    estimated_hours: normalizeOptionalNumber(additional.estimated_hours, 'estimated_hours'),
+    due_date: normalizeOptionalString(additional.due_date),
+    priority_id: normalizeOptionalUuid(additional.priority_id, 'priority_id'),
+    task_type_key: normalizeOptionalString(additional.task_type_key),
+    wbs_code: normalizeOptionalString(additional.wbs_code),
+    tags: parseTags(additional.tags),
+  });
+}
+
+export function buildProjectTaskUpdatePayload(additionalFields: IDataObject = {}): IDataObject {
+  return compactObject({
+    task_name: normalizeOptionalString(additionalFields.task_name),
+    description: normalizeOptionalString(additionalFields.description),
+    assigned_to: normalizeOptionalUuid(additionalFields.assigned_to, 'assigned_to'),
+    estimated_hours: normalizeOptionalNumber(additionalFields.estimated_hours, 'estimated_hours'),
+    due_date: normalizeOptionalString(additionalFields.due_date),
+    priority_id: normalizeOptionalUuid(additionalFields.priority_id, 'priority_id'),
+    task_type_key: normalizeOptionalString(additionalFields.task_type_key),
+    project_status_mapping_id: normalizeOptionalUuid(
+      additionalFields.project_status_mapping_id,
+      'project_status_mapping_id',
+    ),
+    wbs_code: normalizeOptionalString(additionalFields.wbs_code),
+    tags: parseTags(additionalFields.tags),
+  });
+}
+
+export function buildProjectTaskListQuery(input: {
+  page: number;
+  limit: number;
+}): IDataObject {
+  return compactObject({
+    page: input.page,
+    limit: input.limit,
+  });
+}
+
 export function buildContactListQuery(input: {
   page: number;
   limit: number;

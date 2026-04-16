@@ -1103,4 +1103,314 @@ describe('Node execute operations', () => {
       ),
     ).rejects.toBeInstanceOf(NodeOperationError);
   });
+
+  const baseProjectTaskCreateParams = {
+    resource: 'projectTask',
+    projectTaskOperation: 'create',
+    task_name: 'Draft proposal',
+    projectTaskProjectId: { mode: 'id', value: '00000000-0000-0000-0000-000000000201' },
+    projectTaskPhaseId: { mode: 'id', value: '00000000-0000-0000-0000-000000000202' },
+    projectTaskStatusMappingId: { mode: 'id', value: '00000000-0000-0000-0000-000000000203' },
+  };
+
+  it('T080: project task create sends POST /api/v1/projects/{projectId}/phases/{phaseId}/tasks', async () => {
+    const { requests } = await executeNode(
+      [
+        {
+          ...baseProjectTaskCreateParams,
+          projectTaskCreateAdditionalFields: {},
+        },
+      ],
+      () => ({ data: { task_id: '00000000-0000-0000-0000-000000000204' } }),
+    );
+
+    expect(requests[0]?.method).toBe('POST');
+    expect(requests[0]?.url).toBe(
+      'https://api.algapsa.test/api/v1/projects/00000000-0000-0000-0000-000000000201/phases/00000000-0000-0000-0000-000000000202/tasks',
+    );
+    expect(requests[0]?.body).toEqual({
+      task_name: 'Draft proposal',
+      project_status_mapping_id: '00000000-0000-0000-0000-000000000203',
+    });
+  });
+
+  it('T081: project task create includes optional fields only when provided', async () => {
+    const { requests } = await executeNode(
+      [
+        {
+          ...baseProjectTaskCreateParams,
+          projectTaskCreateAdditionalFields: {
+            description: 'Write RFC for new billing pipeline',
+            assigned_to: '00000000-0000-0000-0000-000000000205',
+            estimated_hours: 6,
+            due_date: '2026-05-15',
+            priority_id: '00000000-0000-0000-0000-000000000206',
+            task_type_key: 'design',
+            wbs_code: '2.1',
+            tags: 'billing,design',
+          },
+        },
+      ],
+      () => ({ data: { task_id: '00000000-0000-0000-0000-000000000204' } }),
+    );
+
+    expect(requests[0]?.body).toEqual({
+      task_name: 'Draft proposal',
+      project_status_mapping_id: '00000000-0000-0000-0000-000000000203',
+      description: 'Write RFC for new billing pipeline',
+      assigned_to: '00000000-0000-0000-0000-000000000205',
+      estimated_hours: 6,
+      due_date: '2026-05-15',
+      priority_id: '00000000-0000-0000-0000-000000000206',
+      task_type_key: 'design',
+      wbs_code: '2.1',
+      tags: ['billing', 'design'],
+    });
+  });
+
+  it('T082: project task create unwraps the created task object from the data wrapper', async () => {
+    const { output } = await executeNode(
+      [
+        {
+          ...baseProjectTaskCreateParams,
+          projectTaskCreateAdditionalFields: {},
+        },
+      ],
+      () => ({
+        data: {
+          task_id: '00000000-0000-0000-0000-000000000204',
+          task_name: 'Draft proposal',
+        },
+      }),
+    );
+
+    expect(output[0][0].json).toEqual({
+      task_id: '00000000-0000-0000-0000-000000000204',
+      task_name: 'Draft proposal',
+    });
+  });
+
+  it('T083: project task create rejects missing project/phase/status mapping IDs before request', async () => {
+    await expect(
+      executeNode(
+        [
+          {
+            ...baseProjectTaskCreateParams,
+            projectTaskProjectId: { mode: 'id', value: '' },
+            projectTaskCreateAdditionalFields: {},
+          },
+        ],
+        () => ({ data: {} }),
+      ),
+    ).rejects.toBeInstanceOf(NodeOperationError);
+
+    await expect(
+      executeNode(
+        [
+          {
+            ...baseProjectTaskCreateParams,
+            projectTaskPhaseId: { mode: 'id', value: '' },
+            projectTaskCreateAdditionalFields: {},
+          },
+        ],
+        () => ({ data: {} }),
+      ),
+    ).rejects.toBeInstanceOf(NodeOperationError);
+
+    await expect(
+      executeNode(
+        [
+          {
+            ...baseProjectTaskCreateParams,
+            projectTaskStatusMappingId: { mode: 'id', value: '' },
+            projectTaskCreateAdditionalFields: {},
+          },
+        ],
+        () => ({ data: {} }),
+      ),
+    ).rejects.toBeInstanceOf(NodeOperationError);
+  });
+
+  it('T084: project task get sends GET /api/v1/projects/tasks/{taskId}', async () => {
+    const { requests, output } = await executeNode(
+      [
+        {
+          resource: 'projectTask',
+          projectTaskOperation: 'get',
+          projectTaskId: '00000000-0000-0000-0000-000000000210',
+        },
+      ],
+      () => ({
+        data: {
+          task_id: '00000000-0000-0000-0000-000000000210',
+          task_name: 'Existing task',
+        },
+      }),
+    );
+
+    expect(requests[0]?.method).toBe('GET');
+    expect(requests[0]?.url).toBe(
+      'https://api.algapsa.test/api/v1/projects/tasks/00000000-0000-0000-0000-000000000210',
+    );
+    expect(output[0][0].json).toEqual({
+      task_id: '00000000-0000-0000-0000-000000000210',
+      task_name: 'Existing task',
+    });
+  });
+
+  it('T085: project task list sends GET /api/v1/projects/{projectId}/tasks with pagination', async () => {
+    const { requests, output } = await executeNode(
+      [
+        {
+          resource: 'projectTask',
+          projectTaskOperation: 'list',
+          projectTaskProjectId: {
+            mode: 'id',
+            value: '00000000-0000-0000-0000-000000000220',
+          },
+          projectTaskPage: 2,
+          projectTaskLimit: 50,
+        },
+      ],
+      () => ({
+        data: [{ task_id: '00000000-0000-0000-0000-000000000221' }],
+        pagination: { page: 2, total: 1 },
+      }),
+    );
+
+    expect(requests[0]?.method).toBe('GET');
+    expect(requests[0]?.url).toBe(
+      'https://api.algapsa.test/api/v1/projects/00000000-0000-0000-0000-000000000220/tasks',
+    );
+    expect(requests[0]?.qs).toEqual({ page: 2, limit: 50 });
+    expect(output[0][0].json).toEqual({
+      data: [{ task_id: '00000000-0000-0000-0000-000000000221' }],
+      pagination: { page: 2, total: 1 },
+    });
+  });
+
+  it('T086: project task update sends PUT with only provided fields', async () => {
+    const { requests } = await executeNode(
+      [
+        {
+          resource: 'projectTask',
+          projectTaskOperation: 'update',
+          projectTaskId: '00000000-0000-0000-0000-000000000230',
+          projectTaskUpdateAdditionalFields: {
+            task_name: 'Renamed task',
+            description: '',
+            project_status_mapping_id: '00000000-0000-0000-0000-000000000231',
+          },
+        },
+      ],
+      () => ({ data: { task_id: '00000000-0000-0000-0000-000000000230' } }),
+    );
+
+    expect(requests[0]?.method).toBe('PUT');
+    expect(requests[0]?.url).toBe(
+      'https://api.algapsa.test/api/v1/projects/tasks/00000000-0000-0000-0000-000000000230',
+    );
+    expect(requests[0]?.body).toEqual({
+      task_name: 'Renamed task',
+      project_status_mapping_id: '00000000-0000-0000-0000-000000000231',
+    });
+  });
+
+  it('T087: project task update rejects an empty update collection before request', async () => {
+    await expect(
+      executeNode(
+        [
+          {
+            resource: 'projectTask',
+            projectTaskOperation: 'update',
+            projectTaskId: '00000000-0000-0000-0000-000000000232',
+            projectTaskUpdateAdditionalFields: {},
+          },
+        ],
+        () => ({ data: {} }),
+      ),
+    ).rejects.toBeInstanceOf(NodeOperationError);
+  });
+
+  it('T088: project task delete sends DELETE and returns a success envelope', async () => {
+    const { requests, output } = await executeNode(
+      [
+        {
+          resource: 'projectTask',
+          projectTaskOperation: 'delete',
+          projectTaskId: '00000000-0000-0000-0000-000000000240',
+        },
+      ],
+      () => undefined,
+    );
+
+    expect(requests[0]?.method).toBe('DELETE');
+    expect(requests[0]?.url).toBe(
+      'https://api.algapsa.test/api/v1/projects/tasks/00000000-0000-0000-0000-000000000240',
+    );
+    expect(output[0][0].json).toEqual({
+      success: true,
+      id: '00000000-0000-0000-0000-000000000240',
+      deleted: true,
+    });
+  });
+
+  it('T089: project task get/update/delete reject invalid UUIDs before request', async () => {
+    const getResult = await executeNodeExpectFailure([
+      {
+        resource: 'projectTask',
+        projectTaskOperation: 'get',
+        projectTaskId: 'not-a-uuid',
+      },
+    ]);
+    expect(getResult.error).toBeInstanceOf(NodeOperationError);
+    expect(getResult.requests).toHaveLength(0);
+
+    const deleteResult = await executeNodeExpectFailure([
+      {
+        resource: 'projectTask',
+        projectTaskOperation: 'delete',
+        projectTaskId: '',
+      },
+    ]);
+    expect(deleteResult.error).toBeInstanceOf(NodeOperationError);
+  });
+
+  it('T090: project task continue-on-fail emits item-level errors while later items still execute', async () => {
+    const { output } = await executeNode(
+      [
+        {
+          resource: 'projectTask',
+          projectTaskOperation: 'get',
+          projectTaskId: '00000000-0000-0000-0000-000000000250',
+        },
+        {
+          resource: 'projectTask',
+          projectTaskOperation: 'get',
+          projectTaskId: '00000000-0000-0000-0000-000000000251',
+        },
+      ],
+      (_options, index) => {
+        if (index === 0) {
+          throw createApiError(404, 'NOT_FOUND', 'Task not found', { taskId: 'missing' });
+        }
+
+        return { data: { task_id: '00000000-0000-0000-0000-000000000251' } };
+      },
+      true,
+    );
+
+    expect(output[0]).toHaveLength(2);
+    expect(output[0][0].json).toEqual({
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Task not found',
+        details: { taskId: 'missing' },
+        statusCode: 404,
+      },
+    });
+    expect(output[0][1].json).toEqual({
+      task_id: '00000000-0000-0000-0000-000000000251',
+    });
+  });
 });

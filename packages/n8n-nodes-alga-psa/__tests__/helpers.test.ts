@@ -3,6 +3,9 @@ import {
   buildContactCreatePayload,
   buildContactListQuery,
   buildContactUpdatePayload,
+  buildProjectTaskCreatePayload,
+  buildProjectTaskListQuery,
+  buildProjectTaskUpdatePayload,
   formatAlgaApiError,
   normalizeSuccessResponse,
   parseContactEmailAddresses,
@@ -332,5 +335,92 @@ describe('Transport and normalization helpers', () => {
         display_order: 0,
       },
     ]);
+  });
+
+  it('T070: project task create payload maps required fields and omits absent optional fields', () => {
+    const payload = buildProjectTaskCreatePayload({
+      taskName: 'Write specification',
+      statusMappingId: '00000000-0000-0000-0000-000000000301',
+      additionalFields: {},
+    });
+
+    expect(payload).toEqual({
+      task_name: 'Write specification',
+      project_status_mapping_id: '00000000-0000-0000-0000-000000000301',
+    });
+  });
+
+  it('T071: project task create payload includes scalar optional fields when present', () => {
+    const payload = buildProjectTaskCreatePayload({
+      taskName: 'Write specification',
+      statusMappingId: '00000000-0000-0000-0000-000000000301',
+      additionalFields: {
+        description: 'Draft the functional spec',
+        assigned_to: '00000000-0000-0000-0000-000000000302',
+        estimated_hours: 4.5,
+        due_date: '2026-05-01',
+        priority_id: '00000000-0000-0000-0000-000000000303',
+        task_type_key: 'design',
+        wbs_code: '1.1',
+        tags: 'backend, planning',
+      },
+    });
+
+    expect(payload).toEqual({
+      task_name: 'Write specification',
+      project_status_mapping_id: '00000000-0000-0000-0000-000000000301',
+      description: 'Draft the functional spec',
+      assigned_to: '00000000-0000-0000-0000-000000000302',
+      estimated_hours: 4.5,
+      due_date: '2026-05-01',
+      priority_id: '00000000-0000-0000-0000-000000000303',
+      task_type_key: 'design',
+      wbs_code: '1.1',
+      tags: ['backend', 'planning'],
+    });
+  });
+
+  it('T072: project task create payload rejects non-UUID assigned_to before request time', () => {
+    expect(() =>
+      buildProjectTaskCreatePayload({
+        taskName: 'Task',
+        statusMappingId: '00000000-0000-0000-0000-000000000301',
+        additionalFields: { assigned_to: 'not-a-uuid' },
+      }),
+    ).toThrow('assigned_to must be a valid UUID');
+  });
+
+  it('T073: project task create payload rejects negative estimated_hours before request time', () => {
+    expect(() =>
+      buildProjectTaskCreatePayload({
+        taskName: 'Task',
+        statusMappingId: '00000000-0000-0000-0000-000000000301',
+        additionalFields: { estimated_hours: -1 },
+      }),
+    ).toThrow('estimated_hours must be a non-negative number');
+  });
+
+  it('T074: project task update payload includes only provided update fields', () => {
+    const payload = buildProjectTaskUpdatePayload({
+      task_name: 'Renamed',
+      description: '',
+      project_status_mapping_id: '00000000-0000-0000-0000-000000000304',
+      tags: 'escalated',
+    });
+
+    expect(payload).toEqual({
+      task_name: 'Renamed',
+      project_status_mapping_id: '00000000-0000-0000-0000-000000000304',
+      tags: ['escalated'],
+    });
+  });
+
+  it('T075: project task list query serializes pagination parameters', () => {
+    expect(
+      buildProjectTaskListQuery({
+        page: 3,
+        limit: 50,
+      }),
+    ).toEqual({ page: 3, limit: 50 });
   });
 });

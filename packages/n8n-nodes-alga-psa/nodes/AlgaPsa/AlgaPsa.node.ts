@@ -14,6 +14,9 @@ import {
   buildContactCreatePayload,
   buildContactListQuery,
   buildContactUpdatePayload,
+  buildProjectTaskCreatePayload,
+  buildProjectTaskListQuery,
+  buildProjectTaskUpdatePayload,
   buildTicketCommentListQuery,
   buildTicketCommentPayload,
   buildTicketCreatePayload,
@@ -28,12 +31,21 @@ import {
   normalizeDeleteSuccess,
   normalizeSuccessResponse,
   parseCsvList,
+  UUID_REGEX,
 } from './helpers';
 import { algaApiRequest } from './transport';
 
-type Resource = 'ticket' | 'contact' | 'client' | 'board' | 'status' | 'priority';
+type Resource =
+  | 'ticket'
+  | 'contact'
+  | 'projectTask'
+  | 'client'
+  | 'board'
+  | 'status'
+  | 'priority';
 type StatusType = 'ticket' | 'project' | 'project_task' | 'interaction';
 type ContactOperation = 'create' | 'get' | 'list' | 'update' | 'delete';
+type ProjectTaskOperation = 'create' | 'get' | 'list' | 'update' | 'delete';
 type TicketOperation =
   | 'create'
   | 'get'
@@ -47,7 +59,7 @@ type TicketOperation =
   | 'delete';
 
 const LOOKUP_PAGE_SIZE = 100;
-type HelperResource = Exclude<Resource, 'ticket' | 'contact'>;
+type HelperResource = Exclude<Resource, 'ticket' | 'contact' | 'projectTask'>;
 
 function ensureDataArray(response: unknown): IDataObject[] {
   const normalized = normalizeSuccessResponse(response);
@@ -126,12 +138,20 @@ function getCurrentStatusLookupType(context: ILoadOptionsFunctions): StatusType 
   return undefined;
 }
 
+function getCurrentProjectLookupId(context: ILoadOptionsFunctions): string | undefined {
+  const currentParams = context.getCurrentNodeParameters?.();
+  const value = extractResourceLocatorValue(currentParams?.projectTaskProjectId);
+  return value && UUID_REGEX.test(value) ? value : undefined;
+}
+
 function getOperationParameterName(resource: Resource): string {
   switch (resource) {
     case 'ticket':
       return 'ticketOperation';
     case 'contact':
       return 'contactOperation';
+    case 'projectTask':
+      return 'projectTaskOperation';
     case 'client':
       return 'clientOperation';
     case 'board':
@@ -164,8 +184,8 @@ export class AlgaPsa implements INodeType {
     group: ['transform'],
     version: 1,
     subtitle:
-      '={{$parameter["resource"] + ": " + ($parameter["ticketOperation"] || $parameter["contactOperation"] || $parameter["clientOperation"] || $parameter["boardOperation"] || $parameter["statusOperation"] || $parameter["priorityOperation"])}}',
-    description: 'Create and manage Alga PSA tickets, contacts, and lookup resources',
+      '={{$parameter["resource"] + ": " + ($parameter["ticketOperation"] || $parameter["contactOperation"] || $parameter["projectTaskOperation"] || $parameter["clientOperation"] || $parameter["boardOperation"] || $parameter["statusOperation"] || $parameter["priorityOperation"])}}',
+    description: 'Create and manage Alga PSA tickets, contacts, project tasks, and lookup resources',
     defaults: {
       name: 'Alga PSA',
     },
@@ -186,6 +206,7 @@ export class AlgaPsa implements INodeType {
         options: [
           { name: 'Ticket', value: 'ticket' },
           { name: 'Contact', value: 'contact' },
+          { name: 'Project Task', value: 'projectTask' },
           { name: 'Client', value: 'client' },
           { name: 'Board', value: 'board' },
           { name: 'Status', value: 'status' },
@@ -249,6 +270,25 @@ export class AlgaPsa implements INodeType {
           { name: 'List', value: 'list', action: 'List contacts' },
           { name: 'Update', value: 'update', action: 'Update a contact' },
           { name: 'Delete', value: 'delete', action: 'Delete a contact' },
+        ],
+        default: 'create',
+      },
+      {
+        displayName: 'Operation',
+        name: 'projectTaskOperation',
+        type: 'options',
+        noDataExpression: true,
+        displayOptions: {
+          show: {
+            resource: ['projectTask'],
+          },
+        },
+        options: [
+          { name: 'Create', value: 'create', action: 'Create a project task' },
+          { name: 'Get', value: 'get', action: 'Get a project task' },
+          { name: 'List', value: 'list', action: 'List project tasks' },
+          { name: 'Update', value: 'update', action: 'Update a project task' },
+          { name: 'Delete', value: 'delete', action: 'Delete a project task' },
         ],
         default: 'create',
       },
@@ -1242,6 +1282,313 @@ export class AlgaPsa implements INodeType {
         },
       },
 
+      // Project Task fields
+      {
+        displayName: 'Task Name',
+        name: 'task_name',
+        type: 'string',
+        required: true,
+        default: '',
+        displayOptions: {
+          show: {
+            resource: ['projectTask'],
+            projectTaskOperation: ['create'],
+          },
+        },
+      },
+      {
+        displayName: 'Project ID',
+        name: 'projectTaskProjectId',
+        type: 'resourceLocator',
+        default: { mode: 'list', value: '' },
+        required: true,
+        displayOptions: {
+          show: {
+            resource: ['projectTask'],
+            projectTaskOperation: ['create', 'list'],
+          },
+        },
+        modes: [
+          {
+            displayName: 'From List',
+            name: 'list',
+            type: 'list',
+            typeOptions: {
+              searchListMethod: 'searchProjects',
+            },
+          },
+          {
+            displayName: 'By ID',
+            name: 'id',
+            type: 'string',
+            placeholder: '00000000-0000-0000-0000-000000000000',
+          },
+        ],
+        description: 'Select a project or enter a project UUID manually',
+      },
+      {
+        displayName: 'Phase ID',
+        name: 'projectTaskPhaseId',
+        type: 'resourceLocator',
+        default: { mode: 'list', value: '' },
+        required: true,
+        displayOptions: {
+          show: {
+            resource: ['projectTask'],
+            projectTaskOperation: ['create'],
+          },
+        },
+        modes: [
+          {
+            displayName: 'From List',
+            name: 'list',
+            type: 'list',
+            typeOptions: {
+              searchListMethod: 'searchProjectPhases',
+            },
+          },
+          {
+            displayName: 'By ID',
+            name: 'id',
+            type: 'string',
+            placeholder: '00000000-0000-0000-0000-000000000000',
+          },
+        ],
+        description: 'Select a phase within the selected project, or enter a phase UUID manually',
+      },
+      {
+        displayName: 'Status Mapping ID',
+        name: 'projectTaskStatusMappingId',
+        type: 'resourceLocator',
+        default: { mode: 'list', value: '' },
+        required: true,
+        displayOptions: {
+          show: {
+            resource: ['projectTask'],
+            projectTaskOperation: ['create'],
+          },
+        },
+        modes: [
+          {
+            displayName: 'From List',
+            name: 'list',
+            type: 'list',
+            typeOptions: {
+              searchListMethod: 'searchProjectTaskStatusMappings',
+            },
+          },
+          {
+            displayName: 'By ID',
+            name: 'id',
+            type: 'string',
+            placeholder: '00000000-0000-0000-0000-000000000000',
+          },
+        ],
+        description:
+          'Project-specific task status mapping UUID. Use the lookup to see valid options for the selected project.',
+      },
+      {
+        displayName: 'Task ID',
+        name: 'projectTaskId',
+        type: 'string',
+        required: true,
+        default: '',
+        displayOptions: {
+          show: {
+            resource: ['projectTask'],
+            projectTaskOperation: ['get', 'update', 'delete'],
+          },
+        },
+      },
+      {
+        displayName: 'Create Additional Fields',
+        name: 'projectTaskCreateAdditionalFields',
+        type: 'collection',
+        default: {},
+        placeholder: 'Add Field',
+        displayOptions: {
+          show: {
+            resource: ['projectTask'],
+            projectTaskOperation: ['create'],
+          },
+        },
+        options: [
+          {
+            displayName: 'Description',
+            name: 'description',
+            type: 'string',
+            default: '',
+            typeOptions: {
+              rows: 4,
+            },
+          },
+          {
+            displayName: 'Assigned To',
+            name: 'assigned_to',
+            type: 'string',
+            default: '',
+            placeholder: '00000000-0000-0000-0000-000000000000',
+          },
+          {
+            displayName: 'Estimated Hours',
+            name: 'estimated_hours',
+            type: 'number',
+            default: 0,
+            typeOptions: {
+              minValue: 0,
+            },
+          },
+          {
+            displayName: 'Due Date',
+            name: 'due_date',
+            type: 'string',
+            default: '',
+            placeholder: 'YYYY-MM-DD or ISO 8601 timestamp',
+          },
+          {
+            displayName: 'Priority ID',
+            name: 'priority_id',
+            type: 'string',
+            default: '',
+            placeholder: '00000000-0000-0000-0000-000000000000',
+          },
+          {
+            displayName: 'Task Type Key',
+            name: 'task_type_key',
+            type: 'string',
+            default: '',
+            description: 'Optional task type key; server defaults to "general"',
+          },
+          {
+            displayName: 'WBS Code',
+            name: 'wbs_code',
+            type: 'string',
+            default: '',
+          },
+          {
+            displayName: 'Tags',
+            name: 'tags',
+            type: 'string',
+            default: '',
+            description: 'Comma-separated tags',
+          },
+        ],
+      },
+      {
+        displayName: 'Update Additional Fields',
+        name: 'projectTaskUpdateAdditionalFields',
+        type: 'collection',
+        default: {},
+        placeholder: 'Add Field',
+        displayOptions: {
+          show: {
+            resource: ['projectTask'],
+            projectTaskOperation: ['update'],
+          },
+        },
+        options: [
+          { displayName: 'Task Name', name: 'task_name', type: 'string', default: '' },
+          {
+            displayName: 'Description',
+            name: 'description',
+            type: 'string',
+            default: '',
+            typeOptions: {
+              rows: 4,
+            },
+          },
+          {
+            displayName: 'Assigned To',
+            name: 'assigned_to',
+            type: 'string',
+            default: '',
+            placeholder: '00000000-0000-0000-0000-000000000000',
+          },
+          {
+            displayName: 'Estimated Hours',
+            name: 'estimated_hours',
+            type: 'number',
+            default: 0,
+            typeOptions: {
+              minValue: 0,
+            },
+          },
+          {
+            displayName: 'Due Date',
+            name: 'due_date',
+            type: 'string',
+            default: '',
+            placeholder: 'YYYY-MM-DD or ISO 8601 timestamp',
+          },
+          {
+            displayName: 'Priority ID',
+            name: 'priority_id',
+            type: 'string',
+            default: '',
+            placeholder: '00000000-0000-0000-0000-000000000000',
+          },
+          {
+            displayName: 'Task Type Key',
+            name: 'task_type_key',
+            type: 'string',
+            default: '',
+          },
+          {
+            displayName: 'Status Mapping ID',
+            name: 'project_status_mapping_id',
+            type: 'string',
+            default: '',
+            placeholder: '00000000-0000-0000-0000-000000000000',
+          },
+          {
+            displayName: 'WBS Code',
+            name: 'wbs_code',
+            type: 'string',
+            default: '',
+          },
+          {
+            displayName: 'Tags',
+            name: 'tags',
+            type: 'string',
+            default: '',
+            description: 'Comma-separated tags',
+          },
+        ],
+      },
+      {
+        displayName: 'Page',
+        name: 'projectTaskPage',
+        type: 'number',
+        default: 1,
+        typeOptions: {
+          minValue: 1,
+          numberPrecision: 0,
+        },
+        displayOptions: {
+          show: {
+            resource: ['projectTask'],
+            projectTaskOperation: ['list'],
+          },
+        },
+      },
+      {
+        displayName: 'Limit',
+        name: 'projectTaskLimit',
+        type: 'number',
+        default: 25,
+        typeOptions: {
+          minValue: 1,
+          maxValue: 100,
+          numberPrecision: 0,
+        },
+        displayOptions: {
+          show: {
+            resource: ['projectTask'],
+            projectTaskOperation: ['list'],
+          },
+        },
+      },
+
       // Helper list parameters
       {
         displayName: 'Page',
@@ -1335,6 +1682,46 @@ export class AlgaPsa implements INodeType {
           filter,
         );
       },
+      async searchProjects(this: ILoadOptionsFunctions, filter?: string): Promise<INodeListSearchResult> {
+        return loadLookup(
+          this,
+          '/api/v1/projects',
+          'project_id',
+          ['project_name', 'name'],
+          filter,
+        );
+      },
+      async searchProjectPhases(this: ILoadOptionsFunctions, filter?: string): Promise<INodeListSearchResult> {
+        const projectId = getCurrentProjectLookupId(this);
+        if (!projectId) {
+          return { results: [] };
+        }
+
+        return loadLookup(
+          this,
+          `/api/v1/projects/${projectId}/phases`,
+          'phase_id',
+          ['phase_name', 'name'],
+          filter,
+        );
+      },
+      async searchProjectTaskStatusMappings(
+        this: ILoadOptionsFunctions,
+        filter?: string,
+      ): Promise<INodeListSearchResult> {
+        const projectId = getCurrentProjectLookupId(this);
+        if (!projectId) {
+          return { results: [] };
+        }
+
+        return loadLookup(
+          this,
+          `/api/v1/projects/${projectId}/task-status-mappings`,
+          'project_status_mapping_id',
+          ['custom_name', 'status_name', 'name'],
+          filter,
+        );
+      },
     },
   };
 
@@ -1353,6 +1740,12 @@ export class AlgaPsa implements INodeType {
             ? await executeTicketOperation(this, itemIndex, operation as TicketOperation)
             : resource === 'contact'
               ? await executeContactOperation(this, itemIndex, operation as ContactOperation)
+              : resource === 'projectTask'
+                ? await executeProjectTaskOperation(
+                    this,
+                    itemIndex,
+                    operation as ProjectTaskOperation,
+                  )
             : await executeHelperOperation(
                 this,
                 resource as HelperResource,
@@ -1547,6 +1940,150 @@ async function executeContactOperation(
 
       const response = await algaApiRequest(context, 'DELETE', `/api/v1/contacts/${contactId}`);
       return normalizeDeleteSuccess(contactId, response);
+    }
+  }
+}
+
+async function executeProjectTaskOperation(
+  context: IExecuteFunctions,
+  itemIndex: number,
+  operation: ProjectTaskOperation,
+): Promise<IDataObject> {
+  switch (operation) {
+    case 'create': {
+      const taskName = requireNonEmpty(
+        context,
+        context.getNodeParameter('task_name', itemIndex) as string,
+        'task_name',
+        itemIndex,
+      );
+      const projectId = requireUuid(
+        context,
+        getResourceLocatorId(context, 'projectTaskProjectId', itemIndex),
+        'projectTaskProjectId',
+        itemIndex,
+      );
+      const phaseId = requireUuid(
+        context,
+        getResourceLocatorId(context, 'projectTaskPhaseId', itemIndex),
+        'projectTaskPhaseId',
+        itemIndex,
+      );
+      const statusMappingId = requireUuid(
+        context,
+        getResourceLocatorId(context, 'projectTaskStatusMappingId', itemIndex),
+        'projectTaskStatusMappingId',
+        itemIndex,
+      );
+
+      const additionalFields = context.getNodeParameter(
+        'projectTaskCreateAdditionalFields',
+        itemIndex,
+        {},
+      ) as IDataObject;
+
+      const payload = buildWithOperationValidation(context, itemIndex, () =>
+        buildProjectTaskCreatePayload({
+          taskName,
+          statusMappingId,
+          additionalFields,
+        }),
+      );
+
+      const response = await algaApiRequest(
+        context,
+        'POST',
+        `/api/v1/projects/${projectId}/phases/${phaseId}/tasks`,
+        undefined,
+        payload,
+      );
+      return normalizeSuccessResponse(response);
+    }
+
+    case 'get': {
+      const taskId = requireUuid(
+        context,
+        context.getNodeParameter('projectTaskId', itemIndex) as string,
+        'projectTaskId',
+        itemIndex,
+      );
+
+      const response = await algaApiRequest(
+        context,
+        'GET',
+        `/api/v1/projects/tasks/${taskId}`,
+      );
+      return normalizeSuccessResponse(response);
+    }
+
+    case 'list': {
+      const projectId = requireUuid(
+        context,
+        getResourceLocatorId(context, 'projectTaskProjectId', itemIndex),
+        'projectTaskProjectId',
+        itemIndex,
+      );
+      const page = context.getNodeParameter('projectTaskPage', itemIndex, 1) as number;
+      const limit = context.getNodeParameter('projectTaskLimit', itemIndex, 25) as number;
+
+      const query = buildProjectTaskListQuery({ page, limit });
+
+      const response = await algaApiRequest(
+        context,
+        'GET',
+        `/api/v1/projects/${projectId}/tasks`,
+        query,
+      );
+      return normalizeSuccessResponse(response);
+    }
+
+    case 'update': {
+      const taskId = requireUuid(
+        context,
+        context.getNodeParameter('projectTaskId', itemIndex) as string,
+        'projectTaskId',
+        itemIndex,
+      );
+      const additionalFields = context.getNodeParameter(
+        'projectTaskUpdateAdditionalFields',
+        itemIndex,
+        {},
+      ) as IDataObject;
+
+      const payload = buildWithOperationValidation(context, itemIndex, () =>
+        buildProjectTaskUpdatePayload(additionalFields),
+      );
+
+      if (Object.keys(payload).length === 0) {
+        throw new NodeOperationError(context.getNode(), 'At least one update field is required', {
+          itemIndex,
+        });
+      }
+
+      const response = await algaApiRequest(
+        context,
+        'PUT',
+        `/api/v1/projects/tasks/${taskId}`,
+        undefined,
+        payload,
+      );
+      return normalizeSuccessResponse(response);
+    }
+
+    case 'delete': {
+      const taskId = requireUuid(
+        context,
+        context.getNodeParameter('projectTaskId', itemIndex) as string,
+        'projectTaskId',
+        itemIndex,
+      );
+
+      const response = await algaApiRequest(
+        context,
+        'DELETE',
+        `/api/v1/projects/tasks/${taskId}`,
+      );
+      return normalizeDeleteSuccess(taskId, response);
     }
   }
 }

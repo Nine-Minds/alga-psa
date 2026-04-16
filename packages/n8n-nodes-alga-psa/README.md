@@ -11,6 +11,7 @@ This package adds one node to n8n:
 - Resources:
   - Ticket
   - Contact
+  - Project Task
   - Client
   - Board
   - Status
@@ -56,6 +57,7 @@ Create credential type `Alga PSA API` with:
 | --- | --- |
 | Ticket | Create, Get, List, List Comments, Search, Update, Add Comment, Update Status, Update Assignment, Delete |
 | Contact | Create, Get, List, Update, Delete |
+| Project Task | Create, Get, List, Update, Delete |
 | Client | List |
 | Board | List |
 | Status | List |
@@ -104,6 +106,35 @@ Contact list supports:
 `additional_email_addresses` is authored as JSON and should be an array of objects with a required `email_address` field plus optional `canonical_type`, `custom_type`, and `display_order`.
 
 Use `primary_email_canonical_type` for canonical labels such as `work`, `personal`, `billing`, or `other`. Use `primary_email_custom_type` when you need a freeform primary label instead.
+
+## Project Task Field Requirements
+
+Project Task create requires:
+
+- `task_name`
+- `Project ID` (resource locator with search or manual UUID)
+- `Phase ID` (within the selected project)
+- `Status Mapping ID` (project-specific task status mapping)
+
+Project Task create/update optional fields:
+
+- `description`
+- `assigned_to` (user UUID)
+- `estimated_hours`
+- `due_date` (ISO date/time string)
+- `priority_id`
+- `task_type_key` (server defaults to `general`)
+- `wbs_code`
+- `tags` (comma-separated)
+- Update also accepts `task_name` and `project_status_mapping_id` in its collection
+
+Project Task list requires a `Project ID` and supports `Page` and `Limit`. The server
+returns all tasks for the selected project; filter downstream if you need phase-level
+slicing. `Get`, `Update`, and `Delete` operate on a task UUID regardless of project.
+
+Status Mapping IDs are project-specific. Use the `Status Mapping ID` lookup after
+selecting a project, or fetch candidates via
+`GET /api/v1/projects/{id}/task-status-mappings`.
 
 ## Ticket Comment Operations
 
