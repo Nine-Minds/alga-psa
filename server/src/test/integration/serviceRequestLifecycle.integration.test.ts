@@ -8,6 +8,7 @@ import {
   archiveServiceRequestDefinition,
   createDraftFromLatestPublishedVersion,
   listPublishedServiceRequestDefinitions,
+  unarchiveServiceRequestDefinition,
 } from '../../lib/service-requests/definitionLifecycle';
 import { getVisiblePublishedServiceRequestDefinitionDetail } from '../../lib/service-requests/portalDetail';
 
@@ -73,6 +74,53 @@ describe('service request definition lifecycle', () => {
 
     expect(Number(storedVersions[0].count)).toBe(1);
     expect(Number(storedSubmissions[0].count)).toBe(1);
+  });
+
+  it('unarchiving a previously archived definition clears the live publication marker until republished', async () => {
+    const tenant = uuidv4();
+    const definitionId = uuidv4();
+
+    await db('tenants').insert({
+      tenant,
+      client_name: `Tenant ${tenant.slice(0, 8)}`,
+      email: `tenant-${tenant.slice(0, 8)}@example.com`,
+    });
+
+    await db('service_request_definitions').insert({
+      tenant,
+      definition_id: definitionId,
+      name: 'Archive / Unarchive Request',
+      form_schema: { fields: [] },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+      lifecycle_state: 'draft',
+    });
+
+    await publishServiceRequestDefinition({
+      knex: db,
+      tenant,
+      definitionId,
+    });
+
+    await archiveServiceRequestDefinition(db, tenant, definitionId);
+    await unarchiveServiceRequestDefinition(db, tenant, definitionId);
+
+    const definition = await db('service_request_definitions')
+      .where({ tenant, definition_id: definitionId })
+      .first('lifecycle_state', 'published_at', 'published_by');
+
+    expect(definition).toMatchObject({
+      lifecycle_state: 'draft',
+      published_at: null,
+      published_by: null,
+    });
+
+    const liveDefinitions = await listPublishedServiceRequestDefinitions(db, tenant);
+    expect(liveDefinitions.map((item) => item.definition_id)).not.toContain(definitionId);
   });
 
   it('T046: creating a draft from published and republishing yields version 2 while preserving version 1', async () => {

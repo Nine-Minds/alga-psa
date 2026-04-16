@@ -81,11 +81,41 @@ function buildTicketDescription(
   return descriptionPrefix ? `${descriptionPrefix}\n\n${payloadSummary}` : payloadSummary;
 }
 
+function validateTicketOnlyExecutionConfig(config: Record<string, unknown>) {
+  const errors: string[] = [];
+
+  if (!getStringConfig(config, 'boardId')) {
+    errors.push('Ticket routing board is required');
+  }
+
+  if (!getStringConfig(config, 'statusId')) {
+    errors.push('Ticket routing status is required');
+  }
+
+  const hasPriorityId = Boolean(getStringConfig(config, 'priorityId'));
+  const hasItilImpact = getNumberConfig(config, 'itilImpact') !== undefined;
+  const hasItilUrgency = getNumberConfig(config, 'itilUrgency') !== undefined;
+
+  if (!hasPriorityId && !hasItilImpact && !hasItilUrgency) {
+    errors.push('Ticket routing priority is required');
+  }
+
+  if (!hasPriorityId && hasItilImpact !== hasItilUrgency) {
+    errors.push('Ticket routing requires both ITIL impact and urgency when priority is not set');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings: [],
+  };
+}
+
 export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
   key: 'ticket-only',
   displayName: 'Ticket Only',
   executionMode: SERVICE_REQUEST_EXECUTION_MODES.TICKET_ONLY,
-  validateConfig: () => ({ isValid: true }),
+  validateConfig: validateTicketOnlyExecutionConfig,
   async execute(context) {
     try {
       return await context.knex.transaction(async (trx) => {

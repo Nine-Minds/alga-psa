@@ -124,6 +124,7 @@ describe('service request advanced visibility provider', () => {
         allowedClientIds: [allowedClientId],
       },
       lifecycle_state: 'published',
+      published_at: db.fn.now(),
     });
 
     await db('service_request_definition_versions').insert({

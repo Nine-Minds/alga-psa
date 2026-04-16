@@ -50,10 +50,12 @@ describe('service request portal catalog', () => {
     const clientId = uuidv4();
     const visiblePublishedId = uuidv4();
     const hiddenPublishedId = uuidv4();
+    const draftChangesId = uuidv4();
     const draftId = uuidv4();
     const uncategorizedId = uuidv4();
     const visibleVersionId = uuidv4();
     const hiddenVersionId = uuidv4();
+    const draftChangesVersionId = uuidv4();
     const uncategorizedVersionId = uuidv4();
 
     await db('tenants').insert({
@@ -79,6 +81,7 @@ describe('service request portal catalog', () => {
         visibility_provider: 'test-visibility',
         visibility_config: { allow: true },
         lifecycle_state: 'published',
+        published_at: db.fn.now(),
       },
       {
         tenant,
@@ -96,6 +99,25 @@ describe('service request portal catalog', () => {
         visibility_provider: 'test-visibility',
         visibility_config: { allow: false },
         lifecycle_state: 'published',
+        published_at: db.fn.now(),
+      },
+      {
+        tenant,
+        definition_id: draftChangesId,
+        name: 'Published Password Reset',
+        description: 'Live card should remain visible during draft edits.',
+        icon: 'key-round',
+        category_name_snapshot: 'Onboarding',
+        sort_order: 2,
+        form_schema: { fields: [] },
+        execution_provider: 'ticket-only',
+        execution_config: {},
+        form_behavior_provider: 'basic',
+        form_behavior_config: {},
+        visibility_provider: 'test-visibility',
+        visibility_config: { allow: true },
+        lifecycle_state: 'draft',
+        published_at: db.fn.now(),
       },
       {
         tenant,
@@ -130,6 +152,7 @@ describe('service request portal catalog', () => {
         visibility_provider: 'all-authenticated-client-users',
         visibility_config: {},
         lifecycle_state: 'published',
+        published_at: db.fn.now(),
       },
     ]);
 
@@ -172,6 +195,24 @@ describe('service request portal catalog', () => {
       },
       {
         tenant,
+        version_id: draftChangesVersionId,
+        definition_id: draftChangesId,
+        version_number: 1,
+        name: 'Published Password Reset',
+        description: 'Live card should remain visible during draft edits.',
+        icon: 'key-round',
+        category_name_snapshot: 'Onboarding',
+        sort_order: 2,
+        form_schema_snapshot: { fields: [] },
+        execution_provider: 'ticket-only',
+        execution_config: {},
+        form_behavior_provider: 'basic',
+        form_behavior_config: {},
+        visibility_provider: 'test-visibility',
+        visibility_config: { allow: true },
+      },
+      {
+        tenant,
         version_id: uncategorizedVersionId,
         definition_id: uncategorizedId,
         version_number: 1,
@@ -197,9 +238,10 @@ describe('service request portal catalog', () => {
       contactId: null,
     });
 
-    expect(visibleItems).toHaveLength(2);
+    expect(visibleItems).toHaveLength(3);
     expect(visibleItems.map((item) => item.definitionId)).toEqual([
       visiblePublishedId,
+      draftChangesId,
       uncategorizedId,
     ]);
     expect(visibleItems[0]).toMatchObject({
@@ -212,7 +254,10 @@ describe('service request portal catalog', () => {
     const grouped = groupServiceRequestCatalogItemsByCategory(visibleItems);
     expect(grouped).toHaveLength(2);
     expect(grouped[0].category).toBe('Onboarding');
-    expect(grouped[0].items[0].title).toBe('New Hire Setup');
+    expect(grouped[0].items.map((item) => item.title)).toEqual([
+      'New Hire Setup',
+      'Published Password Reset',
+    ]);
     expect(grouped[1].category).toBe('Other Services');
     expect(grouped[1].items[0].title).toBe('General IT Help');
   });

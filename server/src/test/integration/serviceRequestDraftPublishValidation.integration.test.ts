@@ -2,7 +2,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { publishServiceRequestDefinitionWithValidation } from '../../lib/service-requests/definitionValidation';
+import {
+  publishServiceRequestDefinitionWithValidation,
+  validateServiceRequestDefinitionForPublish,
+} from '../../lib/service-requests/definitionValidation';
 import { saveServiceRequestDefinitionDraft } from '../../lib/service-requests/definitionManagement';
 
 describe('service request draft save and publish validation', () => {
@@ -67,6 +70,75 @@ describe('service request draft save and publish validation', () => {
     ).rejects.toThrow('Publish validation failed');
   });
 
+  it('requires explicit ticket routing before a ticket-only definition can be published', async () => {
+    const tenant = uuidv4();
+    const definitionId = uuidv4();
+
+    await db('tenants').insert({
+      tenant,
+      client_name: `Tenant ${tenant.slice(0, 8)}`,
+      email: `tenant-${tenant.slice(0, 8)}@example.com`,
+    });
+
+    await db('service_request_definitions').insert({
+      tenant,
+      definition_id: definitionId,
+      name: 'Ticket Routed Request',
+      description: 'Needs explicit routing before publish',
+      form_schema: {
+        fields: [{ key: 'request_title', type: 'short-text', label: 'Request Title' }],
+      },
+      execution_provider: 'ticket-only',
+      execution_config: {
+        titleTemplate: 'Ticket: {{request_title}}',
+        includeFormResponsesInDescription: true,
+      },
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+      lifecycle_state: 'draft',
+    });
+
+    const invalidValidation = await validateServiceRequestDefinitionForPublish(
+      db,
+      tenant,
+      definitionId
+    );
+
+    expect(invalidValidation.isValid).toBe(false);
+    expect(invalidValidation.errors).toEqual(
+      expect.arrayContaining([
+        'Execution: Ticket routing board is required',
+        'Execution: Ticket routing status is required',
+        'Execution: Ticket routing priority is required',
+      ])
+    );
+
+    await db('service_request_definitions')
+      .where({ tenant, definition_id: definitionId })
+      .update({
+        execution_config: {
+          titleTemplate: 'Ticket: {{request_title}}',
+          includeFormResponsesInDescription: true,
+          boardId: 'board-123',
+          statusId: 'status-123',
+          priorityId: 'priority-123',
+        },
+      });
+
+    const validValidation = await validateServiceRequestDefinitionForPublish(
+      db,
+      tenant,
+      definitionId
+    );
+
+    expect(validValidation).toMatchObject({
+      isValid: true,
+      errors: [],
+    });
+  });
+
   it('keeps an already-published definition live while draft edits are saved', async () => {
     const tenant = uuidv4();
     const definitionId = uuidv4();
@@ -125,7 +197,7 @@ describe('service request draft save and publish validation', () => {
       },
     });
 
-    expect(savedDraft.lifecycle_state).toBe('published');
+    expect(savedDraft.lifecycle_state).toBe('draft');
     expect(savedDraft.published_by).toBe(actor);
     expect(new Date(savedDraft.published_at as Date).toISOString()).toBe(
       publishedAt.toISOString()
