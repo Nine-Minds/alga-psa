@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getMyServiceRequestSubmissionDetailAction } from '../actions';
 import { getSubmissionFieldDisplay } from '../../submissionFieldPresentation';
-import FeatureFlagPageWrapper from '@alga-psa/ui/components/feature-flags/FeatureFlagPageWrapper';
 
 interface MyRequestDetailPageProps {
   params: Promise<{
@@ -33,112 +32,110 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
   const payload = submission.submitted_payload ?? {};
 
   return (
-    <FeatureFlagPageWrapper featureFlag="service-requests">
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">{submission.request_name}</h1>
-            <p className="text-sm text-[rgb(var(--color-text-600))]">
-              Request ID: <span className="font-mono">{submission.submission_id}</span>
-            </p>
-          </div>
-          <Link
-            href="/client-portal/request-services/my-requests"
-            className="text-sm text-[rgb(var(--color-primary-600))] hover:underline"
-          >
-            Back to My Requests
-          </Link>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">{submission.request_name}</h1>
+          <p className="text-sm text-[rgb(var(--color-text-600))]">
+            Request ID: <span className="font-mono">{submission.submission_id}</span>
+          </p>
         </div>
-
-        <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
-          <h2 className="text-base font-semibold mb-2">Status</h2>
-          <p className="text-sm">Submitted: {formatDateTime(submission.submitted_at)}</p>
-          <p className="text-sm">Execution status: {submission.execution_status}</p>
-          {submission.created_ticket_id && (
-            <p className="text-sm">
-              Ticket:{' '}
-              <Link
-                href={`/client-portal/tickets/${submission.created_ticket_id}`}
-                className="text-[rgb(var(--color-primary-600))] hover:underline"
-              >
-                {submission.created_ticket_id}
-              </Link>
-            </p>
-          )}
-          {submission.workflow_execution_id && (
-            <p className="text-sm">Workflow: {submission.workflow_execution_id}</p>
-          )}
-        </section>
-
-        <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
-          <h2 className="text-base font-semibold mb-2">Submitted Answers</h2>
-          {fields.length === 0 ? (
-            <pre className="text-xs bg-white p-2 rounded overflow-auto">
-              {JSON.stringify(payload, null, 2)}
-            </pre>
-          ) : (
-            <dl className="space-y-2">
-              {fields.map((field: any, index: number) => {
-                const key = typeof field?.key === 'string' ? field.key : `field_${index}`;
-                const label = typeof field?.label === 'string' ? field.label : key;
-                const display = getSubmissionFieldDisplay(
-                  field,
-                  fields,
-                  payload as Record<string, unknown>,
-                  submission.attachments
-                );
-                return (
-                  <div key={key} className="rounded border bg-white p-2">
-                    <dt className="text-xs font-semibold text-[rgb(var(--color-text-700))]">{label}</dt>
-                    <dd className="text-sm">
-                      {display.kind === 'missing' ? (
-                        <span className="text-[rgb(var(--color-text-500))]">No response</span>
-                      ) : display.kind === 'attachments' ? (
-                        <ul className="space-y-1">
-                          {(display.attachments ?? []).map((attachment) => (
-                            <li key={`${key}-${attachment.file_id}`}>
-                              <span className="font-medium">
-                                {attachment.file_name ?? attachment.file_id}
-                              </span>
-                              {attachment.file_name && (
-                                <span className="text-[rgb(var(--color-text-600))]">
-                                  {' '}
-                                  ({attachment.file_id})
-                                </span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        display.text
-                      )}
-                    </dd>
-                  </div>
-                );
-              })}
-            </dl>
-          )}
-        </section>
-
-        <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
-          <h2 className="text-base font-semibold mb-2">Attachments</h2>
-          {submission.attachments.length === 0 ? (
-            <p className="text-sm text-[rgb(var(--color-text-600))]">No attachments included.</p>
-          ) : (
-            <ul className="space-y-2">
-              {submission.attachments.map((attachment) => (
-                <li key={attachment.submission_attachment_id} className="rounded border bg-white p-2">
-                  <p className="text-sm font-medium">{attachment.file_name ?? attachment.file_id}</p>
-                  <p className="text-xs text-[rgb(var(--color-text-600))]">File ID: {attachment.file_id}</p>
-                  {attachment.mime_type && (
-                    <p className="text-xs text-[rgb(var(--color-text-600))]">Type: {attachment.mime_type}</p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <Link
+          href="/client-portal/request-services/my-requests"
+          className="text-sm text-[rgb(var(--color-primary-600))] hover:underline"
+        >
+          Back to My Requests
+        </Link>
       </div>
-    </FeatureFlagPageWrapper>
+
+      <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
+        <h2 className="text-base font-semibold mb-2">Status</h2>
+        <p className="text-sm">Submitted: {formatDateTime(submission.submitted_at)}</p>
+        <p className="text-sm">Execution status: {submission.execution_status}</p>
+        {submission.created_ticket_id && (
+          <p className="text-sm">
+            Ticket:{' '}
+            <Link
+              href={`/client-portal/tickets/${submission.created_ticket_id}`}
+              className="text-[rgb(var(--color-primary-600))] hover:underline"
+            >
+              {submission.created_ticket_id}
+            </Link>
+          </p>
+        )}
+        {submission.workflow_execution_id && (
+          <p className="text-sm">Workflow: {submission.workflow_execution_id}</p>
+        )}
+      </section>
+
+      <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
+        <h2 className="text-base font-semibold mb-2">Submitted Answers</h2>
+        {fields.length === 0 ? (
+          <pre className="text-xs bg-white p-2 rounded overflow-auto">
+            {JSON.stringify(payload, null, 2)}
+          </pre>
+        ) : (
+          <dl className="space-y-2">
+            {fields.map((field: any, index: number) => {
+              const key = typeof field?.key === 'string' ? field.key : `field_${index}`;
+              const label = typeof field?.label === 'string' ? field.label : key;
+              const display = getSubmissionFieldDisplay(
+                field,
+                fields,
+                payload as Record<string, unknown>,
+                submission.attachments
+              );
+              return (
+                <div key={key} className="rounded border bg-white p-2">
+                  <dt className="text-xs font-semibold text-[rgb(var(--color-text-700))]">{label}</dt>
+                  <dd className="text-sm">
+                    {display.kind === 'missing' ? (
+                      <span className="text-[rgb(var(--color-text-500))]">No response</span>
+                    ) : display.kind === 'attachments' ? (
+                      <ul className="space-y-1">
+                        {(display.attachments ?? []).map((attachment) => (
+                          <li key={`${key}-${attachment.file_id}`}>
+                            <span className="font-medium">
+                              {attachment.file_name ?? attachment.file_id}
+                            </span>
+                            {attachment.file_name && (
+                              <span className="text-[rgb(var(--color-text-600))]">
+                                {' '}
+                                ({attachment.file_id})
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      display.text
+                    )}
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
+        )}
+      </section>
+
+      <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
+        <h2 className="text-base font-semibold mb-2">Attachments</h2>
+        {submission.attachments.length === 0 ? (
+          <p className="text-sm text-[rgb(var(--color-text-600))]">No attachments included.</p>
+        ) : (
+          <ul className="space-y-2">
+            {submission.attachments.map((attachment) => (
+              <li key={attachment.submission_attachment_id} className="rounded border bg-white p-2">
+                <p className="text-sm font-medium">{attachment.file_name ?? attachment.file_id}</p>
+                <p className="text-xs text-[rgb(var(--color-text-600))]">File ID: {attachment.file_id}</p>
+                {attachment.mime_type && (
+                  <p className="text-xs text-[rgb(var(--color-text-600))]">Type: {attachment.mime_type}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
   );
 }
