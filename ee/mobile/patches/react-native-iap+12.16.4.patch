@@ -1,0 +1,26 @@
+diff --git a/node_modules/react-native-iap/RNIap.podspec b/node_modules/react-native-iap/RNIap.podspec
+index 79784fd..1656b6b 100644
+--- a/node_modules/react-native-iap/RNIap.podspec
++++ b/node_modules/react-native-iap/RNIap.podspec
+@@ -20,17 +20,10 @@ Pod::Spec.new do |s|
+ 
+   s.dependency "React-Core"
+ 
+-  # Don't install the dependencies when we run `pod install` in the old architecture.
++  # Patched for RN 0.81 prebuilt deps: the native code is pure Swift/ObjC and
++  # does not reference Folly/TurboModule headers, so we can drop the explicit
++  # deps that no longer exist as standalone pods.
+   if ENV['RCT_NEW_ARCH_ENABLED'] == '1' then
+-    s.compiler_flags = folly_compiler_flags + " -DRCT_NEW_ARCH_ENABLED=1"
+-    s.pod_target_xcconfig    = {
+-        "HEADER_SEARCH_PATHS" => "\"$(PODS_ROOT)/boost\"",
+-        "CLANG_CXX_LANGUAGE_STANDARD" => "c++17"
+-    }
+-
+-    s.dependency "RCT-Folly"
+-    s.dependency "RCTRequired"
+-    s.dependency "RCTTypeSafety"
+-    s.dependency "ReactCommon/turbomodule/core"
++    s.compiler_flags = " -DRCT_NEW_ARCH_ENABLED=1"
+   end
+ end

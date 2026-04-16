@@ -150,7 +150,7 @@ export const lightTheme: Theme = {
     primary: primaryLight[500],
     primaryLight: primaryLight[200],
     primaryDark: primaryLight[700],
-    secondary: secondaryLight[500],
+    secondary: secondaryLight[700],
     accent: accentLight[500],
     border: grayLight[200],
     borderLight: grayLight[100],

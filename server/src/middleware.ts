@@ -69,6 +69,12 @@ const apiKeySkipPaths = [
   '/api/client-portal/domain-session',
   // Mobile auth endpoints use OTT/refresh tokens (no x-api-key)
   '/api/v1/mobile/auth/',
+  // Mobile IAP endpoints are pre-account: provisioning happens before the
+  // user has any tenant/api-key; restore + check-email + the Apple webhook
+  // are also unauthenticated by design.
+  '/api/v1/mobile/iap/',
+  // Mobile account endpoints use Bearer auth (validated in route handler)
+  '/api/v1/mobile/account/',
   '/api/integrations/ninjaone/callback',
   '/api/integrations/xero/connect',
   '/api/integrations/xero/callback',

@@ -31,6 +31,18 @@ const activities = proxyActivities<{
     companyName?: string;
     clientName?: string;
     licenseCount?: number;
+    billingSource?: 'stripe' | 'apple_iap' | 'manual';
+    plan?: 'solo' | 'pro' | 'premium';
+    appleIap?: {
+      originalTransactionId: string;
+      productId: string;
+      bundleId: string;
+      environment: 'Production' | 'Sandbox';
+      appAccountToken?: string;
+      latestTransactionId?: string;
+      expiresAt?: string;
+      originalPurchaseAt?: string;
+    };
     stripeCustomerId?: string;
     stripeSubscriptionId?: string;
     stripeSubscriptionItemId?: string;
@@ -232,6 +244,10 @@ export async function tenantCreationWorkflow(
       companyName: tenantCompanyName,
       clientName: tenantDefaultClientName,
       licenseCount: stripeDetails.licenseCount,
+      // Billing source + IAP data (IAP path skips Stripe entirely)
+      billingSource: input.billingSource,
+      plan: input.plan,
+      appleIap: input.appleIap,
       // Pass through Stripe integration data (from input or fetched from Stripe)
       stripeCustomerId: stripeDetails.stripeCustomerId,
       stripeSubscriptionId: stripeDetails.stripeSubscriptionId,

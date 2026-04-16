@@ -6,6 +6,7 @@ import commonEn from "./locales/en/common.json";
 import authEn from "./locales/en/auth.json";
 import ticketsEn from "./locales/en/tickets.json";
 import settingsEn from "./locales/en/settings.json";
+import iapEn from "./locales/en/iap.json";
 
 function resolveDeviceLocale(): SupportedLocale {
   const tag = Localization.getLocales()[0]?.languageTag;
@@ -23,6 +24,7 @@ const resources = {
     auth: authEn,
     tickets: ticketsEn,
     settings: settingsEn,
+    iap: iapEn,
   },
 } as const;
 

@@ -1,0 +1,39 @@
+{
+  "title": "Set up your account",
+  "subtitle": "Alga PSA Solo is a one-person plan for independent MSPs. Subscribe to set up your account and start managing your clients, tickets, and invoices.",
+  "androidNotice": "Subscriptions from this app are only available on iOS. Please set up your account from our website.",
+  "perMonth": "month",
+  "subscribe": "Subscribe",
+  "restore": "Restore Purchases",
+  "disclosure": "Payment will be charged to your Apple ID. Subscription automatically renews unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Apple ID Settings.",
+  "termsOfUse": "Terms of Use (EULA)",
+  "privacyPolicy": "Privacy Policy",
+  "form": {
+    "email": "Email",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "companyName": "Company name (optional)",
+    "companyPlaceholder": "My MSP"
+  },
+  "status": {
+    "loadingProducts": "Loading\u2026",
+    "checkingEmail": "Checking email\u2026",
+    "purchasing": "Processing payment\u2026",
+    "provisioning": "Setting up your account\u2026",
+    "restoring": "Restoring\u2026"
+  },
+  "errors": {
+    "noProducts": "Subscription is temporarily unavailable.",
+    "loadProductsFailed": "Unable to contact the App Store.",
+    "noBaseUrl": "App is not configured.",
+    "invalidEmail": "Enter a valid email address.",
+    "iosOnly": "Subscriptions are only available on iOS.",
+    "purchaseFailed": "Purchase could not be completed.",
+    "provisionFailed": "Purchase went through but we couldn't set up your account. Please contact support.",
+    "nothingToRestore": "No prior purchase was found on this Apple ID.",
+    "restoreNotProvisioned": "This purchase hasn't been used to set up an account yet. Please use 'Subscribe' instead.",
+    "restoreFailed": "Unable to restore your purchase.",
+    "checkEmailFailed": "Unable to verify email availability. Please try again.",
+    "emailAlreadyExists": "An account already exists for this email. Please sign in instead, or use a different email address."
+  }
+}

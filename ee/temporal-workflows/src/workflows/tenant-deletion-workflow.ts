@@ -191,9 +191,10 @@ export async function tenantDeletionWorkflow(
     const { deactivatedCount } = await deactivateAllTenantUsers(input.tenantId);
     log.info('Users deactivated', { deactivatedCount });
 
-    // Step 2.5: Cancel Stripe subscription if triggered from extension/manual (not from Stripe webhook)
-    // When triggered by Stripe webhook, the subscription is already canceled
-    if (input.triggerSource !== 'stripe_webhook') {
+    // Step 2.5: Cancel Stripe subscription if triggered from extension/manual.
+    // - stripe_webhook: subscription already canceled by Stripe
+    // - apple_iap_webhook: no Stripe subscription exists for IAP tenants
+    if (input.triggerSource !== 'stripe_webhook' && input.triggerSource !== 'apple_iap_webhook') {
       state.step = 'canceling_stripe_subscription';
       log.info('Canceling Stripe subscription (triggered from extension/manual)', { tenantId: input.tenantId });
       const cancelResult = await cancelTenantStripeSubscription(input.tenantId);

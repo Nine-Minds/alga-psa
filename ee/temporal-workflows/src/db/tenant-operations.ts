@@ -39,11 +39,22 @@ export async function createTenantInDB(
         updated_at: knex.fn.now()
       };
 
+      // Record which system is paying for this tenant. Defaults to 'stripe'
+      // at the DB level so existing flows don't need to change.
+      if (input.billingSource) {
+        tenantData.billing_source = input.billingSource;
+      }
+
       // Add license count if provided
       if (input.licenseCount !== undefined) {
         tenantData.licensed_user_count = input.licenseCount;
         tenantData.last_license_update = knex.fn.now();
         tenantData.stripe_event_id = `temporal_${Date.now()}`; // Track that this came from Temporal
+      }
+
+      // Explicit plan override (IAP flow has no Stripe product to resolve from).
+      if (input.plan) {
+        tenantData.plan = input.plan;
       }
 
       // Resolve plan from Stripe price → product → tier
@@ -199,6 +210,32 @@ export async function createTenantInDB(
       } else {
         log.info('No Stripe customer ID provided, skipping Stripe integration', {
           tenantId
+        });
+      }
+
+      // Record Apple IAP subscription when present. This is the IAP equivalent
+      // of the stripe_customers/stripe_subscriptions rows above, and keeps
+      // tenant creation + subscription recording in a single transaction.
+      if (input.billingSource === 'apple_iap' && input.appleIap) {
+        log.info('Recording Apple IAP subscription', {
+          tenantId,
+          originalTransactionId: input.appleIap.originalTransactionId,
+          productId: input.appleIap.productId,
+        });
+
+        await trx('apple_iap_subscriptions').insert({
+          tenant: tenantId,
+          original_transaction_id: input.appleIap.originalTransactionId,
+          app_account_token: input.appleIap.appAccountToken ?? null,
+          product_id: input.appleIap.productId,
+          bundle_id: input.appleIap.bundleId,
+          environment: input.appleIap.environment,
+          status: 'active',
+          expires_at: input.appleIap.expiresAt ?? null,
+          original_purchase_at: input.appleIap.originalPurchaseAt ?? null,
+          latest_transaction_id: input.appleIap.latestTransactionId ?? null,
+          created_at: knex.fn.now(),
+          updated_at: knex.fn.now(),
         });
       }
 

@@ -15,7 +15,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.nineminds.algapsa",
-      "buildNumber": "17",
+      "buildNumber": "18",
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false

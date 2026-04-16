@@ -1,6 +1,19 @@
 // Define ISO8601String locally to avoid import issues
 export type ISO8601String = string;
 
+export type BillingSource = 'stripe' | 'apple_iap' | 'manual';
+
+export interface AppleIapTenantInput {
+  originalTransactionId: string;
+  productId: string;
+  bundleId: string;
+  environment: 'Production' | 'Sandbox';
+  appAccountToken?: string;
+  latestTransactionId?: string;
+  expiresAt?: ISO8601String;
+  originalPurchaseAt?: ISO8601String;
+}
+
 export interface TenantCreationInput {
   tenantName: string;
   adminUser: {
@@ -13,6 +26,16 @@ export interface TenantCreationInput {
   contractLine?: string;
   licenseCount?: number; // Number of licenses for the tenant
   checkoutSessionId?: string; // Stripe checkout session ID for status updates
+
+  // Billing source — defaults to 'stripe' when omitted so existing flows are unchanged.
+  billingSource?: BillingSource;
+
+  // Plan override. Used when the plan cannot be resolved from a Stripe product
+  // (e.g. IAP flows), so createTenant can set tenants.plan directly.
+  plan?: 'solo' | 'pro' | 'premium';
+
+  // Apple IAP fields — only set when billingSource === 'apple_iap'.
+  appleIap?: AppleIapTenantInput;
 
   // Stripe integration fields
   stripeCustomerId?: string;        // Stripe customer ID (cus_...)
@@ -45,6 +68,16 @@ export interface CreateTenantActivityInput {
   companyName?: string;
   clientName?: string;
   licenseCount?: number; // Number of licenses for the tenant
+
+  // Billing source — defaults to 'stripe' when omitted.
+  billingSource?: BillingSource;
+
+  // Plan override. Used when plan cannot be resolved from a Stripe product
+  // (e.g. IAP flows); set tenants.plan directly if provided.
+  plan?: 'solo' | 'pro' | 'premium';
+
+  // Apple IAP data — only set when billingSource === 'apple_iap'.
+  appleIap?: AppleIapTenantInput;
 
   // Stripe integration fields
   stripeCustomerId?: string;        // Stripe customer ID (cus_...)

@@ -7,9 +7,9 @@ export type ISO8601String = string;
 
 export interface TenantDeletionInput {
   tenantId: string;
-  triggerSource: 'stripe_webhook' | 'nineminds_extension' | 'manual';
+  triggerSource: 'stripe_webhook' | 'apple_iap_webhook' | 'nineminds_extension' | 'manual';
   triggeredBy?: string; // User ID if manual or extension trigger
-  subscriptionExternalId?: string; // Stripe subscription ID if from webhook
+  subscriptionExternalId?: string; // Stripe subscription ID or Apple original_transaction_id
   reason?: string;
 }
 

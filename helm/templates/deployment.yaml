@@ -710,6 +710,43 @@ spec:
                 key: stripe_webhook_secret
           {{- end }}
 
+          # ----------- APPLE IAP INTEGRATION ----------------
+          {{- if .Values.secrets.APPLE_IAP_KEY_ID }}
+          - name: APPLE_IAP_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: APPLE_IAP_KEY_ID
+          {{- end }}
+          {{- if .Values.secrets.APPLE_IAP_ISSUER_ID }}
+          - name: APPLE_IAP_ISSUER_ID
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: APPLE_IAP_ISSUER_ID
+          {{- end }}
+          {{- if .Values.secrets.APPLE_IAP_BUNDLE_ID }}
+          - name: APPLE_IAP_BUNDLE_ID
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: APPLE_IAP_BUNDLE_ID
+          {{- end }}
+          {{- if .Values.secrets.APPLE_IAP_PRIVATE_KEY }}
+          - name: APPLE_IAP_PRIVATE_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: APPLE_IAP_PRIVATE_KEY
+          {{- end }}
+          {{- if .Values.secrets.APPLE_IAP_ENVIRONMENT }}
+          - name: APPLE_IAP_ENVIRONMENT
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: APPLE_IAP_ENVIRONMENT
+          {{- end }}
+
           # Non-sensitive Stripe configuration
           {{- if .Values.stripe }}
           {{- if .Values.stripe.master_billing_tenant_id_secret }}

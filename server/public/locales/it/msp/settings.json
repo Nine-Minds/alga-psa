@@ -1305,7 +1305,7 @@
       "teams": {
         "name": "Microsoft Teams",
         "description": "Configura le superfici di collaborazione Teams per i tecnici MSP",
-        "upgradeDescription": "Configura le superfici di collaborazione Microsoft Teams per i tecnici MSP. Passa a Premium per sbloccare questa funzionalità."
+        "upgradeDescription": "Configura le superfici di collaborazione Microsoft Teams per i tecnici MSP. Passa a Pro per sbloccare questa funzionalità."
       },
       "calendarSync": {
         "name": "Sincronizzazione calendario",

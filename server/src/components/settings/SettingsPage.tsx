@@ -50,7 +50,7 @@ import { ProjectSettings } from '@alga-psa/projects/components';
 import { SecretsManagement } from './secrets';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTier, useTierFeature } from '@/context/TierContext';
-import { TIER_FEATURES } from '@alga-psa/types';
+import { TIER_FEATURES, FEATURE_MINIMUM_TIER } from '@alga-psa/types';
 
 type SettingsTabContent = TabContent & {
   requiredFeature?: TIER_FEATURES;
@@ -315,7 +315,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       return (
         <FeatureUpgradeNotice
           featureName={activeTabContent.label}
-          requiredTier="pro"
+          requiredTier={FEATURE_MINIMUM_TIER[activeTabContent.requiredFeature]}
         />
       );
     }

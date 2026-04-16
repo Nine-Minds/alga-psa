@@ -33,6 +33,10 @@ import {
   startSoloProTrialAction,
   confirmPremiumTrialAction,
   revertPremiumTrialAction,
+  getIapBillingContextAction,
+  startIapUpgradeAction,
+  cancelIapTransitionAction,
+  type IapBillingContext,
 } from 'ee/server/src/lib/actions/license-actions';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { useRouter } from 'next/navigation';
@@ -106,6 +110,21 @@ export default function AccountManagement() {
     invoices: true,
   });
 
+  // Apple IAP → Stripe transition state
+  const [iapContext, setIapContext] = useState<IapBillingContext | null>(null);
+  const [showIapAutoRenewModal, setShowIapAutoRenewModal] = useState(false);
+  const [iapAutoRenewExpiresAt, setIapAutoRenewExpiresAt] = useState<string | null>(null);
+  const [iapUpgradeTargetTier, setIapUpgradeTargetTier] = useState<'pro' | 'premium'>('pro');
+  const [startingIapUpgrade, setStartingIapUpgrade] = useState(false);
+  const [iapCheckoutClientSecret, setIapCheckoutClientSecret] = useState<string | null>(null);
+  const [iapStripePromise, setIapStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [showIapCheckout, setShowIapCheckout] = useState(false);
+  const [cancelingIapTransition, setCancelingIapTransition] = useState(false);
+  const [showCancelIapTransitionConfirm, setShowCancelIapTransitionConfirm] = useState(false);
+
+  const isIapTenant = iapContext?.billingSource === 'apple_iap';
+  const hasPendingIapTransition = Boolean(iapContext?.iap?.hasPendingTransition);
+
   const router = useRouter();
 
   const formatDate = (value?: string | Date | null) => {
@@ -136,15 +155,21 @@ export default function AccountManagement() {
           return;
         }
 
-        // Fetch license usage, pricing, subscription, payment, invoices, and scheduled changes in parallel
-        const [licenseResult, pricingResult, subscriptionResult, paymentResult, invoicesResult, scheduledChangesResult] = await Promise.all([
+        // Fetch license usage, pricing, subscription, payment, invoices, scheduled changes,
+        // and Apple IAP billing context in parallel
+        const [licenseResult, pricingResult, subscriptionResult, paymentResult, invoicesResult, scheduledChangesResult, iapContextResult] = await Promise.all([
           getLicenseUsageAction(),
           getLicensePricingAction(),
           getSubscriptionInfoAction(),
           getPaymentMethodInfoAction(),
           getRecentInvoicesAction(5),
           getScheduledLicenseChangesAction(),
+          getIapBillingContextAction(),
         ]);
+
+        if (iapContextResult.success && iapContextResult.data) {
+          setIapContext(iapContextResult.data);
+        }
 
         // Set license info with pricing
         if (licenseResult.success && licenseResult.data && pricingResult.success && pricingResult.data) {
@@ -533,6 +558,15 @@ export default function AccountManagement() {
       return;
     }
 
+    // Apple IAP tenants follow a different upgrade path: we don't modify an
+    // existing Stripe sub, we stand up a brand new Stripe sub with trial_end
+    // pinned to Apple's expiry date so Stripe only starts charging after
+    // Apple stops.
+    if (isIapTenant) {
+      await handleStartIapUpgrade(targetTier);
+      return;
+    }
+
     setLoadingPreview(true);
     try {
       const preview = await getUpgradePreviewAction(targetTier);
@@ -548,6 +582,88 @@ export default function AccountManagement() {
       toast.error('Failed to get upgrade pricing');
     } finally {
       setLoadingPreview(false);
+    }
+  };
+
+  /**
+   * Start an Apple IAP → Stripe transition. First call gates on auto-renew
+   * being off; if it still is on, we show a modal with iOS Settings deep link
+   * and the user returns and tries again. Second call (after auto-renew off)
+   * returns an embedded Stripe Checkout session which we render in a Dialog.
+   */
+  const handleStartIapUpgrade = async (targetTier: 'pro' | 'premium') => {
+    if (hasPendingIapTransition) {
+      toast.error('An upgrade is already pending. Cancel it first if you want to start a new one.');
+      return;
+    }
+    setIapUpgradeTargetTier(targetTier);
+    setStartingIapUpgrade(true);
+    try {
+      const result = await startIapUpgradeAction(targetTier);
+
+      if (!result.success) {
+        toast.error(result.error || 'Failed to start upgrade');
+        return;
+      }
+
+      if (result.alreadyPending) {
+        toast.error('You already have an upgrade pending.');
+        // Refresh state so the banner appears.
+        const ctx = await getIapBillingContextAction();
+        if (ctx.success && ctx.data) setIapContext(ctx.data);
+        return;
+      }
+
+      if (result.needsAutoRenewOff) {
+        setIapAutoRenewExpiresAt(result.expiresAt ?? null);
+        setShowIapAutoRenewModal(true);
+        return;
+      }
+
+      if (result.checkout) {
+        const stripe = await loadStripe(result.checkout.publishableKey);
+        setIapStripePromise(Promise.resolve(stripe));
+        setIapCheckoutClientSecret(result.checkout.clientSecret);
+        setShowIapCheckout(true);
+      }
+    } catch (error) {
+      console.error('Error starting IAP upgrade:', error);
+      toast.error('Failed to start upgrade');
+    } finally {
+      setStartingIapUpgrade(false);
+    }
+  };
+
+  /**
+   * User clicks "I've disabled auto-renew, continue" in the modal. Close the
+   * modal and retry the upgrade — the server will re-verify with Apple and
+   * either proceed to checkout or come back with needsAutoRenewOff=true again
+   * if Apple hasn't registered the change yet.
+   */
+  const handleRetryIapUpgradeAfterAutoRenewOff = async () => {
+    setShowIapAutoRenewModal(false);
+    setIapAutoRenewExpiresAt(null);
+    await handleStartIapUpgrade(iapUpgradeTargetTier);
+  };
+
+  const handleCancelIapTransition = async () => {
+    setCancelingIapTransition(true);
+    try {
+      const result = await cancelIapTransitionAction();
+      if (result.success) {
+        toast.success('Upgrade cancelled. You remain on Apple Solo.');
+        setShowCancelIapTransitionConfirm(false);
+        const ctx = await getIapBillingContextAction();
+        if (ctx.success && ctx.data) setIapContext(ctx.data);
+        await refreshTier();
+      } else {
+        toast.error(result.error || 'Failed to cancel upgrade');
+      }
+    } catch (error) {
+      console.error('Error cancelling IAP transition:', error);
+      toast.error('Failed to cancel upgrade');
+    } finally {
+      setCancelingIapTransition(false);
     }
   };
 
@@ -647,6 +763,53 @@ export default function AccountManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Apple IAP → Stripe transition banner */}
+      {hasPendingIapTransition && iapContext?.iap?.expiresAt && (
+        <Alert variant="info">
+          <AlertDescription>
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <p className="font-semibold">Your upgrade is pending</p>
+                <p className="text-sm">
+                  Apple will continue billing you for Solo until {formatDate(iapContext.iap.expiresAt)}.
+                  After that, your upgraded subscription will take over automatically.
+                  {iapContext.iap.autoRenewStatus && (
+                    <>
+                      {' '}
+                      <strong>Auto-renew is currently ON on your Apple subscription</strong> —
+                      please disable it in iOS Settings → Apple ID → Subscriptions → Alga PSA,
+                      otherwise Apple will charge you again and the upgrade will be delayed.
+                    </>
+                  )}
+                </p>
+              </div>
+              <Button
+                id="cancel-iap-transition-btn"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCancelIapTransitionConfirm(true)}
+                disabled={cancelingIapTransition}
+              >
+                Cancel upgrade
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Apple-managed subscription banner (no pending transition) */}
+      {isIapTenant && !hasPendingIapTransition && iapContext?.iap?.expiresAt && (
+        <Alert variant="info">
+          <AlertDescription>
+            <p className="text-sm">
+              Your subscription is managed by Apple. Current billing period ends {formatDate(iapContext.iap.expiresAt)}.
+              You can upgrade to a larger plan at any time — we'll align the new billing to your Apple period so you
+              never pay for both at once.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Summary Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Licenses Used Card */}
@@ -937,7 +1100,7 @@ export default function AccountManagement() {
               {isSolo && (
                 <div className="mb-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3">
                   <p className="text-sm text-blue-900 dark:text-blue-200">
-                    Your Solo plan includes core PSA features. Upgrade to Pro for integrations, mobile access, and more.
+                    Your Solo plan includes core PSA features and mobile access. Upgrade to Pro for advanced workflow design, Teams integration, and team collaboration.
                   </p>
                 </div>
               )}
@@ -964,7 +1127,7 @@ export default function AccountManagement() {
                 {displayedTierFeatures.length === 0 && (
                   <p className="text-sm text-muted-foreground">
                     {isSolo
-                      ? 'Core PSA tools are active on Solo. Upgrade to Pro to unlock integrations, managed email, workflow design, and mobile access.'
+                      ? 'Core PSA tools and mobile access are active on Solo. Upgrade to Pro to unlock advanced workflow design and Teams integration.'
                       : 'Your Pro plan includes all standard features.'}
                   </p>
                 )}
@@ -1222,6 +1385,14 @@ export default function AccountManagement() {
                   {cancelingAi ? 'Cancelling...' : 'Cancel AI Assistant'}
                 </Button>
               </div>
+            </div>
+          ) : isIapTenant ? (
+            <div className="rounded-lg border border-muted bg-muted/30 p-4">
+              <h4 className="font-semibold">Add-ons not available</h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                Add-ons like AI Assistant are not available while your subscription is managed by Apple.
+                To add features beyond the Apple catalog, upgrade to a web-managed plan first.
+              </p>
             </div>
           ) : (
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
@@ -1630,6 +1801,108 @@ export default function AccountManagement() {
           <p className="text-sm text-muted-foreground">Preparing checkout...</p>
         )}
       </Dialog>
+
+      {/* Apple IAP: cancel-auto-renew-first modal */}
+      <Dialog
+        isOpen={showIapAutoRenewModal}
+        onClose={() => {
+          setShowIapAutoRenewModal(false);
+          setIapAutoRenewExpiresAt(null);
+        }}
+        title="Disable auto-renew on your Apple subscription first"
+      >
+        <div className="space-y-4">
+          <p className="text-sm">
+            Your subscription is currently managed by Apple, with auto-renew enabled. To upgrade
+            to {TIER_LABELS[iapUpgradeTargetTier]}, you need to disable auto-renew on the Apple
+            side first so Apple doesn't charge you again after your current period ends.
+          </p>
+          <div className="rounded-lg bg-muted p-4 text-sm space-y-2">
+            <p className="font-semibold">How to disable auto-renew:</p>
+            <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+              <li>Open <strong>Settings</strong> on your iPhone or iPad</li>
+              <li>Tap your name at the top, then <strong>Subscriptions</strong></li>
+              <li>Tap <strong>Alga PSA</strong></li>
+              <li>Tap <strong>Cancel Subscription</strong> — this disables auto-renew but keeps your access until {iapAutoRenewExpiresAt ? formatDate(iapAutoRenewExpiresAt) : 'your current period ends'}</li>
+              <li>Return to this page and click Continue below</li>
+            </ol>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Don't worry — your Solo access continues through the end of your current Apple billing period,
+            and you'll get {TIER_LABELS[iapUpgradeTargetTier]} features immediately after you complete the card setup on the next screen.
+            Your card won't be charged until Apple's billing period ends.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              id="iap-autorenew-cancel-btn"
+              variant="outline"
+              onClick={() => {
+                setShowIapAutoRenewModal(false);
+                setIapAutoRenewExpiresAt(null);
+              }}
+            >
+              Not now
+            </Button>
+            <Button
+              id="iap-autorenew-continue-btn"
+              onClick={handleRetryIapUpgradeAfterAutoRenewOff}
+              disabled={startingIapUpgrade}
+            >
+              {startingIapUpgrade ? 'Checking...' : "I've disabled auto-renew, continue"}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Apple IAP: embedded Stripe checkout for the transition sub */}
+      <Dialog
+        isOpen={showIapCheckout}
+        onClose={() => {
+          setShowIapCheckout(false);
+          setIapCheckoutClientSecret(null);
+        }}
+        title={`Upgrade to ${TIER_LABELS[iapUpgradeTargetTier]}`}
+      >
+        {iapCheckoutClientSecret && iapStripePromise ? (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Enter your card details below. Your card will <strong>not</strong> be charged until your
+              current Apple billing period ends — Stripe will wait until then before starting
+              {' '}{TIER_LABELS[iapUpgradeTargetTier]} billing.
+            </p>
+            <EmbeddedCheckoutProvider
+              stripe={iapStripePromise}
+              options={{ clientSecret: iapCheckoutClientSecret }}
+            >
+              <EmbeddedCheckout />
+            </EmbeddedCheckoutProvider>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Preparing checkout...</p>
+        )}
+      </Dialog>
+
+      {/* Apple IAP: confirm cancel pending transition */}
+      <ConfirmationDialog
+        id="cancel-iap-transition-confirm"
+        isOpen={showCancelIapTransitionConfirm}
+        onClose={() => setShowCancelIapTransitionConfirm(false)}
+        onConfirm={handleCancelIapTransition}
+        title="Cancel your pending upgrade?"
+        confirmLabel={cancelingIapTransition ? 'Cancelling...' : 'Yes, cancel upgrade'}
+        isConfirming={cancelingIapTransition}
+        message={
+          <div className="space-y-2 text-sm">
+            <p>
+              This will cancel your pending upgrade and return you to Apple-managed Solo. Your card
+              won't be charged, and Apple will continue its normal billing cycle.
+            </p>
+            <p className="text-muted-foreground">
+              If you want to continue the upgrade later, you can start it again any time.
+            </p>
+          </div>
+        }
+      />
 
       {/* Billing Interval Switch Dialog */}
       <ConfirmationDialog

@@ -151,6 +151,23 @@ export function SignInScreen() {
         </PrimaryButton>
       </View>
 
+      {Platform.OS === "ios" ? (
+        <View style={{ marginTop: theme.spacing.md, alignItems: "center" }}>
+          <Text
+            onPress={() => navigation.navigate("CreateWorkspace")}
+            accessibilityRole="button"
+            accessibilityLabel={t("signIn.createWorkspace", "Create a new workspace")}
+            style={{
+              ...theme.typography.body,
+              color: theme.colors.secondary,
+              paddingVertical: theme.spacing.sm,
+            }}
+          >
+            {t("signIn.createWorkspace", "Create a new workspace")}
+          </Text>
+        </View>
+      ) : null}
+
       {baseUrl ? (
         <Text
           style={{

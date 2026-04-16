@@ -7,6 +7,8 @@ import { SignInScreen } from "../screens/SignInScreen";
 import { TicketDetailScreen } from "../screens/TicketDetailScreen";
 import { CreateTicketScreen } from "../screens/CreateTicketScreen";
 import { AuthCallbackScreen } from "../screens/AuthCallbackScreen";
+import { CreateWorkspaceScreen } from "../screens/CreateWorkspaceScreen";
+import { AccountDeletionScreen } from "../screens/AccountDeletionScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { useNotifications } from "../notifications/useNotifications";
@@ -43,6 +45,11 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             name="AuthCallback"
             component={AuthCallbackScreen}
             options={{ title: tAuth("callback.title", "Signing in") }}
+          />
+          <Stack.Screen
+            name="AccountDeletion"
+            component={AccountDeletionScreen}
+            options={{ title: tAuth("accountDeletion.title", "Delete Account") }}
           />
           <Stack.Screen
             name="CreateTicket"
@@ -100,6 +107,13 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             component={SignInScreen}
             options={{ title: tAuth("signIn.title", "Sign in") }}
           />
+          {Platform.OS === "ios" ? (
+            <Stack.Screen
+              name="CreateWorkspace"
+              component={CreateWorkspaceScreen}
+              options={{ title: tAuth("createWorkspace.title", "Create workspace") }}
+            />
+          ) : null}
           <Stack.Screen
             name="AuthCallback"
             component={AuthCallbackScreen}

@@ -61,6 +61,11 @@ RUN npm install --ignore-scripts --workspaces=false --legacy-peer-deps \
 
 # Build event-schemas (imported at runtime by shared/workflow/streams)
 WORKDIR /app/packages/event-schemas
+
+RUN npx tsup
+
+# Build @alga-psa/workflows (dist/lib/*.mjs required at runtime)
+WORKDIR /app/ee/packages/workflows
 RUN npx tsup
 
 WORKDIR /app/ee/temporal-workflows

@@ -334,6 +334,9 @@ def "main cleanup" [
         "user_notification_preferences" "user_internal_notification_preferences" "user_preferences"
         "role_permissions" "user_roles" "user_auth_accounts"
 
+        # Apple IAP billing
+        "apple_iap_subscriptions" "apple_iap_notifications"
+
         # Schedule and team
         "schedule_entry_assignees" "schedule_conflicts" "team_members"
         "availability_exceptions" "availability_settings"

@@ -1305,7 +1305,7 @@
       "teams": {
         "name": "Microsoft Teams",
         "description": "Konfigurieren Sie Teams-Kollaborationsoberflächen für MSP-Techniker",
-        "upgradeDescription": "Konfigurieren Sie Microsoft Teams-Kollaborationsoberflächen für MSP-Techniker. Upgraden Sie auf Premium, um diese Funktion freizuschalten."
+        "upgradeDescription": "Konfigurieren Sie Microsoft Teams-Kollaborationsoberflächen für MSP-Techniker. Upgraden Sie auf Pro, um diese Funktion freizuschalten."
       },
       "calendarSync": {
         "name": "Kalendersynchronisation",

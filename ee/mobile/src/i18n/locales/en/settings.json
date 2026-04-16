@@ -54,5 +54,20 @@
   "legal": {
     "privacyPolicy": "Privacy policy",
     "termsOfService": "Terms of service"
+  },
+  "accountDelete": {
+    "title": "Delete Account",
+    "body": "Deleting your account removes your user from Alga PSA. If you're on a Solo plan, your account and all its data — clients, tickets, invoices, time entries — will also be deleted. This cannot be undone.",
+    "appleNote": "Note: deleting your account here does NOT automatically cancel your Apple subscription. To stop future charges, open Settings on your iPhone → your name → Subscriptions → Alga PSA → Cancel Subscription.",
+    "confirmTitle": "Delete your account?",
+    "confirmMessage": "This will permanently delete your user account. If you're on a Solo plan, your account and all its data will also be deleted. This cannot be undone.",
+    "confirmButton": "Delete account",
+    "deleting": "Deleting…",
+    "successTitle": "Account deleted",
+    "cancelInstructions": "To stop future Apple charges, open Settings > Apple ID > Subscriptions and cancel Alga PSA.",
+    "errors": {
+      "failed": "Unable to delete your account. Please try again.",
+      "notSignedIn": "You must be signed in to delete your account."
+    }
   }
 }

@@ -90,6 +90,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'role_permissions', 'user_roles', 'user_auth_accounts',
   'mobile_push_tokens',
 
+  // Apple IAP billing (apple_iap_subscriptions is distributed by tenant;
+  // apple_iap_notifications is a reference table — DELETE WHERE tenant=? still
+  // works, and rows whose tenant never resolved stay as audit history)
+  'apple_iap_subscriptions', 'apple_iap_notifications',
+
   // Schedule and team
   'schedule_entry_assignees', 'schedule_conflicts', 'team_members',
   'availability_exceptions', 'availability_settings',

@@ -8,6 +8,19 @@
 // Tenant Creation Types
 // ============================================================================
 
+export type BillingSource = 'stripe' | 'apple_iap' | 'manual';
+
+export interface AppleIapTenantInput {
+  originalTransactionId: string;
+  productId: string;
+  bundleId: string;
+  environment: 'Production' | 'Sandbox';
+  appAccountToken?: string;
+  latestTransactionId?: string;
+  expiresAt?: string;         // ISO8601
+  originalPurchaseAt?: string; // ISO8601
+}
+
 export interface TenantCreationInput {
   tenantName: string;
   adminUser: {
@@ -20,6 +33,15 @@ export interface TenantCreationInput {
   licenseCount?: number;
   contractLine?: string;
   checkoutSessionId?: string;
+
+  // Billing source — omit to keep existing Stripe-driven flows unchanged.
+  billingSource?: BillingSource;
+
+  // Plan override — set directly when no Stripe product is available (IAP flow).
+  plan?: 'solo' | 'pro' | 'premium';
+
+  // Apple IAP payload — only set when billingSource === 'apple_iap'.
+  appleIap?: AppleIapTenantInput;
 }
 
 export interface TenantCreationResult {
@@ -69,7 +91,7 @@ export interface ResendWelcomeEmailClientResult {
 
 export interface TenantDeletionInput {
   tenantId: string;
-  triggerSource: 'stripe_webhook' | 'nineminds_extension' | 'manual';
+  triggerSource: 'stripe_webhook' | 'apple_iap_webhook' | 'nineminds_extension' | 'manual';
   triggeredBy?: string;
   subscriptionExternalId?: string;
   reason?: string;
