@@ -1032,7 +1032,53 @@ describe('Node execute operations', () => {
       limit: 25,
       type: 'project_task',
     });
+    expect(requests[0]?.qs).not.toHaveProperty('board_id');
     expect(output[0][0].json).toEqual({ data: [{ status_id: '1', name: 'New' }] });
+  });
+
+  it('T034b: Status helper list with ticket type requires board_id and passes it to the API', async () => {
+    const { requests, output } = await executeNode(
+      [
+        {
+          resource: 'status',
+          statusOperation: 'list',
+          helperStatusType: 'ticket',
+          helperBoardId: { mode: 'id', value: '00000000-0000-0000-0000-000000000200' },
+          helperPage: 1,
+          helperLimit: 25,
+          helperSearch: '',
+        },
+      ],
+      () => ({ data: [{ status_id: 'status-1', name: 'Open', board_id: '00000000-0000-0000-0000-000000000200' }] }),
+    );
+
+    expect(requests[0]?.url).toBe('https://api.algapsa.test/api/v1/statuses');
+    expect(requests[0]?.qs).toMatchObject({
+      page: 1,
+      limit: 25,
+      type: 'ticket',
+      board_id: '00000000-0000-0000-0000-000000000200',
+    });
+    expect(output[0][0].json).toEqual({
+      data: [{ status_id: 'status-1', name: 'Open', board_id: '00000000-0000-0000-0000-000000000200' }],
+    });
+  });
+
+  it('T034c: Status helper list with ticket type rejects missing board_id before the API call', async () => {
+    const result = await executeNodeExpectFailure([
+      {
+        resource: 'status',
+        statusOperation: 'list',
+        helperStatusType: 'ticket',
+        helperBoardId: { mode: 'id', value: '' },
+        helperPage: 1,
+        helperLimit: 25,
+        helperSearch: '',
+      },
+    ]);
+
+    expect(result.error).toBeInstanceOf(NodeOperationError);
+    expect(result.requests).toHaveLength(0);
   });
 
   it('T035: Priority helper list maps to GET /api/v1/priorities and returns list output', async () => {

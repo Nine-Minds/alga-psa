@@ -144,6 +144,40 @@ function getCurrentProjectLookupId(context: ILoadOptionsFunctions): string | und
   return value && UUID_REGEX.test(value) ? value : undefined;
 }
 
+function getCurrentStatusBoardId(context: ILoadOptionsFunctions): string | undefined {
+  const currentParams = context.getCurrentNodeParameters?.();
+  if (!currentParams) {
+    return undefined;
+  }
+
+  const resource = currentParams.resource as Resource | undefined;
+
+  if (resource === 'ticket') {
+    const ticketOperation = currentParams.ticketOperation as TicketOperation | undefined;
+
+    if (ticketOperation === 'create') {
+      return extractResourceLocatorValue(currentParams.board_id) || undefined;
+    }
+
+    if (ticketOperation === 'update') {
+      const updateAdditional = currentParams.updateAdditionalFields as IDataObject | undefined;
+      return extractResourceLocatorValue(updateAdditional?.board_id) || undefined;
+    }
+
+    if (ticketOperation === 'updateStatus') {
+      return extractResourceLocatorValue(currentParams.statusFilterBoardId) || undefined;
+    }
+
+    return undefined;
+  }
+
+  if (resource === 'status') {
+    return extractResourceLocatorValue(currentParams.helperBoardId) || undefined;
+  }
+
+  return undefined;
+}
+
 function getOperationParameterName(resource: Resource): string {
   switch (resource) {
     case 'ticket':
@@ -420,6 +454,36 @@ export class AlgaPsa implements INodeType {
         description: 'Select a board or enter a board UUID manually',
       },
       {
+        displayName: 'Board ID (for Status Picker)',
+        name: 'statusFilterBoardId',
+        type: 'resourceLocator',
+        default: { mode: 'list', value: '' },
+        displayOptions: {
+          show: {
+            resource: ['ticket'],
+            ticketOperation: ['updateStatus'],
+          },
+        },
+        modes: [
+          {
+            displayName: 'From List',
+            name: 'list',
+            type: 'list',
+            typeOptions: {
+              searchListMethod: 'searchBoards',
+            },
+          },
+          {
+            displayName: 'By ID',
+            name: 'id',
+            type: 'string',
+            placeholder: '00000000-0000-0000-0000-000000000000',
+          },
+        ],
+        description:
+          "Optional — scopes the Status ID dropdown to one board. Ticket statuses are board-owned, so the picker needs a board to list options. Not sent in the request; the server validates against the ticket's existing board.",
+      },
+      {
         displayName: 'Status ID',
         name: 'status_id',
         type: 'resourceLocator',
@@ -447,7 +511,8 @@ export class AlgaPsa implements INodeType {
             placeholder: '00000000-0000-0000-0000-000000000000',
           },
         ],
-        description: 'Select a status or enter a status UUID manually',
+        description:
+          'Select a status or enter a status UUID manually. Ticket statuses are board-owned, so the dropdown is filtered by the selected board',
       },
       {
         displayName: 'Priority ID',
@@ -1651,6 +1716,38 @@ export class AlgaPsa implements INodeType {
         },
         description: 'Filter statuses by entity type',
       },
+      {
+        displayName: 'Board ID',
+        name: 'helperBoardId',
+        type: 'resourceLocator',
+        default: { mode: 'list', value: '' },
+        required: true,
+        displayOptions: {
+          show: {
+            resource: ['status'],
+            statusOperation: ['list'],
+            helperStatusType: ['ticket'],
+          },
+        },
+        modes: [
+          {
+            displayName: 'From List',
+            name: 'list',
+            type: 'list',
+            typeOptions: {
+              searchListMethod: 'searchBoards',
+            },
+          },
+          {
+            displayName: 'By ID',
+            name: 'id',
+            type: 'string',
+            placeholder: '00000000-0000-0000-0000-000000000000',
+          },
+        ],
+        description:
+          'Required — ticket statuses are board-owned, so listing them requires a board_id',
+      },
     ],
   };
 
@@ -1664,13 +1761,21 @@ export class AlgaPsa implements INodeType {
       },
       async searchStatuses(this: ILoadOptionsFunctions, filter?: string): Promise<INodeListSearchResult> {
         const type = getCurrentStatusLookupType(this);
+        const boardId = getCurrentStatusBoardId(this);
+
+        // Ticket statuses are board-scoped; without a board_id the server returns 400.
+        // Return an empty list so the user can fall back to manual UUID entry.
+        if (type === 'ticket' && !boardId) {
+          return { results: [] };
+        }
+
         return loadLookup(
           this,
           '/api/v1/statuses',
           'status_id',
           ['name', 'status_name'],
           filter,
-          compactObject({ type }),
+          compactObject({ type, board_id: boardId }),
         );
       },
       async searchPriorities(this: ILoadOptionsFunctions, filter?: string): Promise<INodeListSearchResult> {
@@ -1819,11 +1924,23 @@ async function executeHelperOperation(
       ? (context.getNodeParameter('helperStatusType', itemIndex, 'ticket') as StatusType)
       : undefined;
 
+  let statusBoardId: string | undefined;
+  if (resource === 'status' && statusType === 'ticket') {
+    const rawHelperBoard = context.getNodeParameter('helperBoardId', itemIndex, {}) as unknown;
+    statusBoardId = requireUuid(
+      context,
+      extractResourceLocatorValue(rawHelperBoard),
+      'helperBoardId',
+      itemIndex,
+    );
+  }
+
   const query = compactObject({
     page,
     limit,
     search,
     type: statusType,
+    board_id: statusBoardId,
   });
 
   const response = await algaApiRequest(context, 'GET', endpoint, query);

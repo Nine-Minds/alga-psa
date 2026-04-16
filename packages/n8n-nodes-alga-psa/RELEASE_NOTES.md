@@ -1,5 +1,25 @@
 # Release Notes
 
+## 0.4.1
+
+Patch release of the `Alga PSA` n8n community node.
+
+### Fixes
+
+- Ticket status lookups now pass `board_id` to `GET /api/v1/statuses`, restoring compatibility with Alga PSA's per-board ticket statuses (generic `type=ticket` calls without a board now return an HTTP 400 from the server)
+- `Ticket -> Create` and `Ticket -> Update` status dropdowns read the board from the current form state (top-level `board_id` for create, `updateAdditionalFields.board_id` for update) and filter accordingly
+- `Status -> List` with `Ticket` type now requires and forwards a `Board ID`
+
+### Added
+
+- New optional `Board ID (for Status Picker)` field on `Ticket -> Update Status` that scopes the status dropdown to one board. The value is not sent in the request payload; the server still validates the new status against the ticket's existing board
+- `Status -> List` exposes a `Board ID` selector that is shown and required when the status type is `Ticket`
+
+### Notes
+
+- Manual UUID entry for `status_id` continues to work unchanged on all ticket operations
+- Existing `updateStatus` workflows that pass a known `status_id` by manual UUID are unaffected
+
 ## 0.4.0
 
 Feature release of the `Alga PSA` n8n community node.

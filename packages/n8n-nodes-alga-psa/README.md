@@ -151,6 +151,15 @@ For ticket `client_id`, `board_id`, `status_id`, and `priority_id`, plus contact
 - Use dynamic list lookups (`From List`) when available.
 - Use manual UUID input (`By ID`) if lookups fail or if you already know the ID.
 
+## Board-Scoped Ticket Statuses
+
+Ticket statuses in Alga PSA are owned by a board. This changes how ticket status lookups work:
+
+- `Ticket -> Create`: the `Status ID` dropdown is filtered by the selected `Board ID`. Pick the board first.
+- `Ticket -> Update`: when changing `status_id` inside the update fields, also include `board_id` (destination board) so the status dropdown can list valid options. A status is only valid for the ticket's current or updated board.
+- `Ticket -> Update Status`: use the optional `Board ID (for Status Picker)` field to filter the `Status ID` dropdown to the ticket's board. The value is not sent in the request — the server validates against the ticket's existing board. Manual UUID entry still works without this helper.
+- `Status -> List` with type `Ticket` requires a `Board ID`. Use type `Project`, `Project Task`, or `Interaction` for tenant-wide (non-board-owned) statuses.
+
 ## Output and Error Behavior
 
 - API responses unwrap `{ data: ... }` for easier downstream use.
