@@ -36,6 +36,38 @@ describe('service request provider registry', () => {
     expect(getServiceRequestTemplateProvider('ce-starter-pack')).toBeDefined();
   });
 
+  it('T004: built-ins refresh over stale singleton state during dev-style reloads', () => {
+    const staleTemplateProvider = {
+      key: 'ce-starter-pack',
+      displayName: 'CE Starter Pack',
+      listTemplates: () => [
+        {
+          id: 'stale-only',
+          name: 'Stale Only',
+          description: 'stale',
+          buildDraft: () => {
+            throw new Error('Should not use stale template provider');
+          },
+        },
+      ],
+    };
+
+    globalThis.__algaServiceRequestProviderRegistry = {
+      executionProviders: new Map(),
+      formBehaviorProviders: new Map(),
+      visibilityProviders: new Map(),
+      templateProviders: new Map([['ce-starter-pack', staleTemplateProvider as any]]),
+      adminExtensionProviders: new Map(),
+    };
+
+    const templateIds = getServiceRequestTemplateProvider('ce-starter-pack')
+      ?.listTemplates()
+      .map((template) => template.id);
+
+    expect(templateIds).toContain('new-hire');
+    expect(templateIds).not.toContain('stale-only');
+  });
+
   it('T004: CE build remains coherent when enterprise provider registrations are absent', async () => {
     const registrations = await loadEnterpriseServiceRequestProviderRegistrations();
 

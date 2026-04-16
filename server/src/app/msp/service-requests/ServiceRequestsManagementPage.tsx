@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { Archive, Copy, MoreVertical, Plus, Sparkles, Undo2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -53,12 +55,25 @@ function lifecycleLabel(row: ServiceRequestDefinitionRow): string {
 }
 
 export default function ServiceRequestsManagementPage() {
+  const router = useRouter();
   const [definitions, setDefinitions] = useState<ServiceRequestDefinitionRow[]>([]);
   const [templates, setTemplates] = useState<ServiceRequestTemplateRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showArchived, setShowArchived] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const hasTemplates = templates.length > 0;
+  const archivedCount = useMemo(
+    () => definitions.filter((definition) => definition.lifecycle_state === 'archived').length,
+    [definitions]
+  );
+  const visibleDefinitions = useMemo(
+    () =>
+      showArchived
+        ? definitions
+        : definitions.filter((definition) => definition.lifecycle_state !== 'archived'),
+    [definitions, showArchived]
+  );
 
   const reload = async () => {
     const [definitionsResult, templatesResult] = await Promise.all([
@@ -204,6 +219,13 @@ export default function ServiceRequestsManagementPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Switch
+            id="service-request-show-archived-toggle"
+            checked={showArchived}
+            onCheckedChange={(checked) => setShowArchived(checked === true)}
+            disabled={loading || archivedCount === 0}
+            label={`Show archived${archivedCount > 0 ? ` (${archivedCount})` : ''}`}
+          />
           <Button
             id="service-request-create-blank"
             onClick={() =>
@@ -231,7 +253,7 @@ export default function ServiceRequestsManagementPage() {
                 disabled={!hasTemplates || isPending}
               >
                 <Sparkles className="mr-2 h-4 w-4" />
-                Create from Template
+                Start from Example
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -241,15 +263,15 @@ export default function ServiceRequestsManagementPage() {
                   onClick={() =>
                     startTransition(async () => {
                       try {
-                        await createServiceRequestDefinitionFromTemplateAction(
+                        const created = await createServiceRequestDefinitionFromTemplateAction(
                           template.providerKey,
                           template.templateId
                         );
-                        await reload();
-                        toast.success(`Draft created from ${template.templateName}`);
+                        toast.success(`Draft created from example: ${template.templateName}`);
+                        router.push(`/msp/service-requests/${created.definition_id}`);
                       } catch (error) {
                         console.error('Failed to create draft from template', error);
-                        toast.error('Failed to create from template');
+                        toast.error('Failed to create from example');
                       }
                     })
                   }
@@ -264,7 +286,7 @@ export default function ServiceRequestsManagementPage() {
 
       <DataTable
         id="service-requests-management-table"
-        data={definitions}
+        data={visibleDefinitions}
         columns={columns}
         pagination={true}
         currentPage={1}

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: the CE starter template provider exposes six templates and each template builds a valid CE-safe basic-form draft.",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F003", "F004", "F005", "F006", "F007", "F008", "F009"]
+  },
+  {
+    "id": "T002",
+    "description": "Integration: listServiceRequestTemplateOptions returns all six starter templates, including the legacy new-hire template id and the new template names/descriptions.",
+    "implemented": true,
+    "featureIds": ["F001", "F003", "F004", "F005", "F006", "F007", "F008"]
+  },
+  {
+    "id": "T003",
+    "description": "Integration: instantiating representative templates creates detached editable drafts with expected metadata, expected execution config, and null category_id.",
+    "implemented": true,
+    "featureIds": ["F002", "F003", "F006", "F009", "F010"]
+  }
+]
