@@ -58,12 +58,23 @@ export async function convertHtmlToBlockNote(html: string): Promise<BlockNoteBlo
   if (!html) return [];
 
   // Strip non-content markup that ServerBlockNoteEditor may pass through as
-  // text: HTML/conditional comments (Outlook CSS), <style>, <script>, <head>.
+  // text: HTML/conditional comments (Outlook CSS), <style>, <script>, <head>,
+  // and Outlook/Word-specific conditional constructs & XML blocks.
   const cleanHtml = html
+    // Outlook downlevel-hidden conditional comments: <!--[if ...]>...<![endif]-->
+    .replace(/<!--\[if[^\]]*\]>[\s\S]*?<!\[endif\]-->/gi, '')
+    // Standard HTML comments (including CSS-hiding <!-- ... --> inside <style>)
     .replace(/<!--[\s\S]*?-->/g, '')
+    // Outlook conditional processing instructions without -- prefix:
+    // <![if ...]>...<![endif]> (not wrapped in HTML comments)
+    .replace(/<!\[if[^\]]*\]>[\s\S]*?<!\[endif\]>/gi, '')
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
+    .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
+    // Outlook/Word <xml> blocks (e.g. <xml><o:OfficeDocumentSettings>...)
+    .replace(/<xml[^>]*>[\s\S]*?<\/xml>/gi, '')
+    // Office-namespace elements that may appear in <body> (e.g. <o:p>, <w:Sdt>)
+    .replace(/<\/?\w+:[^>]*>/g, '');
 
   const editor = getServerEditor();
   const blocks = await editor.tryParseHTMLToBlocks(cleanHtml);

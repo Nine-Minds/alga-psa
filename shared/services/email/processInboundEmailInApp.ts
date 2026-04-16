@@ -1329,7 +1329,7 @@ export async function processInboundEmailInApp(
   const ticketResult = await createTicketFromEmail(
     {
       title: emailData.subject || '(no subject)',
-      description: parsedEmail?.sanitizedText ?? emailData.body?.text ?? '',
+      description: serializedBlocks,
       client_id: targetClientId,
       contact_id: targetContactId,
       source: 'email',
