@@ -312,7 +312,8 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
         const graph = await buildWorkflowGraph(steps as any, {
           getLabel: (step) => getLabelRef.current(step as any),
           getSubtitle: getSubtitleRef.current ? (step) => (getSubtitleRef.current?.(step as any) ?? null) : undefined,
-          getPipePathForRoot: () => rootPipePath
+          getPipePathForRoot: () => rootPipePath,
+          includeInsertions: editable
         });
         if (cancelled) return;
         setNodes(graph.nodes);
@@ -388,15 +389,42 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
   }
 
   if (steps.length === 0) {
-    return (
-      <div className={`w-full h-full flex flex-col items-center justify-center text-center ${className ?? ''}`}>
-        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-success/15 border-2 border-success mb-4">
-          <Play className="h-5 w-5 text-success ml-0.5" />
+    if (!editable) {
+      return (
+        <div className={`w-full h-full flex flex-col items-center justify-center text-center ${className ?? ''}`}>
+          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-success/15 border-2 border-success mb-4">
+            <Play className="h-5 w-5 text-success ml-0.5" />
+          </div>
+          <p className="text-sm text-gray-500">
+            Select a step from the panel to get started.
+          </p>
         </div>
-        <p className="text-sm text-gray-500">
-          Select a step from the panel to get started.
-        </p>
-      </div>
+      );
+    }
+    return (
+      <Droppable droppableId={`insert:${rootPipePath}:0`}>
+        {(provided, snapshot) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className={`w-full h-full flex flex-col items-center justify-center text-center transition-colors ${
+              snapshot.isDraggingOver
+                ? 'bg-[rgb(var(--color-primary-50))] border-2 border-dashed border-[rgb(var(--color-primary-400))]'
+                : ''
+            } ${className ?? ''}`}
+          >
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-success/15 border-2 border-success mb-4">
+              <Play className="h-5 w-5 text-success ml-0.5" />
+            </div>
+            <p className="text-sm text-gray-500">
+              {snapshot.isDraggingOver
+                ? 'Drop to add as the first step'
+                : 'Drag a step from the panel, or select one to get started.'}
+            </p>
+            <div className="hidden">{provided.placeholder}</div>
+          </div>
+        )}
+      </Droppable>
     );
   }
 
