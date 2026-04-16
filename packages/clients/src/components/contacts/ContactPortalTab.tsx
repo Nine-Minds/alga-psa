@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { IBoard } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -10,10 +11,18 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Mail, Shield, User, Info, RefreshCw } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import type { BadgeVariant } from '@alga-psa/ui/components/Badge';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import type { IContact } from '@alga-psa/types';
 import {
   updateContactPortalAdminStatus,
-  getUserByContactId
+  getUserByContactId,
+  getClientPortalVisibilityBoardsByClient,
+  getClientPortalVisibilityGroupById,
+  getClientPortalVisibilityGroupsForContact,
+  assignClientPortalVisibilityGroupToContact,
+  createClientPortalVisibilityGroupForContact,
+  updateClientPortalVisibilityGroupForContact,
+  deleteClientPortalVisibilityGroupForContact
 } from '../../actions/contact-actions/contactActions';
 import {
   assignRoleToUser,
@@ -29,7 +38,18 @@ import {
 import type { InvitationHistoryItem } from '@alga-psa/portal-shared/types';
 import { useToast } from '@alga-psa/ui';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
+import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+const FULL_ACCESS_VALUE = '__full_access__';
+
+interface VisibilityGroup {
+  group_id: string;
+  name: string;
+  description: string | null;
+  board_count: number;
+}
 
 interface ContactPortalTabProps {
   contact: IContact;
@@ -63,6 +83,15 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const [invitationHistory, setInvitationHistory] = useState<InvitationHistoryItem[]>([]);
   const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
   const [isRefreshingInvitationHistory, setIsRefreshingInvitationHistory] = useState(false);
+  const [visibilityGroups, setVisibilityGroups] = useState<VisibilityGroup[]>([]);
+  const [visibilityBoards, setVisibilityBoards] = useState<IBoard[]>([]);
+  const [selectedVisibilityGroupId, setSelectedVisibilityGroupId] = useState<string | null>(
+    contact.portal_visibility_group_id || null
+  );
+  const [visibilityGroupName, setVisibilityGroupName] = useState('');
+  const [visibilityGroupDescription, setVisibilityGroupDescription] = useState('');
+  const [visibilityGroupBoardIds, setVisibilityGroupBoardIds] = useState<string[]>([]);
+  const [editingVisibilityGroupId, setEditingVisibilityGroupId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -92,6 +121,15 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       const clientPortalRoles = roles.filter(role => role.client && !role.msp);
       setClientRoles(clientPortalRoles);
 
+      const [groupRows, boardRows] = await Promise.all([
+        getClientPortalVisibilityGroupsForContact(contact.contact_name_id),
+        getClientPortalVisibilityBoardsByClient(contact.contact_name_id),
+      ]);
+
+      setVisibilityGroups(groupRows || []);
+      setVisibilityBoards(boardRows || []);
+      setSelectedVisibilityGroupId(contact.portal_visibility_group_id || null);
+
       // Load invitation history
       await loadInvitationHistory();
     } catch (error) {
@@ -103,6 +141,133 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const resetVisibilityGroupForm = () => {
+    setEditingVisibilityGroupId(null);
+    setVisibilityGroupName('');
+    setVisibilityGroupDescription('');
+    setVisibilityGroupBoardIds([]);
+  };
+
+  const handleVisibilityGroupSelect = async (selectedValue: string) => {
+    const groupId = selectedValue === FULL_ACCESS_VALUE ? null : selectedValue;
+    const previousValue = selectedVisibilityGroupId;
+    setSelectedVisibilityGroupId(groupId);
+
+    try {
+      setIsUpdating(true);
+      await assignClientPortalVisibilityGroupToContact(contact.contact_name_id, groupId);
+      toast({
+        title: 'Success',
+        description: 'Contact visibility assignment updated'
+      });
+    } catch (error) {
+      setSelectedVisibilityGroupId(previousValue);
+      console.error('Error assigning visibility group:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to assign visibility group',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleToggleGroupBoard = (boardId: string) => {
+    setVisibilityGroupBoardIds((current) =>
+      current.includes(boardId)
+        ? current.filter((value) => value !== boardId)
+        : [...current, boardId]
+    );
+  };
+
+  const handleSaveVisibilityGroup = async () => {
+    const trimmedName = visibilityGroupName.trim();
+    if (!trimmedName) {
+      toast({
+        title: 'Validation Error',
+        description: 'Visibility group name is required',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      if (editingVisibilityGroupId) {
+        await updateClientPortalVisibilityGroupForContact(contact.contact_name_id, editingVisibilityGroupId, {
+          name: trimmedName,
+          description: visibilityGroupDescription.trim() || null,
+          boardIds: visibilityGroupBoardIds
+        });
+        toast({ title: 'Success', description: 'Visibility group updated' });
+      } else {
+        await createClientPortalVisibilityGroupForContact(contact.contact_name_id, {
+          name: trimmedName,
+          description: visibilityGroupDescription.trim() || null,
+          boardIds: visibilityGroupBoardIds
+        });
+        toast({ title: 'Success', description: 'Visibility group created' });
+      }
+
+      resetVisibilityGroupForm();
+      const updatedGroups = await getClientPortalVisibilityGroupsForContact(contact.contact_name_id);
+      setVisibilityGroups(updatedGroups || []);
+    } catch (error) {
+      console.error('Failed to save visibility group:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to save visibility group',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleEditVisibilityGroup = async (groupId: string) => {
+    try {
+      const group = await getClientPortalVisibilityGroupById(contact.contact_name_id, groupId);
+      setEditingVisibilityGroupId(group.group_id);
+      setVisibilityGroupName(group.name);
+      setVisibilityGroupDescription(group.description || '');
+      setVisibilityGroupBoardIds(group.board_ids || []);
+    } catch (error) {
+      console.error('Failed to load visibility group:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load visibility group for editing',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleDeleteVisibilityGroup = async (groupId: string) => {
+    if (!confirm('Delete this visibility group?')) {
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      await deleteClientPortalVisibilityGroupForContact(contact.contact_name_id, groupId);
+      if (selectedVisibilityGroupId === groupId) {
+        setSelectedVisibilityGroupId(null);
+      }
+      const updatedGroups = await getClientPortalVisibilityGroupsForContact(contact.contact_name_id);
+      setVisibilityGroups(updatedGroups || []);
+      toast({ title: 'Success', description: 'Visibility group deleted' });
+    } catch (error) {
+      console.error('Failed to delete visibility group:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete visibility group',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -257,6 +422,14 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         return 'default-muted';
     }
   };
+
+  const visibilityGroupSelectOptions = [
+    { value: FULL_ACCESS_VALUE, label: 'Full access' },
+    ...visibilityGroups.map((group) => ({
+      value: group.group_id,
+      label: `${group.name} (${group.board_count} boards)`
+    }))
+  ];
 
   const handlePortalAdminToggle = async (checked: boolean) => {
     if (!currentUserPermissions.canUpdateRoles) {
@@ -574,6 +747,152 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
               </div>
             </div>
           )}
+
+          <div className="border-t pt-6">
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Ticket visibility group</Label>
+                <p className="text-sm text-muted-foreground">
+                  Assign a visibility group for this contact, or keep full access.
+                </p>
+              </div>
+              <CustomSelect
+                id="visibility-group-assignment"
+                value={selectedVisibilityGroupId || FULL_ACCESS_VALUE}
+                onValueChange={handleVisibilityGroupSelect}
+                disabled={!currentUserPermissions.canUpdateRoles || isUpdating}
+                options={visibilityGroupSelectOptions}
+                placeholder="Select visibility assignment"
+              />
+
+              <div>
+                <Label className="text-sm font-medium">Visibility groups for client</Label>
+                <p className="text-sm text-muted-foreground">
+                  Create or edit groups of boards and use them for contact assignments.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="visibility-group-name">Group name</Label>
+                  <Input
+                    id="visibility-group-name"
+                    value={visibilityGroupName}
+                    onChange={(event) => setVisibilityGroupName(event.target.value)}
+                    placeholder="Group name"
+                    disabled={isUpdating}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="visibility-group-description">Description</Label>
+                  <TextArea
+                    id="visibility-group-description"
+                    value={visibilityGroupDescription}
+                    onChange={(event) => setVisibilityGroupDescription(event.target.value)}
+                    placeholder="Optional description"
+                    rows={3}
+                    disabled={isUpdating}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Boards</Label>
+                  {visibilityBoards.length > 0 ? (
+                    <div className="space-y-2 rounded-lg border p-3 max-h-56 overflow-y-auto">
+                      {visibilityBoards.map((board) => {
+                        if (!board.board_id) {
+                          return null;
+                        }
+
+                        const checked = visibilityGroupBoardIds.includes(board.board_id);
+                        return (
+                          <label
+                            key={board.board_id}
+                            className="flex items-center space-x-2 text-sm"
+                          >
+                            <Checkbox
+                              id={`visibility-group-board-${board.board_id}`}
+                              checked={checked}
+                              onChange={() => handleToggleGroupBoard(board.board_id!)}
+                              disabled={isUpdating}
+                            />
+                            <span>{board.board_name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No boards available</p>
+                  )}
+                </div>
+
+                <div className="flex items-end justify-end gap-2">
+                  {editingVisibilityGroupId && (
+                    <Button
+                      id="visibility-group-cancel-button"
+                      variant="outline"
+                      size="sm"
+                      onClick={resetVisibilityGroupForm}
+                      disabled={isUpdating}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                  <Button
+                    id="visibility-group-save-button"
+                    size="sm"
+                    onClick={handleSaveVisibilityGroup}
+                    disabled={isUpdating || !visibilityGroupName.trim()}
+                  >
+                    {editingVisibilityGroupId ? 'Update group' : 'Create group'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {visibilityGroups.length > 0 ? (
+                visibilityGroups.map((group) => (
+                  <div key={group.group_id} className="rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">{group.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {group.board_count} board{group.board_count === 1 ? '' : 's'}
+                        </p>
+                        {group.description ? (
+                          <p className="text-xs text-muted-foreground">{group.description}</p>
+                        ) : null}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          id={`visibility-group-edit-${group.group_id}`}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditVisibilityGroup(group.group_id)}
+                          disabled={isUpdating}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          id={`visibility-group-delete-${group.group_id}`}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteVisibilityGroup(group.group_id)}
+                          disabled={isUpdating}
+                          className="text-red-600"
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No visibility groups yet</p>
+              )}
+            </div>
+          </div>
 
           {/* Invitation History */}
           <div className="border-t pt-6">

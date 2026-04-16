@@ -481,6 +481,7 @@ export const checkClientPortalPermissions = withAuth(async (
   hasUserManagementAccess: boolean;
   hasClientSettingsAccess: boolean;
   hasAccountAccess: boolean;
+  hasVisibilityGroupAccess: boolean;
 }> => {
   try {
     const { knex } = await createTenantKnex();
@@ -500,12 +501,25 @@ export const checkClientPortalPermissions = withAuth(async (
       hasPermission(currentUser, 'settings', 'read')
     ]);
 
+    let hasVisibilityGroupAccess = false;
+    if (currentUser.user_type === 'client' && currentUser.contact_id) {
+      const actorContact = await knex('contacts')
+        .where({
+          tenant,
+          contact_name_id: currentUser.contact_id
+        })
+        .select('is_client_admin')
+        .first();
+      hasVisibilityGroupAccess = !!actorContact?.is_client_admin;
+    }
+
     return {
       hasBillingAccess: hasBilling,
       hasUserManagementAccess: hasUser,
       hasClientSettingsAccess: hasClient,
       // Account access requires both hosted tenant and settings permission
-      hasAccountAccess: isHosted && hasSettings
+      hasAccountAccess: isHosted && hasSettings,
+      hasVisibilityGroupAccess
     };
   } catch (error) {
     console.error('Error checking client portal permissions:', error);
@@ -513,7 +527,8 @@ export const checkClientPortalPermissions = withAuth(async (
       hasBillingAccess: false,
       hasUserManagementAccess: false,
       hasClientSettingsAccess: false,
-      hasAccountAccess: false
+      hasAccountAccess: false,
+      hasVisibilityGroupAccess: false
     };
   }
 });

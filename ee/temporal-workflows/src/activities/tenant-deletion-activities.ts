@@ -101,6 +101,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Tags and resources
   'tag_mappings', 'ticket_resources',
 
+  // Client portal visibility leaf table (depends on groups and boards)
+  'client_portal_visibility_group_boards',
+
   // Logs and notifications
   'job_details', 'jobs', 'audit_logs', 'notification_logs', 'internal_notifications',
   'platform_notification_recipients',
@@ -288,6 +291,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'contact_additional_email_addresses',
   'contact_phone_type_definitions',
   'contact_email_type_definitions',
+  // Client portal visibility groups depend on clients and are referenced by contacts via ON DELETE SET NULL.
+  // Delete them before clients so tenant cleanup does not leave this table behind.
+  'client_portal_visibility_groups',
   'clients',    // Delete clients FIRST (after NULLing account_manager references)
   'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
   'users',      // Delete users LAST (they have NOT NULL contact_id → contacts)

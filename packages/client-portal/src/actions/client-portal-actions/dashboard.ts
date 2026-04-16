@@ -1,11 +1,16 @@
 'use server'
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal dashboard actions intentionally compose ticket visibility helpers to keep dashboard counts and recent activity aligned with canonical client portal ticket visibility rules. */
+
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { headers } from 'next/headers.js';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import {
+  applyVisibilityBoardFilter,
+  getClientContactVisibilityContext
+} from '@alga-psa/tickets/lib';
 
 export interface DashboardMetrics {
   openTickets: number;
@@ -70,6 +75,7 @@ export const getDashboardMetrics = withAuth(async (
     throw new Error('Unauthorized: Contact information not found');
   }
 
+  const userContactId = user.contact_id;
   const { knex } = await createTenantKnex();
 
   try {
@@ -77,7 +83,7 @@ export const getDashboardMetrics = withAuth(async (
       // Get client_id from contact
       const contact = await trx('contacts')
         .where({
-          'contact_name_id': user.contact_id,
+          'contact_name_id': userContactId,
           'tenant': tenant
         })
         .select('client_id')
@@ -88,16 +94,20 @@ export const getDashboardMetrics = withAuth(async (
       }
 
       const clientId = contact.client_id;
+      const visibility = await getClientContactVisibilityContext(trx, tenant, userContactId);
 
-      const [[ticketCount], [projectCount], [invoiceCount], [assetCount]] = await Promise.all([
+        const [[ticketCount], [projectCount], [invoiceCount], [assetCount]] = await Promise.all([
         // Get open tickets count
-        trx('tickets')
-          .where({
-            'tickets.tenant': tenant,
-            'tickets.client_id': clientId,
-            'is_closed': false
-          })
-          .count('ticket_id as count'),
+        applyVisibilityBoardFilter(
+          trx('tickets')
+            .where({
+              'tickets.tenant': tenant,
+              'tickets.client_id': clientId,
+              'is_closed': false
+            }),
+          visibility.visibleBoardIds,
+          'tickets.board_id'
+        ).count('ticket_id as count'),
 
         // Get active projects count
         trx('projects')
@@ -158,6 +168,7 @@ export const getRecentActivity = withAuth(async (
     throw new Error('Unauthorized: Contact information not found');
   }
 
+  const userContactId = user.contact_id;
   const { knex } = await createTenantKnex();
 
   try {
@@ -165,7 +176,7 @@ export const getRecentActivity = withAuth(async (
       // Get client_id from contact
       const contact = await trx('contacts')
         .where({
-          'contact_name_id': user.contact_id,
+          'contact_name_id': userContactId,
           'tenant': tenant
         })
         .select('client_id')
@@ -176,6 +187,7 @@ export const getRecentActivity = withAuth(async (
       }
 
       const clientId = contact.client_id;
+      const visibility = await getClientContactVisibilityContext(trx, tenant, userContactId);
 
       // Get recent tickets with their initial descriptions
       const tickets = await trx('tickets')
@@ -191,6 +203,9 @@ export const getRecentActivity = withAuth(async (
         .where({
           'tickets.tenant': tenant,
           'tickets.client_id': clientId
+        })
+        .modify((queryBuilder: Knex.QueryBuilder) => {
+          applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds, 'tickets.board_id');
         })
         .orderBy('tickets.updated_at', 'desc')
         .limit(3);

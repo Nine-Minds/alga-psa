@@ -19,6 +19,12 @@ export {
 } from './ticketMobileEditorBridge';
 export { TicketMobileEditorRuntime } from './ticketMobileEditorRuntime';
 export {
+  applyVisibilityBoardFilter,
+  getClientContactVisibilityContext,
+  VISIBILITY_GROUP_MISMATCH_ERROR,
+  VISIBILITY_GROUP_MISSING_ERROR,
+} from './clientPortalVisibility';
+export {
   buildTicketStatusFilterOptions,
   createTicketStatusNameFilterValue,
   isTicketStatusClosedFilter,
@@ -34,6 +40,7 @@ export type {
   CommentUserAuthor,
   ResolvedCommentAuthor,
 } from './commentAuthorResolution';
+export type { ContactVisibilityContext } from './clientPortalVisibility';
 export type { TicketStatusFilterOption } from './ticketStatusFilter';
 export type { TicketMobileEditorBridgeClientOptions } from './ticketMobileEditorBridge';
 export type {

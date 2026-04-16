@@ -46,12 +46,15 @@
     "titlePlaceholder": "Ticket Title",
     "descriptionPlaceholder": "Describe your issue...",
     "priorityPlaceholder": "Select Priority",
+    "boardPlaceholder": "Select Board",
+    "noBoardsAvailable": "No ticket boards are available for your account. Contact your administrator.",
     "submit": "Create Ticket",
     "submitting": "Creating...",
     "errors": {
       "titleRequired": "Title is required",
       "descriptionRequired": "Description is required",
       "priorityRequired": "Please select a priority",
+      "boardRequired": "Please select a board",
       "createFailed": "Failed to create ticket. Please try again."
     }
   },
