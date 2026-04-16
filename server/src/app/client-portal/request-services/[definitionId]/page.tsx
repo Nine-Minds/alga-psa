@@ -92,7 +92,7 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
           {visibleFields.length === 0 ? (
             <p className="text-sm text-[rgb(var(--color-text-600))]">No fields configured.</p>
           ) : (
-            <form action={submitAction} encType="multipart/form-data" className="space-y-4">
+            <form action={submitAction} encType="multipart/form-data" noValidate className="space-y-4">
               {visibleFields.map((field: any, index: number) => {
                 const key = typeof field?.key === 'string' ? field.key : `field_${index}`;
                 const label = typeof field?.label === 'string' ? field.label : key;
