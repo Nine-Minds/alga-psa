@@ -98,6 +98,7 @@ describe('Node description and load options', () => {
       currentNodeParameters: {
         resource: 'ticket',
         ticketOperation: 'create',
+        board_id: { mode: 'id', value: '00000000-0000-0000-0000-000000000200' },
       },
     });
 
@@ -109,9 +110,98 @@ describe('Node description and load options', () => {
         qs: expect.objectContaining({
           type: 'ticket',
           search: 'new',
+          board_id: '00000000-0000-0000-0000-000000000200',
         }),
       }),
     );
+  });
+
+  it('T038b: ticket status load-options without a board_id returns an empty list without hitting the API', async () => {
+    const node = new AlgaPsa();
+    const requestHandler = vi.fn(() => ({ data: [{ status_id: 'status-1', name: 'New' }] }));
+    const context = createLoadOptionsHarness({
+      requestHandler,
+      currentNodeParameters: {
+        resource: 'ticket',
+        ticketOperation: 'create',
+      },
+    });
+
+    const result = await node.methods.listSearch.searchStatuses.call(context, 'new');
+    expect(result.results).toEqual([]);
+    expect(requestHandler).not.toHaveBeenCalled();
+  });
+
+  it('T038c: ticket update status load-options reads board_id from updateAdditionalFields', async () => {
+    const node = new AlgaPsa();
+    const requestHandler = vi.fn(() => ({ data: [{ status_id: 'status-2', name: 'Resolved' }] }));
+    const context = createLoadOptionsHarness({
+      requestHandler,
+      currentNodeParameters: {
+        resource: 'ticket',
+        ticketOperation: 'update',
+        updateAdditionalFields: {
+          board_id: { mode: 'id', value: '00000000-0000-0000-0000-000000000201' },
+        },
+      },
+    });
+
+    const result = await node.methods.listSearch.searchStatuses.call(context);
+    expect(result.results).toEqual([{ name: 'Resolved', value: 'status-2' }]);
+    expect(requestHandler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        qs: expect.objectContaining({
+          type: 'ticket',
+          board_id: '00000000-0000-0000-0000-000000000201',
+        }),
+      }),
+    );
+  });
+
+  it('T038d: ticket updateStatus load-options reads board_id from statusFilterBoardId', async () => {
+    const node = new AlgaPsa();
+    const requestHandler = vi.fn(() => ({ data: [{ status_id: 'status-3', name: 'In Progress' }] }));
+    const context = createLoadOptionsHarness({
+      requestHandler,
+      currentNodeParameters: {
+        resource: 'ticket',
+        ticketOperation: 'updateStatus',
+        statusFilterBoardId: { mode: 'id', value: '00000000-0000-0000-0000-000000000202' },
+      },
+    });
+
+    const result = await node.methods.listSearch.searchStatuses.call(context);
+    expect(result.results).toEqual([{ name: 'In Progress', value: 'status-3' }]);
+    expect(requestHandler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        qs: expect.objectContaining({
+          type: 'ticket',
+          board_id: '00000000-0000-0000-0000-000000000202',
+        }),
+      }),
+    );
+  });
+
+  it('T038e: non-ticket status load-options omits board_id', async () => {
+    const node = new AlgaPsa();
+    let capturedQs: Record<string, unknown> | undefined;
+    const requestHandler = vi.fn((options: { qs?: Record<string, unknown> }) => {
+      capturedQs = options.qs;
+      return { data: [{ status_id: 'status-4', name: 'Planned' }] };
+    });
+    const context = createLoadOptionsHarness({
+      requestHandler,
+      currentNodeParameters: {
+        resource: 'status',
+        statusOperation: 'list',
+        helperStatusType: 'project',
+      },
+    });
+
+    const result = await node.methods.listSearch.searchStatuses.call(context);
+    expect(result.results).toEqual([{ name: 'Planned', value: 'status-4' }]);
+    expect(capturedQs).toMatchObject({ type: 'project' });
+    expect(capturedQs).not.toHaveProperty('board_id');
   });
 
   it('T039: priority load-options maps API records to label/value list', async () => {
