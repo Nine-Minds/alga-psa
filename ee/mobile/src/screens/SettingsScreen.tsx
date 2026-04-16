@@ -364,7 +364,7 @@ export function SettingsScreen() {
           theme={theme}
           label={t("legal.termsOfService")}
           onPress={() => {
-            const url = tryBuildHostedPathUrl(config.ok ? config.baseUrl : null, "/static/master-terms");
+            const url = tryBuildHostedPathUrl(config.ok ? config.baseUrl : null, "/static/master_terms");
             if (url) void Linking.openURL(url);
           }}
         />

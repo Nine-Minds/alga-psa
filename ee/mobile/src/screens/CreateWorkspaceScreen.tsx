@@ -396,7 +396,7 @@ export function CreateWorkspaceScreen() {
   };
 
   const openTerms = () => {
-    const url = tryBuildHostedPathUrl(baseUrl, "/static/master-terms");
+    const url = tryBuildHostedPathUrl(baseUrl, "/static/master_terms");
     if (url) void Linking.openURL(url);
   };
   const openPrivacy = () => {
@@ -574,13 +574,13 @@ export function CreateWorkspaceScreen() {
         </View>
 
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.md }}>
-          {t("form.workspaceName", "Workspace name (optional)")}
+          {t("form.companyName", "Company name (optional)")}
         </Text>
         <TextInput
           value={workspaceName}
           onChangeText={setWorkspaceName}
           editable={!busy}
-          placeholder={t("form.workspacePlaceholder", "My MSP")}
+          placeholder={t("form.companyPlaceholder", "My MSP")}
           placeholderTextColor={theme.colors.textSecondary}
           style={{
             marginTop: theme.spacing.xs,
@@ -616,7 +616,7 @@ export function CreateWorkspaceScreen() {
             accessibilityLabel={t("restore", "Restore Purchases")}
             style={{
               ...theme.typography.body,
-              color: busy ? theme.colors.textSecondary : theme.colors.accent,
+              color: busy ? theme.colors.textSecondary : theme.colors.secondary,
               textAlign: "center",
               paddingVertical: theme.spacing.sm,
             }}
@@ -630,7 +630,7 @@ export function CreateWorkspaceScreen() {
         <Text
           style={{
             ...theme.typography.body,
-            color: theme.colors.danger,
+            color: theme.colors.secondary,
             textAlign: "center",
             marginTop: theme.spacing.md,
           }}
@@ -665,7 +665,7 @@ export function CreateWorkspaceScreen() {
           onPress={openTerms}
           accessibilityRole="link"
           accessibilityLabel={t("termsOfUse", "Terms of Use")}
-          style={{ ...theme.typography.caption, color: theme.colors.accent }}
+          style={{ ...theme.typography.caption, color: theme.colors.secondary }}
         >
           {t("termsOfUse", "Terms of Use (EULA)")}
         </Text>
@@ -673,7 +673,7 @@ export function CreateWorkspaceScreen() {
           onPress={openPrivacy}
           accessibilityRole="link"
           accessibilityLabel={t("privacyPolicy", "Privacy Policy")}
-          style={{ ...theme.typography.caption, color: theme.colors.accent }}
+          style={{ ...theme.typography.caption, color: theme.colors.secondary }}
         >
           {t("privacyPolicy", "Privacy Policy")}
         </Text>

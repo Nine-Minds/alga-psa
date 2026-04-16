@@ -38,6 +38,7 @@ export function AccountDeletionScreen() {
     try {
       const client = createApiClient({
         baseUrl: config.baseUrl,
+        getAccessToken: () => session.accessToken,
         getTenantId: () => session.tenantId,
         getUserAgentTag: () => `mobile/${Platform.OS}/account-delete`,
       });

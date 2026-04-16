@@ -159,7 +159,7 @@ export function SignInScreen() {
             accessibilityLabel={t("signIn.createWorkspace", "Create a new workspace")}
             style={{
               ...theme.typography.body,
-              color: theme.colors.accent,
+              color: theme.colors.secondary,
               paddingVertical: theme.spacing.sm,
             }}
           >

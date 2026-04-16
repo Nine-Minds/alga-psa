@@ -20,7 +20,14 @@ import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowC
  */
 
 async function authenticate(req: NextRequest): Promise<{ tenant: string; userId: string }> {
-  const apiKey = req.headers.get('x-api-key');
+  let apiKey = req.headers.get('x-api-key');
+  if (!apiKey) {
+    // Also accept Bearer token (mobile client sends accessToken via Authorization header)
+    const authHeader = req.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      apiKey = authHeader.slice(7);
+    }
+  }
   if (!apiKey) throw new UnauthorizedError('API key required');
 
   const tenantId = req.headers.get('x-tenant-id');
@@ -50,9 +57,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     const otherInternalUsers = await knex('users')
-      .where({ tenant, user_type: 'internal' })
+      .where({ tenant, user_type: 'internal', is_inactive: false })
       .whereNot({ user_id: userId })
-      .where((q: any) => q.whereNull('deleted_at').orWhere('deleted_at', null))
       .count<{ count: string }[]>('user_id as count');
 
     const otherCount = Number(otherInternalUsers[0]?.count ?? 0);
@@ -63,12 +69,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         .where({ user_id: userId, tenant })
         .update({
           is_inactive: true,
-          deleted_at: trx.fn.now(),
-          updated_at: trx.fn.now(),
         });
 
       // Best-effort: deactivate any API keys the user still has.
-      await trx('api_keys').where({ user_id: userId, tenant }).update({ is_active: false });
+      await trx('api_keys').where({ user_id: userId, tenant }).update({ active: false });
     });
 
     // 3. If this was the last internal user on an IAP tenant, nuke the tenant.

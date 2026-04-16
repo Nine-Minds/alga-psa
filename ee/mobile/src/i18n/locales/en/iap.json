@@ -1,7 +1,7 @@
 {
-  "title": "Create your workspace",
-  "subtitle": "Alga PSA Solo is a one-person plan for independent MSPs. Subscribe to create your workspace and start managing your clients, tickets, and invoices.",
-  "androidNotice": "Subscriptions from this app are only available on iOS. Please create a workspace from our website.",
+  "title": "Set up your account",
+  "subtitle": "Alga PSA Solo is a one-person plan for independent MSPs. Subscribe to set up your account and start managing your clients, tickets, and invoices.",
+  "androidNotice": "Subscriptions from this app are only available on iOS. Please set up your account from our website.",
   "perMonth": "month",
   "subscribe": "Subscribe",
   "restore": "Restore Purchases",
@@ -12,14 +12,14 @@
     "email": "Email",
     "firstName": "First name",
     "lastName": "Last name",
-    "workspaceName": "Workspace name (optional)",
-    "workspacePlaceholder": "My MSP"
+    "companyName": "Company name (optional)",
+    "companyPlaceholder": "My MSP"
   },
   "status": {
     "loadingProducts": "Loading\u2026",
     "checkingEmail": "Checking email\u2026",
     "purchasing": "Processing payment\u2026",
-    "provisioning": "Creating your workspace\u2026",
+    "provisioning": "Setting up your account\u2026",
     "restoring": "Restoring\u2026"
   },
   "errors": {
@@ -29,9 +29,9 @@
     "invalidEmail": "Enter a valid email address.",
     "iosOnly": "Subscriptions are only available on iOS.",
     "purchaseFailed": "Purchase could not be completed.",
-    "provisionFailed": "Purchase went through but we couldn't provision your workspace. Please contact support.",
+    "provisionFailed": "Purchase went through but we couldn't set up your account. Please contact support.",
     "nothingToRestore": "No prior purchase was found on this Apple ID.",
-    "restoreNotProvisioned": "This purchase hasn't been used to create a workspace yet. Please use 'Subscribe' instead.",
+    "restoreNotProvisioned": "This purchase hasn't been used to set up an account yet. Please use 'Subscribe' instead.",
     "restoreFailed": "Unable to restore your purchase.",
     "checkEmailFailed": "Unable to verify email availability. Please try again.",
     "emailAlreadyExists": "An account already exists for this email. Please sign in instead, or use a different email address."
