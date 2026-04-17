@@ -190,6 +190,9 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   `settings.enabled`, `settings.disabled`, `settings.expirationPeriod`, `settings.daysUnit`,
   `settings.notificationDays`, and `settings.none`, leaving no page-local settings labels in
   raw English.
+- **(2026-04-17, F013)** Wired `packages/billing/src/components/credits/AddCreditButton.tsx`
+  to `useTranslation('msp/credits')`. The trigger label, dialog title, placeholder paragraph,
+  cancel action, and submit action all now resolve from `actions.*` / `management.addCreditPlaceholder`.
 
 ## Key Paths / Runbooks
 
