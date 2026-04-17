@@ -175,11 +175,16 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   locale generation. Result: `Errors: 0`, `Warnings: 0`, `PASSED` across `de/es/fr/it/nl/pl`
   plus `xx/yy`. This confirmed key parity, interpolation preservation, pseudo fill patterns,
   and the Italian file surviving the validator’s accent checks.
+- **(2026-04-17, F010)** Added `'/msp/billing/credits'` to
+  `packages/core/src/lib/i18n/config.ts` immediately above the broader `/msp/billing` entry.
+  This preserves exact-match handling and longest-prefix fallback so the new page loads
+  `msp/credits` instead of inheriting only the general billing namespaces.
 
 ## Key Paths / Runbooks
 
 - English source namespace: `server/public/locales/en/msp/credits.json`
 - Pseudo-locale generator: `node scripts/generate-pseudo-locales.cjs`
 - Translation validator: `node scripts/validate-translations.cjs`
+- Route namespace config: `packages/core/src/lib/i18n/config.ts`
 - Plan artifacts:
   `ee/docs/plans/2026-04-09-msp-i18n-credits/{PRD.md,SCRATCHPAD.md,features.json,tests.json}`
