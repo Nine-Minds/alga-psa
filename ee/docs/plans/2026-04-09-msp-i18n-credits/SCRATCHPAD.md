@@ -163,6 +163,10 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
 - **(2026-04-17, F006)** Added `server/public/locales/it/msp/credits.json` and deliberately
   used accented/contracted Italian forms where they naturally occur (`più`, `Si è`, `Tutti gli`)
   so the later accent audit is testing a real localized file rather than English-looking copy.
+- **(2026-04-17, F007)** Added `server/public/locales/pl/msp/credits.json` with preserved
+  placeholders and the same month subgroup used by the chart placeholders. The recurring-
+  lineage copy needed a light polish to stay understandable in Polish while keeping the billing
+  domain meaning intact.
 
 ## Key Paths / Runbooks
 
