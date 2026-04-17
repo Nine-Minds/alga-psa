@@ -74,6 +74,7 @@ type DbCharge = {
   quantity?: number | null;
   unit_price?: number | null;
   total_price: number;
+  net_amount?: number | null;
   tax_amount?: number | null;
   tax_region?: string | null;
 };
@@ -299,11 +300,19 @@ export class XeroAdapter implements AccountingExportAdapter {
         const unitAmountCents =
           typeof charge.unit_price === 'number' ? Math.round(charge.unit_price) : null;
 
+        if (typeof charge.net_amount !== 'number') {
+          throw new AppError(
+            'XERO_CHARGE_MISSING_NET_AMOUNT',
+            `Charge ${charge.item_id} on invoice ${invoiceId} is missing net_amount; run the backfill migration.`
+          );
+        }
+        const netAmountCents = Math.round(charge.net_amount);
+
         const servicePeriod = resolveXeroLineServicePeriod(line);
 
         const payload: XeroInvoiceLinePayload = {
           lineId: line.line_id,
-          amountCents: Math.round(line.amount_cents),
+          amountCents: netAmountCents,
           description,
           quantity: typeof charge.quantity === 'number' ? charge.quantity : 1,
           unitAmountCents,
@@ -323,7 +332,7 @@ export class XeroAdapter implements AccountingExportAdapter {
 
         lineItems.push(payload);
         chargeIds.push(line.invoice_charge_id);
-        invoiceTotal += Math.round(line.amount_cents);
+        invoiceTotal += netAmountCents;
       }
 
       if (lineItems.length === 0) {
@@ -528,6 +537,7 @@ export class XeroAdapter implements AccountingExportAdapter {
         'quantity',
         'unit_price',
         'total_price',
+        'net_amount',
         'tax_amount',
         'tax_region'
       )

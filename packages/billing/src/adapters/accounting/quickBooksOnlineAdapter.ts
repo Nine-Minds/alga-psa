@@ -1,5 +1,6 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting export adapter - intentionally bridges billing and QuickBooks integration APIs */
 import logger from '@alga-psa/core/logger';
+import { AppError } from '@alga-psa/core';
 import { Knex } from 'knex';
 import {
   AccountingExportAdapter,
@@ -44,6 +45,7 @@ type DbCharge = {
   quantity?: number | null;
   unit_price?: number | null;
   total_price: number;
+  net_amount?: number | null;
   tax_amount?: number | null;
   is_taxable?: boolean | null;
   is_discount?: boolean | null;
@@ -209,6 +211,10 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       const qboLines: QboInvoiceLine[] = [];
       const chargeIds: string[] = []; // Track charge IDs in same order as qboLines
+      let invoiceNetCents = 0;
+      let invoiceTaxCents = 0;
+      const shouldIncludeAuthoritativeTax =
+        !context.excludeTaxFromExport && context.taxDelegationMode !== 'delegate';
       for (const line of exportLines) {
         if (!line.invoice_charge_id) {
           throw new Error(`QuickBooks adapter: export line ${line.line_id} has no invoice_charge_id`);
@@ -276,8 +282,20 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         // Note: When shouldExcludeTax is true, we don't set TaxCodeRef
         // QBO will apply default tax behavior or NON depending on settings
 
+        if (typeof charge.net_amount !== 'number') {
+          throw new AppError(
+            'QBO_CHARGE_MISSING_NET_AMOUNT',
+            `Charge ${charge.item_id} on invoice ${invoiceId} is missing net_amount; run the backfill migration.`
+          );
+        }
+        const netAmountCents = Math.round(charge.net_amount);
+        invoiceNetCents += netAmountCents;
+        if (shouldIncludeAuthoritativeTax && typeof charge.tax_amount === 'number') {
+          invoiceTaxCents += Math.round(charge.tax_amount);
+        }
+
         qboLines.push({
-          Amount: centsToAmount(line.amount_cents),
+          Amount: centsToAmount(netAmountCents),
           DetailType: 'SalesItemLineDetail',
           Description: charge.description ?? undefined,
           SalesItemLineDetail: salesDetail
@@ -299,6 +317,11 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         },
         Line: qboLines
       };
+
+      if (shouldIncludeAuthoritativeTax && invoiceTaxCents > 0) {
+        // Push Alga's authoritative tax total so QBO's books match Alga's internal calculation.
+        qboInvoice.TxnTaxDetail = { TotalTax: centsToAmount(invoiceTaxCents) };
+      }
 
       if (invoice.po_number) {
         qboInvoice.PrivateNote = buildQboPrivateNoteForPurchaseOrder(invoice.po_number);
@@ -351,7 +374,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           source: mappingSource ?? 'mapping_table'
         },
         totals: {
-          amountCents: exportLines.reduce((sum, line) => sum + line.amount_cents, 0)
+          amountCents: invoiceNetCents
         }
       };
 
@@ -533,6 +556,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'quantity',
         'unit_price',
         'total_price',
+        'net_amount',
         'tax_amount',
         'is_taxable',
         'is_discount',
