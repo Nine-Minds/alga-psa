@@ -210,6 +210,10 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
 - **(2026-04-17, F018)** Began `CreditReconciliation.tsx` wiring by translating the dashboard
   heading, client selector placeholder, run button state, filter labels/options, reset action,
   and the validation toast message with `balanceCount` / `trackingCount` interpolation.
+- **(2026-04-17, F019)** Completed the reporting surface in `CreditReconciliation.tsx`. The
+  stat tiles, chart titles/descriptions, chart legend labels, month placeholders, table card
+  copy, report-table columns, status badges, row action buttons, and tab labels with counts now
+  all resolve from `msp/credits`.
 
 ## Key Paths / Runbooks
 
