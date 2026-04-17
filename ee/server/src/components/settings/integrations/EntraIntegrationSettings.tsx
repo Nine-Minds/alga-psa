@@ -477,8 +477,9 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
         {isMapStepCurrent ? (
           <p className="mt-2 text-xs text-muted-foreground">This is your current onboarding step.</p>
         ) : null}
-        <div className="mb-3 mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
-          <p><span className="font-medium text-foreground">Mapped:</span> {mappingSummary.mapped}</p>
+        <div className="mb-3 mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-4">
+          <p><span className="font-medium text-foreground">Saved:</span> {status?.mappedTenantCount ?? 0}</p>
+          <p><span className="font-medium text-foreground">Selected:</span> {mappingSummary.mapped}</p>
           <p><span className="font-medium text-foreground">Skipped:</span> {mappingSummary.skipped}</p>
           <p><span className="font-medium text-foreground">Needs Review:</span> {mappingSummary.needsReview}</p>
         </div>
