@@ -236,5 +236,13 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
 - Route namespace config: `packages/core/src/lib/i18n/config.ts`
 - Credits page client wrapper: `packages/billing/src/components/credits/CreditsPageClient.tsx`
 - Credits page server loader: `packages/billing/src/components/credits/CreditsPage.tsx`
+- Credits namespace/route tests: `packages/billing/tests/creditsNamespaceAndRoute.i18n.test.ts`
 - Plan artifacts:
   `ee/docs/plans/2026-04-09-msp-i18n-credits/{PRD.md,SCRATCHPAD.md,features.json,tests.json}`
+
+## Test Log
+
+- **(2026-04-17, T001)** Added `packages/billing/tests/creditsNamespaceAndRoute.i18n.test.ts`
+  with an executable validator contract that reruns pseudo-locale generation plus
+  `validate-translations.cjs` and asserts the combined pipeline stays green (`PASSED`,
+  `Errors: 0`, `Warnings: 0`).

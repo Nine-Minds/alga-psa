@@ -1,5 +1,5 @@
 [
-  {"id": "T001", "description": "Lang-pack validation: `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs` passes for all 9 locales after namespace creation (covers key parity, missing/extra keys, interpolation variables, pseudo-locale patterns, Italian accents)", "implemented": false, "featureIds": ["F001", "F002", "F003", "F004", "F005", "F006", "F007", "F008", "F009"]},
+  {"id": "T001", "description": "Lang-pack validation: `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs` passes for all 9 locales after namespace creation (covers key parity, missing/extra keys, interpolation variables, pseudo-locale patterns, Italian accents)", "implemented": true, "featureIds": ["F001", "F002", "F003", "F004", "F005", "F006", "F007", "F008", "F009"]},
   {"id": "T002", "description": "Namespace exists: server/public/locales/en/msp/credits.json is valid JSON with top-level groups (page, columns, status, actions, tabs, settings, charts, stats, management, reconciliation, application, expiration, expirationDialog, context)", "implemented": false, "featureIds": ["F001"]},
 
   {"id": "T003", "description": "Route config: ROUTE_NAMESPACES entry for '/msp/billing/credits' exists and includes 'msp/credits' in its namespace array", "implemented": false, "featureIds": ["F010"]},
