@@ -16,6 +16,7 @@ import CreditExpirationSettings from './CreditExpirationSettings';
 import RenewalAutomationSettings from './RenewalAutomationSettings';
 import { TaxSourceSettings } from '../tax/TaxSourceSettings';
 import { TaxRegionsManager } from '../tax/TaxRegionsManager';
+import TaxDelegationBanner from '../../tax/TaxDelegationBanner';
 
 // Payment Settings Skeleton Component
 const PaymentSettingsSkeleton: React.FC = () => {
@@ -234,6 +235,7 @@ const BillingSettings: React.FC = () => {
       label: t('tabs.tax', { defaultValue: 'Tax' }),
       content: (
         <div className="space-y-6">
+          <TaxDelegationBanner />
           <TaxSourceSettings />
           <Card>
             <CardHeader>

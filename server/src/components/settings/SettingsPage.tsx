@@ -35,7 +35,7 @@ const ExperimentalFeaturesSettings = dynamic(() => import('./general/Experimenta
 });
 import InteractionSettings from './general/InteractionSettings';
 import { TimeEntrySettings } from '@alga-psa/scheduling/components';
-import { BillingSettings } from '@alga-psa/billing/components'; // Import the new component
+import { BillingSettings, TaxDelegationNudge } from '@alga-psa/billing/components'; // Import the new component
 import NotificationsTab from './general/NotificationsTab';
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
 import { IntegrationsSettingsPage } from '@alga-psa/integrations/components';
@@ -271,7 +271,12 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       label: t('tabs.integrations'),
       icon: Plug,
       requiredFeature: TIER_FEATURES.INTEGRATIONS,
-      content: <IntegrationsSettingsPage canUseEntraSync={canUseEntraSync} canUseCipp={canUseCipp} canUseTeams={canUseTeams} />,
+      content: (
+        <>
+          <TaxDelegationNudge />
+          <IntegrationsSettingsPage canUseEntraSync={canUseEntraSync} canUseCipp={canUseCipp} canUseTeams={canUseTeams} />
+        </>
+      ),
     }
   ];
 
