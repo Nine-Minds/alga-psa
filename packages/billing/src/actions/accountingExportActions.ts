@@ -43,6 +43,7 @@ export interface AccountingExportPreviewFilters {
   endDate?: string;
   invoiceStatuses?: string[] | string;
   clientIds?: string[] | string;
+  invoiceIds?: string[] | string;
   clientSearch?: string;
   adapterType?: string;
   targetRealm?: string;
@@ -207,6 +208,7 @@ export const previewAccountingExport = withAuth(async (
     endDate: toOptionalString(filters.endDate),
     invoiceStatuses: toStringArray(filters.invoiceStatuses),
     clientIds: toStringArray(filters.clientIds),
+    invoiceIds: toStringArray(filters.invoiceIds),
     clientSearch: toOptionalString(filters.clientSearch),
     adapterType: toOptionalString(filters.adapterType),
     targetRealm: toOptionalString(filters.targetRealm) ?? null,
@@ -313,6 +315,11 @@ function normalizeCreateBatchFilters(
   const clientIds = toFilterStringArray(filters.client_ids ?? filters.clientIds);
   if (clientIds && clientIds.length > 0) {
     result.clientIds = clientIds;
+  }
+
+  const invoiceIds = toFilterStringArray(filters.invoice_ids ?? filters.invoiceIds);
+  if (invoiceIds && invoiceIds.length > 0) {
+    result.invoiceIds = invoiceIds;
   }
 
   const clientSearch = toFilterString(filters.client_search ?? filters.clientSearch);
