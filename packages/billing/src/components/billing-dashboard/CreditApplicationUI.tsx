@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrency } from '@alga-psa/core';
 import { ICreditTracking } from '@alga-psa/types';
 import CreditExpirationBadge from '@alga-psa/ui/components/CreditExpirationBadge';
@@ -27,6 +28,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
   onApplyCredit,
   onCancel
 }) => {
+  const { t } = useTranslation('msp/credits');
   const [availableCredits, setAvailableCredits] = useState<ICreditTracking[]>([]);
   const [selectedCreditId, setSelectedCreditId] = useState<string>('');
   const [applicationAmount, setApplicationAmount] = useState<number>(0);
@@ -62,7 +64,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
         setLoading(false);
       } catch (error) {
         console.error('Error fetching credits:', error);
-        setError('Failed to load available credits');
+        setError(t('application.failedToLoadCredits', { defaultValue: 'Failed to load available credits' }));
         setLoading(false);
       }
     };
@@ -102,7 +104,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
 
   const handleApplyCredit = async () => {
     if (!selectedCreditId || applicationAmount <= 0) {
-      setError('Please select a credit and enter a valid amount');
+      setError(t('application.selectCreditError', { defaultValue: 'Please select a credit and enter a valid amount' }));
       return;
     }
     
@@ -120,7 +122,8 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
         await onApplyCredit(selectedCreditId, applicationAmount);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to apply credit');
+      console.error('Error applying credit:', err);
+      setError(t('application.failedToApply', { defaultValue: 'Failed to apply credit' }));
     } finally {
       setApplying(false);
     }
@@ -133,17 +136,17 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
   // Define columns for the DataTable
   const columns = [
     {
-      title: 'Amount Available',
+      title: t('columns.amountAvailable', { defaultValue: 'Amount Available' }),
       dataIndex: 'remaining_amount',
       render: (value: number) => formatCurrency(value)
     },
     {
-      title: 'Created',
+      title: t('columns.created', { defaultValue: 'Created' }),
       dataIndex: 'created_at',
       render: (value: string) => formatDateOnly(new Date(value))
     },
     {
-      title: 'Expiration',
+      title: t('columns.expiration', { defaultValue: 'Expiration' }),
       dataIndex: 'expiration_date',
       render: (value: string | undefined, record: ICreditTracking) => (
         <div className="flex items-center">
@@ -157,13 +160,13 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
               />
             </>
           ) : (
-            <span>Never</span>
+            <span>{t('expiration.never', { defaultValue: 'Never' })}</span>
           )}
         </div>
       )
     },
     {
-      title: 'Select',
+      title: t('columns.select', { defaultValue: 'Select' }),
       dataIndex: 'credit_id',
       render: (value: string, record: ICreditTracking) => (
         <Button
@@ -172,7 +175,9 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
           size="sm"
           onClick={() => handleCreditSelection(value)}
         >
-          {selectedCreditId === value ? "Selected" : "Select"}
+          {selectedCreditId === value
+            ? t('actions.selected', { defaultValue: 'Selected' })
+            : t('actions.select', { defaultValue: 'Select' })}
         </Button>
       )
     }
@@ -181,11 +186,11 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
   return (
     <Card className="w-full max-w-lg">
       <CardHeader>
-        <CardTitle>Apply Credit</CardTitle>
+        <CardTitle>{t('application.title', { defaultValue: 'Apply Credit' })}</CardTitle>
         <CardDescription>
           {invoiceId
-            ? 'Apply available credits to this invoice'
-            : 'Apply credits to reduce customer balance'}
+            ? t('application.applyToInvoice', { defaultValue: 'Apply available credits to this invoice' })
+            : t('application.applyToBalance', { defaultValue: 'Apply credits to reduce customer balance' })}
         </CardDescription>
       </CardHeader>
       
@@ -198,23 +203,31 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
         ) : error ? (
           <div className="text-red-500">{error}</div>
         ) : availableCredits.length === 0 ? (
-          <div className="text-muted-foreground">No credits available for this client</div>
+          <div className="text-muted-foreground">
+            {t('application.noCreditsAvailable', { defaultValue: 'No credits available for this client' })}
+          </div>
         ) : (
           <div className="space-y-4">
             <div className="flex justify-between text-sm">
-              <span className="font-medium">Total Available Credit:</span>
+              <span className="font-medium">
+                {t('application.totalAvailableCredit', { defaultValue: 'Total Available Credit:' })}
+              </span>
               <span>{formatCurrency(getTotalAvailableCredit())}</span>
             </div>
             
             {invoiceAmount > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="font-medium">Invoice Amount:</span>
+                <span className="font-medium">
+                  {t('application.invoiceAmount', { defaultValue: 'Invoice Amount:' })}
+                </span>
                 <span>{formatCurrency(invoiceAmount)}</span>
               </div>
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="credit-select">Select Credit to Apply</Label>
+              <Label htmlFor="credit-select">
+                {t('application.selectCreditToApply', { defaultValue: 'Select Credit to Apply' })}
+              </Label>
               <DataTable
                 id="credit-application-table"
                 data={availableCredits}
@@ -228,7 +241,9 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="amount-input">Amount to Apply</Label>
+              <Label htmlFor="amount-input">
+                {t('application.amountToApply', { defaultValue: 'Amount to Apply' })}
+              </Label>
               <Input
                 id="amount-input"
                 type="number"
@@ -240,7 +255,9 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground">
-                Credits are applied in order of expiration date (oldest first)
+                {t('application.creditOrderNote', {
+                  defaultValue: 'Credits are applied in order of expiration date (oldest first)',
+                })}
               </p>
             </div>
           </div>
@@ -255,7 +272,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
           onClick={onCancel}
           disabled={applying}
         >
-          Cancel
+          {t('actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
         <Button
           id="apply-credit-button"
@@ -263,7 +280,9 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
           onClick={handleApplyCredit}
           disabled={applying || !selectedCreditId || applicationAmount <= 0}
         >
-          {applying ? 'Applying...' : 'Apply Credit'}
+          {applying
+            ? t('actions.applying', { defaultValue: 'Applying...' })
+            : t('actions.applyCredit', { defaultValue: 'Apply Credit' })}
         </Button>
       </CardFooter>
     </Card>

@@ -214,6 +214,10 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   stat tiles, chart titles/descriptions, chart legend labels, month placeholders, table card
   copy, report-table columns, status badges, row action buttons, and tab labels with counts now
   all resolve from `msp/credits`.
+- **(2026-04-17, F020)** Wired `CreditApplicationUI.tsx` to `useTranslation('msp/credits')`.
+  All card copy, table columns, selection buttons, labels, helper text, empty states, and the
+  generic load/apply validation errors now resolve from the credits namespace instead of raw
+  English strings.
 
 ## Key Paths / Runbooks
 
