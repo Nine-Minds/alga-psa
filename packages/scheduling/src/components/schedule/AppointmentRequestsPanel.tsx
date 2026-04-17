@@ -13,6 +13,7 @@ import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { zonedTimeToUtc } from 'date-fns-tz';
 import { Check, X, Calendar, Clock, User, FileText, Briefcase, Ticket } from 'lucide-react';
 import { getAllUsersBasic, getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -135,26 +136,27 @@ export default function AppointmentRequestsPanel({
     setShowDeclineForm(false);
     setAssignedTechnicianId(request.preferred_assigned_user_id || '');
 
-    // Handle date/time parsing safely - prefill with requested date/time
+    // Handle date/time parsing safely - prefill with requested date/time.
+    // requested_date/requested_time are the user's LOCAL wall-clock (in request.requester_timezone).
+    // Convert to a real UTC instant so the DateTimePicker renders the correct moment
+    // in the admin's browser timezone.
     try {
       if (request.requested_date && request.requested_time) {
-        // Normalize PG DATE (may be JS Date object at runtime despite string type) to YYYY-MM-DD
         const rawDate = request.requested_date as unknown;
         const dateStr = rawDate instanceof Date
           ? rawDate.toISOString().split('T')[0]
           : typeof rawDate === 'string' ? rawDate.slice(0, 10) : null;
 
-        // Database stores time in HH:MM or HH:MM:SS format (UTC)
         const timeStr = typeof request.requested_time === 'string'
           ? request.requested_time.slice(0, 5)
           : null;
 
         if (dateStr && timeStr) {
-          const [hours, minutes] = timeStr.split(':').map(Number);
-          const parsedDate = new Date(`${dateStr}T00:00:00Z`);
-
-          if (!isNaN(parsedDate.getTime()) && !isNaN(hours) && !isNaN(minutes)) {
-            parsedDate.setUTCHours(hours, minutes, 0, 0);
+          const tz = request.requester_timezone || 'UTC';
+          // zonedTimeToUtc interprets the naive local datetime string as being in `tz`
+          // and returns a Date whose UTC equals that instant.
+          const parsedDate = zonedTimeToUtc(`${dateStr}T${timeStr}:00`, tz);
+          if (!isNaN(parsedDate.getTime())) {
             setFinalDateTime(parsedDate);
           } else {
             setFinalDateTime(null);
@@ -321,7 +323,7 @@ export default function AppointmentRequestsPanel({
     }
   };
 
-  const formatDateTime = (date: unknown, time: unknown) => {
+  const formatDateTime = (date: unknown, time: unknown, tz?: string | null) => {
     try {
       if (!date || !time) {
         return t('requests.fallbacks.invalidDateTime', { defaultValue: 'Invalid date/time' });
@@ -335,7 +337,9 @@ export default function AppointmentRequestsPanel({
 
       if (!dateStr || !timeStr) return t('requests.fallbacks.invalidDateTime', { defaultValue: 'Invalid date/time' });
 
-      const dateTime = new Date(`${dateStr}T${timeStr}:00Z`);
+      // Treat requested_date/requested_time as naive local in requester_timezone.
+      // Fallback 'UTC' keeps legacy rows (stored without tz) rendering as before.
+      const dateTime = zonedTimeToUtc(`${dateStr}T${timeStr}:00`, tz || 'UTC');
       if (isNaN(dateTime.getTime())) {
         return `${dateStr} ${timeStr}`;
       }
@@ -428,7 +432,7 @@ export default function AppointmentRequestsPanel({
                         </div>
                         <div className="flex items-center text-gray-600">
                           <Calendar className="h-4 w-4 mr-2" />
-                          {formatDateTime(request.requested_date, request.requested_time)}
+                          {formatDateTime(request.requested_date, request.requested_time, request.requester_timezone)}
                         </div>
                         <div className="flex items-center text-gray-600">
                           <Clock className="h-4 w-4 mr-2" />
@@ -522,7 +526,7 @@ export default function AppointmentRequestsPanel({
                 </div>
                 <div>
                   <div className="font-semibold text-gray-700">{t('requests.detail.labels.requestedTime', { defaultValue: 'Requested Time' })}</div>
-                  <div>{formatDateTime(selectedRequest.requested_date, selectedRequest.requested_time)}</div>
+                  <div>{formatDateTime(selectedRequest.requested_date, selectedRequest.requested_time, selectedRequest.requester_timezone)}</div>
                 </div>
                 <div>
                   <div className="font-semibold text-gray-700">{t('requests.detail.labels.duration', { defaultValue: 'Duration' })}</div>

@@ -5,6 +5,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Clock, User, Loader2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { format } from 'date-fns';
+import { zonedTimeToUtc } from 'date-fns-tz';
 import type { BadgeVariant } from '@alga-psa/ui/components/Badge';
 
 export interface ITicketAppointmentRequest {
@@ -14,6 +15,7 @@ export interface ITicketAppointmentRequest {
   requested_date: string;
   requested_time: string;
   requested_duration: number;
+  requester_timezone?: string | null;
   preferred_assigned_user_name?: string;
   approved_at?: string;
   approver_first_name?: string;
@@ -50,7 +52,7 @@ export default function TicketAppointmentRequests({
     }
   };
 
-  const formatDateTime = (dateVal: unknown, timeVal: unknown): string => {
+  const formatDateTime = (dateVal: unknown, timeVal: unknown, tz?: string | null): string => {
     try {
       // Normalize PG DATE (may be JS Date object) to YYYY-MM-DD string
       const dateStr = dateVal instanceof Date
@@ -60,7 +62,7 @@ export default function TicketAppointmentRequests({
       const timeStr = typeof timeVal === 'string' ? timeVal.slice(0, 5) : null;
       if (!dateStr || !timeStr) return t('ticketSection.invalidDateTime');
 
-      const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+      const dt = zonedTimeToUtc(`${dateStr}T${timeStr}:00`, tz || 'UTC');
       if (isNaN(dt.getTime())) return t('ticketSection.invalidDateTime');
       return dt.toLocaleString('en-US', {
         month: 'short', day: 'numeric', year: 'numeric',
@@ -111,7 +113,7 @@ export default function TicketAppointmentRequests({
                 <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                   <Calendar className="h-3 w-3" />
                   <span>
-                    {formatDateTime(appointment.requested_date, appointment.requested_time)}
+                    {formatDateTime(appointment.requested_date, appointment.requested_time, appointment.requester_timezone)}
                   </span>
                 </div>
 

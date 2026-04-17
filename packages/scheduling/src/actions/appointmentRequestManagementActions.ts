@@ -37,6 +37,7 @@ import {
   formatTime
 } from './appointmentHelpers';
 import { generateICSBuffer, generateICSFilename, ICSEventData } from '../utils/icsGenerator';
+import { formatInTimeZone, zonedTimeToUtc } from 'date-fns-tz';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -47,6 +48,7 @@ export interface IAppointmentRequest {
   requested_date: string;
   requested_time: string;
   requested_duration: number;
+  requester_timezone?: string | null;
   preferred_assigned_user_id?: string;
   status: 'pending' | 'approved' | 'declined' | 'cancelled';
   description?: string;
@@ -708,8 +710,14 @@ export const approveAppointmentRequest = withAuth(async (
           .where({ entry_id: scheduleEntry.entry_id, tenant })
           .first();
         const calendarLink = await generateICSLink(scheduleEntryWithDetails);
-        const formattedDate = await formatDate(finalDate);
-        const formattedTime = await formatTime(finalTime);
+
+        // finalDate/finalTime are UTC values. Render the appointment in the
+        // requester's timezone so the email shows the user their own local time.
+        const requesterTz = (request as any).requester_timezone || 'UTC';
+        const localDateStr = formatInTimeZone(scheduledStart, requesterTz, 'yyyy-MM-dd');
+        const localTimeStr = formatInTimeZone(scheduledStart, requesterTz, 'HH:mm');
+        const formattedDate = await formatDate(localDateStr);
+        const formattedTime = await formatTime(localTimeStr);
 
         // Generate ICS file for email attachment
         const icsEventData: ICSEventData = {

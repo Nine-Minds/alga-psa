@@ -228,6 +228,7 @@ export async function POST(req: NextRequest) {
       requested_date: validatedData.requested_date,
       requested_time: validatedData.requested_time,
       requested_duration: requestedDuration,
+      requester_timezone: validatedData.requester_timezone || null,
       preferred_assigned_user_id: validatedData.preferred_assigned_user_id || null,
       status: 'pending',
       description: validatedData.message || null,

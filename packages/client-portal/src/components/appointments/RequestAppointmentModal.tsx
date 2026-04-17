@@ -289,10 +289,10 @@ export function RequestAppointmentModal({
         slotDuration: selectedSlot?.duration
       });
 
-      // Extract UTC time from the ISO timestamp
-      // The selectedTimeISO is like "2025-11-14T21:00:00.000Z"
-      // We need to extract the time portion in UTC format "21:00"
-      const utcTime = selectedTimeISO ? new Date(selectedTimeISO).toISOString().substring(11, 16) : selectedTime;
+      // Send the user's LOCAL wall-clock time along with their IANA timezone.
+      // The server converts to a true UTC instant using the timezone; the
+      // "received" and "approved" emails are rendered back in the user's tz.
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
       let result;
 
@@ -302,8 +302,9 @@ export function RequestAppointmentModal({
           appointment_request_id: editingAppointment.appointment_request_id,
           service_id: selectedServiceId,
           requested_date: format(selectedDate!, 'yyyy-MM-dd'),
-          requested_time: utcTime, // Send UTC time
+          requested_time: selectedTime, // local HH:MM in requester_timezone
           requested_duration: duration,
+          requester_timezone: userTimezone,
           preferred_assigned_user_id: preferredTechnicianId && preferredTechnicianId !== '__no_preference__' ? preferredTechnicianId : undefined,
           description: description || undefined,
           ticket_id: linkedTicketId && linkedTicketId !== '__no_ticket__' ? linkedTicketId : undefined,
@@ -313,8 +314,9 @@ export function RequestAppointmentModal({
         result = await createAppointmentRequest({
           service_id: selectedServiceId,
           requested_date: format(selectedDate!, 'yyyy-MM-dd'),
-          requested_time: utcTime, // Send UTC time
+          requested_time: selectedTime, // local HH:MM in requester_timezone
           requested_duration: duration,
+          requester_timezone: userTimezone,
           preferred_assigned_user_id: preferredTechnicianId && preferredTechnicianId !== '__no_preference__' ? preferredTechnicianId : undefined,
           description: description || undefined,
           ticket_id: linkedTicketId && linkedTicketId !== '__no_ticket__' ? linkedTicketId : undefined,

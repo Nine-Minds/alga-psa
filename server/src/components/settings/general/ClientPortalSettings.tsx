@@ -43,6 +43,8 @@ const ClientPortalSettings = () => {
   const [primaryColor, setPrimaryColor] = useState<string>('');
   const [secondaryColor, setSecondaryColor] = useState<string>('');
   const [clientName, setClientName] = useState<string>('');
+  const [supportEmail, setSupportEmail] = useState<string>('');
+  const [supportPhone, setSupportPhone] = useState<string>('');
   const [tenantId, setTenantId] = useState<string>('');
   const [showPreview, setShowPreview] = useState<boolean>(false);
   const [previewMode, setPreviewMode] = useState<'dashboard' | 'signin' | null>(null);
@@ -108,6 +110,8 @@ const ClientPortalSettings = () => {
           setPrimaryColor(brandingSettings.primaryColor || '');
           setSecondaryColor(brandingSettings.secondaryColor || '');
           setClientName(brandingSettings.clientName || '');
+          setSupportEmail(brandingSettings.supportEmail || '');
+          setSupportPhone(brandingSettings.supportPhone || '');
         }
       } catch (error) {
         console.error('Failed to load tenant settings:', error);
@@ -166,12 +170,16 @@ const ClientPortalSettings = () => {
     primaryColor: string;
     secondaryColor: string;
     clientName: string;
+    supportEmail: string;
+    supportPhone: string;
   }>) => {
     const brandingData = {
       logoUrl: logoUrl, // Keep existing logo URL
       primaryColor: updates.primaryColor || primaryColor,
       secondaryColor: updates.secondaryColor || secondaryColor,
       clientName: updates.clientName !== undefined ? updates.clientName : clientName,
+      supportEmail: updates.supportEmail !== undefined ? updates.supportEmail : supportEmail,
+      supportPhone: updates.supportPhone !== undefined ? updates.supportPhone : supportPhone,
     };
 
     await updateTenantBrandingAction(brandingData);
@@ -185,6 +193,8 @@ const ClientPortalSettings = () => {
         primaryColor,
         secondaryColor,
         clientName,
+        supportEmail,
+        supportPhone,
       });
       // Refresh branding context after saving
       await refreshBranding();
@@ -336,6 +346,44 @@ const ClientPortalSettings = () => {
               />
               <p className="text-sm text-gray-500">
                 {t('clientPortal.branding.help.companyName')}
+              </p>
+            </div>
+
+            {/* Support Email */}
+            <div>
+              <Input
+                id="support-email"
+                label={t('clientPortal.branding.fields.supportEmail', { defaultValue: 'Support Email' })}
+                type="email"
+                value={supportEmail}
+                onChange={(e) => setSupportEmail(e.target.value)}
+                placeholder="support@yourcompany.com"
+                disabled={brandingLoading || brandingSaving}
+                containerClassName="mb-1"
+              />
+              <p className="text-sm text-gray-500">
+                {t('clientPortal.branding.help.supportEmail', {
+                  defaultValue: 'Shown to clients in appointment confirmations and other outbound emails as the address to contact for help.'
+                })}
+              </p>
+            </div>
+
+            {/* Support Phone */}
+            <div>
+              <Input
+                id="support-phone"
+                label={t('clientPortal.branding.fields.supportPhone', { defaultValue: 'Support Phone' })}
+                type="tel"
+                value={supportPhone}
+                onChange={(e) => setSupportPhone(e.target.value)}
+                placeholder="+1 (555) 123-4567"
+                disabled={brandingLoading || brandingSaving}
+                containerClassName="mb-1"
+              />
+              <p className="text-sm text-gray-500">
+                {t('clientPortal.branding.help.supportPhone', {
+                  defaultValue: 'Optional. Shown alongside the support email in client-facing emails.'
+                })}
               </p>
             </div>
 

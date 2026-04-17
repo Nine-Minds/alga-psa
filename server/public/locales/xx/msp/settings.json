@@ -714,13 +714,17 @@
         "companyLogo": "11111",
         "colorPalette": "11111",
         "primaryColor": "11111",
-        "secondaryColor": "11111"
+        "secondaryColor": "11111",
+        "supportEmail": "11111",
+        "supportPhone": "11111"
       },
       "help": {
         "companyName": "11111",
         "companyLogo": "11111",
         "primaryColor": "11111",
-        "secondaryColor": "11111"
+        "secondaryColor": "11111",
+        "supportEmail": "11111",
+        "supportPhone": "11111"
       },
       "preview": "11111",
       "previewDarkMode": "11111",
