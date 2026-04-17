@@ -254,3 +254,8 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   `ROUTE_NAMESPACES['/msp/billing/credits']` value and the runtime result of
   `getNamespacesForRoute('/msp/billing/credits')` / nested credit paths. This protects the
   longest-prefix behavior called out in the PRD.
+- **(2026-04-17, T005-T008)** Added `packages/billing/tests/CreditsPage.i18n.test.ts` as the
+  wrapper/server-page contract. The file checks that `CreditsPage.tsx` delegates to
+  `CreditsPageClient`, that the client wrapper wires translated columns/status/tabs/settings
+  summary keys, and that representative credits-page keys resolve to pseudo-locale fill in
+  `xx/msp/credits.json`.

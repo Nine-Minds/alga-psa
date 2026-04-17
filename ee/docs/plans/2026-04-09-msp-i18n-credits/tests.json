@@ -5,11 +5,11 @@
   {"id": "T003", "description": "Route config: ROUTE_NAMESPACES entry for '/msp/billing/credits' exists and includes 'msp/credits' in its namespace array", "implemented": true, "featureIds": ["F010"]},
   {"id": "T004", "description": "Route config: getNamespacesForRoute('/msp/billing/credits') returns array containing 'msp/credits' (longest prefix match works correctly)", "implemented": true, "featureIds": ["F010"]},
 
-  {"id": "T005", "description": "Unit: CreditsPage client wrapper renders column titles (Credit ID, Created, Description, Original Amount, Remaining, Expires, Status, Actions) via t() in en", "implemented": false, "featureIds": ["F011"]},
-  {"id": "T006", "description": "Unit: CreditsPage client wrapper renders status labels (Active, Expired, Expiring Soon) and tab labels (Active Credits, All Credits, Expired Credits) via t()", "implemented": false, "featureIds": ["F011"]},
+  {"id": "T005", "description": "Unit: CreditsPage client wrapper renders column titles (Credit ID, Created, Description, Original Amount, Remaining, Expires, Status, Actions) via t() in en", "implemented": true, "featureIds": ["F011"]},
+  {"id": "T006", "description": "Unit: CreditsPage client wrapper renders status labels (Active, Expired, Expiring Soon) and tab labels (Active Credits, All Credits, Expired Credits) via t()", "implemented": true, "featureIds": ["F011"]},
 
-  {"id": "T007", "description": "Unit: CreditsPage CreditExpirationSettings labels (Credit Expiration, Enabled/Disabled, Expiration Period, Notification Days) render via t()", "implemented": false, "featureIds": ["F012"]},
-  {"id": "T008", "description": "Unit: CreditsPage no hardcoded English strings remain in rendered output (pseudo-locale xx coverage check)", "implemented": false, "featureIds": ["F011", "F012"]},
+  {"id": "T007", "description": "Unit: CreditsPage CreditExpirationSettings labels (Credit Expiration, Enabled/Disabled, Expiration Period, Notification Days) render via t()", "implemented": true, "featureIds": ["F012"]},
+  {"id": "T008", "description": "Unit: CreditsPage no hardcoded English strings remain in rendered output (pseudo-locale xx coverage check)", "implemented": true, "featureIds": ["F011", "F012"]},
 
   {"id": "T009", "description": "Unit: AddCreditButton renders button label, dialog title, Cancel/Add Credit buttons via t()", "implemented": false, "featureIds": ["F013"]},
   {"id": "T010", "description": "Unit: AddCreditButton no hardcoded English in rendered output", "implemented": false, "featureIds": ["F013"]},
