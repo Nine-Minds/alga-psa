@@ -145,6 +145,11 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   management load/empty states, reconciliation tab labels, short month labels for placeholder
   charts, and generic application/expiration failure strings. This keeps later wiring stable
   and avoids repeated locale-file churn.
+- **(2026-04-17, F002)** Added `server/public/locales/fr/msp/credits.json` with full key parity
+  against English. Kept the same structure and interpolation tokens, translated the domain-
+  specific copy directly (credit reconciliation, recurring-lineage context, expiration flows),
+  and preserved the placeholder chart month subgroup so later pseudo-generation remains
+  mechanical.
 
 ## Key Paths / Runbooks
 
