@@ -162,6 +162,15 @@ export interface XeroTaxComponentPayload {
 
 export interface XeroInvoiceLinePayload {
   lineId: string;
+  /**
+   * Xero-assigned LineItemID from a prior export of the same invoice, when known.
+   * Omit on a fresh create — Xero will generate and return one, which we then
+   * persist on the invoice mapping for future updates. On a retry / update we
+   * MUST send the Xero LineItemID for every previously-posted line, otherwise
+   * Xero's upsert-by-InvoiceNumber rejects the line with "Could not find line
+   * item(s) with the following id(s)".
+   */
+  externalLineItemId?: string | null;
   amountCents: number;
   description?: string | null;
   quantity?: number | null;
@@ -178,6 +187,12 @@ export interface XeroInvoiceLinePayload {
 
 export interface XeroInvoicePayload {
   invoiceId: string;
+  /**
+   * Xero-assigned InvoiceID from a prior export of the same Alga invoice, when known.
+   * Setting this turns the POST into an explicit update rather than an
+   * upsert-by-InvoiceNumber, which is what makes retries idempotent.
+   */
+  externalInvoiceId?: string | null;
   contactId: string;
   currency?: string | null;
   reference?: string | null;
@@ -948,6 +963,7 @@ function mapInvoicePayload(payload: XeroInvoicePayload): Record<string, unknown>
 
   const invoice: Record<string, unknown> = {
     Type: 'ACCREC',
+    InvoiceID: payload.externalInvoiceId ?? undefined,
     InvoiceNumber: invoiceNumber,
     Reference: payload.reference ?? undefined,
     Date: formatDate(payload.invoiceDate),
@@ -971,7 +987,11 @@ function mapInvoiceLine(line: XeroInvoiceLinePayload): Record<string, unknown> {
   const tracking = normalizeTracking(line.tracking);
 
   const payload: Record<string, unknown> = {
-    LineItemID: line.lineId,
+    // Only send LineItemID for lines we know Xero already has (from a prior export).
+    // Sending our Alga UUID as LineItemID tricks Xero into treating the line as
+    // one it already knows and, on retry, triggers a validation error because
+    // the ID doesn't match any line in the existing draft.
+    LineItemID: line.externalLineItemId ?? undefined,
     Description: buildLineDescription(line),
     Quantity: quantity,
     UnitAmount: unitAmount ?? (quantity !== 0 ? Number((lineAmount ?? 0) / quantity) : undefined),
