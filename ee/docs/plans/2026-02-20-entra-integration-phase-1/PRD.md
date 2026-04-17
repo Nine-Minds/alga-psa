@@ -2,14 +2,28 @@
 
 - Slug: `entra-integration-phase-1`
 - Date: `2026-02-20`
-- Status: Draft
+- Status: Draft (scope updated 2026-04-17 — CIPP connection type removed from Phase 1)
 - Edition: Enterprise only (`NEXT_PUBLIC_EDITION=enterprise`)
 
 ## Summary
 
-Build the Phase 1 Microsoft Entra integration for the EE product with a partner-level auth model, tenant discovery/mapping, and ongoing contact sync using Temporal workflows.
+Build the Phase 1 Microsoft Entra integration for the EE product with a Direct Microsoft partner auth model, tenant discovery/mapping, and ongoing contact sync using Temporal workflows.
 
 All user-visible Entra surfaces ship behind feature flags from day one for selective tenant rollout.
+
+## Scope Change — 2026-04-17
+
+CIPP as a connection type is dropped from Phase 1. Rationale:
+
+1. Zero unique capability vs Direct — both hit Microsoft Graph/Lighthouse endpoints.
+2. Microsoft has closed the Partner Center / GDAP / Lighthouse UX gap that drove CIPP adoption; the moat is shrinking.
+3. Permanent maintenance tax: CIPP response shapes, auth, and endpoint paths drift; every drift is a silent sync failure we own.
+4. Permanent testing cost: CIPP cannot run without Azure + GitHub + Partner Center; every release either deploys CIPP or trusts a drifting mock.
+5. Support surface triples ("Alga bug, CIPP bug, or Graph bug?").
+6. Security surface: storing third-party API tokens one hop from customer Entra data is avoidable blast radius.
+7. Onboarding UX simplifies — no "Direct or CIPP" decision for users with no opinion.
+
+The existing CIPP adapter, secret keys, validation route, and connect action remain in the repo but are no longer wired into the onboarding UI (the connection options list renders Direct only via `buildEntraConnectionOptions`). Retained so the path can be reinstated without a schema or API migration if the bet reverses.
 
 ## Problem
 
@@ -20,9 +34,7 @@ Today there is no EE Entra workflow that does this end-to-end with deterministic
 ## Goals
 
 1. Ship EE-only Entra integration settings and APIs.
-2. Support partner-level connection paths:
-1. Direct Microsoft partner auth (reusing existing Azure app credentials model).
-2. CIPP-based connection.
+2. Support Direct Microsoft partner auth as the single partner-level connection path (reusing existing Azure app credentials model).
 3. Discover managed Microsoft tenants and reconcile them to Alga clients.
 4. Sync enabled Entra users into Alga contacts with additive/linking behavior.
 5. Run initial and recurring sync via Temporal workflows.
@@ -37,7 +49,7 @@ Today there is no EE Entra workflow that does this end-to-end with deterministic
 ## Users and Primary Flows
 
 1. MSP admin/internal user opens Integrations and enables Entra connection.
-2. MSP user chooses connection type (Direct or CIPP) and completes setup.
+2. MSP user completes Direct Microsoft partner auth setup.
 3. MSP user runs discovery and reviews mapping suggestions.
 4. MSP user confirms mappings and starts initial sync.
 5. MSP user reviews sync outcomes, ambiguous matches, and per-tenant status.
@@ -49,7 +61,7 @@ Client portal users do not see or access Entra setup/sync surfaces.
 
 1. Add an EE card to integrations settings for Entra.
 2. Use a 4-step wizard:
-1. Connect.
+1. Connect (Direct Microsoft partner auth only).
 2. Discover Tenants.
 3. Map Tenants to Clients.
 4. Initial Sync.
@@ -64,7 +76,7 @@ Client portal users do not see or access Entra setup/sync surfaces.
 
 1. EE-only APIs/routes/components for Entra integration.
 2. Feature flags gate all user-visible Entra settings and client actions.
-3. Partner-level auth configuration supports Direct and CIPP connection types.
+3. Partner-level auth is Direct Microsoft partner OAuth only (CIPP descoped from Phase 1).
 4. Tenant discovery persists discovered managed tenants.
 5. Mapping flow supports exact-domain auto-match, fuzzy candidates, manual assignment, skip.
 6. Initial sync creates contact links and new contacts where needed.
@@ -94,8 +106,8 @@ Client portal users do not see or access Entra setup/sync surfaces.
 ### Connection adapters
 
 1. Direct adapter for Microsoft partner discovery/user enumeration in `ee/server/src/lib/integrations/entra/providers/direct`.
-2. CIPP adapter for tenant/user enumeration in `ee/server/src/lib/integrations/entra/providers/cipp`.
-3. Provider interface and normalization layer in `ee/server/src/lib/integrations/entra/providers`.
+2. Provider interface and normalization layer in `ee/server/src/lib/integrations/entra/providers`.
+3. CIPP adapter scaffolding remains under `ee/server/src/lib/integrations/entra/providers/cipp` but is not wired into the onboarding UI in Phase 1 (descoped 2026-04-17).
 
 ### API/action surfaces
 
@@ -128,9 +140,10 @@ Primary flags:
 
 1. `entra-integration-ui` (settings card + wizard).
 2. `entra-integration-client-sync-action` (client page manual sync button).
-3. `entra-integration-cipp` (CIPP option visibility).
-4. `entra-integration-field-sync` (field overwrite toggles visibility).
-5. `entra-integration-ambiguous-queue` (reconciliation queue visibility).
+3. `entra-integration-field-sync` (field overwrite toggles visibility).
+4. `entra-integration-ambiguous-queue` (reconciliation queue visibility).
+
+`entra-integration-cipp` is retained as a flag constant but no longer controls user-visible surface area in Phase 1 (CIPP option is hidden unconditionally in `buildEntraConnectionOptions`).
 
 All flags are managed via EE platform feature flag APIs (`/api/v1/platform-feature-flags` + tenant targeting).
 
@@ -147,12 +160,15 @@ Only minimal sync status and audit-oriented result storage required for feature 
 ## Open Questions
 
 1. Direct partner path exact required delegated scopes for tenant and user enumeration in target customer environments.
-2. CIPP endpoint contract stability/version for tenant and user listing.
-3. Final fuzzy matching heuristic threshold defaults.
+2. Final fuzzy matching heuristic threshold defaults.
+
+Resolved / removed:
+
+- (2026-04-17) CIPP endpoint contract stability/version — moot: CIPP path descoped from Phase 1.
 
 ## Acceptance Criteria (Definition of Done)
 
-1. EE tenant can connect Direct or CIPP, discover tenants, map tenants, and run initial sync entirely through flag-gated UI.
+1. EE tenant can connect via Direct Microsoft partner auth, discover tenants, map tenants, and run initial sync entirely through flag-gated UI.
 2. Manual sync (all tenants and per client) starts Temporal workflows and records outcomes.
 3. Contact sync is additive/linking by default; no silent overwrite of non-enabled fields.
 4. Disabled/deleted Entra users mark linked contacts inactive, not deleted.

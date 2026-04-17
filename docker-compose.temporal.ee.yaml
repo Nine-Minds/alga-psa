@@ -51,6 +51,9 @@ services:
       - PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE=${PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE:-msp/alga-psa-vs}
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
+      # Smoke-only: defaults to unset so the worker uses the real GDAP endpoints. Override in
+      # the compose invocation or shell env to test self-tenant mode without CSP/GDAP.
+      - ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE=${ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE:-}
     volumes:
       - type: bind
         source: ./secrets/tenants

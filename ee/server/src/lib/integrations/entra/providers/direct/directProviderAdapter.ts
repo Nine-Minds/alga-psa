@@ -13,6 +13,12 @@ import type {
 
 const GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0';
 
+// Smoke-only: when enabled, swap the GDAP-backed managedTenants/* endpoints for
+// /organization and /users so the partner's own tenant acts as a single managed
+// tenant for end-to-end testing without a CSP/GDAP relationship. Never enable in production.
+const IS_SELF_TENANT_SMOKE =
+  (process.env.ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE || '').toLowerCase() === 'true';
+
 function toObject(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -163,6 +169,10 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
   public async listManagedTenants(
     input: EntraListManagedTenantsInput
   ): Promise<EntraManagedTenantRecord[]> {
+    if (IS_SELF_TENANT_SMOKE) {
+      return this.listSelfTenantAsManaged(input);
+    }
+
     const tenants: EntraManagedTenantRecord[] = [];
     const seenTenantIds = new Set<string>();
     let nextUrl = `${GRAPH_BASE_URL}/tenantRelationships/managedTenants/tenants?$top=999`;
@@ -200,6 +210,10 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
   public async listUsersForTenant(
     input: EntraListUsersForTenantInput
   ): Promise<EntraManagedUserRecord[]> {
+    if (IS_SELF_TENANT_SMOKE) {
+      return this.listSelfTenantUsers(input);
+    }
+
     const users: EntraManagedUserRecord[] = [];
     const seenObjectIds = new Set<string>();
     const encodedTenant = encodeURIComponent(input.managedTenantId);
@@ -240,6 +254,100 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
 
         users.push(normalizeEntraSyncUser({
           entraTenantId,
+          entraObjectId,
+          userPrincipalName,
+          email,
+          displayName: getNullableString(raw.displayName),
+          givenName: getNullableString(raw.givenName),
+          surname: getNullableString(raw.surname),
+          accountEnabled: getBoolean(raw.accountEnabled, true),
+          jobTitle: getNullableString(raw.jobTitle),
+          mobilePhone: getNullableString(raw.mobilePhone),
+          businessPhones: getStringArray(raw.businessPhones),
+          raw,
+        }));
+      }
+
+      const candidateNextLink = getNullableString(payload['@odata.nextLink']);
+      nextUrl = candidateNextLink || '';
+    }
+
+    return users;
+  }
+
+  private async listSelfTenantAsManaged(
+    input: EntraListManagedTenantsInput
+  ): Promise<EntraManagedTenantRecord[]> {
+    const payload = await this.graphGet(input.tenant, `${GRAPH_BASE_URL}/organization`);
+    const rows = Array.isArray(payload.value) ? payload.value : [];
+    const tenants: EntraManagedTenantRecord[] = [];
+
+    for (const row of rows) {
+      const raw = toObject(row);
+      const entraTenantId = getFirstString(raw.id);
+      if (!entraTenantId) continue;
+
+      const verifiedDomains = Array.isArray(raw.verifiedDomains) ? raw.verifiedDomains : [];
+      let primaryDomain: string | null = null;
+      let initialDomain: string | null = null;
+      for (const domain of verifiedDomains) {
+        const d = toObject(domain);
+        const name = getNullableString(d.name);
+        if (!name) continue;
+        if (getBoolean(d.isDefault)) {
+          primaryDomain = name;
+        } else if (!initialDomain && getBoolean(d.isInitial)) {
+          initialDomain = name;
+        }
+      }
+
+      tenants.push({
+        entraTenantId,
+        displayName: getNullableString(raw.displayName),
+        primaryDomain: primaryDomain || initialDomain,
+        sourceUserCount: 0,
+        raw,
+      });
+    }
+
+    return tenants;
+  }
+
+  private async listSelfTenantUsers(
+    input: EntraListUsersForTenantInput
+  ): Promise<EntraManagedUserRecord[]> {
+    const users: EntraManagedUserRecord[] = [];
+    const seenObjectIds = new Set<string>();
+    const select = [
+      'id',
+      'displayName',
+      'givenName',
+      'surname',
+      'mail',
+      'userPrincipalName',
+      'accountEnabled',
+      'jobTitle',
+      'mobilePhone',
+      'businessPhones',
+    ].join(',');
+
+    let nextUrl = `${GRAPH_BASE_URL}/users?$select=${select}&$top=999`;
+
+    while (nextUrl) {
+      const payload = await this.graphGet(input.tenant, nextUrl);
+      const rows = Array.isArray(payload.value) ? payload.value : [];
+
+      for (const row of rows) {
+        const raw = toObject(row);
+        const entraObjectId = getFirstString(raw.id);
+        if (!entraObjectId || seenObjectIds.has(entraObjectId)) continue;
+        seenObjectIds.add(entraObjectId);
+
+        const userPrincipalName = getNullableString(raw.userPrincipalName);
+        const email = getNullableString(raw.mail) || userPrincipalName;
+
+        users.push(normalizeEntraSyncUser({
+          entraTenantId: input.managedTenantId,
           entraObjectId,
           userPrincipalName,
           email,

@@ -1,17 +1,21 @@
-export const routes = {
-    route: null,
-    connectRoute: null,
-    disconnectRoute: null,
-    validateDirectRoute: null,
-    validateCippRoute: null,
-    discoveryRoute: null,
-    syncRoute: null,
-    syncRunsRoute: null,
-    mappingsPreviewRoute: null,
-    mappingsConfirmRoute: null,
-    mappingsUnmapRoute: null,
-    mappingsRemapRoute: null,
-    reconciliationQueueRoute: null,
-    resolveExistingRoute: null,
-    resolveNewRoute: null,
+type RouteLoader = () => Promise<null>;
+
+const unavailable: RouteLoader = async () => null;
+
+export const routes: Record<string, RouteLoader> = {
+    route: unavailable,
+    connectRoute: unavailable,
+    disconnectRoute: unavailable,
+    validateDirectRoute: unavailable,
+    validateCippRoute: unavailable,
+    discoveryRoute: unavailable,
+    syncRoute: unavailable,
+    syncRunsRoute: unavailable,
+    mappingsPreviewRoute: unavailable,
+    mappingsConfirmRoute: unavailable,
+    mappingsUnmapRoute: unavailable,
+    mappingsRemapRoute: unavailable,
+    reconciliationQueueRoute: unavailable,
+    resolveExistingRoute: unavailable,
+    resolveNewRoute: unavailable,
 };
