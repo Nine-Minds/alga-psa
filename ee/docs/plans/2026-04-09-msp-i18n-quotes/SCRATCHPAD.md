@@ -2,6 +2,40 @@
 
 - Plan slug: `2026-04-09-msp-i18n-quotes`
 - Created: `2026-04-09`
+- Last synced to codebase: `2026-04-17`
+
+## Status Recheck (2026-04-17)
+
+**Still 0% implemented.** Verified against the current codebase:
+
+- `server/public/locales/en/msp/quotes.json` — **does not exist**.
+- All 12 files under `packages/billing/src/components/billing-dashboard/quotes/` still have `useTranslation=0` (confirmed by grep).
+- `features.json` / `tests.json`: 0/22 features, 0/27 tests marked implemented.
+- `nav.billing.sections.quotes`, `nav.billing.quotes`, `nav.billing.quoteBusinessTemplates`, `nav.billing.quoteLayouts` **still missing** from `server/public/locales/en/msp/core.json` (verified via grep). The `F022`/`T027` backfill remains outstanding.
+
+### Upstream changes since the 2026-04-10 addendum (affect this plan)
+
+| Commit | What changed | Impact on this plan |
+|---|---|---|
+| `7da29f66c add footer for most of them` (touches `QuoteForm.tsx`, `QuoteDetail.tsx`, `QuoteLineItemsEditor.tsx`) | Footer UI added to quote components. | Include footer labels in the existing `quoteForm.*` / `quoteDetail.*` / `quoteLineItems.*` groups. No new namespace needed. |
+| `ead79deec Fix quote recipients field build errors` | Build fix on `QuoteSendRecipientsField.tsx`. | `QuoteSendRecipientsField.tsx` is now 396 LOC (PRD estimated 403). Strings enumerated in 2026-04-10 addendum remain the same; `F021`/`quoteRecipients.*` group still correct. |
+| `8528a0816 enums translated` (merged via `i18n/more_enum_hooks` / PR #2344) — finishes the shared **enum-labels pattern** for billing enums. `useBillingFrequencyOptions` / `useFormatBillingFrequency` / `useContractLineTypeOptions` / `useFormatContractLineType` published from `@alga-psa/billing/hooks/useBillingEnumOptions`; keys in `features/billing.json#enums.*`. | `QuoteLineItemsEditor.tsx` renders a frequency select (Weekly / Monthly / Quarterly / Annually — see "Decisions" below). `QuoteStatusBadge.tsx` still blocked on status-metadata translation. | **New guidance:** replace the local `frequency` option list in `QuoteLineItemsEditor.tsx` with `useBillingFrequencyOptions()`. Do NOT duplicate those labels into `msp/quotes`. Verify `/msp/billing`, `/msp/quote-approvals`, and `/msp/quote-document-templates` entries in `ROUTE_NAMESPACES` load `features/billing` (the PRD already adds `msp/quotes` to `/msp/billing`, which already has `features/billing`). |
+| `QuoteLineItemsEditor.tsx` now 666 LOC (PRD estimate: 676). No behavioral drift beyond markup badge already captured in the 2026-04-10 addendum. | — | No change to `F006` / `F020`. |
+
+### PRD correction — `QuoteStatusBadge` follow-up is now unblocked
+
+The 2026-04-09 decision excluded `QuoteStatusBadge.tsx` because `QUOTE_STATUS_METADATA` labels were baked in at the types layer. The enum-labels pattern shipped 2026-04-14 is the pattern that solves this (see `.ai/translation/enum-labels-pattern.md`). Options:
+
+1. **Preferred:** publish a `useQuoteStatusLabel()` / `useQuoteStatusOptions()` hook from `@alga-psa/types` or `@alga-psa/billing/hooks/`, with keys under `features/billing.json#enums.quoteStatus.*`. Then `QuoteStatusBadge.tsx` becomes a thin consumer of the hook. Zero changes needed in `msp/quotes`.
+2. Leave out-of-scope per original plan, and track a dedicated "quote status labels via enum-hook" plan.
+
+Recommend (1) — it removes the only remaining untranslated quote surface and matches the pattern now adopted project-wide. Add as a **new feature F023** (wire `QuoteStatusBadge` via shared hook) and a corresponding **T028** (pseudo-locale visibility test on status badges).
+
+### No structural changes otherwise
+
+Existing F001-F022 / T001-T027 remain valid. Proceed with the corrected frequency-options source and, if accepted, add F023/T028 for `QuoteStatusBadge`.
+
+---
 
 ## Decisions
 

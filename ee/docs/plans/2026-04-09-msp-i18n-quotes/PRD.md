@@ -2,7 +2,7 @@
 
 - Slug: `2026-04-09-msp-i18n-quotes`
 - Date: `2026-04-09`
-- Status: Draft
+- Status: Draft (ready to start — verified unchanged on 2026-04-17; see SCRATCHPAD "Status Recheck (2026-04-17)" for new enum-hook guidance and recommended `QuoteStatusBadge` follow-up)
 
 ## Summary
 

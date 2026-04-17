@@ -2,6 +2,38 @@
 
 - Plan slug: `2026-04-09-msp-i18n-credits`
 - Created: `2026-04-09`
+- Last synced to codebase: `2026-04-17`
+
+## Status Recheck (2026-04-17)
+
+**Still 0% implemented.** Verified against the current codebase:
+
+- `server/public/locales/en/msp/credits.json` — **does not exist**.
+- All 8 client components below still have `useTranslation=0`:
+  `credits/CreditsPage.tsx`, `credits/AddCreditButton.tsx`, `credits/BackButton.tsx`,
+  `billing-dashboard/CreditManagement.tsx`, `billing-dashboard/CreditReconciliation.tsx`,
+  `billing-dashboard/CreditApplicationUI.tsx`, `billing-dashboard/CreditExpirationInfo.tsx`,
+  `billing-dashboard/CreditExpirationModificationDialog.tsx`.
+- `/msp/billing/credits` **not yet** in `ROUTE_NAMESPACES`.
+- `features.json` / `tests.json`: 0/22 features, 0/31 tests marked implemented.
+
+### Adjacent work that shipped since 2026-04-09 (affects this plan)
+
+| Change | Impact on this plan |
+|---|---|
+| Billing-settings plan (`2026-04-09-msp-i18n-billing-settings`) shipped — completed **F006 "translate credit expiration settings"** and **T008 CreditExpirationSettings i18n wiring**. Namespace: `msp/billing-settings`, not `msp/credits`. | `CreditExpirationSettings` is the *settings page* under `/msp/settings`. It is **not** one of the 10 files in this plan (which covers the *dashboard-side* `CreditExpirationInfo.tsx` + `CreditExpirationModificationDialog.tsx`). No rescoping needed, but when reusing copy (e.g., "Expiration Period", "Notification Days"), mirror the keys already in `msp/billing-settings.json` to avoid translation drift. |
+| Enum-labels pattern adopted 2026-04-14 (`.ai/translation/enum-labels-pattern.md`, `useBillingFrequencyOptions` / `useFormatBillingFrequency`). | No shared billing-frequency enum rendering found in the 10 credit components, so no migration required here. Keep the pattern in mind if new enum surfaces appear during wiring. |
+| No edits to the 10 credit component files since 2026-04-09. | PRD file inventory and LOC counts in the PRD remain accurate; proceed as written. |
+
+### Minor PRD corrections observed during recheck
+
+- PRD says `CreditsTabs.tsx` is 53 LOC — still accurate.
+- PRD says `CreditReconciliation.tsx` is 604 LOC — current file matches.
+- PRD's `actions.ts` guidance is still correct; `'Authentication required'` and `'Transfer amount must be greater than zero'` remain the only user-surfacing error strings.
+
+No structural changes to the plan are required. This batch is ready to start as-is; the branch `i18n/billing_credits` appears set up for this work.
+
+---
 
 ## What This Is
 

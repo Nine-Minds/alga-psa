@@ -2,6 +2,60 @@
 
 - Plan slug: `2026-04-09-msp-i18n-service-catalog`
 - Created: `2026-04-09`
+- Last synced to codebase: `2026-04-17`
+
+## Status Recheck (2026-04-17)
+
+**Still 0% implemented.** Verified against the current codebase:
+
+- `server/public/locales/en/msp/service-catalog.json` — **does not exist**.
+- All 14 components listed in the PRD still have `useTranslation=0`.
+- `features.json` / `tests.json`: 0/20 features, 0/16 tests marked implemented.
+- `BucketServiceConfigPanel.tsx` still imports the legacy `BILLING_FREQUENCY_OPTIONS` constant (not `useBillingFrequencyOptions`) — the 2026-04-14 migration hasn't happened yet. Still listed in Acceptance Criteria as required.
+
+### Billing-settings plan (shipped) — overlap check
+
+The parallel `2026-04-09-msp-i18n-billing-settings` batch merged (all 37 features implemented). Its scope was the 17 *settings* components under `server/src/components/settings/billing-settings/` and `settings/tax/` (e.g., `ServiceCatalogManager`, `ServiceCategoriesSettings`, `ServiceTypeSettings`, `ProductsManager`, `TaxRegionsManager`, `TaxSettingsForm`, `TaxHolidayManager`, `TaxComponentEditor`, `TaxThresholdEditor`, `QuickAddService`, `QuickAddProduct`, `RenewalAutomationSettings`, `CreditExpirationSettings`, `ZeroDollarInvoiceSettings`, `DefaultCurrencySettings`).
+
+**Result: no file-level overlap.** This batch's 14 files live under `packages/billing/src/components/billing-dashboard/` (TaxRates, TaxRateDetailPanel, ServiceForm, and the service-config/service-configurations panels). Different files, different namespace. `ServiceCatalogManager.tsx` (settings) ≠ `ServiceForm.tsx` (dashboard). `TaxRegionsManager.tsx` (settings) ≠ `TaxRates.tsx` (dashboard).
+
+**Terminology-sync needs:** the `msp/billing-settings` namespace already defines translated terms like "Tax Rate", "Service Category", "Service Type", "Billing Period", "Overage", etc. When extracting keys for `msp/service-catalog`, copy the English phrasing verbatim from `msp/billing-settings.json` so the translations AI produces consistent output across the two namespaces. Spot-check: "Tax Rate" must not become "Aliquota fiscale" in one file and "Imposta" in another.
+
+### Enum-labels pattern now fully landed (2026-04-14 → 2026-04-16)
+
+The enum-labels pattern (`.ai/translation/enum-labels-pattern.md`) is adopted. Published hooks in `@alga-psa/billing/hooks/useBillingEnumOptions.ts`:
+
+- `useBillingFrequencyOptions()` / `useFormatBillingFrequency()` → `features/billing.json#enums.billingFrequency.*`
+- `useContractLineTypeOptions()` / `useFormatContractLineType()` → `features/billing.json#enums.contractLineType.*`
+- **(new since initial PRD — 2026-04-16, `8528a0816 enums translated` / PR #2344)** Further enum hooks added for related billing enums. Re-check `useBillingEnumOptions.ts` exports before touching any of the 14 files — if a plan-type / contract-line-preset hook exists, use it instead of translating in-place.
+
+**Plan updates:**
+- `BucketServiceConfigPanel.tsx` migration: use `useBillingFrequencyOptions()` (already in PRD "In scope" section). Keep.
+- **New:** audit `UsageServiceConfigPanel.tsx` and `HourlyServiceConfigPanel.tsx` for any billing-frequency / plan-type selects introduced after 2026-04-09. If found, wire via the published hooks instead of local `t()`.
+- Component-local constants (`CONFIGURATION_TYPE_OPTIONS`, `userTypeOptions`, billing-method options in `ServiceForm`, `alignmentOptions`) remain component-local and stay inside their component bodies with inline `t()` calls. Unchanged.
+
+### Recent code changes to in-scope files
+
+`git log --since="2026-04-09" -- <14 files>` returns only `7da29f66c add footer for most of them`. File touches are minor footer additions — no new string groups, no path changes, no LOC blowout. PRD file inventory remains accurate.
+
+### Route namespace reminder
+
+PRD updates `/msp/settings`. If `BucketServiceConfigPanel` uses `useTranslation('features/billing')` for its frequency options (via the shared hook), the `/msp/settings` route must ALSO load `features/billing`. Today `/msp/settings` loads: `['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets']` — **missing `features/billing`**. Add it alongside `msp/service-catalog`:
+
+```typescript
+'/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets', 'msp/service-catalog', 'features/billing'],
+```
+
+This wasn't explicit in the PRD Acceptance Criteria (line 119 says "If BucketServiceConfigPanel renders under a route that does not already load features/billing, that route entry has been updated") — treat it as a firm requirement now.
+
+### No structural plan overhaul
+
+Proceed with the 20 features / 16 tests already in `features.json` / `tests.json`, plus:
+
+- Re-audit for any newly-added billing-frequency / plan-type selects on the 14 components (none found today, but enum-labels guidance applies if any appear).
+- Treat the `features/billing` addition to `/msp/settings` as mandatory, not conditional.
+
+---
 
 ## Decisions
 

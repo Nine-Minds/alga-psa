@@ -2,6 +2,68 @@
 
 - Plan slug: `2026-04-09-msp-i18n-invoicing`
 - Created: `2026-04-09`
+- Last synced to codebase: `2026-04-17`
+
+## Status Recheck (2026-04-17)
+
+**Still 0% implemented.** Verified against the current codebase:
+
+- `server/public/locales/en/msp/invoicing.json` — **does not exist**.
+- All 22 components listed in the PRD still have `useTranslation=0`.
+- `features.json` / `tests.json`: 0/37 features, 0/50 tests marked implemented.
+
+### PRD file-path correction (important)
+
+The PRD's "File Inventory" header says files live in `packages/billing/src/components/`, but
+every component actually lives in one of three subdirectories. Update mental model to:
+
+| Component | Actual path (relative to `packages/billing/src/components/`) |
+|---|---|
+| AutomaticInvoices.tsx | `billing-dashboard/AutomaticInvoices.tsx` |
+| ManualInvoices.tsx | `billing-dashboard/ManualInvoices.tsx` |
+| DraftsTab.tsx | `billing-dashboard/invoicing/DraftsTab.tsx` |
+| FinalizedTab.tsx | `billing-dashboard/invoicing/FinalizedTab.tsx` |
+| RecurringServicePeriodsTab.tsx | `billing-dashboard/RecurringServicePeriodsTab.tsx` |
+| BillingCycles.tsx | `billing-dashboard/BillingCycles.tsx` |
+| InvoicePreviewPanel.tsx | `billing-dashboard/invoicing/InvoicePreviewPanel.tsx` |
+| InvoiceTemplateEditor.tsx | `billing-dashboard/InvoiceTemplateEditor.tsx` |
+| InvoiceTemplates.tsx | `billing-dashboard/InvoiceTemplates.tsx` |
+| ExternalTaxBatchImportDashboard.tsx | `invoices/ExternalTaxBatchImportDashboard.tsx` |
+| ExternalTaxImportPanel.tsx | `invoices/ExternalTaxImportPanel.tsx` |
+| SendInvoiceEmailDialog.tsx | `billing-dashboard/invoicing/SendInvoiceEmailDialog.tsx` |
+| TaxReconciliationView.tsx | `invoices/TaxReconciliationView.tsx` |
+| GenerateTab.tsx | `billing-dashboard/invoicing/GenerateTab.tsx` |
+| PrepaymentInvoices.tsx | `billing-dashboard/PrepaymentInvoices.tsx` |
+| ContractInvoiceItems.tsx | `billing-dashboard/invoices/ContractInvoiceItems.tsx` |
+| InvoicingHub.tsx | `billing-dashboard/InvoicingHub.tsx` |
+| InvoiceTemplateManager.tsx | `billing-dashboard/InvoiceTemplateManager.tsx` |
+| InvoiceTaxSourceBadge.tsx | `invoices/InvoiceTaxSourceBadge.tsx` |
+| InvoiceAnnotations.tsx | `billing-dashboard/InvoiceAnnotations.tsx` |
+| PurchaseOrderSummaryBanner.tsx | `billing-dashboard/invoicing/PurchaseOrderSummaryBanner.tsx` |
+| PaperInvoice.tsx (excluded) | `billing-dashboard/PaperInvoice.tsx` |
+
+### Upstream changes since 2026-04-09 (affect this plan)
+
+| Commit | What changed | Impact on this plan |
+|---|---|---|
+| `d3ad4fa4f feat(billing): allow editing draft invoice details` | DraftsTab.tsx gained inline draft-editing UI. File grew 550 → 558 LOC. | Add an extra feature to wire new edit-draft strings (field labels, save/cancel, validation) under `draftsTab.editDraft.*`. |
+| `9dd19bf02 Fix draft invoice preview nullable due date typing` | Typing tweak in InvoicePreviewPanel. | No new strings. |
+| `7cd6f79e2 fix: persist automatic invoice filter for ready and approval views` | AutomaticInvoices.tsx filter UI persistence; file grew 1983 → 2073 LOC (~+90 LOC). | String count may be slightly higher than the PRD's ~120 estimate. Audit filter-mode labels (ready / needs approval) when extracting. |
+| `63353605a feat(F001-F018): enforce recurring approval blockers in due-work, UI, and generation` | AutomaticInvoices.tsx surfaces unapproved-time blocker strings. | Include blocker/alert strings in `automaticInvoices.blockers.*`. |
+| `0825b1191 fix(accounting): move net_amount backfill migration to 2026-04-16`, `22924f65c fix(accounting): use charge.net_amount for Xero/QBO export LineAmount`, `8671fdcbd feat(accounting): nudge tenants to let the accounting system calculate tax`, `ef36541f7 fix(accounting): coerce bigint/numeric charge fields in export adapters`, `60be5c878 fix(accounting): honor invoiceIds filter on export batches`, `f849c9f8f fix(accounting): return 409 instead of 500 when retry matches zero invoices`, `50b4164ad fix(xero): make invoice re-export idempotent via InvoiceID + LineItemID threading`, `2a14053b8 fix(accounting): make external-mode tax writeback actually complete` | Back-end/adapter-layer accounting work. No UI strings added to the 22 in-scope components. | No plan changes. Noted to avoid merge conflicts when touching `ExternalTax*` / `TaxReconciliationView` files. |
+| Contract-lines batch shipped 2026-04-14; adopted the **enum-labels pattern** (`useBillingFrequencyOptions` / `useFormatBillingFrequency` from `@alga-psa/billing/hooks/useBillingEnumOptions`, keys under `features/billing.json#enums.billingFrequency.*`). | `BillingCycles.tsx` renders a month-anchor select (PRD's "MONTH_OPTIONS" gotcha); `RecurringServicePeriodsTab.tsx` and `AutomaticInvoices.tsx` render billing-frequency badges. | **New guidance:** any billing-frequency label rendering (badges, select options, cell renderers) must use `useFormatBillingFrequency()` / `useBillingFrequencyOptions()` — do **not** re-translate those strings in `msp/invoicing.json`. Route must load `features/billing` (it already does for `/msp/billing`). Month-name labels in `BillingCycles.tsx` remain local to this batch (not shared). |
+| `i18n/billing_contracts` merged (PR #2325) and `i18n/biling_ctd` merged (PR #2313) — contract-facing invoice wiring translated (`test(T008): cover contract detail invoice tab translation keys`, `feat(F015): localize contract detail quick actions dialogs and invoices`). | Those are `msp/contracts` surfaces, not the 22 in-scope invoicing components. | No overlap; ensure the "Invoices" tab inside contract detail keeps using `msp/contracts` keys, not `msp/invoicing`. |
+
+### Scratchpad addendum
+
+- Add an explicit feature for **DraftsTab edit-draft fields** (commit `d3ad4fa4f`).
+- Add an explicit feature for **AutomaticInvoices persisted-filter labels** (commit `7cd6f79e2`) and **unapproved-time blocker alerts** (commit `63353605a`).
+- Remove/avoid re-translating billing-frequency labels; route them through `useFormatBillingFrequency()`.
+- Re-estimate AutomaticInvoices from ~120 to **~135** strings to account for the +90 LOC.
+
+No structural plan overhaul; proceed with the corrected paths and the three extra sub-features above.
+
+---
 
 ## What This Is
 
