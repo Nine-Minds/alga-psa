@@ -1042,9 +1042,12 @@ export const updateAppointmentRequestDateTime = withAuth(async (
       }
 
       const now = new Date();
+      const effectiveTimezone = validatedData.new_timezone ?? request.requester_timezone ?? 'UTC';
+      const effectiveDuration = validatedData.new_duration ?? request.requested_duration;
       const updateData: any = {
         requested_date: validatedData.new_date,
         requested_time: validatedData.new_time,
+        requester_timezone: effectiveTimezone,
         updated_at: now
       };
 
@@ -1059,6 +1062,28 @@ export const updateAppointmentRequestDateTime = withAuth(async (
           tenant
         })
         .update(updateData);
+
+      // Keep the linked schedule entry in sync with the new local wall-clock.
+      // new_date/new_time are the user's naive local time in effectiveTimezone;
+      // schedule_entries.scheduled_start must be the corresponding UTC instant.
+      if (request.schedule_entry_id) {
+        const scheduledStart = zonedTimeToUtc(
+          `${validatedData.new_date}T${validatedData.new_time}:00`,
+          effectiveTimezone
+        );
+        const scheduledEnd = new Date(scheduledStart.getTime() + effectiveDuration * 60000);
+
+        await trx('schedule_entries')
+          .where({
+            entry_id: request.schedule_entry_id,
+            tenant
+          })
+          .update({
+            scheduled_start: scheduledStart.toISOString(),
+            scheduled_end: scheduledEnd.toISOString(),
+            updated_at: now
+          });
+      }
 
       // Get updated request
       const updatedRequest = await trx('appointment_requests')
