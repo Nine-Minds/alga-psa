@@ -929,5 +929,10 @@
         "confirm_delete": "55555"
       }
     }
+  },
+  "enums": {
+    "addOnDescription": {
+      "ai_assistant": "55555"
+    }
   }
 }

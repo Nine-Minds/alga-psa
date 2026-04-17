@@ -131,6 +131,52 @@
       "Fixed": "Fisso",
       "Hourly": "A ore",
       "Usage": "A consumo"
+    },
+    "quoteStatus": {
+      "draft": "Bozza",
+      "pending_approval": "In attesa di approvazione",
+      "approved": "Approvato",
+      "sent": "Inviato",
+      "accepted": "Accettato",
+      "rejected": "Rifiutato",
+      "expired": "Scaduto",
+      "converted": "Convertito",
+      "cancelled": "Annullato",
+      "superseded": "Sostituito",
+      "archived": "Archiviato"
+    },
+    "quoteStatusDescription": {
+      "draft": "Il preventivo è in preparazione",
+      "pending_approval": "Il preventivo è in attesa di approvazione interna",
+      "approved": "Il preventivo è approvato e pronto da inviare",
+      "sent": "Il preventivo è stato inviato al cliente",
+      "accepted": "Il cliente ha accettato il preventivo",
+      "rejected": "Il cliente ha rifiutato il preventivo",
+      "expired": "Il preventivo ha superato la data di validità",
+      "converted": "Il preventivo è stato convertito in fatturazione",
+      "cancelled": "Il preventivo è stato annullato prima della conversione",
+      "superseded": "Il preventivo è stato sostituito da una revisione",
+      "archived": "Il preventivo è archiviato e in sola lettura"
+    },
+    "invoiceStatus": {
+      "draft": "Bozza",
+      "sent": "Inviata",
+      "paid": "Pagata",
+      "overdue": "Scaduta",
+      "cancelled": "Annullata",
+      "pending": "In attesa",
+      "prepayment": "Acconto",
+      "partially_applied": "Parzialmente applicata"
+    },
+    "invoiceStatusDescription": {
+      "draft": "Fatture in preparazione non ancora inviate al cliente",
+      "sent": "Fatture finalizzate e inviate al cliente",
+      "paid": "Fatture interamente pagate pronte per la riconciliazione",
+      "overdue": "Fatture finalizzate che hanno superato la data di scadenza",
+      "cancelled": "Fatture annullate o invalidate",
+      "pending": "Fatture in attesa di approvazione o ulteriore elaborazione",
+      "prepayment": "Fatture di acconto o anticipo",
+      "partially_applied": "Fatture con pagamenti parziali applicati"
     }
   }
 }

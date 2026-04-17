@@ -9,6 +9,10 @@ import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
+  useFormatArticleAudience,
+  useFormatArticleStatus,
+} from '@alga-psa/ui/hooks/useKnowledgeBaseEnumOptions';
+import {
   Send,
   CheckCircle,
   Archive,
@@ -29,13 +33,6 @@ const STATUS_COLORS: Record<ArticleStatus, string> = {
   archived: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 };
 
-const STATUS_LABELS: Record<ArticleStatus, string> = {
-  draft: 'Draft',
-  review: 'In Review',
-  published: 'Published',
-  archived: 'Archived',
-};
-
 interface KBPublishingControlsProps {
   article: IKBArticleWithDocument;
   onStatusChange?: () => void;
@@ -53,11 +50,8 @@ export default function KBPublishingControls({
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
 
-  const getStatusLabel = (status: ArticleStatus) =>
-    t(`shared.statusLabels.${status}`, { defaultValue: STATUS_LABELS[status] });
-
-  const getAudienceLabel = (audience: IKBArticleWithDocument['audience']) =>
-    t(`shared.audienceLabels.${audience}`, { defaultValue: audience });
+  const getStatusLabel = useFormatArticleStatus();
+  const getAudienceLabel = useFormatArticleAudience();
 
   const handlePublish = async () => {
     setIsPublishing(true);

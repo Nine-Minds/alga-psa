@@ -131,6 +131,52 @@
       "Fixed": "Forfait",
       "Hourly": "Horaire",
       "Usage": "À l'usage"
+    },
+    "quoteStatus": {
+      "draft": "Brouillon",
+      "pending_approval": "En attente d'approbation",
+      "approved": "Approuvé",
+      "sent": "Envoyé",
+      "accepted": "Accepté",
+      "rejected": "Refusé",
+      "expired": "Expiré",
+      "converted": "Converti",
+      "cancelled": "Annulé",
+      "superseded": "Remplacé",
+      "archived": "Archivé"
+    },
+    "quoteStatusDescription": {
+      "draft": "Le devis est en cours de préparation",
+      "pending_approval": "Le devis attend une approbation interne",
+      "approved": "Le devis est approuvé et prêt à être envoyé",
+      "sent": "Le devis a été envoyé au client",
+      "accepted": "Le client a accepté le devis",
+      "rejected": "Le client a refusé le devis",
+      "expired": "Le devis a dépassé sa date de validité",
+      "converted": "Le devis a été converti en facturation",
+      "cancelled": "Le devis a été annulé avant conversion",
+      "superseded": "Le devis a été remplacé par une révision",
+      "archived": "Le devis est archivé et en lecture seule"
+    },
+    "invoiceStatus": {
+      "draft": "Brouillon",
+      "sent": "Envoyée",
+      "paid": "Payée",
+      "overdue": "En retard",
+      "cancelled": "Annulée",
+      "pending": "En attente",
+      "prepayment": "Acompte",
+      "partially_applied": "Partiellement appliquée"
+    },
+    "invoiceStatusDescription": {
+      "draft": "Factures en cours de préparation, non envoyées au client",
+      "sent": "Factures finalisées et envoyées au client",
+      "paid": "Factures entièrement payées prêtes pour rapprochement",
+      "overdue": "Factures finalisées dont la date d'échéance est dépassée",
+      "cancelled": "Factures annulées ou invalidées",
+      "pending": "Factures en attente d'approbation ou de traitement",
+      "prepayment": "Factures d'acompte ou de dépôt",
+      "partially_applied": "Factures avec paiements partiels appliqués"
     }
   }
 }

@@ -221,5 +221,24 @@
   },
   "empty": {
     "default": "Aucun document trouvé"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "Brouillon",
+      "review": "En revue",
+      "published": "Publié",
+      "archived": "Archivé"
+    },
+    "audienceLabels": {
+      "internal": "Interne",
+      "client": "Client",
+      "public": "Publique"
+    },
+    "typeLabels": {
+      "how_to": "Comment faire",
+      "faq": "FAQ",
+      "troubleshooting": "Dépannage",
+      "reference": "Référence"
+    }
   }
 }

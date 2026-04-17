@@ -221,5 +221,24 @@
   },
   "empty": {
     "default": "Geen documenten gevonden"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "Voorlopige versie",
+      "review": "Ter beoordeling",
+      "published": "Gepubliceerd",
+      "archived": "Gearchiveerd"
+    },
+    "audienceLabels": {
+      "internal": "Intern",
+      "client": "Cliënt",
+      "public": "Openbaar"
+    },
+    "typeLabels": {
+      "how_to": "Hoe",
+      "faq": "Veelgestelde vragen",
+      "troubleshooting": "Problemen oplossen",
+      "reference": "Referentie"
+    }
   }
 }

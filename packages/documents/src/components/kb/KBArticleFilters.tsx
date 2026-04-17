@@ -7,32 +7,14 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { TagFilter } from '@alga-psa/ui/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  useArticleAudienceOptions,
+  useArticleStatusOptions,
+  useArticleTypeOptions,
+} from '@alga-psa/ui/hooks/useKnowledgeBaseEnumOptions';
 import { X, Search } from 'lucide-react';
 import { IArticleFilters, ArticleStatus, ArticleAudience, ArticleType } from '../../actions/kbArticleActions';
 import type { ITag } from '@alga-psa/types';
-
-const STATUS_OPTIONS: SelectOption[] = [
-  { value: '', label: 'All Statuses' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'review', label: 'In Review' },
-  { value: 'published', label: 'Published' },
-  { value: 'archived', label: 'Archived' },
-];
-
-const AUDIENCE_OPTIONS: SelectOption[] = [
-  { value: '', label: 'All Audiences' },
-  { value: 'internal', label: 'Internal' },
-  { value: 'client', label: 'Client' },
-  { value: 'public', label: 'Public' },
-];
-
-const TYPE_OPTIONS: SelectOption[] = [
-  { value: '', label: 'All Types' },
-  { value: 'how_to', label: 'How-To' },
-  { value: 'faq', label: 'FAQ' },
-  { value: 'troubleshooting', label: 'Troubleshooting' },
-  { value: 'reference', label: 'Reference' },
-];
 
 interface KBArticleFiltersProps {
   filters: IArticleFilters;
@@ -51,26 +33,20 @@ export default function KBArticleFilters({
 }: KBArticleFiltersProps) {
   const { t } = useTranslation('msp/knowledge-base');
 
-  const statusOptions: SelectOption[] = STATUS_OPTIONS.map((option) => ({
-    ...option,
-    label: option.value
-      ? t(`shared.statusLabels.${option.value}`, { defaultValue: option.label })
-      : t('filters.options.status.all', { defaultValue: option.label }),
-  }));
+  const statusOptions: SelectOption[] = [
+    { value: '', label: t('filters.options.status.all', { defaultValue: 'All Statuses' }) },
+    ...useArticleStatusOptions(),
+  ];
 
-  const audienceOptions: SelectOption[] = AUDIENCE_OPTIONS.map((option) => ({
-    ...option,
-    label: option.value
-      ? t(`shared.audienceLabels.${option.value}`, { defaultValue: option.label })
-      : t('filters.options.audience.all', { defaultValue: option.label }),
-  }));
+  const audienceOptions: SelectOption[] = [
+    { value: '', label: t('filters.options.audience.all', { defaultValue: 'All Audiences' }) },
+    ...useArticleAudienceOptions(),
+  ];
 
-  const typeOptions: SelectOption[] = TYPE_OPTIONS.map((option) => ({
-    ...option,
-    label: option.value
-      ? t(`shared.typeLabels.${option.value}`, { defaultValue: option.label })
-      : t('filters.options.articleType.all', { defaultValue: option.label }),
-  }));
+  const typeOptions: SelectOption[] = [
+    { value: '', label: t('filters.options.articleType.all', { defaultValue: 'All Types' }) },
+    ...useArticleTypeOptions(),
+  ];
 
   const categoryOptions: SelectOption[] = [
     { value: '', label: t('filters.options.category.all', { defaultValue: 'All Categories' }) },

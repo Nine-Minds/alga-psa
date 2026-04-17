@@ -46,6 +46,7 @@
     "titlePlaceholder": "55555",
     "descriptionPlaceholder": "55555",
     "priorityPlaceholder": "55555",
+    "boardPlaceholder": "55555",
     "noBoardsAvailable": "55555",
     "submit": "55555",
     "submitting": "55555",
@@ -53,10 +54,9 @@
       "titleRequired": "55555",
       "descriptionRequired": "55555",
       "priorityRequired": "55555",
-      "createFailed": "55555",
-      "boardRequired": "Ɏɏƴƴƴ"
-    },
-    "boardPlaceholder": "Ɏɏƴƴƴ"
+      "boardRequired": "55555",
+      "createFailed": "55555"
+    }
   },
   "status": {
     "open": "55555",

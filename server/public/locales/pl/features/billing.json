@@ -131,6 +131,52 @@
       "Fixed": "Stała stawka",
       "Hourly": "Godzinowe",
       "Usage": "Na podstawie zużycia"
+    },
+    "quoteStatus": {
+      "draft": "Szkic",
+      "pending_approval": "Oczekuje na zatwierdzenie",
+      "approved": "Zatwierdzony",
+      "sent": "Wysłany",
+      "accepted": "Zaakceptowany",
+      "rejected": "Odrzucony",
+      "expired": "Wygasły",
+      "converted": "Przekształcony",
+      "cancelled": "Anulowany",
+      "superseded": "Zastąpiony",
+      "archived": "Zarchiwizowany"
+    },
+    "quoteStatusDescription": {
+      "draft": "Oferta jest przygotowywana",
+      "pending_approval": "Oferta czeka na wewnętrzne zatwierdzenie",
+      "approved": "Oferta jest zatwierdzona i gotowa do wysłania",
+      "sent": "Oferta została wysłana do klienta",
+      "accepted": "Klient zaakceptował ofertę",
+      "rejected": "Klient odrzucił ofertę",
+      "expired": "Oferta przekroczyła datę ważności",
+      "converted": "Oferta została przekształcona w rekordy fakturowania",
+      "cancelled": "Oferta została anulowana przed przekształceniem",
+      "superseded": "Oferta została zastąpiona przez nową wersję",
+      "archived": "Oferta jest zarchiwizowana i tylko do odczytu"
+    },
+    "invoiceStatus": {
+      "draft": "Szkic",
+      "sent": "Wysłana",
+      "paid": "Opłacona",
+      "overdue": "Zaległa",
+      "cancelled": "Anulowana",
+      "pending": "Oczekująca",
+      "prepayment": "Zaliczka",
+      "partially_applied": "Częściowo zastosowana"
+    },
+    "invoiceStatusDescription": {
+      "draft": "Faktury w przygotowaniu, jeszcze niewysłane do klienta",
+      "sent": "Faktury sfinalizowane i wysłane do klienta",
+      "paid": "W pełni opłacone faktury gotowe do uzgodnienia",
+      "overdue": "Sfinalizowane faktury po terminie płatności",
+      "cancelled": "Faktury anulowane lub unieważnione",
+      "pending": "Faktury oczekujące na zatwierdzenie lub dalsze przetwarzanie",
+      "prepayment": "Faktury zaliczkowe lub depozytowe",
+      "partially_applied": "Faktury z zastosowanymi częściowymi płatnościami"
     }
   }
 }

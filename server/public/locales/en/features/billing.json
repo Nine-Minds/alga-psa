@@ -131,6 +131,52 @@
       "Fixed": "Fixed",
       "Hourly": "Hourly",
       "Usage": "Usage Based"
+    },
+    "quoteStatus": {
+      "draft": "Draft",
+      "pending_approval": "Pending Approval",
+      "approved": "Approved",
+      "sent": "Sent",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "expired": "Expired",
+      "converted": "Converted",
+      "cancelled": "Cancelled",
+      "superseded": "Superseded",
+      "archived": "Archived"
+    },
+    "quoteStatusDescription": {
+      "draft": "Quote is being prepared",
+      "pending_approval": "Quote is waiting for internal approval",
+      "approved": "Quote is approved and ready to send",
+      "sent": "Quote has been sent to the client",
+      "accepted": "Client accepted the quote",
+      "rejected": "Client rejected the quote",
+      "expired": "Quote passed its validity date",
+      "converted": "Quote has been converted to billing records",
+      "cancelled": "Quote was cancelled before conversion",
+      "superseded": "Quote was replaced by a revision",
+      "archived": "Quote is archived and read-only"
+    },
+    "invoiceStatus": {
+      "draft": "Draft",
+      "sent": "Sent",
+      "paid": "Paid",
+      "overdue": "Overdue",
+      "cancelled": "Cancelled",
+      "pending": "Pending",
+      "prepayment": "Prepayment",
+      "partially_applied": "Partially Applied"
+    },
+    "invoiceStatusDescription": {
+      "draft": "Work-in-progress invoices that have not been sent to the customer",
+      "sent": "Invoices that have been finalized and sent to the customer",
+      "paid": "Fully paid invoices ready for reconciliation",
+      "overdue": "Finalized invoices that are past their due date",
+      "cancelled": "Invoices that have been voided or cancelled",
+      "pending": "Invoices awaiting approval or additional processing",
+      "prepayment": "Advance payment or deposit invoices",
+      "partially_applied": "Invoices with partial payments applied"
     }
   }
 }

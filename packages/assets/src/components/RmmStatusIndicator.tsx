@@ -12,6 +12,7 @@ import { Wifi, WifiOff, Cloud, Monitor, AlertTriangle } from 'lucide-react';
 import type { Asset } from '@alga-psa/types';
 import { getRmmProviderDisplayName } from '../lib/rmmProviderDisplay';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatRmmAgentStatus } from '../hooks/useRmmAgentStatusOptions';
 
 interface RmmStatusIndicatorProps {
   asset: Asset;
@@ -30,6 +31,7 @@ export function RmmStatusIndicator({
   className = '',
 }: RmmStatusIndicatorProps) {
   const { t } = useTranslation('msp/assets');
+  const formatAgentStatus = useFormatRmmAgentStatus();
   // Don't render if not RMM managed
   if (!asset.rmm_provider || !asset.rmm_device_id) {
     return null;
@@ -63,6 +65,12 @@ export function RmmStatusIndicator({
     );
   }
 
+  const statusLabel = isOnline
+    ? formatAgentStatus('online')
+    : isOverdue
+      ? formatAgentStatus('overdue')
+      : formatAgentStatus('offline');
+
   return (
     <span
       className={`inline-flex items-center gap-1.5 ${sizeClasses[size]} ${
@@ -70,11 +78,7 @@ export function RmmStatusIndicator({
       } ${className}`}
       title={t('rmmStatusIndicator.titles.status', {
         defaultValue: '{{status}}{{suffix}}',
-        status: isOnline
-          ? t('rmmStatusIndicator.statuses.online', { defaultValue: 'Online' })
-          : isOverdue
-            ? t('rmmStatusIndicator.statuses.overdue', { defaultValue: 'Overdue' })
-            : t('rmmStatusIndicator.statuses.offline', { defaultValue: 'Offline' }),
+        status: statusLabel,
         suffix: asset.last_seen_at
           ? t('rmmStatusIndicator.titles.lastSeen', {
             defaultValue: ' - Last seen: {{value}}',
@@ -89,13 +93,7 @@ export function RmmStatusIndicator({
       {showProvider ? (
         <span>{getRmmProviderDisplayName(asset.rmm_provider)}</span>
       ) : (
-        <span>
-          {isOnline
-            ? t('rmmStatusIndicator.statuses.online', { defaultValue: 'Online' })
-            : isOverdue
-              ? t('rmmStatusIndicator.statuses.overdue', { defaultValue: 'Overdue' })
-              : t('rmmStatusIndicator.statuses.offline', { defaultValue: 'Offline' })}
-        </span>
+        <span>{statusLabel}</span>
       )}
     </span>
   );
@@ -114,6 +112,7 @@ export function RmmBadge({
   className?: string;
 }) {
   const { t } = useTranslation('msp/assets');
+  const formatAgentStatus = useFormatRmmAgentStatus();
   // Don't render if not RMM managed
   if (!asset.rmm_provider || !asset.rmm_device_id) {
     return null;
@@ -129,7 +128,7 @@ export function RmmBadge({
         className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-500/10 text-gray-600 ${className}`}
       >
         <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-        {t('rmmStatusIndicator.statuses.unknown', { defaultValue: 'Unknown' })}
+        {formatAgentStatus('unknown')}
       </span>
     );
   }
@@ -151,10 +150,10 @@ export function RmmBadge({
           }`}
         />
         {isOnline
-          ? t('rmmStatusIndicator.statuses.online', { defaultValue: 'Online' })
+          ? formatAgentStatus('online')
           : isOverdue
-            ? t('rmmStatusIndicator.statuses.overdue', { defaultValue: 'Overdue' })
-            : t('rmmStatusIndicator.statuses.offline', { defaultValue: 'Offline' })}
+            ? formatAgentStatus('overdue')
+            : formatAgentStatus('offline')}
       </span>
       {showLastSeen && asset.last_seen_at && (
         <span className="text-[10px] text-gray-400 mt-0.5 text-center">

@@ -30,6 +30,14 @@
     "no": "Nie",
     "yes": "Tak"
   },
+  "enums": {
+    "rmmAgentStatus": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Zaległy",
+      "unknown": "Nieznany"
+    }
+  },
   "assetAlertsSection": {
     "title": "Sekcja alertów dotyczących zasobów",
     "description": "Opakowanie sekcji alertów przedsiębiorstwa dla alertów RMM dotyczących konkretnych zasobów i działań zaradczych"
@@ -158,12 +166,6 @@
       "rmmManaged": {
         "managed": "Zarządzane RMM",
         "unmanaged": "Nie zarządzane"
-      },
-      "agentStatuses": {
-        "online": "Online",
-        "offline": "Offline",
-        "overdue": "Zaległy",
-        "unknown": "Nieznany"
       }
     },
     "activeFilters": {
@@ -824,12 +826,6 @@
       "unknown": "Status agenta nieznany",
       "status": "{{status}}{{suffix}}",
       "lastSeen": " - Ostatnio widziany: {{value}}"
-    },
-    "statuses": {
-      "online": "Online",
-      "offline": "Offline",
-      "overdue": "Zaległy",
-      "unknown": "Nieznany"
     },
     "relative": {
       "justNow": "Właśnie teraz",

@@ -2,6 +2,10 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  useArticleAudienceOptions,
+  useArticleTypeOptions,
+} from '@alga-psa/ui/hooks/useKnowledgeBaseEnumOptions';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -28,19 +32,6 @@ interface PendingFile {
 
 const ACCEPTED_EXTENSIONS = ['.md', '.markdown', '.html', '.htm'];
 
-const AUDIENCE_OPTIONS = [
-  { value: 'internal', label: 'Internal' },
-  { value: 'client', label: 'Client' },
-  { value: 'public', label: 'Public' },
-];
-
-const ARTICLE_TYPE_OPTIONS = [
-  { value: 'reference', label: 'Reference' },
-  { value: 'how_to', label: 'How-To' },
-  { value: 'faq', label: 'FAQ' },
-  { value: 'troubleshooting', label: 'Troubleshooting' },
-];
-
 export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KBImportDialogProps) {
   const { t } = useTranslation('msp/knowledge-base');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -51,15 +42,8 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
   const [result, setResult] = useState<IImportResult | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
-  const audienceOptions = AUDIENCE_OPTIONS.map((option) => ({
-    ...option,
-    label: t(`shared.audienceLabels.${option.value}`, { defaultValue: option.label }),
-  }));
-
-  const articleTypeOptions = ARTICLE_TYPE_OPTIONS.map((option) => ({
-    ...option,
-    label: t(`shared.typeLabels.${option.value}`, { defaultValue: option.label }),
-  }));
+  const audienceOptions = useArticleAudienceOptions();
+  const articleTypeOptions = useArticleTypeOptions();
 
   const reset = useCallback(() => {
     setFiles([]);

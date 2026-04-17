@@ -30,6 +30,14 @@
     "no": "No",
     "yes": "Sì"
   },
+  "enums": {
+    "rmmAgentStatus": {
+      "online": "In linea",
+      "offline": "Non in linea",
+      "overdue": "In ritardo",
+      "unknown": "Sconosciuto"
+    }
+  },
   "assetAlertsSection": {
     "title": "Sezione Avvisi sulle risorse",
     "description": "Wrapper della sezione di avviso aziendale per avvisi RMM specifici per asset e azioni correttive"
@@ -158,12 +166,6 @@
       "rmmManaged": {
         "managed": "Gestito da RMM",
         "unmanaged": "Non gestito"
-      },
-      "agentStatuses": {
-        "online": "In linea",
-        "offline": "Non in linea",
-        "overdue": "In ritardo",
-        "unknown": "Sconosciuto"
       }
     },
     "activeFilters": {
@@ -824,12 +826,6 @@
       "unknown": "Stato dell'agente sconosciuto",
       "status": "{{status}}{{suffix}}",
       "lastSeen": "- Ultimo visto: {{value}}"
-    },
-    "statuses": {
-      "online": "In linea",
-      "offline": "Non in linea",
-      "overdue": "In ritardo",
-      "unknown": "Sconosciuto"
     },
     "relative": {
       "justNow": "Proprio adesso",

@@ -930,5 +930,10 @@
     "deleteCommentAriaLabel": "Elimina commento",
     "deleteComment": "Elimina commento",
     "deleteCommentConfirmation": "Sei sicuro di voler eliminare questo commento? Questa azione non può essere annullata."
+  },
+  "enums": {
+    "addOnDescription": {
+      "ai_assistant": "Sblocca la chat AI, l'assistenza ai documenti, l'aiuto nella barra laterale e gli strumenti AI per i flussi di lavoro del tuo team."
+    }
   }
 }
