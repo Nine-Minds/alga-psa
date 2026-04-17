@@ -22,10 +22,10 @@
   {"id": "T015", "description": "Unit: CreditManagement renderCreditContext labels (Lineage Missing, Recurring Source, Financial Only, Service Period) rendered via t()", "implemented": true, "featureIds": ["F017"]},
   {"id": "T016", "description": "Unit: CreditManagement no hardcoded English in rendered output (pseudo-locale xx coverage)", "implemented": true, "featureIds": ["F015", "F016", "F017"]},
 
-  {"id": "T017", "description": "Unit: CreditReconciliation renders dashboard title, filter labels, stat card labels via t() in en", "implemented": false, "featureIds": ["F018"]},
-  {"id": "T018", "description": "Unit: CreditReconciliation renders chart titles, column titles, tab labels, status badges via t()", "implemented": false, "featureIds": ["F019"]},
-  {"id": "T019", "description": "Unit: CreditReconciliation toast message uses interpolation for validation result ({{balanceCount}}, {{trackingCount}})", "implemented": false, "featureIds": ["F018"]},
-  {"id": "T020", "description": "Unit: CreditReconciliation no hardcoded English in rendered output (pseudo-locale xx coverage)", "implemented": false, "featureIds": ["F018", "F019"]},
+  {"id": "T017", "description": "Unit: CreditReconciliation renders dashboard title, filter labels, stat card labels via t() in en", "implemented": true, "featureIds": ["F018"]},
+  {"id": "T018", "description": "Unit: CreditReconciliation renders chart titles, column titles, tab labels, status badges via t()", "implemented": true, "featureIds": ["F019"]},
+  {"id": "T019", "description": "Unit: CreditReconciliation toast message uses interpolation for validation result ({{balanceCount}}, {{trackingCount}})", "implemented": true, "featureIds": ["F018"]},
+  {"id": "T020", "description": "Unit: CreditReconciliation no hardcoded English in rendered output (pseudo-locale xx coverage)", "implemented": true, "featureIds": ["F018", "F019"]},
 
   {"id": "T021", "description": "Unit: CreditApplicationUI renders card title, column titles, labels, button text via t() in en", "implemented": false, "featureIds": ["F020"]},
   {"id": "T022", "description": "Unit: CreditApplicationUI no hardcoded English; error/empty states translated", "implemented": false, "featureIds": ["F020"]},

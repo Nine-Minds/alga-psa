@@ -266,3 +266,7 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
 - **(2026-04-17, T013-T016)** Added `packages/billing/tests/CreditManagement.i18n.test.ts` to
   cover the translated dashboard shell, chart legend labels/month placeholders, recurring-
   lineage context helper copy, and representative pseudo-locale coverage for the management tab.
+- **(2026-04-17, T017-T020)** Added `packages/billing/tests/CreditReconciliation.i18n.test.ts`
+  covering the translated dashboard/filter shell, report charts/table/status badges, the
+  interpolated validation toast copy, and representative `xx` pseudo-locale backing for the
+  reconciliation surface.
