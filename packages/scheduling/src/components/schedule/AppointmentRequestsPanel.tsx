@@ -13,7 +13,7 @@ import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { zonedTimeToUtc } from 'date-fns-tz';
+import { fromZonedTime } from 'date-fns-tz';
 import { Check, X, Calendar, Clock, User, FileText, Briefcase, Ticket } from 'lucide-react';
 import { getAllUsersBasic, getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -153,9 +153,9 @@ export default function AppointmentRequestsPanel({
 
         if (dateStr && timeStr) {
           const tz = request.requester_timezone || 'UTC';
-          // zonedTimeToUtc interprets the naive local datetime string as being in `tz`
+          // fromZonedTime interprets the naive local datetime string as being in `tz`
           // and returns a Date whose UTC equals that instant.
-          const parsedDate = zonedTimeToUtc(`${dateStr}T${timeStr}:00`, tz);
+          const parsedDate = fromZonedTime(`${dateStr}T${timeStr}:00`, tz);
           if (!isNaN(parsedDate.getTime())) {
             setFinalDateTime(parsedDate);
           } else {
@@ -339,7 +339,7 @@ export default function AppointmentRequestsPanel({
 
       // Treat requested_date/requested_time as naive local in requester_timezone.
       // Fallback 'UTC' keeps legacy rows (stored without tz) rendering as before.
-      const dateTime = zonedTimeToUtc(`${dateStr}T${timeStr}:00`, tz || 'UTC');
+      const dateTime = fromZonedTime(`${dateStr}T${timeStr}:00`, tz || 'UTC');
       if (isNaN(dateTime.getTime())) {
         return `${dateStr} ${timeStr}`;
       }

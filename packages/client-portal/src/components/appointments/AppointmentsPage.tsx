@@ -12,7 +12,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { Calendar, Clock, User, FileText, AlertCircle, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { zonedTimeToUtc } from 'date-fns-tz';
+import { fromZonedTime } from 'date-fns-tz';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -156,7 +156,7 @@ export default function AppointmentsPage() {
           try {
             // requested_time is the user's naive local time in record.requester_timezone.
             // 'UTC' fallback preserves legacy behavior for rows written before the tz column existed.
-            const dt = zonedTimeToUtc(`${dateStr}T${timeStr}:00`, record.requester_timezone || 'UTC');
+            const dt = fromZonedTime(`${dateStr}T${timeStr}:00`, record.requester_timezone || 'UTC');
             if (!isNaN(dt.getTime())) {
               display = dt.toLocaleString('en-US', {
                 month: 'short', day: 'numeric', year: 'numeric',
@@ -414,7 +414,7 @@ export default function AppointmentsPage() {
                         const timeStr = normalizeTimeValue(selectedAppointment.requested_time);
                         if (!dateStr || !timeStr) return 'N/A';
                         try {
-                          const dt = zonedTimeToUtc(`${dateStr}T${timeStr}:00`, selectedAppointment.requester_timezone || 'UTC');
+                          const dt = fromZonedTime(`${dateStr}T${timeStr}:00`, selectedAppointment.requester_timezone || 'UTC');
                           if (isNaN(dt.getTime())) return 'N/A';
                           return dt.toLocaleString('en-US', {
                             weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',

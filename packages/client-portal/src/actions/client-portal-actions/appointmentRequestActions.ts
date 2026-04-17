@@ -34,7 +34,7 @@ import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/
 import { isValidEmail } from '@alga-psa/core';
 import { format, type Locale } from 'date-fns';
 import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
-import { zonedTimeToUtc } from 'date-fns-tz';
+import { fromZonedTime } from 'date-fns-tz';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -430,7 +430,7 @@ export const createAppointmentRequest = withAuth(async (
         // requested_date/requested_time are the user's LOCAL wall-clock in requester_timezone.
         // Convert to a true UTC instant for schedule_entries.scheduled_start.
         const createTz = validatedData.requester_timezone || 'UTC';
-        const scheduledStart = zonedTimeToUtc(
+        const scheduledStart = fromZonedTime(
           `${normalizedRequestedDate}T${normalizedRequestedTime}:00`,
           createTz
         );
@@ -490,7 +490,7 @@ export const createAppointmentRequest = withAuth(async (
     try {
       if (scheduleEntryId) {
         const eventTz = validatedData.requester_timezone || 'UTC';
-        const scheduledStart = zonedTimeToUtc(
+        const scheduledStart = fromZonedTime(
           `${normalizedRequestedDate}T${normalizedRequestedTime}:00`,
           eventTz
         );
@@ -822,7 +822,7 @@ export const updateAppointmentRequest = withAuth(async (
         ? existingRequest.requested_date.toISOString().split('T')[0]
         : String(existingRequest.requested_date).slice(0, 10);
       const beforeTimeStr = String(existingRequest.requested_time).slice(0, 5);
-      const beforeStart = zonedTimeToUtc(`${beforeDateStr}T${beforeTimeStr}:00`, beforeTz);
+      const beforeStart = fromZonedTime(`${beforeDateStr}T${beforeTimeStr}:00`, beforeTz);
       const beforeEnd = new Date(beforeStart.getTime() + existingRequest.requested_duration * 60000);
 
       appointmentWorkflowUpdate = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -831,7 +831,7 @@ export const updateAppointmentRequest = withAuth(async (
           .select('user_id')
           .first();
 
-        const scheduledStart = zonedTimeToUtc(
+        const scheduledStart = fromZonedTime(
           `${validatedData.requested_date}T${validatedData.requested_time}:00`,
           afterTz
         );

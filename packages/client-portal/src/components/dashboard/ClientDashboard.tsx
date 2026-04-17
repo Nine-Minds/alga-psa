@@ -11,7 +11,7 @@ import { RequestAppointmentModal } from '../appointments/RequestAppointmentModal
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Clock } from 'lucide-react';
-import { zonedTimeToUtc } from 'date-fns-tz';
+import { fromZonedTime } from 'date-fns-tz';
 
 // Flag to control visibility of the recent activity section
 const SHOW_RECENT_ACTIVITY = false;
@@ -281,7 +281,7 @@ export function ClientDashboard() {
                             if (!dateStr || !timeStr) return 'N/A';
                             try {
                               const tz = appointment.requester_timezone || 'UTC';
-                              const dt = zonedTimeToUtc(`${dateStr}T${timeStr}:00`, tz);
+                              const dt = fromZonedTime(`${dateStr}T${timeStr}:00`, tz);
                               if (isNaN(dt.getTime())) return 'N/A';
                               return dt.toLocaleString('en-US', {
                                 month: 'short', day: 'numeric', year: 'numeric',

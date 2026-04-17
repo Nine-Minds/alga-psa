@@ -37,7 +37,7 @@ import {
   formatTime
 } from './appointmentHelpers';
 import { generateICSBuffer, generateICSFilename, ICSEventData } from '../utils/icsGenerator';
-import { formatInTimeZone, zonedTimeToUtc } from 'date-fns-tz';
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -1067,7 +1067,7 @@ export const updateAppointmentRequestDateTime = withAuth(async (
       // new_date/new_time are the user's naive local time in effectiveTimezone;
       // schedule_entries.scheduled_start must be the corresponding UTC instant.
       if (request.schedule_entry_id) {
-        const scheduledStart = zonedTimeToUtc(
+        const scheduledStart = fromZonedTime(
           `${validatedData.new_date}T${validatedData.new_time}:00`,
           effectiveTimezone
         );

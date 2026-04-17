@@ -5,7 +5,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Clock, User, Loader2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { format } from 'date-fns';
-import { zonedTimeToUtc } from 'date-fns-tz';
+import { fromZonedTime } from 'date-fns-tz';
 import type { BadgeVariant } from '@alga-psa/ui/components/Badge';
 
 export interface ITicketAppointmentRequest {
@@ -62,7 +62,7 @@ export default function TicketAppointmentRequests({
       const timeStr = typeof timeVal === 'string' ? timeVal.slice(0, 5) : null;
       if (!dateStr || !timeStr) return t('ticketSection.invalidDateTime');
 
-      const dt = zonedTimeToUtc(`${dateStr}T${timeStr}:00`, tz || 'UTC');
+      const dt = fromZonedTime(`${dateStr}T${timeStr}:00`, tz || 'UTC');
       if (isNaN(dt.getTime())) return t('ticketSection.invalidDateTime');
       return dt.toLocaleString('en-US', {
         month: 'short', day: 'numeric', year: 'numeric',
