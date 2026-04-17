@@ -72,28 +72,24 @@ function fullNameExpression(knex: any, tableAlias: string, outputAlias: string):
   );
 }
 
-export async function getTeamsTicketById(
-  ticketId: string,
-  context: ServiceContext
-): Promise<TeamsTicketRecord | null> {
-  const { knex } = await createTenantKnex(context.tenant);
-  const ticket = await knex('tickets as t')
-    .leftJoin('clients as comp', function joinClients() {
+function buildTeamsTicketBaseQuery(knex: any, tenant: string) {
+  return knex('tickets as t')
+    .leftJoin('clients as comp', function joinClients(this: any) {
       this.on('t.client_id', '=', 'comp.client_id').andOn('t.tenant', '=', 'comp.tenant');
     })
-    .leftJoin('contacts as cont', function joinContacts() {
+    .leftJoin('contacts as cont', function joinContacts(this: any) {
       this.on('t.contact_name_id', '=', 'cont.contact_name_id').andOn('t.tenant', '=', 'cont.tenant');
     })
-    .leftJoin('statuses as stat', function joinStatuses() {
+    .leftJoin('statuses as stat', function joinStatuses(this: any) {
       this.on('t.status_id', '=', 'stat.status_id').andOn('t.tenant', '=', 'stat.tenant');
     })
-    .leftJoin('priorities as pri', function joinPriorities() {
+    .leftJoin('priorities as pri', function joinPriorities(this: any) {
       this.on('t.priority_id', '=', 'pri.priority_id').andOn('t.tenant', '=', 'pri.tenant');
     })
-    .leftJoin('users as assigned_user', function joinAssignedUser() {
+    .leftJoin('users as assigned_user', function joinAssignedUser(this: any) {
       this.on('t.assigned_to', '=', 'assigned_user.user_id').andOn('t.tenant', '=', 'assigned_user.tenant');
     })
-    .where({ 't.tenant': context.tenant, 't.ticket_id': ticketId })
+    .where('t.tenant', tenant)
     .select(
       't.ticket_id',
       't.ticket_number',
@@ -105,10 +101,48 @@ export async function getTeamsTicketById(
       'stat.is_closed as status_is_closed',
       'pri.priority_name',
       fullNameExpression(knex, 'assigned_user', 'assigned_to_name')
-    )
+    );
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function getTeamsTicketById(
+  ticketId: string,
+  context: ServiceContext
+): Promise<TeamsTicketRecord | null> {
+  const { knex } = await createTenantKnex(context.tenant);
+  const ticket = await buildTeamsTicketBaseQuery(knex, context.tenant)
+    .where('t.ticket_id', ticketId)
     .first();
 
   return (ticket as TeamsTicketRecord | undefined) ?? null;
+}
+
+export async function resolveTeamsTicketByReference(
+  reference: string,
+  context: ServiceContext
+): Promise<TeamsTicketRecord | null> {
+  const trimmed = reference.trim();
+  if (!trimmed) return null;
+
+  const { knex } = await createTenantKnex(context.tenant);
+
+  // Try exact match on ticket_number first (case-insensitive) — this is the
+  // human-friendly identifier users will type in bot commands.
+  const byNumber = await buildTeamsTicketBaseQuery(knex, context.tenant)
+    .whereRaw('LOWER("t"."ticket_number") = ?', [trimmed.toLowerCase()])
+    .first();
+  if (byNumber) return byNumber as TeamsTicketRecord;
+
+  // Fall back to ticket_id lookup only when the reference looks like a UUID.
+  if (UUID_PATTERN.test(trimmed)) {
+    const byId = await buildTeamsTicketBaseQuery(knex, context.tenant)
+      .where('t.ticket_id', trimmed)
+      .first();
+    return (byId as TeamsTicketRecord | undefined) ?? null;
+  }
+
+  return null;
 }
 
 export async function listAssignedOpenTeamsTickets(params: {
@@ -118,19 +152,19 @@ export async function listAssignedOpenTeamsTickets(params: {
 }): Promise<TeamsTicketRecord[]> {
   const { knex } = await createTenantKnex(params.tenantId);
   const rows = await knex('tickets as t')
-    .leftJoin('clients as comp', function joinClients() {
+    .leftJoin('clients as comp', function joinClients(this: any) {
       this.on('t.client_id', '=', 'comp.client_id').andOn('t.tenant', '=', 'comp.tenant');
     })
-    .leftJoin('contacts as cont', function joinContacts() {
+    .leftJoin('contacts as cont', function joinContacts(this: any) {
       this.on('t.contact_name_id', '=', 'cont.contact_name_id').andOn('t.tenant', '=', 'cont.tenant');
     })
-    .leftJoin('statuses as stat', function joinStatuses() {
+    .leftJoin('statuses as stat', function joinStatuses(this: any) {
       this.on('t.status_id', '=', 'stat.status_id').andOn('t.tenant', '=', 'stat.tenant');
     })
-    .leftJoin('priorities as pri', function joinPriorities() {
+    .leftJoin('priorities as pri', function joinPriorities(this: any) {
       this.on('t.priority_id', '=', 'pri.priority_id').andOn('t.tenant', '=', 'pri.tenant');
     })
-    .leftJoin('users as assigned_user', function joinAssignedUser() {
+    .leftJoin('users as assigned_user', function joinAssignedUser(this: any) {
       this.on('t.assigned_to', '=', 'assigned_user.user_id').andOn('t.tenant', '=', 'assigned_user.tenant');
     })
     .where('t.tenant', params.tenantId)
@@ -164,13 +198,13 @@ export async function searchTeamsTickets(params: {
 }): Promise<TeamsTicketRecord[]> {
   const { knex } = await createTenantKnex(params.tenantId);
   const rows = await knex('tickets as t')
-    .leftJoin('clients as comp', function joinClients() {
+    .leftJoin('clients as comp', function joinClients(this: any) {
       this.on('t.client_id', '=', 'comp.client_id').andOn('t.tenant', '=', 'comp.tenant');
     })
-    .leftJoin('contacts as cont', function joinContacts() {
+    .leftJoin('contacts as cont', function joinContacts(this: any) {
       this.on('t.contact_name_id', '=', 'cont.contact_name_id').andOn('t.tenant', '=', 'cont.tenant');
     })
-    .leftJoin('statuses as stat', function joinStatuses() {
+    .leftJoin('statuses as stat', function joinStatuses(this: any) {
       this.on('t.status_id', '=', 'stat.status_id').andOn('t.tenant', '=', 'stat.tenant');
     })
     .where('t.tenant', params.tenantId)
@@ -289,7 +323,7 @@ export async function getTeamsContactById(
 ): Promise<TeamsContactRecord | null> {
   const { knex } = await createTenantKnex(context.tenant);
   const contact = await knex('contacts as c')
-    .leftJoin('clients as comp', function joinClients() {
+    .leftJoin('clients as comp', function joinClients(this: any) {
       this.on('c.client_id', '=', 'comp.client_id').andOn('c.tenant', '=', 'comp.tenant');
     })
     .where({ 'c.tenant': context.tenant, 'c.contact_name_id': contactId })
@@ -307,7 +341,7 @@ export async function searchTeamsContacts(params: {
   const { knex } = await createTenantKnex(params.tenantId);
   const normalizedDigits = params.query.replace(/\D/g, '');
   const rows = await knex('contacts as c')
-    .leftJoin('clients as comp', function joinClients() {
+    .leftJoin('clients as comp', function joinClients(this: any) {
       this.on('c.client_id', '=', 'comp.client_id').andOn('c.tenant', '=', 'comp.tenant');
     })
     .where('c.tenant', params.tenantId)
@@ -499,10 +533,10 @@ export async function listPendingApprovalsForTeams(params: {
   const normalizedQuery = params.query?.trim();
 
   let query = knex('time_sheets')
-    .join('users', function joinUsers() {
+    .join('users', function joinUsers(this: any) {
       this.on('time_sheets.user_id', '=', 'users.user_id').andOn('time_sheets.tenant', '=', 'users.tenant');
     })
-    .join('time_periods', function joinPeriods() {
+    .join('time_periods', function joinPeriods(this: any) {
       this.on('time_sheets.period_id', '=', 'time_periods.period_id').andOn('time_sheets.tenant', '=', 'time_periods.tenant');
     })
     .where('time_sheets.tenant', params.tenantId)

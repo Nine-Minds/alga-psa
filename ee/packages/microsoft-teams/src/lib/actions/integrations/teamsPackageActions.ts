@@ -211,12 +211,12 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
     bots: [
       {
         botId: profile.client_id,
-        scopes: ['personal'],
+        scopes: ['personal', 'groupChat'],
         supportsFiles: false,
         isNotificationOnly: false,
         commandLists: [
           {
-            scopes: ['personal'],
+            scopes: ['personal', 'groupChat'],
             commands: [
               { title: 'my tickets', description: 'Show the technician work queue.' },
               { title: 'ticket <id>', description: 'Open a specific ticket summary.' },

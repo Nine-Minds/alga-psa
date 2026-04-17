@@ -37,6 +37,7 @@ import {
   listPendingApprovalsForTeams,
   type TeamsPendingApprovalRecord,
   requestChangesForTeamsTimeSheet,
+  resolveTeamsTicketByReference,
   searchTeamsTickets,
   updateTeamsTicketAssignee,
 } from '../teamsPsaData';
@@ -118,6 +119,8 @@ export interface TeamsActionError {
 
 export interface TeamsActionResultItem {
   id: string;
+  /** Human-friendly identifier such as ticket_number, used for bot command buttons. */
+  displayId?: string;
   title: string;
   summary: string;
   entityType: TeamsActionTargetType;
@@ -477,16 +480,17 @@ async function resolveTargetInternal(
 ): Promise<TeamsResolvedTarget> {
   switch (reference.entityType) {
     case 'ticket': {
-      const entity = await getTeamsTicketById(reference.ticketId, serviceContext);
+      const entity = await resolveTeamsTicketByReference(reference.ticketId, serviceContext);
       if (!entity) {
-        throw new NotFoundError('Ticket not found');
+        throw new NotFoundError('Ticket not found. Use a ticket number (e.g. alga0001833) or a valid ticket ID.');
       }
+      const resolvedTicketId = entity.ticket_id;
 
       return {
         entityType: 'ticket',
-        id: reference.ticketId,
+        id: resolvedTicketId,
         entity,
-        destination: { type: 'ticket', ticketId: reference.ticketId },
+        destination: { type: 'ticket', ticketId: resolvedTicketId },
       };
     }
 
@@ -841,22 +845,25 @@ function buildActionLinks(
     return { links: [], warnings: [] };
   }
 
-  const links: TeamsActionLink[] = [
-    {
-      type: 'psa',
-      label: 'Open in full PSA',
-      url: psaUrl,
-    },
-  ];
-  const warnings: TeamsActionWarning[] = [];
-
   const baseUrl =
     integration.packageMetadata && typeof integration.packageMetadata.baseUrl === 'string'
       ? integration.packageMetadata.baseUrl
       : null;
 
+  // Hero Card openUrl buttons require absolute URLs — Teams cannot navigate
+  // to a relative path. Use baseUrl when available to make the PSA link work.
+  const absolutePsaUrl = psaUrl.startsWith('http') ? psaUrl : (baseUrl ? `${baseUrl}${psaUrl}` : psaUrl);
+
+  const links: TeamsActionLink[] = [
+    {
+      type: 'psa',
+      label: 'Open in full PSA',
+      url: absolutePsaUrl,
+    },
+  ];
+  const warnings: TeamsActionWarning[] = [];
+
   if (baseUrl && integration.appId) {
-    const absolutePsaUrl = psaUrl.startsWith('http') ? psaUrl : `${baseUrl}${psaUrl}`;
     const teamsUrl =
       surface === 'bot'
         ? buildTeamsBotResultDeepLinkFromPsaUrl(baseUrl, integration.appId, absolutePsaUrl)
@@ -887,11 +894,13 @@ async function buildItemForDestination(
   summary: string,
   destination: TeamsTabDestination,
   integration: TeamsIntegrationExecutionState,
-  surface: TeamsActionSurface
+  surface: TeamsActionSurface,
+  displayId?: string
 ): Promise<TeamsActionResultItem> {
   const { links } = buildActionLinks(destination, integration, surface);
   return {
     id,
+    ...(displayId ? { displayId } : {}),
     title,
     summary,
     entityType,
@@ -1010,17 +1019,20 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
       });
 
       const items = await Promise.all(
-        tickets.map((ticket) =>
-          buildItemForDestination(
+        tickets.map((ticket) => {
+          const ticketId = String((ticket as { ticket_id?: string }).ticket_id ?? '');
+          const ticketNumber = String((ticket as { ticket_number?: string }).ticket_number || '').trim() || undefined;
+          return buildItemForDestination(
             'ticket',
-            String((ticket as { ticket_id?: string }).ticket_id ?? ''),
-            String((ticket as { ticket_number?: string }).ticket_number || (ticket as { ticket_id?: string }).ticket_id || 'Ticket'),
+            ticketId,
+            ticketNumber || ticketId || 'Ticket',
             describeTicketListSummary(ticket as unknown as Record<string, unknown>),
-            { type: 'ticket', ticketId: String((ticket as { ticket_id?: string }).ticket_id ?? '') },
+            { type: 'ticket', ticketId },
             context.integration,
-            context.request.surface
-          )
-        )
+            context.request.surface,
+            ticketNumber
+          );
+        })
       );
 
       return {
@@ -1141,6 +1153,9 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
       }
 
       const description = describeResolvedTarget(target);
+      const ticketDisplayId = target.entityType === 'ticket'
+        ? (typeof (target.entity as any)?.ticket_number === 'string' ? (target.entity as any).ticket_number.trim() : undefined) || undefined
+        : undefined;
       const item = await buildItemForDestination(
         target.entityType,
         target.id,
@@ -1148,7 +1163,8 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
         description.summary,
         target.destination,
         context.integration,
-        context.request.surface
+        context.request.surface,
+        ticketDisplayId
       );
       return {
         summary: {
@@ -1362,13 +1378,16 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
         metadata: normalized.metadata as Record<string, unknown> | undefined,
       });
 
+      const ticketLabel = typeof (target.entity as any)?.ticket_number === 'string'
+        ? (target.entity as any).ticket_number.trim()
+        : target.id;
       return {
         summary: {
           title: normalized.updateType === 'customer_reply' ? 'Reply sent' : 'Internal note added',
           text:
             normalized.updateType === 'customer_reply'
-              ? `A customer-visible reply was added to ticket ${target.id}.`
-              : `An internal note was added to ticket ${target.id}.`,
+              ? `A customer-visible reply was added to ticket ${ticketLabel}.`
+              : `An internal note was added to ticket ${ticketLabel}.`,
         },
         destination: target.destination,
         target,
@@ -1396,16 +1415,17 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
       ),
     authorize: async (_normalized, context) =>
       ensurePermission(context.request.user, 'ticket', 'update', 'You do not have permission to assign tickets from Teams.'),
-    execute: async (normalized, context) => {
+    execute: async (normalized, context, target) => {
+      const resolvedTicketId = target?.entityType === 'ticket' ? target.id : String(normalized.ticketId);
       await updateTeamsTicketAssignee({
-        ticketId: String(normalized.ticketId),
+        ticketId: resolvedTicketId,
         tenantId: context.request.tenantId,
         assigneeId: String(normalized.assigneeId),
         actorUserId: context.request.user.user_id,
       });
       if (normalized.note) {
         await addTeamsTicketComment({
-          ticketId: String(normalized.ticketId),
+          ticketId: resolvedTicketId,
           tenantId: context.request.tenantId,
           actorUserId: context.request.user.user_id,
           commentText: String(normalized.note),
@@ -1413,17 +1433,20 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
         });
       }
 
-      const target = await resolveTargetInternal(
-        { entityType: 'ticket', ticketId: String(normalized.ticketId) },
+      const refreshedTarget = await resolveTargetInternal(
+        { entityType: 'ticket', ticketId: resolvedTicketId },
         context.serviceContext
       );
+      const ticketLabel = typeof (refreshedTarget.entity as any)?.ticket_number === 'string'
+        ? (refreshedTarget.entity as any).ticket_number.trim()
+        : resolvedTicketId;
       return {
         summary: {
           title: 'Ticket assigned',
-          text: `Ticket ${normalized.ticketId} was reassigned successfully.`,
+          text: `Ticket ${ticketLabel} was reassigned successfully.`,
         },
-        destination: target.destination,
-        target,
+        destination: refreshedTarget.destination,
+        target: refreshedTarget,
       };
     },
   },
@@ -1447,9 +1470,10 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
       ),
     authorize: async (_normalized, context) =>
       ensurePermission(context.request.user, 'ticket', 'update', 'You do not have permission to add ticket notes from Teams.'),
-    execute: async (normalized, context) => {
+    execute: async (normalized, context, target) => {
+      const resolvedTicketId = target?.entityType === 'ticket' ? target.id : String(normalized.ticketId);
       await addTeamsTicketComment({
-        ticketId: String(normalized.ticketId),
+        ticketId: resolvedTicketId,
         tenantId: context.request.tenantId,
         actorUserId: context.request.user.user_id,
         commentText: String(normalized.note),
@@ -1457,17 +1481,20 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
         metadata: normalized.metadata as Record<string, unknown> | undefined,
       });
 
-      const target = await resolveTargetInternal(
-        { entityType: 'ticket', ticketId: String(normalized.ticketId) },
+      const refreshedTarget = await resolveTargetInternal(
+        { entityType: 'ticket', ticketId: resolvedTicketId },
         context.serviceContext
       );
+      const ticketLabel = typeof (refreshedTarget.entity as any)?.ticket_number === 'string'
+        ? (refreshedTarget.entity as any).ticket_number.trim()
+        : resolvedTicketId;
       return {
         summary: {
           title: 'Internal note added',
-          text: `A new internal note was added to ticket ${normalized.ticketId}.`,
+          text: `A new internal note was added to ticket ${ticketLabel}.`,
         },
-        destination: target.destination,
-        target,
+        destination: refreshedTarget.destination,
+        target: refreshedTarget,
       };
     },
   },
@@ -1491,9 +1518,10 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
       ),
     authorize: async (_normalized, context) =>
       ensurePermission(context.request.user, 'ticket', 'update', 'You do not have permission to send ticket replies from Teams.'),
-    execute: async (normalized, context) => {
+    execute: async (normalized, context, target) => {
+      const resolvedTicketId = target?.entityType === 'ticket' ? target.id : String(normalized.ticketId);
       await addTeamsTicketComment({
-        ticketId: String(normalized.ticketId),
+        ticketId: resolvedTicketId,
         tenantId: context.request.tenantId,
         actorUserId: context.request.user.user_id,
         commentText: String(normalized.reply),
@@ -1501,17 +1529,20 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
         metadata: normalized.metadata as Record<string, unknown> | undefined,
       });
 
-      const target = await resolveTargetInternal(
-        { entityType: 'ticket', ticketId: String(normalized.ticketId) },
+      const refreshedTarget = await resolveTargetInternal(
+        { entityType: 'ticket', ticketId: resolvedTicketId },
         context.serviceContext
       );
+      const ticketLabel = typeof (refreshedTarget.entity as any)?.ticket_number === 'string'
+        ? (refreshedTarget.entity as any).ticket_number.trim()
+        : resolvedTicketId;
       return {
         summary: {
           title: 'Reply sent',
-          text: `A customer-visible reply was added to ticket ${normalized.ticketId}.`,
+          text: `A customer-visible reply was added to ticket ${ticketLabel}.`,
         },
-        destination: target.destination,
-        target,
+        destination: refreshedTarget.destination,
+        target: refreshedTarget,
       };
     },
   },

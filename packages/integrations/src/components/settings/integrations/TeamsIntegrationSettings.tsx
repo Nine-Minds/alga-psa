@@ -44,6 +44,7 @@ type TeamsCheckboxGroupField = 'enabledCapabilities' | 'notificationCategories' 
 const TEAMS_CAPABILITY_OPTIONS = [
   { value: 'personal_tab', label: 'Personal tab', description: 'Launch the PSA personal tab entry point.' },
   { value: 'personal_bot', label: 'Personal bot', description: 'Enable personal-scope bot commands for technicians.' },
+  { value: 'group_chat_bot', label: 'Group chat bot', description: 'Allow the bot to respond in Teams group chats. Bot replies (including ticket details) are visible to every member of the chat.' },
   { value: 'message_extension', label: 'Message extension', description: 'Enable lookup and message-driven PSA actions.' },
   { value: 'activity_notifications', label: 'Activity notifications', description: 'Deliver personal Teams activity-feed notifications.' },
 ] as const;
