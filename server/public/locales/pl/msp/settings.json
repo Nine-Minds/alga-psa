@@ -714,13 +714,17 @@
         "companyLogo": "Logo firmy",
         "colorPalette": "Paleta kolorów",
         "primaryColor": "Kolor główny",
-        "secondaryColor": "Kolor dodatkowy"
+        "secondaryColor": "Kolor dodatkowy",
+        "supportEmail": "E-mail wsparcia",
+        "supportPhone": "Telefon wsparcia"
       },
       "help": {
         "companyName": "Będzie wyświetlana w nagłówku portalu klienta",
         "companyLogo": "Zalecane: PNG lub SVG, maks. 2 MB, przezroczyste tło",
         "primaryColor": "Używany dla przycisków, linków i wyróżnień",
-        "secondaryColor": "Używany dla akcentów i akcji dodatkowych"
+        "secondaryColor": "Używany dla akcentów i akcji dodatkowych",
+        "supportEmail": "Wyświetlany klientom w potwierdzeniach wizyt i innych wychodzących wiadomościach e-mail jako adres kontaktowy do uzyskania pomocy.",
+        "supportPhone": "Opcjonalnie. Wyświetlany obok e-maila wsparcia w wiadomościach wysyłanych do klientów."
       },
       "preview": "Podgląd",
       "previewDarkMode": "Podgląd trybu ciemnego",

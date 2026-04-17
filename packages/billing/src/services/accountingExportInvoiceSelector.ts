@@ -12,6 +12,7 @@ export interface InvoiceSelectionFilters {
   endDate?: Nullable<string>;
   invoiceStatuses?: string[];
   clientIds?: string[];
+  invoiceIds?: string[];
   clientSearch?: string;
   adapterType?: string;
   targetRealm?: Nullable<string>;
@@ -149,6 +150,10 @@ export class AccountingExportInvoiceSelector {
           );
         }
       });
+    }
+
+    if (filters.invoiceIds && filters.invoiceIds.length > 0) {
+      query.andWhere((builder) => builder.whereIn('inv.invoice_id', filters.invoiceIds!));
     }
 
     if (filters.clientIds && filters.clientIds.length > 0) {
@@ -512,6 +517,10 @@ function normalizeFilters(filters: InvoiceSelectionFilters): Record<string, unkn
 
   if (filters.clientIds && filters.clientIds.length > 0) {
     normalized.client_ids = Array.from(new Set(filters.clientIds));
+  }
+
+  if (filters.invoiceIds && filters.invoiceIds.length > 0) {
+    normalized.invoice_ids = Array.from(new Set(filters.invoiceIds));
   }
 
   if (filters.clientSearch && filters.clientSearch.trim().length > 0) {

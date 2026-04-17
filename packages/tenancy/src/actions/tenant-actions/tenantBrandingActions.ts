@@ -11,6 +11,8 @@ export interface TenantBranding {
   primaryColor: string;
   secondaryColor: string;
   clientName: string;
+  supportEmail?: string;
+  supportPhone?: string;
   computedStyles?: string; // Cached CSS styles
 }
 
@@ -40,9 +42,13 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
     clientName: branding.clientName,
   });
 
-  // Build updated settings with branding and computed styles
+  // Build updated settings with branding and computed styles.
+  // supportEmail/supportPhone live at the top level of `settings` because
+  // that's what appointmentHelpers.getTenantSettings reads (contactEmail/Phone fallbacks).
   const updatedSettings = {
     ...existingSettings,
+    supportEmail: branding.supportEmail ?? existingSettings.supportEmail ?? '',
+    supportPhone: branding.supportPhone ?? existingSettings.supportPhone ?? '',
     branding: {
       logoUrl: branding.logoUrl,
       primaryColor: branding.primaryColor,
@@ -94,7 +100,11 @@ export const getTenantBrandingAction = withOptionalAuth(async (user: IUserWithRo
     return null;
   }
 
-  return tenantSettings.settings.branding;
+  return {
+    ...tenantSettings.settings.branding,
+    supportEmail: tenantSettings.settings.supportEmail ?? '',
+    supportPhone: tenantSettings.settings.supportPhone ?? '',
+  };
 });
 
 /**
@@ -111,5 +121,9 @@ export async function getTenantBrandingByIdAction(tenantId: string): Promise<Ten
     return null;
   }
 
-  return tenantSettings.settings.branding;
+  return {
+    ...tenantSettings.settings.branding,
+    supportEmail: tenantSettings.settings.supportEmail ?? '',
+    supportPhone: tenantSettings.settings.supportPhone ?? '',
+  };
 }
