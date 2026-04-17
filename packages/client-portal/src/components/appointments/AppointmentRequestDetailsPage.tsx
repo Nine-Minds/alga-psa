@@ -38,6 +38,7 @@ interface AppointmentRequestDetails {
   requested_date: string;
   requested_time: string;
   requested_duration: number;
+  requester_timezone?: string | null;
   status: 'pending' | 'approved' | 'declined' | 'cancelled';
   preferred_technician_first_name?: string;
   preferred_technician_last_name?: string;
@@ -238,7 +239,7 @@ export function AppointmentRequestDetailsPage() {
                     {t('details.dateTime', 'Date & Time')}
                   </div>
                   <div className="text-sm text-gray-900">
-                    {formatRequestedDateTime(appointment.requested_date, appointment.requested_time, (appointment as any).requester_timezone)}
+                    {formatRequestedDateTime(appointment.requested_date, appointment.requested_time, appointment.requester_timezone)}
                   </div>
                   <div className="text-sm text-gray-600 mt-1 flex items-center gap-1">
                     <Clock className="h-4 w-4" />

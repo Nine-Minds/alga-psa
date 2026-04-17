@@ -37,6 +37,7 @@ interface AppointmentRequest {
   requested_date: string;
   requested_time: string;
   requested_duration: number;
+  requester_timezone?: string | null;
   status: 'pending' | 'approved' | 'declined' | 'cancelled';
   preferred_assigned_user_name?: string;
 }
@@ -279,7 +280,7 @@ export function ClientDashboard() {
                             const timeStr = normalizeTimeValue(appointment.requested_time);
                             if (!dateStr || !timeStr) return 'N/A';
                             try {
-                              const tz = (appointment as any).requester_timezone || 'UTC';
+                              const tz = appointment.requester_timezone || 'UTC';
                               const dt = zonedTimeToUtc(`${dateStr}T${timeStr}:00`, tz);
                               if (isNaN(dt.getTime())) return 'N/A';
                               return dt.toLocaleString('en-US', {
