@@ -179,6 +179,12 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   `packages/core/src/lib/i18n/config.ts` immediately above the broader `/msp/billing` entry.
   This preserves exact-match handling and longest-prefix fallback so the new page loads
   `msp/credits` instead of inheriting only the general billing namespaces.
+- **(2026-04-17, F011)** Replaced the old mixed server/client `CreditsPage.tsx` with a thin
+  server loader plus new client wrapper `packages/billing/src/components/credits/CreditsPageClient.tsx`.
+  The wrapper now owns `useTranslation('msp/credits')`, translated page/card headings, tab
+  labels, table column titles, status labels, and action-button copy while keeping currency and
+  date formatting intact. Also normalized the expired tab to derive its rows from the fetched
+  “all credits” dataset while preserving upstream fetch error states.
 
 ## Key Paths / Runbooks
 
@@ -186,5 +192,7 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
 - Pseudo-locale generator: `node scripts/generate-pseudo-locales.cjs`
 - Translation validator: `node scripts/validate-translations.cjs`
 - Route namespace config: `packages/core/src/lib/i18n/config.ts`
+- Credits page client wrapper: `packages/billing/src/components/credits/CreditsPageClient.tsx`
+- Credits page server loader: `packages/billing/src/components/credits/CreditsPage.tsx`
 - Plan artifacts:
   `ee/docs/plans/2026-04-09-msp-i18n-credits/{PRD.md,SCRATCHPAD.md,features.json,tests.json}`
