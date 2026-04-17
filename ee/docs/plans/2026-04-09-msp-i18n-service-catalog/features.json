@@ -1,7 +1,7 @@
 [
   {"id": "F001", "description": "Create en/msp/service-catalog.json with all keys for 14 service catalog and tax rate components (~285-430 strings)", "implemented": true},
   {"id": "F002", "description": "Wire useTranslation('msp/service-catalog') in TaxRates.tsx — table column headers, dialog title/labels, validation messages, button text, loading indicator", "implemented": true},
-  {"id": "F003", "description": "Wire useTranslation in TaxRateDetailPanel.tsx — tab labels (Details, Components, Brackets, Holidays), detail field labels, precedence info, composite badge, alert text", "implemented": false},
+  {"id": "F003", "description": "Wire useTranslation in TaxRateDetailPanel.tsx — tab labels (Details, Components, Brackets, Holidays), detail field labels, precedence info, composite badge, alert text", "implemented": true},
   {"id": "F004", "description": "Wire useTranslation in ServiceForm.tsx — placeholder text, select labels (Service Type, Billing Method, Tax Rate), description label, submit button", "implemented": false},
   {"id": "F005", "description": "Wire useTranslation in ServiceSelectionDialog.tsx — dialog title, search placeholder, table headers (Item Name, Type, Unit, Rate), Quick Add label, selection count, action buttons, loading/empty/error states", "implemented": false},
   {"id": "F006", "description": "Wire useTranslation in ConfigurationTypeSelector.tsx — type labels (Fixed Price, Hourly Rate, Usage-Based, Bucket Hours), type descriptions, warning dialog title/body/buttons", "implemented": false},
