@@ -613,8 +613,11 @@ export class XeroAdapter implements AccountingExportAdapter {
     targetRealm?: string
   ): Promise<ExternalInvoiceFetchResult> {
     try {
-      const { knex } = await createTenantKnex();
-      const tenantId = await this.getTenantFromContext(knex);
+      const { knex, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new AppError('XERO_TENANT_REQUIRED', 'Unable to determine tenant from context');
+      }
+      const tenantId = tenant;
 
       const client = await XeroClientService.create(tenantId, targetRealm ?? null);
       const xeroInvoice = await client.getInvoice(externalInvoiceRef);
@@ -905,6 +908,13 @@ function normalizeTaxComponents(input: unknown): XeroTaxComponentPayload[] | und
 
 function defaultLineAmountType(lines: XeroInvoiceLinePayload[]): LineAmountType {
   if (lines.some((line) => typeof line.taxAmountCents === 'number' && line.taxAmountCents !== 0)) {
+    return 'Exclusive';
+  }
+  // When we delegate tax calculation to Xero we still send a TaxType per line so
+  // Xero knows which rate to apply. Those TaxType codes are only valid on
+  // Exclusive/Inclusive invoices — on a NoTax invoice Xero overrides TaxType to
+  // NONE and charges no tax, which silently breaks writeback.
+  if (lines.some((line) => Boolean(line.taxType))) {
     return 'Exclusive';
   }
   return 'NoTax';

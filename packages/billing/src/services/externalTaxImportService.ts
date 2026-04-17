@@ -229,11 +229,15 @@ export class ExternalTaxImportService {
         .first();
 
       const newTotalsRow = newTotals as unknown as { subtotal?: number | string; tax?: number | string } | undefined;
-      const newTotal = Number(newTotalsRow?.subtotal ?? 0) + Number(newTotalsRow?.tax ?? 0);
+      const newSubtotal = Number(newTotalsRow?.subtotal ?? 0);
+      const newTax = Number(newTotalsRow?.tax ?? 0);
+      const newTotal = newSubtotal + newTax;
 
       await knex('invoices')
         .where({ invoice_id: invoiceId, tenant })
         .update({
+          subtotal: newSubtotal,
+          tax: newTax,
           total_amount: newTotal,
           updated_at: knex.fn.now()
         });
