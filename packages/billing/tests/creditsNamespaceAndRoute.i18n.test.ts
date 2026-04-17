@@ -27,4 +27,27 @@ describe('MSP credits namespace and route i18n contract', () => {
     expect(output).toContain('Errors: 0');
     expect(output).toContain('Warnings: 0');
   });
+
+  it('T002: english credits namespace exposes the planned top-level groups', () => {
+    const en = readJson<Record<string, unknown>>(
+      '../../../server/public/locales/en/msp/credits.json',
+    );
+
+    expect(Object.keys(en)).toEqual([
+      'page',
+      'columns',
+      'status',
+      'actions',
+      'tabs',
+      'settings',
+      'charts',
+      'stats',
+      'management',
+      'reconciliation',
+      'application',
+      'expiration',
+      'expirationDialog',
+      'context',
+    ]);
+  });
 });

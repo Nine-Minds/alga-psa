@@ -246,3 +246,6 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   with an executable validator contract that reruns pseudo-locale generation plus
   `validate-translations.cjs` and asserts the combined pipeline stays green (`PASSED`,
   `Errors: 0`, `Warnings: 0`).
+- **(2026-04-17, T002)** Extended the same namespace/route contract file with a strict top-level
+  shape assertion for `server/public/locales/en/msp/credits.json`. This guards against accidental
+  group drift when future i18n edits touch the credits namespace.
