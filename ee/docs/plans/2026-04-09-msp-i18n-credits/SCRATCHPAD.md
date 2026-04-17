@@ -263,3 +263,6 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   the small page-shell controls. It asserts `AddCreditButton` and `BackButton` both import
   `useTranslation('msp/credits')` and checks the representative `xx` pseudo-locale keys those
   controls depend on.
+- **(2026-04-17, T013-T016)** Added `packages/billing/tests/CreditManagement.i18n.test.ts` to
+  cover the translated dashboard shell, chart legend labels/month placeholders, recurring-
+  lineage context helper copy, and representative pseudo-locale coverage for the management tab.

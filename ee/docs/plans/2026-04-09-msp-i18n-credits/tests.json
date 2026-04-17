@@ -17,10 +17,10 @@
   {"id": "T011", "description": "Unit: BackButton renders 'Back to Credits' via t()", "implemented": true, "featureIds": ["F014"]},
   {"id": "T012", "description": "Unit: BackButton no hardcoded English in rendered output", "implemented": true, "featureIds": ["F014"]},
 
-  {"id": "T013", "description": "Unit: CreditManagement renders page title, chart titles, stat labels, column titles via t() in en", "implemented": false, "featureIds": ["F015", "F016"]},
-  {"id": "T014", "description": "Unit: CreditManagement chart legend labels (Credits Issued, Credits Applied, Credits Expired) rendered via t()", "implemented": false, "featureIds": ["F015"]},
-  {"id": "T015", "description": "Unit: CreditManagement renderCreditContext labels (Lineage Missing, Recurring Source, Financial Only, Service Period) rendered via t()", "implemented": false, "featureIds": ["F017"]},
-  {"id": "T016", "description": "Unit: CreditManagement no hardcoded English in rendered output (pseudo-locale xx coverage)", "implemented": false, "featureIds": ["F015", "F016", "F017"]},
+  {"id": "T013", "description": "Unit: CreditManagement renders page title, chart titles, stat labels, column titles via t() in en", "implemented": true, "featureIds": ["F015", "F016"]},
+  {"id": "T014", "description": "Unit: CreditManagement chart legend labels (Credits Issued, Credits Applied, Credits Expired) rendered via t()", "implemented": true, "featureIds": ["F015"]},
+  {"id": "T015", "description": "Unit: CreditManagement renderCreditContext labels (Lineage Missing, Recurring Source, Financial Only, Service Period) rendered via t()", "implemented": true, "featureIds": ["F017"]},
+  {"id": "T016", "description": "Unit: CreditManagement no hardcoded English in rendered output (pseudo-locale xx coverage)", "implemented": true, "featureIds": ["F015", "F016", "F017"]},
 
   {"id": "T017", "description": "Unit: CreditReconciliation renders dashboard title, filter labels, stat card labels via t() in en", "implemented": false, "featureIds": ["F018"]},
   {"id": "T018", "description": "Unit: CreditReconciliation renders chart titles, column titles, tab labels, status badges via t()", "implemented": false, "featureIds": ["F019"]},
