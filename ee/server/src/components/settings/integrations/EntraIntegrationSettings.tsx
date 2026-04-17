@@ -36,7 +36,7 @@ type GuidedStepId = 'connect' | 'discover' | 'map' | 'sync';
 type GuidedStepVisualState = 'current' | 'complete' | 'locked';
 
 const WIZARD_STEPS = [
-  { id: 'connect' as const, title: 'Connect', description: 'Choose Direct Microsoft partner auth or CIPP.' },
+  { id: 'connect' as const, title: 'Connect', description: 'Authorize Direct Microsoft partner auth to link this Entra tenant.' },
   { id: 'discover' as const, title: 'Discover Tenants', description: 'Load and persist managed Entra tenants for this MSP tenant.' },
   { id: 'map' as const, title: 'Map Tenants to Clients', description: 'Review auto-match suggestions and confirm mappings.' },
   { id: 'sync' as const, title: 'Initial Sync', description: 'Start the first sync run for confirmed mappings.' },
@@ -235,7 +235,11 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
   };
 
   const connectionOptions = buildEntraConnectionOptions(cippFlag.enabled && canUseCippTier);
-  const mappedTenantCount = Math.max(status?.mappedTenantCount ?? 0, mappingSummary.mapped);
+  // Only count rows the server confirms exist in entra_client_tenant_mappings. Auto-match
+  // candidates surfaced by the preview table must not advance the wizard to Step 4 —
+  // otherwise the map step never becomes "current" after discovery even though no confirm
+  // action has run, and the wizard jumps straight to Run Initial Sync without mappings.
+  const mappedTenantCount = status?.mappedTenantCount ?? 0;
   const guidedStepState = deriveGuidedStepState({
     status,
     mappedCount: mappedTenantCount,
@@ -454,12 +458,12 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
   }, [fieldSyncConfig, loadStatus]);
 
   React.useEffect(() => {
+    // Auto-open the mapping panel whenever the map step is the active step or we're in
+    // maintenance mode. Don't force-close it otherwise — the Review/Remap button owns
+    // the closed state post-discovery so users can still re-open the preview.
     if (settingsMode === 'maintenance' || isMapStepCurrent) {
       setShowMappingDetails(true);
-      return;
     }
-
-    setShowMappingDetails(false);
   }, [isMapStepCurrent, settingsMode]);
 
   const mappingAndSkippedSection = (
@@ -473,8 +477,9 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
         {isMapStepCurrent ? (
           <p className="mt-2 text-xs text-muted-foreground">This is your current onboarding step.</p>
         ) : null}
-        <div className="mb-3 mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
-          <p><span className="font-medium text-foreground">Mapped:</span> {mappingSummary.mapped}</p>
+        <div className="mb-3 mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-4">
+          <p><span className="font-medium text-foreground">Saved:</span> {status?.mappedTenantCount ?? 0}</p>
+          <p><span className="font-medium text-foreground">Selected:</span> {mappingSummary.mapped}</p>
           <p><span className="font-medium text-foreground">Skipped:</span> {mappingSummary.skipped}</p>
           <p><span className="font-medium text-foreground">Needs Review:</span> {mappingSummary.needsReview}</p>
         </div>
@@ -544,7 +549,18 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
             >
               Disconnect
             </Button>
-          ) : null}
+          ) : (
+            <Button
+              id="entra-reconnect"
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void handleConnectionOptionClick('direct')}
+              disabled={directLoading || statusLoading}
+            >
+              {directLoading ? 'Reconnecting…' : 'Reconnect'}
+            </Button>
+          )}
           <Button id="entra-refresh-status" type="button" size="sm" variant="ghost" onClick={loadStatus} disabled={statusLoading}>
             Refresh
           </Button>

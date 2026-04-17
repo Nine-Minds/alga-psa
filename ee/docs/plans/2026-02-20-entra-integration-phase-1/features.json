@@ -118,11 +118,15 @@
     "id": "F011",
     "description": "CIPP flag gate: only render CIPP connection option when `entra-integration-cipp` is enabled.",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. `buildEntraConnectionOptions` now hides the CIPP option unconditionally. Flag remains defined but no longer gates user-visible surface area.",
     "prdRefs": [
-      "Feature Flags / Rollout"
+      "Feature Flags / Rollout",
+      "Scope Change — 2026-04-17"
     ],
     "locations": [
-      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx",
+      "ee/server/src/components/settings/integrations/entraIntegrationSettingsGates.ts"
     ]
   },
   {
@@ -359,7 +363,7 @@
   },
   {
     "id": "F033",
-    "description": "Secret constants: define canonical tenant secret keys for Entra direct/CIPP credentials and tokens.",
+    "description": "Secret constants: define canonical tenant secret keys for Entra direct credentials and tokens. (CIPP secret keys retained for future reinstatement but unused in Phase 1.)",
     "implemented": true,
     "prdRefs": [
       "Security / Permissions"
@@ -428,8 +432,10 @@
     "id": "F039",
     "description": "CIPP connect action: add settings action to save CIPP base URL and token for tenant.",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. Action remains in code for possible reinstatement but is not reachable from the onboarding UI.",
     "prdRefs": [
-      "Requirements"
+      "Scope Change — 2026-04-17"
     ],
     "locations": [
       "packages/integrations/src/actions/integrations/entraActions.ts"
@@ -439,8 +445,10 @@
     "id": "F040",
     "description": "CIPP token secret persistence: save/remove CIPP token via tenant secret provider (vault-compatible).",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. Secret store helpers retained; no tokens should be written in Phase 1 since no UI reaches the CIPP connect action.",
     "prdRefs": [
-      "Security / Permissions"
+      "Scope Change — 2026-04-17"
     ],
     "locations": [
       "ee/server/src/lib/integrations/entra/providers/cipp/cippSecretStore.ts"
@@ -462,8 +470,10 @@
     "id": "F042",
     "description": "Connection validation (CIPP): add endpoint/action confirming CIPP tenant list access.",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. Validation route retained for reinstatement; not reachable from the Phase 1 onboarding UI.",
     "prdRefs": [
-      "Requirements"
+      "Scope Change — 2026-04-17"
     ],
     "locations": [
       "ee/server/src/app/api/integrations/entra/validate-cipp/route.ts",
@@ -498,8 +508,10 @@
     "id": "F045",
     "description": "Connection type switching: enforce cleanup of stale direct/CIPP credentials when switching connection type.",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — Phase 1 supports only Direct, so there is no user-triggered switch. Defensive cleanup logic retained in code.",
     "prdRefs": [
-      "Requirements"
+      "Scope Change — 2026-04-17"
     ],
     "locations": [
       "packages/integrations/src/actions/integrations/entraActions.ts"
@@ -542,8 +554,10 @@
     "id": "F049",
     "description": "CIPP adapter (tenants): implement managed tenant enumeration against configured CIPP endpoint.",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. Adapter retained but not exercised by any Phase 1 UI flow.",
     "prdRefs": [
-      "Requirements"
+      "Scope Change — 2026-04-17"
     ],
     "locations": [
       "ee/server/src/lib/integrations/entra/providers/cipp/cippProviderAdapter.ts"
@@ -553,8 +567,10 @@
     "id": "F050",
     "description": "CIPP adapter (users): implement per-tenant user enumeration with normalized model parity to direct adapter.",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. Adapter retained but not exercised by any Phase 1 UI flow.",
     "prdRefs": [
-      "Requirements"
+      "Scope Change — 2026-04-17"
     ],
     "locations": [
       "ee/server/src/lib/integrations/entra/providers/cipp/cippProviderAdapter.ts"

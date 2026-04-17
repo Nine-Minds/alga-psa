@@ -2,8 +2,9 @@ import logger from '@alga-psa/core/logger';
 import { randomUUID } from 'crypto';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db/tenant';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
-import { EntraSyncResultAggregator } from '@ee/lib/integrations/entra/sync/syncResultAggregator';
-import { filterEntraUsers } from '@ee/lib/integrations/entra/sync/userFilterPipeline';
+import { executeEntraSync } from '@ee/lib/integrations/entra/sync/syncEngine';
+import { filterEntraUsersForTenant } from '@ee/lib/integrations/entra/settingsService';
+import { markDisabledEntraUsersInactive } from '@ee/lib/integrations/entra/sync/disableHandler';
 import type { EntraConnectionType } from '@ee/interfaces/entra.interfaces';
 import type {
   LoadMappedTenantsActivityInput,
@@ -96,27 +97,60 @@ export async function syncTenantUsersActivity(
   const connectionType = await getActiveConnectionType(input.tenantId);
   const adapter = getEntraProviderAdapter(connectionType);
 
+  if (!input.mapping.clientId) {
+    throw new Error(
+      `Mapping ${input.mapping.managedTenantId} is missing clientId; cannot reconcile contacts.`
+    );
+  }
+
   const users = await adapter.listUsersForTenant({
     tenant: input.tenantId,
-    managedTenantId: input.mapping.managedTenantId,
+    // Adapter expects the Microsoft tenant GUID (used as `tenantId eq ...` filter
+    // in the managedTenants/users Graph call). The DB's managed_tenant_id is a
+    // local PK and must not be passed here.
+    managedTenantId: input.mapping.entraTenantId,
   });
-  const filteredUsers = filterEntraUsers(users);
-  const counters = new EntraSyncResultAggregator();
-  counters.increment('linked', filteredUsers.included.length);
+  const filteredUsers = await filterEntraUsersForTenant(input.tenantId, users);
 
-  // Phase-1 activity pipeline currently tracks per-tenant pull + aggregate counters.
-  // Contact-level reconciliation is implemented in later sync features.
-  const aggregated = counters.toJSON();
+  const fieldSyncConfig = await runWithTenant(input.tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const row = await knex('entra_sync_settings')
+      .where({ tenant: input.tenantId })
+      .first(['field_sync_config']);
+    const raw = row?.field_sync_config;
+    return raw && typeof raw === 'object' && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : {};
+  });
+
+  const syncResult = await executeEntraSync({
+    tenantId: input.tenantId,
+    clientId: input.mapping.clientId,
+    managedTenantId: input.mapping.managedTenantId,
+    users: filteredUsers.included,
+    fieldSyncConfig,
+    dryRun: false,
+  });
+
+  const disabledIdentities = filteredUsers.excluded
+    .filter((entry) => entry.reason === 'account_disabled')
+    .map((entry) => ({
+      entraTenantId: entry.user.entraTenantId,
+      entraObjectId: entry.user.entraObjectId,
+    }));
+  const inactivatedCount = disabledIdentities.length
+    ? await markDisabledEntraUsersInactive(input.tenantId, disabledIdentities)
+    : 0;
 
   return {
     managedTenantId: input.mapping.managedTenantId,
-    clientId: input.mapping.clientId || null,
+    clientId: input.mapping.clientId,
     status: 'completed',
-    created: aggregated.created,
-    linked: aggregated.linked,
-    updated: aggregated.updated,
-    ambiguous: aggregated.ambiguous,
-    inactivated: aggregated.inactivated,
+    created: syncResult.counters.created,
+    linked: syncResult.counters.linked,
+    updated: syncResult.counters.updated,
+    ambiguous: syncResult.counters.ambiguous,
+    inactivated: syncResult.counters.inactivated + inactivatedCount,
     errorMessage: null,
   };
 }

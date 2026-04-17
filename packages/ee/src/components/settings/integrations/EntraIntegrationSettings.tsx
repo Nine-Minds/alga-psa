@@ -2,7 +2,11 @@
 
 import React from 'react';
 
-const EntraIntegrationSettings: React.FC = () => {
+interface EntraIntegrationSettingsProps {
+  canUseCipp?: boolean;
+}
+
+const EntraIntegrationSettings: React.FC<EntraIntegrationSettingsProps> = () => {
   return (
     <div className="text-center py-8 text-muted-foreground">
       <p className="text-lg font-medium">Enterprise Feature</p>
