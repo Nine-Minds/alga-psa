@@ -4,6 +4,7 @@ import { createTenantKnex, runWithTenant } from '@alga-psa/db/tenant';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
 import { executeEntraSync } from '@ee/lib/integrations/entra/sync/syncEngine';
 import { filterEntraUsersForTenant } from '@ee/lib/integrations/entra/settingsService';
+import { markDisabledEntraUsersInactive } from '@ee/lib/integrations/entra/sync/disableHandler';
 import type { EntraConnectionType } from '@ee/interfaces/entra.interfaces';
 import type {
   LoadMappedTenantsActivityInput,
@@ -131,6 +132,16 @@ export async function syncTenantUsersActivity(
     dryRun: false,
   });
 
+  const disabledIdentities = filteredUsers.excluded
+    .filter((entry) => entry.reason === 'account_disabled')
+    .map((entry) => ({
+      entraTenantId: entry.user.entraTenantId,
+      entraObjectId: entry.user.entraObjectId,
+    }));
+  const inactivatedCount = disabledIdentities.length
+    ? await markDisabledEntraUsersInactive(input.tenantId, disabledIdentities)
+    : 0;
+
   return {
     managedTenantId: input.mapping.managedTenantId,
     clientId: input.mapping.clientId,
@@ -139,7 +150,7 @@ export async function syncTenantUsersActivity(
     linked: syncResult.counters.linked,
     updated: syncResult.counters.updated,
     ambiguous: syncResult.counters.ambiguous,
-    inactivated: syncResult.counters.inactivated,
+    inactivated: syncResult.counters.inactivated + inactivatedCount,
     errorMessage: null,
   };
 }

@@ -47,6 +47,26 @@ const SYNTHETIC_SMOKE_TENANTS: SyntheticSmokeTenant[] = IS_SELF_TENANT_SMOKE
   ? parseSyntheticSmokeTenants(process.env.ENTRA_DIRECT_SMOKE_SYNTHETIC_TENANTS)
   : [];
 
+// Smoke-only: force accountEnabled=false for listed email/UPN values so Flow 5
+// (offboard → deactivate) can be exercised without disabling real Entra users.
+// Format: comma-separated email/UPN list.
+const SMOKE_DISABLED_USER_EMAILS: Set<string> = IS_SELF_TENANT_SMOKE
+  ? new Set(
+      (process.env.ENTRA_DIRECT_SMOKE_DISABLED_USER_EMAILS || '')
+        .split(',')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean),
+    )
+  : new Set();
+
+function matchesSmokeDisabledUser(user: EntraManagedUserRecord): boolean {
+  if (SMOKE_DISABLED_USER_EMAILS.size === 0) return false;
+  const candidates = [user.email, user.userPrincipalName]
+    .map((value) => (value || '').trim().toLowerCase())
+    .filter(Boolean);
+  return candidates.some((candidate) => SMOKE_DISABLED_USER_EMAILS.has(candidate));
+}
+
 function toObject(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -355,6 +375,9 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     input: EntraListUsersForTenantInput
   ): Promise<EntraManagedUserRecord[]> {
     const allUsers = await this.fetchSelfTenantUsersRaw(input.tenant, input.managedTenantId);
+    const withSmokeDisables = allUsers.map((user) =>
+      matchesSmokeDisabledUser(user) ? { ...user, accountEnabled: false } : user,
+    );
 
     if (SYNTHETIC_SMOKE_TENANTS.length > 0) {
       const bucketIndex = SYNTHETIC_SMOKE_TENANTS.findIndex((t) => t.id === input.managedTenantId);
@@ -363,13 +386,13 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
       }
       const stride = SYNTHETIC_SMOKE_TENANTS.length;
       // Stable ordering so partitions are deterministic across calls.
-      const sorted = [...allUsers].sort((a, b) => a.entraObjectId.localeCompare(b.entraObjectId));
+      const sorted = [...withSmokeDisables].sort((a, b) => a.entraObjectId.localeCompare(b.entraObjectId));
       return sorted
         .filter((_, index) => index % stride === bucketIndex)
         .map((user) => ({ ...user, entraTenantId: SYNTHETIC_SMOKE_TENANTS[bucketIndex].id }));
     }
 
-    return allUsers;
+    return withSmokeDisables;
   }
 
   private async fetchSelfTenantUsersRaw(

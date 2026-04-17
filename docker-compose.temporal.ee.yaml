@@ -58,6 +58,10 @@ services:
       # tenants so cross-client bleed (Flow 2) can be exercised without CSP/GDAP. Format:
       # comma-separated `id|primary_domain|display_name` entries.
       - ENTRA_DIRECT_SMOKE_SYNTHETIC_TENANTS=${ENTRA_DIRECT_SMOKE_SYNTHETIC_TENANTS:-}
+      # Smoke-only: forces accountEnabled=false for listed emails/UPNs so the
+      # offboard → deactivate path (Flow 5) can be exercised without disabling
+      # real users in Entra. Format: comma-separated email/UPN list.
+      - ENTRA_DIRECT_SMOKE_DISABLED_USER_EMAILS=${ENTRA_DIRECT_SMOKE_DISABLED_USER_EMAILS:-}
     volumes:
       - type: bind
         source: ./secrets/tenants
