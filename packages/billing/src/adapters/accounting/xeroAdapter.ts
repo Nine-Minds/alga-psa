@@ -274,8 +274,7 @@ export class XeroAdapter implements AccountingExportAdapter {
               (taxMapping?.metadata ? (taxMapping.metadata as Record<string, any>)?.components : null)
           );
 
-          taxAmountCents =
-            typeof charge.tax_amount === 'number' ? Math.round(charge.tax_amount) : null;
+          taxAmountCents = coerceChargeCents(charge.tax_amount);
         }
         // When shouldExcludeTax is true, taxComponents and taxAmountCents remain undefined/null
         // This allows the external system to calculate tax based on the taxType
@@ -297,16 +296,15 @@ export class XeroAdapter implements AccountingExportAdapter {
           charge.description ??
           `Invoice ${invoice.invoice_number ?? invoice.invoice_id} line`;
 
-        const unitAmountCents =
-          typeof charge.unit_price === 'number' ? Math.round(charge.unit_price) : null;
+        const unitAmountCents = coerceChargeCents(charge.unit_price);
 
-        if (typeof charge.net_amount !== 'number') {
+        const netAmountCents = coerceChargeCents(charge.net_amount);
+        if (netAmountCents === null) {
           throw new AppError(
             'XERO_CHARGE_MISSING_NET_AMOUNT',
             `Charge ${charge.item_id} on invoice ${invoiceId} is missing net_amount; run the backfill migration.`
           );
         }
-        const netAmountCents = Math.round(charge.net_amount);
 
         const servicePeriod = resolveXeroLineServicePeriod(line);
 
@@ -314,7 +312,7 @@ export class XeroAdapter implements AccountingExportAdapter {
           lineId: line.line_id,
           amountCents: netAmountCents,
           description,
-          quantity: typeof charge.quantity === 'number' ? charge.quantity : 1,
+          quantity: coerceChargeDecimal(charge.quantity) ?? 1,
           unitAmountCents,
           itemCode:
             safeString(lineResolution.itemCode) ??
@@ -790,6 +788,28 @@ function safeString(value: unknown): string | undefined {
     return value;
   }
   return undefined;
+}
+
+function coerceChargeCents(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.round(value);
+  }
+  if (typeof value === 'string' && /^-?\d+$/.test(value.trim())) {
+    const parsed = parseInt(value.trim(), 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function coerceChargeDecimal(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
 }
 
 function safeLineAmountType(value: unknown): LineAmountType | undefined {
