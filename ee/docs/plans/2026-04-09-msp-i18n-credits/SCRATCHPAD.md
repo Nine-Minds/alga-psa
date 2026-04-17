@@ -160,6 +160,9 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
 - **(2026-04-17, F005)** Added `server/public/locales/nl/msp/credits.json` with the same key
   shape. Kept the recurring-context explanation and reconciliation wording explicit, since
   those are the easiest places for machine-like Dutch to leak in.
+- **(2026-04-17, F006)** Added `server/public/locales/it/msp/credits.json` and deliberately
+  used accented/contracted Italian forms where they naturally occur (`più`, `Si è`, `Tutti gli`)
+  so the later accent audit is testing a real localized file rather than English-looking copy.
 
 ## Key Paths / Runbooks
 

@@ -4,7 +4,7 @@
   {"id": "F003", "description": "Generate es/msp/credits.json translations for all keys", "implemented": true},
   {"id": "F004", "description": "Generate de/msp/credits.json translations for all keys", "implemented": true},
   {"id": "F005", "description": "Generate nl/msp/credits.json translations for all keys", "implemented": true},
-  {"id": "F006", "description": "Generate it/msp/credits.json translations for all keys (with Italian accent audit)", "implemented": false},
+  {"id": "F006", "description": "Generate it/msp/credits.json translations for all keys (with Italian accent audit)", "implemented": true},
   {"id": "F007", "description": "Generate pl/msp/credits.json translations for all keys", "implemented": false},
   {"id": "F008", "description": "Run `node scripts/generate-pseudo-locales.cjs` to generate xx/msp/credits.json and yy/msp/credits.json pseudo-locale files from English source", "implemented": false},
   {"id": "F009", "description": "Run `node scripts/validate-translations.cjs` and confirm exit code 0 (key parity, variable preservation, pseudo-locale patterns, Italian accents)", "implemented": false},
