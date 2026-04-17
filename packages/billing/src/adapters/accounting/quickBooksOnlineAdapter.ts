@@ -282,16 +282,19 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         // Note: When shouldExcludeTax is true, we don't set TaxCodeRef
         // QBO will apply default tax behavior or NON depending on settings
 
-        if (typeof charge.net_amount !== 'number') {
+        const netAmountCents = coerceChargeCents(charge.net_amount);
+        if (netAmountCents === null) {
           throw new AppError(
             'QBO_CHARGE_MISSING_NET_AMOUNT',
             `Charge ${charge.item_id} on invoice ${invoiceId} is missing net_amount; run the backfill migration.`
           );
         }
-        const netAmountCents = Math.round(charge.net_amount);
         invoiceNetCents += netAmountCents;
-        if (shouldIncludeAuthoritativeTax && typeof charge.tax_amount === 'number') {
-          invoiceTaxCents += Math.round(charge.tax_amount);
+        if (shouldIncludeAuthoritativeTax) {
+          const taxCents = coerceChargeCents(charge.tax_amount);
+          if (taxCents !== null) {
+            invoiceTaxCents += taxCents;
+          }
         }
 
         qboLines.push({
@@ -903,6 +906,17 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
 function centsToAmount(value: number): number {
   return Math.round(value) / 100;
+}
+
+function coerceChargeCents(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.round(value);
+  }
+  if (typeof value === 'string' && /^-?\d+$/.test(value.trim())) {
+    const parsed = parseInt(value.trim(), 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
 }
 
 function amountToCents(value: number): number {
