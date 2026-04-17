@@ -193,6 +193,8 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
 - **(2026-04-17, F013)** Wired `packages/billing/src/components/credits/AddCreditButton.tsx`
   to `useTranslation('msp/credits')`. The trigger label, dialog title, placeholder paragraph,
   cancel action, and submit action all now resolve from `actions.*` / `management.addCreditPlaceholder`.
+- **(2026-04-17, F014)** Wired `packages/billing/src/components/credits/BackButton.tsx` to
+  `useTranslation('msp/credits')` and moved the visible label to `actions.backToCredits`.
 
 ## Key Paths / Runbooks
 
