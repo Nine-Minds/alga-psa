@@ -1,5 +1,5 @@
 [
-  {"id": "F001", "description": "Create server/public/locales/en/msp/credits.json namespace with all keys needed by credit components (~80 keys across page, columns, status, actions, tabs, settings, charts, stats, management, reconciliation, application, expiration, expirationDialog, context groups)", "implemented": false},
+  {"id": "F001", "description": "Create server/public/locales/en/msp/credits.json namespace with all keys needed by credit components (~80 keys across page, columns, status, actions, tabs, settings, charts, stats, management, reconciliation, application, expiration, expirationDialog, context groups)", "implemented": true},
   {"id": "F002", "description": "Generate fr/msp/credits.json translations for all keys in F001", "implemented": false},
   {"id": "F003", "description": "Generate es/msp/credits.json translations for all keys", "implemented": false},
   {"id": "F004", "description": "Generate de/msp/credits.json translations for all keys", "implemented": false},

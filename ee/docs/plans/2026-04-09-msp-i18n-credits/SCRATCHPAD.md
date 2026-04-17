@@ -132,3 +132,22 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
    uses English month names (Jan, Feb, etc.). These are placeholder data and will eventually
    come from an analytics endpoint. For now, translate them as keys or leave as-is since
    they are placeholder/demo data. Decision: translate them since they are user-visible.
+
+## Implementation Log
+
+- **(2026-04-17, F001)** Added the greenfield English namespace at
+  `server/public/locales/en/msp/credits.json`. The file now defines the 14 planned top-level
+  groups (`page`, `columns`, `status`, `actions`, `tabs`, `settings`, `charts`, `stats`,
+  `management`, `reconciliation`, `application`, `expiration`, `expirationDialog`,
+  `context`) and includes the shared table/status/chart/tab vocabulary needed by all 8 client
+  components plus the server `CreditsPage` wrapper. Included a few pragmatic extras inside the
+  planned groups rather than adding new top-level groups:
+  management load/empty states, reconciliation tab labels, short month labels for placeholder
+  charts, and generic application/expiration failure strings. This keeps later wiring stable
+  and avoids repeated locale-file churn.
+
+## Key Paths / Runbooks
+
+- English source namespace: `server/public/locales/en/msp/credits.json`
+- Plan artifacts:
+  `ee/docs/plans/2026-04-09-msp-i18n-credits/{PRD.md,SCRATCHPAD.md,features.json,tests.json}`
