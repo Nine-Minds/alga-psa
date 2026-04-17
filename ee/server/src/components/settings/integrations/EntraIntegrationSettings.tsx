@@ -549,7 +549,18 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
             >
               Disconnect
             </Button>
-          ) : null}
+          ) : (
+            <Button
+              id="entra-reconnect"
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void handleConnectionOptionClick('direct')}
+              disabled={directLoading || statusLoading}
+            >
+              {directLoading ? 'Reconnecting…' : 'Reconnect'}
+            </Button>
+          )}
           <Button id="entra-refresh-status" type="button" size="sm" variant="ghost" onClick={loadStatus} disabled={statusLoading}>
             Refresh
           </Button>
