@@ -135,7 +135,8 @@ describe('XeroAdapter – spec validation scaffolding', () => {
             service_id: 'svc-123',
             description: 'Consulting services',
             quantity: 1,
-            unit_price: 12_345,
+            unit_price: 11_110,
+            net_amount: 11_110,
             total_price: 12_345,
             tax_amount: 1_235,
             tax_region: 'tax-region'
@@ -190,6 +191,10 @@ describe('XeroAdapter – spec validation scaffolding', () => {
     expect(line.taxType).toBe('OUTPUT');
     expect(line.tracking?.[0]).toMatchObject({ name: 'Region', option: 'North' });
     expect(Array.isArray(line.taxComponents ?? [])).toBe(true);
+    // Regression: LineAmount is the pre-tax net; qty × unitAmount reconciles against it.
+    expect(line.amountCents).toBe(11_110);
+    expect(line.quantity! * line.unitAmountCents!).toBe(line.amountCents);
+    expect(line.taxAmountCents).toBe(1_235);
   });
 
   it('merges mapping and resolver tax metadata to include multiple tax components', async () => {
@@ -245,7 +250,8 @@ describe('XeroAdapter – spec validation scaffolding', () => {
             service_id: 'svc-456',
             description: 'Managed backup',
             quantity: 1,
-            unit_price: 20_000,
+            unit_price: 17_600,
+            net_amount: 17_600,
             total_price: 20_000,
             tax_amount: 2_400,
             tax_region: 'tax-region'
@@ -341,7 +347,8 @@ describe('XeroAdapter – spec validation scaffolding', () => {
             service_id: 'svc-range',
             description: 'Managed services',
             quantity: 1,
-            unit_price: 12_345,
+            unit_price: 11_110,
+            net_amount: 11_110,
             total_price: 12_345,
             tax_amount: 1_235,
             tax_region: 'tax-region'
@@ -356,6 +363,7 @@ describe('XeroAdapter – spec validation scaffolding', () => {
             description: 'Credit adjustment',
             quantity: 1,
             unit_price: 4_000,
+            net_amount: 4_000,
             total_price: 4_000,
             tax_amount: 0,
             tax_region: null
@@ -457,7 +465,8 @@ describe('XeroAdapter – spec validation scaffolding', () => {
             service_id: 'svc-client-cadence',
             description: 'Client cadence managed services',
             quantity: 1,
-            unit_price: 12_345,
+            unit_price: 11_110,
+            net_amount: 11_110,
             total_price: 12_345,
             tax_amount: 1_235,
             tax_region: 'tax-region'
@@ -471,7 +480,8 @@ describe('XeroAdapter – spec validation scaffolding', () => {
             service_id: 'svc-contract-cadence',
             description: 'Contract cadence backup',
             quantity: 1,
-            unit_price: 9_500,
+            unit_price: 8_550,
+            net_amount: 8_550,
             total_price: 9_500,
             tax_amount: 950,
             tax_region: 'tax-region'
@@ -550,6 +560,7 @@ describe('XeroAdapter – spec validation scaffolding', () => {
             description: 'Monthly subscription',
             quantity: 2,
             unit_price: 6_000,
+            net_amount: 12_000,
             total_price: 12_000,
             tax_amount: 0,
             tax_region: null
@@ -611,5 +622,146 @@ describe('XeroAdapter – spec validation scaffolding', () => {
     const delivery = await adapter.deliver(transformResult, context);
     expect(delivery.deliveredLines).toHaveLength(1);
     expect(createSpy).toHaveBeenCalledWith(TENANT_ID, 'realm-demo');
+  });
+
+  // Regression: historically the adapter sent tax-inclusive total_price as LineAmount while
+  // UnitAmount was pre-tax. Xero silently normalized (qty → 1, tax → 0), which dropped sales
+  // tax liability out of Xero's books. The adapter now sources LineAmount from net_amount.
+  it('sends LineAmount = net_amount (pre-tax) so Qty × UnitAmount reconciles', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([baseLine]);
+
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-TAX',
+            invoice_date: '2026-04-16',
+            due_date: '2026-04-30',
+            client_id: CLIENT_ID,
+            currency_code: 'USD'
+          }
+        ]
+      ])
+    );
+
+    // Mirrors the real Acme smoke-test case: qty 2 @ $100, 8.875% NY tax → net 20000, tax 1775, total 21775.
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          CHARGE_ID,
+          {
+            item_id: CHARGE_ID,
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-123',
+            description: 'Remote Support - Hourly',
+            quantity: 2,
+            unit_price: 10_000,
+            net_amount: 20_000,
+            total_price: 21_775,
+            tax_amount: 1_775,
+            tax_region: 'US-NY'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [CLIENT_ID, { client_id: CLIENT_ID, client_name: 'Acme', billing_email: 'a@a' }]
+      ]),
+      mappings: new Map([
+        [
+          CLIENT_ID,
+          {
+            id: 'mapping-1',
+            integration_type: 'xero',
+            alga_entity_type: 'client',
+            alga_entity_id: CLIENT_ID,
+            external_entity_id: 'external-contact-acme',
+            metadata: { source: 'mapping_table' }
+          }
+        ]
+      ])
+    });
+
+    const result = await adapter.transform(context);
+    const invoice = (result.documents[0].payload as Record<string, any>).invoice;
+    const line = invoice.lines[0];
+
+    expect(line.amountCents).toBe(20_000); // pre-tax net, not 21_775
+    expect(line.quantity).toBe(2);
+    expect(line.unitAmountCents).toBe(10_000);
+    expect(line.quantity * line.unitAmountCents).toBe(line.amountCents); // reconciles
+    expect(line.taxAmountCents).toBe(1_775);
+    expect(invoice.lineAmountType).toBe('Exclusive');
+    // Invoice-level amountCents mirrors the sum of pre-tax line amounts.
+    expect(invoice.amountCents).toBe(20_000);
+  });
+
+  it('throws XERO_CHARGE_MISSING_NET_AMOUNT when a charge has no net_amount', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([baseLine]);
+
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-NONET',
+            invoice_date: '2026-04-16',
+            due_date: '2026-04-30',
+            client_id: CLIENT_ID,
+            currency_code: 'USD'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          CHARGE_ID,
+          {
+            item_id: CHARGE_ID,
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-123',
+            description: 'Legacy charge',
+            quantity: 1,
+            unit_price: 10_000,
+            // net_amount intentionally absent — simulates a pre-migration row
+            total_price: 10_000,
+            tax_amount: 0,
+            tax_region: null
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [CLIENT_ID, { client_id: CLIENT_ID, client_name: 'Acme', billing_email: 'a@a' }]
+      ]),
+      mappings: new Map([
+        [
+          CLIENT_ID,
+          {
+            id: 'mapping-1',
+            integration_type: 'xero',
+            alga_entity_type: 'client',
+            alga_entity_id: CLIENT_ID,
+            external_entity_id: 'external-contact-acme',
+            metadata: { source: 'mapping_table' }
+          }
+        ]
+      ])
+    });
+
+    await expect(adapter.transform(context)).rejects.toMatchObject({
+      code: 'XERO_CHARGE_MISSING_NET_AMOUNT'
+    });
   });
 });
