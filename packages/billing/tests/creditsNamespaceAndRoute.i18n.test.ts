@@ -4,6 +4,7 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { ROUTE_NAMESPACES, getNamespacesForRoute } from '@alga-psa/core/lib/i18n/config';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -49,5 +50,19 @@ describe('MSP credits namespace and route i18n contract', () => {
       'expirationDialog',
       'context',
     ]);
+  });
+
+  it('T003: route config declares a dedicated msp/credits namespace entry for /msp/billing/credits', () => {
+    expect(ROUTE_NAMESPACES['/msp/billing/credits']).toEqual([
+      'common',
+      'msp/core',
+      'features/billing',
+      'msp/credits',
+    ]);
+  });
+
+  it('T004: longest-prefix namespace lookup resolves msp/credits for /msp/billing/credits', () => {
+    expect(getNamespacesForRoute('/msp/billing/credits')).toContain('msp/credits');
+    expect(getNamespacesForRoute('/msp/billing/credits/details')).toContain('msp/credits');
   });
 });

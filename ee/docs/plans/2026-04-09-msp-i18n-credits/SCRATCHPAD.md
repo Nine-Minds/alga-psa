@@ -249,3 +249,8 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
 - **(2026-04-17, T002)** Extended the same namespace/route contract file with a strict top-level
   shape assertion for `server/public/locales/en/msp/credits.json`. This guards against accidental
   group drift when future i18n edits touch the credits namespace.
+- **(2026-04-17, T003/T004)** Added route invariants to
+  `packages/billing/tests/creditsNamespaceAndRoute.i18n.test.ts` that assert both the literal
+  `ROUTE_NAMESPACES['/msp/billing/credits']` value and the runtime result of
+  `getNamespacesForRoute('/msp/billing/credits')` / nested credit paths. This protects the
+  longest-prefix behavior called out in the PRD.
