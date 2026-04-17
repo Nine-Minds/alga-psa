@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  formatEntraRunStatusLabel,
   isTerminalEntraRunStatus,
   resolveEntraClientSyncStartState,
   shouldShowEntraSyncAction,
@@ -26,7 +27,7 @@ describe('shouldShowEntraSyncAction', () => {
   it('T127: resolves run-id state and non-terminal polling status for client-level sync feedback', () => {
     expect(resolveEntraClientSyncStartState('run-127')).toEqual({
       runId: 'run-127',
-      statusMessage: 'Run run-127: queued',
+      statusMessage: 'Entra sync queued',
       shouldPoll: true,
     });
     expect(resolveEntraClientSyncStartState(null)).toEqual({
@@ -41,6 +42,17 @@ describe('shouldShowEntraSyncAction', () => {
     expect(isTerminalEntraRunStatus('partial')).toBe(true);
   });
 
+  it('formatEntraRunStatusLabel produces human labels that never include the opaque workflow id', () => {
+    expect(formatEntraRunStatusLabel('queued')).toBe('Entra sync queued');
+    expect(formatEntraRunStatusLabel('running')).toBe('Entra sync running');
+    expect(formatEntraRunStatusLabel('completed')).toBe('Entra sync completed');
+    expect(formatEntraRunStatusLabel('failed')).toBe('Entra sync failed');
+    expect(formatEntraRunStatusLabel('partial')).toBe('Entra sync completed with issues');
+    // Unknown raw status falls back to a compact prefix but still omits any id
+    expect(formatEntraRunStatusLabel('weird-status')).toBe('Entra sync: weird-status');
+    expect(formatEntraRunStatusLabel(null)).toBe('Entra sync status unknown');
+  });
+
   it('T140: disabling client sync action flag hides entrypoint while preserving existing run-id status representation', () => {
     expect(
       shouldShowEntraSyncAction('enterprise', false, { entra_tenant_id: 'entra-tenant-140' })
@@ -48,7 +60,7 @@ describe('shouldShowEntraSyncAction', () => {
 
     expect(resolveEntraClientSyncStartState('run-140-history')).toEqual({
       runId: 'run-140-history',
-      statusMessage: 'Run run-140-history: queued',
+      statusMessage: 'Entra sync queued',
       shouldPoll: true,
     });
   });

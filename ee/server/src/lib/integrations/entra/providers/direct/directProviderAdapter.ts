@@ -67,6 +67,35 @@ function matchesSmokeDisabledUser(user: EntraManagedUserRecord): boolean {
   return candidates.some((candidate) => SMOKE_DISABLED_USER_EMAILS.has(candidate));
 }
 
+// Smoke-only: inject extra fake users into the /users response, pinned to a
+// specific synthetic tenant bucket so Flow 7 (ambiguous match) can be
+// exercised without adding real users to Entra. Format:
+// comma-separated `objectId|upn|displayName|bucketIndex` entries.
+interface SmokeExtraUser {
+  objectId: string;
+  upn: string;
+  displayName: string;
+  bucketIndex: number;
+}
+
+function parseSmokeExtraUsers(raw: string | undefined): SmokeExtraUser[] {
+  if (!raw) return [];
+  const users: SmokeExtraUser[] = [];
+  for (const entry of raw.split(',')) {
+    const parts = entry.split('|').map((part) => part.trim());
+    if (parts.length < 4) continue;
+    const [objectId, upn, displayName, bucketIndexRaw] = parts;
+    const bucketIndex = Number.parseInt(bucketIndexRaw, 10);
+    if (!objectId || !upn || !displayName || !Number.isFinite(bucketIndex)) continue;
+    users.push({ objectId, upn, displayName, bucketIndex });
+  }
+  return users;
+}
+
+const SMOKE_EXTRA_USERS: SmokeExtraUser[] = IS_SELF_TENANT_SMOKE
+  ? parseSmokeExtraUsers(process.env.ENTRA_DIRECT_SMOKE_EXTRA_USERS)
+  : [];
+
 function toObject(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -387,9 +416,28 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
       const stride = SYNTHETIC_SMOKE_TENANTS.length;
       // Stable ordering so partitions are deterministic across calls.
       const sorted = [...withSmokeDisables].sort((a, b) => a.entraObjectId.localeCompare(b.entraObjectId));
-      return sorted
+      const bucketed = sorted
         .filter((_, index) => index % stride === bucketIndex)
         .map((user) => ({ ...user, entraTenantId: SYNTHETIC_SMOKE_TENANTS[bucketIndex].id }));
+
+      const extras = SMOKE_EXTRA_USERS.filter((u) => u.bucketIndex === bucketIndex).map((u) =>
+        normalizeEntraSyncUser({
+          entraTenantId: SYNTHETIC_SMOKE_TENANTS[bucketIndex].id,
+          entraObjectId: u.objectId,
+          userPrincipalName: u.upn,
+          email: u.upn,
+          displayName: u.displayName,
+          givenName: null,
+          surname: null,
+          accountEnabled: true,
+          jobTitle: null,
+          mobilePhone: null,
+          businessPhones: [],
+          raw: { __smokeExtra: true },
+        }),
+      );
+
+      return [...bucketed, ...extras];
     }
 
     return withSmokeDisables;

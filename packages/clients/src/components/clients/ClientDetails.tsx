@@ -71,6 +71,7 @@ import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
 import {
+  formatEntraRunStatusLabel,
   isTerminalEntraRunStatus,
   resolveEntraClientSyncStartState,
   shouldShowEntraSyncAction,
@@ -268,7 +269,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   );
 
   const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {
-    const response = await fetch(`/api/integrations/entra/sync/runs/${runId}`, {
+    const response = await fetch(`/api/integrations/entra/sync/runs/${encodeURIComponent(runId)}`, {
       method: 'GET',
       credentials: 'same-origin',
       cache: 'no-store',
@@ -301,7 +302,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           return;
         }
 
-        setEntraSyncStatus(`Run ${entraSyncRunId}: ${nextStatus}`);
+        setEntraSyncStatus(formatEntraRunStatusLabel(nextStatus));
         if (isTerminalEntraRunStatus(nextStatus)) {
           setEntraSyncRunId(null);
         }
@@ -892,7 +893,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         return;
       }
 
-      const syncState = resolveEntraClientSyncStartState(result.data?.runId);
+      // The status endpoint looks up by entra_sync_runs.run_id or workflow_id.
+      // Prefer workflowId because the upstream `runId` here is Temporal's
+      // firstExecutionRunId, which has no row in entra_sync_runs — polling it
+      // would never reach a terminal state.
+      const syncState = resolveEntraClientSyncStartState(result.data?.workflowId || result.data?.runId);
       if (syncState.shouldPoll && syncState.runId) {
         setEntraSyncRunId(syncState.runId);
         setEntraSyncStatus(syncState.statusMessage);
@@ -1722,7 +1727,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   {t('clientDetails.syncEntraNow', { defaultValue: 'Sync Entra Now' })}
                 </Button>
                 {entraSyncStatus ? (
-                  <p className="text-xs text-muted-foreground" id={`${id}-sync-entra-status`}>
+                  <p
+                    className="text-xs text-muted-foreground"
+                    id={`${id}-sync-entra-status`}
+                    title={entraSyncRunId || undefined}
+                  >
                     {entraSyncStatus}
                   </p>
                 ) : null}

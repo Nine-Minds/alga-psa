@@ -62,6 +62,11 @@ services:
       # offboard → deactivate path (Flow 5) can be exercised without disabling
       # real users in Entra. Format: comma-separated email/UPN list.
       - ENTRA_DIRECT_SMOKE_DISABLED_USER_EMAILS=${ENTRA_DIRECT_SMOKE_DISABLED_USER_EMAILS:-}
+      # Smoke-only: injects fake users into the /users response pinned to a
+      # specific synthetic tenant bucket so Flow 7 (ambiguous match) can be
+      # exercised without adding real users to Entra. Format: comma-separated
+      # `objectId|upn|displayName|bucketIndex` entries.
+      - ENTRA_DIRECT_SMOKE_EXTRA_USERS=${ENTRA_DIRECT_SMOKE_EXTRA_USERS:-}
     volumes:
       - type: bind
         source: ./secrets/tenants
