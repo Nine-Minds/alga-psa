@@ -94,5 +94,11 @@
     "description": "No key collisions between msp/service-catalog.json and existing msp/settings.json or features/billing.json keys",
     "implemented": false,
     "featureIds": ["F001"]
+  },
+  {
+    "id": "T017",
+    "description": "Portuguese locale support wired end-to-end — shared i18n config(s) recognize pt and the language can resolve msp/service-catalog resources",
+    "implemented": false,
+    "featureIds": ["F015", "F021"]
   }
 ]

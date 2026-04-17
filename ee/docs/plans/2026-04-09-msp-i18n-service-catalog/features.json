@@ -1,5 +1,5 @@
 [
-  {"id": "F001", "description": "Create en/msp/service-catalog.json with all keys for 14 service catalog and tax rate components (~285-430 strings)", "implemented": false},
+  {"id": "F001", "description": "Create en/msp/service-catalog.json with all keys for 14 service catalog and tax rate components (~285-430 strings)", "implemented": true},
   {"id": "F002", "description": "Wire useTranslation('msp/service-catalog') in TaxRates.tsx — table column headers, dialog title/labels, validation messages, button text, loading indicator", "implemented": false},
   {"id": "F003", "description": "Wire useTranslation in TaxRateDetailPanel.tsx — tab labels (Details, Components, Brackets, Holidays), detail field labels, precedence info, composite badge, alert text", "implemented": false},
   {"id": "F004", "description": "Wire useTranslation in ServiceForm.tsx — placeholder text, select labels (Service Type, Billing Method, Tax Rate), description label, submit button", "implemented": false},
@@ -18,5 +18,6 @@
   {"id": "F017", "description": "Italian accent audit on it/msp/service-catalog.json", "implemented": false},
   {"id": "F018", "description": "Update ROUTE_NAMESPACES to add 'msp/service-catalog' to /msp/settings route", "implemented": false},
   {"id": "F019", "description": "validate-translations.cjs passes for msp/service-catalog across all 9 locales (0 errors, 0 warnings)", "implemented": false},
-  {"id": "F020", "description": "npm run build succeeds with no TypeScript errors after all wiring", "implemented": false}
+  {"id": "F020", "description": "npm run build succeeds with no TypeScript errors after all wiring", "implemented": false},
+  {"id": "F021", "description": "Add Portuguese locale support to shared i18n runtime config(s) so pt/msp/service-catalog.json can be resolved in-app", "implemented": false}
 ]

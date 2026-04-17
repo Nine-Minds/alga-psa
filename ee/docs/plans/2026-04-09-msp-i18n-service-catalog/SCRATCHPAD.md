@@ -67,6 +67,13 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
 
 ## Discoveries / Constraints
 
+### Portuguese runtime support gap
+- (2026-04-17) The PRD requires `pt` production locales, but the current runtime configs do **not** support Portuguese:
+  - `packages/core/src/lib/i18n/config.ts` supported locales: `en, fr, es, de, nl, it, pl, xx, yy`
+  - `server/src/middleware/i18nConfig.ts` supported locales: `en, fr, es, de, nl, it, pl`
+  - `packages/ui/src/lib/i18n/LanguageSwitcher.tsx` already has a `pt` flag entry, so the missing support is specifically the shared locale config + middleware list.
+- **Plan addition required:** add an atomic follow-up feature/test so `pt/msp/service-catalog.json` is not dead weight. Without this, Portuguese translations could exist on disk but never be selectable/resolved by the app.
+
 ### Two ServiceConfigurationPanel files
 - (2026-04-09) There are two files with the same component name in different directories:
   - `service-configurations/ServiceConfigurationPanel.tsx` (279 LOC) — orchestrator that composes Base + type-specific panels, has save/cancel buttons and bucket overlay logic.
@@ -116,3 +123,23 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
 4. **Mismatch warning in BucketServiceConfigPanel**: Line 125 builds a warning with embedded variables: `Bucket billing period (${billingPeriod}) should match contract line billing frequency (${contractLineBillingFrequency})`. Use interpolation: `t('bucketConfig.periodMismatch', { billingPeriod, contractLineBillingFrequency })`.
 5. **Plural handling**: `ServiceSelectionDialog.tsx` line 297-299 uses a ternary for pluralization: `service${selectedServices.length !== 1 ? 's' : ''} selected`. Use i18next `_one`/`_other` plural keys or `t('serviceSelection.selectedCount', { count })`.
 6. **sr-only text**: `TaxRates.tsx` line 288 has `<span className="sr-only">Open menu</span>`. This accessibility text must be translated.
+
+## 2026-04-17 Working Log
+
+- Repo state before work: unrelated modified plan files already present under `ee/docs/plans/2026-04-09-msp-i18n-credits/`; leave untouched.
+- Commands used for initial audit:
+  - `git status --short`
+  - `jq '.[] | select(.implemented==false)' ee/docs/plans/2026-04-09-msp-i18n-service-catalog/{features,tests}.json`
+  - `sed -n '1,260p'` / `sed -n '1,420p'` across the 14 in-scope component files
+  - `sed -n '1,260p' packages/core/src/lib/i18n/config.ts`
+  - `sed -n '1,220p' server/src/middleware/i18nConfig.ts`
+  - `sed -n '1,260p' packages/billing/src/hooks/useBillingEnumOptions.ts`
+  - `find . -name 'generate-pseudo-locales.cjs' -o -name 'validate-translations.cjs'`
+- Immediate implementation order:
+  1. Add missing checklist items for Portuguese runtime support.
+  2. Build `server/public/locales/en/msp/service-catalog.json` from all 14 components (`F001`).
+  3. Wire components and route/runtime config.
+  4. Add/adjust tests, generate locales, validate, and build.
+- **(2026-04-17, F001)** Created `server/public/locales/en/msp/service-catalog.json` with 13 top-level groups matching the PRD namespace layout (`taxRates`, `taxRateDetail`, `serviceForm`, `serviceSelection`, `configType`, `serviceConfig`, `fixedConfig`, `hourlyConfig`, `usageConfig`, `bucketConfig`, `rateTiers`, `serviceTaxSettings`, `serviceDetail`). The English source currently contains 258 leaf keys covering all 14 in-scope components, including carried-over enum-adjacent copy and currency/validation/helper text. Validation used:
+  - `jq empty server/public/locales/en/msp/service-catalog.json`
+  - `jq 'keys' server/public/locales/en/msp/service-catalog.json`
