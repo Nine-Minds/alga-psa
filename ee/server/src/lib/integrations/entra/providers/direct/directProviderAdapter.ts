@@ -19,6 +19,34 @@ const GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0';
 const IS_SELF_TENANT_SMOKE =
   (process.env.ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE || '').toLowerCase() === 'true';
 
+// Smoke-only: partition the self-tenant /users response into N synthetic managed
+// tenants so Flow 2 (cross-client bleed) can be exercised without real CSP/GDAP.
+// Format: comma-separated `id|domain|displayName` entries. Users are distributed
+// across buckets by index-mod-N, so each client sees a disjoint subset.
+interface SyntheticSmokeTenant {
+  id: string;
+  domain: string;
+  displayName: string;
+}
+
+function parseSyntheticSmokeTenants(raw: string | undefined): SyntheticSmokeTenant[] {
+  if (!raw) return [];
+  const specs: SyntheticSmokeTenant[] = [];
+  for (const entry of raw.split(',')) {
+    const parts = entry.split('|').map((part) => part.trim());
+    if (parts.length < 3) continue;
+    const [id, domain, displayName] = parts;
+    if (id && domain && displayName) {
+      specs.push({ id, domain, displayName });
+    }
+  }
+  return specs;
+}
+
+const SYNTHETIC_SMOKE_TENANTS: SyntheticSmokeTenant[] = IS_SELF_TENANT_SMOKE
+  ? parseSyntheticSmokeTenants(process.env.ENTRA_DIRECT_SMOKE_SYNTHETIC_TENANTS)
+  : [];
+
 function toObject(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -278,6 +306,16 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
   private async listSelfTenantAsManaged(
     input: EntraListManagedTenantsInput
   ): Promise<EntraManagedTenantRecord[]> {
+    if (SYNTHETIC_SMOKE_TENANTS.length > 0) {
+      return SYNTHETIC_SMOKE_TENANTS.map((spec) => ({
+        entraTenantId: spec.id,
+        displayName: spec.displayName,
+        primaryDomain: spec.domain,
+        sourceUserCount: 0,
+        raw: { __smokeSynthetic: true, id: spec.id, domain: spec.domain },
+      }));
+    }
+
     const payload = await this.graphGet(input.tenant, `${GRAPH_BASE_URL}/organization`);
     const rows = Array.isArray(payload.value) ? payload.value : [];
     const tenants: EntraManagedTenantRecord[] = [];
@@ -316,6 +354,28 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
   private async listSelfTenantUsers(
     input: EntraListUsersForTenantInput
   ): Promise<EntraManagedUserRecord[]> {
+    const allUsers = await this.fetchSelfTenantUsersRaw(input.tenant, input.managedTenantId);
+
+    if (SYNTHETIC_SMOKE_TENANTS.length > 0) {
+      const bucketIndex = SYNTHETIC_SMOKE_TENANTS.findIndex((t) => t.id === input.managedTenantId);
+      if (bucketIndex < 0) {
+        return [];
+      }
+      const stride = SYNTHETIC_SMOKE_TENANTS.length;
+      // Stable ordering so partitions are deterministic across calls.
+      const sorted = [...allUsers].sort((a, b) => a.entraObjectId.localeCompare(b.entraObjectId));
+      return sorted
+        .filter((_, index) => index % stride === bucketIndex)
+        .map((user) => ({ ...user, entraTenantId: SYNTHETIC_SMOKE_TENANTS[bucketIndex].id }));
+    }
+
+    return allUsers;
+  }
+
+  private async fetchSelfTenantUsersRaw(
+    tenant: string,
+    defaultEntraTenantId: string
+  ): Promise<EntraManagedUserRecord[]> {
     const users: EntraManagedUserRecord[] = [];
     const seenObjectIds = new Set<string>();
     const select = [
@@ -334,7 +394,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     let nextUrl = `${GRAPH_BASE_URL}/users?$select=${select}&$top=999`;
 
     while (nextUrl) {
-      const payload = await this.graphGet(input.tenant, nextUrl);
+      const payload = await this.graphGet(tenant, nextUrl);
       const rows = Array.isArray(payload.value) ? payload.value : [];
 
       for (const row of rows) {
@@ -347,7 +407,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
         const email = getNullableString(raw.mail) || userPrincipalName;
 
         users.push(normalizeEntraSyncUser({
-          entraTenantId: input.managedTenantId,
+          entraTenantId: defaultEntraTenantId,
           entraObjectId,
           userPrincipalName,
           email,

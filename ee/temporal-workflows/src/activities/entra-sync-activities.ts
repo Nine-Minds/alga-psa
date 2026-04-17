@@ -104,7 +104,10 @@ export async function syncTenantUsersActivity(
 
   const users = await adapter.listUsersForTenant({
     tenant: input.tenantId,
-    managedTenantId: input.mapping.managedTenantId,
+    // Adapter expects the Microsoft tenant GUID (used as `tenantId eq ...` filter
+    // in the managedTenants/users Graph call). The DB's managed_tenant_id is a
+    // local PK and must not be passed here.
+    managedTenantId: input.mapping.entraTenantId,
   });
   const filteredUsers = await filterEntraUsersForTenant(input.tenantId, users);
 
