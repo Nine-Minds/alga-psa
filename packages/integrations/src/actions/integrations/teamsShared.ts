@@ -4,6 +4,7 @@ export type TeamsInstallStatus = typeof TEAMS_INSTALL_STATUSES[number];
 export const TEAMS_CAPABILITIES = [
   'personal_tab',
   'personal_bot',
+  'group_chat_bot',
   'message_extension',
   'activity_notifications',
 ] as const;

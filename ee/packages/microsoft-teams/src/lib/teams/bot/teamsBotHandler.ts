@@ -985,6 +985,21 @@ export async function handleTeamsBotActivity(
     });
   }
 
+  // Group-chat responses are visible to every chat member regardless of their
+  // PSA permissions. Require an explicit per-tenant capability so admins
+  // knowingly opt in before the bot echoes ticket data into a shared chat.
+  if (conversationType === 'groupChat' && !tenantContext.enabledCapabilities.includes('group_chat_bot')) {
+    return buildMessageResponse('The Alga PSA Teams bot is not enabled for group chats in this tenant. Ask an administrator to enable the group chat capability in Teams integration settings.', {
+      attachments: [
+        buildCard(
+          'Group chat not enabled',
+          'Group chat is not enabled for Alga PSA in this tenant. Administrators can enable it under Settings → Integrations → Teams → Capabilities.'
+        ),
+      ],
+      metadata: baseMetadata,
+    });
+  }
+
   const linkedUser = await resolveTeamsLinkedUser({
     tenantId: tenantContext.tenantId,
     microsoftAccountId: getMicrosoftAccountId(activity),
