@@ -40,7 +40,8 @@ function formatCreditServicePeriod(
 }
 
 function renderCreditContext(
-  record: ICreditTracking & { transaction_description?: string; invoice_number?: string }
+  record: ICreditTracking & { transaction_description?: string; invoice_number?: string },
+  t: ReturnType<typeof useTranslation>['t'],
 ) {
   const periodLabel = formatCreditServicePeriod(
     record.invoice_service_period_start,
@@ -50,9 +51,11 @@ function renderCreditContext(
   if (record.invoice_context_status === 'missing_source_context') {
     return (
       <div className="text-sm">
-        <div className="font-medium">Lineage Missing</div>
+        <div className="font-medium">{t('context.lineageMissing', { defaultValue: 'Lineage Missing' })}</div>
         <div className="text-muted-foreground">
-          Source invoice metadata could not be recovered. Treat this as financial-date context until lineage is repaired.
+          {t('context.lineageMissingDescription', {
+            defaultValue: 'Source invoice metadata could not be recovered. Treat this as financial-date context until lineage is repaired.',
+          })}
         </div>
       </div>
     );
@@ -62,10 +65,19 @@ function renderCreditContext(
     return (
       <div className="text-sm">
         <div className="font-medium">
-          {record.lineage_origin === 'transferred_credit' ? 'Transferred Recurring Credit' : 'Recurring Source'}
+          {record.lineage_origin === 'transferred_credit'
+            ? t('context.transferredRecurringCredit', { defaultValue: 'Transferred Recurring Credit' })
+            : t('context.recurringSource', { defaultValue: 'Recurring Source' })}
         </div>
         <div className="text-muted-foreground">
-          {periodLabel ? `Service Period: ${periodLabel}` : 'Recurring source lineage preserved'}
+          {periodLabel
+            ? t('context.servicePeriod', {
+                period: periodLabel,
+                defaultValue: 'Service Period: {{period}}',
+              })
+            : t('context.recurringLineagePreserved', {
+                defaultValue: 'Recurring source lineage preserved',
+              })}
         </div>
       </div>
     );
@@ -73,8 +85,10 @@ function renderCreditContext(
 
   return (
     <div className="text-sm">
-      <div className="font-medium">Financial Only</div>
-      <div className="text-muted-foreground">No recurring service period</div>
+      <div className="font-medium">{t('context.financialOnly', { defaultValue: 'Financial Only' })}</div>
+      <div className="text-muted-foreground">
+        {t('context.noRecurringServicePeriod', { defaultValue: 'No recurring service period' })}
+      </div>
     </div>
   );
 }
@@ -105,7 +119,7 @@ const createColumns = (
   {
     title: t('columns.context', { defaultValue: 'Context' }),
     dataIndex: 'invoice_context_status',
-    render: (_value: string | undefined, record) => renderCreditContext(record)
+    render: (_value: string | undefined, record) => renderCreditContext(record, t)
   },
   {
     title: t('columns.originalAmount', { defaultValue: 'Original Amount' }),

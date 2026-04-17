@@ -204,6 +204,9 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   the credits table columns into `createColumns(t)` so column titles, `N/A`/`Never` fallbacks,
   status badges, row action buttons, the “Recent Credits” section copy, tab labels, “View All
   Credits” CTA, and the local add-credit dialog all now resolve from `msp/credits`.
+- **(2026-04-17, F017)** Threaded `t` through `renderCreditContext()` in `CreditManagement.tsx`
+  so the lineage/status explanation blocks now resolve `context.*` keys instead of rendering
+  raw English helper text.
 
 ## Key Paths / Runbooks
 
