@@ -207,6 +207,9 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
 - **(2026-04-17, F017)** Threaded `t` through `renderCreditContext()` in `CreditManagement.tsx`
   so the lineage/status explanation blocks now resolve `context.*` keys instead of rendering
   raw English helper text.
+- **(2026-04-17, F018)** Began `CreditReconciliation.tsx` wiring by translating the dashboard
+  heading, client selector placeholder, run button state, filter labels/options, reset action,
+  and the validation toast message with `balanceCount` / `trackingCount` interpolation.
 
 ## Key Paths / Runbooks
 

@@ -9,6 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrency } from '@alga-psa/core';
 import { formatDateOnly } from '@alga-psa/core';
 import { parseISO } from 'date-fns';
@@ -158,6 +159,7 @@ const CreditReconciliation: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
+  const { t } = useTranslation('msp/credits');
   const subtabParam = searchParams?.get('subtab');
 
   // Update URL when tab changes
@@ -260,7 +262,11 @@ const CreditReconciliation: React.FC = () => {
       // In a real implementation, we would refresh the data after validation
       // For now, just show a success message
       toast.success(
-        `Validation completed: Found ${result.balanceDiscrepancyCount} balance discrepancies and ${result.missingTrackingCount + result.inconsistentTrackingCount} tracking issues.`,
+        t('reconciliation.validationResult', {
+          balanceCount: result.balanceDiscrepancyCount,
+          trackingCount: result.missingTrackingCount + result.inconsistentTrackingCount,
+          defaultValue: 'Validation completed: Found {{balanceCount}} balance discrepancies and {{trackingCount}} tracking issues.',
+        }),
       );
 
       setRunningValidation(false);
@@ -305,7 +311,9 @@ const CreditReconciliation: React.FC = () => {
     <div className="space-y-6">
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">Credit Reconciliation Dashboard</h2>
+          <h2 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">
+            {t('reconciliation.title', { defaultValue: 'Credit Reconciliation Dashboard' })}
+          </h2>
           <div className="flex space-x-2">
             <div className="flex items-center space-x-2">
               <select
@@ -314,7 +322,7 @@ const CreditReconciliation: React.FC = () => {
                 onChange={handleClientChange}
                 className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-card"
               >
-                <option value="">Select Client</option>
+                <option value="">{t('reconciliation.selectClient', { defaultValue: 'Select Client' })}</option>
                 {clients.map(client => (
                   <option key={client.id} value={client.id}>{client.name}</option>
                 ))}
@@ -324,7 +332,9 @@ const CreditReconciliation: React.FC = () => {
                 onClick={handleRunValidation}
                 disabled={!selectedClient || runningValidation}
               >
-                {runningValidation ? 'Running...' : 'Run Reconciliation'}
+                {runningValidation
+                  ? t('actions.running', { defaultValue: 'Running...' })
+                  : t('actions.runReconciliation', { defaultValue: 'Run Reconciliation' })}
               </Button>
             </div>
           </div>
@@ -336,7 +346,7 @@ const CreditReconciliation: React.FC = () => {
             <div className="flex flex-wrap gap-4 items-center">
               <div>
                 <label htmlFor="status-filter" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                  Status
+                  {t('reconciliation.status', { defaultValue: 'Status' })}
                 </label>
                 <select
                   id="status-filter"
@@ -344,16 +354,16 @@ const CreditReconciliation: React.FC = () => {
                   onChange={(e) => setSelectedStatus(e.target.value as ReconciliationStatus | '')}
                   className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-card"
                 >
-                  <option value="">All Statuses</option>
-                  <option value="open">Open</option>
-                  <option value="in_review">In Review</option>
-                  <option value="resolved">Resolved</option>
+                  <option value="">{t('reconciliation.allStatuses', { defaultValue: 'All Statuses' })}</option>
+                  <option value="open">{t('status.open', { defaultValue: 'Open' })}</option>
+                  <option value="in_review">{t('status.inReview', { defaultValue: 'In Review' })}</option>
+                  <option value="resolved">{t('status.resolved', { defaultValue: 'Resolved' })}</option>
                 </select>
               </div>
               
               <div>
                 <label htmlFor="date-from" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                  From Date
+                  {t('reconciliation.fromDate', { defaultValue: 'From Date' })}
                 </label>
                 <input
                   id="date-from"
@@ -366,7 +376,7 @@ const CreditReconciliation: React.FC = () => {
               
               <div>
                 <label htmlFor="date-to" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                  To Date
+                  {t('reconciliation.toDate', { defaultValue: 'To Date' })}
                 </label>
                 <input
                   id="date-to"
@@ -388,7 +398,7 @@ const CreditReconciliation: React.FC = () => {
                   }}
                   className="mt-6"
                 >
-                  Reset
+                  {t('actions.reset', { defaultValue: 'Reset' })}
                 </Button>
               </div>
             </div>
