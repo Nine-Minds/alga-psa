@@ -126,6 +126,7 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
             description: 'Managed services',
             quantity: 1,
             unit_price: 12_345,
+            net_amount: 12_345,
             total_price: 12_345,
             tax_amount: 0,
             tax_region: null
@@ -204,6 +205,7 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
             description: 'Manual adjustment',
             quantity: 1,
             unit_price: 12_345,
+            net_amount: 12_345,
             total_price: 12_345,
             tax_amount: 0,
             tax_region: null
@@ -299,6 +301,7 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
             description: 'Client cadence managed services',
             quantity: 1,
             unit_price: 12_345,
+            net_amount: 12_345,
             total_price: 12_345,
             tax_amount: 0,
             tax_region: null
@@ -313,6 +316,7 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
             description: 'Contract cadence backup',
             quantity: 1,
             unit_price: 8_765,
+            net_amount: 8_765,
             total_price: 8_765,
             tax_amount: 0,
             tax_region: null
@@ -352,5 +356,246 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
     expect(invoice.Line).toHaveLength(2);
     expect(invoice.Line[0]?.SalesItemLineDetail?.ServiceDate).toBe('2025-02-01');
     expect(invoice.Line[1]?.SalesItemLineDetail?.ServiceDate).toBe('2025-02-08');
+  });
+
+  // Regression: the adapter used to send tax-inclusive total_price as Amount alongside pre-tax
+  // UnitPrice, which produced Qty × UnitPrice ≠ Amount. In internal-tax mode, tax now also
+  // flows to QBO via TxnTaxDetail.TotalTax so QBO's books mirror Alga's authoritative totals.
+  it('sends pre-tax Amount and authoritative TxnTaxDetail.TotalTax in internal-tax mode', async () => {
+    const adapter = new QuickBooksOnlineAdapter();
+    const context: AccountingExportAdapterContext = {
+      ...buildContext([baseLine]),
+      taxDelegationMode: 'none',
+      excludeTaxFromExport: false
+    } as AccountingExportAdapterContext;
+
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-QBO-TAX',
+            invoice_date: '2026-04-16',
+            due_date: '2026-04-30',
+            client_id: CLIENT_ID,
+            currency_code: 'USD'
+          }
+        ]
+      ])
+    );
+
+    mockResolver.resolveTaxCodeMapping.mockResolvedValue({
+      external_entity_id: 'TAX-NY',
+      metadata: {}
+    });
+
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          'charge-qbo-1',
+          {
+            item_id: 'charge-qbo-1',
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-qbo-1',
+            description: 'Remote Support - Hourly',
+            quantity: 2,
+            unit_price: 10_000,
+            net_amount: 20_000,
+            total_price: 21_775,
+            tax_amount: 1_775,
+            tax_region: 'US-NY'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [
+          CLIENT_ID,
+          {
+            client_id: CLIENT_ID,
+            client_name: 'Acme',
+            billing_email: 'a@a',
+            payment_terms: null
+          }
+        ]
+      ]),
+      mappings: new Map([
+        [
+          CLIENT_ID,
+          {
+            id: 'mapping-qbo-1',
+            integration_type: 'quickbooks_online',
+            alga_entity_type: 'client',
+            alga_entity_id: CLIENT_ID,
+            external_entity_id: 'external-customer-acme',
+            metadata: { source: 'mapping_table' }
+          }
+        ]
+      ])
+    });
+
+    const result = await adapter.transform(context);
+    const invoice = (result.documents[0]?.payload as any).invoice;
+    const line = invoice.Line[0];
+
+    expect(line.Amount).toBe(200.00); // pre-tax net in dollars (20_000 cents)
+    expect(line.SalesItemLineDetail.Qty).toBe(2);
+    expect(line.SalesItemLineDetail.UnitPrice).toBe(100.00);
+    expect(line.SalesItemLineDetail.Qty * line.SalesItemLineDetail.UnitPrice).toBe(line.Amount);
+    expect(invoice.TxnTaxDetail?.TotalTax).toBe(17.75);
+  });
+
+  it('omits TxnTaxDetail in delegate-tax mode and still sends pre-tax Amount', async () => {
+    const adapter = new QuickBooksOnlineAdapter();
+    const context: AccountingExportAdapterContext = {
+      ...buildContext([baseLine]),
+      taxDelegationMode: 'delegate',
+      excludeTaxFromExport: true
+    } as AccountingExportAdapterContext;
+
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-QBO-DEL',
+            invoice_date: '2026-04-16',
+            due_date: '2026-04-30',
+            client_id: CLIENT_ID,
+            currency_code: 'USD'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          'charge-qbo-1',
+          {
+            item_id: 'charge-qbo-1',
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-qbo-1',
+            description: 'Remote Support - Hourly',
+            quantity: 2,
+            unit_price: 10_000,
+            net_amount: 20_000,
+            total_price: 21_775,
+            tax_amount: 1_775,
+            tax_region: 'US-NY'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [
+          CLIENT_ID,
+          {
+            client_id: CLIENT_ID,
+            client_name: 'Acme',
+            billing_email: 'a@a',
+            payment_terms: null
+          }
+        ]
+      ]),
+      mappings: new Map([
+        [
+          CLIENT_ID,
+          {
+            id: 'mapping-qbo-1',
+            integration_type: 'quickbooks_online',
+            alga_entity_type: 'client',
+            alga_entity_id: CLIENT_ID,
+            external_entity_id: 'external-customer-acme',
+            metadata: { source: 'mapping_table' }
+          }
+        ]
+      ])
+    });
+
+    const result = await adapter.transform(context);
+    const invoice = (result.documents[0]?.payload as any).invoice;
+    const line = invoice.Line[0];
+
+    expect(line.Amount).toBe(200.00); // still pre-tax
+    expect(invoice.TxnTaxDetail).toBeUndefined(); // QBO owns tax in delegate mode
+  });
+
+  it('throws QBO_CHARGE_MISSING_NET_AMOUNT when a charge has no net_amount', async () => {
+    const adapter = new QuickBooksOnlineAdapter();
+    const context = buildContext([baseLine]);
+
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-QBO-NONET',
+            invoice_date: '2026-04-16',
+            due_date: '2026-04-30',
+            client_id: CLIENT_ID,
+            currency_code: 'USD'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          'charge-qbo-1',
+          {
+            item_id: 'charge-qbo-1',
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-qbo-1',
+            description: 'Legacy charge',
+            quantity: 1,
+            unit_price: 10_000,
+            // net_amount intentionally absent — simulates a pre-migration row
+            total_price: 10_000,
+            tax_amount: 0,
+            tax_region: null
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [
+          CLIENT_ID,
+          {
+            client_id: CLIENT_ID,
+            client_name: 'Acme',
+            billing_email: 'a@a',
+            payment_terms: null
+          }
+        ]
+      ]),
+      mappings: new Map([
+        [
+          CLIENT_ID,
+          {
+            id: 'mapping-qbo-1',
+            integration_type: 'quickbooks_online',
+            alga_entity_type: 'client',
+            alga_entity_id: CLIENT_ID,
+            external_entity_id: 'external-customer-acme',
+            metadata: { source: 'mapping_table' }
+          }
+        ]
+      ])
+    });
+
+    await expect(adapter.transform(context)).rejects.toMatchObject({
+      code: 'QBO_CHARGE_MISSING_NET_AMOUNT'
+    });
   });
 });
