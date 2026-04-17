@@ -80,59 +80,61 @@ function renderCreditContext(
 }
 
 // Define columns for the credits table
-const columns: ColumnDefinition<ICreditTracking & { transaction_description?: string, invoice_number?: string }>[] = [
+const createColumns = (
+  t: ReturnType<typeof useTranslation>['t'],
+): ColumnDefinition<ICreditTracking & { transaction_description?: string, invoice_number?: string }>[] => [
   {
-    title: 'Credit ID',
+    title: t('columns.creditId', { defaultValue: 'Credit ID' }),
     dataIndex: 'credit_id',
     render: (value: string) => (
       <span className="font-mono text-xs">{value.substring(0, 8)}...</span>
     )
   },
   {
-    title: 'Created',
+    title: t('columns.created', { defaultValue: 'Created' }),
     dataIndex: 'created_at',
     render: (value: string) => (
       <span>{new Date(value).toLocaleDateString()}</span>
     )
   },
   {
-    title: 'Description',
+    title: t('columns.description', { defaultValue: 'Description' }),
     dataIndex: 'transaction_description',
-    render: (value: string | undefined) => value || 'N/A'
+    render: (value: string | undefined) => value || t('status.na', { defaultValue: 'N/A' })
   },
   {
-    title: 'Context',
+    title: t('columns.context', { defaultValue: 'Context' }),
     dataIndex: 'invoice_context_status',
     render: (_value: string | undefined, record) => renderCreditContext(record)
   },
   {
-    title: 'Original Amount',
+    title: t('columns.originalAmount', { defaultValue: 'Original Amount' }),
     dataIndex: 'amount',
     render: (value: number) => formatCurrency(value)
   },
   {
-    title: 'Remaining',
+    title: t('columns.remaining', { defaultValue: 'Remaining' }),
     dataIndex: 'remaining_amount',
     render: (value: number) => formatCurrency(value)
   },
   {
-    title: 'Expires',
+    title: t('columns.expires', { defaultValue: 'Expires' }),
     dataIndex: 'expiration_date',
     render: (value: string | undefined) => {
-      if (!value) return <span className="text-muted-foreground">Never</span>;
+      if (!value) return <span className="text-muted-foreground">{t('status.never', { defaultValue: 'Never' })}</span>;
       return <span>{new Date(value).toLocaleDateString()}</span>;
     }
   },
   {
-    title: 'Status',
+    title: t('columns.status', { defaultValue: 'Status' }),
     dataIndex: 'is_expired',
     render: (isExpired: boolean, record) => {
       if (isExpired) {
-        return <span className="text-red-600 font-medium">Expired</span>;
+        return <span className="text-red-600 font-medium">{t('status.expired', { defaultValue: 'Expired' })}</span>;
       }
       
       if (!record.expiration_date) {
-        return <span className="text-blue-600 font-medium">Active</span>;
+        return <span className="text-blue-600 font-medium">{t('status.active', { defaultValue: 'Active' })}</span>;
       }
       
       const now = new Date();
@@ -140,14 +142,21 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
       const daysUntilExpiration = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       
       if (daysUntilExpiration <= 7) {
-        return <span className="text-orange-500 font-medium">Expiring Soon ({daysUntilExpiration} days)</span>;
+        return (
+          <span className="text-orange-500 font-medium">
+            {t('status.expiringSoon', {
+              days: daysUntilExpiration,
+              defaultValue: 'Expiring Soon ({{days}} days)',
+            })}
+          </span>
+        );
       }
       
-      return <span className="text-blue-600 font-medium">Active</span>;
+      return <span className="text-blue-600 font-medium">{t('status.active', { defaultValue: 'Active' })}</span>;
     }
   },
   {
-    title: 'Actions',
+    title: t('columns.actions', { defaultValue: 'Actions' }),
     dataIndex: 'credit_id',
     width: '10%',
     render: (value: string, record) => {
@@ -160,7 +169,7 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
             size="sm"
             id={`view-credit-${value}`}
           >
-            View
+            {t('actions.view', { defaultValue: 'View' })}
           </Button>
           {!isExpired && (
             <>
@@ -169,7 +178,7 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
                 size="sm"
                 id={`edit-credit-${value}`}
               >
-                Edit
+                {t('actions.edit', { defaultValue: 'Edit' })}
               </Button>
               <Button
                 variant="outline"
@@ -177,7 +186,7 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
                 id={`expire-credit-${value}`}
                 className="text-destructive hover:bg-destructive/10"
               >
-                Expire
+                {t('actions.expire', { defaultValue: 'Expire' })}
               </Button>
             </>
           )}
@@ -251,6 +260,7 @@ const CreditManagement: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation('msp/credits');
+  const columns = createColumns(t);
   const tabParam = searchParams?.get('creditTab');
 
   // Determine initial active tab based on URL parameter
@@ -435,7 +445,7 @@ const CreditManagement: React.FC = () => {
             id="add-credit-button"
             onClick={handleAddCredit}
           >
-            Add Credit
+            {t('actions.addCredit', { defaultValue: 'Add Credit' })}
           </Button>
         </div>
       </div>
@@ -560,9 +570,11 @@ const CreditManagement: React.FC = () => {
       {/* Credits Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Credits</CardTitle>
+          <CardTitle>{t('management.recentCredits', { defaultValue: 'Recent Credits' })}</CardTitle>
           <CardDescription>
-            View and manage your client credits. Credits stay financial artifacts, and recurring service periods appear only when the source invoice carried canonical coverage.
+            {t('management.recentCreditsDescription', {
+              defaultValue: 'View and manage your client credits. Credits stay financial artifacts, and recurring service periods appear only when the source invoice carried canonical coverage.',
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -570,7 +582,7 @@ const CreditManagement: React.FC = () => {
             tabs={[
               {
                 id: 'active-credits',
-                label: "Active Credits",
+                label: t('tabs.activeCredits', { defaultValue: 'Active Credits' }),
                 content: (
                   <DataTable
                     id="credit-management-table"
@@ -586,7 +598,7 @@ const CreditManagement: React.FC = () => {
               },
               {
                 id: 'expired-credits',
-                label: "Expired Credits",
+                label: t('tabs.expiredCredits', { defaultValue: 'Expired Credits' }),
                 content: (
                   <DataTable
                     id="credit-management-expired-table"
@@ -602,7 +614,7 @@ const CreditManagement: React.FC = () => {
               },
               {
                 id: 'all-credits',
-                label: "All Credits",
+                label: t('tabs.allCredits', { defaultValue: 'All Credits' }),
                 content: (
                   <DataTable
                     id="credit-management-all-table"
@@ -630,7 +642,7 @@ const CreditManagement: React.FC = () => {
               onClick={handleViewAllCredits}
               id="view-all-credits-button"
             >
-              View All Credits
+              {t('actions.viewAllCredits', { defaultValue: 'View All Credits' })}
             </Button>
           </div>
         </CardContent>
@@ -640,13 +652,15 @@ const CreditManagement: React.FC = () => {
       <Dialog
         isOpen={isAddCreditModalOpen}
         onClose={() => setIsAddCreditModalOpen(false)}
-        title="Add Credit"
+        title={t('actions.addCredit', { defaultValue: 'Add Credit' })}
       >
         <DialogContent>
           {/* Add credit form would go here */}
           <div className="py-4">
             <p className="text-muted-foreground">
-              Credit amount and details form would be implemented here.
+              {t('management.addCreditPlaceholder', {
+                defaultValue: 'Credit amount and details form would be implemented here.',
+              })}
             </p>
           </div>
         </DialogContent>
@@ -656,13 +670,13 @@ const CreditManagement: React.FC = () => {
             variant="outline"
             onClick={() => setIsAddCreditModalOpen(false)}
           >
-            Cancel
+            {t('actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button
             id="submit-add-credit-button"
             onClick={handleSubmitAddCredit}
           >
-            Add Credit
+            {t('actions.addCredit', { defaultValue: 'Add Credit' })}
           </Button>
         </DialogFooter>
       </Dialog>

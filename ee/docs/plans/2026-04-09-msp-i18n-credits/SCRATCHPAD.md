@@ -200,6 +200,10 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   card titles/descriptions, stat tiles, legend labels, and placeholder month labels; moved the
   expiration bucket labels into a `generateExpirationChartData(..., t)` helper and derived the
   pie-chart labels in a locale-aware effect so pseudo/de locale changes update chart copy too.
+- **(2026-04-17, F016)** Finished the `CreditManagement` table/dialog shell wiring. Refactored
+  the credits table columns into `createColumns(t)` so column titles, `N/A`/`Never` fallbacks,
+  status badges, row action buttons, the “Recent Credits” section copy, tab labels, “View All
+  Credits” CTA, and the local add-credit dialog all now resolve from `msp/credits`.
 
 ## Key Paths / Runbooks
 
