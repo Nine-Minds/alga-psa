@@ -270,3 +270,7 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   covering the translated dashboard/filter shell, report charts/table/status badges, the
   interpolated validation toast copy, and representative `xx` pseudo-locale backing for the
   reconciliation surface.
+- **(2026-04-17, T021-T026)** Added `packages/billing/tests/CreditApplicationExpiration.i18n.test.ts`
+  to cover the remaining credit application and expiration components: application card/table
+  copy, error/empty/help states, applied-credit interpolation, and the expiration dialog’s
+  label/validation/error wiring.

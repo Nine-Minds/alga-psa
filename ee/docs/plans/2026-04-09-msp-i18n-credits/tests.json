@@ -27,14 +27,14 @@
   {"id": "T019", "description": "Unit: CreditReconciliation toast message uses interpolation for validation result ({{balanceCount}}, {{trackingCount}})", "implemented": true, "featureIds": ["F018"]},
   {"id": "T020", "description": "Unit: CreditReconciliation no hardcoded English in rendered output (pseudo-locale xx coverage)", "implemented": true, "featureIds": ["F018", "F019"]},
 
-  {"id": "T021", "description": "Unit: CreditApplicationUI renders card title, column titles, labels, button text via t() in en", "implemented": false, "featureIds": ["F020"]},
-  {"id": "T022", "description": "Unit: CreditApplicationUI no hardcoded English; error/empty states translated", "implemented": false, "featureIds": ["F020"]},
+  {"id": "T021", "description": "Unit: CreditApplicationUI renders card title, column titles, labels, button text via t() in en", "implemented": true, "featureIds": ["F020"]},
+  {"id": "T022", "description": "Unit: CreditApplicationUI no hardcoded English; error/empty states translated", "implemented": true, "featureIds": ["F020"]},
 
-  {"id": "T023", "description": "Unit: CreditExpirationInfo renders card title, field labels, help text via t() in en", "implemented": false, "featureIds": ["F021"]},
-  {"id": "T024", "description": "Unit: CreditExpirationInfo description uses interpolation for applied amount ({{amount}})", "implemented": false, "featureIds": ["F021"]},
+  {"id": "T023", "description": "Unit: CreditExpirationInfo renders card title, field labels, help text via t() in en", "implemented": true, "featureIds": ["F021"]},
+  {"id": "T024", "description": "Unit: CreditExpirationInfo description uses interpolation for applied amount ({{amount}})", "implemented": true, "featureIds": ["F021"]},
 
-  {"id": "T025", "description": "Unit: CreditExpirationModificationDialog renders dialog title, field labels, switch label, button text via t() in en", "implemented": false, "featureIds": ["F022"]},
-  {"id": "T026", "description": "Unit: CreditExpirationModificationDialog validation error ('past date') and generic error rendered via t()", "implemented": false, "featureIds": ["F022"]},
+  {"id": "T025", "description": "Unit: CreditExpirationModificationDialog renders dialog title, field labels, switch label, button text via t() in en", "implemented": true, "featureIds": ["F022"]},
+  {"id": "T026", "description": "Unit: CreditExpirationModificationDialog validation error ('past date') and generic error rendered via t()", "implemented": true, "featureIds": ["F022"]},
 
   {"id": "T027", "description": "Italian accent preservation: it/msp/credits.json values with accented characters (e.g., 'Crediti', 'Scadenza', 'Disponibilita') retain correct Unicode accents after generation", "implemented": false, "featureIds": ["F006"]},
   {"id": "T028", "description": "Variable preservation: all locale files preserve {{variable}} interpolation tokens (days, count, amount, balanceCount, trackingCount, period) identically to English source", "implemented": false, "featureIds": ["F002", "F003", "F004", "F005", "F006", "F007"]},
