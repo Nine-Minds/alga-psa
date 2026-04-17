@@ -218,6 +218,10 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   All card copy, table columns, selection buttons, labels, helper text, empty states, and the
   generic load/apply validation errors now resolve from the credits namespace instead of raw
   English strings.
+- **(2026-04-17, F021)** Wired `CreditExpirationInfo.tsx` to `useTranslation('msp/credits')`.
+  The card title, applied-amount description, field labels, “Never” fallback, empty/error
+  states, and ordering note now all resolve through `expiration.*`, with the applied amount
+  kept as an interpolation value rather than a translated currency string.
 
 ## Key Paths / Runbooks
 
