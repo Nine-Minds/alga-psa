@@ -714,13 +714,17 @@
         "companyLogo": "Company Logo",
         "colorPalette": "Color Palette",
         "primaryColor": "Primary Color",
-        "secondaryColor": "Secondary Color"
+        "secondaryColor": "Secondary Color",
+        "supportEmail": "Support Email",
+        "supportPhone": "Support Phone"
       },
       "help": {
         "companyName": "This will be displayed in the client portal header",
         "companyLogo": "Recommended: PNG or SVG, max 2MB, transparent background",
         "primaryColor": "Used for buttons, links, and highlights",
-        "secondaryColor": "Used for accents and secondary actions"
+        "secondaryColor": "Used for accents and secondary actions",
+        "supportEmail": "Shown to clients in appointment confirmations and other outbound emails as the address to contact for help.",
+        "supportPhone": "Optional. Shown alongside the support email in client-facing emails."
       },
       "preview": "Preview",
       "previewDarkMode": "Preview dark mode",

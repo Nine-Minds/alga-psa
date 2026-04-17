@@ -714,13 +714,17 @@
         "companyLogo": "Logo de l'entreprise",
         "colorPalette": "Palette de couleurs",
         "primaryColor": "Couleur principale",
-        "secondaryColor": "Couleur secondaire"
+        "secondaryColor": "Couleur secondaire",
+        "supportEmail": "E-mail du support",
+        "supportPhone": "Téléphone du support"
       },
       "help": {
         "companyName": "Ce nom sera affiché dans l'en-tête du portail client",
         "companyLogo": "Recommandé : PNG ou SVG, 2 Mo max, fond transparent",
         "primaryColor": "Utilisée pour les boutons, les liens et les éléments mis en avant",
-        "secondaryColor": "Utilisée pour les accents et les actions secondaires"
+        "secondaryColor": "Utilisée pour les accents et les actions secondaires",
+        "supportEmail": "Affiché aux clients dans les confirmations de rendez-vous et autres e-mails sortants comme adresse de contact pour obtenir de l'aide.",
+        "supportPhone": "Facultatif. Affiché à côté de l'e-mail du support dans les e-mails destinés aux clients."
       },
       "preview": "Aperçu",
       "previewDarkMode": "Aperçu en mode sombre",

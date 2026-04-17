@@ -34,6 +34,7 @@ import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/
 import { isValidEmail } from '@alga-psa/core';
 import { format, type Locale } from 'date-fns';
 import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
+import { fromZonedTime } from 'date-fns-tz';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -44,6 +45,7 @@ export interface IAppointmentRequest {
   requested_date: string;
   requested_time: string;
   requested_duration: number;
+  requester_timezone?: string | null;
   preferred_assigned_user_id?: string;
   status: 'pending' | 'approved' | 'declined' | 'cancelled';
   description?: string;
@@ -363,6 +365,7 @@ export const createAppointmentRequest = withAuth(async (
         requested_date: normalizedRequestedDate,
         requested_time: normalizedRequestedTime,
         requested_duration: validatedData.requested_duration,
+        requester_timezone: validatedData.requester_timezone || null,
         preferred_assigned_user_id: validatedData.preferred_assigned_user_id || null,
         status: 'pending',
         description: validatedData.description || null,
@@ -424,10 +427,13 @@ export const createAppointmentRequest = withAuth(async (
     {
       scheduleEntryId = await withTransaction(db, async (trx: Knex.Transaction) => {
         const entryId = uuidv4();
-        // Parse as UTC by adding 'Z' suffix to ensure correct timezone interpretation
-        const scheduledStart = new Date(`${normalizedRequestedDate}T${normalizedRequestedTime}:00Z`);
-
-        // Calculate end time by adding milliseconds to avoid timezone conversion issues
+        // requested_date/requested_time are the user's LOCAL wall-clock in requester_timezone.
+        // Convert to a true UTC instant for schedule_entries.scheduled_start.
+        const createTz = validatedData.requester_timezone || 'UTC';
+        const scheduledStart = fromZonedTime(
+          `${normalizedRequestedDate}T${normalizedRequestedTime}:00`,
+          createTz
+        );
         const scheduledEnd = new Date(scheduledStart.getTime() + validatedData.requested_duration * 60000);
 
         // Create schedule entry
@@ -483,7 +489,11 @@ export const createAppointmentRequest = withAuth(async (
 
     try {
       if (scheduleEntryId) {
-        const scheduledStart = new Date(`${normalizedRequestedDate}T${normalizedRequestedTime}:00Z`);
+        const eventTz = validatedData.requester_timezone || 'UTC';
+        const scheduledStart = fromZonedTime(
+          `${normalizedRequestedDate}T${normalizedRequestedTime}:00`,
+          eventTz
+        );
         const scheduledEnd = new Date(scheduledStart.getTime() + validatedData.requested_duration * 60000);
         const ticketId = appointmentRequest.ticket_id || undefined;
 
@@ -782,6 +792,7 @@ export const updateAppointmentRequest = withAuth(async (
           requested_date: validatedData.requested_date,
           requested_time: validatedData.requested_time,
           requested_duration: validatedData.requested_duration,
+          requester_timezone: validatedData.requester_timezone ?? existingRequest.requester_timezone ?? null,
           preferred_assigned_user_id: validatedData.preferred_assigned_user_id || null,
           description: validatedData.description || null,
           ticket_id: validatedData.ticket_id || null,
@@ -804,7 +815,14 @@ export const updateAppointmentRequest = withAuth(async (
 
     // Update the associated schedule entry if it exists
     if (existingRequest.schedule_entry_id) {
-      const beforeStart = new Date(`${existingRequest.requested_date}T${existingRequest.requested_time}:00Z`);
+      const beforeTz = existingRequest.requester_timezone || 'UTC';
+      const afterTz = validatedData.requester_timezone ?? existingRequest.requester_timezone ?? 'UTC';
+      // Normalize stored requested_date in case PG returns a Date object.
+      const beforeDateStr = existingRequest.requested_date instanceof Date
+        ? existingRequest.requested_date.toISOString().split('T')[0]
+        : String(existingRequest.requested_date).slice(0, 10);
+      const beforeTimeStr = String(existingRequest.requested_time).slice(0, 5);
+      const beforeStart = fromZonedTime(`${beforeDateStr}T${beforeTimeStr}:00`, beforeTz);
       const beforeEnd = new Date(beforeStart.getTime() + existingRequest.requested_duration * 60000);
 
       appointmentWorkflowUpdate = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -813,7 +831,10 @@ export const updateAppointmentRequest = withAuth(async (
           .select('user_id')
           .first();
 
-        const scheduledStart = new Date(`${validatedData.requested_date}T${validatedData.requested_time}:00Z`);
+        const scheduledStart = fromZonedTime(
+          `${validatedData.requested_date}T${validatedData.requested_time}:00`,
+          afterTz
+        );
         const scheduledEnd = new Date(scheduledStart.getTime() + validatedData.requested_duration * 60000);
 
         await trx('schedule_entries')

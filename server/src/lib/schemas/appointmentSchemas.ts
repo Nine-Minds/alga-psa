@@ -35,6 +35,7 @@ export const createAppointmentRequestSchema = z.object({
   preferred_assigned_user_id: z.string().uuid('User ID must be a valid UUID').optional().nullable(),
   description: z.string().max(2000, 'Description cannot exceed 2000 characters').optional().nullable(),
   ticket_id: z.string().uuid('Ticket ID must be a valid UUID').optional().nullable(),
+  requester_timezone: z.string().max(100).optional().nullable(),
 }).refine((data) => {
   // Validate that requested_date is not in the past
   const today = new Date();
@@ -61,6 +62,7 @@ export const updateAppointmentRequestSchema = z.object({
   preferred_assigned_user_id: z.string().uuid('User ID must be a valid UUID').optional().nullable(),
   description: z.string().max(2000, 'Description cannot exceed 2000 characters').optional().nullable(),
   ticket_id: z.string().uuid('Ticket ID must be a valid UUID').optional().nullable(),
+  requester_timezone: z.string().max(100).optional().nullable(),
 }).refine((data) => {
   // Validate that requested_date is not in the past
   const today = new Date();
@@ -90,6 +92,7 @@ export const createPublicAppointmentRequestSchema = z.object({
   requested_duration: z.number().int().min(15, 'Duration must be at least 15 minutes').max(480, 'Duration cannot exceed 8 hours').optional(),
   message: z.string().max(2000, 'Message cannot exceed 2000 characters').optional().nullable(),
   preferred_assigned_user_id: z.string().uuid('Preferred technician ID must be a valid UUID').optional().nullable(),
+  requester_timezone: z.string().max(100).optional().nullable(),
 });
 
 export type CreatePublicAppointmentRequestInput = z.infer<typeof createPublicAppointmentRequestSchema>;
@@ -278,6 +281,7 @@ export const updateAppointmentRequestDateTimeSchema = z.object({
   new_date: dateStringSchema,
   new_time: timeStringSchema,
   new_duration: z.number().int().min(15).max(480).optional().nullable(),
+  new_timezone: z.string().max(100).optional().nullable(),
 });
 
 export type UpdateAppointmentRequestDateTimeInput = z.infer<typeof updateAppointmentRequestDateTimeSchema>;
@@ -330,6 +334,7 @@ export const appointmentRequestSchema = tenantSchema.extend({
   approved_by_user_id: z.string().uuid().optional().nullable(),
   approved_at: z.string().optional().nullable(),
   declined_reason: z.string().max(2000).optional().nullable(),
+  requester_timezone: z.string().max(100).optional().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
 });

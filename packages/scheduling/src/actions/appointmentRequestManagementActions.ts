@@ -37,6 +37,7 @@ import {
   formatTime
 } from './appointmentHelpers';
 import { generateICSBuffer, generateICSFilename, ICSEventData } from '../utils/icsGenerator';
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -47,6 +48,7 @@ export interface IAppointmentRequest {
   requested_date: string;
   requested_time: string;
   requested_duration: number;
+  requester_timezone?: string | null;
   preferred_assigned_user_id?: string;
   status: 'pending' | 'approved' | 'declined' | 'cancelled';
   description?: string;
@@ -708,8 +710,14 @@ export const approveAppointmentRequest = withAuth(async (
           .where({ entry_id: scheduleEntry.entry_id, tenant })
           .first();
         const calendarLink = await generateICSLink(scheduleEntryWithDetails);
-        const formattedDate = await formatDate(finalDate);
-        const formattedTime = await formatTime(finalTime);
+
+        // finalDate/finalTime are UTC values. Render the appointment in the
+        // requester's timezone so the email shows the user their own local time.
+        const requesterTz = (request as any).requester_timezone || 'UTC';
+        const localDateStr = formatInTimeZone(scheduledStart, requesterTz, 'yyyy-MM-dd');
+        const localTimeStr = formatInTimeZone(scheduledStart, requesterTz, 'HH:mm');
+        const formattedDate = await formatDate(localDateStr);
+        const formattedTime = await formatTime(localTimeStr);
 
         // Generate ICS file for email attachment
         const icsEventData: ICSEventData = {
@@ -1034,9 +1042,12 @@ export const updateAppointmentRequestDateTime = withAuth(async (
       }
 
       const now = new Date();
+      const effectiveTimezone = validatedData.new_timezone ?? request.requester_timezone ?? 'UTC';
+      const effectiveDuration = validatedData.new_duration ?? request.requested_duration;
       const updateData: any = {
         requested_date: validatedData.new_date,
         requested_time: validatedData.new_time,
+        requester_timezone: effectiveTimezone,
         updated_at: now
       };
 
@@ -1051,6 +1062,28 @@ export const updateAppointmentRequestDateTime = withAuth(async (
           tenant
         })
         .update(updateData);
+
+      // Keep the linked schedule entry in sync with the new local wall-clock.
+      // new_date/new_time are the user's naive local time in effectiveTimezone;
+      // schedule_entries.scheduled_start must be the corresponding UTC instant.
+      if (request.schedule_entry_id) {
+        const scheduledStart = fromZonedTime(
+          `${validatedData.new_date}T${validatedData.new_time}:00`,
+          effectiveTimezone
+        );
+        const scheduledEnd = new Date(scheduledStart.getTime() + effectiveDuration * 60000);
+
+        await trx('schedule_entries')
+          .where({
+            entry_id: request.schedule_entry_id,
+            tenant
+          })
+          .update({
+            scheduled_start: scheduledStart.toISOString(),
+            scheduled_end: scheduledEnd.toISOString(),
+            updated_at: now
+          });
+      }
 
       // Get updated request
       const updatedRequest = await trx('appointment_requests')
