@@ -150,6 +150,10 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   specific copy directly (credit reconciliation, recurring-lineage context, expiration flows),
   and preserved the placeholder chart month subgroup so later pseudo-generation remains
   mechanical.
+- **(2026-04-17, F003)** Added `server/public/locales/es/msp/credits.json` with matching key
+  structure and preserved interpolation variables. Kept the recurring-credit context labels,
+  expiration flow copy, and reconciliation phrasing idiomatic enough for MSP billing rather
+  than literal English carry-over.
 
 ## Key Paths / Runbooks
 
