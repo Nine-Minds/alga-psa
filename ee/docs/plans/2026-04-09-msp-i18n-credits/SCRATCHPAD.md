@@ -274,3 +274,8 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   to cover the remaining credit application and expiration components: application card/table
   copy, error/empty/help states, applied-credit interpolation, and the expiration dialog’s
   label/validation/error wiring.
+- **(2026-04-17, T027-T031)** Added `packages/billing/tests/CreditsLocaleSmoke.i18n.test.ts`
+  for the final locale smoke layer: Italian accent/contracted-form checks, interpolation-token
+  parity across all translated locales, representative English route-shell coverage, German
+  non-English coverage for the management/reconciliation dashboards, and representative `xx`
+  pseudo-fill checks across page/management/reconciliation/application/expiration flows.

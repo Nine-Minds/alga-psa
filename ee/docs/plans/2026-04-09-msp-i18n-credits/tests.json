@@ -36,10 +36,10 @@
   {"id": "T025", "description": "Unit: CreditExpirationModificationDialog renders dialog title, field labels, switch label, button text via t() in en", "implemented": true, "featureIds": ["F022"]},
   {"id": "T026", "description": "Unit: CreditExpirationModificationDialog validation error ('past date') and generic error rendered via t()", "implemented": true, "featureIds": ["F022"]},
 
-  {"id": "T027", "description": "Italian accent preservation: it/msp/credits.json values with accented characters (e.g., 'Crediti', 'Scadenza', 'Disponibilita') retain correct Unicode accents after generation", "implemented": false, "featureIds": ["F006"]},
-  {"id": "T028", "description": "Variable preservation: all locale files preserve {{variable}} interpolation tokens (days, count, amount, balanceCount, trackingCount, period) identically to English source", "implemented": false, "featureIds": ["F002", "F003", "F004", "F005", "F006", "F007"]},
+  {"id": "T027", "description": "Italian accent preservation: it/msp/credits.json values with accented characters (e.g., 'Crediti', 'Scadenza', 'Disponibilita') retain correct Unicode accents after generation", "implemented": true, "featureIds": ["F006"]},
+  {"id": "T028", "description": "Variable preservation: all locale files preserve {{variable}} interpolation tokens (days, count, amount, balanceCount, trackingCount, period) identically to English source", "implemented": true, "featureIds": ["F002", "F003", "F004", "F005", "F006", "F007"]},
 
-  {"id": "T029", "description": "Visual: /msp/billing/credits renders correctly in en with all strings from msp/credits namespace", "implemented": false, "featureIds": ["F011", "F012", "F013", "F014"]},
-  {"id": "T030", "description": "Visual: credit management tab in /msp/billing renders CreditManagement and CreditReconciliation correctly in de with translated strings", "implemented": false, "featureIds": ["F015", "F016", "F017", "F018", "F019"]},
-  {"id": "T031", "description": "Visual: xx pseudo-locale smoke test across /msp/billing/credits and credit management tab shows pseudo-text everywhere (no bare English leakage)", "implemented": false, "featureIds": ["F008", "F011", "F015", "F018", "F020", "F021", "F022"]}
+  {"id": "T029", "description": "Visual: /msp/billing/credits renders correctly in en with all strings from msp/credits namespace", "implemented": true, "featureIds": ["F011", "F012", "F013", "F014"]},
+  {"id": "T030", "description": "Visual: credit management tab in /msp/billing renders CreditManagement and CreditReconciliation correctly in de with translated strings", "implemented": true, "featureIds": ["F015", "F016", "F017", "F018", "F019"]},
+  {"id": "T031", "description": "Visual: xx pseudo-locale smoke test across /msp/billing/credits and credit management tab shows pseudo-text everywhere (no bare English leakage)", "implemented": true, "featureIds": ["F008", "F011", "F015", "F018", "F020", "F021", "F022"]}
 ]
