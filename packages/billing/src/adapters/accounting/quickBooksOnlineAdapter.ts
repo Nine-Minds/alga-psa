@@ -609,8 +609,11 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     targetRealm?: string
   ): Promise<ExternalInvoiceFetchResult> {
     try {
-      const { knex } = await createTenantKnex();
-      const tenantId = await this.getTenantFromContext(knex);
+      const { knex, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new AppError('QBO_TENANT_REQUIRED', 'Unable to determine tenant from context');
+      }
+      const tenantId = tenant;
 
       if (!targetRealm) {
         return {
