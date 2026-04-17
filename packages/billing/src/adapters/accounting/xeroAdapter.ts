@@ -152,6 +152,7 @@ export class XeroAdapter implements AccountingExportAdapter {
       adapterFactory: (adapterType) => (adapterType === XeroAdapter.TYPE ? this.companyAdapter : null)
     });
     const resolver = await AccountingMappingResolver.create({ companySyncService });
+    const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
 
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
     const chargesById = await this.loadCharges(knex, tenantId, context);
@@ -164,6 +165,32 @@ export class XeroAdapter implements AccountingExportAdapter {
       const invoice = invoicesById.get(invoiceId);
       if (!invoice) {
         throw new AppError('XERO_INVOICE_NOT_FOUND', `Invoice ${invoiceId} not found for tenant ${tenantId}`);
+      }
+
+      // If this invoice was already exported to Xero, look up the Xero InvoiceID
+      // and the per-charge LineItemIDs so we can send them back on this export.
+      // Xero upserts invoices by InvoiceNumber; without an InvoiceID on an update
+      // it rematches by number and then rejects any LineItemID it doesn't already
+      // have in that draft. Threading the known IDs makes the retry idempotent.
+      const existingMapping = await invoiceMappingRepository.findInvoiceMapping({
+        tenantId,
+        adapterType: this.type,
+        invoiceId,
+        targetRealm: context.batch.target_realm ?? null
+      });
+      const storedChargeLineMappings = Array.isArray(
+        (existingMapping?.metadata as any)?.chargeLineMappings
+      )
+        ? ((existingMapping!.metadata as any).chargeLineMappings as Array<{
+            chargeId: string;
+            xeroLineItemId: string;
+          }>)
+        : [];
+      const knownChargeToXeroLineItemId = new Map<string, string>();
+      for (const entry of storedChargeLineMappings) {
+        if (entry?.chargeId && entry?.xeroLineItemId) {
+          knownChargeToXeroLineItemId.set(entry.chargeId, entry.xeroLineItemId);
+        }
       }
 
       const clientId =
@@ -310,6 +337,7 @@ export class XeroAdapter implements AccountingExportAdapter {
 
         const payload: XeroInvoiceLinePayload = {
           lineId: line.line_id,
+          externalLineItemId: knownChargeToXeroLineItemId.get(line.invoice_charge_id) ?? null,
           amountCents: netAmountCents,
           description,
           quantity: coerceChargeDecimal(charge.quantity) ?? 1,
@@ -346,6 +374,7 @@ export class XeroAdapter implements AccountingExportAdapter {
 
       const invoicePayload: XeroInvoicePayload = {
         invoiceId,
+        externalInvoiceId: existingMapping?.externalInvoiceId ?? null,
         contactId: clientMapping.external_entity_id,
         currency: invoice.currency_code ?? exportLines[0]?.currency_code ?? null,
         reference,
