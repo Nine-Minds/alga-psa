@@ -222,6 +222,11 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   The card title, applied-amount description, field labels, “Never” fallback, empty/error
   states, and ordering note now all resolve through `expiration.*`, with the applied amount
   kept as an interpolation value rather than a translated currency string.
+- **(2026-04-17, F022)** Wired `CreditExpirationModificationDialog.tsx` to
+  `useTranslation('msp/credits')`. The dialog title/description, field labels, switch copy,
+  input label, cancel/save button states, past-date validation message, and generic update
+  failure all now resolve from `expirationDialog.*` / shared `actions.*`, and raw thrown errors
+  are no longer surfaced to the user.
 
 ## Key Paths / Runbooks
 

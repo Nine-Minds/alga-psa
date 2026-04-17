@@ -27,5 +27,5 @@
 
   {"id": "F021", "description": "Wire useTranslation('msp/credits') in CreditExpirationInfo.tsx — translate card title (Applied Credits), description with interpolation (Credits applied to this invoice: {{amount}}), field labels (Credit Amount, Created, Expiration), Never label, help text, error/empty states", "implemented": true},
 
-  {"id": "F022", "description": "Wire useTranslation('msp/credits') in CreditExpirationModificationDialog.tsx — translate dialog title (Modify Credit Expiration), description, field labels (Credit Amount, Remaining Amount, Created, Current Expiration, No expiration), switch label (Remove expiration date), input label (New Expiration Date), validation error (past date), button text (Cancel, Save Changes, Saving...), generic update error message", "implemented": false}
+  {"id": "F022", "description": "Wire useTranslation('msp/credits') in CreditExpirationModificationDialog.tsx — translate dialog title (Modify Credit Expiration), description, field labels (Credit Amount, Remaining Amount, Created, Current Expiration, No expiration), switch label (Remove expiration date), input label (New Expiration Date), validation error (past date), button text (Cancel, Save Changes, Saving...), generic update error message", "implemented": true}
 ]
