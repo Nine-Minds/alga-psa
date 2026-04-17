@@ -183,25 +183,39 @@ function CreditsList({
 }
 
 function CreditExpirationSettingsPanel({ settings }: { settings: ICreditExpirationSettings }) {
+  const { t } = useTranslation('msp/credits');
+
   return (
     <div className="p-4 border rounded-md bg-muted mb-4">
-      <h3 className="text-lg font-medium mb-2">Credit Expiration Settings</h3>
+      <h3 className="text-lg font-medium mb-2">
+        {t('settings.title', { defaultValue: 'Credit Expiration Settings' })}
+      </h3>
       <div className="space-y-2">
         <div className="flex justify-between">
-          <span>Credit Expiration:</span>
+          <span>{t('settings.creditExpiration', { defaultValue: 'Credit Expiration:' })}</span>
           <span className={settings.enable_credit_expiration ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-            {settings.enable_credit_expiration ? 'Enabled' : 'Disabled'}
+            {settings.enable_credit_expiration
+              ? t('settings.enabled', { defaultValue: 'Enabled' })
+              : t('settings.disabled', { defaultValue: 'Disabled' })}
           </span>
         </div>
         {settings.enable_credit_expiration && (
           <>
             <div className="flex justify-between">
-              <span>Expiration Period:</span>
-              <span>{settings.credit_expiration_days} days</span>
+              <span>{t('settings.expirationPeriod', { defaultValue: 'Expiration Period:' })}</span>
+              <span>
+                {t('settings.daysUnit', {
+                  count: settings.credit_expiration_days,
+                  defaultValue: '{{count}} days',
+                })}
+              </span>
             </div>
             <div className="flex justify-between">
-              <span>Notification Days:</span>
-              <span>{settings.credit_expiration_notification_days?.join(', ') || 'None'}</span>
+              <span>{t('settings.notificationDays', { defaultValue: 'Notification Days:' })}</span>
+              <span>
+                {settings.credit_expiration_notification_days?.join(', ')
+                  || t('settings.none', { defaultValue: 'None' })}
+              </span>
             </div>
           </>
         )}

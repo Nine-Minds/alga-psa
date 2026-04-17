@@ -185,6 +185,11 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   labels, table column titles, status labels, and action-button copy while keeping currency and
   date formatting intact. Also normalized the expired tab to derive its rows from the fetched
   “all credits” dataset while preserving upstream fetch error states.
+- **(2026-04-17, F012)** Finished the `CreditsPageClient` settings-summary translation pass.
+  The inline expiration settings panel now resolves `settings.title`, `settings.creditExpiration`,
+  `settings.enabled`, `settings.disabled`, `settings.expirationPeriod`, `settings.daysUnit`,
+  `settings.notificationDays`, and `settings.none`, leaving no page-local settings labels in
+  raw English.
 
 ## Key Paths / Runbooks
 

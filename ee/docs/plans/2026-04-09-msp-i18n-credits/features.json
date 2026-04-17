@@ -11,7 +11,7 @@
   {"id": "F010", "description": "Add '/msp/billing/credits' route to ROUTE_NAMESPACES in packages/core/src/lib/i18n/config.ts loading ['common', 'msp/core', 'features/billing', 'msp/credits']", "implemented": true},
 
   {"id": "F011", "description": "Wire useTranslation('msp/credits') in CreditsPage.tsx — create a client wrapper component (CreditsPageClient.tsx) to handle translation for the server component; translate column titles (Credit ID, Created, Description, Original Amount, Remaining, Expires, Status, Actions), status labels (Active, Expired, Expiring Soon), tab labels (Active Credits, All Credits, Expired Credits), card titles (Credits Overview, Credit Expiration Summary, Credit Usage Trends), settings section labels, and page heading", "implemented": true},
-  {"id": "F012", "description": "Wire useTranslation('msp/credits') in CreditsPage.tsx — translate CreditExpirationSettings sub-component labels (Credit Expiration Settings, Credit Expiration, Enabled/Disabled, Expiration Period, Notification Days) and card descriptions", "implemented": false},
+  {"id": "F012", "description": "Wire useTranslation('msp/credits') in CreditsPage.tsx — translate CreditExpirationSettings sub-component labels (Credit Expiration Settings, Credit Expiration, Enabled/Disabled, Expiration Period, Notification Days) and card descriptions", "implemented": true},
 
   {"id": "F013", "description": "Wire useTranslation('msp/credits') in AddCreditButton.tsx — translate button label (Add Credit), dialog title, placeholder text, Cancel/Add Credit buttons", "implemented": false},
   {"id": "F014", "description": "Wire useTranslation('msp/credits') in BackButton.tsx — translate 'Back to Credits' button text", "implemented": false},
