@@ -7,11 +7,12 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrency } from '@alga-psa/core';
 import { formatDateOnly } from '@alga-psa/core';
 import { ColumnDefinition } from '@alga-psa/types';
 import { ICreditTracking } from '@alga-psa/types';
-import { listClientCredits, getCreditDetails } from '@alga-psa/billing/actions/creditActions';
+import { listClientCredits } from '@alga-psa/billing/actions/creditActions';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import {
   BarChart,
@@ -190,7 +191,10 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
 // In a production environment, this data would come from dedicated analytics endpoints
 
 // Function to generate expiration data based on active credits
-const generateExpirationChartData = (credits: ICreditTracking[]) => {
+const generateExpirationChartData = (
+  credits: ICreditTracking[],
+  t: ReturnType<typeof useTranslation>['t'],
+) => {
   // Group credits by expiration timeframe
   const within7Days = credits.filter(credit =>
     credit.expiration_date &&
@@ -216,37 +220,27 @@ const generateExpirationChartData = (credits: ICreditTracking[]) => {
   
   return [
     {
-      name: '< 7 days',
+      name: t('charts.lessThan7Days', { defaultValue: '< 7 days' }),
       value: within7Days.reduce((sum, credit) => sum + credit.remaining_amount, 0),
       count: within7Days.length
     },
     {
-      name: '< 30 days',
+      name: t('charts.lessThan30Days', { defaultValue: '< 30 days' }),
       value: within30Days.reduce((sum, credit) => sum + credit.remaining_amount, 0),
       count: within30Days.length
     },
     {
-      name: '< 90 days',
+      name: t('charts.lessThan90Days', { defaultValue: '< 90 days' }),
       value: within90Days.reduce((sum, credit) => sum + credit.remaining_amount, 0),
       count: within90Days.length
     },
     {
-      name: '> 90 days',
+      name: t('charts.greaterThan90Days', { defaultValue: '> 90 days' }),
       value: beyond90Days.reduce((sum, credit) => sum + credit.remaining_amount, 0),
       count: beyond90Days.length
     },
   ];
 };
-
-// Placeholder for credit usage history - in production, this would come from an analytics endpoint
-const placeholderCreditUsageData = [
-  { month: 'Jan', applied: 4000, expired: 1000, issued: 6000 },
-  { month: 'Feb', applied: 3000, expired: 500, issued: 4000 },
-  { month: 'Mar', applied: 5000, expired: 1500, issued: 3000 },
-  { month: 'Apr', applied: 2780, expired: 800, issued: 5000 },
-  { month: 'May', applied: 1890, expired: 300, issued: 3500 },
-  { month: 'Jun', applied: 2390, expired: 200, issued: 2800 },
-];
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
@@ -256,6 +250,7 @@ const DEFAULT_TAB = 'active-credits';
 const CreditManagement: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation('msp/credits');
   const tabParam = searchParams?.get('creditTab');
 
   // Determine initial active tab based on URL parameter
@@ -281,7 +276,14 @@ const CreditManagement: React.FC = () => {
 
   // State for chart data
   const [expiringCreditsData, setExpiringCreditsData] = useState<Array<{name: string, value: number, count: number}>>([]);
-  const [creditUsageData] = useState(placeholderCreditUsageData);
+  const creditUsageData = [
+    { month: t('charts.months.jan', { defaultValue: 'Jan' }), applied: 4000, expired: 1000, issued: 6000 },
+    { month: t('charts.months.feb', { defaultValue: 'Feb' }), applied: 3000, expired: 500, issued: 4000 },
+    { month: t('charts.months.mar', { defaultValue: 'Mar' }), applied: 5000, expired: 1500, issued: 3000 },
+    { month: t('charts.months.apr', { defaultValue: 'Apr' }), applied: 2780, expired: 800, issued: 5000 },
+    { month: t('charts.months.may', { defaultValue: 'May' }), applied: 1890, expired: 300, issued: 3500 },
+    { month: t('charts.months.jun', { defaultValue: 'Jun' }), applied: 2390, expired: 200, issued: 2800 },
+  ];
 
   // Pagination state for Active Credits
   const [activeCurrentPage, setActiveCurrentPage] = useState(1);
@@ -348,9 +350,6 @@ const CreditManagement: React.FC = () => {
             .reduce((sum, credit) => sum + (credit.amount - credit.remaining_amount), 0)
         });
         
-        // Generate chart data
-        setExpiringCreditsData(generateExpirationChartData(activeCreditsFiltered));
-        
         setLoading(false);
       } catch (error) {
         console.error('Error fetching credit data:', error);
@@ -360,6 +359,10 @@ const CreditManagement: React.FC = () => {
     
     fetchData();
   }, []);
+
+  useEffect(() => {
+    setExpiringCreditsData(generateExpirationChartData(activeCredits, t));
+  }, [activeCredits, t]);
 
   // Update active tab when URL parameter changes
   useEffect(() => {
@@ -438,15 +441,19 @@ const CreditManagement: React.FC = () => {
       </div>
       
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Credit Management</h2>
+        <h2 className="text-2xl font-bold">{t('management.title', { defaultValue: 'Credit Management' })}</h2>
       </div>
       
       {/* Credit Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Credit Expiration Summary</CardTitle>
-            <CardDescription>Overview of credits expiring soon</CardDescription>
+            <CardTitle>{t('charts.expirationSummary', { defaultValue: 'Credit Expiration Summary' })}</CardTitle>
+            <CardDescription>
+              {t('charts.expirationSummaryDescription', {
+                defaultValue: 'Overview of credits expiring soon',
+              })}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64">
@@ -473,11 +480,15 @@ const CreditManagement: React.FC = () => {
             </div>
             <div className="mt-4 grid grid-cols-2 gap-4">
               <div className="bg-primary/10 p-3 rounded-md">
-                <p className="text-sm text-primary">Total Active Credits</p>
+                <p className="text-sm text-primary">
+                  {t('stats.totalActiveCredits', { defaultValue: 'Total Active Credits' })}
+                </p>
                 <p className="text-xl font-bold">{formatCurrency(creditStats.totalActive)}</p>
               </div>
               <div className="bg-warning/10 p-3 rounded-md">
-                <p className="text-sm text-warning">Expiring in 30 Days</p>
+                <p className="text-sm text-warning">
+                  {t('stats.expiringIn30Days', { defaultValue: 'Expiring in 30 Days' })}
+                </p>
                 <p className="text-xl font-bold">{formatCurrency(creditStats.expiringWithin30Days)}</p>
               </div>
             </div>
@@ -486,8 +497,12 @@ const CreditManagement: React.FC = () => {
         
         <Card>
           <CardHeader>
-            <CardTitle>Credit Usage Trends</CardTitle>
-            <CardDescription>Historical credit usage patterns</CardDescription>
+            <CardTitle>{t('charts.usageTrends', { defaultValue: 'Credit Usage Trends' })}</CardTitle>
+            <CardDescription>
+              {t('charts.usageTrendsDescription', {
+                defaultValue: 'Historical credit usage patterns',
+              })}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64">
@@ -506,19 +521,35 @@ const CreditManagement: React.FC = () => {
                   <YAxis tickFormatter={(value) => `$${value}`} />
                   <Tooltip formatter={(value) => formatCurrency(value as number)} />
                   <Legend />
-                  <Bar dataKey="issued" fill="#8884d8" name="Credits Issued" />
-                  <Bar dataKey="applied" fill="#82ca9d" name="Credits Applied" />
-                  <Bar dataKey="expired" fill="#ff8042" name="Credits Expired" />
+                  <Bar
+                    dataKey="issued"
+                    fill="#8884d8"
+                    name={t('charts.creditsIssued', { defaultValue: 'Credits Issued' })}
+                  />
+                  <Bar
+                    dataKey="applied"
+                    fill="#82ca9d"
+                    name={t('charts.creditsApplied', { defaultValue: 'Credits Applied' })}
+                  />
+                  <Bar
+                    dataKey="expired"
+                    fill="#ff8042"
+                    name={t('charts.creditsExpired', { defaultValue: 'Credits Expired' })}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-4">
               <div className="bg-success/10 p-3 rounded-md">
-                <p className="text-sm text-success">Total Credits Applied</p>
+                <p className="text-sm text-success">
+                  {t('stats.totalCreditsApplied', { defaultValue: 'Total Credits Applied' })}
+                </p>
                 <p className="text-xl font-bold">{formatCurrency(creditStats.totalCreditsApplied)}</p>
               </div>
               <div className="bg-destructive/10 p-3 rounded-md">
-                <p className="text-sm text-destructive">Total Credits Expired</p>
+                <p className="text-sm text-destructive">
+                  {t('stats.totalCreditsExpired', { defaultValue: 'Total Credits Expired' })}
+                </p>
                 <p className="text-xl font-bold">{formatCurrency(creditStats.totalExpired)}</p>
               </div>
             </div>

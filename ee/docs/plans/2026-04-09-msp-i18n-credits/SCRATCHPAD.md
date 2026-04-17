@@ -195,6 +195,11 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   cancel action, and submit action all now resolve from `actions.*` / `management.addCreditPlaceholder`.
 - **(2026-04-17, F014)** Wired `packages/billing/src/components/credits/BackButton.tsx` to
   `useTranslation('msp/credits')` and moved the visible label to `actions.backToCredits`.
+- **(2026-04-17, F015)** Started the `CreditManagement.tsx` translation pass by wiring
+  `useTranslation('msp/credits')` for the dashboard shell. Translated the page title, chart
+  card titles/descriptions, stat tiles, legend labels, and placeholder month labels; moved the
+  expiration bucket labels into a `generateExpirationChartData(..., t)` helper and derived the
+  pie-chart labels in a locale-aware effect so pseudo/de locale changes update chart copy too.
 
 ## Key Paths / Runbooks
 
