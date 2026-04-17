@@ -7,7 +7,7 @@
   {"id": "F006", "description": "Generate it/msp/credits.json translations for all keys (with Italian accent audit)", "implemented": true},
   {"id": "F007", "description": "Generate pl/msp/credits.json translations for all keys", "implemented": true},
   {"id": "F008", "description": "Run `node scripts/generate-pseudo-locales.cjs` to generate xx/msp/credits.json and yy/msp/credits.json pseudo-locale files from English source", "implemented": true},
-  {"id": "F009", "description": "Run `node scripts/validate-translations.cjs` and confirm exit code 0 (key parity, variable preservation, pseudo-locale patterns, Italian accents)", "implemented": false},
+  {"id": "F009", "description": "Run `node scripts/validate-translations.cjs` and confirm exit code 0 (key parity, variable preservation, pseudo-locale patterns, Italian accents)", "implemented": true},
   {"id": "F010", "description": "Add '/msp/billing/credits' route to ROUTE_NAMESPACES in packages/core/src/lib/i18n/config.ts loading ['common', 'msp/core', 'features/billing', 'msp/credits']", "implemented": false},
 
   {"id": "F011", "description": "Wire useTranslation('msp/credits') in CreditsPage.tsx — create a client wrapper component (CreditsPageClient.tsx) to handle translation for the server component; translate column titles (Credit ID, Created, Description, Original Amount, Remaining, Expires, Status, Actions), status labels (Active, Expired, Expiring Soon), tab labels (Active Credits, All Credits, Expired Credits), card titles (Credits Overview, Credit Expiration Summary, Credit Usage Trends), settings section labels, and page heading", "implemented": false},

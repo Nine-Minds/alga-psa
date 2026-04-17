@@ -171,10 +171,15 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   namespace landed. The generator rebuilt `62` pseudo-locale files from `31` English sources
   and created `server/public/locales/xx/msp/credits.json` plus
   `server/public/locales/yy/msp/credits.json`. No hand-edits to pseudo-locales were made.
+- **(2026-04-17, F009)** Ran `node scripts/validate-translations.cjs` immediately after pseudo-
+  locale generation. Result: `Errors: 0`, `Warnings: 0`, `PASSED` across `de/es/fr/it/nl/pl`
+  plus `xx/yy`. This confirmed key parity, interpolation preservation, pseudo fill patterns,
+  and the Italian file surviving the validator’s accent checks.
 
 ## Key Paths / Runbooks
 
 - English source namespace: `server/public/locales/en/msp/credits.json`
 - Pseudo-locale generator: `node scripts/generate-pseudo-locales.cjs`
+- Translation validator: `node scripts/validate-translations.cjs`
 - Plan artifacts:
   `ee/docs/plans/2026-04-09-msp-i18n-credits/{PRD.md,SCRATCHPAD.md,features.json,tests.json}`
