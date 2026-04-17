@@ -116,9 +116,11 @@
         "placeholder": "Service Name"
       },
       "serviceType": {
+        "label": "Service Type",
         "placeholder": "Select Service Type"
       },
       "billingMethod": {
+        "label": "Billing Method",
         "placeholder": "Select Billing Method"
       },
       "defaultRate": {
