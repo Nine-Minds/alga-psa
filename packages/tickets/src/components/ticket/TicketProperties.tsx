@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { fromZonedTime } from 'date-fns-tz';
 import { getScheduledHoursForTicket, getTicketAppointmentRequests } from '../../actions/ticketActions';
 import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation, IContact } from '@alga-psa/types'; // Added IClient and IClientLocation
 import { IUserWithRoles, ITeam } from '@alga-psa/types';
@@ -818,7 +819,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                         let displayDateTime = t('properties.notAvailable', 'N/A');
                         if (dateStr && timeStr) {
                           try {
-                            const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+                            const dt = fromZonedTime(`${dateStr}T${timeStr}:00`, request.requester_timezone || 'UTC');
                             if (!isNaN(dt.getTime())) {
                               displayDateTime = dt.toLocaleString('en-US', {
                                 month: 'short', day: 'numeric',

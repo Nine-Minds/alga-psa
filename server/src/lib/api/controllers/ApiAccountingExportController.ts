@@ -122,6 +122,16 @@ export class ApiAccountingExportController extends ApiBaseController {
               { status: 409 }
             );
           }
+          if (error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_EMPTY_BATCH') {
+            return NextResponse.json(
+              {
+                error: error.code,
+                message: error.message,
+                filters: error.details?.filters
+              },
+              { status: 409 }
+            );
+          }
           throw error;
         }
       });

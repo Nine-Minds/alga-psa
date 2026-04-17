@@ -12,6 +12,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { Calendar, Clock, User, FileText, AlertCircle, X } from 'lucide-react';
 import { format } from 'date-fns';
+import { fromZonedTime } from 'date-fns-tz';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -39,6 +40,7 @@ interface AppointmentRequest {
   requested_date: string;
   requested_time: string;
   requested_duration: number;
+  requester_timezone?: string | null;
   status: 'pending' | 'approved' | 'declined' | 'cancelled';
   preferred_assigned_user_name?: string;
   description?: string;
@@ -152,7 +154,9 @@ export default function AppointmentsPage() {
         let display = 'N/A';
         if (dateStr && timeStr) {
           try {
-            const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+            // requested_time is the user's naive local time in record.requester_timezone.
+            // 'UTC' fallback preserves legacy behavior for rows written before the tz column existed.
+            const dt = fromZonedTime(`${dateStr}T${timeStr}:00`, record.requester_timezone || 'UTC');
             if (!isNaN(dt.getTime())) {
               display = dt.toLocaleString('en-US', {
                 month: 'short', day: 'numeric', year: 'numeric',
@@ -410,7 +414,7 @@ export default function AppointmentsPage() {
                         const timeStr = normalizeTimeValue(selectedAppointment.requested_time);
                         if (!dateStr || !timeStr) return 'N/A';
                         try {
-                          const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+                          const dt = fromZonedTime(`${dateStr}T${timeStr}:00`, selectedAppointment.requester_timezone || 'UTC');
                           if (isNaN(dt.getTime())) return 'N/A';
                           return dt.toLocaleString('en-US', {
                             weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',

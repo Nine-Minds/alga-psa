@@ -10,6 +10,7 @@ import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { format } from 'date-fns';
+import { fromZonedTime } from 'date-fns-tz';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { getAppointmentRequestDetails, cancelAppointmentRequest } from '@alga-psa/client-portal/actions';
@@ -37,6 +38,7 @@ interface AppointmentRequestDetails {
   requested_date: string;
   requested_time: string;
   requested_duration: number;
+  requester_timezone?: string | null;
   status: 'pending' | 'approved' | 'declined' | 'cancelled';
   preferred_technician_first_name?: string;
   preferred_technician_last_name?: string;
@@ -115,12 +117,12 @@ export function AppointmentRequestDetailsPage() {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const formatRequestedDateTime = (dateValue: unknown, timeValue: unknown) => {
+  const formatRequestedDateTime = (dateValue: unknown, timeValue: unknown, tz?: string | null) => {
     const dateStr = normalizeDateValue(dateValue);
     const timeStr = normalizeTimeValue(timeValue);
     if (!dateStr || !timeStr) return 'N/A';
     try {
-      const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+      const dt = fromZonedTime(`${dateStr}T${timeStr}:00`, tz || 'UTC');
       if (isNaN(dt.getTime())) return 'N/A';
       return dt.toLocaleString('en-US', {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
@@ -237,7 +239,7 @@ export function AppointmentRequestDetailsPage() {
                     {t('details.dateTime', 'Date & Time')}
                   </div>
                   <div className="text-sm text-gray-900">
-                    {formatRequestedDateTime(appointment.requested_date, appointment.requested_time)}
+                    {formatRequestedDateTime(appointment.requested_date, appointment.requested_time, appointment.requester_timezone)}
                   </div>
                   <div className="text-sm text-gray-600 mt-1 flex items-center gap-1">
                     <Clock className="h-4 w-4" />

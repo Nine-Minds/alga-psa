@@ -68,11 +68,19 @@ function toJsonbValue<T>(value: T): string {
   return JSON.stringify(value);
 }
 
+// Capabilities that default to disabled for new tenants. `group_chat_bot`
+// is opt-in because bot responses in group chats are visible to every
+// member of the chat regardless of their PSA permissions — admins must
+// consciously enable it.
+const TEAMS_CAPABILITIES_OPT_IN: readonly TeamsCapability[] = ['group_chat_bot'];
+
 function defaultTeamsIntegrationState() {
   return {
     selectedProfileId: null,
     installStatus: 'not_configured' as TeamsInstallStatus,
-    enabledCapabilities: [...TEAMS_CAPABILITIES] as TeamsCapability[],
+    enabledCapabilities: TEAMS_CAPABILITIES.filter(
+      (capability) => !TEAMS_CAPABILITIES_OPT_IN.includes(capability)
+    ) as TeamsCapability[],
     notificationCategories: [...TEAMS_NOTIFICATION_CATEGORIES] as TeamsNotificationCategory[],
     allowedActions: [...TEAMS_ALLOWED_ACTIONS] as TeamsAllowedAction[],
     appId: null as string | null,
