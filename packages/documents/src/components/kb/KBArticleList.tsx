@@ -19,6 +19,11 @@ import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
+  useFormatArticleAudience,
+  useFormatArticleStatus,
+  useFormatArticleType,
+} from '@alga-psa/ui/hooks/useKnowledgeBaseEnumOptions';
+import {
   Plus,
   MoreVertical,
   Pencil,
@@ -48,30 +53,10 @@ const STATUS_COLORS: Record<ArticleStatus, string> = {
   archived: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 };
 
-const STATUS_LABELS: Record<ArticleStatus, string> = {
-  draft: 'Draft',
-  review: 'In Review',
-  published: 'Published',
-  archived: 'Archived',
-};
-
 const AUDIENCE_COLORS: Record<ArticleAudience, string> = {
   internal: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
   client: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
   public: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300',
-};
-
-const AUDIENCE_LABELS: Record<ArticleAudience, string> = {
-  internal: 'Internal',
-  client: 'Client',
-  public: 'Public',
-};
-
-const TYPE_LABELS: Record<ArticleType, string> = {
-  how_to: 'How-To',
-  faq: 'FAQ',
-  troubleshooting: 'Troubleshooting',
-  reference: 'Reference',
 };
 
 interface KBArticleListProps {
@@ -127,14 +112,9 @@ export default function KBArticleList({
   const [articleToArchive, setArticleToArchive] = useState<IKBArticleWithDocument | null>(null);
   const [isArchiving, setIsArchiving] = useState(false);
 
-  const getStatusLabel = (status: ArticleStatus) =>
-    t(`shared.statusLabels.${status}`, { defaultValue: STATUS_LABELS[status] });
-
-  const getAudienceLabel = (audience: ArticleAudience) =>
-    t(`shared.audienceLabels.${audience}`, { defaultValue: AUDIENCE_LABELS[audience] });
-
-  const getTypeLabel = (type: ArticleType) =>
-    t(`shared.typeLabels.${type}`, { defaultValue: TYPE_LABELS[type] });
+  const getStatusLabel = useFormatArticleStatus();
+  const getAudienceLabel = useFormatArticleAudience();
+  const getTypeLabel = useFormatArticleType();
 
   const handleTagsChange = useCallback((articleId: string, tags: ITag[]) => {
     articleTagsRef.current[articleId] = tags;

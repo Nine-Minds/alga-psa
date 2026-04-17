@@ -221,5 +221,24 @@
   },
   "empty": {
     "default": "11111"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "11111",
+      "review": "11111",
+      "published": "11111",
+      "archived": "11111"
+    },
+    "audienceLabels": {
+      "internal": "11111",
+      "client": "11111",
+      "public": "11111"
+    },
+    "typeLabels": {
+      "how_to": "11111",
+      "faq": "11111",
+      "troubleshooting": "11111",
+      "reference": "11111"
+    }
   }
 }

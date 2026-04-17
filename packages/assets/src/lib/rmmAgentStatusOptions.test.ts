@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { RMM_AGENT_STATUS_OPTIONS } from './rmmAgentStatusOptions';
+import { RMM_AGENT_STATUS_VALUES } from './rmmAgentStatusOptions';
 
-describe('RMM_AGENT_STATUS_OPTIONS', () => {
+describe('RMM_AGENT_STATUS_VALUES', () => {
   it('includes overdue (and preserves existing online/offline/unknown values)', () => {
-    const values = RMM_AGENT_STATUS_OPTIONS.map((o) => o.value);
-    expect(values).toEqual(['online', 'offline', 'overdue', 'unknown']);
+    expect(RMM_AGENT_STATUS_VALUES).toEqual(['online', 'offline', 'overdue', 'unknown']);
   });
 });
-

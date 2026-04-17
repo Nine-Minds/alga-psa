@@ -46,8 +46,9 @@ import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 import CancellationFeedbackModal from './CancellationFeedbackModal';
 import { signOut } from 'next-auth/react';
 import { useTier } from 'server/src/context/TierContext';
-import { ADD_ONS, ADD_ON_LABELS, ADD_ON_DESCRIPTIONS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES } from '@alga-psa/types';
+import { ADD_ONS, ADD_ON_LABELS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES } from '@alga-psa/types';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useFormatAddOnDescription } from '@alga-psa/ui/hooks/useAddOnEnumOptions';
 
 // Feature display names for the tier features list
 const FEATURE_DISPLAY_NAMES: Record<TIER_FEATURES, string> = {
@@ -65,6 +66,7 @@ const FEATURE_DISPLAY_NAMES: Record<TIER_FEATURES, string> = {
 };
 
 export default function AccountManagement() {
+  const formatAddOnDescription = useFormatAddOnDescription();
   const [loading, setLoading] = useState(true);
   const [licenseInfo, setLicenseInfo] = useState<ILicenseInfo | null>(null);
   const [paymentInfo, setPaymentInfo] = useState<IPaymentMethod | null>(null);
@@ -1356,7 +1358,7 @@ export default function AccountManagement() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <CardTitle>{ADD_ON_LABELS[ADD_ONS.AI_ASSISTANT]}</CardTitle>
-              <CardDescription>{ADD_ON_DESCRIPTIONS[ADD_ONS.AI_ASSISTANT]}</CardDescription>
+              <CardDescription>{formatAddOnDescription(ADD_ONS.AI_ASSISTANT)}</CardDescription>
             </div>
             <Badge variant={hasAiAssistant ? 'success' : 'default-muted'}>
               {hasAiAssistant ? 'Active' : 'Available'}

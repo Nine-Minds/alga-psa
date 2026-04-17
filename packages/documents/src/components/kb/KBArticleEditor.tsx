@@ -38,6 +38,11 @@ import {
 } from '../../actions/kbArticleActions';
 import { TagManager, findTagsByEntityId } from '@alga-psa/tags';
 import type { ITag } from '@alga-psa/types';
+import {
+  useArticleAudienceOptions,
+  useArticleTypeOptions,
+  useFormatArticleStatus,
+} from '@alga-psa/ui/hooks/useKnowledgeBaseEnumOptions';
 
 const STATUS_COLORS: Record<ArticleStatus, string> = {
   draft: 'bg-gray-100 text-gray-700',
@@ -45,26 +50,6 @@ const STATUS_COLORS: Record<ArticleStatus, string> = {
   published: 'bg-green-100 text-green-700',
   archived: 'bg-red-100 text-red-700',
 };
-
-const STATUS_LABELS: Record<ArticleStatus, string> = {
-  draft: 'Draft',
-  review: 'In Review',
-  published: 'Published',
-  archived: 'Archived',
-};
-
-const TYPE_OPTION_DEFAULTS: SelectOption[] = [
-  { value: 'how_to', label: 'How-To' },
-  { value: 'faq', label: 'FAQ' },
-  { value: 'troubleshooting', label: 'Troubleshooting' },
-  { value: 'reference', label: 'Reference' },
-];
-
-const AUDIENCE_OPTION_DEFAULTS: SelectOption[] = [
-  { value: 'internal', label: 'Internal' },
-  { value: 'client', label: 'Client' },
-  { value: 'public', label: 'Public' },
-];
 
 const REVIEW_CYCLE_OPTION_DEFAULTS: SelectOption[] = [
   { value: '', label: 'No review cycle' },
@@ -129,22 +114,9 @@ export default function KBArticleEditor({
   const [categoryId, setCategoryId] = useState<string>('');
   const [reviewCycleDays, setReviewCycleDays] = useState<string>('');
 
-  const statusLabels: Record<ArticleStatus, string> = {
-    draft: t('shared.statusLabels.draft', { defaultValue: STATUS_LABELS.draft }),
-    review: t('shared.statusLabels.review', { defaultValue: STATUS_LABELS.review }),
-    published: t('shared.statusLabels.published', { defaultValue: STATUS_LABELS.published }),
-    archived: t('shared.statusLabels.archived', { defaultValue: STATUS_LABELS.archived }),
-  };
-
-  const typeOptions: SelectOption[] = TYPE_OPTION_DEFAULTS.map((option) => ({
-    ...option,
-    label: t(`shared.typeLabels.${option.value}`, { defaultValue: option.label }),
-  }));
-
-  const audienceOptions: SelectOption[] = AUDIENCE_OPTION_DEFAULTS.map((option) => ({
-    ...option,
-    label: t(`shared.audienceLabels.${option.value}`, { defaultValue: option.label }),
-  }));
+  const formatStatus = useFormatArticleStatus();
+  const typeOptions: SelectOption[] = useArticleTypeOptions();
+  const audienceOptions: SelectOption[] = useArticleAudienceOptions();
 
   const reviewCycleOptions: SelectOption[] = REVIEW_CYCLE_OPTION_DEFAULTS.map((option) => ({
     ...option,
@@ -323,7 +295,7 @@ export default function KBArticleEditor({
               <h2 className="text-lg font-semibold">{title || t('editor.header.untitled', { defaultValue: 'Untitled Article' })}</h2>
               <div className="flex items-center gap-2 mt-1">
                 <Badge className={STATUS_COLORS[article.status]}>
-                  {statusLabels[article.status]}
+                  {formatStatus(article.status)}
                 </Badge>
                 {isStale && (
                   <Badge className="bg-orange-100 text-orange-700">

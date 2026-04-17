@@ -930,5 +930,10 @@
     "deleteCommentAriaLabel": "Eliminar comentario",
     "deleteComment": "Eliminar comentario",
     "deleteCommentConfirmation": "¿Está seguro de que desea eliminar este comentario? Esta acción no se puede deshacer."
+  },
+  "enums": {
+    "addOnDescription": {
+      "ai_assistant": "Desbloquea el chat con IA, la asistencia de documentos, la ayuda en la barra lateral y las herramientas de IA de flujo de trabajo para tu equipo."
+    }
   }
 }

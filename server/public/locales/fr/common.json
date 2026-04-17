@@ -930,5 +930,10 @@
     "deleteCommentAriaLabel": "Supprimer le commentaire",
     "deleteComment": "Supprimer le commentaire",
     "deleteCommentConfirmation": "Êtes-vous sûr de vouloir supprimer ce commentaire ? Cette action est irréversible."
+  },
+  "enums": {
+    "addOnDescription": {
+      "ai_assistant": "Débloquez le chat IA, l'assistance documentaire, l'aide en barre latérale et les outils IA de flux de travail pour votre équipe."
+    }
   }
 }

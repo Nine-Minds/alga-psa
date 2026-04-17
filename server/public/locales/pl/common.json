@@ -929,5 +929,10 @@
         "confirm_delete": "Czy na pewno chcesz usunąć ten komentarz?"
       }
     }
+  },
+  "enums": {
+    "addOnDescription": {
+      "ai_assistant": "Odblokuj czat AI, pomoc w dokumentach, pomoc w pasku bocznym oraz narzędzia AI dla przepływów pracy Twojego zespołu."
+    }
   }
 }

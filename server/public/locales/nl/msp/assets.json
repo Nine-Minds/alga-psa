@@ -30,6 +30,14 @@
     "no": "Nee",
     "yes": "Ja"
   },
+  "enums": {
+    "rmmAgentStatus": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Verlopen",
+      "unknown": "Onbekend"
+    }
+  },
   "assetAlertsSection": {
     "title": "Sectie Activawaarschuwingen",
     "description": "Wrapper voor ondernemingswaarschuwingen voor activaspecifieke RMM-waarschuwingen en herstelacties"
@@ -158,12 +166,6 @@
       "rmmManaged": {
         "managed": "RMM beheerd",
         "unmanaged": "Niet beheerd"
-      },
-      "agentStatuses": {
-        "online": "Online",
-        "offline": "Offline",
-        "overdue": "Verlopen",
-        "unknown": "Onbekend"
       }
     },
     "activeFilters": {
@@ -824,12 +826,6 @@
       "unknown": "Agentstatus onbekend",
       "status": "{{status}}{{suffix}}",
       "lastSeen": "- Laatst gezien: {{value}}"
-    },
-    "statuses": {
-      "online": "Online",
-      "offline": "Offline",
-      "overdue": "Verlopen",
-      "unknown": "Onbekend"
     },
     "relative": {
       "justNow": "Zojuist",

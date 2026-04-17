@@ -30,6 +30,14 @@
     "no": "No",
     "yes": "Sí"
   },
+  "enums": {
+    "rmmAgentStatus": {
+      "online": "En línea",
+      "offline": "Desconectado",
+      "overdue": "Atrasado",
+      "unknown": "Desconocido"
+    }
+  },
   "assetAlertsSection": {
     "title": "Sección de alertas de activos",
     "description": "Envoltorio de la sección de alerta empresarial para alertas RMM específicas de activos y acciones de remediación"
@@ -158,12 +166,6 @@
       "rmmManaged": {
         "managed": "RMM Gestionado",
         "unmanaged": "No gestionado"
-      },
-      "agentStatuses": {
-        "online": "En línea",
-        "offline": "Desconectado",
-        "overdue": "Atrasado",
-        "unknown": "Desconocido"
       }
     },
     "activeFilters": {
@@ -824,12 +826,6 @@
       "unknown": "Estado del agente desconocido",
       "status": "{{status}}{{suffix}}",
       "lastSeen": "- Visto por última vez: {{value}}"
-    },
-    "statuses": {
-      "online": "En línea",
-      "offline": "Desconectado",
-      "overdue": "Atrasado",
-      "unknown": "Desconocido"
     },
     "relative": {
       "justNow": "En este momento",

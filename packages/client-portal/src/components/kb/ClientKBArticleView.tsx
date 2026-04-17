@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatArticleType } from '@alga-psa/ui/hooks/useKnowledgeBaseEnumOptions';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
@@ -33,13 +34,6 @@ const TYPE_ICONS: Record<ArticleType, React.ReactNode> = {
   reference: <FileText className="w-5 h-5 text-gray-500" />,
 };
 
-const TYPE_LABELS: Record<ArticleType, string> = {
-  how_to: 'How-To Guide',
-  faq: 'FAQ',
-  troubleshooting: 'Troubleshooting',
-  reference: 'Reference',
-};
-
 interface ClientKBArticleViewProps {
   articleIdOrSlug: string;
   onBack?: () => void;
@@ -50,6 +44,7 @@ export default function ClientKBArticleView({
   onBack,
 }: ClientKBArticleViewProps) {
   const { t } = useTranslation('features/documents');
+  const formatArticleType = useFormatArticleType('features/documents');
   const [article, setArticle] = useState<IKBArticleWithDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<'helpful' | 'not_helpful' | null>(
@@ -405,7 +400,7 @@ export default function ClientKBArticleView({
               </h1>
               <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                 <Badge variant="secondary">
-                  {TYPE_LABELS[article.article_type]}
+                  {formatArticleType(article.article_type)}
                 </Badge>
                 <span className="flex items-center gap-1">
                   <Eye className="w-4 h-4" />

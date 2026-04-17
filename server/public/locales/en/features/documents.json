@@ -221,5 +221,24 @@
   },
   "empty": {
     "default": "No documents found"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "Draft",
+      "review": "In Review",
+      "published": "Published",
+      "archived": "Archived"
+    },
+    "audienceLabels": {
+      "internal": "Internal",
+      "client": "Client",
+      "public": "Public"
+    },
+    "typeLabels": {
+      "how_to": "How-To",
+      "faq": "FAQ",
+      "troubleshooting": "Troubleshooting",
+      "reference": "Reference"
+    }
   }
 }

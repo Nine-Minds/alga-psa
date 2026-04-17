@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/component
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ArrowLeft, Download } from 'lucide-react';
 import type { IQuote, IQuoteItem, QuoteStatus } from '@alga-psa/types';
-import { QUOTE_STATUS_METADATA } from '@alga-psa/types';
+import { useFormatQuoteStatus } from '@alga-psa/ui/hooks/useQuoteEnumOptions';
 import {
   acceptClientQuote,
   downloadClientQuotePdf,
@@ -44,6 +44,7 @@ interface QuoteDetailPageProps {
 
 const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
   const router = useRouter();
+  const formatQuoteStatus = useFormatQuoteStatus();
   const [quote, setQuote] = useState<IQuote | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -257,7 +258,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
               <p className="text-sm text-muted-foreground">{quote.title}</p>
             </div>
             <Badge variant={STATUS_VARIANTS[(quote.status || 'draft') as QuoteStatus] || 'secondary'}>
-              {QUOTE_STATUS_METADATA[(quote.status || 'draft') as QuoteStatus]?.label || quote.status}
+              {formatQuoteStatus((quote.status || 'draft') as QuoteStatus)}
             </Badge>
           </div>
         </div>
