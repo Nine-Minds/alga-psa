@@ -154,6 +154,9 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   structure and preserved interpolation variables. Kept the recurring-credit context labels,
   expiration flow copy, and reconciliation phrasing idiomatic enough for MSP billing rather
   than literal English carry-over.
+- **(2026-04-17, F004)** Added `server/public/locales/de/msp/credits.json`. Paid extra
+  attention to the reconciliation/dashboard nouns and the “financial artifact / recurring
+  service period” explanatory copy so the German file remains readable instead of over-literal.
 
 ## Key Paths / Runbooks
 
