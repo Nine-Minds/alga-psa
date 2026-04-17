@@ -167,9 +167,14 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   placeholders and the same month subgroup used by the chart placeholders. The recurring-
   lineage copy needed a light polish to stay understandable in Polish while keeping the billing
   domain meaning intact.
+- **(2026-04-17, F008)** Ran `node scripts/generate-pseudo-locales.cjs` after the new English
+  namespace landed. The generator rebuilt `62` pseudo-locale files from `31` English sources
+  and created `server/public/locales/xx/msp/credits.json` plus
+  `server/public/locales/yy/msp/credits.json`. No hand-edits to pseudo-locales were made.
 
 ## Key Paths / Runbooks
 
 - English source namespace: `server/public/locales/en/msp/credits.json`
+- Pseudo-locale generator: `node scripts/generate-pseudo-locales.cjs`
 - Plan artifacts:
   `ee/docs/plans/2026-04-09-msp-i18n-credits/{PRD.md,SCRATCHPAD.md,features.json,tests.json}`
