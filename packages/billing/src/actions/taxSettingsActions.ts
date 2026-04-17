@@ -753,3 +753,87 @@ export const updateTenantTaxSettings = withAuth(async (
     throw new Error('Failed to update tenant tax settings');
   }
 });
+
+const DELEGATION_INTEGRATION_TYPES = ['xero', 'quickbooks_online'] as const;
+const INTEGRATION_LABELS: Record<string, string> = {
+  xero: 'Xero',
+  quickbooks_online: 'QuickBooks Online',
+};
+
+/**
+ * Returns whether the in-settings "let your accounting system calculate tax" banner
+ * should appear for the current tenant, plus the label of the first delegation-capable
+ * adapter that has an active mapping. The banner appears when:
+ * - `default_tax_source` is `internal`
+ * - The tenant admin hasn't dismissed the banner
+ * - At least one live-adapter mapping (Xero / QBO Online) exists
+ */
+export const getTaxDelegationNudgeState = withAuth(async (
+  _user,
+  { tenant }
+): Promise<{ shouldShow: boolean; adapterLabel: string | null }> => {
+  if (!tenant) {
+    return { shouldShow: false, adapterLabel: null };
+  }
+
+  const { knex } = await createTenantKnex();
+
+  const settings = await knex('tenant_settings')
+    .where({ tenant })
+    .select('default_tax_source', 'tax_delegation_nudge_dismissed_at')
+    .first();
+
+  if (settings?.tax_delegation_nudge_dismissed_at) {
+    return { shouldShow: false, adapterLabel: null };
+  }
+  if ((settings?.default_tax_source ?? 'internal') !== 'internal') {
+    return { shouldShow: false, adapterLabel: null };
+  }
+
+  const mapping = await knex('tenant_external_entity_mappings')
+    .where({ tenant })
+    .whereIn('integration_type', DELEGATION_INTEGRATION_TYPES as unknown as string[])
+    .select('integration_type')
+    .first();
+
+  if (!mapping) {
+    return { shouldShow: false, adapterLabel: null };
+  }
+
+  return {
+    shouldShow: true,
+    adapterLabel: INTEGRATION_LABELS[mapping.integration_type] ?? 'your accounting system',
+  };
+});
+
+/**
+ * Marks the tax delegation banner as dismissed for the current tenant. Dismissal is
+ * tenant-wide by design — one admin's dismissal suppresses the banner for the rest
+ * of the tenant.
+ */
+export const dismissTaxDelegationNudge = withAuth(async (
+  user,
+  { tenant }
+): Promise<void> => {
+  if (!(hasPermission(user, 'billing', 'update'))) {
+    throw new Error('Permission denied: Cannot dismiss tax delegation banner');
+  }
+  if (!tenant) {
+    throw new Error('SYSTEM_ERROR: Tenant context not found');
+  }
+
+  const { knex } = await createTenantKnex();
+  const now = new Date().toISOString();
+
+  const existing = await knex('tenant_settings').where({ tenant }).first();
+  if (existing) {
+    await knex('tenant_settings')
+      .where({ tenant })
+      .update({ tax_delegation_nudge_dismissed_at: now });
+  } else {
+    await knex('tenant_settings').insert({
+      tenant,
+      tax_delegation_nudge_dismissed_at: now,
+    });
+  }
+});
