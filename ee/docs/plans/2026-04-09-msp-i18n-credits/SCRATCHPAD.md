@@ -259,3 +259,7 @@ tickets migration (which extended an existing 147-key namespace), this batch cre
   `CreditsPageClient`, that the client wrapper wires translated columns/status/tabs/settings
   summary keys, and that representative credits-page keys resolve to pseudo-locale fill in
   `xx/msp/credits.json`.
+- **(2026-04-17, T009-T012)** Added `packages/billing/tests/CreditControls.i18n.test.ts` for
+  the small page-shell controls. It asserts `AddCreditButton` and `BackButton` both import
+  `useTranslation('msp/credits')` and checks the representative `xx` pseudo-locale keys those
+  controls depend on.
