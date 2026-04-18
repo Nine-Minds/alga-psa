@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useMemo, useState } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -9,6 +10,16 @@ import { Pencil, Info } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import type { CatalogPickerItem } from '../../../actions/serviceActions';
 import ServiceCatalogPicker from '../contracts/ServiceCatalogPicker';
+import LocationPicker from '../locations/LocationPicker';
+import LocationAddress from '../locations/LocationAddress';
+import {
+  buildLocationGroups,
+  getLocationKey,
+  pickDefaultLocation,
+  shouldShowLocationGroups,
+  type LocationGroupEntry,
+  type LocationSummary,
+} from '../locations/locationGrouping';
 import {
   calculateDraftQuoteTotals,
   createCustomDraftQuoteItem,
@@ -91,6 +102,28 @@ interface QuoteLineItemsEditorProps {
   currencyCode: string;
   disabled?: boolean;
   onChange: (items: DraftQuoteItem[]) => void;
+  /**
+   * Client locations available for assignment. When a second location is
+   * chosen via "Add location", this dropdown feeds every group picker.
+   */
+  locations?: LocationSummary[];
+  /**
+   * When true, the editor shows per-location groups with per-group subtotals
+   * and "+ Add item" actions. When false (default) it shows today's flat
+   * layout. The caller decides based on `shouldShowLocationGroups(items)`
+   * plus an explicit "+ Add location" click.
+   */
+  showLocationGroups?: boolean;
+  /**
+   * Extra location_ids that should render as empty groups even if no items
+   * reference them yet. Populated by the "+ Add location" flow so the user
+   * can pick a second location before adding any line items.
+   */
+  extraGroupLocationIds?: string[];
+  /** Fires when the user asks to add a new empty location group. */
+  onAddLocationGroup?: () => void;
+  /** Fires when a location group is deleted (used to auto-revert to flat). */
+  onRemoveLocationGroup?: (locationId: string | null) => void;
 }
 
 interface QuotePhaseSection {
@@ -162,7 +195,13 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   currencyCode,
   disabled = false,
   onChange,
+  locations = [],
+  showLocationGroups = false,
+  extraGroupLocationIds = [],
+  onAddLocationGroup,
+  onRemoveLocationGroup,
 }) => {
+  const { t } = useTranslation('features/billing');
   const [servicePickerValue, setServicePickerValue] = useState('');
   const [isDiscountOpen, setIsDiscountOpen] = useState(false);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
@@ -179,24 +218,33 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
       .map((item) => [item.service_id!, { value: item.service_id!, label: item.service_name || item.description }])
   ).values());
 
-  const sections = useMemo<QuotePhaseSection[]>(() => {
-    const grouped = new Map<string, QuotePhaseSection>();
+  const defaultLocation = useMemo(() => pickDefaultLocation(locations), [locations]);
 
-    for (const item of items) {
-      const key = getPhaseKey(item.phase);
-      if (!grouped.has(key)) {
-        grouped.set(key, {
-          key,
-          label: getPhaseLabel(item.phase),
+  const locationGroups = useMemo<LocationGroupEntry<DraftQuoteItem>[]>(
+    () => {
+      const groups = buildLocationGroups(items, locations);
+      // Surface empty groups the caller asked us to keep rendering so the
+      // user can pick a location / add items into them.
+      const existingKeys = new Set(groups.map((group) => group.key));
+      for (const extraId of extraGroupLocationIds) {
+        if (!extraId || existingKeys.has(extraId)) continue;
+        const resolved = locations.find((loc) => loc.location_id === extraId) ?? null;
+        groups.push({
+          key: extraId,
+          location_id: extraId,
+          location: resolved,
           items: [],
         });
       }
+      return groups;
+    },
+    [items, locations, extraGroupLocationIds]
+  );
 
-      grouped.get(key)!.items.push(item);
-    }
-
-    return Array.from(grouped.values());
-  }, [items]);
+  const phaseSections = useMemo(
+    (): QuotePhaseSection[] => buildPhaseSections(items),
+    [items]
+  );
 
   const updateItem = (localId: string, patch: Partial<DraftQuoteItem>) => {
     onChange(items.map((item) => item.local_id === localId ? { ...item, ...patch } : item));
@@ -222,12 +270,26 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     reorderedItems.splice(adjustedTargetIndex, 0, {
       ...draggedItem,
       phase: targetItem.phase ?? null,
+      // When dropping across location groups, inherit the target's location.
+      location_id: targetItem.location_id ?? draggedItem.location_id ?? null,
     });
     onChange(reorderedItems);
   };
 
   const removeItem = (localId: string) => {
-    onChange(items.filter((item) => item.local_id !== localId));
+    const next = items.filter((item) => item.local_id !== localId);
+    const removed = items.find((item) => item.local_id === localId);
+    onChange(next);
+
+    // Empty-group auto-removal: if the removed item leaves its location group empty
+    // (and the group wasn't the default), let the parent know so it can revert to
+    // flat layout when only the default group remains.
+    if (showLocationGroups && removed?.location_id) {
+      const locationStillInUse = next.some((item) => item.location_id === removed.location_id);
+      if (!locationStillInUse) {
+        onRemoveLocationGroup?.(removed.location_id);
+      }
+    }
   };
 
   const toggleSection = (sectionKey: string) => {
@@ -237,20 +299,21 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     }));
   };
 
-  const handleAddService = (service: CatalogPickerItem) => {
-    onChange([...items, createDraftQuoteItemFromService(service, currencyCode)]);
+  const handleAddServiceForLocation = (service: CatalogPickerItem, locationId: string | null) => {
+    const nextItem = createDraftQuoteItemFromService(service, currencyCode);
+    nextItem.location_id = locationId ?? defaultLocation?.location_id ?? null;
+    onChange([...items, nextItem]);
     setServicePickerValue('');
   };
 
-  const handleAddCustomItem = (description: string) => {
-    onChange([
-      ...items,
-      createCustomDraftQuoteItem({
-        description,
-        quantity: 1,
-        unit_price: 0,
-      }),
-    ]);
+  const handleAddCustomItemForLocation = (description: string, locationId: string | null) => {
+    const nextItem = createCustomDraftQuoteItem({
+      description,
+      quantity: 1,
+      unit_price: 0,
+    });
+    nextItem.location_id = locationId ?? defaultLocation?.location_id ?? null;
+    onChange([...items, nextItem]);
     setServicePickerValue('');
   };
 
@@ -260,17 +323,16 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
       return;
     }
 
-    onChange([
-      ...items,
-      createDraftDiscountQuoteItem({
-        description: discountType === 'percentage' ? `Discount (${numericValue}%)` : 'Discount',
-        discount_type: discountType,
-        discount_percentage: discountType === 'percentage' ? Math.round(numericValue) : null,
-        fixed_amount: discountType === 'fixed' ? Math.round(numericValue * 100) : 0,
-        applies_to_item_id: discountTargetType === 'item' ? discountTargetValue || null : null,
-        applies_to_service_id: discountTargetType === 'service' ? discountTargetValue || null : null,
-      }),
-    ]);
+    const discountItem = createDraftDiscountQuoteItem({
+      description: discountType === 'percentage' ? `Discount (${numericValue}%)` : 'Discount',
+      discount_type: discountType,
+      discount_percentage: discountType === 'percentage' ? Math.round(numericValue) : null,
+      fixed_amount: discountType === 'fixed' ? Math.round(numericValue * 100) : 0,
+      applies_to_item_id: discountTargetType === 'item' ? discountTargetValue || null : null,
+      applies_to_service_id: discountTargetType === 'service' ? discountTargetValue || null : null,
+    });
+
+    onChange([...items, discountItem]);
 
     setDiscountValue(discountType === 'percentage' ? '10' : '0.00');
     setDiscountTargetType('quote');
@@ -515,31 +577,186 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     );
   });
 
+  const renderPhaseSections = (sections: QuotePhaseSection[], sectionKeyPrefix: string) => (
+    <div className="space-y-4">
+      {sections.map((section) => {
+        const sectionKey = `${sectionKeyPrefix}:${section.key}`;
+        const isCollapsed = collapsedSections[sectionKey] === true;
+
+        return (
+          <div key={sectionKey} className="overflow-hidden rounded-md border border-border">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between bg-muted/40 px-4 py-3 text-left"
+              onClick={() => toggleSection(sectionKey)}
+            >
+              <div>
+                <div className="text-sm font-semibold text-foreground">{section.label}</div>
+                <div className="text-xs text-muted-foreground">
+                  {section.items.length} {section.items.length === 1 ? 'item' : 'items'}
+                </div>
+              </div>
+              <span className="text-sm text-muted-foreground">{isCollapsed ? 'Expand' : 'Collapse'}</span>
+            </button>
+
+            {!isCollapsed ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-border text-sm">
+                  <thead className="bg-background text-left">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Move</th>
+                      <th className="px-3 py-2 font-medium">Item</th>
+                      <th className="px-3 py-2 font-medium">Billing</th>
+                      <th className="px-3 py-2 font-medium">Flags</th>
+                      <th className="px-3 py-2 font-medium">Qty</th>
+                      <th className="px-3 py-2 font-medium">Unit Price</th>
+                      <th className="px-3 py-2 font-medium">Total</th>
+                      <th className="px-3 py-2 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border bg-background">
+                    {renderItemRows(section.items)}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderServicePicker = (locationId: string | null, keySuffix: string) => (
+    <div className="w-full max-w-md">
+      <ServiceCatalogPicker
+        value={servicePickerValue}
+        selectedLabel=""
+        onSelect={(service) => handleAddServiceForLocation(service, locationId)}
+        onAddCustom={(description) => handleAddCustomItemForLocation(description, locationId)}
+        disabled={disabled}
+        currencyCode={currencyCode}
+        placeholder={t('quotes.lineItems.searchPlaceholder', { defaultValue: 'Search or type custom item name...' })}
+      />
+    </div>
+  );
+
+  const excludedLocationIds = useMemo(() => {
+    // Prevent the same location from being chosen twice across groups.
+    const seen = new Set<string>();
+    for (const item of items) {
+      if (item.location_id) seen.add(item.location_id);
+    }
+    return Array.from(seen);
+  }, [items]);
+
+  const renderLocationGroupHeader = (group: LocationGroupEntry<DraftQuoteItem>, index: number) => {
+    const pickerId = `quote-location-picker-${group.location_id ?? 'unassigned'}`;
+    // Exclude locations that are already chosen by *other* groups.
+    const exclude = excludedLocationIds.filter((id) => id !== (group.location_id ?? undefined));
+
+    return (
+      <div className="flex flex-col gap-3 rounded-t-md bg-muted/40 px-4 py-3 md:flex-row md:items-start md:justify-between">
+        <div className="flex-1 space-y-2">
+          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {t('quotes.locations.groupHeading', {
+              defaultValue: 'Location {{index}}',
+              index: index + 1,
+            })}
+          </div>
+          <div className="max-w-md">
+            <LocationPicker
+              id={pickerId}
+              locations={locations}
+              value={group.location_id}
+              onChange={(nextLocationId) => {
+                // Reassign every item in this group to the new location.
+                const currentLocationId = group.location_id;
+                onChange(items.map((item) =>
+                  (item.location_id ?? null) === currentLocationId
+                    ? { ...item, location_id: nextLocationId }
+                    : item
+                ));
+              }}
+              placeholder={t('quotes.locations.pickerPlaceholder', { defaultValue: 'Select a location' })}
+              disabled={disabled}
+              excludeLocationIds={exclude}
+              allowClear={false}
+            />
+          </div>
+          {group.location ? (
+            <LocationAddress location={group.location} showName={false} />
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {t('quotes.locations.unassigned', { defaultValue: 'Items without a location are listed here until one is chosen.' })}
+            </p>
+          )}
+        </div>
+        {onRemoveLocationGroup && group.location_id ? (
+          <div>
+            <Button
+              id={`quote-location-remove-${group.location_id}`}
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onRemoveLocationGroup(group.location_id)}
+              disabled={disabled}
+            >
+              {t('quotes.locations.removeGroup', { defaultValue: 'Remove location' })}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  const renderLocationGroupSubtotal = (group: LocationGroupEntry<DraftQuoteItem>) => {
+    const totals = calculateDraftQuoteTotals(group.items);
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-6 border-t border-border bg-background/70 px-4 py-2 text-sm">
+        <span className="text-xs uppercase tracking-wide text-muted-foreground">
+          {t('quotes.locations.subtotal', { defaultValue: 'Location subtotal' })}
+        </span>
+        <span className="font-semibold">{formatDraftQuoteMoney(totals.subtotal - totals.discount_total, currencyCode)}</span>
+      </div>
+    );
+  };
+
   return (
     <section className="space-y-4 rounded-lg border border-border bg-background/40 p-4">
       <div className="space-y-3">
         <h3 className="text-base font-semibold">Line Items</h3>
-        <div className="w-full max-w-md">
-          <ServiceCatalogPicker
-            value={servicePickerValue}
-            selectedLabel=""
-            onSelect={handleAddService}
-            onAddCustom={handleAddCustomItem}
+        {!showLocationGroups && renderServicePicker(defaultLocation?.location_id ?? null, 'root')}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            id="quote-line-toggle-discount"
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsDiscountOpen(!isDiscountOpen)}
             disabled={disabled}
-            currencyCode={currencyCode}
-            placeholder="Search or type custom item name..."
-          />
+          >
+            {isDiscountOpen ? 'Hide Discount' : 'Add Discount'}
+          </Button>
+          {onAddLocationGroup ? (
+            <Button
+              id="quote-line-add-location"
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onAddLocationGroup()}
+              disabled={disabled || locations.length < 2}
+            >
+              {t('quotes.locations.addLocationButton', { defaultValue: '+ Add location' })}
+            </Button>
+          ) : null}
         </div>
-        <Button
-          id="quote-line-toggle-discount"
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setIsDiscountOpen(!isDiscountOpen)}
-          disabled={disabled}
-        >
-          {isDiscountOpen ? 'Hide Discount' : 'Add Discount'}
-        </Button>
+        {onAddLocationGroup && locations.length < 2 ? (
+          <p className="text-xs text-muted-foreground">
+            {t('quotes.locations.needMoreLocations', {
+              defaultValue: 'This client only has one active location. Add a second location in Client settings to enable multi-site quoting.',
+            })}
+          </p>
+        ) : null}
       </div>
 
       {isDiscountOpen && (
@@ -610,57 +827,50 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
         </div>
       )}
 
-      {items.length === 0 ? (
+      {items.length === 0 && !showLocationGroups ? (
         <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
           No line items yet. Use the catalog search above to add your first item.
         </div>
-      ) : (
+      ) : showLocationGroups ? (
         <div className="space-y-4">
-          {sections.map((section) => {
-            const isCollapsed = collapsedSections[section.key] === true;
-
-            return (
-              <div key={section.key} className="overflow-hidden rounded-md border border-border">
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between bg-muted/40 px-4 py-3 text-left"
-                  onClick={() => toggleSection(section.key)}
-                >
-                  <div>
-                    <div className="text-sm font-semibold text-foreground">{section.label}</div>
-                    <div className="text-xs text-muted-foreground">{section.items.length} item{section.items.length === 1 ? '' : 's'}</div>
+          {locationGroups.map((group, index) => (
+            <div key={group.key} className="overflow-hidden rounded-md border border-border">
+              {renderLocationGroupHeader(group, index)}
+              <div className="border-t border-border p-4 space-y-3">
+                {renderServicePicker(group.location_id ?? null, `loc-${group.key}`)}
+                {group.items.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+                    {t('quotes.locations.emptyGroup', { defaultValue: 'No items yet for this location.' })}
                   </div>
-                  <span className="text-sm text-muted-foreground">{isCollapsed ? 'Expand' : 'Collapse'}</span>
-                </button>
-
-                {!isCollapsed ? (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-border text-sm">
-                      <thead className="bg-background text-left">
-                        <tr>
-                          <th className="px-3 py-2 font-medium">Move</th>
-                          <th className="px-3 py-2 font-medium">Item</th>
-                          <th className="px-3 py-2 font-medium">Billing</th>
-                          <th className="px-3 py-2 font-medium">Flags</th>
-                          <th className="px-3 py-2 font-medium">Qty</th>
-                          <th className="px-3 py-2 font-medium">Unit Price</th>
-                          <th className="px-3 py-2 font-medium">Total</th>
-                          <th className="px-3 py-2 font-medium">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border bg-background">
-                        {renderItemRows(section.items)}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : null}
+                ) : (
+                  renderPhaseSections(buildPhaseSections(group.items), `loc-${group.key}`)
+                )}
               </div>
-            );
-          })}
+              {group.items.length > 0 ? renderLocationGroupSubtotal(group) : null}
+            </div>
+          ))}
         </div>
+      ) : (
+        renderPhaseSections(phaseSections, 'root')
       )}
     </section>
   );
 };
+
+function buildPhaseSections(items: DraftQuoteItem[]): QuotePhaseSection[] {
+  const grouped = new Map<string, QuotePhaseSection>();
+  for (const item of items) {
+    const key = getPhaseKey(item.phase);
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        key,
+        label: getPhaseLabel(item.phase),
+        items: [],
+      });
+    }
+    grouped.get(key)!.items.push(item);
+  }
+  return Array.from(grouped.values());
+}
 
 export default QuoteLineItemsEditor;

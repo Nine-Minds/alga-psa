@@ -11,6 +11,7 @@
  */
 
 export * from './billingAndTax';
+export * from './billingClientLocationActions';
 export * from './billingCurrencyActions';
 export * from './billingCycleActions';
 export * from './billingCycleAnchorActions';

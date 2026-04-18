@@ -16,9 +16,12 @@ import {
   acceptClientQuote,
   downloadClientQuotePdf,
   getClientQuoteById,
+  getLocationsForClientQuote,
   rejectClientQuote,
   updateClientQuoteSelections,
+  type ClientPortalLocationSummary,
 } from '@alga-psa/client-portal/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
   draft: 'warning',
@@ -42,9 +45,73 @@ interface QuoteDetailPageProps {
   quoteId: string;
 }
 
+type LocationGroup = {
+  key: string;
+  locationId: string | null;
+  location: ClientPortalLocationSummary | null;
+  items: IQuoteItem[];
+};
+
+const UNASSIGNED_KEY = '__unassigned__';
+
+function groupQuoteItemsByLocation(
+  items: IQuoteItem[],
+  locations: ClientPortalLocationSummary[],
+): LocationGroup[] {
+  const locationById = new Map<string, ClientPortalLocationSummary>();
+  for (const location of locations) {
+    if (location.location_id) locationById.set(location.location_id, location);
+  }
+  const order: string[] = [];
+  const grouped = new Map<string, LocationGroup>();
+
+  for (const item of items) {
+    const id = item.location_id ?? null;
+    const key = id && id.trim().length > 0 ? id : UNASSIGNED_KEY;
+    let entry = grouped.get(key);
+    if (!entry) {
+      entry = {
+        key,
+        locationId: key === UNASSIGNED_KEY ? null : key,
+        location: key === UNASSIGNED_KEY ? null : locationById.get(key) ?? null,
+        items: [],
+      };
+      grouped.set(key, entry);
+      order.push(key);
+    }
+    entry.items.push(item);
+  }
+  return order.map((key) => grouped.get(key)!);
+}
+
+function distinctLocationCount(items: IQuoteItem[]): number {
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (item.location_id) seen.add(item.location_id);
+  }
+  return seen.size;
+}
+
+function formatClientPortalLocationLines(location: ClientPortalLocationSummary | null | undefined): string[] {
+  if (!location) return [];
+  const lines: string[] = [];
+  for (const field of [location.address_line1, location.address_line2, location.address_line3]) {
+    if (typeof field === 'string' && field.trim().length > 0) lines.push(field.trim());
+  }
+  const parts = [location.city, location.state_province, location.postal_code]
+    .map((v) => (typeof v === 'string' ? v.trim() : ''))
+    .filter((v) => v.length > 0);
+  if (parts.length > 0) lines.push(parts.join(', '));
+  const country = (location.country_name || location.country_code || '').trim();
+  if (country) lines.push(country);
+  return lines;
+}
+
 const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
   const router = useRouter();
+  const { t } = useTranslation('features/billing');
   const [quote, setQuote] = useState<IQuote | null>(null);
+  const [clientLocations, setClientLocations] = useState<ClientPortalLocationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectionError, setSelectionError] = useState<string | null>(null);
@@ -81,8 +148,12 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
       setIsLoading(true);
       setError(null);
       try {
-        const fetched = await getClientQuoteById(quoteId);
+        const [fetched, locations] = await Promise.all([
+          getClientQuoteById(quoteId),
+          getLocationsForClientQuote(quoteId).catch(() => [] as ClientPortalLocationSummary[]),
+        ]);
         setQuote(fetched);
+        setClientLocations(Array.isArray(locations) ? locations : []);
       } catch (err) {
         console.error('Error loading quote:', err);
         setError('Failed to load quote details. You may not have access to this quote.');
@@ -319,59 +390,112 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                   : 'Optional item selections are locked once the quote is no longer awaiting your response.'}
               </p>
             )}
-            <div className="overflow-x-auto rounded-md border">
-              <table className="min-w-full divide-y text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Description</th>
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Qty</th>
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Rate</th>
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {(quote.quote_items || []).map((item) => {
-                    const isIncluded = itemIsIncluded(item);
-
-                    return (
-                      <tr key={item.quote_item_id} className={!isIncluded ? 'opacity-60' : undefined}>
-                        <td className="px-3 py-2">
-                          <div className="flex flex-col gap-1">
-                            <span>{item.description}</span>
-                            {item.is_optional && (
-                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                <Badge variant="outline" className="text-[10px]">Optional</Badge>
-                                <span>{item.is_selected !== false ? 'Included' : 'Excluded'}</span>
-                              </div>
-                            )}
-                            {item.is_optional && (
-                              <div className="pt-1">
-                                <Switch
-                                  id={`quote-item-${item.quote_item_id}-selection`}
-                                  checked={item.is_selected !== false}
-                                  disabled={!canEditSelections || isUpdatingSelections}
-                                  onCheckedChange={(checked) => void handleSelectionToggle(item.quote_item_id, checked)}
-                                  className="data-[state=checked]:bg-primary-500"
-                                  label={item.is_selected !== false ? 'Include' : 'Exclude'}
-                                  size="sm"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-muted-foreground">{item.quantity}</td>
-                        <td className="px-3 py-2 text-muted-foreground">
-                          {formatCurrency(item.unit_price || 0, quote.currency_code)}
-                        </td>
-                        <td className="px-3 py-2">
-                          {formatCurrency(item.total_price || 0, quote.currency_code)}
-                        </td>
+            {(() => {
+              const items = quote.quote_items || [];
+              const renderItemsTable = (rowItems: IQuoteItem[]) => (
+                <div className="overflow-x-auto rounded-md border">
+                  <table className="min-w-full divide-y text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Description</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Qty</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Rate</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Amount</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody className="divide-y">
+                      {rowItems.map((item) => {
+                        const isIncluded = itemIsIncluded(item);
+                        return (
+                          <tr key={item.quote_item_id} className={!isIncluded ? 'opacity-60' : undefined}>
+                            <td className="px-3 py-2">
+                              <div className="flex flex-col gap-1">
+                                <span>{item.description}</span>
+                                {item.is_optional && (
+                                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                    <Badge variant="outline" className="text-[10px]">Optional</Badge>
+                                    <span>{item.is_selected !== false ? 'Included' : 'Excluded'}</span>
+                                  </div>
+                                )}
+                                {item.is_optional && (
+                                  <div className="pt-1">
+                                    <Switch
+                                      id={`quote-item-${item.quote_item_id}-selection`}
+                                      checked={item.is_selected !== false}
+                                      disabled={!canEditSelections || isUpdatingSelections}
+                                      onCheckedChange={(checked) => void handleSelectionToggle(item.quote_item_id, checked)}
+                                      className="data-[state=checked]:bg-primary-500"
+                                      label={item.is_selected !== false ? 'Include' : 'Exclude'}
+                                      size="sm"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-muted-foreground">{item.quantity}</td>
+                            <td className="px-3 py-2 text-muted-foreground">
+                              {formatCurrency(item.unit_price || 0, quote.currency_code)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {formatCurrency(item.total_price || 0, quote.currency_code)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+
+              if (distinctLocationCount(items) >= 2) {
+                const groups = groupQuoteItemsByLocation(items, clientLocations);
+                return (
+                  <div className="space-y-4">
+                    {groups.map((group) => {
+                      // Live per-group subtotal honours the optional-item toggle.
+                      const subtotal = group.items
+                        .filter((i) => !i.is_discount && itemIsIncluded(i))
+                        .reduce((sum, i) => sum + (Number(i.total_price) || 0), 0);
+                      const addressLines = formatClientPortalLocationLines(group.location);
+                      return (
+                        <div key={group.key} className="overflow-hidden rounded-md border">
+                          <div className="flex flex-col gap-2 border-b bg-muted/40 px-4 py-3 md:flex-row md:items-start md:justify-between">
+                            <div>
+                              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                {t('quotes.locations.groupHeading', { defaultValue: 'Location' })}
+                              </div>
+                              {group.location?.location_name ? (
+                                <div className="mt-1 font-medium">{group.location.location_name}</div>
+                              ) : null}
+                              {addressLines.length > 0 ? (
+                                <div className="text-xs text-muted-foreground whitespace-pre-line">
+                                  {addressLines.join('\n')}
+                                </div>
+                              ) : !group.location ? (
+                                <div className="text-xs text-muted-foreground">
+                                  {t('quotes.locations.unassigned', { defaultValue: 'Items without a location' })}
+                                </div>
+                              ) : null}
+                            </div>
+                            <div className="text-sm md:text-right">
+                              <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                                {t('quotes.locations.subtotal', { defaultValue: 'Location subtotal' })}
+                              </div>
+                              <div className="mt-1 font-semibold">
+                                {formatCurrency(subtotal, quote.currency_code)}
+                              </div>
+                            </div>
+                          </div>
+                          {renderItemsTable(group.items)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }
+
+              return renderItemsTable(items);
+            })()}
             {isUpdatingSelections && (
               <p className="mt-2 text-sm text-muted-foreground">Saving optional item selections...</p>
             )}
