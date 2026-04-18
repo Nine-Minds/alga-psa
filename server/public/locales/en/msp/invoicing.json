@@ -809,9 +809,9 @@
       "prepayment": "Prepayment"
     },
     "descriptions": {
-      "automatic": "Generate draft invoices from ready recurring service periods and due work.",
-      "manual": "Create a one-off invoice with manual line items and optional automated charges.",
-      "prepayment": "Create a prepayment invoice or credit memo for future value."
+      "automatic": "Use invoice windows to review due recurring service periods before generating a recurring batch.",
+      "manual": "Use manual invoices for one-off or adjustment lines. They do not redefine recurring service periods.",
+      "prepayment": "Use prepayment and credit flows for financial value that should stay separate from recurring service-period coverage."
     },
     "messages": {
       "success": "Invoice generated successfully!",

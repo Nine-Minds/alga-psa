@@ -107,7 +107,7 @@
   {
     "id": "F022",
     "description": "Wire useTranslation in GenerateTab.tsx -- Invoice Type label, type option labels (Automatic Invoices, Manual Invoice, Prepayment), type descriptions (3 strings), success dialog message (Invoice generated successfully!), error message (Failed to load data)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F023",
