@@ -252,3 +252,4 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `packages/billing/src/components/billing-dashboard/service-config/ServiceRateTiers.tsx:29` → `const { formatCurrency } = useFormatters();`
   - `packages/billing/src/components/billing-dashboard/service-config/ServiceRateTiers.tsx:343` → `rateTiers.formattedRate` receives a `formatCurrency(...)` result before rendering
   This confirms both targeted screens now rely on `useFormatters()` rather than hardcoded `$` string assembly.
+- **(2026-04-18, T016)** Checked the English dotted-key inventory for the new namespace against `server/public/locales/en/msp/settings.json` and `server/public/locales/en/features/billing.json` with a small comparison script. Result: `mspSettingsCollisions = 0`, `featuresBillingCollisions = 0`. That confirms the new `msp/service-catalog` file introduces a distinct key surface without overlapping either of the adjacent existing namespaces.
