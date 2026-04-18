@@ -20,5 +20,5 @@
   {"id": "F022", "description": "Seed the rest of server/public/locales/pt from English so global translation validation/runtime can resolve Portuguese beyond msp/service-catalog", "implemented": true},
   {"id": "F019", "description": "validate-translations.cjs passes for msp/service-catalog across all 9 locales (0 errors, 0 warnings)", "implemented": true},
   {"id": "F020", "description": "npm run build succeeds with no TypeScript errors after all wiring", "implemented": true},
-  {"id": "F021", "description": "Add Portuguese locale support to shared i18n runtime config(s) so pt/msp/service-catalog.json can be resolved in-app", "implemented": false}
+  {"id": "F021", "description": "Add Portuguese locale support to shared i18n runtime config(s) so pt/msp/service-catalog.json can be resolved in-app", "implemented": true}
 ]
