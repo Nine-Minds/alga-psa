@@ -293,7 +293,9 @@
   },
   "finalizedTab": {
     "title": "Finalized Invoices",
-    "searchPlaceholder": "Search finalized invoices",
+    "searchPlaceholder": "Search invoices...",
+    "bulkActions_one": "Actions ({{count}})",
+    "bulkActions_other": "Actions ({{count}})",
     "columns": {
       "invoiceNumber": "Invoice Number",
       "client": "Client",
@@ -318,9 +320,13 @@
       "description": "Finalize draft invoices to see them here.",
       "viewDrafts": "View Drafts"
     },
-    "loading": "Loading finalized invoices",
+    "loading": "Loading invoices...",
     "errors": {
-      "loadFailed": "Failed to load finalized invoices."
+      "loadFailed": "Failed to load invoices. Please try again.",
+      "pdfFailed": "Failed to generate PDF. Please try again.",
+      "bulkPdfFailed": "Failed to generate PDFs. Please try again.",
+      "unfinalizeFailed": "Failed to unfinalize invoice. Please try again.",
+      "bulkUnfinalizeFailed": "Failed to unfinalize invoices. Please try again."
     }
   },
   "recurringServicePeriods": {

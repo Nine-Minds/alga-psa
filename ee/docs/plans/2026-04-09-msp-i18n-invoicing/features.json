@@ -52,7 +52,7 @@
   {
     "id": "F011",
     "description": "Wire useTranslation in FinalizedTab.tsx -- column headers (Invoice Number, Client, Amount, Finalized Date, Status, Actions), search placeholder, bulk actions (Download PDFs, Send Emails, Unfinalize Selected), row actions (Download PDF, Send Email, Unfinalize), empty state (heading, description, View Drafts button), loading text, error messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F012",
