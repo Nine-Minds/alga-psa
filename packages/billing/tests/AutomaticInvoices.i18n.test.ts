@@ -91,4 +91,37 @@ describe('AutomaticInvoices i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T005: child execution rows resolve cadence, billing timing, assignment context, pending amount, and blocker copy through msp/invoicing', () => {
+    const source = read('../src/components/billing-dashboard/AutomaticInvoices.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../server/public/locales/en/msp/invoicing.json',
+    );
+
+    const keyChecks = [
+      'automaticInvoices.executionRows.labels.cadence',
+      'automaticInvoices.executionRows.labels.billingTiming',
+      'automaticInvoices.executionRows.labels.servicePeriod',
+      'automaticInvoices.executionRows.pendingAmount',
+      'automaticInvoices.executionRows.attributionWarning',
+      'automaticInvoices.executionRows.blockedUntilApproval',
+      'automaticInvoices.executionRows.assignmentContext.unresolvedTimeEntry',
+      'automaticInvoices.executionRows.assignmentContext.unresolvedUsageRecord',
+      'automaticInvoices.executionRows.assignmentContext.assignedContractLine',
+      'automaticInvoices.executionRows.assignmentContext.assignedWorkItem',
+      'automaticInvoices.executionRows.assignmentContext.unresolvedWork',
+      'automaticInvoices.history.badges.contractAnniversary',
+      'automaticInvoices.history.badges.clientSchedule',
+      'recurringServicePeriods.values.advance',
+      'recurringServicePeriods.values.arrears',
+    ];
+
+    expect(source).toContain('translateAssignmentContext');
+    expect(source).toContain('formatBlockedReason');
+
+    for (const key of keyChecks) {
+      expect(source).toContain(key);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });

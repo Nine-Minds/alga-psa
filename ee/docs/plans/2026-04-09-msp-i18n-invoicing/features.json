@@ -22,7 +22,7 @@
   {
     "id": "F005",
     "description": "Wire AutomaticInvoices.tsx child execution row strings: cadence/billing timing/service period labels, assignment context strings (Unresolved time entry, Unresolved usage record, Assigned contract line, Assigned work item, Unresolved work), attribution metadata warning, Pending amount, blocked reason display",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F006",

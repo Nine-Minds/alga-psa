@@ -220,12 +220,20 @@ const isInvoiceDraftStatus = (status: string | null | undefined): boolean =>
 
 const formatCadenceSourceBadge = (
   cadenceSource: string | null | undefined,
-): { label: string; variant: 'outline' | 'secondary' } => {
+): { label: string; labelKey?: string; variant: 'outline' | 'secondary' } => {
   switch (cadenceSource) {
     case 'contract_anniversary':
-      return { label: 'Contract anniversary', variant: 'outline' };
+      return {
+        label: 'Contract anniversary',
+        labelKey: 'automaticInvoices.history.badges.contractAnniversary',
+        variant: 'outline',
+      };
     case 'client_schedule':
-      return { label: 'Client schedule', variant: 'outline' };
+      return {
+        label: 'Client schedule',
+        labelKey: 'automaticInvoices.history.badges.clientSchedule',
+        variant: 'outline',
+      };
     default:
       return {
         label: `Unknown cadence source (${cadenceSource?.trim() ? cadenceSource : 'missing'})`,
@@ -358,6 +366,51 @@ const resolveIncompatibilityReasons = (candidate: ReadyPeriod): string[] => {
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, refreshTrigger = 0 }) => {
   const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
+  const translateAssignmentContext = (contextValue: string | null): string | null => {
+    if (!contextValue) {
+      return null;
+    }
+
+    switch (contextValue) {
+      case 'Unresolved time entry':
+        return t('automaticInvoices.executionRows.assignmentContext.unresolvedTimeEntry', {
+          defaultValue: 'Unresolved time entry',
+        });
+      case 'Unresolved usage record':
+        return t('automaticInvoices.executionRows.assignmentContext.unresolvedUsageRecord', {
+          defaultValue: 'Unresolved usage record',
+        });
+      case 'Assigned contract line':
+        return t('automaticInvoices.executionRows.assignmentContext.assignedContractLine', {
+          defaultValue: 'Assigned contract line',
+        });
+      case 'Assigned work item':
+        return t('automaticInvoices.executionRows.assignmentContext.assignedWorkItem', {
+          defaultValue: 'Assigned work item',
+        });
+      case 'Unresolved work':
+        return t('automaticInvoices.executionRows.assignmentContext.unresolvedWork', {
+          defaultValue: 'Unresolved work',
+        });
+      default:
+        return contextValue;
+    }
+  };
+  const formatBlockedReason = (reason: string | null | undefined): string | null => {
+    if (!reason) {
+      return null;
+    }
+
+    const approvalBlockMatch = reason.match(/^Blocked until approval:\s+(\d+)\s+unapproved\s+(entry|entries)\.$/i);
+    if (approvalBlockMatch?.[1]) {
+      return t('automaticInvoices.executionRows.blockedUntilApproval', {
+        count: Number(approvalBlockMatch[1]),
+        defaultValue: reason,
+      });
+    }
+
+    return reason;
+  };
   // Drawer removed: client details quick view no longer used here
   const [selectedTargets, setSelectedTargets] = useState<Set<string>>(new Set());
   const [expandedParentGroups, setExpandedParentGroups] = useState<Set<string>>(new Set());
@@ -1553,7 +1606,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                 className="text-xs text-muted-foreground"
                                 data-testid={`contract-assignment-context-${record.parentSummary.candidateKey}`}
                               >
-                                {contextValue}
+                                {translateAssignmentContext(contextValue)}
                               </div>
                             )) : null}
                             {contractMetadataMissingCount > 0 ? (
@@ -1621,10 +1674,17 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 	                  return (
 	                    <div className="min-w-[20rem] space-y-2">
 	                      {record.childExecutionRows.map((member) => {
-		                        const assignmentContext = getRecurringAssignmentContext(member);
+		                        const assignmentContext = translateAssignmentContext(getRecurringAssignmentContext(member));
 	                          const nonContractSelection = parseNonContractSelectionFromScheduleKey(member.scheduleKey ?? null);
-		                        const cadenceSource = formatCadenceSourceBadge(member.cadenceSource).label;
-		                        const billingTiming = member.duePosition === 'advance' ? 'Advance' : 'Arrears';
+                                const cadenceSourceBadge = formatCadenceSourceBadge(member.cadenceSource);
+		                        const cadenceSource = cadenceSourceBadge.labelKey
+                                  ? t(cadenceSourceBadge.labelKey, {
+                                    defaultValue: cadenceSourceBadge.label,
+                                  })
+                                  : cadenceSourceBadge.label;
+		                        const billingTiming = member.duePosition === 'advance'
+                                  ? t('recurringServicePeriods.values.advance', { defaultValue: 'Advance' })
+                                  : t('recurringServicePeriods.values.arrears', { defaultValue: 'Arrears' });
 		                        const amountCents = (member as { amountCents?: number | null }).amountCents;
 	                        const isChildSelected = selectedTargets.has(childSelectionKeyForMember(member));
                           const childTitle =
@@ -1659,25 +1719,39 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                       ) : null}
                                       {nonContractSelection ? (
                                         <div className="text-xs text-muted-foreground" data-testid={`non-contract-child-${member.executionIdentityKey}`}>
-                                          Unresolved work
+                                          {t('automaticInvoices.executionRows.assignmentContext.unresolvedWork', {
+                                            defaultValue: 'Unresolved work',
+                                          })}
                                         </div>
                                       ) : null}
                                       {member.attribution?.isComplete === false ? (
                                         <div className="text-xs text-warning" data-testid={`child-attribution-warning-${member.executionIdentityKey}`}>
-                                          Assignment attribution metadata missing
+                                          {t('automaticInvoices.executionRows.attributionWarning', {
+                                            defaultValue: 'Assignment attribution metadata missing',
+                                          })}
                                         </div>
                                       ) : null}
                                     </div>
                                     <div className="shrink-0 text-sm font-medium">
-                                      {typeof amountCents === 'number' ? formatCurrency(amountCents / 100) : 'Pending amount'}
+                                      {typeof amountCents === 'number'
+                                        ? formatCurrency(amountCents / 100)
+                                        : t('automaticInvoices.executionRows.pendingAmount', {
+                                          defaultValue: 'Pending amount',
+                                        })}
                                     </div>
                                   </div>
-                                  <div className="text-xs text-muted-foreground">Cadence: {cadenceSource}</div>
-                                  <div className="text-xs text-muted-foreground">Billing timing: {billingTiming}</div>
-                                  <div className="text-xs text-muted-foreground">Service period: {member.servicePeriodLabel}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {t('automaticInvoices.executionRows.labels.cadence', { defaultValue: 'Cadence' })}: {cadenceSource}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {t('automaticInvoices.executionRows.labels.billingTiming', { defaultValue: 'Billing timing' })}: {billingTiming}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {t('automaticInvoices.executionRows.labels.servicePeriod', { defaultValue: 'Service period' })}: {member.servicePeriodLabel}
+                                  </div>
                                   {!member.canGenerate && (member as { blockedReason?: string | null }).blockedReason ? (
                                     <div className="text-xs text-muted-foreground">
-                                      {(member as { blockedReason?: string | null }).blockedReason}
+                                      {formatBlockedReason((member as { blockedReason?: string | null }).blockedReason)}
                                     </div>
                                   ) : null}
                                 </div>

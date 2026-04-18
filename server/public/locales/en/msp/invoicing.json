@@ -38,8 +38,16 @@
       "exportShapeDiffers": "Export shape differs"
     },
     "executionRows": {
+      "labels": {
+        "cadence": "Cadence",
+        "billingTiming": "Billing timing",
+        "servicePeriod": "Service period"
+      },
       "pendingAmount": "Pending amount",
-      "attributionWarning": "Attribution metadata is incomplete for this due-work item.",
+      "attributionWarning": "Assignment attribution metadata missing",
+      "blockedUntilApproval": "Blocked until approval: {{count}} unapproved entry.",
+      "blockedUntilApproval_one": "Blocked until approval: {{count}} unapproved entry.",
+      "blockedUntilApproval_other": "Blocked until approval: {{count}} unapproved entries.",
       "assignmentContext": {
         "unresolvedTimeEntry": "Unresolved time entry",
         "unresolvedUsageRecord": "Unresolved usage record",
