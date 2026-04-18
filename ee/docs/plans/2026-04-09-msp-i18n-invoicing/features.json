@@ -27,7 +27,7 @@
   {
     "id": "F006",
     "description": "Wire AutomaticInvoices.tsx action buttons and dialogs: Preview Selected, Generate Invoices button with count, Reverse Invoice/Delete Invoice history actions, reverse dialog (warning text, bullet points, cancel/confirm buttons), delete confirmation dialog, PO overage batch/single dialogs, preview dialog (title, description, invoice count summary, line item table headers, subtotal/tax/total footer, Close Preview, Generate Invoice buttons)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F007",

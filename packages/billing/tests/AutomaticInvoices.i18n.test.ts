@@ -124,4 +124,53 @@ describe('AutomaticInvoices i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T006/T007/T008: reverse, preview, delete, and PO-overage dialog copy resolves through msp/invoicing', () => {
+    const source = read('../src/components/billing-dashboard/AutomaticInvoices.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../server/public/locales/en/msp/invoicing.json',
+    );
+
+    const keyChecks = [
+      'automaticInvoices.actions.reverseInvoice',
+      'automaticInvoices.actions.deleteInvoice',
+      'automaticInvoices.actions.closePreview',
+      'automaticInvoices.actions.generateInvoice',
+      'automaticInvoices.dialogs.reverse.title',
+      'automaticInvoices.dialogs.reverse.warningTitle',
+      'automaticInvoices.dialogs.reverse.description',
+      'automaticInvoices.dialogs.reverse.impactTitle',
+      'automaticInvoices.dialogs.reverse.effects.deleteDraft',
+      'automaticInvoices.dialogs.reverse.effects.reissueCredits',
+      'automaticInvoices.dialogs.reverse.effects.unmarkRecords',
+      'automaticInvoices.dialogs.reverse.effects.retireBridge',
+      'automaticInvoices.dialogs.reverse.effects.reopenPeriods',
+      'automaticInvoices.dialogs.reverse.confirm',
+      'automaticInvoices.dialogs.delete.title',
+      'automaticInvoices.dialogs.delete.message',
+      'automaticInvoices.dialogs.preview.title',
+      'automaticInvoices.dialogs.preview.description',
+      'automaticInvoices.dialogs.preview.summaryCombined',
+      'automaticInvoices.dialogs.preview.summarySeparate',
+      'automaticInvoices.dialogs.preview.columns.description',
+      'automaticInvoices.dialogs.preview.columns.quantity',
+      'automaticInvoices.dialogs.preview.columns.rate',
+      'automaticInvoices.dialogs.preview.columns.amount',
+      'automaticInvoices.dialogs.preview.totals.subtotal',
+      'automaticInvoices.dialogs.preview.totals.tax',
+      'automaticInvoices.dialogs.preview.totals.total',
+      'automaticInvoices.dialogs.poOverage.title',
+      'automaticInvoices.dialogs.poOverage.batchDescription',
+      'automaticInvoices.dialogs.poOverage.batchItem',
+      'automaticInvoices.dialogs.poOverage.allowOverages',
+      'automaticInvoices.dialogs.poOverage.skipInvoices',
+      'automaticInvoices.dialogs.poOverage.singleDescription',
+      'automaticInvoices.dialogs.poOverage.proceedConfirm',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(key);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });

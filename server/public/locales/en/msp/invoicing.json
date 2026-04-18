@@ -68,19 +68,53 @@
     },
     "dialogs": {
       "reverse": {
-        "title": "Reverse Invoice",
+        "title": "Reverse Recurring Invoice",
         "warning": "Reversing this invoice will remove the generated draft and associated recurring selections.",
-        "confirm": "Reverse Invoice"
+        "warningTitle": "Warning: Reverse Recurring Invoice",
+        "description": "You are about to reverse the recurring invoice for:",
+        "impactTitle": "This action will:",
+        "cannotUndo": "This action cannot be undone!",
+        "confirm": "Yes, Reverse Invoice",
+        "reversing": "Reversing...",
+        "error": "Failed to reverse recurring invoice",
+        "labels": {
+          "client": "Client",
+          "cadenceSource": "Cadence source",
+          "servicePeriod": "Service period"
+        },
+        "effects": {
+          "deleteDraft": "Delete the generated recurring invoice draft",
+          "reissueCredits": "Reissue any credits that were applied to that invoice",
+          "unmarkRecords": "Unmark linked time entries and usage records as invoiced",
+          "retireBridge": "Retire the linked client cadence bridge record and reopen the linked recurring service periods",
+          "reopenPeriods": "Reopen the linked recurring service periods without requiring client-cycle bridge metadata"
+        }
       },
       "delete": {
-        "title": "Delete Invoice",
-        "description": "Delete this recurring invoice history entry?"
+        "title": "Permanently Delete Recurring Invoice?",
+        "message": "This action cannot be undone. This will permanently delete the recurring invoice for:\nClient: {{client}}\nCadence source: {{cadenceSource}}\nService period: {{servicePeriod}}\n{{bridgeEffect}}",
+        "bridgeDeleted": "The linked client cadence bridge record will also be deleted.",
+        "bridgeReopened": "Linked recurring service periods will be reopened without requiring client-cycle bridge metadata.",
+        "confirm": "Yes, Delete Permanently",
+        "deleting": "Deleting...",
+        "error": "Failed to delete recurring invoice"
       },
       "preview": {
         "title": "Invoice Preview",
-        "description": "Review the grouped invoice output before generation.",
+        "description": "This is a preview of how the invoice will look when finalized.",
         "summary_one": "{{count}} invoice selected",
         "summary_other": "{{count}} invoices selected",
+        "summaryCombined": "This selection will generate one combined invoice.",
+        "summarySeparate": "This selection will generate {{count}} separate invoices.",
+        "invoiceTitle": "Invoice {{index}}",
+        "sections": {
+          "clientDetails": "Client Details",
+          "invoiceDetails": "Invoice Details",
+          "lineItems": "Line Items"
+        },
+        "fields": {
+          "date": "Date"
+        },
         "columns": {
           "description": "Description",
           "quantity": "Quantity",
@@ -91,13 +125,22 @@
           "subtotal": "Subtotal",
           "tax": "Tax",
           "total": "Total"
-        }
+        },
+        "generating": "Generating...",
+        "generateError": "Failed to generate invoice from preview"
       },
       "poOverage": {
-        "title": "Purchase order overage detected",
+        "title": "Purchase Order Limit Overages",
         "description": "The selected invoice total is over by {{amount}}.",
-        "allowOverages": "Allow overages",
-        "skipInvoices": "Skip invoices"
+        "batchDescription": "One or more invoices would exceed a Purchase Order authorized amount. What do you want to do?",
+        "batchItem": "{{clientName}}: over by {{amount}}",
+        "allowOverages": "Allow overages (generate all invoices)",
+        "skipInvoices": "Skip invoices that would overrun their PO",
+        "continue": "Continue",
+        "singleDescription": "This invoice would exceed the Purchase Order authorized amount by {{amount}}.",
+        "proceedAnyway": "Proceed anyway?",
+        "proceedConfirm": "Proceed Anyway",
+        "skippedError": "Skipped due to PO overage ({{poLabel}}): over by {{amount}}."
       }
     },
     "history": {

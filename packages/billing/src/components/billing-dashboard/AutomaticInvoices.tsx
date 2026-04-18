@@ -411,6 +411,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
     return reason;
   };
+  const formatCadenceSourceText = (cadenceSource: string | null | undefined): string => {
+    const badge = formatCadenceSourceBadge(cadenceSource);
+    return badge.labelKey
+      ? t(badge.labelKey, { defaultValue: badge.label })
+      : badge.label;
+  };
   // Drawer removed: client details quick view no longer used here
   const [selectedTargets, setSelectedTargets] = useState<Set<string>>(new Set());
   const [expandedParentGroups, setExpandedParentGroups] = useState<Set<string>>(new Set());
@@ -446,7 +452,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     hasBillingCycleBridge: boolean;
     client: string;
     servicePeriodLabel: string;
-    cadenceSource: string;
+    cadenceSource: string | null | undefined;
   } | null>(null);
   // State to hold preview data and the canonical selector metadata used to generate it.
   const [previewState, setPreviewState] = useState<{
@@ -491,7 +497,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     hasBillingCycleBridge: boolean;
     client: string;
     servicePeriodLabel: string;
-    cadenceSource: string;
+    cadenceSource: string | null | undefined;
   } | null>(null);
 
   // Server-side pagination state for "Ready to Invoice"
@@ -999,8 +1005,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       if (decision === 'skip') {
         for (const [, info] of Object.entries(overageByExecutionIdentityKey)) {
           newErrors[info.clientName] =
-            `Skipped due to PO overage (${info.poNumber ? `PO ${info.poNumber}` : 'PO'}): ` +
-            `over by ${formatCurrency(info.overageCents)}.`;
+            t('automaticInvoices.dialogs.poOverage.skippedError', {
+              amount: formatCurrency(info.overageCents),
+              poLabel: info.poNumber ? `PO ${info.poNumber}` : 'PO',
+              defaultValue:
+                `Skipped due to PO overage (${info.poNumber ? `PO ${info.poNumber}` : 'PO'}): `
+                + `over by ${formatCurrency(info.overageCents)}.`,
+            });
         }
       }
 
@@ -1045,7 +1056,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       onGenerateSuccess();
     } catch (error) {
       setErrors({
-        [selectedCycleToReverse.client]: error instanceof Error ? error.message : 'Failed to reverse recurring invoice'
+        [selectedCycleToReverse.client]: error instanceof Error
+          ? error.message
+          : t('automaticInvoices.dialogs.reverse.error', {
+            defaultValue: 'Failed to reverse recurring invoice',
+          })
       });
     }
     setIsReversing(false);
@@ -1066,7 +1081,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       onGenerateSuccess();
     } catch (error) {
       setErrors({
-        [selectedCycleToDelete.client]: error instanceof Error ? error.message : 'Failed to delete recurring invoice'
+        [selectedCycleToDelete.client]: error instanceof Error
+          ? error.message
+          : t('automaticInvoices.dialogs.delete.error', {
+            defaultValue: 'Failed to delete recurring invoice',
+          })
       });
       setShowDeleteDialog(false);
     }
@@ -1102,7 +1121,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         ],
       });
       if (runResult.failures.length > 0) {
-        throw new Error(runResult.failures[0]?.errorMessage || 'Failed to generate invoice from preview');
+        throw new Error(
+          runResult.failures[0]?.errorMessage
+          || t('automaticInvoices.dialogs.preview.generateError', {
+            defaultValue: 'Failed to generate invoice from preview',
+          }),
+        );
       }
       setShowPreviewDialog(false); // Close dialog on success
       setPreviewState({
@@ -1115,7 +1139,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       onGenerateSuccess(); // Refresh data lists
     } catch (err) {
       setErrors({
-        preview: err instanceof Error ? err.message : 'Failed to generate invoice from preview',
+        preview: err instanceof Error
+          ? err.message
+          : t('automaticInvoices.dialogs.preview.generateError', {
+            defaultValue: 'Failed to generate invoice from preview',
+          }),
       });
     } finally {
       setIsGeneratingFromPreview(false);
@@ -1863,14 +1891,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                               hasBillingCycleBridge: record.hasBillingCycleBridge,
                               client: record.clientName,
                               servicePeriodLabel: record.servicePeriodLabel,
-                              cadenceSource: record.cadenceSource === 'contract_anniversary'
-                                ? 'Contract anniversary'
-                                : 'Client schedule',
+                              cadenceSource: record.cadenceSource,
                             });
                             setShowReverseDialog(true);
                           }}
                         >
-                          Reverse Invoice
+                          {t('automaticInvoices.actions.reverseInvoice', { defaultValue: 'Reverse Invoice' })}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -1884,14 +1910,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                               hasBillingCycleBridge: record.hasBillingCycleBridge,
                               client: record.clientName,
                               servicePeriodLabel: record.servicePeriodLabel,
-                              cadenceSource: record.cadenceSource === 'contract_anniversary'
-                                ? 'Contract anniversary'
-                                : 'Client schedule',
+                              cadenceSource: record.cadenceSource,
                             });
                             setShowDeleteDialog(true);
                           }}
                         >
-                          Delete Invoice
+                          {t('automaticInvoices.actions.deleteInvoice', { defaultValue: 'Delete Invoice' })}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1913,7 +1937,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       <Dialog
         isOpen={showReverseDialog}
         onClose={() => setShowReverseDialog(false)}
-        title="Reverse Recurring Invoice"
+        title={t('automaticInvoices.dialogs.reverse.title', {
+          defaultValue: 'Reverse Recurring Invoice',
+        })}
         footer={(
           <div className="flex justify-end space-x-2">
             <Button
@@ -1921,7 +1947,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               variant="outline"
               onClick={() => setShowReverseDialog(false)}
             >
-              Cancel
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               id='reverse-billing-cycle-button'
@@ -1929,7 +1955,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               onClick={handleReverseBillingCycle}
               disabled={isReversing}
             >
-              {isReversing ? 'Reversing...' : 'Yes, Reverse Invoice'}
+              {isReversing
+                ? t('automaticInvoices.dialogs.reverse.reversing', { defaultValue: 'Reversing...' })
+                : t('automaticInvoices.dialogs.reverse.confirm', {
+                  defaultValue: 'Yes, Reverse Invoice',
+                })}
             </Button>
           </div>
         )}
@@ -1937,29 +1967,59 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         <DialogContent>
           <div className="flex items-center gap-2 text-red-600 mb-4">
             <AlertTriangle className="h-5 w-5" />
-            <span className="font-semibold">Warning: Reverse Recurring Invoice</span>
+            <span className="font-semibold">
+              {t('automaticInvoices.dialogs.reverse.warningTitle', {
+                defaultValue: 'Warning: Reverse Recurring Invoice',
+              })}
+            </span>
           </div>
           <div className="text-sm space-y-2">
-            <p className="font-semibold">You are about to reverse the recurring invoice for:</p>
-            <p>Client: {selectedCycleToReverse?.client}</p>
-            <p>Cadence source: {selectedCycleToReverse?.cadenceSource}</p>
-            <p>Service period: {selectedCycleToReverse?.servicePeriodLabel}</p>
+            <p className="font-semibold">
+              {t('automaticInvoices.dialogs.reverse.description', {
+                defaultValue: 'You are about to reverse the recurring invoice for:',
+              })}
+            </p>
+            <p>
+              {t('automaticInvoices.dialogs.reverse.labels.client', { defaultValue: 'Client' })}: {selectedCycleToReverse?.client}
+            </p>
+            <p>
+              {t('automaticInvoices.dialogs.reverse.labels.cadenceSource', {
+                defaultValue: 'Cadence source',
+              })}: {formatCadenceSourceText(selectedCycleToReverse?.cadenceSource)}
+            </p>
+            <p>
+              {t('automaticInvoices.dialogs.reverse.labels.servicePeriod', {
+                defaultValue: 'Service period',
+              })}: {selectedCycleToReverse?.servicePeriodLabel}
+            </p>
           </div>
 
           <Alert variant="warning" className="mt-4">
             <AlertDescription className="text-sm space-y-2">
-              <p className="font-semibold">This action will:</p>
+              <p className="font-semibold">
+                {t('automaticInvoices.dialogs.reverse.impactTitle', {
+                  defaultValue: 'This action will:',
+                })}
+              </p>
               <ul className="list-disc pl-5">
-                <li>Delete the generated recurring invoice draft</li>
-                <li>Reissue any credits that were applied to that invoice</li>
-                <li>Unmark linked time entries and usage records as invoiced</li>
+                <li>{t('automaticInvoices.dialogs.reverse.effects.deleteDraft', { defaultValue: 'Delete the generated recurring invoice draft' })}</li>
+                <li>{t('automaticInvoices.dialogs.reverse.effects.reissueCredits', { defaultValue: 'Reissue any credits that were applied to that invoice' })}</li>
+                <li>{t('automaticInvoices.dialogs.reverse.effects.unmarkRecords', { defaultValue: 'Unmark linked time entries and usage records as invoiced' })}</li>
                 <li>
                   {selectedCycleToReverse?.hasBillingCycleBridge
-                    ? 'Retire the linked client cadence bridge record and reopen the linked recurring service periods'
-                    : 'Reopen the linked recurring service periods without requiring client-cycle bridge metadata'}
+                    ? t('automaticInvoices.dialogs.reverse.effects.retireBridge', {
+                      defaultValue: 'Retire the linked client cadence bridge record and reopen the linked recurring service periods',
+                    })
+                    : t('automaticInvoices.dialogs.reverse.effects.reopenPeriods', {
+                      defaultValue: 'Reopen the linked recurring service periods without requiring client-cycle bridge metadata',
+                    })}
                 </li>
               </ul>
-              <p className="text-destructive font-semibold mt-4">This action cannot be undone!</p>
+              <p className="text-destructive font-semibold mt-4">
+                {t('automaticInvoices.dialogs.reverse.cannotUndo', {
+                  defaultValue: 'This action cannot be undone!',
+                })}
+              </p>
             </AlertDescription>
           </Alert>
         </DialogContent>
@@ -1979,7 +2039,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           });
           setErrors({}); // Clear preview-specific errors on close
         }}
-        title="Invoice Preview"
+        title={t('automaticInvoices.dialogs.preview.title', {
+          defaultValue: 'Invoice Preview',
+        })}
         footer={(
           <div className="flex justify-end space-x-2">
             <Button
@@ -1998,7 +2060,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               }}
               disabled={isGeneratingFromPreview} // Disable while generating
             >
-              Close Preview
+              {t('automaticInvoices.actions.closePreview', { defaultValue: 'Close Preview' })}
             </Button>
             {/* Add Generate Invoice button */}
             <Button
@@ -2014,14 +2076,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 || !previewSupportsDirectGeneration
               }
             >
-              {isGeneratingFromPreview ? 'Generating...' : 'Generate Invoice'}
+              {isGeneratingFromPreview
+                ? t('automaticInvoices.dialogs.preview.generating', { defaultValue: 'Generating...' })
+                : t('automaticInvoices.actions.generateInvoice', { defaultValue: 'Generate Invoice' })}
             </Button>
           </div>
         )}
       >
         <DialogContent>
           <DialogDescription>
-            This is a preview of how the invoice will look when finalized.
+            {t('automaticInvoices.dialogs.preview.description', {
+              defaultValue: 'This is a preview of how the invoice will look when finalized.',
+            })}
           </DialogDescription>
           {errors.preview ? (
             <div className="text-center py-8">
@@ -2032,43 +2098,71 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             <div className="space-y-4">
               <div className="rounded border border-border/70 bg-muted/10 px-3 py-2 text-sm" data-testid="preview-invoice-count-summary">
                 {previewState.invoiceCount === 1
-                  ? 'This selection will generate one combined invoice.'
-                  : `This selection will generate ${previewState.invoiceCount} separate invoices.`}
+                  ? t('automaticInvoices.dialogs.preview.summaryCombined', {
+                    defaultValue: 'This selection will generate one combined invoice.',
+                  })
+                  : t('automaticInvoices.dialogs.preview.summarySeparate', {
+                    count: previewState.invoiceCount,
+                    defaultValue: `This selection will generate ${previewState.invoiceCount} separate invoices.`,
+                  })}
               </div>
               {previewState.previews.map((previewEntry, previewIndex) => (
                 <div key={previewEntry.previewGroupKey} className="space-y-4 rounded border border-border/70 p-3" data-testid={`preview-group-${previewEntry.previewGroupKey}`}>
-                  <h3 className="font-semibold">Invoice {previewIndex + 1}</h3>
+                  <h3 className="font-semibold">
+                    {t('automaticInvoices.dialogs.preview.invoiceTitle', {
+                      index: previewIndex + 1,
+                      defaultValue: `Invoice ${previewIndex + 1}`,
+                    })}
+                  </h3>
                   <div className="border-b pb-4">
-                    <h4 className="font-semibold">Client Details</h4>
+                    <h4 className="font-semibold">
+                      {t('automaticInvoices.dialogs.preview.sections.clientDetails', {
+                        defaultValue: 'Client Details',
+                      })}
+                    </h4>
                     <p>{previewEntry.data.customer?.name}</p>
                     <p>{previewEntry.data.customer?.address}</p>
                   </div>
                   <div className="border-b pb-4">
-                    <h4 className="font-semibold">Invoice Details</h4>
+                    <h4 className="font-semibold">
+                      {t('automaticInvoices.dialogs.preview.sections.invoiceDetails', {
+                        defaultValue: 'Invoice Details',
+                      })}
+                    </h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">Invoice Number</p>
+                        <p className="text-sm text-muted-foreground">
+                          {t('common.labels.invoiceNumber', { defaultValue: 'Invoice Number' })}
+                        </p>
                         <p>{previewEntry.data.invoiceNumber}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Date</p>
+                        <p className="text-sm text-muted-foreground">
+                          {t('automaticInvoices.dialogs.preview.fields.date', { defaultValue: 'Date' })}
+                        </p>
                         <p>{toPlainDate(previewEntry.data.issueDate).toLocaleString()}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Due Date</p>
+                        <p className="text-sm text-muted-foreground">
+                          {t('common.labels.dueDate', { defaultValue: 'Due Date' })}
+                        </p>
                         <p>{toPlainDate(previewEntry.data.dueDate).toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-semibold mb-2">Line Items</h4>
+                    <h4 className="font-semibold mb-2">
+                      {t('automaticInvoices.dialogs.preview.sections.lineItems', {
+                        defaultValue: 'Line Items',
+                      })}
+                    </h4>
                     <table className="min-w-full">
                       <thead>
                         <tr className="border-b">
-                          <th className="text-left py-2">Description</th>
-                          <th className="text-right py-2">Quantity</th>
-                          <th className="text-right py-2">Rate</th>
-                          <th className="text-right py-2">Amount</th>
+                          <th className="text-left py-2">{t('automaticInvoices.dialogs.preview.columns.description', { defaultValue: 'Description' })}</th>
+                          <th className="text-right py-2">{t('automaticInvoices.dialogs.preview.columns.quantity', { defaultValue: 'Quantity' })}</th>
+                          <th className="text-right py-2">{t('automaticInvoices.dialogs.preview.columns.rate', { defaultValue: 'Rate' })}</th>
+                          <th className="text-right py-2">{t('automaticInvoices.dialogs.preview.columns.amount', { defaultValue: 'Amount' })}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2105,15 +2199,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       </tbody>
                       <tfoot>
                         <tr>
-                          <td colSpan={3} className="text-right py-2 font-semibold">Subtotal</td>
+                          <td colSpan={3} className="text-right py-2 font-semibold">{t('automaticInvoices.dialogs.preview.totals.subtotal', { defaultValue: 'Subtotal' })}</td>
                           <td className="text-right py-2">{formatCurrency(previewEntry.data.subtotal / 100)}</td>
                         </tr>
                         <tr>
-                          <td colSpan={3} className="text-right py-2 font-semibold">Tax</td>
+                          <td colSpan={3} className="text-right py-2 font-semibold">{t('automaticInvoices.dialogs.preview.totals.tax', { defaultValue: 'Tax' })}</td>
                           <td className="text-right py-2">{formatCurrency(previewEntry.data.tax / 100)}</td>
                         </tr>
                         <tr>
-                          <td colSpan={3} className="text-right py-2 font-semibold">Total</td>
+                          <td colSpan={3} className="text-right py-2 font-semibold">{t('automaticInvoices.dialogs.preview.totals.total', { defaultValue: 'Total' })}</td>
                           <td className="text-right py-2">{formatCurrency(previewEntry.data.total / 100)}</td>
                         </tr>
                       </tfoot>
@@ -2133,9 +2227,34 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           setSelectedCycleToDelete(null);
         }}
         onConfirm={handleDeleteRecurringInvoice}
-        title="Permanently Delete Recurring Invoice?"
-        message={`This action cannot be undone. This will permanently delete the recurring invoice for:\nClient: ${selectedCycleToDelete?.client}\nCadence source: ${selectedCycleToDelete?.cadenceSource}\nService period: ${selectedCycleToDelete?.servicePeriodLabel}\n${selectedCycleToDelete?.hasBillingCycleBridge ? 'The linked client cadence bridge record will also be deleted.' : 'Linked recurring service periods will be reopened without requiring client-cycle bridge metadata.'}`}
-        confirmLabel={isDeleting ? 'Deleting...' : 'Yes, Delete Permanently'}
+        title={t('automaticInvoices.dialogs.delete.title', {
+          defaultValue: 'Permanently Delete Recurring Invoice?',
+        })}
+        message={t('automaticInvoices.dialogs.delete.message', {
+          client: selectedCycleToDelete?.client ?? '',
+          cadenceSource: formatCadenceSourceText(selectedCycleToDelete?.cadenceSource),
+          servicePeriod: selectedCycleToDelete?.servicePeriodLabel ?? '',
+          bridgeEffect: selectedCycleToDelete?.hasBillingCycleBridge
+            ? t('automaticInvoices.dialogs.delete.bridgeDeleted', {
+              defaultValue: 'The linked client cadence bridge record will also be deleted.',
+            })
+            : t('automaticInvoices.dialogs.delete.bridgeReopened', {
+              defaultValue: 'Linked recurring service periods will be reopened without requiring client-cycle bridge metadata.',
+            }),
+          defaultValue:
+            `This action cannot be undone. This will permanently delete the recurring invoice for:\n`
+            + `Client: ${selectedCycleToDelete?.client}\n`
+            + `Cadence source: ${formatCadenceSourceText(selectedCycleToDelete?.cadenceSource)}\n`
+            + `Service period: ${selectedCycleToDelete?.servicePeriodLabel}\n`
+            + `${selectedCycleToDelete?.hasBillingCycleBridge
+              ? 'The linked client cadence bridge record will also be deleted.'
+              : 'Linked recurring service periods will be reopened without requiring client-cycle bridge metadata.'}`,
+        })}
+        confirmLabel={isDeleting
+          ? t('automaticInvoices.dialogs.delete.deleting', { defaultValue: 'Deleting...' })
+          : t('automaticInvoices.dialogs.delete.confirm', {
+            defaultValue: 'Yes, Delete Permanently',
+          })}
         isConfirming={isDeleting}
         id="delete-recurring-invoice-confirmation"
       />
@@ -2146,27 +2265,45 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         onClose={() =>
           setPoOverageDialogState({ isOpen: false, executionIdentityKeys: [], overageByExecutionIdentityKey: {} })
         }
-        title="Purchase Order Limit Overages"
+        title={t('automaticInvoices.dialogs.poOverage.title', {
+          defaultValue: 'Purchase Order Limit Overages',
+        })}
         message={
           <div className="space-y-2">
             <p>
-              One or more invoices would exceed a Purchase Order authorized amount. What do you want to do?
+              {t('automaticInvoices.dialogs.poOverage.batchDescription', {
+                defaultValue: 'One or more invoices would exceed a Purchase Order authorized amount. What do you want to do?',
+              })}
             </p>
             <ul className="list-disc pl-5">
               {Object.entries(poOverageDialogState.overageByExecutionIdentityKey).map(([id, info]) => (
                 <li key={id}>
-                  {info.clientName}: over by {formatCurrency(info.overageCents)}
+                  {t('automaticInvoices.dialogs.poOverage.batchItem', {
+                    clientName: info.clientName,
+                    amount: formatCurrency(info.overageCents),
+                    defaultValue: `${info.clientName}: over by ${formatCurrency(info.overageCents)}`,
+                  })}
                   {info.poNumber ? ` (PO ${info.poNumber})` : ''}
                 </li>
               ))}
             </ul>
           </div>
         }
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
+        confirmLabel={t('automaticInvoices.dialogs.poOverage.continue', { defaultValue: 'Continue' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
         options={[
-          { value: 'allow', label: 'Allow overages (generate all invoices)' },
-          { value: 'skip', label: 'Skip invoices that would overrun their PO' },
+          {
+            value: 'allow',
+            label: t('automaticInvoices.dialogs.poOverage.allowOverages', {
+              defaultValue: 'Allow overages (generate all invoices)',
+            }),
+          },
+          {
+            value: 'skip',
+            label: t('automaticInvoices.dialogs.poOverage.skipInvoices', {
+              defaultValue: 'Skip invoices that would overrun their PO',
+            }),
+          },
         ]}
         onConfirm={handlePoOverageBatchDecision}
       />
@@ -2184,18 +2321,28 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             poNumber: null,
           })
         }
-        title="Purchase Order Limit Overages"
+        title={t('automaticInvoices.dialogs.poOverage.title', {
+          defaultValue: 'Purchase Order Limit Overages',
+        })}
         message={
           <div className="space-y-2">
             <p>
-              This invoice would exceed the Purchase Order authorized amount by {formatCurrency(poOverageSingleConfirm.overageCents)}.
+              {t('automaticInvoices.dialogs.poOverage.singleDescription', {
+                amount: formatCurrency(poOverageSingleConfirm.overageCents),
+                defaultValue:
+                  `This invoice would exceed the Purchase Order authorized amount by ${formatCurrency(poOverageSingleConfirm.overageCents)}.`,
+              })}
             </p>
-            {poOverageSingleConfirm.poNumber && <p>PO Number: {poOverageSingleConfirm.poNumber}</p>}
-            <p>Proceed anyway?</p>
+            {poOverageSingleConfirm.poNumber && (
+              <p>
+                {t('purchaseOrder.labels.number', { defaultValue: 'PO Number' })}: {poOverageSingleConfirm.poNumber}
+              </p>
+            )}
+            <p>{t('automaticInvoices.dialogs.poOverage.proceedAnyway', { defaultValue: 'Proceed anyway?' })}</p>
           </div>
         }
-        confirmLabel="Proceed Anyway"
-        cancelLabel="Cancel"
+        confirmLabel={t('automaticInvoices.dialogs.poOverage.proceedConfirm', { defaultValue: 'Proceed Anyway' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
         onConfirm={handlePoOverageSingleConfirm}
       />
       </>
