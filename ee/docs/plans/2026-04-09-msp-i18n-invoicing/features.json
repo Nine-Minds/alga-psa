@@ -72,7 +72,7 @@
   {
     "id": "F015",
     "description": "Wire useTranslation in InvoicePreviewPanel.tsx -- panel heading (Invoice Preview), template selector placeholder, action buttons (Finalize Invoice, Edit Items, Download PDF, Reverse Draft, Send Email, Unfinalize), loading text (Loading Preview...), empty state (Select an invoice to preview), error fallback (Could not display preview), View Source Quote button",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F016",

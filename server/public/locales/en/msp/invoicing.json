@@ -529,7 +529,10 @@
   },
   "invoicePreview": {
     "title": "Invoice Preview",
-    "templatePlaceholder": "Select an invoice template",
+    "templatePlaceholder": "Select invoice template...",
+    "labels": {
+      "standard": " (Standard)"
+    },
     "actions": {
       "finalizeInvoice": "Finalize Invoice",
       "editItems": "Edit Items",
@@ -541,7 +544,19 @@
     },
     "loading": "Loading Preview...",
     "empty": "Select an invoice to preview",
-    "error": "Could not display preview"
+    "error": "Could not display preview",
+    "errorDescription": "Could not display preview. Data might be missing.",
+    "errors": {
+      "loadFailed": "Failed to load preview: {{message}}",
+      "actionFailed": "Failed to {{action}}. Please try again.",
+      "actionLabels": {
+        "finalizeInvoice": "finalize invoice",
+        "downloadPdf": "download PDF",
+        "reverseDraft": "reverse draft",
+        "sendEmail": "send email",
+        "unfinalize": "unfinalize invoice"
+      }
+    }
   },
   "templateEditor": {
     "actions": {
