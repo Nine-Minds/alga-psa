@@ -200,3 +200,8 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `ServiceForm.tsx:180` / `:190` → translated Service Type and Billing Method labels
   - `ServiceForm.tsx:244` → translated submit button via `serviceForm.actions.submit`
   That confirms the form compiles and the placeholder/label/button copy is no longer hardcoded.
+- **(2026-04-18, T004)** Verified `packages/billing/src/components/billing-dashboard/service-config/ServiceSelectionDialog.tsx` with the successful `npm run build` plus:
+  - `ServiceSelectionDialog.tsx:30` → `useTranslation('msp/service-catalog')`
+  - `ServiceSelectionDialog.tsx:31` → `useFormatters()`
+  - `ServiceSelectionDialog.tsx:155` / `:262` / `:311` → translated dialog title, rate column header, and Quick Add label
+  This covers both the translation wiring and the locale-aware rate-display hook on the selection dialog.

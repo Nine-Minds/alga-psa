@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "ServiceSelectionDialog.tsx compiles with useTranslation — dialog title, table headers, Quick Add, loading/empty states all use t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
