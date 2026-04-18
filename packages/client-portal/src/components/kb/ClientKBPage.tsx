@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatArticleType } from '@alga-psa/ui/hooks/useKnowledgeBaseEnumOptions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -40,12 +41,6 @@ const TYPE_ICONS: Record<ArticleType, React.ReactNode> = {
   reference: <FileText className="w-5 h-5 text-gray-500" />,
 };
 
-const TYPE_LABELS: Record<ArticleType, string> = {
-  how_to: 'How-To',
-  faq: 'FAQ',
-  troubleshooting: 'Troubleshooting',
-  reference: 'Reference',
-};
 
 interface CategoryTreeNodeProps {
   category: ClientKBCategory;
@@ -126,6 +121,7 @@ interface ArticleCardProps {
 }
 
 function ArticleCard({ article, onClick }: ArticleCardProps) {
+  const formatArticleType = useFormatArticleType('features/documents');
   return (
     <Card
       className="hover:shadow-md transition-shadow cursor-pointer"
@@ -142,7 +138,7 @@ function ArticleCard({ article, onClick }: ArticleCardProps) {
             </h4>
             <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
               <Badge variant="secondary" className="text-xs">
-                {TYPE_LABELS[article.article_type]}
+                {formatArticleType(article.article_type)}
               </Badge>
               <span className="flex items-center gap-1">
                 <Eye className="w-3 h-3" />
@@ -166,6 +162,7 @@ interface ClientKBPageProps {
 
 export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
   const { t } = useTranslation('features/documents');
+  const formatArticleType = useFormatArticleType('features/documents');
 
   const [articles, setArticles] = useState<IKBArticleWithDocument[]>([]);
   const [categories, setCategories] = useState<ClientKBCategory[]>([]);

@@ -30,6 +30,14 @@
     "no": "Nein",
     "yes": "Ja"
   },
+  "enums": {
+    "rmmAgentStatus": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Überfällig",
+      "unknown": "Unbekannt"
+    }
+  },
   "assetAlertsSection": {
     "title": "Abschnitt „Asset-Warnungen“.",
     "description": "Wrapper für Enterprise-Warnungsabschnitte für anlagenspezifische RMM-Warnungen und Abhilfemaßnahmen"
@@ -158,12 +166,6 @@
       "rmmManaged": {
         "managed": "RMM Verwaltet",
         "unmanaged": "Nicht verwaltet"
-      },
-      "agentStatuses": {
-        "online": "Online",
-        "offline": "Offline",
-        "overdue": "Überfällig",
-        "unknown": "Unbekannt"
       }
     },
     "activeFilters": {
@@ -824,12 +826,6 @@
       "unknown": "Agentenstatus unbekannt",
       "status": "{{status}}{{suffix}}",
       "lastSeen": "- Zuletzt gesehen: {{value}}"
-    },
-    "statuses": {
-      "online": "Online",
-      "offline": "Offline",
-      "overdue": "Überfällig",
-      "unknown": "Unbekannt"
     },
     "relative": {
       "justNow": "Soeben",

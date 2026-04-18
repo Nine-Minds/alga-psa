@@ -27,7 +27,10 @@ import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { RmmStatusIndicator } from './RmmStatusIndicator';
-import { RMM_AGENT_STATUS_OPTIONS } from '../lib/rmmAgentStatusOptions';
+import {
+  useFormatRmmAgentStatus,
+  useRmmAgentStatusOptions,
+} from '../hooks/useRmmAgentStatusOptions';
 import {
   ASSET_DRAWER_TABS,
   type AssetDrawerTab,
@@ -70,7 +73,6 @@ type ColumnKey =
 
 const STATUS_OPTIONS: string[] = ['active', 'inactive', 'maintenance'];
 const TYPE_OPTIONS: string[] = ['workstation', 'server', 'network_device', 'mobile_device', 'printer'];
-const AGENT_STATUS_OPTIONS = RMM_AGENT_STATUS_OPTIONS;
 
 export default function AssetDashboardClient({ initialAssets }: AssetDashboardClientProps) {
   const { t } = useTranslation('msp/assets');
@@ -514,11 +516,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     });
   }, [t]);
 
-  const getAgentStatusLabel = useCallback((status: string) => {
-    return t(`assetDashboardClient.filters.agentStatuses.${status}`, {
-      defaultValue: status.charAt(0).toUpperCase() + status.slice(1)
-    });
-  }, [t]);
+  const getAgentStatusLabel = useFormatRmmAgentStatus();
+  const agentStatusOptions = useRmmAgentStatusOptions();
 
   const toggleColumn = useCallback((key: ColumnKey) => {
     setVisibleColumnIds(prev => {
@@ -939,7 +938,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-48">
-                    {AGENT_STATUS_OPTIONS.map(({ value }) => (
+                    {agentStatusOptions.map(({ value }) => (
                       <DropdownMenuItem key={value} id={`filter-agent-${value}`} onSelect={(event) => event.preventDefault()}>
                         <Checkbox
                           id={`agent-checkbox-${value}`}

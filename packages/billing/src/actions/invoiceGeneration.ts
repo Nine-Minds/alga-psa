@@ -1222,7 +1222,8 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
   }
 
   const client = await getClientDetails(knex, tenant, client_id);
-  const due_date = await getDueDate(client_id, cycleEnd);
+  const previewInvoiceDate = Temporal.Now.plainDateISO().toString();
+  const due_date = await getDueDate(client_id, previewInvoiceDate);
   const chargesByContractGroup: { [key: string]: IBillingCharge[] } = {};
   const nonContractAssociatedCharges: IBillingCharge[] = [];
 
@@ -1990,7 +1991,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
     throw new Error(`Client '${client.client_name}' does not have a default tax region configured. Please set one before generating invoices.`);
   }
   const currentDate = Temporal.Now.plainDateISO().toString();
-  const due_date = await getDueDate(clientId, cycleEnd); // Uses temporary import
+  const due_date = await getDueDate(clientId, currentDate);
   // taxService initialized above
   // let subtotal = 0; // Subtotal will be calculated by persistInvoiceCharges
 
@@ -2020,7 +2021,9 @@ export const createInvoiceFromBillingResult = withAuth(async (
     tenant,
     currency_code: billingResult.currency_code || 'USD',
     is_manual: false,
-    // Add billing period dates to ensure validation works correctly
+    // `billing_period_start/end` stores the INVOICE WINDOW (when this cycle may be cut),
+    // not the service period. Service periods live in `recurring_service_periods`.
+    // Column rename to `invoice_window_*` is pending — do not treat these as customer-facing dates.
     billing_period_start: toPlainDate(cycleStart),
     billing_period_end: toPlainDate(cycleEnd),
     // Tax source: 'internal', 'pending_external', or 'external'

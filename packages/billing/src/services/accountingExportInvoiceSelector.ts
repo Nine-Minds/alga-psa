@@ -12,6 +12,7 @@ export interface InvoiceSelectionFilters {
   endDate?: Nullable<string>;
   invoiceStatuses?: string[];
   clientIds?: string[];
+  invoiceIds?: string[];
   clientSearch?: string;
   adapterType?: string;
   targetRealm?: Nullable<string>;
@@ -54,6 +55,9 @@ type InvoicePreviewSelectionRow = {
   client_name?: string | null;
   currency_code?: string | null;
   invoice_is_manual?: boolean | null;
+  // `billing_period_start/end` stores the invoice window, not the service period.
+  // Canonical service periods are in `detail_service_period_*` below / `recurring_service_periods`.
+  // Column rename to `invoice_window_*` is pending.
   billing_period_start?: string | Date | null;
   billing_period_end?: string | Date | null;
   total_amount?: number | string | null;
@@ -149,6 +153,10 @@ export class AccountingExportInvoiceSelector {
           );
         }
       });
+    }
+
+    if (filters.invoiceIds && filters.invoiceIds.length > 0) {
+      query.andWhere((builder) => builder.whereIn('inv.invoice_id', filters.invoiceIds!));
     }
 
     if (filters.clientIds && filters.clientIds.length > 0) {
@@ -512,6 +520,10 @@ function normalizeFilters(filters: InvoiceSelectionFilters): Record<string, unkn
 
   if (filters.clientIds && filters.clientIds.length > 0) {
     normalized.client_ids = Array.from(new Set(filters.clientIds));
+  }
+
+  if (filters.invoiceIds && filters.invoiceIds.length > 0) {
+    normalized.invoice_ids = Array.from(new Set(filters.invoiceIds));
   }
 
   if (filters.clientSearch && filters.clientSearch.trim().length > 0) {

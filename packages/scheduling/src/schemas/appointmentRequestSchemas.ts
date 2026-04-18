@@ -54,6 +54,7 @@ export const updateAppointmentRequestDateTimeSchema = z.object({
   new_date: dateStringSchema,
   new_time: timeStringSchema,
   new_duration: z.number().int().min(15).max(480).optional().nullable(),
+  new_timezone: z.string().max(100).optional().nullable(),
 });
 
 export type UpdateAppointmentRequestDateTimeInput = z.infer<typeof updateAppointmentRequestDateTimeSchema>;

@@ -21,6 +21,7 @@ import {
   TaxDelegationMode
 } from '@alga-psa/types';
 import { AccountingExportValidation } from './accountingExportValidation';
+import { getExternalTaxImportService } from './externalTaxImportService';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { AppError } from '@alga-psa/core';
 import { getXeroCsvSettingsForTenant } from '@alga-psa/integrations/runtime';
@@ -52,7 +53,7 @@ export class AccountingExportService {
       AccountingExportRepository.create(),
       AccountingAdapterRegistry.createDefault()
     ]);
-    return new AccountingExportService(repository, registry, taxImporter);
+    return new AccountingExportService(repository, registry, taxImporter ?? getExternalTaxImportService());
   }
 
   static async createForTenant(
@@ -63,7 +64,7 @@ export class AccountingExportService {
       AccountingExportRepository.createForTenant(tenantId),
       AccountingAdapterRegistry.createDefault()
     ]);
-    return new AccountingExportService(repository, registry, taxImporter);
+    return new AccountingExportService(repository, registry, taxImporter ?? getExternalTaxImportService());
   }
 
   async createBatch(input: CreateExportBatchOptions): Promise<AccountingExportBatch> {

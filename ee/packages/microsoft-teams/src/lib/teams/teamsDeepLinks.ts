@@ -11,19 +11,24 @@ export type TeamsDeepLinkDestination =
 export type TeamsDeepLinkSurface = 'tab' | 'notification' | 'bot' | 'message_extension';
 
 function buildTeamsTabWebUrl(baseUrl: string, destination: TeamsDeepLinkDestination): string {
+  // Build a Teams-tab URL with query params that resolveTeamsTabDestination()
+  // can read server-side. Using the tab URL (instead of the raw PSA URL)
+  // ensures the destination context survives regardless of how Teams delivers
+  // the deep link to the tab page.
+  const tabBase = `${baseUrl}/teams/tab`;
   switch (destination.type) {
     case 'my_work':
-      return `${baseUrl}/teams/tab`;
+      return tabBase;
     case 'ticket':
-      return `${baseUrl}/msp/tickets/${destination.ticketId}`;
+      return `${tabBase}?page=ticket&ticketId=${encodeURIComponent(destination.ticketId)}`;
     case 'project_task':
-      return `${baseUrl}/msp/projects/${destination.projectId}?taskId=${encodeURIComponent(destination.taskId)}`;
+      return `${tabBase}?page=project_task&projectId=${encodeURIComponent(destination.projectId)}&taskId=${encodeURIComponent(destination.taskId)}`;
     case 'approval':
-      return `${baseUrl}/msp/approvals/${destination.approvalId}`;
+      return `${tabBase}?page=approval&approvalId=${encodeURIComponent(destination.approvalId)}`;
     case 'time_entry':
-      return `${baseUrl}/msp/time?entryId=${encodeURIComponent(destination.entryId)}`;
+      return `${tabBase}?page=time_entry&entryId=${encodeURIComponent(destination.entryId)}`;
     case 'contact':
-      return `${baseUrl}/msp/contacts/${destination.contactId}`;
+      return `${tabBase}?page=contact&contactId=${encodeURIComponent(destination.contactId)}`;
     default: {
       const exhaustive: never = destination;
       throw new Error(`Unsupported Teams deep-link destination: ${(exhaustive as any).type}`);

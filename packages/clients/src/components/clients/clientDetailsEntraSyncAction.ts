@@ -17,6 +17,22 @@ export const isTerminalEntraRunStatus = (status: string | null | undefined): boo
   return terminalEntraSyncStatuses.has(status.trim().toLowerCase());
 };
 
+const ENTRA_RUN_STATUS_LABELS: Record<string, string> = {
+  queued: 'Entra sync queued',
+  running: 'Entra sync running',
+  completed: 'Entra sync completed',
+  failed: 'Entra sync failed',
+  partial: 'Entra sync completed with issues',
+};
+
+export const formatEntraRunStatusLabel = (status: string | null | undefined): string => {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (!normalized) {
+    return 'Entra sync status unknown';
+  }
+  return ENTRA_RUN_STATUS_LABELS[normalized] || `Entra sync: ${normalized}`;
+};
+
 export const resolveEntraClientSyncStartState = (runId: string | null | undefined): {
   runId: string | null;
   statusMessage: string;
@@ -33,7 +49,7 @@ export const resolveEntraClientSyncStartState = (runId: string | null | undefine
 
   return {
     runId: normalizedRunId,
-    statusMessage: `Run ${normalizedRunId}: queued`,
+    statusMessage: formatEntraRunStatusLabel('queued'),
     shouldPoll: true,
   };
 };

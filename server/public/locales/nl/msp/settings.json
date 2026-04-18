@@ -714,13 +714,17 @@
         "companyLogo": "Bedrijfslogo",
         "colorPalette": "Kleurenpalet",
         "primaryColor": "Primaire kleur",
-        "secondaryColor": "Secundaire kleur"
+        "secondaryColor": "Secundaire kleur",
+        "supportEmail": "Support-e-mail",
+        "supportPhone": "Support-telefoonnummer"
       },
       "help": {
         "companyName": "Dit wordt weergegeven in de koptekst van het klantenportaal",
         "companyLogo": "Aanbevolen: PNG of SVG, maximaal 2 MB, transparante achtergrond",
         "primaryColor": "Wordt gebruikt voor knoppen, links en accenten",
-        "secondaryColor": "Wordt gebruikt voor accenten en secundaire acties"
+        "secondaryColor": "Wordt gebruikt voor accenten en secundaire acties",
+        "supportEmail": "Wordt aan klanten getoond in afspraakbevestigingen en andere uitgaande e-mails als contactadres voor hulp.",
+        "supportPhone": "Optioneel. Wordt naast het support-e-mailadres weergegeven in e-mails aan klanten."
       },
       "preview": "Voorbeeld",
       "previewDarkMode": "Voorbeeld donkere modus",

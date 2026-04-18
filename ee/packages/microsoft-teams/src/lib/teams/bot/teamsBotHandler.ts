@@ -280,20 +280,20 @@ async function buildSupportedCommandButtons(tenantId: string): Promise<TeamsBotB
   const buttons: TeamsBotButton[] = [
     buildImBackButton('My tickets', 'my tickets'),
     buildImBackButton('My approvals', 'my approvals'),
-    buildImBackButton('Ticket <id>', 'ticket <id>'),
+    buildImBackButton('Ticket <number>', 'ticket <number>'),
   ];
 
   if (integration.allowedActions.includes('assign_ticket')) {
-    buttons.push(buildImBackButton('Assign ticket', 'assign ticket <ticket-id> to me'));
+    buttons.push(buildImBackButton('Assign ticket', 'assign ticket <number> to me'));
   }
   if (integration.allowedActions.includes('add_note')) {
-    buttons.push(buildImBackButton('Add note', 'add note <ticket-id>: <note>'));
+    buttons.push(buildImBackButton('Add note', 'add note <number>: <note>'));
   }
   if (integration.allowedActions.includes('reply_to_contact')) {
-    buttons.push(buildImBackButton('Reply to contact', 'reply to contact <ticket-id>: <reply>'));
+    buttons.push(buildImBackButton('Reply to contact', 'reply to contact <number>: <reply>'));
   }
   if (integration.allowedActions.includes('log_time')) {
-    buttons.push(buildImBackButton('Log time', 'log time ticket <ticket-id> 30m: <note>'));
+    buttons.push(buildImBackButton('Log time', 'log time ticket <number> 30m: <note>'));
   }
   if (integration.allowedActions.includes('approval_response')) {
     buttons.push(buildImBackButton('Approve approval', 'approve approval <approval-id>'));
@@ -377,7 +377,9 @@ function mapActionAvailabilityToButtons(
 function buildTargetReferenceFromItem(item: TeamsActionResultItem): TeamsActionEntityReference | null {
   switch (item.entityType) {
     case 'ticket':
-      return { entityType: 'ticket', ticketId: item.id };
+      // Use displayId (ticket_number) when available so bot command buttons
+      // show human-friendly references instead of UUIDs.
+      return { entityType: 'ticket', ticketId: item.displayId || item.id };
     case 'project_task':
       return { entityType: 'project_task', taskId: item.id };
     case 'approval':
@@ -659,12 +661,15 @@ async function handleAssignTicketCommand(params: {
     });
   }
 
+  // The action result summary already uses the resolved ticket_number. Swap
+  // "was reassigned successfully" with the assignee name so the bot message
+  // reads naturally while preserving the human-friendly ticket reference.
   return renderActionResult(
     {
       ...result,
       summary: {
         title: 'Ticket assigned',
-        text: `Ticket ${params.ticketId} was assigned to ${assignee.assigneeLabel}.`,
+        text: result.summary.text.replace('was reassigned successfully', `was assigned to ${assignee.assigneeLabel}`),
       },
     },
     {
@@ -968,12 +973,27 @@ export async function handleTeamsBotActivity(
     });
   }
 
-  if (conversationType !== 'personal') {
-    return buildMessageResponse('The Alga PSA Teams bot only supports personal chats in v1. Open the bot in personal scope and try again.', {
+  if (conversationType !== 'personal' && conversationType !== 'groupChat') {
+    return buildMessageResponse('The Alga PSA Teams bot supports personal and group chats. Channel conversations are not supported yet.', {
       attachments: [
         buildCard(
-          'Personal scope only',
-          'This Teams bot supports personal chats only in v1. Open the Alga PSA bot directly from your personal app rail and try again.'
+          'Unsupported conversation type',
+          'The Alga PSA Teams bot works in personal and group chats. Channel conversations are not supported yet. Open the bot in a personal or group chat and try again.'
+        ),
+      ],
+      metadata: baseMetadata,
+    });
+  }
+
+  // Group-chat responses are visible to every chat member regardless of their
+  // PSA permissions. Require an explicit per-tenant capability so admins
+  // knowingly opt in before the bot echoes ticket data into a shared chat.
+  if (conversationType === 'groupChat' && !tenantContext.enabledCapabilities.includes('group_chat_bot')) {
+    return buildMessageResponse('The Alga PSA Teams bot is not enabled for group chats in this tenant. Ask an administrator to enable the group chat capability in Teams integration settings.', {
+      attachments: [
+        buildCard(
+          'Group chat not enabled',
+          'Group chat is not enabled for Alga PSA in this tenant. Administrators can enable it under Settings → Integrations → Teams → Capabilities.'
         ),
       ],
       metadata: baseMetadata,

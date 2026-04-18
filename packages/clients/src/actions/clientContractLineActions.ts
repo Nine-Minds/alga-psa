@@ -124,7 +124,10 @@ async function getLatestHistoricalInvoicedEndDate(db: any, tenant: string, clien
 
   // If we found an invoice, determine the appropriate date to return
   if (latestInvoice) {
-    // If billing_period_end exists, use it
+    // NOTE: `billing_period_end` is the INVOICE WINDOW end (when the cycle could be cut),
+    // not the service period end. For arrears billing this over-reports "billed through" by
+    // roughly one cycle. Acceptable here only because this is the legacy-flat-invoice fallback;
+    // the canonical path reads `recurring_service_periods`. Column rename to `invoice_window_*` is pending.
     if (latestInvoice.billing_period_end) {
       return new Date(latestInvoice.billing_period_end);
     }

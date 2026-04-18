@@ -7,17 +7,20 @@ import {
 } from '@ee/components/settings/integrations/entraIntegrationSettingsGates';
 
 describe('buildEntraConnectionOptions', () => {
-  it('hides the CIPP connection option when entra-integration-cipp is disabled', () => {
+  it('returns only the Direct option when CIPP is disabled', () => {
     const options = buildEntraConnectionOptions(false);
 
     expect(options.map((option) => option.id)).toEqual(['direct']);
     expect(options.find((option) => option.id === 'cipp')).toBeUndefined();
   });
 
-  it('includes the CIPP connection option when entra-integration-cipp is enabled', () => {
+  it('ignores the CIPP flag and never surfaces CIPP in the UI', () => {
+    // CIPP entry point is intentionally removed from the UI. Server plumbing
+    // remains, but buildEntraConnectionOptions must not re-expose it.
     const options = buildEntraConnectionOptions(true);
 
-    expect(options.map((option) => option.id)).toEqual(['direct', 'cipp']);
+    expect(options.map((option) => option.id)).toEqual(['direct']);
+    expect(options.find((option) => option.id === 'cipp')).toBeUndefined();
   });
 
   it('hides field-sync controls and ambiguous queue when their flags are disabled', () => {

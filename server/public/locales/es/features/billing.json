@@ -160,6 +160,52 @@
       "Fixed": "Fijo",
       "Hourly": "Por hora",
       "Usage": "Basado en uso"
+    },
+    "quoteStatus": {
+      "draft": "Borrador",
+      "pending_approval": "Pendiente de aprobación",
+      "approved": "Aprobado",
+      "sent": "Enviado",
+      "accepted": "Aceptado",
+      "rejected": "Rechazado",
+      "expired": "Expirado",
+      "converted": "Convertido",
+      "cancelled": "Cancelado",
+      "superseded": "Reemplazado",
+      "archived": "Archivado"
+    },
+    "quoteStatusDescription": {
+      "draft": "La cotización se está preparando",
+      "pending_approval": "La cotización está a la espera de aprobación interna",
+      "approved": "La cotización está aprobada y lista para enviar",
+      "sent": "La cotización ha sido enviada al cliente",
+      "accepted": "El cliente aceptó la cotización",
+      "rejected": "El cliente rechazó la cotización",
+      "expired": "La cotización superó su fecha de validez",
+      "converted": "La cotización se ha convertido en registros de facturación",
+      "cancelled": "La cotización se canceló antes de la conversión",
+      "superseded": "La cotización fue reemplazada por una revisión",
+      "archived": "La cotización está archivada y es de solo lectura"
+    },
+    "invoiceStatus": {
+      "draft": "Borrador",
+      "sent": "Enviada",
+      "paid": "Pagada",
+      "overdue": "Vencida",
+      "cancelled": "Cancelada",
+      "pending": "Pendiente",
+      "prepayment": "Anticipo",
+      "partially_applied": "Parcialmente aplicada"
+    },
+    "invoiceStatusDescription": {
+      "draft": "Facturas en preparación que no se han enviado al cliente",
+      "sent": "Facturas finalizadas y enviadas al cliente",
+      "paid": "Facturas totalmente pagadas listas para conciliación",
+      "overdue": "Facturas finalizadas cuya fecha de vencimiento ha pasado",
+      "cancelled": "Facturas que han sido anuladas o canceladas",
+      "pending": "Facturas en espera de aprobación o procesamiento adicional",
+      "prepayment": "Facturas de anticipo o depósito",
+      "partially_applied": "Facturas con pagos parciales aplicados"
     }
   },
   "quoteForm": {

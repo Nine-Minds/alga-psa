@@ -13,6 +13,89 @@ import type {
 
 const GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0';
 
+// Smoke-only: when enabled, swap the GDAP-backed managedTenants/* endpoints for
+// /organization and /users so the partner's own tenant acts as a single managed
+// tenant for end-to-end testing without a CSP/GDAP relationship. Never enable in production.
+const IS_SELF_TENANT_SMOKE =
+  (process.env.ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE || '').toLowerCase() === 'true';
+
+// Smoke-only: partition the self-tenant /users response into N synthetic managed
+// tenants so Flow 2 (cross-client bleed) can be exercised without real CSP/GDAP.
+// Format: comma-separated `id|domain|displayName` entries. Users are distributed
+// across buckets by index-mod-N, so each client sees a disjoint subset.
+interface SyntheticSmokeTenant {
+  id: string;
+  domain: string;
+  displayName: string;
+}
+
+function parseSyntheticSmokeTenants(raw: string | undefined): SyntheticSmokeTenant[] {
+  if (!raw) return [];
+  const specs: SyntheticSmokeTenant[] = [];
+  for (const entry of raw.split(',')) {
+    const parts = entry.split('|').map((part) => part.trim());
+    if (parts.length < 3) continue;
+    const [id, domain, displayName] = parts;
+    if (id && domain && displayName) {
+      specs.push({ id, domain, displayName });
+    }
+  }
+  return specs;
+}
+
+const SYNTHETIC_SMOKE_TENANTS: SyntheticSmokeTenant[] = IS_SELF_TENANT_SMOKE
+  ? parseSyntheticSmokeTenants(process.env.ENTRA_DIRECT_SMOKE_SYNTHETIC_TENANTS)
+  : [];
+
+// Smoke-only: force accountEnabled=false for listed email/UPN values so Flow 5
+// (offboard → deactivate) can be exercised without disabling real Entra users.
+// Format: comma-separated email/UPN list.
+const SMOKE_DISABLED_USER_EMAILS: Set<string> = IS_SELF_TENANT_SMOKE
+  ? new Set(
+      (process.env.ENTRA_DIRECT_SMOKE_DISABLED_USER_EMAILS || '')
+        .split(',')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean),
+    )
+  : new Set();
+
+function matchesSmokeDisabledUser(user: EntraManagedUserRecord): boolean {
+  if (SMOKE_DISABLED_USER_EMAILS.size === 0) return false;
+  const candidates = [user.email, user.userPrincipalName]
+    .map((value) => (value || '').trim().toLowerCase())
+    .filter(Boolean);
+  return candidates.some((candidate) => SMOKE_DISABLED_USER_EMAILS.has(candidate));
+}
+
+// Smoke-only: inject extra fake users into the /users response, pinned to a
+// specific synthetic tenant bucket so Flow 7 (ambiguous match) can be
+// exercised without adding real users to Entra. Format:
+// comma-separated `objectId|upn|displayName|bucketIndex` entries.
+interface SmokeExtraUser {
+  objectId: string;
+  upn: string;
+  displayName: string;
+  bucketIndex: number;
+}
+
+function parseSmokeExtraUsers(raw: string | undefined): SmokeExtraUser[] {
+  if (!raw) return [];
+  const users: SmokeExtraUser[] = [];
+  for (const entry of raw.split(',')) {
+    const parts = entry.split('|').map((part) => part.trim());
+    if (parts.length < 4) continue;
+    const [objectId, upn, displayName, bucketIndexRaw] = parts;
+    const bucketIndex = Number.parseInt(bucketIndexRaw, 10);
+    if (!objectId || !upn || !displayName || !Number.isFinite(bucketIndex)) continue;
+    users.push({ objectId, upn, displayName, bucketIndex });
+  }
+  return users;
+}
+
+const SMOKE_EXTRA_USERS: SmokeExtraUser[] = IS_SELF_TENANT_SMOKE
+  ? parseSmokeExtraUsers(process.env.ENTRA_DIRECT_SMOKE_EXTRA_USERS)
+  : [];
+
 function toObject(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -163,6 +246,10 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
   public async listManagedTenants(
     input: EntraListManagedTenantsInput
   ): Promise<EntraManagedTenantRecord[]> {
+    if (IS_SELF_TENANT_SMOKE) {
+      return this.listSelfTenantAsManaged(input);
+    }
+
     const tenants: EntraManagedTenantRecord[] = [];
     const seenTenantIds = new Set<string>();
     let nextUrl = `${GRAPH_BASE_URL}/tenantRelationships/managedTenants/tenants?$top=999`;
@@ -200,6 +287,10 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
   public async listUsersForTenant(
     input: EntraListUsersForTenantInput
   ): Promise<EntraManagedUserRecord[]> {
+    if (IS_SELF_TENANT_SMOKE) {
+      return this.listSelfTenantUsers(input);
+    }
+
     const users: EntraManagedUserRecord[] = [];
     const seenObjectIds = new Set<string>();
     const encodedTenant = encodeURIComponent(input.managedTenantId);
@@ -240,6 +331,154 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
 
         users.push(normalizeEntraSyncUser({
           entraTenantId,
+          entraObjectId,
+          userPrincipalName,
+          email,
+          displayName: getNullableString(raw.displayName),
+          givenName: getNullableString(raw.givenName),
+          surname: getNullableString(raw.surname),
+          accountEnabled: getBoolean(raw.accountEnabled, true),
+          jobTitle: getNullableString(raw.jobTitle),
+          mobilePhone: getNullableString(raw.mobilePhone),
+          businessPhones: getStringArray(raw.businessPhones),
+          raw,
+        }));
+      }
+
+      const candidateNextLink = getNullableString(payload['@odata.nextLink']);
+      nextUrl = candidateNextLink || '';
+    }
+
+    return users;
+  }
+
+  private async listSelfTenantAsManaged(
+    input: EntraListManagedTenantsInput
+  ): Promise<EntraManagedTenantRecord[]> {
+    if (SYNTHETIC_SMOKE_TENANTS.length > 0) {
+      return SYNTHETIC_SMOKE_TENANTS.map((spec) => ({
+        entraTenantId: spec.id,
+        displayName: spec.displayName,
+        primaryDomain: spec.domain,
+        sourceUserCount: 0,
+        raw: { __smokeSynthetic: true, id: spec.id, domain: spec.domain },
+      }));
+    }
+
+    const payload = await this.graphGet(input.tenant, `${GRAPH_BASE_URL}/organization`);
+    const rows = Array.isArray(payload.value) ? payload.value : [];
+    const tenants: EntraManagedTenantRecord[] = [];
+
+    for (const row of rows) {
+      const raw = toObject(row);
+      const entraTenantId = getFirstString(raw.id);
+      if (!entraTenantId) continue;
+
+      const verifiedDomains = Array.isArray(raw.verifiedDomains) ? raw.verifiedDomains : [];
+      let primaryDomain: string | null = null;
+      let initialDomain: string | null = null;
+      for (const domain of verifiedDomains) {
+        const d = toObject(domain);
+        const name = getNullableString(d.name);
+        if (!name) continue;
+        if (getBoolean(d.isDefault)) {
+          primaryDomain = name;
+        } else if (!initialDomain && getBoolean(d.isInitial)) {
+          initialDomain = name;
+        }
+      }
+
+      tenants.push({
+        entraTenantId,
+        displayName: getNullableString(raw.displayName),
+        primaryDomain: primaryDomain || initialDomain,
+        sourceUserCount: 0,
+        raw,
+      });
+    }
+
+    return tenants;
+  }
+
+  private async listSelfTenantUsers(
+    input: EntraListUsersForTenantInput
+  ): Promise<EntraManagedUserRecord[]> {
+    const allUsers = await this.fetchSelfTenantUsersRaw(input.tenant, input.managedTenantId);
+    const withSmokeDisables = allUsers.map((user) =>
+      matchesSmokeDisabledUser(user) ? { ...user, accountEnabled: false } : user,
+    );
+
+    if (SYNTHETIC_SMOKE_TENANTS.length > 0) {
+      const bucketIndex = SYNTHETIC_SMOKE_TENANTS.findIndex((t) => t.id === input.managedTenantId);
+      if (bucketIndex < 0) {
+        return [];
+      }
+      const stride = SYNTHETIC_SMOKE_TENANTS.length;
+      // Stable ordering so partitions are deterministic across calls.
+      const sorted = [...withSmokeDisables].sort((a, b) => a.entraObjectId.localeCompare(b.entraObjectId));
+      const bucketed = sorted
+        .filter((_, index) => index % stride === bucketIndex)
+        .map((user) => ({ ...user, entraTenantId: SYNTHETIC_SMOKE_TENANTS[bucketIndex].id }));
+
+      const extras = SMOKE_EXTRA_USERS.filter((u) => u.bucketIndex === bucketIndex).map((u) =>
+        normalizeEntraSyncUser({
+          entraTenantId: SYNTHETIC_SMOKE_TENANTS[bucketIndex].id,
+          entraObjectId: u.objectId,
+          userPrincipalName: u.upn,
+          email: u.upn,
+          displayName: u.displayName,
+          givenName: null,
+          surname: null,
+          accountEnabled: true,
+          jobTitle: null,
+          mobilePhone: null,
+          businessPhones: [],
+          raw: { __smokeExtra: true },
+        }),
+      );
+
+      return [...bucketed, ...extras];
+    }
+
+    return withSmokeDisables;
+  }
+
+  private async fetchSelfTenantUsersRaw(
+    tenant: string,
+    defaultEntraTenantId: string
+  ): Promise<EntraManagedUserRecord[]> {
+    const users: EntraManagedUserRecord[] = [];
+    const seenObjectIds = new Set<string>();
+    const select = [
+      'id',
+      'displayName',
+      'givenName',
+      'surname',
+      'mail',
+      'userPrincipalName',
+      'accountEnabled',
+      'jobTitle',
+      'mobilePhone',
+      'businessPhones',
+    ].join(',');
+
+    let nextUrl = `${GRAPH_BASE_URL}/users?$select=${select}&$top=999`;
+
+    while (nextUrl) {
+      const payload = await this.graphGet(tenant, nextUrl);
+      const rows = Array.isArray(payload.value) ? payload.value : [];
+
+      for (const row of rows) {
+        const raw = toObject(row);
+        const entraObjectId = getFirstString(raw.id);
+        if (!entraObjectId || seenObjectIds.has(entraObjectId)) continue;
+        seenObjectIds.add(entraObjectId);
+
+        const userPrincipalName = getNullableString(raw.userPrincipalName);
+        const email = getNullableString(raw.mail) || userPrincipalName;
+
+        users.push(normalizeEntraSyncUser({
+          entraTenantId: defaultEntraTenantId,
           entraObjectId,
           userPrincipalName,
           email,

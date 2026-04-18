@@ -1460,7 +1460,7 @@ export const getDueDate = withAuth(async (
     user,
     { tenant },
     clientId: string,
-    billingEndDate: ISO8601String
+    invoiceDate: ISO8601String
 ): Promise<ISO8601String> => {
     const { knex } = await createTenantKnex();
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1474,12 +1474,10 @@ export const getDueDate = withAuth(async (
     });
 
     const paymentTerms = client?.payment_terms || 'net_30';
-    const days = await getPaymentTermDays(paymentTerms); // Await the async function
-    console.log('paymentTerms', paymentTerms, 'days', days);
+    const days = await getPaymentTermDays(paymentTerms);
 
-    // Convert billingEndDate string to a Temporal.PlainDate before adding days
-    const plainEndDate = toPlainDate(billingEndDate);
-    const dueDate = plainEndDate.add({ days });
+    const plainInvoiceDate = toPlainDate(invoiceDate);
+    const dueDate = plainInvoiceDate.add({ days });
     return toISODate(dueDate);
 });
 

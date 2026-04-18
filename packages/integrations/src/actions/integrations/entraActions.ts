@@ -121,7 +121,13 @@ async function callEeRoute<T>(params: {
   }
 
   try {
-    const eeRouteModule = params.importFn;
+    const eeRouteModule =
+      typeof params.importFn === 'function' ? await params.importFn() : params.importFn;
+
+    if (!eeRouteModule) {
+      return eeUnavailableResult<T>();
+    }
+
     const routeHandler = eeRouteModule[params.method] as RouteHandler | undefined;
 
     if (!routeHandler) {
@@ -352,11 +358,15 @@ export const initiateEntraDirectOAuth = withAuth(async (user, { tenant }) => {
     connectionType: 'direct',
   };
 
+  const { ENTRA_DIRECT_DELEGATED_SCOPES } = await import(
+    '@enterprise/lib/integrations/entra/auth/directScopes'
+  );
+
   const authUrl = generateMicrosoftAuthUrl(
     credentials.clientId,
     redirectUri,
     statePayload as any,
-    ['https://graph.microsoft.com/User.Read', 'offline_access'],
+    [...ENTRA_DIRECT_DELEGATED_SCOPES],
     'common'
   );
 
@@ -1120,6 +1130,26 @@ export const startEntraSync = withAuth(async (
       tenantId: tenant,
       actor: { userId: (user as { user_id?: string } | undefined)?.user_id },
       trigger: 'manual',
+    });
+
+    return {
+      success: true,
+      data: {
+        accepted: workflowStart.available,
+        scope: input.scope,
+        runId: workflowStart.runId || null,
+        workflowId: workflowStart.workflowId || null,
+        error: workflowStart.error || null,
+      },
+    } as const;
+  }
+
+  if (input.scope === 'initial') {
+    const workflowClient = await import('@enterprise/lib/integrations/entra/entraWorkflowClient');
+    const workflowStart = await workflowClient.startEntraInitialSyncWorkflow({
+      tenantId: tenant,
+      actor: { userId: (user as { user_id?: string } | undefined)?.user_id },
+      startImmediately: true,
     });
 
     return {

@@ -160,6 +160,52 @@
       "Fixed": "Festpreis",
       "Hourly": "Stündlich",
       "Usage": "Nutzungsbasiert"
+    },
+    "quoteStatus": {
+      "draft": "Entwurf",
+      "pending_approval": "Genehmigung ausstehend",
+      "approved": "Genehmigt",
+      "sent": "Gesendet",
+      "accepted": "Akzeptiert",
+      "rejected": "Abgelehnt",
+      "expired": "Abgelaufen",
+      "converted": "Umgewandelt",
+      "cancelled": "Storniert",
+      "superseded": "Ersetzt",
+      "archived": "Archiviert"
+    },
+    "quoteStatusDescription": {
+      "draft": "Angebot wird vorbereitet",
+      "pending_approval": "Angebot wartet auf interne Genehmigung",
+      "approved": "Angebot ist genehmigt und versandbereit",
+      "sent": "Angebot wurde an den Kunden gesendet",
+      "accepted": "Kunde hat das Angebot akzeptiert",
+      "rejected": "Kunde hat das Angebot abgelehnt",
+      "expired": "Angebot hat das Gültigkeitsdatum überschritten",
+      "converted": "Angebot wurde in Abrechnungsdatensätze umgewandelt",
+      "cancelled": "Angebot wurde vor der Umwandlung storniert",
+      "superseded": "Angebot wurde durch eine Überarbeitung ersetzt",
+      "archived": "Angebot ist archiviert und schreibgeschützt"
+    },
+    "invoiceStatus": {
+      "draft": "Entwurf",
+      "sent": "Versendet",
+      "paid": "Bezahlt",
+      "overdue": "Überfällig",
+      "cancelled": "Storniert",
+      "pending": "Ausstehend",
+      "prepayment": "Vorauszahlung",
+      "partially_applied": "Teilweise zugeordnet"
+    },
+    "invoiceStatusDescription": {
+      "draft": "In Bearbeitung befindliche Rechnungen, die noch nicht an den Kunden gesendet wurden",
+      "sent": "Finalisierte Rechnungen, die an den Kunden gesendet wurden",
+      "paid": "Vollständig bezahlte Rechnungen, bereit für Abstimmung",
+      "overdue": "Finalisierte Rechnungen, deren Fälligkeitsdatum überschritten ist",
+      "cancelled": "Stornierte oder ungültig gemachte Rechnungen",
+      "pending": "Rechnungen, die auf Genehmigung oder weitere Bearbeitung warten",
+      "prepayment": "Anzahlungs- oder Vorauszahlungsrechnungen",
+      "partially_applied": "Rechnungen mit teilweise zugeordneten Zahlungen"
     }
   },
   "quoteForm": {

@@ -2,6 +2,7 @@ type TeamsInstallStatus = 'not_configured' | 'install_pending' | 'active' | 'err
 type TeamsCapability =
   | 'personal_tab'
   | 'personal_bot'
+  | 'group_chat_bot'
   | 'message_extension'
   | 'activity_notifications';
 type TeamsNotificationCategory =

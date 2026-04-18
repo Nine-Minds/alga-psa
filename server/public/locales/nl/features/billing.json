@@ -160,6 +160,52 @@
       "Fixed": "Vast",
       "Hourly": "Per uur",
       "Usage": "Op verbruik"
+    },
+    "quoteStatus": {
+      "draft": "Concept",
+      "pending_approval": "Wacht op goedkeuring",
+      "approved": "Goedgekeurd",
+      "sent": "Verzonden",
+      "accepted": "Geaccepteerd",
+      "rejected": "Afgewezen",
+      "expired": "Verlopen",
+      "converted": "Geconverteerd",
+      "cancelled": "Geannuleerd",
+      "superseded": "Vervangen",
+      "archived": "Gearchiveerd"
+    },
+    "quoteStatusDescription": {
+      "draft": "Offerte wordt voorbereid",
+      "pending_approval": "Offerte wacht op interne goedkeuring",
+      "approved": "Offerte is goedgekeurd en klaar om te versturen",
+      "sent": "Offerte is naar de klant verzonden",
+      "accepted": "Klant heeft de offerte geaccepteerd",
+      "rejected": "Klant heeft de offerte afgewezen",
+      "expired": "Offerte heeft de geldigheidsdatum overschreden",
+      "converted": "Offerte is geconverteerd naar facturatie",
+      "cancelled": "Offerte is geannuleerd vóór conversie",
+      "superseded": "Offerte is vervangen door een herziening",
+      "archived": "Offerte is gearchiveerd en alleen-lezen"
+    },
+    "invoiceStatus": {
+      "draft": "Concept",
+      "sent": "Verzonden",
+      "paid": "Betaald",
+      "overdue": "Verlopen",
+      "cancelled": "Geannuleerd",
+      "pending": "In afwachting",
+      "prepayment": "Vooruitbetaling",
+      "partially_applied": "Gedeeltelijk toegepast"
+    },
+    "invoiceStatusDescription": {
+      "draft": "Facturen die nog niet naar de klant zijn verzonden",
+      "sent": "Facturen die gefinaliseerd en naar de klant zijn verzonden",
+      "paid": "Volledig betaalde facturen, klaar voor afstemming",
+      "overdue": "Gefinaliseerde facturen waarvan de vervaldatum is verstreken",
+      "cancelled": "Facturen die zijn geannuleerd of ongeldig gemaakt",
+      "pending": "Facturen die wachten op goedkeuring of verdere verwerking",
+      "prepayment": "Facturen voor vooruitbetaling of aanbetaling",
+      "partially_applied": "Facturen met gedeeltelijke betalingen toegepast"
     }
   },
   "quoteForm": {

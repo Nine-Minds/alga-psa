@@ -2,7 +2,7 @@
 
 - Plan slug: `entra-integration-phase-1`
 - Created: `2026-02-19`
-- Last Updated: `2026-02-20`
+- Last Updated: `2026-04-17`
 
 ## What This Is
 
@@ -16,6 +16,7 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) Sync behavior is additive/linking by default; field overwrites occur only for explicitly enabled fields.
 - (2026-02-20) Client portal users are excluded from Entra setup/sync functionality.
 - (2026-02-20) Use existing RBAC model (`system_settings.read/update`) for Entra setup and sync actions.
+- (2026-04-17) **CIPP connection type descoped from Phase 1.** Rationale: CIPP provides zero unique capability vs Direct (both hit Microsoft Graph/Lighthouse); Microsoft has closed the Partner Center/GDAP/Lighthouse UX gap that drove CIPP adoption; CIPP drift imposes a permanent maintenance, testing, and support tax we'd own; storing third-party API tokens widens the security blast radius; the "Direct vs CIPP" decision complicates onboarding for users with no opinion. Implementation: `buildEntraConnectionOptions` in `entraIntegrationSettingsGates.ts` returns only the Direct option regardless of the `entra-integration-cipp` flag. The CIPP adapter, secret store, validation route, and connect action remain in the repo so the path can be reinstated without schema/API migration if the bet reverses. All CIPP-specific features in `features.json` and tests in `tests.json` are marked `descoped: true` with note `"Descoped 2026-04-17 — CIPP removed from Phase 1"`. Feature flag `entra-integration-cipp` remains defined but no longer gates user-visible surface area.
 
 ## Discoveries / Constraints
 
@@ -57,8 +58,8 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 ## Open Questions
 
 - Confirm exact delegated scopes needed for direct partner tenant + user enumeration in target MSP environments.
-- Confirm CIPP API endpoint/version contract to lock adapter payload parsing.
 - Confirm default fuzzy threshold values for mapping suggestions before UI finalization.
+- ~~Confirm CIPP API endpoint/version contract to lock adapter payload parsing.~~ (Resolved 2026-04-17 — CIPP descoped from Phase 1.)
 
 ## Implementation Log
 

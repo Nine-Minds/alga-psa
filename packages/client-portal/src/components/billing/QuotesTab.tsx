@@ -5,7 +5,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import type { ColumnDefinition, IQuoteWithClient, QuoteStatus } from '@alga-psa/types';
-import { QUOTE_STATUS_METADATA } from '@alga-psa/types';
+import { useFormatQuoteStatus } from '@alga-psa/ui/hooks/useQuoteEnumOptions';
 import { getClientQuotes } from '@alga-psa/client-portal/actions';
 import { useRouter } from 'next/navigation';
 
@@ -30,6 +30,7 @@ const STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
 
 const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, formatDate }) => {
   const router = useRouter();
+  const formatQuoteStatus = useFormatQuoteStatus();
   const [quotes, setQuotes] = useState<IQuoteWithClient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +76,7 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
         const status = (value || 'draft') as QuoteStatus;
         return (
           <Badge variant={STATUS_VARIANTS[status] || 'secondary'}>
-            {QUOTE_STATUS_METADATA[status]?.label || status}
+            {formatQuoteStatus(status)}
           </Badge>
         );
       },
@@ -85,7 +86,7 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
       dataIndex: 'quote_date',
       render: (value) => formatDate(value),
     },
-  ], [formatCurrency, formatDate]);
+  ], [formatCurrency, formatDate, formatQuoteStatus]);
 
   if (isLoading) {
     return (

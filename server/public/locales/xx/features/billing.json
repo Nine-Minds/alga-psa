@@ -160,6 +160,52 @@
       "Fixed": "11111",
       "Hourly": "11111",
       "Usage": "11111"
+    },
+    "quoteStatus": {
+      "draft": "11111",
+      "pending_approval": "11111",
+      "approved": "11111",
+      "sent": "11111",
+      "accepted": "11111",
+      "rejected": "11111",
+      "expired": "11111",
+      "converted": "11111",
+      "cancelled": "11111",
+      "superseded": "11111",
+      "archived": "11111"
+    },
+    "quoteStatusDescription": {
+      "draft": "11111",
+      "pending_approval": "11111",
+      "approved": "11111",
+      "sent": "11111",
+      "accepted": "11111",
+      "rejected": "11111",
+      "expired": "11111",
+      "converted": "11111",
+      "cancelled": "11111",
+      "superseded": "11111",
+      "archived": "11111"
+    },
+    "invoiceStatus": {
+      "draft": "11111",
+      "sent": "11111",
+      "paid": "11111",
+      "overdue": "11111",
+      "cancelled": "11111",
+      "pending": "11111",
+      "prepayment": "11111",
+      "partially_applied": "11111"
+    },
+    "invoiceStatusDescription": {
+      "draft": "11111",
+      "sent": "11111",
+      "paid": "11111",
+      "overdue": "11111",
+      "cancelled": "11111",
+      "pending": "11111",
+      "prepayment": "11111",
+      "partially_applied": "11111"
     }
   },
   "quoteForm": {

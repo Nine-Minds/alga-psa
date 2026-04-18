@@ -930,5 +930,10 @@
     "deleteCommentAriaLabel": "Commentaar verwijderen",
     "deleteComment": "Commentaar verwijderen",
     "deleteCommentConfirmation": "Weet u zeker dat u dit commentaar wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+  },
+  "enums": {
+    "addOnDescription": {
+      "ai_assistant": "Ontgrendel AI-chat, documenthulp, zijbalk-assistentie en workflow-AI-tools voor je team."
+    }
   }
 }

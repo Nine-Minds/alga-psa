@@ -74,6 +74,7 @@ type DbCharge = {
   quantity?: number | null;
   unit_price?: number | null;
   total_price: number;
+  net_amount?: number | null;
   tax_amount?: number | null;
   tax_region?: string | null;
 };
@@ -151,6 +152,7 @@ export class XeroAdapter implements AccountingExportAdapter {
       adapterFactory: (adapterType) => (adapterType === XeroAdapter.TYPE ? this.companyAdapter : null)
     });
     const resolver = await AccountingMappingResolver.create({ companySyncService });
+    const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
 
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
     const chargesById = await this.loadCharges(knex, tenantId, context);
@@ -163,6 +165,32 @@ export class XeroAdapter implements AccountingExportAdapter {
       const invoice = invoicesById.get(invoiceId);
       if (!invoice) {
         throw new AppError('XERO_INVOICE_NOT_FOUND', `Invoice ${invoiceId} not found for tenant ${tenantId}`);
+      }
+
+      // If this invoice was already exported to Xero, look up the Xero InvoiceID
+      // and the per-charge LineItemIDs so we can send them back on this export.
+      // Xero upserts invoices by InvoiceNumber; without an InvoiceID on an update
+      // it rematches by number and then rejects any LineItemID it doesn't already
+      // have in that draft. Threading the known IDs makes the retry idempotent.
+      const existingMapping = await invoiceMappingRepository.findInvoiceMapping({
+        tenantId,
+        adapterType: this.type,
+        invoiceId,
+        targetRealm: context.batch.target_realm ?? null
+      });
+      const storedChargeLineMappings = Array.isArray(
+        (existingMapping?.metadata as any)?.chargeLineMappings
+      )
+        ? ((existingMapping!.metadata as any).chargeLineMappings as Array<{
+            chargeId: string;
+            xeroLineItemId: string;
+          }>)
+        : [];
+      const knownChargeToXeroLineItemId = new Map<string, string>();
+      for (const entry of storedChargeLineMappings) {
+        if (entry?.chargeId && entry?.xeroLineItemId) {
+          knownChargeToXeroLineItemId.set(entry.chargeId, entry.xeroLineItemId);
+        }
       }
 
       const clientId =
@@ -273,8 +301,7 @@ export class XeroAdapter implements AccountingExportAdapter {
               (taxMapping?.metadata ? (taxMapping.metadata as Record<string, any>)?.components : null)
           );
 
-          taxAmountCents =
-            typeof charge.tax_amount === 'number' ? Math.round(charge.tax_amount) : null;
+          taxAmountCents = coerceChargeCents(charge.tax_amount);
         }
         // When shouldExcludeTax is true, taxComponents and taxAmountCents remain undefined/null
         // This allows the external system to calculate tax based on the taxType
@@ -296,16 +323,24 @@ export class XeroAdapter implements AccountingExportAdapter {
           charge.description ??
           `Invoice ${invoice.invoice_number ?? invoice.invoice_id} line`;
 
-        const unitAmountCents =
-          typeof charge.unit_price === 'number' ? Math.round(charge.unit_price) : null;
+        const unitAmountCents = coerceChargeCents(charge.unit_price);
+
+        const netAmountCents = coerceChargeCents(charge.net_amount);
+        if (netAmountCents === null) {
+          throw new AppError(
+            'XERO_CHARGE_MISSING_NET_AMOUNT',
+            `Charge ${charge.item_id} on invoice ${invoiceId} is missing net_amount; run the backfill migration.`
+          );
+        }
 
         const servicePeriod = resolveXeroLineServicePeriod(line);
 
         const payload: XeroInvoiceLinePayload = {
           lineId: line.line_id,
-          amountCents: Math.round(line.amount_cents),
+          externalLineItemId: knownChargeToXeroLineItemId.get(line.invoice_charge_id) ?? null,
+          amountCents: netAmountCents,
           description,
-          quantity: typeof charge.quantity === 'number' ? charge.quantity : 1,
+          quantity: coerceChargeDecimal(charge.quantity) ?? 1,
           unitAmountCents,
           itemCode:
             safeString(lineResolution.itemCode) ??
@@ -323,7 +358,7 @@ export class XeroAdapter implements AccountingExportAdapter {
 
         lineItems.push(payload);
         chargeIds.push(line.invoice_charge_id);
-        invoiceTotal += Math.round(line.amount_cents);
+        invoiceTotal += netAmountCents;
       }
 
       if (lineItems.length === 0) {
@@ -339,6 +374,7 @@ export class XeroAdapter implements AccountingExportAdapter {
 
       const invoicePayload: XeroInvoicePayload = {
         invoiceId,
+        externalInvoiceId: existingMapping?.externalInvoiceId ?? null,
         contactId: clientMapping.external_entity_id,
         currency: invoice.currency_code ?? exportLines[0]?.currency_code ?? null,
         reference,
@@ -528,6 +564,7 @@ export class XeroAdapter implements AccountingExportAdapter {
         'quantity',
         'unit_price',
         'total_price',
+        'net_amount',
         'tax_amount',
         'tax_region'
       )
@@ -605,8 +642,11 @@ export class XeroAdapter implements AccountingExportAdapter {
     targetRealm?: string
   ): Promise<ExternalInvoiceFetchResult> {
     try {
-      const { knex } = await createTenantKnex();
-      const tenantId = await this.getTenantFromContext(knex);
+      const { knex, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new AppError('XERO_TENANT_REQUIRED', 'Unable to determine tenant from context');
+      }
+      const tenantId = tenant;
 
       const client = await XeroClientService.create(tenantId, targetRealm ?? null);
       const xeroInvoice = await client.getInvoice(externalInvoiceRef);
@@ -782,6 +822,28 @@ function safeString(value: unknown): string | undefined {
   return undefined;
 }
 
+function coerceChargeCents(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.round(value);
+  }
+  if (typeof value === 'string' && /^-?\d+$/.test(value.trim())) {
+    const parsed = parseInt(value.trim(), 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function coerceChargeDecimal(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 function safeLineAmountType(value: unknown): LineAmountType | undefined {
   if (typeof value !== 'string') {
     return undefined;
@@ -875,6 +937,13 @@ function normalizeTaxComponents(input: unknown): XeroTaxComponentPayload[] | und
 
 function defaultLineAmountType(lines: XeroInvoiceLinePayload[]): LineAmountType {
   if (lines.some((line) => typeof line.taxAmountCents === 'number' && line.taxAmountCents !== 0)) {
+    return 'Exclusive';
+  }
+  // When we delegate tax calculation to Xero we still send a TaxType per line so
+  // Xero knows which rate to apply. Those TaxType codes are only valid on
+  // Exclusive/Inclusive invoices — on a NoTax invoice Xero overrides TaxType to
+  // NONE and charges no tax, which silently breaks writeback.
+  if (lines.some((line) => Boolean(line.taxType))) {
     return 'Exclusive';
   }
   return 'NoTax';

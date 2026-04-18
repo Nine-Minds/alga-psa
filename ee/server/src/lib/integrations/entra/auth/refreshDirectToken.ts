@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { resolveMicrosoftCredentialsForTenant } from './microsoftCredentialResolver';
 import { getEntraDirectRefreshToken, saveEntraDirectTokenSet } from './tokenStore';
+import { ENTRA_DIRECT_SCOPE_STRING } from './directScopes';
 
 export interface RefreshDirectTokenResult {
   accessToken: string;
@@ -29,7 +30,7 @@ export async function refreshEntraDirectToken(
     client_secret: credentials.clientSecret,
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
-    scope: 'https://graph.microsoft.com/User.Read offline_access',
+    scope: ENTRA_DIRECT_SCOPE_STRING,
   });
 
   const response = await axios.post(

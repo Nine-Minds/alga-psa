@@ -8,11 +8,11 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Download, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
-  INVOICE_STATUS_METADATA,
   INVOICE_STATUS_DISPLAY_ORDER,
   DEFAULT_ACCOUNTING_EXPORT_STATUSES,
   type InvoiceStatus
 } from '@alga-psa/types';
+import { useInvoiceStatusOptions } from '@alga-psa/ui/hooks/useInvoiceEnumOptions';
 
 interface ExportFilters {
   startDate?: string;
@@ -31,13 +31,8 @@ type ExportErrorDetail = {
   metadata?: Record<string, any> | null;
 };
 
-// Build status options from the canonical invoice status metadata
-const INVOICE_STATUS_OPTIONS = INVOICE_STATUS_DISPLAY_ORDER.map((status) => ({
-  value: status,
-  label: INVOICE_STATUS_METADATA[status].label
-}));
-
 export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
+  const INVOICE_STATUS_OPTIONS = useInvoiceStatusOptions(INVOICE_STATUS_DISPLAY_ORDER);
   const [dateRange, setDateRange] = useState<{ from: string; to: string }>({
     from: '',
     to: ''

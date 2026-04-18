@@ -30,6 +30,14 @@
     "no": "55555",
     "yes": "55555"
   },
+  "enums": {
+    "rmmAgentStatus": {
+      "online": "55555",
+      "offline": "55555",
+      "overdue": "55555",
+      "unknown": "55555"
+    }
+  },
   "assetAlertsSection": {
     "title": "55555",
     "description": "55555"
@@ -158,12 +166,6 @@
       "rmmManaged": {
         "managed": "55555",
         "unmanaged": "55555"
-      },
-      "agentStatuses": {
-        "online": "55555",
-        "offline": "55555",
-        "overdue": "55555",
-        "unknown": "55555"
       }
     },
     "activeFilters": {
@@ -824,12 +826,6 @@
       "unknown": "55555",
       "status": "55555 {{status}} 55555 {{suffix}} 55555",
       "lastSeen": "55555 {{value}} 55555"
-    },
-    "statuses": {
-      "online": "55555",
-      "offline": "55555",
-      "overdue": "55555",
-      "unknown": "55555"
     },
     "relative": {
       "justNow": "55555",

@@ -168,6 +168,9 @@ const baseInvoiceSchema = z.object({
   billing_cycle_id: uuidSchema.nullable().optional(),
   is_manual: z.boolean().default(false),
   is_prepayment: z.boolean().default(false),
+  // NOTE: these fields store the INVOICE WINDOW (when the cycle may be cut), not the service
+  // period. Service periods live in `recurring_service_periods`. Column rename to
+  // `invoice_window_*` is pending. Do not surface these as customer-facing "billing period" dates.
   billing_period_start: invoiceDateSchema.optional(),
   billing_period_end: invoiceDateSchema.optional(),
   recurring_execution_window_kind: recurringExecutionWindowKindSchema.nullable().optional(),
