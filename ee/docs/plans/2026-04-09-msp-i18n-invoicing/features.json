@@ -97,7 +97,7 @@
   {
     "id": "F020",
     "description": "Wire useTranslation in SendInvoiceEmailDialog.tsx -- dialog title (Send Invoice Email), loading text, summary labels (N Invoice(s), N ready to send, N missing email), Recipients heading, recipient source labels (Billing Contact, Billing Email, Client Email, No Email Found), no email configured message, Due label, Additional Message label/placeholder, email preview text, Cancel/Send/Sending button states",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F021",

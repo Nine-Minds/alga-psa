@@ -717,7 +717,7 @@
   },
   "sendEmail": {
     "title": "Send Invoice Email",
-    "loading": "Loading recipients...",
+    "loading": "Loading recipient information...",
     "summary": {
       "invoices_one": "{{count}} Invoice",
       "invoices_other": "{{count}} Invoices",
@@ -732,20 +732,37 @@
       "billingEmail": "Billing Email",
       "clientEmail": "Client Email",
       "noEmailFound": "No Email Found",
-      "notConfigured": "No email address is configured for this invoice."
+      "notConfigured": "No email address is configured for this client."
     },
     "fields": {
       "due": "Due",
       "additionalMessage": "Additional Message",
-      "additionalMessagePlaceholder": "Add an optional note to the invoice email."
+      "additionalMessagePlaceholder": "Add a personal note to include in the email..."
     },
-    "preview": "The invoice PDF will be attached to the generated email.",
+    "preview": "Emails will be sent from {{fromEmail}} on behalf of {{companyName}}. Each invoice will be attached as a PDF.",
+    "values": {
+      "defaultFromEmail": "noreply@example.com",
+      "defaultCompanyName": "Your Company"
+    },
     "actions": {
       "cancel": "Cancel",
+      "sendFallback": "Send Email",
       "send_one": "Send {{count}} Email",
       "send_other": "Send {{count}} Emails",
       "sending_one": "Sending {{count}} invoice...",
       "sending_other": "Sending {{count}} invoices..."
+    },
+    "toasts": {
+      "noValidRecipients": "No valid recipients found",
+      "sentSuccess_one": "{{count}} invoice sent successfully",
+      "sentSuccess_other": "{{count}} invoices sent successfully",
+      "sentFailure_one": "Failed to send {{count}} invoice",
+      "sentFailure_other": "Failed to send {{count}} invoices",
+      "sentPartial": "{{successCount}} sent, {{failureCount}} failed"
+    },
+    "errors": {
+      "loadRecipients": "Failed to load recipient info",
+      "sendFailed": "Failed to send emails"
     }
   },
   "generateTab": {
