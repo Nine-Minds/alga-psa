@@ -247,7 +247,7 @@
   },
   "draftsTab": {
     "title": "Draft Invoices",
-    "searchPlaceholder": "Search draft invoices",
+    "searchPlaceholder": "Search invoices...",
     "bulkActions_one": "Actions ({{count}})",
     "bulkActions_other": "Actions ({{count}})",
     "columns": {
@@ -261,8 +261,10 @@
     },
     "actions": {
       "finalize": "Finalize",
+      "finalizeSelected": "Finalize Selected",
       "downloadPdf": "Download PDF",
       "reverseDraft": "Reverse Draft",
+      "reverseSelected": "Reverse Selected",
       "generateInvoices": "Generate Invoices"
     },
     "status": {
@@ -270,17 +272,22 @@
     },
     "empty": {
       "title": "No Draft Invoices",
-      "description": "Generate recurring, manual, or prepayment invoices to see drafts here."
+      "description": "Draft invoices will appear here once you create invoices that have not been finalized."
     },
-    "loading": "Loading draft invoices",
+    "loading": "Loading draft invoices...",
     "errors": {
-      "loadFailed": "Failed to load draft invoices."
+      "loadFailed": "Failed to load draft invoices. Please try again.",
+      "finalizeFailed": "Failed to finalize invoice. Please try again.",
+      "bulkFinalizeFailed": "Failed to finalize selected invoices. Please try again.",
+      "pdfFailed": "Failed to generate PDF. Please try again.",
+      "reverseFailed": "Failed to reverse draft invoice(s). Please try again."
     },
     "reverseDialog": {
-      "title": "Reverse draft invoices",
-      "message_one": "Reversing {{count}} draft invoice will delete it and remove its generated charges.",
-      "message_other": "Reversing {{count}} draft invoices will delete them and remove their generated charges.",
-      "confirm": "Reverse Drafts",
+      "title": "Reverse Draft Invoice",
+      "title_other": "Reverse Draft Invoices",
+      "message_one": "Reversing this draft invoice will delete it and release any linked time entries or usage records. This action cannot be undone.",
+      "message_other": "Reversing {{count}} draft invoices will delete them and release any linked time entries or usage records. This action cannot be undone.",
+      "confirm": "Reverse Draft",
       "cancel": "Cancel"
     }
   },

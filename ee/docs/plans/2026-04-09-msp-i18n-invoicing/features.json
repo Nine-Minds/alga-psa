@@ -47,7 +47,7 @@
   {
     "id": "F010",
     "description": "Wire useTranslation in DraftsTab.tsx -- column headers (Invoice Number, Client, Amount, Invoice Date, Due Date, Status, Actions), search placeholder, bulk actions button label, row actions (Finalize, Download PDF, Reverse Draft), empty state (heading, description, Generate Invoices button), loading text, error messages, reverse confirmation dialog (title, message with count interpolation, confirm/cancel labels)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F011",
