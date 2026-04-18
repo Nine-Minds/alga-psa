@@ -571,7 +571,7 @@
     },
     "fields": {
       "templateName": "Template Name",
-      "templateAst": "Template AST",
+      "templateAst": "Template AST (JSON)",
       "created": "Created",
       "lastUpdated": "Last Updated"
     },
@@ -580,11 +580,15 @@
       "code": "Code"
     },
     "alerts": {
-      "codeReadonly": "Code view is read-only for this template."
+      "codeReadonly": "Code view is generated from the Visual workspace and is read-only."
     },
     "errors": {
+      "loadFailed": "Failed to load template data.",
+      "saveFailed": "Failed to save template.",
+      "unexpectedSave": "An unexpected error occurred while saving.",
       "templateNameRequired": "Template name is required",
-      "astExportFailed": "Failed to export template AST."
+      "astExportFailed": "Failed to export template AST from visual workspace: {{message}}",
+      "unknownAstExport": "Unknown AST export error"
     }
   },
   "templates": {

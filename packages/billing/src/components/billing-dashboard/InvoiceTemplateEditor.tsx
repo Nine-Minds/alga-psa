@@ -20,12 +20,15 @@ import {
   importTemplateAstToWorkspace,
 } from '../invoice-designer/ast/workspaceAst';
 import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface InvoiceTemplateEditorProps {
   templateId: string | null; // null indicates a new template
 }
 
 const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateId }) => {
+  const { t } = useTranslation('msp/invoicing');
+  const { formatDate } = useFormatters();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [template, setTemplate] = useState<Partial<IInvoiceTemplate> | null>(null);
@@ -75,7 +78,9 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
         })
         .catch((err: Error) => { // Add explicit type for err
           console.error("Error fetching template:", err);
-          setError("Failed to load template data.");
+          setError(t('templateEditor.errors.loadFailed', {
+            defaultValue: 'Failed to load template data.',
+          }));
           setTemplate(null);
         })
         .finally(() => setIsLoading(false));
@@ -178,7 +183,9 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
 
     // --- START VALIDATION ---
     if (!template.name || template.name.trim() === '') {
-      setError("Template name is required.");
+      setError(t('templateEditor.errors.templateNameRequired', {
+        defaultValue: 'Template name is required',
+      }));
       return; // Prevent saving if name is invalid
     } else {
       setError(null); // Clear previous validation error
@@ -213,8 +220,15 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
         const ast = exportWorkspaceToTemplateAst(workspace);
         (dataToSave as Record<string, unknown>).templateAst = ast;
       } catch (compilerError) {
-        const message = compilerError instanceof Error ? compilerError.message : 'Unknown AST export error';
-        setError(`Failed to export template AST from visual workspace: ${message}`);
+        const message = compilerError instanceof Error
+          ? compilerError.message
+          : t('templateEditor.errors.unknownAstExport', {
+            defaultValue: 'Unknown AST export error',
+          });
+        setError(t('templateEditor.errors.astExportFailed', {
+          message,
+          defaultValue: 'Failed to export template AST from visual workspace: {{message}}',
+        }));
         setIsLoading(false);
         return;
       }
@@ -226,12 +240,16 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
         // Navigate back to the templates list after successful save
         handleBack();
       } else {
-        setError((result as any).error || 'Failed to save template.');
+        setError((result as any).error || t('templateEditor.errors.saveFailed', {
+          defaultValue: 'Failed to save template.',
+        }));
       }
     } catch (err) {
       // Catch unexpected errors during the action call itself
       console.error("Unexpected error during saveInvoiceTemplate call:", err);
-      setError("An unexpected error occurred while saving.");
+      setError(t('templateEditor.errors.unexpectedSave', {
+        defaultValue: 'An unexpected error occurred while saving.',
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -252,14 +270,29 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
        <CardHeader>
          <div className="flex items-center">
            <BackNav>
-             ← Back to Layouts List
+             {t('templateEditor.actions.back', {
+               defaultValue: 'Back to Invoice Layouts',
+             })}
            </BackNav>
          </div>
-         <h2 className="text-xl font-semibold mt-2">{isNewTemplate ? 'Create New Invoice Layout' : `Edit Layout: ${template?.name || templateId}`}</h2>
+         <h2 className="text-xl font-semibold mt-2">
+           {isNewTemplate
+             ? t('templateEditor.titles.create', {
+               defaultValue: 'Create New Invoice Layout',
+             })
+             : t('templateEditor.titles.edit', {
+               name: template?.name || templateId,
+               defaultValue: 'Edit Layout: {{name}}',
+             })}
+         </h2>
        </CardHeader>
        <CardContent>
          <div className="mt-4">
-           <label htmlFor="templateName" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">Template Name</label>
+           <label htmlFor="templateName" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+             {t('templateEditor.fields.templateName', {
+               defaultValue: 'Template Name',
+             })}
+           </label>
            <Input
              type="text"
              id="templateName" // Keep ID for label association
@@ -278,8 +311,12 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
          <div className="mt-4">
            <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as 'visual' | 'code')}>
              <TabsList>
-               <TabsTrigger value="visual" data-automation-id="invoice-template-editor-visual-tab">Visual</TabsTrigger>
-               <TabsTrigger value="code" data-automation-id="invoice-template-editor-code-tab">Code</TabsTrigger>
+               <TabsTrigger value="visual" data-automation-id="invoice-template-editor-visual-tab">
+                 {t('templateEditor.tabs.visual', { defaultValue: 'Visual' })}
+               </TabsTrigger>
+               <TabsTrigger value="code" data-automation-id="invoice-template-editor-code-tab">
+                 {t('templateEditor.tabs.code', { defaultValue: 'Code' })}
+               </TabsTrigger>
              </TabsList>
              <TabsContent value="visual" className="pt-4 space-y-3">
                <div className="border rounded overflow-hidden bg-card" id="invoice-template-visual-designer">
@@ -292,11 +329,15 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
              <TabsContent value="code" className="pt-4">
                <Alert variant="info" className="mb-3" data-automation-id="invoice-template-editor-code-readonly-alert">
                  <AlertDescription>
-                   Code view is generated from the Visual workspace and is read-only.
+                   {t('templateEditor.alerts.codeReadonly', {
+                     defaultValue: 'Code view is generated from the Visual workspace and is read-only.',
+                   })}
                  </AlertDescription>
                </Alert>
                <label htmlFor="templateAssemblyScriptSource" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                 Template AST (JSON)
+                 {t('templateEditor.fields.templateAst', {
+                   defaultValue: 'Template AST (JSON)',
+                 })}
                </label>
                <div ref={editorContainerRef} className="mt-1 border rounded-md overflow-hidden">
                  <Editor
@@ -322,19 +363,27 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
            <div className="text-sm text-muted-foreground"> {/* Container for timestamps */}
              {template?.created_at && (
                <p id="template-created-at"> {/* Add id */}
-                 Created: {new Date(template.created_at).toLocaleString()}
+                 {t('templateEditor.fields.created', {
+                   defaultValue: 'Created',
+                 })}: {formatDate(template.created_at, { dateStyle: 'medium', timeStyle: 'short' })}
                </p>
              )}
              {template?.updated_at && (
                <p id="template-updated-at"> {/* Add id */}
-                 Last Updated: {new Date(template.updated_at).toLocaleString()}
+                 {t('templateEditor.fields.lastUpdated', {
+                   defaultValue: 'Last Updated',
+                 })}: {formatDate(template.updated_at, { dateStyle: 'medium', timeStyle: 'short' })}
                </p>
              )}
            </div>
            <div className="flex gap-2"> {/* Container for buttons */}
-             <Button id="cancel-template-edit-button" variant="outline" onClick={handleBack} disabled={isLoading}>Cancel</Button> {/* Add id */}
+             <Button id="cancel-template-edit-button" variant="outline" onClick={handleBack} disabled={isLoading}>
+               {t('templateEditor.actions.cancel', { defaultValue: 'Cancel' })}
+             </Button> {/* Add id */}
              <Button id="save-template-button" onClick={handleSave} disabled={isLoading}>
-               {isLoading ? 'Saving...' : 'Save Template'}
+               {isLoading
+                 ? t('templateEditor.actions.saving', { defaultValue: 'Saving...' })
+                 : t('templateEditor.actions.save', { defaultValue: 'Save Template' })}
              </Button>
            </div>
        </CardFooter>
