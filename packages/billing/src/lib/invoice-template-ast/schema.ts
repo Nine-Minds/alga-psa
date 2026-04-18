@@ -260,6 +260,11 @@ type NodeInput =
       type: 'stack';
       direction?: 'row' | 'column';
       style?: z.infer<typeof nodeStyleRefSchema>;
+      repeat?: {
+        sourceBinding: z.infer<typeof bindingRefSchema>;
+        itemBinding: string;
+        keyPath?: string;
+      };
       children: NodeInput[];
     }
   | {
@@ -359,6 +364,11 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       type: z.literal('stack'),
       direction: z.enum(['row', 'column']).optional(),
       style: nodeStyleRefSchema.optional(),
+      repeat: z.object({
+        sourceBinding: bindingRefSchema,
+        itemBinding: z.string().min(1),
+        keyPath: z.string().min(1).optional(),
+      }).strict().optional(),
       children: z.array(nodeSchema),
     }).strict(),
     z.object({
