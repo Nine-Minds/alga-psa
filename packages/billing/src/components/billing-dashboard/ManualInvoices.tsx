@@ -122,10 +122,14 @@ const AutomatedItemsTable: React.FC<{
 };
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  const { t } = useTranslation('msp/invoicing');
+
   return (
     <Alert variant="destructive" className="p-4">
       <AlertDescription>
-        <h2 className="text-lg font-semibold">Something went wrong:</h2>
+        <h2 className="text-lg font-semibold">
+          {t('manualInvoices.errorFallback.title', { defaultValue: 'Something went wrong' })}:
+        </h2>
         <pre className="mt-2 text-sm">{error.message}</pre>
         <Button
           id='try-again-button'
@@ -133,7 +137,7 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
           className="mt-4"
           variant="secondary"
         >
-          Try again
+          {t('manualInvoices.errorFallback.retry', { defaultValue: 'Try again' })}
         </Button>
       </AlertDescription>
     </Alert>
@@ -205,6 +209,47 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [isPrepayment, setIsPrepayment] = useState(false);
   const [expirationDate, setExpirationDate] = useState<string>('');
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
+  const translateManualInvoiceError = (message: string, mode: 'update' | 'generate'): string => {
+    if (message === 'Invoice number must be unique') {
+      return t('manualInvoices.errors.invoiceNumberUnique', {
+        defaultValue: 'This invoice number is already in use.',
+      });
+    }
+
+    if (message.includes('No active tax rate')) {
+      return t('manualInvoices.errors.noTaxRateConfigured', {
+        defaultValue: 'No tax rate configured for the region.',
+      });
+    }
+
+    if (message.includes('Service not found')) {
+      return t('manualInvoices.errors.serviceNotFound', {
+        defaultValue: 'Selected service not found.',
+      });
+    }
+
+    if (message.includes('Cannot modify')) {
+      return t('manualInvoices.errors.cannotModify', {
+        defaultValue: 'Invoice cannot be modified (paid/cancelled).',
+      });
+    }
+
+    if (message === 'Error loading invoice items') {
+      return t('manualInvoices.errors.loadItems', {
+        defaultValue: 'Error loading invoice items',
+      });
+    }
+
+    if (message === 'An error occurred while refreshing invoice data.') {
+      return t('manualInvoices.errors.refresh', {
+        defaultValue: 'An error occurred while refreshing invoice data.',
+      });
+    }
+
+    return t(`manualInvoices.errors.${mode === 'update' ? 'updateFailed' : 'generateFailed'}`, {
+      defaultValue: message,
+    });
+  };
 
   useEffect(() => {
     setClientOptions(clients);
@@ -270,7 +315,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
         } catch (error) {
           console.error('Error loading invoice items:', error);
-          setError('Error loading invoice items');
+          setError(t('manualInvoices.errors.loadItems', {
+            defaultValue: 'Error loading invoice items',
+          }));
         } finally {
           setLoading(false);
         }
@@ -378,7 +425,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentInvoiceData && selectedClient === null) {
-      setError('Please select a client');
+      setError(t('manualInvoices.errors.selectClient', {
+        defaultValue: 'Please select a client',
+      }));
       return;
     }
 
@@ -456,7 +505,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
         if (!currentInvoiceData) {
           console.error('[Submit] Cannot refresh items: currentInvoiceData became undefined after update.');
-          setError('An error occurred while refreshing invoice data.');
+          setError(t('manualInvoices.errors.refresh', {
+            defaultValue: 'An error occurred while refreshing invoice data.',
+          }));
           setIsGenerating(false);
           return;
         }
@@ -534,7 +585,12 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         });
 
         if (!result.success) {
-          setError((result as { success: false; error: string }).error);
+          setError(
+            translateManualInvoiceError(
+              (result as { success: false; error: string }).error,
+              'generate',
+            ),
+          );
           return;
         }
 
@@ -543,14 +599,12 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
     } catch (err: unknown) {
        if (IS_DEVELOPMENT) console.error('Error with invoice:', err);
-       let errorMessage = `Error ${currentInvoiceData ? 'updating' : 'generating'} invoice`;
+       const errorMode = currentInvoiceData ? 'update' : 'generate';
+       let errorMessage = t(`manualInvoices.errors.${errorMode === 'update' ? 'updateFailed' : 'generateFailed'}`, {
+         defaultValue: `Error ${errorMode === 'update' ? 'updating' : 'generating'} invoice`,
+       });
        if (err instanceof Error) {
-         const message = err.message;
-         if (message === 'Invoice number must be unique') errorMessage = 'This invoice number is already in use.';
-         else if (message.includes('No active tax rate')) errorMessage = `No tax rate configured for the region.`;
-         else if (message.includes('Service not found')) errorMessage = `Selected service not found.`;
-         else if (message.includes('Cannot modify')) errorMessage = `Invoice cannot be modified (paid/cancelled).`;
-         else errorMessage = message;
+         errorMessage = translateManualInvoiceError(err.message, errorMode);
        }
        setError(errorMessage);
     } finally {
@@ -577,8 +631,13 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   };
 
   const getButtonText = () => {
-    if (isGenerating) return 'Processing...';
-    return currentInvoiceData ? 'Save Changes' : 'Generate Invoice';
+    if (isGenerating) {
+      return t('manualInvoices.actions.processing', { defaultValue: 'Processing...' });
+    }
+
+    return currentInvoiceData
+      ? t('manualInvoices.actions.saveChanges', { defaultValue: 'Save Changes' })
+      : t('manualInvoices.actions.generate', { defaultValue: 'Generate Invoice' });
   };
 
   const automatedSubtotal = useMemo(() => {
@@ -777,7 +836,12 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                   items={currentInvoiceData.invoice_charges
                     .filter(item => !item.is_manual)
                     .map(item => ({
-                      service_name: services.find(s => s.service_id === item.service_id)?.service_name || item.description || 'Unknown Service',
+                      service_name:
+                        services.find(s => s.service_id === item.service_id)?.service_name
+                        || item.description
+                        || t('manualInvoices.automatedItems.unknownService', {
+                          defaultValue: 'Unknown Service',
+                        }),
                       total: item.total_price // Pass total_price (in cents)
                     }))
                   }
@@ -790,17 +854,25 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                   <div className="flex items-center">
                     <Checkbox
                       id="is-prepayment"
-                      label="This is a prepayment invoice (creates credit)"
+                      label={t('manualInvoices.prepayment.label', {
+                        defaultValue: 'This is a prepayment invoice (creates credit)',
+                      })}
                       checked={isPrepayment}
                       onChange={(e) => setIsPrepayment((e.target as HTMLInputElement).checked)}
                     />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Mark this only when the manual invoice should create credit for future financial application instead of representing recurring service-period coverage.
+                    {t('manualInvoices.prepayment.description', {
+                      defaultValue: 'Mark this only when the manual invoice should create credit for future financial application instead of representing recurring service-period coverage.',
+                    })}
                   </p>
                   {isPrepayment && (
                     <div>
-                      <label htmlFor="expiration-date-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Credit Expiration Date</label>
+                      <label htmlFor="expiration-date-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                        {t('manualInvoices.creditExpiration.label', {
+                          defaultValue: 'Credit Expiration Date',
+                        })}
+                      </label>
                       <div className="flex items-center">
                         <input
                           id="expiration-date-input"
@@ -809,7 +881,11 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                           onChange={(e) => setExpirationDate(e.target.value)}
                           className="border rounded-md px-3 py-2 w-full max-w-xs shadow-sm focus:ring-blue-500 focus:border-blue-500"
                         />
-                        <div className="ml-2 text-sm text-muted-foreground">Leave blank for no expiration or to use default expiration period</div>
+                        <div className="ml-2 text-sm text-muted-foreground">
+                          {t('manualInvoices.creditExpiration.helpText', {
+                            defaultValue: 'Leave blank for no expiration or to use default expiration period',
+                          })}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -854,10 +930,12 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               <div className="flex justify-between items-center">
                 <div className="flex gap-2">
                   <Button id='add-line-item-button' type="button" onClick={() => handleAddItem(false)} variant="secondary" disabled={isGenerating || expandedItems.size > 0}>
-                    <PlusIcon className="w-4 h-4 mr-2" /> Add Charge
+                    <PlusIcon className="w-4 h-4 mr-2" />
+                    {t('manualInvoices.actions.addCharge', { defaultValue: 'Add Charge' })}
                   </Button>
                   <Button id='add-discount-button' type="button" onClick={() => handleAddItem(true)} variant="secondary" disabled={isGenerating || expandedItems.size > 0}>
-                    <MinusCircleIcon className="w-4 h-4 mr-2" /> Add Discount
+                    <MinusCircleIcon className="w-4 h-4 mr-2" />
+                    {t('manualInvoices.actions.addDiscount', { defaultValue: 'Add Discount' })}
                   </Button>
                 </div>
                 <div className="text-lg font-semibold">

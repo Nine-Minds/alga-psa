@@ -42,7 +42,7 @@
   {
     "id": "F009",
     "description": "Wire ManualInvoices.tsx form controls and validation: Add Charge/Add Discount buttons, Total label, Save Changes/Generate Invoice/Processing button states, prepayment checkbox label and description, credit expiration date label/help text, error messages (Please select a client, invoice number must be unique, no tax rate configured, service not found, cannot modify), ErrorFallback heading and Try again button",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F010",

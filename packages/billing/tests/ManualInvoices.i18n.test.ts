@@ -57,4 +57,66 @@ describe('ManualInvoices i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T012: action buttons, submit states, prepayment controls, credit-expiration help, and validation errors resolve through msp/invoicing', () => {
+    const source = read('../src/components/billing-dashboard/ManualInvoices.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../server/public/locales/en/msp/invoicing.json',
+    );
+
+    const directKeyChecks = [
+      'manualInvoices.actions.addCharge',
+      'manualInvoices.actions.addDiscount',
+      'manualInvoices.actions.saveChanges',
+      'manualInvoices.actions.generate',
+      'manualInvoices.actions.processing',
+      'manualInvoices.prepayment.label',
+      'manualInvoices.prepayment.description',
+      'manualInvoices.creditExpiration.label',
+      'manualInvoices.creditExpiration.helpText',
+      'manualInvoices.errors.selectClient',
+      'manualInvoices.errors.invoiceNumberUnique',
+      'manualInvoices.errors.noTaxRateConfigured',
+      'manualInvoices.errors.serviceNotFound',
+      'manualInvoices.errors.cannotModify',
+      'manualInvoices.errors.loadItems',
+      'manualInvoices.errors.refresh',
+      'manualInvoices.automatedItems.unknownService',
+    ];
+    const dynamicLocaleChecks = [
+      'manualInvoices.errors.updateFailed',
+      'manualInvoices.errors.generateFailed',
+    ];
+
+    expect(source).toContain('translateManualInvoiceError');
+    expect(source).toContain("mode === 'update' ? 'updateFailed' : 'generateFailed'");
+    expect(source).toContain("t('manualInvoices.prepayment.label'");
+    expect(source).toContain("t('manualInvoices.creditExpiration.helpText'");
+
+    for (const key of directKeyChecks) {
+      expect(source).toContain(key);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+
+    for (const key of dynamicLocaleChecks) {
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
+
+  it('T013: error fallback resolves title and retry action through msp/invoicing', () => {
+    const source = read('../src/components/billing-dashboard/ManualInvoices.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../server/public/locales/en/msp/invoicing.json',
+    );
+
+    const keyChecks = [
+      'manualInvoices.errorFallback.title',
+      'manualInvoices.errorFallback.retry',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(key);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });

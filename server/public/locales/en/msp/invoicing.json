@@ -216,23 +216,33 @@
       "total": "Total"
     },
     "prepayment": {
-      "label": "Apply as prepayment",
-      "description": "Create the invoice as client credit for future value."
+      "label": "This is a prepayment invoice (creates credit)",
+      "description": "Mark this only when the manual invoice should create credit for future financial application instead of representing recurring service-period coverage."
     },
     "creditExpiration": {
-      "label": "Credit expiration date",
-      "helpText": "Optional date to expire any resulting client credit."
+      "label": "Credit Expiration Date",
+      "helpText": "Leave blank for no expiration or to use default expiration period"
     },
     "errors": {
       "selectClient": "Please select a client",
-      "invoiceNumberUnique": "Invoice number must be unique",
-      "noTaxRateConfigured": "No tax rate is configured for this invoice.",
-      "serviceNotFound": "The selected service could not be found.",
-      "cannotModify": "This invoice can no longer be modified."
+      "invoiceNumberUnique": "This invoice number is already in use.",
+      "noTaxRateConfigured": "No tax rate configured for the region.",
+      "serviceNotFound": "Selected service not found.",
+      "cannotModify": "Invoice cannot be modified (paid/cancelled).",
+      "loadItems": "Error loading invoice items",
+      "refresh": "An error occurred while refreshing invoice data.",
+      "updateFailed": "Error updating invoice",
+      "generateFailed": "Error generating invoice"
     },
     "errorFallback": {
       "title": "Something went wrong",
       "retry": "Try again"
+    },
+    "automatedItems": {
+      "title": "Automated Line Items",
+      "service": "Service",
+      "total": "Total",
+      "unknownService": "Unknown Service"
     }
   },
   "draftsTab": {
