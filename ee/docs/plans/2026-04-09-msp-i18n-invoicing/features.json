@@ -92,7 +92,7 @@
   {
     "id": "F019",
     "description": "Wire useTranslation in ExternalTaxImportPanel.tsx -- panel title (External Tax Import), Show/Hide History toggle, pending alert (Tax Pending Import, description), import button (Import Tax from adapter), imported alert (Tax Imported from adapter), reconciliation labels (Internal, External, Difference), significant difference warning, history heading (Import History), loading/empty history text, help text, adapter names",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F020",
