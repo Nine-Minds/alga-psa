@@ -525,6 +525,19 @@
       "contractLines": "11111",
       "inline": "11111"
     },
+    "location": {
+      "addLocation": "11111",
+      "fallback": "11111",
+      "label": "11111",
+      "lineCountPlural": "11111 {{count}} 11111",
+      "lineCountSingle": "11111 {{count}} 11111",
+      "none": "11111",
+      "pendingEmptyHint": "11111",
+      "placeholder": "11111",
+      "removePendingGroup": "11111",
+      "unassigned": "11111",
+      "unnamed": "11111"
+    },
     "serviceCountPlural": "11111 {{count}} 11111",
     "serviceCountSingle": "11111 {{count}} 11111",
     "services": {

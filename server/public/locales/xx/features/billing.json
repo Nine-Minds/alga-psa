@@ -11,7 +11,19 @@
   "viewContractLineDetails": "11111",
   "viewAllInvoices": "11111",
   "failedToLoad": "11111",
-  "invoices": "11111",
+  "invoices": {
+    "locations": {
+      "groupHeading": "11111",
+      "subtotal": "11111",
+      "unassigned": "11111",
+      "pickerPlaceholder": "11111",
+      "addLocationButton": "11111",
+      "removeGroup": "11111",
+      "emptyGroup": "11111",
+      "needMoreLocations": "11111",
+      "notSet": "11111"
+    }
+  },
   "payments": "11111",
   "contractLines": "11111",
   "usage": "11111",
@@ -119,7 +131,24 @@
     "pendingQuotes": "11111",
     "awaitingResponse": "11111 {{count}} 11111",
     "noPending": "11111",
-    "viewAll": "11111"
+    "viewAll": "11111",
+    "locations": {
+      "primaryLocationHeading": "11111",
+      "changeButton": "11111",
+      "cancelChange": "11111",
+      "notSet": "11111",
+      "groupHeading": "11111",
+      "pickerPlaceholder": "11111",
+      "addLocationButton": "11111",
+      "removeGroup": "11111",
+      "needMoreLocations": "11111",
+      "emptyGroup": "11111",
+      "subtotal": "11111",
+      "unassigned": "11111"
+    },
+    "lineItems": {
+      "searchPlaceholder": "11111"
+    }
   },
   "enums": {
     "billingFrequency": {
@@ -177,6 +206,125 @@
       "pending": "11111",
       "prepayment": "11111",
       "partially_applied": "11111"
+    }
+  },
+  "quoteForm": {
+    "noticeTitle": "11111",
+    "readOnlyNotice": "11111",
+    "breadcrumb": {
+      "billing": "11111",
+      "quotes": "11111",
+      "quoteTemplates": "11111",
+      "newQuote": "11111"
+    },
+    "header": {
+      "editQuote": "11111",
+      "newQuote": "11111",
+      "editTemplate": "11111",
+      "newTemplate": "11111",
+      "quoteTotalLabel": "11111",
+      "version": "11111 {{version}}"
+    },
+    "subtitle": {
+      "forClient": "11111 {{clientName}}",
+      "expires": "11111 {{date}}",
+      "template": "11111 {{description}}"
+    },
+    "actions": {
+      "pdf": "11111",
+      "duplicate": "11111",
+      "back": "11111",
+      "cancel": "11111",
+      "previewPdf": "11111",
+      "moreActions": "11111",
+      "saving": "11111",
+      "saveQuote": "11111",
+      "saveTemplate": "11111",
+      "sendToClient": "11111",
+      "requestApproval": "11111",
+      "requestChanges": "11111",
+      "approve": "11111",
+      "revise": "11111",
+      "createNewRevision": "11111",
+      "convertToContract": "11111",
+      "convertToInvoice": "11111",
+      "convertToBoth": "11111",
+      "resend": "11111",
+      "sendReminder": "11111",
+      "cancelQuote": "11111"
+    },
+    "banners": {
+      "acceptedTitle": "11111",
+      "acceptedBy": "11111 {{name}}",
+      "acceptedOn": "11111 {{date}}",
+      "rejectedTitle": "11111",
+      "rejectedOn": "11111 {{date}}",
+      "rejectedReason": "11111 {{reason}}",
+      "convertedTitle": "11111",
+      "convertedDescription": "11111"
+    },
+    "essentials": {
+      "title": "11111",
+      "subtitle": "11111",
+      "titleField": "11111",
+      "descriptionField": "11111",
+      "descriptionHelp": "11111",
+      "client": "11111",
+      "clientPlaceholder": "11111",
+      "contact": "11111",
+      "contactPlaceholder": "11111",
+      "currency": "11111",
+      "currencyPlaceholder": "11111",
+      "quoteDate": "11111",
+      "validUntil": "11111",
+      "validUntilHelp": "11111"
+    },
+    "lineItems": {
+      "title": "11111",
+      "subtitleEmpty": "11111",
+      "subtitleCount": "{{count}} 11111 {{mix}}",
+      "mixBoth": "11111",
+      "mixRecurring": "11111",
+      "mixOneTime": "11111",
+      "addLocation": "11111",
+      "fromTemplate": "11111"
+    },
+    "clientFacing": {
+      "title": "11111",
+      "subtitle": "11111",
+      "notes": "11111",
+      "terms": "11111"
+    },
+    "moreDetails": {
+      "title": "11111",
+      "subtitle": "11111",
+      "poNumber": "11111",
+      "opportunity": "11111",
+      "opportunityPlaceholder": "11111",
+      "pdfLayout": "11111",
+      "pdfLayoutPlaceholder": "11111",
+      "pdfLayoutHelp": "11111"
+    },
+    "footer": {
+      "savedAgo": "11111 {{ago}}",
+      "saving": "11111",
+      "unsaved": "11111"
+    },
+    "sidebar": {
+      "quoteTotal": "11111",
+      "recurringPerMonth": "{{amount}} 11111",
+      "subtotal": "11111",
+      "discounts": "11111",
+      "tax": "11111",
+      "statusLabel": "11111",
+      "approvalLabel": "11111",
+      "approvalMessage": "11111",
+      "documentLayoutLabel": "11111",
+      "defaultLayout": "11111",
+      "standardLayout": "11111",
+      "customLayout": "11111",
+      "tenantDefault": "11111",
+      "changeLayout": "11111"
     }
   }
 }

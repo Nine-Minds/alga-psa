@@ -11,7 +11,19 @@
   "viewContractLineDetails": "Abonnementsdetails bekijken",
   "viewAllInvoices": "Alle facturen bekijken",
   "failedToLoad": "Facturen laden is mislukt. Probeer het opnieuw.",
-  "invoices": "Facturen",
+  "invoices": {
+    "locations": {
+      "groupHeading": "Locatie",
+      "subtotal": "Subtotaal locatie",
+      "unassigned": "Items zonder locatie",
+      "pickerPlaceholder": "Selecteer een locatie",
+      "addLocationButton": "+ Locatie toevoegen",
+      "removeGroup": "Locatie verwijderen",
+      "emptyGroup": "Nog geen items voor deze locatie.",
+      "needMoreLocations": "Deze klant heeft slechts één actieve locatie. Voeg een tweede locatie toe in de klantinstellingen om facturatie voor meerdere locaties mogelijk te maken.",
+      "notSet": "Geen locatie geselecteerd"
+    }
+  },
   "payments": "Betalingen",
   "contractLines": "Service-abonnementen",
   "usage": "Verbruiksstatistieken",
@@ -119,7 +131,24 @@
     "pendingQuotes": "Openstaande offertes",
     "awaitingResponse": "{{count}} offerte(s) wacht(en) op uw reactie",
     "noPending": "Geen openstaande offertes",
-    "viewAll": "Alle offertes bekijken"
+    "viewAll": "Alle offertes bekijken",
+    "locations": {
+      "primaryLocationHeading": "Offertelocatie",
+      "changeButton": "Wijzigen",
+      "cancelChange": "Annuleren",
+      "notSet": "Geen locatie geselecteerd",
+      "groupHeading": "Locatie",
+      "pickerPlaceholder": "Selecteer een locatie",
+      "addLocationButton": "+ Locatie toevoegen",
+      "removeGroup": "Locatie verwijderen",
+      "needMoreLocations": "Deze klant heeft slechts één actieve locatie. Voeg een tweede locatie toe in de klantinstellingen om offertes voor meerdere locaties mogelijk te maken.",
+      "emptyGroup": "Nog geen items voor deze locatie.",
+      "subtotal": "Subtotaal locatie",
+      "unassigned": "Items zonder locatie"
+    },
+    "lineItems": {
+      "searchPlaceholder": "Zoeken of aangepaste itemnaam typen..."
+    }
   },
   "enums": {
     "billingFrequency": {
@@ -177,6 +206,125 @@
       "pending": "Facturen die wachten op goedkeuring of verdere verwerking",
       "prepayment": "Facturen voor vooruitbetaling of aanbetaling",
       "partially_applied": "Facturen met gedeeltelijke betalingen toegepast"
+    }
+  },
+  "quoteForm": {
+    "noticeTitle": "Quote",
+    "readOnlyNotice": "This quote is read-only. To make changes, create a new revision.",
+    "breadcrumb": {
+      "billing": "Billing",
+      "quotes": "Quotes",
+      "quoteTemplates": "Quote Templates",
+      "newQuote": "New quote"
+    },
+    "header": {
+      "editQuote": "Edit Quote",
+      "newQuote": "New Quote",
+      "editTemplate": "Edit Quote Template",
+      "newTemplate": "New Quote Template",
+      "quoteTotalLabel": "Quote total",
+      "version": "v{{version}}"
+    },
+    "subtitle": {
+      "forClient": "For {{clientName}}",
+      "expires": "Expires {{date}}",
+      "template": "Template · {{description}}"
+    },
+    "actions": {
+      "pdf": "PDF",
+      "duplicate": "Duplicate",
+      "back": "Back",
+      "cancel": "Cancel",
+      "previewPdf": "Preview PDF",
+      "moreActions": "More actions",
+      "saving": "Saving…",
+      "saveQuote": "Save quote",
+      "saveTemplate": "Save template",
+      "sendToClient": "Send to client",
+      "requestApproval": "Request approval",
+      "requestChanges": "Request changes",
+      "approve": "Approve",
+      "revise": "Revise",
+      "createNewRevision": "Create new revision",
+      "convertToContract": "Convert to contract",
+      "convertToInvoice": "Convert to invoice",
+      "convertToBoth": "Convert to both",
+      "resend": "Resend",
+      "sendReminder": "Send reminder",
+      "cancelQuote": "Cancel quote"
+    },
+    "banners": {
+      "acceptedTitle": "Quote Accepted",
+      "acceptedBy": "Accepted by: {{name}}",
+      "acceptedOn": "Accepted on: {{date}}",
+      "rejectedTitle": "Quote Rejected",
+      "rejectedOn": "Rejected on: {{date}}",
+      "rejectedReason": "Reason: {{reason}}",
+      "convertedTitle": "Quote Converted",
+      "convertedDescription": "This quote has been converted to a contract and/or invoice."
+    },
+    "essentials": {
+      "title": "Essentials",
+      "subtitle": "Shown to the client on the quote document.",
+      "titleField": "Title",
+      "descriptionField": "Description / Scope",
+      "descriptionHelp": "A short paragraph that appears just under the title on the PDF.",
+      "client": "Client",
+      "clientPlaceholder": "Select client",
+      "contact": "Contact",
+      "contactPlaceholder": "Select contact",
+      "currency": "Currency",
+      "currencyPlaceholder": "Select currency",
+      "quoteDate": "Quote date",
+      "validUntil": "Valid until",
+      "validUntilHelp": "Quote auto-expires on this date."
+    },
+    "lineItems": {
+      "title": "Line items",
+      "subtitleEmpty": "No items yet.",
+      "subtitleCount": "{{count}} items · {{mix}}",
+      "mixBoth": "recurring and one-time",
+      "mixRecurring": "recurring",
+      "mixOneTime": "one-time",
+      "addLocation": "+ Add location",
+      "fromTemplate": "+ From template"
+    },
+    "clientFacing": {
+      "title": "Client-facing text",
+      "subtitle": "Appears on the PDF, below the totals.",
+      "notes": "Notes to client (Optional)",
+      "terms": "Terms & conditions (Optional)"
+    },
+    "moreDetails": {
+      "title": "More details",
+      "subtitle": "PO number, opportunity, PDF layout",
+      "poNumber": "PO number",
+      "opportunity": "Opportunity",
+      "opportunityPlaceholder": "Opportunity ID (optional)",
+      "pdfLayout": "PDF layout",
+      "pdfLayoutPlaceholder": "Use default layout",
+      "pdfLayoutHelp": "Choose which layout the client will see. Leave default to use tenant default."
+    },
+    "footer": {
+      "savedAgo": "Changes saved · {{ago}}",
+      "saving": "Saving…",
+      "unsaved": "Unsaved changes"
+    },
+    "sidebar": {
+      "quoteTotal": "Quote total",
+      "recurringPerMonth": "{{amount}} recurring / month",
+      "subtotal": "Subtotal",
+      "discounts": "Discounts",
+      "tax": "Tax",
+      "statusLabel": "Status",
+      "approvalLabel": "Approval",
+      "approvalMessage": "Quotes need sales lead approval before sending.",
+      "documentLayoutLabel": "Document layout",
+      "defaultLayout": "Tenant default",
+      "standardLayout": "Standard",
+      "customLayout": "Custom",
+      "tenantDefault": "Tenant default",
+      "changeLayout": "Change"
     }
   }
 }

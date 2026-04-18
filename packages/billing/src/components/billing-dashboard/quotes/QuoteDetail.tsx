@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -11,6 +12,9 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
+import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
+import LocationAddress from '../locations/LocationAddress';
+import { buildLocationGroups, shouldShowLocationGroups } from '../locations/locationGrouping';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
 import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
@@ -64,9 +68,51 @@ function hasConvertibleOneTimeItems(quote: IQuote | null): boolean {
 
 type ConversionMode = 'contract' | 'invoice' | 'both';
 
+function renderQuoteDetailRow(
+  quote: IQuote,
+  item: NonNullable<IQuote['quote_items']>[number],
+  formatCurrencyFn: (amount: number, currencyCode: string) => string,
+) {
+  const showClientSelection = quote.status === 'accepted' && item.is_optional;
+  const clientSelected = item.is_selected !== false;
+
+  return (
+    <tr
+      key={item.quote_item_id}
+      className={showClientSelection ? (clientSelected ? 'bg-emerald-50/60' : 'bg-amber-50/70') : undefined}
+    >
+      <td className="px-3 py-3 align-top">
+        <div className="font-medium text-foreground">{item.description}</div>
+        <div className="text-xs text-muted-foreground">
+          {item.service_name || 'Custom item'}
+          {item.service_sku ? ` • ${item.service_sku}` : ''}
+          {item.phase ? ` • Phase: ${item.phase}` : ''}
+          {item.is_optional ? ' • Optional' : ''}
+          {item.is_recurring ? ` • Recurring${item.billing_frequency ? ` (${item.billing_frequency})` : ''}` : ''}
+        </div>
+        {showClientSelection ? (
+          <div className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${clientSelected ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+            {clientSelected ? 'Client selected this optional item' : 'Client declined this optional item'}
+          </div>
+        ) : null}
+      </td>
+      <td className="px-3 py-3 align-top text-muted-foreground">{item.billing_method || '—'}</td>
+      <td className="px-3 py-3 align-top text-muted-foreground">{item.quantity}</td>
+      <td className="px-3 py-3 align-top text-muted-foreground">
+        {formatCurrencyFn(item.unit_price, quote.currency_code || 'USD')}
+      </td>
+      <td className="px-3 py-3 align-top font-medium text-foreground">
+        {formatCurrencyFn(item.total_price, quote.currency_code || 'USD')}
+      </td>
+    </tr>
+  );
+}
+
 const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSelectVersion }) => {
   const router = useRouter();
+  const { t } = useTranslation('features/billing');
   const [quote, setQuote] = useState<IQuote | null>(null);
+  const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
   const [versions, setVersions] = useState<IQuote[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -133,6 +179,33 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     () => (quote?.quote_items || []).filter((item) => item.is_optional),
     [quote?.quote_items]
   );
+
+  // Location-grouped rendering: 1 distinct location ⇒ flat; ≥2 ⇒ grouped.
+  const quoteItems = useMemo(() => quote?.quote_items ?? [], [quote?.quote_items]);
+  const showLocationGroupedItems = useMemo(() => shouldShowLocationGroups(quoteItems), [quoteItems]);
+  const locationGroups = useMemo(
+    () => buildLocationGroups(quoteItems, clientLocations),
+    [quoteItems, clientLocations]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!quote?.client_id) {
+        setClientLocations([]);
+        return;
+      }
+      try {
+        const locations = await getActiveClientLocationsForBilling(quote.client_id);
+        if (!cancelled) setClientLocations(locations);
+      } catch (locationError) {
+        console.error('Failed to load client locations:', locationError);
+        if (!cancelled) setClientLocations([]);
+      }
+    };
+    void run();
+    return () => { cancelled = true; };
+  }, [quote?.client_id]);
   const canConvertToContract = useMemo(() => hasConvertibleRecurringItems(quote), [quote]);
   const canConvertToInvoice = useMemo(() => hasConvertibleOneTimeItems(quote), [quote]);
   const canConvertToBoth = canConvertToContract && canConvertToInvoice;
@@ -834,57 +907,73 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               </AlertDescription>
             </Alert>
           ) : null}
-          {quote.quote_items?.length ? (
-            <div className="overflow-x-auto rounded-md border border-border">
-              <table className="min-w-full divide-y divide-border text-sm">
-                <thead className="bg-muted/40 text-left">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">Description</th>
-                    <th className="px-3 py-2 font-medium">Billing</th>
-                    <th className="px-3 py-2 font-medium">Qty</th>
-                    <th className="px-3 py-2 font-medium">Unit Price</th>
-                    <th className="px-3 py-2 font-medium">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border bg-background">
-                  {quote.quote_items.map((item) => {
-                    const showClientSelection = quote.status === 'accepted' && item.is_optional;
-                    const clientSelected = item.is_selected !== false;
-
-                    return (
-                    <tr
-                      key={item.quote_item_id}
-                      className={showClientSelection ? (clientSelected ? 'bg-emerald-50/60' : 'bg-amber-50/70') : undefined}
-                    >
-                      <td className="px-3 py-3 align-top">
-                        <div className="font-medium text-foreground">{item.description}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {item.service_name || 'Custom item'}
-                          {item.service_sku ? ` • ${item.service_sku}` : ''}
-                          {item.phase ? ` • Phase: ${item.phase}` : ''}
-                          {item.is_optional ? ' • Optional' : ''}
-                          {item.is_recurring ? ` • Recurring${item.billing_frequency ? ` (${item.billing_frequency})` : ''}` : ''}
-                        </div>
-                        {showClientSelection ? (
-                          <div className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${clientSelected ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                            {clientSelected ? 'Client selected this optional item' : 'Client declined this optional item'}
+          {quoteItems.length ? (
+            showLocationGroupedItems ? (
+              <div className="space-y-4">
+                {locationGroups.map((group) => {
+                  const subtotal = group.items
+                    .filter((item) => !item.is_discount && (!item.is_optional || item.is_selected !== false))
+                    .reduce((sum, item) => sum + (Number(item.total_price) || 0), 0);
+                  return (
+                    <div key={group.key} className="overflow-hidden rounded-md border border-border">
+                      <div className="flex flex-col gap-2 border-b border-border bg-muted/40 px-4 py-3 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {t('quotes.locations.groupHeading', { defaultValue: 'Location' })}
                           </div>
-                        ) : null}
-                      </td>
-                      <td className="px-3 py-3 align-top text-muted-foreground">{item.billing_method || '—'}</td>
-                      <td className="px-3 py-3 align-top text-muted-foreground">{item.quantity}</td>
-                      <td className="px-3 py-3 align-top text-muted-foreground">
-                        {formatCurrency(item.unit_price, quote.currency_code || 'USD')}
-                      </td>
-                      <td className="px-3 py-3 align-top font-medium text-foreground">
-                        {formatCurrency(item.total_price, quote.currency_code || 'USD')}
-                      </td>
+                          <div className="mt-1">
+                            <LocationAddress
+                              location={group.location}
+                              showName
+                              emptyText={t('quotes.locations.unassigned', { defaultValue: 'Items without a location' })}
+                            />
+                          </div>
+                        </div>
+                        <div className="text-sm">
+                          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                            {t('quotes.locations.subtotal', { defaultValue: 'Location subtotal' })}
+                          </div>
+                          <div className="mt-1 font-semibold">{formatCurrency(subtotal, quote.currency_code || 'USD')}</div>
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-border text-sm">
+                          <thead className="bg-background text-left">
+                            <tr>
+                              <th className="px-3 py-2 font-medium">Description</th>
+                              <th className="px-3 py-2 font-medium">Billing</th>
+                              <th className="px-3 py-2 font-medium">Qty</th>
+                              <th className="px-3 py-2 font-medium">Unit Price</th>
+                              <th className="px-3 py-2 font-medium">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border bg-background">
+                            {group.items.map((item) => renderQuoteDetailRow(quote, item, formatCurrency))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-md border border-border">
+                <table className="min-w-full divide-y divide-border text-sm">
+                  <thead className="bg-muted/40 text-left">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Description</th>
+                      <th className="px-3 py-2 font-medium">Billing</th>
+                      <th className="px-3 py-2 font-medium">Qty</th>
+                      <th className="px-3 py-2 font-medium">Unit Price</th>
+                      <th className="px-3 py-2 font-medium">Total</th>
                     </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-border bg-background">
+                    {quoteItems.map((item) => renderQuoteDetailRow(quote, item, formatCurrency))}
+                  </tbody>
+                </table>
+              </div>
+            )
           ) : (
             <p className="text-sm text-muted-foreground">No line items on this quote yet.</p>
           )}

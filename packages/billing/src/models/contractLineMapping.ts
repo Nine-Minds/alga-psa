@@ -404,7 +404,8 @@ const ContractLineMapping = {
             'lines.line_type as contract_line_type',
             'lines.minimum_billable_time',
             'lines.round_up_to_nearest',
-            'tfc.base_rate as default_rate'
+            'tfc.base_rate as default_rate',
+            db.raw('NULL::uuid as location_id')
           )
           .orderBy('lines.display_order', 'asc');
       }
@@ -431,7 +432,8 @@ const ContractLineMapping = {
           'cl.contract_line_type',
           'cl.minimum_billable_time',
           'cl.round_up_to_nearest',
-          'cl.custom_rate as default_rate'
+          'cl.custom_rate as default_rate',
+          'cl.location_id'
         )
         .orderBy('cl.display_order', 'asc');
     } catch (error) {

@@ -869,3 +869,54 @@ export const downloadClientQuotePdf = withAuth(async (
     return { success: false, error: 'Failed to download quote PDF' };
   }
 });
+
+/**
+ * Client-portal location summary used for rendering location-grouped
+ * quote/invoice detail pages. Returns only the locations referenced by the
+ * given quote, scoped to the authenticated client user's own client_id.
+ */
+export interface ClientPortalLocationSummary {
+  location_id: string;
+  location_name?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  address_line3?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_code?: string | null;
+  country_name?: string | null;
+  region_code?: string | null;
+}
+
+export const getLocationsForClientQuote = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+): Promise<ClientPortalLocationSummary[]> => {
+  const knex = await getConnection(tenant);
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Authorizes + confirms the quote belongs to this portal user's client.
+    const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId);
+    if (!quote.client_id) return [];
+
+    return trx('client_locations')
+      .select<ClientPortalLocationSummary[]>(
+        'location_id',
+        'location_name',
+        'address_line1',
+        'address_line2',
+        'address_line3',
+        'city',
+        'state_province',
+        'postal_code',
+        'country_code',
+        'country_name',
+        'region_code',
+      )
+      .where({ tenant, client_id: quote.client_id, is_active: true })
+      .orderBy('is_default', 'desc')
+      .orderBy('location_name', 'asc');
+  });
+});

@@ -120,6 +120,10 @@ export class BillingEngine {
     string,
     string | null
   >();
+  private readonly locationTaxRegionCodeCache = new Map<
+    string,
+    string | null
+  >();
 
   constructor() {
     this.knex = null as any;
@@ -222,6 +226,32 @@ export class BillingEngine {
     return taxRegionCode;
   }
 
+  private async getLocationTaxRegionCode(
+    locationId: string | null | undefined,
+  ): Promise<string | null> {
+    if (!locationId) {
+      return null;
+    }
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    const cacheKey = `${this.tenant}:${locationId}`;
+    if (this.locationTaxRegionCodeCache.has(cacheKey)) {
+      return this.locationTaxRegionCodeCache.get(cacheKey) ?? null;
+    }
+
+    const row = await this.knex("client_locations")
+      .where({ tenant: this.tenant, location_id: locationId })
+      .select("region_code")
+      .first();
+
+    const regionCode = (row?.region_code as string | null | undefined) ?? null;
+    this.locationTaxRegionCodeCache.set(cacheKey, regionCode);
+    return regionCode;
+  }
+
   /**
    * Determines the tax region and taxability based on a service's tax_rate_id.
    * @param service - The service object, expected to have service_id and tax_rate_id.
@@ -313,6 +343,7 @@ export class BillingEngine {
     options: CalculateBillingOptions = {},
   ): Promise<IBillingResult & { error?: string }> {
     this.clientDefaultTaxRegionCodeCache.clear();
+    this.locationTaxRegionCodeCache.clear();
     return this.withPinnedTransaction(async () => {
       return this.calculateBillingInternal(
         clientId,
@@ -331,6 +362,7 @@ export class BillingEngine {
     options: CalculateBillingOptions = {},
   ): Promise<IBillingResult & { error?: string }> {
     this.clientDefaultTaxRegionCodeCache.clear();
+    this.locationTaxRegionCodeCache.clear();
     return this.withPinnedTransaction(async () => {
       await this.initKnex();
       const client = await this.knex<IClient>("clients")
@@ -361,6 +393,7 @@ export class BillingEngine {
     endDate: ISO8601String,
   ): Promise<RecurringChargeTimingSelections> {
     this.clientDefaultTaxRegionCodeCache.clear();
+    this.locationTaxRegionCodeCache.clear();
     return this.withPinnedTransaction(async () => {
       const billingPeriod: IBillingPeriod = {
         startDate: toISODate(toPlainDate(startDate)),
@@ -1425,6 +1458,7 @@ export class BillingEngine {
         "cl.cadence_owner",
         "cl.custom_rate",
         "cl.enable_proration",
+        "cl.location_id",
         knex.raw("cc.tenant as tenant"),
       );
 
@@ -1988,8 +2022,12 @@ export class BillingEngine {
           return [];
         }
 
-        const { taxRegion: fallbackTaxRegion, isTaxable: fallbackIsTaxable } =
+        const { taxRegion: fallbackServiceTaxRegion, isTaxable: fallbackIsTaxable } =
           await this.getTaxInfoFromService(fallbackService);
+        const fallbackTaxRegion =
+          fallbackServiceTaxRegion ??
+          (await this.getLocationTaxRegionCode(clientContractLine.location_id)) ??
+          (await this.getClientDefaultTaxRegionCode(client.client_id));
         let fallbackTaxAmount = 0;
         let fallbackTaxRate = 0;
         if (!client.is_tax_exempt && fallbackIsTaxable && fallbackTaxRegion) {
@@ -2026,6 +2064,7 @@ export class BillingEngine {
             client_contract_id:
               clientContractLine.client_contract_id || undefined,
             contract_name: clientContractLine.contract_name || undefined,
+            location_id: clientContractLine.location_id ?? null,
             base_rate: baseRateInCents,
             enable_proration: planLevelEnableProration,
             fmv: baseRateInCents,
@@ -2145,9 +2184,10 @@ export class BillingEngine {
 
             // ***** START OF CORRECTED BLOCK *****
             if (!client.is_tax_exempt && isTaxable) {
-              // Use the region derived from tax_rate_id, fallback to client default ONLY if service region is null
+              // Use the region derived from tax_rate_id, fallback to location then client default
               const effectiveTaxRegion =
                 serviceTaxRegion ??
+                (await this.getLocationTaxRegionCode(clientContractLine.location_id)) ??
                 (await this.getClientDefaultTaxRegionCode(client.client_id)) ??
                 "";
               if (effectiveTaxRegion) {
@@ -2252,11 +2292,12 @@ export class BillingEngine {
             // We need the taxRegion derived from the service's tax_rate_id for this specific allocation
             // Let's re-fetch it here for clarity, although it was calculated during allocation.
             // Ideally, the allocation object would carry the derived taxRegion.
-            // For now, re-derive:
+            // For now, re-derive with the location fallback chain:
             tax_region:
               (await this.getTaxInfoFromService(planService)).taxRegion ??
+              (await this.getLocationTaxRegionCode(clientContractLine.location_id)) ??
               (await this.getClientDefaultTaxRegionCode(client.client_id)) ??
-              undefined, // Use derived region, fallback to client default lookup
+              undefined, // Use derived region, fallback to location then client default
             // planId: clientContractLine.contract_line_id, // Removed - planId not part of IFixedPriceCharge
             client_contract_line_id: clientContractLine.client_contract_line_id, // Link back to the plan assignment
 
@@ -2264,6 +2305,7 @@ export class BillingEngine {
             client_contract_id:
               clientContractLine.client_contract_id || undefined,
             contract_name: clientContractLine.contract_name || undefined,
+            location_id: clientContractLine.location_id ?? null,
 
             // IFixedPriceCharge specific fields (newly added)
             config_id: planService.config_id, // From the modified query
@@ -2326,14 +2368,18 @@ export class BillingEngine {
                 client_contract_id:
                   clientContractLine.client_contract_id || undefined,
                 contract_name: clientContractLine.contract_name || undefined,
+                location_id: clientContractLine.location_id ?? null,
                 tax_amount: 0,
                 tax_rate: 0,
                 tax_region:
                   serviceTaxRegion ??
+                  (await this.getLocationTaxRegionCode(
+                    clientContractLine.location_id,
+                  )) ??
                   (await this.getClientDefaultTaxRegionCode(
                     client.client_id,
                   )) ??
-                  undefined, // Use derived region, fallback to client default lookup
+                  undefined, // Use derived region, fallback to location then client default
                 is_taxable: isTaxable, // Use derived value
                 // Use plan-level settings fetched earlier, even if plan type isn't strictly 'Fixed' now
                 // This maintains consistency if a plan type was changed.
@@ -3251,6 +3297,7 @@ export class BillingEngine {
         let taxRate = 0;
         const effectiveTaxRegion =
           serviceTaxRegion ??
+          (await this.getLocationTaxRegionCode(clientContractLine.location_id)) ??
           (await this.getClientDefaultTaxRegionCode(client.client_id)) ??
           undefined;
 
@@ -3288,7 +3335,7 @@ export class BillingEngine {
           type: "time",
           tax_amount: taxAmount, // Set initial tax amount
           tax_rate: taxRate, // Set initial tax rate
-          tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
+          tax_region: effectiveTaxRegion, // Use derived region, fallback to location then client default
           entryId: entry.entry_id,
           is_taxable: isTaxable, // Use derived value
           servicePeriodStart,
@@ -3298,6 +3345,7 @@ export class BillingEngine {
           client_contract_id:
             clientContractLine.client_contract_id || undefined,
           contract_name: clientContractLine.contract_name || undefined,
+          location_id: clientContractLine.location_id ?? null,
         };
       },
     );
@@ -3532,6 +3580,7 @@ export class BillingEngine {
         let taxRate = 0;
         const effectiveTaxRegion =
           serviceTaxRegion ??
+          (await this.getLocationTaxRegionCode(clientContractLine.location_id)) ??
           (await this.getClientDefaultTaxRegionCode(client.client_id)) ??
           undefined;
 
@@ -3563,7 +3612,7 @@ export class BillingEngine {
           quantity,
           rate,
           total,
-          tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
+          tax_region: effectiveTaxRegion, // Use derived region, fallback to location then client default
           type: "usage",
           tax_amount: taxAmount, // Set initial tax amount
           tax_rate: taxRate, // Set initial tax rate
@@ -3576,6 +3625,7 @@ export class BillingEngine {
           client_contract_id:
             clientContractLine.client_contract_id || undefined,
           contract_name: clientContractLine.contract_name || undefined,
+          location_id: clientContractLine.location_id ?? null,
         };
       },
     );
@@ -3819,6 +3869,7 @@ export class BillingEngine {
         let taxRate = 0;
         const effectiveTaxRegion =
           serviceTaxRegion ??
+          (await this.getLocationTaxRegionCode(clientContractLine.location_id)) ??
           (await this.getClientDefaultTaxRegionCode(client.client_id)) ??
           undefined;
 
@@ -3854,7 +3905,7 @@ export class BillingEngine {
           total: total,
           tax_amount: taxAmount,
           tax_rate: taxRate,
-          tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
+          tax_region: effectiveTaxRegion, // Use derived region, fallback to location then client default
           is_taxable: isTaxable,
           servicePeriodStart,
           servicePeriodEnd,
@@ -3865,6 +3916,7 @@ export class BillingEngine {
           client_contract_id:
             clientContractLine.client_contract_id || undefined,
           contract_name: clientContractLine.contract_name || undefined,
+          location_id: clientContractLine.location_id ?? null,
           ...(isLicenseCharge
             ? {
                 period_start: servicePeriodStart,
@@ -4243,6 +4295,7 @@ export class BillingEngine {
           let taxRate = 0;
           const effectiveTaxRegion =
             serviceTaxRegion ??
+            (await this.getLocationTaxRegionCode(contractLine.location_id)) ??
             (await this.getClientDefaultTaxRegionCode(client.client_id)) ??
             undefined;
 
@@ -4287,6 +4340,7 @@ export class BillingEngine {
             billingTiming: "arrears",
             client_contract_id: contractLine.client_contract_id || undefined,
             contract_name: contractLine.contract_name || undefined,
+            location_id: contractLine.location_id ?? null,
           });
         }
 

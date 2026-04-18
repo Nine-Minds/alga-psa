@@ -2463,6 +2463,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         <TabsContent value="lines">
           <ContractLines
             contract={contract}
+            clientId={primaryAssignment?.client_id ?? contract.owner_client_id ?? null}
             onContractLinesChanged={handleContractLinesChanged}
             isReadOnly={isSystemManagedDefault}
           />

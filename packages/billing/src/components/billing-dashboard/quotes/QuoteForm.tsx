@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -11,16 +12,28 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@alga-psa/ui/components/DropdownMenu';
+import { ChevronDown, ChevronRight, MoreVertical } from 'lucide-react';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import type { IClient, IContact, IQuote, IQuoteDocumentTemplate, IQuoteListItem, QuoteConversionPreview, QuoteStatus } from '@alga-psa/types';
 import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
+import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
 import { addQuoteItem, approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
+import {
+  pickDefaultLocation,
+  collectDistinctLocationIds,
+} from '../locations/locationGrouping';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
@@ -68,10 +81,40 @@ const toDateInputValue = (value?: string | Date | null): string => {
   return typeof value === 'string' ? value.slice(0, 10) : String(value).slice(0, 10);
 };
 
+const formatRelativeMinutes = (iso?: string | null): string | null => {
+  if (!iso) return null;
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return null;
+  const mins = Math.max(0, Math.floor((Date.now() - when.getTime()) / 60000));
+  if (mins < 1) return 'just now';
+  if (mins === 1) return '1 min ago';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs === 1) return '1 hr ago';
+  if (hrs < 24) return `${hrs} hr ago`;
+  return when.toLocaleString();
+};
+
 const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = false, onCancel, onSaved }) => {
+  const { t } = useTranslation('features/billing');
   const isEditMode = Boolean(quoteId && quoteId !== 'new');
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [form, setForm] = useState<QuoteFormState>(EMPTY_FORM);
+  const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
+  /**
+   * True once the user has explicitly clicked "+ Add location" OR loaded a quote
+   * that already spans multiple locations. False ⇒ render the editor flat with
+   * a single header-level location. This state is the sole toggle the editor
+   * uses — it falls back to flat automatically once only one distinct location
+   * remains.
+   */
+  const [multiLocationMode, setMultiLocationMode] = useState(false);
+  /**
+   * Locations that should appear as empty groups even though no items have
+   * been added to them yet. Populated by "+ Add location" so the user can
+   * choose the second location before adding items.
+   */
+  const [extraGroupLocationIds, setExtraGroupLocationIds] = useState<string[]>([]);
 
   useEffect(() => {
     getDefaultBillingSettings()
@@ -96,6 +139,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [isMoreDetailsOpen, setIsMoreDetailsOpen] = useState(false);
 
   // Workflow state — sourced from the persisted quote for status-based actions
   const [quote, setQuote] = useState<IQuote | null>(null);
@@ -115,6 +160,79 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
   useEffect(() => {
     void loadFormData();
   }, [quoteId]);
+
+  // Load locations whenever the selected client changes so the picker is fresh.
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!form.client_id) {
+        setClientLocations([]);
+        return;
+      }
+      try {
+        const locations = await getActiveClientLocationsForBilling(form.client_id);
+        if (cancelled) return;
+        setClientLocations(locations);
+      } catch (locationError) {
+        console.error('Failed to load client locations:', locationError);
+        if (!cancelled) setClientLocations([]);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [form.client_id]);
+
+  // Derived: whether the quote currently spans ≥2 locations. Combined with
+  // `multiLocationMode` this drives the editor's flat-vs-grouped layout.
+  const distinctLocationIds = useMemo(() => collectDistinctLocationIds(lineItems), [lineItems]);
+  // Editor renders groups when the user explicitly entered multi-location
+  // mode (via "+ Add location"), regardless of whether the seeded empty
+  // second group has items yet.
+  const showLocationGroups = multiLocationMode;
+
+  // Auto-flip back to flat if everything collapses to one location and no
+  // user-seeded empty location group is still visible.
+  useEffect(() => {
+    if (!multiLocationMode) return;
+    if (distinctLocationIds.length <= 1 && extraGroupLocationIds.length === 0) {
+      setMultiLocationMode(false);
+    }
+  }, [multiLocationMode, distinctLocationIds.length, extraGroupLocationIds.length]);
+
+  // An extra group is "realized" once items land on it — drop it from the
+  // placeholder list so `buildLocationGroups` doesn't double-count it.
+  useEffect(() => {
+    if (extraGroupLocationIds.length === 0) return;
+    const stillEmpty = extraGroupLocationIds.filter((id) => !distinctLocationIds.includes(id));
+    if (stillEmpty.length !== extraGroupLocationIds.length) {
+      setExtraGroupLocationIds(stillEmpty);
+    }
+  }, [distinctLocationIds, extraGroupLocationIds]);
+
+  // On first render (or client change), make sure every line item carries a
+  // location_id. Default to the client's primary location.
+  useEffect(() => {
+    if (clientLocations.length === 0) return;
+    const primary = pickDefaultLocation(clientLocations);
+    if (!primary) return;
+
+    const hasUnassigned = lineItems.some((item) => !item.location_id);
+    if (hasUnassigned) {
+      setLineItems((current) => current.map((item) =>
+        item.location_id ? item : { ...item, location_id: primary.location_id }
+      ));
+    }
+  }, [clientLocations, lineItems.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Enter multi-location mode automatically when loading a quote that already
+  // spans ≥2 locations (e.g. editing an existing multi-site quote).
+  useEffect(() => {
+    if (distinctLocationIds.length >= 2 && !multiLocationMode) {
+      setMultiLocationMode(true);
+    }
+  }, [distinctLocationIds.length, multiLocationMode]);
 
   const loadFormData = async () => {
     try {
@@ -160,6 +278,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         });
         setLineItems((quote.quote_items || []).map(createDraftQuoteItemFromQuoteItem));
         setPersistedQuoteItemIds((quote.quote_items || []).map((item) => item.quote_item_id));
+        setLastSavedAt(quote.updated_at || quote.created_at || null);
       } else {
         const today = new Date();
         const validUntil = new Date(today);
@@ -173,6 +292,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         });
         setLineItems([]);
         setPersistedQuoteItemIds([]);
+        setLastSavedAt(null);
       }
 
       setError(null);
@@ -193,6 +313,34 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
   }, [contacts, form.client_id]);
 
   const draftTotals = useMemo(() => calculateDraftQuoteTotals(lineItems), [lineItems]);
+
+  // Derived: recurring per-month subtotal across draft items (expressed in
+  // the quote's minor currency units). Used for the sidebar "$X recurring /
+  // month" hint. Only monthly-recurring items count; mixed frequencies don't
+  // reduce cleanly to a single per-month number without more math.
+  const recurringMonthlySubtotal = useMemo(() => {
+    return lineItems.reduce((sum, item) => {
+      if (!item.is_recurring || item.is_discount) return sum;
+      if (item.is_optional && item.is_selected === false) return sum;
+      const freq = (item.billing_frequency || '').toLowerCase();
+      if (freq && freq !== 'monthly') return sum;
+      return sum + Math.round(item.quantity * item.unit_price);
+    }, 0);
+  }, [lineItems]);
+
+  const selectedClient = useMemo(
+    () => clients.find((c) => c.client_id === form.client_id) ?? null,
+    [clients, form.client_id],
+  );
+
+  const selectedDocTemplate = useMemo(
+    () => documentTemplates.find((dt) => dt.template_id === documentTemplateId) ?? null,
+    [documentTemplates, documentTemplateId],
+  );
+
+  const lineItemCount = lineItems.filter((i) => !i.is_discount).length;
+  const hasRecurring = lineItems.some((i) => i.is_recurring && !i.is_discount);
+  const hasOneTime = lineItems.some((i) => !i.is_recurring && !i.is_discount);
 
   const handleChange = (field: keyof QuoteFormState, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -226,6 +374,10 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
           ...createDraftQuoteItemFromQuoteItem(item),
           local_id: crypto.randomUUID(),
           quote_item_id: undefined,
+          // Templates may originate from a different client — drop the
+          // template's location_id so the primary-location auto-assign
+          // effect can pick the correct one for the new client.
+          location_id: null,
         })));
       }
     } catch (err) {
@@ -315,6 +467,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
             is_taxable: item.is_taxable ?? true,
             tax_region: item.tax_region ?? null,
             tax_rate: item.tax_rate ?? null,
+            location_id: item.location_id ?? null,
             cost: item.cost ?? null,
             cost_currency: item.cost_currency ?? null,
           };
@@ -391,6 +544,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
 
       setLineItems(nextLineItems);
       setPersistedQuoteItemIds(nextLineItems.map((item) => item.quote_item_id).filter((value): value is string => Boolean(value)));
+      setLastSavedAt(new Date().toISOString());
 
       onSaved(result.quote_id);
     } catch (submitError) {
@@ -613,6 +767,186 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
 
   const isReadOnly = isEditMode && !isTemplate && quoteStatus !== 'draft';
 
+  // +Add-location handler moved into the line-items toolbar. Seed an empty
+  // second group so the user can pick a location before adding any items.
+  const handleAddLocationGroup = () => {
+    const primary = pickDefaultLocation(clientLocations)?.location_id ?? null;
+    setLineItems((current) => current.map((item) =>
+      item.is_discount || item.location_id ? item : { ...item, location_id: primary }
+    ));
+    setMultiLocationMode(true);
+    const used = new Set<string>(lineItems.map((item) => item.location_id).filter((id): id is string => Boolean(id)));
+    if (primary) used.add(primary);
+    const candidate = clientLocations.find((loc) => !used.has(loc.location_id));
+    if (candidate) {
+      setExtraGroupLocationIds((current) => current.includes(candidate.location_id) ? current : [...current, candidate.location_id]);
+    }
+  };
+
+  const handleRemoveLocationGroup = (removedLocationId: string | null) => {
+    if (removedLocationId) {
+      setLineItems((current) => current.filter((item) => item.location_id !== removedLocationId));
+      setExtraGroupLocationIds((current) => current.filter((id) => id !== removedLocationId));
+    }
+  };
+
+  // Scroll into view + expand helper wired to the sidebar "Change" link.
+  const openMoreDetails = () => {
+    setIsMoreDetailsOpen(true);
+    // Defer scroll until after expansion so the target is measured.
+    requestAnimationFrame(() => {
+      const el = document.getElementById('quote-form-more-details');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  // ---------------------------------------------------------------------------
+  // Primary action: a single state-driven descriptor used in both the top
+  // header bar and the footer row. Keeps label/handler/id consistent and
+  // avoids two code paths drifting.
+  // ---------------------------------------------------------------------------
+  type PrimaryAction = { id: string; label: string; onClick: () => void; disabled?: boolean } | null;
+
+  const resolvePrimaryAction = (): PrimaryAction => {
+    if (isTemplate) {
+      return {
+        id: 'quote-form-save',
+        label: isSaving
+          ? t('quoteForm.actions.saving', { defaultValue: 'Saving…' })
+          : t('quoteForm.actions.saveTemplate', { defaultValue: 'Save template' }),
+        onClick: () => void handleSubmit(),
+        disabled: isSaving,
+      };
+    }
+
+    if (!isEditMode || !quote) {
+      return {
+        id: 'quote-form-save',
+        label: isSaving
+          ? t('quoteForm.actions.saving', { defaultValue: 'Saving…' })
+          : t('quoteForm.actions.saveQuote', { defaultValue: 'Save quote' }),
+        onClick: () => void handleSubmit(),
+        disabled: isSaving,
+      };
+    }
+
+    switch (quoteStatus) {
+      case 'draft':
+        return approvalRequired
+          ? {
+              id: 'quote-form-submit-approval',
+              label: t('quoteForm.actions.requestApproval', { defaultValue: 'Request approval' }),
+              onClick: () => void handleSubmitForApproval(),
+              disabled: isWorking,
+            }
+          : {
+              id: 'quote-form-send',
+              label: t('quoteForm.actions.sendToClient', { defaultValue: 'Send to client' }),
+              onClick: () => setIsSendDialogOpen(true),
+              disabled: isWorking,
+            };
+      case 'pending_approval':
+        return {
+          id: 'quote-form-approve',
+          label: t('quoteForm.actions.approve', { defaultValue: 'Approve' }),
+          onClick: () => setApprovalDialogMode('approve'),
+          disabled: isWorking,
+        };
+      case 'approved':
+        return {
+          id: 'quote-form-send-approved',
+          label: t('quoteForm.actions.sendToClient', { defaultValue: 'Send to client' }),
+          onClick: () => setIsSendDialogOpen(true),
+          disabled: isWorking,
+        };
+      case 'sent':
+        return {
+          id: 'quote-form-revise',
+          label: t('quoteForm.actions.revise', { defaultValue: 'Revise' }),
+          onClick: () => void handleReviseQuote(),
+          disabled: isWorking,
+        };
+      case 'accepted':
+        if (canConvertToBoth) {
+          return {
+            id: 'quote-form-convert-both',
+            label: t('quoteForm.actions.convertToBoth', { defaultValue: 'Convert to both' }),
+            onClick: () => void handleOpenConversionDialog('both'),
+            disabled: isWorking || isPreviewLoading,
+          };
+        }
+        if (canConvertToContract) {
+          return {
+            id: 'quote-form-convert-contract',
+            label: t('quoteForm.actions.convertToContract', { defaultValue: 'Convert to contract' }),
+            onClick: () => void handleOpenConversionDialog('contract'),
+            disabled: isWorking || isPreviewLoading,
+          };
+        }
+        if (canConvertToInvoice) {
+          return {
+            id: 'quote-form-convert-invoice',
+            label: t('quoteForm.actions.convertToInvoice', { defaultValue: 'Convert to invoice' }),
+            onClick: () => void handleOpenConversionDialog('invoice'),
+            disabled: isWorking || isPreviewLoading,
+          };
+        }
+        return null;
+      case 'rejected':
+      case 'expired':
+        return {
+          id: 'quote-form-revise',
+          label: t('quoteForm.actions.createNewRevision', { defaultValue: 'Create new revision' }),
+          onClick: () => void handleReviseQuote(),
+          disabled: isWorking,
+        };
+      default:
+        return null;
+    }
+  };
+
+  const primaryAction = resolvePrimaryAction();
+
+  // Secondary inline button (e.g. "Request changes" pairs with "Approve").
+  const resolveSecondaryAction = (): PrimaryAction => {
+    if (!isEditMode || isTemplate || !quote) return null;
+    if (quoteStatus === 'pending_approval') {
+      return {
+        id: 'quote-form-request-changes',
+        label: t('quoteForm.actions.requestChanges', { defaultValue: 'Request changes' }),
+        onClick: () => setApprovalDialogMode('changes'),
+        disabled: isWorking,
+      };
+    }
+    return null;
+  };
+
+  const secondaryAction = resolveSecondaryAction();
+
+  // Overflow items for workflow statuses with secondary actions.
+  type OverflowItem = { id: string; label: string; onClick: () => void; disabled?: boolean };
+  const resolveOverflowItems = (): OverflowItem[] => {
+    if (!isEditMode || isTemplate || !quote) return [];
+    if (quoteStatus === 'sent') {
+      return [
+        { id: 'quote-form-resend', label: t('quoteForm.actions.resend', { defaultValue: 'Resend' }), onClick: () => void handleResendQuote(), disabled: isWorking },
+        { id: 'quote-form-reminder', label: t('quoteForm.actions.sendReminder', { defaultValue: 'Send reminder' }), onClick: () => void handleSendReminder(), disabled: isWorking },
+        { id: 'quote-form-cancel-quote', label: t('quoteForm.actions.cancelQuote', { defaultValue: 'Cancel quote' }), onClick: () => void handleCancelQuote(), disabled: isWorking },
+      ];
+    }
+    if (quoteStatus === 'accepted') {
+      const items: OverflowItem[] = [];
+      if (canConvertToContract) items.push({ id: 'quote-form-convert-contract', label: t('quoteForm.actions.convertToContract', { defaultValue: 'Convert to contract' }), onClick: () => void handleOpenConversionDialog('contract'), disabled: isWorking || isPreviewLoading });
+      if (canConvertToInvoice) items.push({ id: 'quote-form-convert-invoice', label: t('quoteForm.actions.convertToInvoice', { defaultValue: 'Convert to invoice' }), onClick: () => void handleOpenConversionDialog('invoice'), disabled: isWorking || isPreviewLoading });
+      if (canConvertToBoth) items.push({ id: 'quote-form-convert-both', label: t('quoteForm.actions.convertToBoth', { defaultValue: 'Convert to both' }), onClick: () => void handleOpenConversionDialog('both'), disabled: isWorking || isPreviewLoading });
+      // Remove the item whose id matches the primary so we don't duplicate.
+      return items.filter((i) => i.id !== primaryAction?.id);
+    }
+    return [];
+  };
+
+  const overflowItems = resolveOverflowItems();
+
   if (isLoading) {
     return (
       <Card size="2">
@@ -629,290 +963,566 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Render helpers
+  // ---------------------------------------------------------------------------
+
+  const formattedTotal = formatDraftQuoteMoney(draftTotals.total_amount, form.currency_code);
+  const formattedSubtotal = formatDraftQuoteMoney(draftTotals.subtotal, form.currency_code);
+  const formattedDiscount = formatDraftQuoteMoney(draftTotals.discount_total, form.currency_code);
+  const formattedTax = formatDraftQuoteMoney(draftTotals.tax, form.currency_code);
+  const formattedRecurringMonthly = recurringMonthlySubtotal > 0
+    ? formatDraftQuoteMoney(recurringMonthlySubtotal, form.currency_code)
+    : null;
+
+  const headerTitle = isTemplate
+    ? (isEditMode
+        ? t('quoteForm.header.editTemplate', { defaultValue: 'Edit Quote Template' })
+        : t('quoteForm.header.newTemplate', { defaultValue: 'New Quote Template' }))
+    : (form.title || (isEditMode
+        ? t('quoteForm.header.editQuote', { defaultValue: 'Edit Quote' })
+        : t('quoteForm.header.newQuote', { defaultValue: 'New Quote' })));
+
+  const breadcrumbParts = isTemplate
+    ? [
+        t('quoteForm.breadcrumb.billing', { defaultValue: 'Billing' }),
+        t('quoteForm.breadcrumb.quoteTemplates', { defaultValue: 'Quote Templates' }),
+        headerTitle,
+      ]
+    : [
+        t('quoteForm.breadcrumb.billing', { defaultValue: 'Billing' }),
+        t('quoteForm.breadcrumb.quotes', { defaultValue: 'Quotes' }),
+        quote?.quote_number ?? t('quoteForm.breadcrumb.newQuote', { defaultValue: 'New quote' }),
+      ];
+
+  const subtitleLine = isTemplate
+    ? t('quoteForm.subtitle.template', { defaultValue: 'Template · {{description}}', description: form.description || '' })
+    : (() => {
+        const parts: string[] = [];
+        if (quote?.quote_number) parts.push(quote.quote_number);
+        if (selectedClient?.client_name) parts.push(t('quoteForm.subtitle.forClient', { defaultValue: 'For {{clientName}}', clientName: selectedClient.client_name }));
+        if (form.valid_until) {
+          parts.push(t('quoteForm.subtitle.expires', { defaultValue: 'Expires {{date}}', date: new Date(form.valid_until + 'T00:00:00').toLocaleDateString() }));
+        }
+        return parts.join(' · ');
+      })();
+
   return (
     <Card size="2">
-      <Box p="4" className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-semibold">
-              {isTemplate
-                ? (isEditMode ? 'Edit Quote Template' : 'New Quote Template')
-                : isReadOnly
-                  ? (quote?.quote_number ? `Quote ${quote.quote_number}${quote.version > 1 ? ` v${quote.version}` : ''}` : 'Quote')
-                  : (isEditMode ? 'Edit Quote' : 'New Quote')}
-            </h2>
-            {isEditMode && quote && !isTemplate && (
-              <QuoteStatusBadge status={quoteStatus} />
+      <Box p="4" className="space-y-6">
+        {/* ============ TOP HEADER BAR ============ */}
+        <header className="flex flex-col gap-3 border-b border-border pb-4 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0 flex-1 space-y-2">
+            <nav className="text-xs text-muted-foreground">
+              {breadcrumbParts.map((part, idx) => (
+                <span key={`${part}-${idx}`}>
+                  {idx > 0 && <span className="mx-1">›</span>}
+                  <span>{part}</span>
+                </span>
+              ))}
+            </nav>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-semibold text-foreground">{headerTitle}</h2>
+              {isEditMode && quote && !isTemplate && (
+                <>
+                  <QuoteStatusBadge status={quoteStatus} />
+                  {quote.version > 1 && (
+                    <span className="text-xs text-muted-foreground">
+                      {t('quoteForm.header.version', { defaultValue: 'v{{version}}', version: quote.version })}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+            {subtitleLine && (
+              <p className="text-sm text-muted-foreground">{subtitleLine}</p>
+            )}
+            {isReadOnly && (
+              <p className="text-xs text-muted-foreground">
+                {t('quoteForm.readOnlyNotice', { defaultValue: 'This quote is read-only. To make changes, create a new revision.' })}
+              </p>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {isEditMode && quote && !isTemplate && (
-              <>
-                <Button id="quote-form-download-pdf" variant="outline" onClick={() => void handleDownloadPdf()} disabled={isWorking}>Download PDF</Button>
-                <Button id="quote-form-duplicate" variant="outline" onClick={() => void handleDuplicateQuote()} disabled={isWorking}>Duplicate</Button>
-              </>
-            )}
-            <Button id="quote-form-cancel" variant="outline" onClick={onCancel}>Back</Button>
-          </div>
-        </div>
 
-        {/* Status info banners */}
+          <div className="flex flex-col items-stretch gap-2 md:items-end">
+            {!isTemplate && (
+              <div className="text-right">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t('quoteForm.header.quoteTotalLabel', { defaultValue: 'Quote total' })}
+                </div>
+                <div className="text-2xl font-semibold text-foreground">{formattedTotal}</div>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {isEditMode && quote && !isTemplate && (
+                <>
+                  <Button id="quote-form-download-pdf" variant="outline" onClick={() => void handleDownloadPdf()} disabled={isWorking}>
+                    {t('quoteForm.actions.pdf', { defaultValue: 'PDF' })}
+                  </Button>
+                  <Button id="quote-form-duplicate" variant="outline" onClick={() => void handleDuplicateQuote()} disabled={isWorking}>
+                    {t('quoteForm.actions.duplicate', { defaultValue: 'Duplicate' })}
+                  </Button>
+                </>
+              )}
+              <Button id="quote-form-cancel" variant="outline" onClick={onCancel}>
+                {t('quoteForm.actions.back', { defaultValue: 'Back' })}
+              </Button>
+              {secondaryAction && (
+                <Button id={secondaryAction.id} variant="outline" onClick={secondaryAction.onClick} disabled={secondaryAction.disabled}>
+                  {secondaryAction.label}
+                </Button>
+              )}
+              {primaryAction && !isReadOnly && (
+                <Button id={primaryAction.id} onClick={primaryAction.onClick} disabled={primaryAction.disabled}>
+                  {primaryAction.label}
+                </Button>
+              )}
+              {overflowItems.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      id="quote-form-overflow"
+                      variant="outline"
+                      className="h-9 w-9 p-0"
+                      aria-label={t('quoteForm.actions.moreActions', { defaultValue: 'More actions' })}
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {overflowItems.map((item) => (
+                      <DropdownMenuItem key={item.id} id={`${item.id}-menu-item`} onClick={item.onClick} disabled={item.disabled}>
+                        {item.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* ============ STATUS BANNERS ============ */}
         {isEditMode && quote && !isTemplate && quoteStatus === 'accepted' && (
           <Alert>
-            <AlertTitle>Quote Accepted</AlertTitle>
+            <AlertTitle>{t('quoteForm.banners.acceptedTitle', { defaultValue: 'Quote Accepted' })}</AlertTitle>
             <AlertDescription>
-              {quote.accepted_by_name && <>Accepted by: {quote.accepted_by_name}<br /></>}
-              {quote.accepted_at && <>Accepted on: {new Date(quote.accepted_at).toLocaleDateString()}</>}
+              {quote.accepted_by_name && <>{t('quoteForm.banners.acceptedBy', { defaultValue: 'Accepted by: {{name}}', name: quote.accepted_by_name })}<br /></>}
+              {quote.accepted_at && <>{t('quoteForm.banners.acceptedOn', { defaultValue: 'Accepted on: {{date}}', date: new Date(quote.accepted_at).toLocaleDateString() })}</>}
             </AlertDescription>
           </Alert>
         )}
         {isEditMode && quote && !isTemplate && quoteStatus === 'rejected' && (
           <Alert variant="destructive">
-            <AlertTitle>Quote Rejected</AlertTitle>
+            <AlertTitle>{t('quoteForm.banners.rejectedTitle', { defaultValue: 'Quote Rejected' })}</AlertTitle>
             <AlertDescription>
-              {quote.rejected_at && <>Rejected on: {new Date(quote.rejected_at as string).toLocaleDateString()}<br /></>}
-              {quote.rejection_reason && <>Reason: {quote.rejection_reason}</>}
+              {quote.rejected_at && <>{t('quoteForm.banners.rejectedOn', { defaultValue: 'Rejected on: {{date}}', date: new Date(quote.rejected_at as string).toLocaleDateString() })}<br /></>}
+              {quote.rejection_reason && <>{t('quoteForm.banners.rejectedReason', { defaultValue: 'Reason: {{reason}}', reason: quote.rejection_reason })}</>}
             </AlertDescription>
           </Alert>
         )}
         {isEditMode && quote && !isTemplate && quoteStatus === 'converted' && (
           <Alert>
-            <AlertTitle>Quote Converted</AlertTitle>
-            <AlertDescription>This quote has been converted to a contract and/or invoice.</AlertDescription>
+            <AlertTitle>{t('quoteForm.banners.convertedTitle', { defaultValue: 'Quote Converted' })}</AlertTitle>
+            <AlertDescription>{t('quoteForm.banners.convertedDescription', { defaultValue: 'This quote has been converted to a contract and/or invoice.' })}</AlertDescription>
           </Alert>
         )}
 
-        {/* Workflow action buttons */}
-        {isEditMode && quote && !isTemplate && (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
-            {quoteStatus === 'draft' && (
-              <>
-                {approvalRequired ? (
-                  <Button id="quote-form-submit-approval" onClick={() => void handleSubmitForApproval()} disabled={isWorking}>Submit for Approval</Button>
-                ) : (
-                  <Button id="quote-form-send" onClick={() => setIsSendDialogOpen(true)} disabled={isWorking}>Send to Client</Button>
-                )}
-              </>
-            )}
-            {quoteStatus === 'pending_approval' && (
-              <>
-                <Button id="quote-form-approve" onClick={() => setApprovalDialogMode('approve')} disabled={isWorking}>Approve</Button>
-                <Button id="quote-form-request-changes" variant="outline" onClick={() => setApprovalDialogMode('changes')} disabled={isWorking}>Request Changes</Button>
-              </>
-            )}
-            {quoteStatus === 'approved' && (
-              <Button id="quote-form-send-approved" onClick={() => setIsSendDialogOpen(true)} disabled={isWorking}>Send to Client</Button>
-            )}
-            {quoteStatus === 'sent' && (
-              <>
-                <Button id="quote-form-revise" onClick={() => void handleReviseQuote()} disabled={isWorking}>Revise</Button>
-                <Button id="quote-form-resend" variant="outline" onClick={() => void handleResendQuote()} disabled={isWorking}>Resend</Button>
-                <Button id="quote-form-reminder" variant="outline" onClick={() => void handleSendReminder()} disabled={isWorking}>Send Reminder</Button>
-                <Button id="quote-form-cancel-quote" variant="outline" onClick={() => void handleCancelQuote()} disabled={isWorking}>Cancel Quote</Button>
-              </>
-            )}
-            {quoteStatus === 'accepted' && (
-              <>
-                <Button id="quote-form-convert-contract" onClick={() => void handleOpenConversionDialog('contract')} disabled={isWorking || isPreviewLoading}>Convert to Contract</Button>
-                <Button id="quote-form-convert-invoice" onClick={() => void handleOpenConversionDialog('invoice')} disabled={isWorking || isPreviewLoading}>Convert to Invoice</Button>
-                <Button id="quote-form-convert-both" variant="outline" onClick={() => void handleOpenConversionDialog('both')} disabled={isWorking || isPreviewLoading}>Convert to Both</Button>
-              </>
-            )}
-            {(quoteStatus === 'rejected' || quoteStatus === 'expired') && (
-              <Button id="quote-form-revise" onClick={() => void handleReviseQuote()} disabled={isWorking}>Create New Revision</Button>
-            )}
-            {isReadOnly && (
-              <span className="ml-auto text-xs text-muted-foreground">
-                This quote is read-only. To make changes, create a new revision.
-              </span>
-            )}
-          </div>
-        )}
-
+        {/* Notice / error alerts */}
         {notice && (
           <Alert>
-            <AlertTitle>Quote</AlertTitle>
+            <AlertTitle>{t('quoteForm.noticeTitle', { defaultValue: 'Quote' })}</AlertTitle>
             <AlertDescription>{notice}</AlertDescription>
           </Alert>
         )}
         {error && (
           <Alert variant="destructive">
-            <AlertTitle>Quote</AlertTitle>
+            <AlertTitle>{t('quoteForm.noticeTitle', { defaultValue: 'Quote' })}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
-            Title
-            <Input value={form.title} onChange={(event) => handleChange('title', event.target.value)} disabled={isReadOnly} />
-          </label>
+        {/* ============ TWO-COLUMN LAYOUT ============ */}
+        <div className={isTemplate ? '' : 'grid gap-6 lg:grid-cols-3'}>
+          {/* MAIN COLUMN */}
+          <div className={isTemplate ? 'space-y-6' : 'space-y-6 lg:col-span-2'}>
+            {/* --- Essentials card --- */}
+            <section className="rounded-lg border border-border bg-background p-5 shadow-sm">
+              <header className="mb-4 space-y-1">
+                <h3 className="text-base font-semibold">{t('quoteForm.essentials.title', { defaultValue: 'Essentials' })}</h3>
+                <p className="text-xs text-muted-foreground">
+                  {t('quoteForm.essentials.subtitle', { defaultValue: 'Shown to the client on the quote document.' })}
+                </p>
+              </header>
 
-          <label className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
-            Description / Scope
-            <TextArea value={form.description} onChange={(event) => handleChange('description', event.target.value)} rows={4} disabled={isReadOnly} />
-          </label>
+              <div className="grid gap-4 md:grid-cols-3">
+                <label className="flex flex-col gap-1 text-sm font-medium md:col-span-3">
+                  {t('quoteForm.essentials.titleField', { defaultValue: 'Title' })}
+                  <Input value={form.title} onChange={(event) => handleChange('title', event.target.value)} disabled={isReadOnly} />
+                </label>
 
-          {!isTemplate && (
-            <div className="flex flex-col gap-1 text-sm font-medium">
-              <label htmlFor="quote-client">Client</label>
-              <ClientPicker
-                id="quote-client"
-                clients={clients}
-                selectedClientId={form.client_id || null}
-                onSelect={(clientId) => {
-                  if (isReadOnly) return;
-                  handleChange('client_id', clientId || '');
-                  if (clientId !== form.client_id) {
-                    handleChange('contact_id', '');
-                  }
-                }}
-                filterState={clientFilterState}
-                onFilterStateChange={setClientFilterState}
-                clientTypeFilter={clientTypeFilter}
-                onClientTypeFilterChange={setClientTypeFilter}
-                placeholder="Select client"
-                disabled={isReadOnly}
+                <label className="flex flex-col gap-1 text-sm font-medium md:col-span-3">
+                  {t('quoteForm.essentials.descriptionField', { defaultValue: 'Description / Scope' })}
+                  <TextArea value={form.description} onChange={(event) => handleChange('description', event.target.value)} rows={4} disabled={isReadOnly} />
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {t('quoteForm.essentials.descriptionHelp', { defaultValue: 'A short paragraph that appears just under the title on the PDF.' })}
+                  </span>
+                </label>
+
+                {!isTemplate && (
+                  <div className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
+                    <label htmlFor="quote-client">{t('quoteForm.essentials.client', { defaultValue: 'Client' })}</label>
+                    <ClientPicker
+                      id="quote-client"
+                      clients={clients}
+                      selectedClientId={form.client_id || null}
+                      onSelect={(clientId) => {
+                        if (isReadOnly) return;
+                        handleChange('client_id', clientId || '');
+                        if (clientId !== form.client_id) {
+                          handleChange('contact_id', '');
+                        }
+                      }}
+                      filterState={clientFilterState}
+                      onFilterStateChange={setClientFilterState}
+                      clientTypeFilter={clientTypeFilter}
+                      onClientTypeFilterChange={setClientTypeFilter}
+                      placeholder={t('quoteForm.essentials.clientPlaceholder', { defaultValue: 'Select client' })}
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                )}
+
+                {!isTemplate && (
+                  <div className="flex flex-col gap-1 text-sm font-medium">
+                    <label htmlFor="quote-contact">{t('quoteForm.essentials.contact', { defaultValue: 'Contact' })}</label>
+                    <ContactPicker
+                      id="quote-contact"
+                      contacts={availableContacts}
+                      value={form.contact_id || ''}
+                      onValueChange={(value) => { if (!isReadOnly) handleChange('contact_id', value); }}
+                      clientId={form.client_id || undefined}
+                      placeholder={t('quoteForm.essentials.contactPlaceholder', { defaultValue: 'Select contact' })}
+                      buttonWidth="full"
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-1 text-sm font-medium">
+                  <label htmlFor="quote-currency">{t('quoteForm.essentials.currency', { defaultValue: 'Currency' })}</label>
+                  <CustomSelect
+                    id="quote-currency"
+                    value={form.currency_code}
+                    onValueChange={(value) => handleChange('currency_code', value)}
+                    placeholder={t('quoteForm.essentials.currencyPlaceholder', { defaultValue: 'Select currency' })}
+                    options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
+                    disabled={isReadOnly}
+                  />
+                </div>
+
+                {!isTemplate && (
+                  <div className="flex flex-col gap-1 text-sm font-medium">
+                    <label htmlFor="quote-date">{t('quoteForm.essentials.quoteDate', { defaultValue: 'Quote date' })}</label>
+                    <DatePicker
+                      value={form.quote_date ? new Date(form.quote_date + 'T00:00:00') : undefined}
+                      onChange={(date) => { if (!isReadOnly) handleChange('quote_date', date ? date.toISOString().slice(0, 10) : ''); }}
+                      className="w-full"
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                )}
+
+                {!isTemplate && (
+                  <div className="flex flex-col gap-1 text-sm font-medium">
+                    <label htmlFor="quote-valid-until">{t('quoteForm.essentials.validUntil', { defaultValue: 'Valid until' })}</label>
+                    <DatePicker
+                      value={form.valid_until ? new Date(form.valid_until + 'T00:00:00') : undefined}
+                      onChange={(date) => { if (!isReadOnly) handleChange('valid_until', date ? date.toISOString().slice(0, 10) : ''); }}
+                      className="w-full"
+                      disabled={isReadOnly}
+                    />
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {t('quoteForm.essentials.validUntilHelp', { defaultValue: 'Quote auto-expires on this date.' })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* --- Line items card --- */}
+            <section className="rounded-lg border border-border bg-background p-5 shadow-sm">
+              <header className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className="space-y-1">
+                  <h3 className="text-base font-semibold">{t('quoteForm.lineItems.title', { defaultValue: 'Line items' })}</h3>
+                  <p className="text-xs text-muted-foreground">
+                    {lineItemCount === 0
+                      ? t('quoteForm.lineItems.subtitleEmpty', { defaultValue: 'No items yet.' })
+                      : t('quoteForm.lineItems.subtitleCount', {
+                          defaultValue: '{{count}} items · {{mix}}',
+                          count: lineItemCount,
+                          mix: hasRecurring && hasOneTime
+                            ? t('quoteForm.lineItems.mixBoth', { defaultValue: 'recurring and one-time' })
+                            : hasRecurring
+                              ? t('quoteForm.lineItems.mixRecurring', { defaultValue: 'recurring' })
+                              : t('quoteForm.lineItems.mixOneTime', { defaultValue: 'one-time' }),
+                        })}
+                  </p>
+                </div>
+                {!isReadOnly && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {!isTemplate && clientLocations.length >= 2 && !showLocationGroups && (
+                      <Button
+                        id="quote-form-add-location"
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAddLocationGroup}
+                        disabled={isSaving}
+                      >
+                        {t('quoteForm.lineItems.addLocation', { defaultValue: '+ Add location' })}
+                      </Button>
+                    )}
+                    {!isEditMode && templates.length > 0 && (
+                      <CustomSelect
+                        id="quote-form-template-picker"
+                        value={form.template_id || undefined}
+                        onValueChange={(value) => void handleTemplateChange(value)}
+                        placeholder={t('quoteForm.lineItems.fromTemplate', { defaultValue: '+ From template' })}
+                        allowClear
+                        options={templates.map((template) => ({
+                          value: template.quote_id,
+                          label: template.title,
+                        }))}
+                      />
+                    )}
+                  </div>
+                )}
+              </header>
+
+              <QuoteLineItemsEditor
+                items={lineItems}
+                currencyCode={form.currency_code}
+                onChange={setLineItems}
+                disabled={isSaving || isReadOnly}
+                locations={clientLocations}
+                showLocationGroups={showLocationGroups}
+                extraGroupLocationIds={extraGroupLocationIds}
+                onAddLocationGroup={
+                  !isTemplate && !isReadOnly ? handleAddLocationGroup : undefined
+                }
+                onRemoveLocationGroup={handleRemoveLocationGroup}
               />
-            </div>
-          )}
+            </section>
 
+            {/* --- Client-facing text card --- */}
+            <section className="rounded-lg border border-border bg-background p-5 shadow-sm">
+              <header className="mb-4 space-y-1">
+                <h3 className="text-base font-semibold">{t('quoteForm.clientFacing.title', { defaultValue: 'Client-facing text' })}</h3>
+                <p className="text-xs text-muted-foreground">
+                  {t('quoteForm.clientFacing.subtitle', { defaultValue: 'Appears on the PDF, below the totals.' })}
+                </p>
+              </header>
+
+              <div className="grid gap-4">
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  {t('quoteForm.clientFacing.notes', { defaultValue: 'Notes to client (Optional)' })}
+                  <TextArea value={form.client_notes} onChange={(event) => handleChange('client_notes', event.target.value)} rows={3} disabled={isReadOnly} />
+                </label>
+
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  {t('quoteForm.clientFacing.terms', { defaultValue: 'Terms & conditions (Optional)' })}
+                  <TextArea value={form.terms_and_conditions} onChange={(event) => handleChange('terms_and_conditions', event.target.value)} rows={4} disabled={isReadOnly} />
+                </label>
+              </div>
+            </section>
+
+            {/* --- More details (collapsible) --- */}
+            {!isTemplate && (
+              <section id="quote-form-more-details" className="rounded-lg border border-border bg-background shadow-sm">
+                <button
+                  id="quote-form-more-details-toggle"
+                  type="button"
+                  onClick={() => setIsMoreDetailsOpen((open) => !open)}
+                  className="flex w-full items-center justify-between gap-3 p-5 text-left"
+                  aria-expanded={isMoreDetailsOpen}
+                >
+                  <div className="space-y-1">
+                    <h3 className="text-base font-semibold">{t('quoteForm.moreDetails.title', { defaultValue: 'More details' })}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {t('quoteForm.moreDetails.subtitle', { defaultValue: 'PO number, opportunity, PDF layout' })}
+                    </p>
+                  </div>
+                  {isMoreDetailsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </button>
+                {isMoreDetailsOpen && (
+                  <div className="grid gap-4 border-t border-border p-5 md:grid-cols-2">
+                    <label className="flex flex-col gap-1 text-sm font-medium">
+                      {t('quoteForm.moreDetails.poNumber', { defaultValue: 'PO number' })}
+                      <Input value={form.po_number} onChange={(event) => handleChange('po_number', event.target.value)} disabled={isReadOnly} />
+                    </label>
+
+                    <label className="flex flex-col gap-1 text-sm font-medium">
+                      {t('quoteForm.moreDetails.opportunity', { defaultValue: 'Opportunity' })}
+                      <Input
+                        id="quote-form-opportunity"
+                        value={form.opportunity_id}
+                        onChange={(event) => handleChange('opportunity_id', event.target.value)}
+                        placeholder={t('quoteForm.moreDetails.opportunityPlaceholder', { defaultValue: 'Opportunity ID (optional)' })}
+                        disabled={isReadOnly}
+                      />
+                    </label>
+
+                    <div className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
+                      <label htmlFor="quote-document-layout">{t('quoteForm.moreDetails.pdfLayout', { defaultValue: 'PDF layout' })}</label>
+                      <CustomSelect
+                        id="quote-document-layout"
+                        value={documentTemplateId || undefined}
+                        onValueChange={(value) => setDocumentTemplateId(value || '')}
+                        placeholder={t('quoteForm.moreDetails.pdfLayoutPlaceholder', { defaultValue: 'Use default layout' })}
+                        allowClear
+                        options={documentTemplates.map((dt) => ({
+                          value: dt.template_id,
+                          label: `${dt.name}${dt.isStandard ? ' (Standard)' : ''}`,
+                        }))}
+                        disabled={isReadOnly}
+                      />
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {t('quoteForm.moreDetails.pdfLayoutHelp', { defaultValue: 'Choose which layout the client will see. Leave default to use tenant default.' })}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* --- Footer row --- */}
+            <div className="flex flex-col gap-3 border-t border-border pt-4 md:flex-row md:items-center md:justify-between">
+              <div className="text-xs text-muted-foreground" id="quote-form-autosave-indicator">
+                {lastSavedAt
+                  ? t('quoteForm.footer.savedAgo', { defaultValue: 'Changes saved · {{ago}}', ago: formatRelativeMinutes(lastSavedAt) ?? '' })
+                  : isSaving
+                    ? t('quoteForm.footer.saving', { defaultValue: 'Saving…' })
+                    : t('quoteForm.footer.unsaved', { defaultValue: 'Unsaved changes' })}
+              </div>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button id="quote-form-cancel-bottom" variant="outline" onClick={onCancel}>
+                  {t('quoteForm.actions.cancel', { defaultValue: 'Cancel' })}
+                </Button>
+                {isEditMode && quote && !isTemplate && (
+                  <Button id="quote-form-preview-pdf" variant="outline" onClick={() => void handleDownloadPdf()} disabled={isWorking}>
+                    {t('quoteForm.actions.previewPdf', { defaultValue: 'Preview PDF' })}
+                  </Button>
+                )}
+                {primaryAction && !isReadOnly && (
+                  <Button id={`${primaryAction.id}-footer`} onClick={primaryAction.onClick} disabled={primaryAction.disabled}>
+                    {primaryAction.label}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT SIDEBAR */}
           {!isTemplate && (
-            <div className="flex flex-col gap-1 text-sm font-medium">
-              <label htmlFor="quote-contact">Contact</label>
-              <ContactPicker
-                id="quote-contact"
-                contacts={availableContacts}
-                value={form.contact_id || ''}
-                onValueChange={(value) => { if (!isReadOnly) handleChange('contact_id', value); }}
-                clientId={form.client_id || undefined}
-                placeholder="Select contact"
-                buttonWidth="full"
-                disabled={isReadOnly}
-              />
-            </div>
-          )}
+            <aside className="space-y-4 lg:sticky lg:top-4 lg:h-fit lg:self-start">
+              {/* Quote Total card */}
+              <section className="rounded-lg border border-border bg-background p-5 shadow-sm">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t('quoteForm.sidebar.quoteTotal', { defaultValue: 'Quote total' })}
+                </div>
+                <div className="mt-1 text-2xl font-semibold">{formattedTotal}</div>
+                {formattedRecurringMonthly && (
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    {t('quoteForm.sidebar.recurringPerMonth', { defaultValue: '{{amount}} recurring / month', amount: formattedRecurringMonthly })}
+                  </div>
+                )}
+                <dl className="mt-4 space-y-1.5 text-sm">
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">{t('quoteForm.sidebar.subtotal', { defaultValue: 'Subtotal' })}</dt>
+                    <dd>{formattedSubtotal}</dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">{t('quoteForm.sidebar.discounts', { defaultValue: 'Discounts' })}</dt>
+                    <dd>{draftTotals.discount_total > 0 ? `−${formattedDiscount}` : formattedDiscount}</dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">{t('quoteForm.sidebar.tax', { defaultValue: 'Tax' })}</dt>
+                    <dd>{formattedTax}</dd>
+                  </div>
+                </dl>
+              </section>
 
-          <div className="flex flex-col gap-1 text-sm font-medium">
-            <label htmlFor="quote-currency">Currency</label>
-            <CustomSelect
-              id="quote-currency"
-              value={form.currency_code}
-              onValueChange={(value) => handleChange('currency_code', value)}
-              placeholder="Select currency"
-              options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
-              disabled={isReadOnly}
-            />
-          </div>
+              {/* Status card */}
+              {isEditMode && quote && (
+                <section className="rounded-lg border border-border bg-background p-5 shadow-sm">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t('quoteForm.sidebar.statusLabel', { defaultValue: 'Status' })}
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <QuoteStatusBadge status={quoteStatus} />
+                    {quote.version > 1 && (
+                      <span className="text-xs text-muted-foreground">
+                        {t('quoteForm.header.version', { defaultValue: 'v{{version}}', version: quote.version })}
+                      </span>
+                    )}
+                  </div>
+                </section>
+              )}
 
-          {!isEditMode && (
-            <div className="flex flex-col gap-1 text-sm font-medium">
-              <label htmlFor="quote-template">Create From Template</label>
-              <CustomSelect
-                id="quote-template"
-                value={form.template_id || undefined}
-                onValueChange={(value) => void handleTemplateChange(value)}
-                placeholder="Start from scratch"
-                allowClear
-                options={templates.map((template) => ({
-                  value: template.quote_id,
-                  label: template.title,
-                }))}
-              />
-            </div>
-          )}
+              {/* Approval card */}
+              {isEditMode && quote && approvalRequired && (quoteStatus === 'draft' || quoteStatus === 'pending_approval') && (
+                <section className="rounded-lg border border-border bg-background p-5 shadow-sm">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t('quoteForm.sidebar.approvalLabel', { defaultValue: 'Approval' })}
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {t('quoteForm.sidebar.approvalMessage', { defaultValue: 'Quotes need sales lead approval before sending.' })}
+                  </p>
+                  {quoteStatus === 'draft' && (
+                    <Button
+                      id="quote-form-sidebar-submit-approval"
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 w-full"
+                      onClick={() => void handleSubmitForApproval()}
+                      disabled={isWorking}
+                    >
+                      {t('quoteForm.actions.requestApproval', { defaultValue: 'Request approval' })}
+                    </Button>
+                  )}
+                </section>
+              )}
 
-          {!isTemplate && (
-            <div className="flex flex-col gap-1 text-sm font-medium">
-              <label htmlFor="quote-date">Quote Date</label>
-              <DatePicker
-                value={form.quote_date ? new Date(form.quote_date + 'T00:00:00') : undefined}
-                onChange={(date) => { if (!isReadOnly) handleChange('quote_date', date ? date.toISOString().slice(0, 10) : ''); }}
-                className="w-full"
-                disabled={isReadOnly}
-              />
-            </div>
-          )}
-
-          {!isTemplate && (
-            <div className="flex flex-col gap-1 text-sm font-medium">
-              <label htmlFor="quote-valid-until">Valid Until</label>
-              <DatePicker
-                value={form.valid_until ? new Date(form.valid_until + 'T00:00:00') : undefined}
-                onChange={(date) => { if (!isReadOnly) handleChange('valid_until', date ? date.toISOString().slice(0, 10) : ''); }}
-                className="w-full"
-                disabled={isReadOnly}
-              />
-            </div>
-          )}
-
-          {!isTemplate && (
-            <label className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
-              PO Number
-              <Input value={form.po_number} onChange={(event) => handleChange('po_number', event.target.value)} disabled={isReadOnly} />
-            </label>
-          )}
-
-          <label className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
-            Notes to Client
-            <TextArea value={form.client_notes} onChange={(event) => handleChange('client_notes', event.target.value)} rows={3} disabled={isReadOnly} />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
-            Terms & Conditions
-            <TextArea value={form.terms_and_conditions} onChange={(event) => handleChange('terms_and_conditions', event.target.value)} rows={4} disabled={isReadOnly} />
-          </label>
-
-          <div className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
-            <label htmlFor="quote-document-layout">Quote Layout</label>
-            <p className="text-xs text-muted-foreground">Choose which layout to use for this quote&apos;s PDF. Leave empty to use the default.</p>
-            <CustomSelect
-              id="quote-document-layout"
-              value={documentTemplateId || undefined}
-              onValueChange={(value) => setDocumentTemplateId(value || '')}
-              placeholder="Use default layout"
-              allowClear
-              options={documentTemplates.map((t) => ({
-                value: t.template_id,
-                label: `${t.name}${t.isStandard ? ' (Standard)' : ''}`,
-              }))}
-              disabled={isReadOnly}
-            />
-          </div>
-        </div>
-
-        <QuoteLineItemsEditor
-          items={lineItems}
-          currencyCode={form.currency_code}
-          onChange={setLineItems}
-          disabled={isSaving || isReadOnly}
-        />
-
-        <section className="grid gap-3 rounded-lg border border-border p-4 md:grid-cols-2 xl:grid-cols-4">
-          <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Subtotal</div>
-            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.subtotal, form.currency_code)}</div>
-          </div>
-          <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Discounts</div>
-            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.discount_total, form.currency_code)}</div>
-          </div>
-          <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Tax</div>
-            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.tax, form.currency_code)}</div>
-          </div>
-          <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Total</div>
-            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.total_amount, form.currency_code)}</div>
-          </div>
-        </section>
-
-        <div className="flex justify-end gap-2">
-          <Button id="quote-form-cancel-bottom" variant="outline" onClick={onCancel}>Back</Button>
-          {!isReadOnly && (
-            <Button id="quote-form-save" onClick={() => void handleSubmit()} disabled={isSaving}>
-              {isSaving ? 'Saving...' : isTemplate ? 'Save Template' : 'Save Quote'}
-            </Button>
+              {/* Document Layout card */}
+              <section className="rounded-lg border border-border bg-background p-5 shadow-sm">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t('quoteForm.sidebar.documentLayoutLabel', { defaultValue: 'Document layout' })}
+                </div>
+                <div className="mt-2">
+                  <div className="text-sm font-medium text-foreground">
+                    {selectedDocTemplate?.name ?? t('quoteForm.sidebar.defaultLayout', { defaultValue: 'Tenant default' })}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {selectedDocTemplate
+                      ? (selectedDocTemplate.isStandard
+                          ? t('quoteForm.sidebar.standardLayout', { defaultValue: 'Standard' })
+                          : t('quoteForm.sidebar.customLayout', { defaultValue: 'Custom' }))
+                      : t('quoteForm.sidebar.tenantDefault', { defaultValue: 'Tenant default' })}
+                  </div>
+                  <Button
+                    id="quote-form-sidebar-change-layout"
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={openMoreDetails}
+                    disabled={isReadOnly}
+                  >
+                    {t('quoteForm.sidebar.changeLayout', { defaultValue: 'Change' })}
+                  </Button>
+                </div>
+              </section>
+            </aside>
           )}
         </div>
       </Box>

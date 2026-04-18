@@ -12,13 +12,21 @@ import { buildDocumentGeneratedPayload } from '@alga-psa/workflow-streams';
 
 import { getInvoiceForRendering } from '../actions/invoiceQueries';
 import { getInvoiceTemplate, getInvoiceTemplates } from '../actions/invoiceTemplates';
-import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
+import {
+  enrichInvoiceViewModelWithLocations,
+  mapDbInvoiceToWasmViewModel,
+} from '../lib/adapters/invoiceAdapters';
 import { mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { resolvePdfPrintOptionsFromAst } from '../lib/invoice-template-ast/printSettings';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
+import {
+  autoSelectStandardInvoiceTemplateCode,
+  getStandardTemplateAstByCode,
+  STANDARD_INVOICE_BY_LOCATION_CODE,
+} from '../lib/invoice-template-ast/standardTemplates';
 import { getStandardQuoteTemplateAstByCode } from '../lib/quote-template-ast/standardTemplates';
 import { resolveQuoteTemplateAst } from '../lib/quote-template-ast/templateSelection';
 import { browserPoolService } from './browserPoolService';
@@ -307,6 +315,28 @@ export class PDFGenerationService {
 
       if (!invoiceViewModel) {
         throw new Error(`Failed to map invoice ${invoiceId} to view model`);
+      }
+
+      await enrichInvoiceViewModelWithLocations(knex, this.tenant, invoiceViewModel);
+
+      // Standard-fallback auto-branch: when no custom template was picked and
+      // the invoice spans ≥2 distinct locations, swap in the by-location
+      // standard template. Custom tenant templates are deliberately not
+      // auto-swapped — they only pick up the new binding if authors opt in.
+      if (
+        selectedTemplate?.isStandard &&
+        !overrideTemplateId &&
+        invoiceViewModel.hasMultipleLocations
+      ) {
+        const fallbackCode = autoSelectStandardInvoiceTemplateCode({
+          hasMultipleLocations: true,
+        });
+        if (fallbackCode === STANDARD_INVOICE_BY_LOCATION_CODE) {
+          const fallbackAst = getStandardTemplateAstByCode(fallbackCode);
+          if (fallbackAst) {
+            templateAst = fallbackAst;
+          }
+        }
       }
 
       const evaluation = evaluateTemplateAst(

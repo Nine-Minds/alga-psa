@@ -17,7 +17,18 @@ import { resolveTemplatePrintSettingsFromAst } from './printSettings';
 type UnknownRecord = Record<string, unknown>;
 
 type RenderScope = {
+  /**
+   * The current row/item for the innermost repeat region. Path expressions
+   * resolve against this value first (same behavior as dynamic-table cells).
+   */
   row?: UnknownRecord;
+  /**
+   * Named item map for repeat regions. When a repeating stack pushes
+   * `scope.items[<node.repeat.itemBinding>] = currentItem`, inner nodes
+   * whose binding ids begin with `<itemBinding>` (e.g. `group.items`) can
+   * resolve against this map instead of the global `evaluation.bindings`.
+   */
+  items?: Record<string, UnknownRecord>;
 };
 
 type RenderContext = {
@@ -346,7 +357,38 @@ const resolveExpressionValue = (
   }
 };
 
-const resolveCollection = (bindingId: string, evaluation: TemplateEvaluationResult): UnknownRecord[] => {
+/**
+ * Resolve an array value referenced by `bindingId` against either the render
+ * scope's named item map (for nested dynamic-tables inside a repeating stack)
+ * or the global evaluation bindings.
+ *
+ * Scope wins when the head of a dotted bindingId matches a key present in
+ * `scope.items`. For example, with an outer repeating stack pushing
+ * `scope.items.group = <currentGroup>`, an inner dynamic-table with
+ * `repeat.sourceBinding.bindingId = 'group.items'` walks the `items` path
+ * against the current group rather than looking up a (non-existent) global
+ * binding called `group.items`. Plain bindingIds and anything that does not
+ * shadow a scope entry fall through to the usual global lookup — so
+ * `lineItems`, `groupsByLocation`, `lineItems.grouped`, etc., behave
+ * identically to before.
+ */
+const resolveCollection = (
+  bindingId: string,
+  evaluation: TemplateEvaluationResult,
+  scope: RenderScope,
+): UnknownRecord[] => {
+  const scopeItems = scope.items;
+  if (scopeItems && bindingId.includes('.')) {
+    const [head, ...rest] = bindingId.split('.');
+    if (head && Object.prototype.hasOwnProperty.call(scopeItems, head)) {
+      const scoped = getPathValue(scopeItems[head], rest.join('.'));
+      if (Array.isArray(scoped)) {
+        return scoped.filter(isRecord);
+      }
+      return [];
+    }
+  }
+
   const value = evaluation.bindings[bindingId];
   if (!Array.isArray(value)) {
     return [];
@@ -391,6 +433,27 @@ const renderNode = (
         gap: '8px',
       };
       const mergedStyle: React.CSSProperties = { ...defaultStackStyle, ...(style ?? {}) };
+
+      if (node.repeat) {
+        const itemBinding = node.repeat.itemBinding;
+        const repeatRows = resolveCollection(node.repeat.sourceBinding.bindingId, evaluation, scope);
+        return (
+          <div key={node.id} id={node.id} className={elementClassName || undefined} style={mergedStyle}>
+            {repeatRows.map((row, index) => {
+              const iterationScope: RenderScope = {
+                row,
+                items: { ...(scope.items ?? {}), [itemBinding]: row },
+              };
+              return (
+                <React.Fragment key={`${node.id}-iter-${index}`}>
+                  {node.children.map((child) => renderNode(child, evaluation, iterationScope, ctx))}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        );
+      }
+
       return (
         <div key={node.id} id={node.id} className={elementClassName || undefined} style={mergedStyle}>
           {node.children.map((child) => renderNode(child, evaluation, scope, ctx))}
@@ -457,7 +520,7 @@ const renderNode = (
     case 'divider':
       return <hr key={node.id} id={node.id} className={elementClassName || undefined} style={style} />;
     case 'table': {
-      const rows = resolveCollection(node.sourceBinding.bindingId, evaluation);
+      const rows = resolveCollection(node.sourceBinding.bindingId, evaluation, scope);
       const { style: headerStyle } = resolveStyleRef(node.headerStyle);
       return (
         <table key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
@@ -508,7 +571,7 @@ const renderNode = (
       );
     }
     case 'dynamic-table': {
-      const rows = resolveCollection(node.repeat.sourceBinding.bindingId, evaluation);
+      const rows = resolveCollection(node.repeat.sourceBinding.bindingId, evaluation, scope);
       const { style: dynamicHeaderStyle } = resolveStyleRef(node.headerStyle);
       return (
         <table key={node.id} id={node.id} className={elementClassName || undefined} style={style}>

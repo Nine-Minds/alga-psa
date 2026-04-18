@@ -49,6 +49,10 @@ export const QUOTE_TEMPLATE_VALUE_BINDINGS: QuoteTemplateValueBindings = {
 export const QUOTE_TEMPLATE_COLLECTION_BINDINGS: QuoteTemplateCollectionBindings = {
   lineItems: { id: 'lineItems', kind: 'collection', path: 'line_items' },
   phases: { id: 'phases', kind: 'collection', path: 'phases' },
+  // Pre-computed per-location groupings for templates that want location
+  // "bands" (one location + address header + rows + per-location subtotal).
+  // Mirrors the `phases` binding shape.
+  groupsByLocation: { id: 'groupsByLocation', kind: 'collection', path: 'groups_by_location' },
   recurringItems: { id: 'recurringItems', kind: 'collection', path: 'recurring_items' },
   onetimeItems: { id: 'onetimeItems', kind: 'collection', path: 'onetime_items' },
   serviceItems: { id: 'serviceItems', kind: 'collection', path: 'service_items' },

@@ -954,10 +954,42 @@ const mapDesignerNodeToAstNode = (
 	              ? 'row'
 	              : 'column'
 	            : undefined;
+	        // Preserve the optional `repeat` region binding that makes a stack
+	        // repeat its children once per item in a source collection. This
+	        // was added alongside `dynamic-table.repeat` as a compound-block
+	        // primitive for per-location (or other grouped) bands. Imported
+	        // AST nodes stash the original `repeat` on metadata; designer-
+	        // authored stacks simply omit it.
+	        const metadata = getWorkspaceNodeMetadata(node);
+	        const importedRepeat = isRecord(metadata.__astStackRepeat)
+	          ? (metadata.__astStackRepeat as Record<string, unknown>)
+	          : null;
+	        const importedSourceBinding = importedRepeat && isRecord(importedRepeat.sourceBinding)
+	          ? (importedRepeat.sourceBinding as Record<string, unknown>)
+	          : null;
+	        const importedSourceBindingId = importedSourceBinding
+	          ? asTrimmedString(importedSourceBinding.bindingId)
+	          : '';
+	        const importedItemBinding = importedRepeat
+	          ? asTrimmedString(importedRepeat.itemBinding)
+	          : '';
+	        const importedKeyPath =
+	          importedRepeat && typeof importedRepeat.keyPath === 'string' && importedRepeat.keyPath.trim().length > 0
+	            ? importedRepeat.keyPath.trim()
+	            : undefined;
+	        const repeat =
+	          importedSourceBindingId.length > 0 && importedItemBinding.length > 0
+	            ? {
+	                sourceBinding: { bindingId: importedSourceBindingId },
+	                itemBinding: importedItemBinding,
+	                ...(importedKeyPath ? { keyPath: importedKeyPath } : {}),
+	              }
+	            : undefined;
 	        return {
 	          ...createBaseNode(node),
 	          type: 'stack',
 	          direction,
+	          ...(repeat ? { repeat } : {}),
 	          children,
 	        };
 	      }
@@ -1026,12 +1058,18 @@ const mapDesignerNodeToAstNode = (
     case 'table':
     case 'dynamic-table': {
       const metadata = getWorkspaceNodeMetadata(node);
-      const collectionPath = resolveCollectionPath(node);
-      const sourceBindingId = resolveCollectionSourceBindingId(
-        collectionPath,
-        registerCollectionBinding,
-        transformOutputBindingId
-      );
+      // If the import preserved a raw source bindingId (e.g. the scope-
+      // resolved `group.items` used inside a repeating stack), round-trip it
+      // verbatim. These ids do not correspond to a global binding and must
+      // not be re-registered as a synthesized `collection.*` entry.
+      const preservedSourceBindingId = asTrimmedString(metadata.__astTableSourceBindingId);
+      const sourceBindingId = preservedSourceBindingId.length > 0
+        ? preservedSourceBindingId
+        : resolveCollectionSourceBindingId(
+            resolveCollectionPath(node),
+            registerCollectionBinding,
+            transformOutputBindingId
+          );
       const headerBg = asTrimmedString(metadata.headerBackgroundColor);
       const headerClr = asTrimmedString(metadata.headerColor);
       const headerStyle: TemplateNodeStyleRef | undefined =
@@ -1784,12 +1822,21 @@ export const importTemplateAstToWorkspace = (
             metadata.placeholder = inputNode.placeholder;
           }
         } else if (inputNode.type === 'dynamic-table' || inputNode.type === 'table') {
-          const collectionPath = resolveImportedCollectionBindingPath(
-            astInput,
+          const rawBindingId =
             inputNode.type === 'dynamic-table'
               ? inputNode.repeat.sourceBinding.bindingId
-              : inputNode.sourceBinding.bindingId
-          );
+              : inputNode.sourceBinding.bindingId;
+          // Preserve the raw source bindingId so scope-resolved bindings
+          // (e.g. `group.items` inside a repeating stack) round-trip back
+          // without being replaced by a synthesized `collection.*` id.
+          const isResolvableGlobalBinding =
+            Boolean(astInput.bindings?.collections?.[rawBindingId]) ||
+            normalizeInvoiceBindingPath(asTrimmedString(astInput.transforms?.outputBindingId)) ===
+              normalizeInvoiceBindingPath(rawBindingId);
+          if (!isResolvableGlobalBinding) {
+            metadata.__astTableSourceBindingId = rawBindingId;
+          }
+          const collectionPath = resolveImportedCollectionBindingPath(astInput, rawBindingId);
           metadata.collectionBindingKey = denormalizeBindingPath(collectionPath);
           metadata.columns = inputNode.columns.map((column) => {
             const mappedColumn: Record<string, unknown> = {
@@ -1860,6 +1907,18 @@ export const importTemplateAstToWorkspace = (
         } else if (inputNode.type === 'section') {
           if (typeof inputNode.title === 'string' && inputNode.title.trim().length > 0) {
             metadata.title = inputNode.title;
+          }
+        } else if (inputNode.type === 'stack') {
+          // Carry the optional `repeat` region binding through so the designer
+          // can round-trip it back on export. Designer-authored stacks never
+          // set this; only imported templates that opted into the repeat
+          // primitive do.
+          if (inputNode.repeat) {
+            metadata.__astStackRepeat = {
+              sourceBinding: { bindingId: inputNode.repeat.sourceBinding.bindingId },
+              itemBinding: inputNode.repeat.itemBinding,
+              ...(inputNode.repeat.keyPath ? { keyPath: inputNode.repeat.keyPath } : {}),
+            };
           }
         }
 

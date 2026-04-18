@@ -69,6 +69,7 @@ export interface IBillingCharge extends TenantEntity {
   is_taxable?: boolean;
   client_contract_id?: string; // Reference to the client contract assignment
   contract_name?: string; // Contract name
+  location_id?: string | null;
   servicePeriodStart?: ISO8601String;
   servicePeriodEnd?: ISO8601String;
   billingTiming?: 'arrears' | 'advance';
@@ -124,6 +125,7 @@ export interface IClientContractLine extends TenantEntity {
   contract_line_name?: string;
   billing_frequency?: string;
   contract_name?: string; // Contract name (added dynamically for contract-associated contract lines)
+  location_id?: string | null;
 }
 
 export interface IClientContractLineCycle extends TenantEntity {
@@ -248,6 +250,7 @@ export interface IContractLine extends TenantEntity {
   custom_rate?: number | null;
   display_order?: number;
   enable_proration?: boolean;
+  location_id?: string | null;
   is_custom?: boolean; // Whether this is a custom contract line (not from preset)
   is_active?: boolean;
   // Hourly contract line fields (contract-line-level, same for all services)

@@ -48,6 +48,93 @@ describe('templateAstSchema', () => {
     );
   });
 
+  it('accepts a stack node with an optional repeat region binding', () => {
+    const validResult = validateTemplateAst({
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'location-bands',
+            type: 'stack',
+            direction: 'column',
+            repeat: {
+              sourceBinding: { bindingId: 'groupsByLocation' },
+              itemBinding: 'group',
+            },
+            children: [
+              {
+                id: 'band-header',
+                type: 'text',
+                content: { type: 'path', path: 'name' },
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(validResult.success).toBe(true);
+  });
+
+  it('still accepts a plain stack with no repeat (backward compatible)', () => {
+    const validResult = validateTemplateAst({
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'plain-stack',
+            type: 'stack',
+            direction: 'row',
+            children: [
+              {
+                id: 'text-child',
+                type: 'text',
+                content: { type: 'literal', value: 'hello' },
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(validResult.success).toBe(true);
+  });
+
+  it('rejects a stack node with a malformed repeat (missing itemBinding)', () => {
+    const invalidResult = validateTemplateAst({
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'location-bands',
+            type: 'stack',
+            direction: 'column',
+            repeat: {
+              sourceBinding: { bindingId: 'groupsByLocation' },
+              // itemBinding intentionally omitted
+            },
+            children: [],
+          },
+        ],
+      },
+    });
+
+    expect(invalidResult.success).toBe(false);
+    if (invalidResult.success) {
+      return;
+    }
+    expect(invalidResult.errors.some((error) => error.path.includes('repeat.itemBinding'))).toBe(true);
+  });
+
   it('requires repeat binding metadata for dynamic-table nodes', () => {
     const invalidResult = validateTemplateAst({
       kind: 'invoice-template-ast',

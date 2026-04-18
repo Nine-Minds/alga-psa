@@ -104,6 +104,7 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   discount_percentage?: number;
   applies_to_item_id?: string;
   applies_to_service_id?: string; // Reference a service instead of an item
+  location_id?: string | null;
   client_contract_id?: string; // Reference to the client contract assignment
   contract_name?: string; // Contract name
   is_bundle_header?: boolean; // Whether this item is a contract group header
@@ -420,6 +421,46 @@ export interface ICreditAllocation extends TenantEntity {
     created_at: ISO8601String;
 }
 
+/**
+ * Shape of a single `client_locations` row as referenced by invoice line
+ * items on the rendered invoice view model. Mirrors `QuoteViewModelLocation`
+ * from `quote.interfaces.ts` exactly; the parallel type alias is retained
+ * so downstream code can refer to it as an invoice-specific concept without
+ * reaching into the quote namespace.
+ */
+export interface InvoiceViewModelLocation {
+  id: string;
+  location_name?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  address_line3?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_code?: string | null;
+  country_name?: string | null;
+  region_code?: string | null;
+  /** Pre-joined full address, handy for single-line template fields. */
+  full_address?: string | null;
+}
+
+/**
+ * Pre-computed per-location line-item grouping for invoice templates that
+ * want location "bands" (one location + address header + rows + per-location
+ * subtotal). Mirrors `QuoteViewModelLocationGroup`.
+ */
+export interface InvoiceViewModelLocationGroup {
+  location_id: string | null;
+  location?: InvoiceViewModelLocation | null;
+  /** Convenience fields duplicated for simpler template binding expressions. */
+  name?: string | null;
+  address?: string | null;
+  items: IInvoiceCharge[];
+  subtotal: number;
+  tax: number;
+  total: number;
+}
+
 export interface InvoiceViewModel {
   invoice_number: string;
   client_id: string;
@@ -463,4 +504,15 @@ export interface InvoiceViewModel {
   recurring_service_period_end?: ISO8601String | null;
   recurring_invoice_window_start?: ISO8601String | null;
   recurring_invoice_window_end?: ISO8601String | null;
+  /**
+   * Pre-computed location groupings for invoice templates and UI surfaces
+   * that want per-location bands. When charges span only one location
+   * (or none), this may be empty.
+   */
+  groups_by_location?: InvoiceViewModelLocationGroup[];
+  /**
+   * True when invoice_charges span ≥2 distinct locations — a convenience
+   * flag for auto-branching between flat and grouped layouts.
+   */
+  has_multiple_locations?: boolean;
 }

@@ -363,7 +363,7 @@ export class QuoteService extends BaseService<IQuote> {
     return withTransaction(knex, async (trx) => {
       const quote = await Quote.getById(trx, context.tenant, quoteId);
       if (!quote) throw new Error(`Quote ${quoteId} not found`);
-      return buildQuoteConversionPreview(quote);
+      return buildQuoteConversionPreview(quote, trx, context.tenant);
     });
   }
 
