@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { FocusScope } from '@radix-ui/react-focus-scope';
 import { ChevronDown, Plus } from 'lucide-react';
 import type { VariantProps } from 'class-variance-authority';
 import type { IClient } from '@alga-psa/types';
@@ -280,10 +281,22 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   }, [mappedOptions, placeholder, selectedClientId, updateMetadata]);
 
   const dropdown = (
+    <FocusScope
+      asChild
+      loop
+      trapped
+      onMountAutoFocus={(event) => {
+        event.preventDefault();
+      }}
+      onUnmountAutoFocus={(event) => {
+        event.preventDefault();
+        triggerRef.current?.querySelector('button')?.focus();
+      }}
+    >
     <div
       ref={dropdownRef}
       className="fixed z-[10000] bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden"
-      style={{ top: dropdownCoords.top, left: dropdownCoords.left, width: dropdownCoords.width }}
+      style={{ top: dropdownCoords.top, left: dropdownCoords.left, width: dropdownCoords.width, pointerEvents: 'auto' }}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
@@ -368,6 +381,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
         </>
       )}
     </div>
+    </FocusScope>
   );
 
   return (
