@@ -16,10 +16,17 @@ import { WorkflowRuntimeV2EventStreamWorker } from './v2/WorkflowRuntimeV2EventS
 import { WorkflowRuntimeV2TemporalWorker } from './v2/WorkflowRuntimeV2TemporalWorker.js';
 import logger from '@alga-psa/core/logger';
 import { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } from '@alga-psa/email';
+import { HealthServer } from './healthServer.js';
 import { registerEnterpriseStorageProviders } from './registerEnterpriseStorageProviders.js';
 
 async function startServices() {
+  const healthServer = new HealthServer();
   try {
+    // Start the health HTTP server before anything else so kubelet probes
+    // (rewritten by the Istio sidecar to hit localhost:PORT/health) get a
+    // response — 503 until the workers finish starting, 200 after.
+    await healthServer.start();
+
     logger.info('[WorkflowWorker] Initializing services');
     const verbose =
       process.env.WORKFLOW_WORKER_VERBOSE === 'true' ||
@@ -71,33 +78,39 @@ async function startServices() {
     });
     if (enableTemporalPolling) {
       await runtimeV2TemporalWorker.start();
+      healthServer.setWorker('temporal', true);
     } else {
       logger.info('[WorkflowWorker] Authored Temporal polling disabled for this environment');
     }
     await runtimeV2EventWorker.start();
+    healthServer.setWorker('eventStream', true);
     if (enableDbPollingWorker) {
       await runtimeV2Worker.start();
+      healthServer.setWorker('dbPolling', true);
     } else {
       logger.info('[WorkflowWorker] DB polling runtime worker disabled; Temporal-native runtime is authoritative for new runs');
     }
-    
+
+    healthServer.markReady();
     logger.info('[WorkflowWorker] All services started successfully');
-    
+
     // Handle graceful shutdown
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);
-    
+
     async function shutdown() {
       logger.info('[WorkflowWorker] Shutting down services...');
       await Promise.all([
         enableTemporalPolling ? runtimeV2TemporalWorker.stop() : Promise.resolve(),
         runtimeV2EventWorker.stop(),
-        enableDbPollingWorker ? runtimeV2Worker.stop() : Promise.resolve()
+        enableDbPollingWorker ? runtimeV2Worker.stop() : Promise.resolve(),
+        healthServer.stop(),
       ]);
       process.exit(0);
     }
   } catch (error) {
     logger.error('[WorkflowWorker] Failed to start services:', error);
+    await healthServer.stop().catch(() => undefined);
     process.exit(1);
   }
 }
