@@ -210,3 +210,9 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `ConfigurationTypeSelector.tsx:53` / `:82` → translated Fixed/Bucket option labels and descriptions are generated via `t()`
   - `ConfigurationTypeSelector.tsx:157` / `:208` → both warning-dialog variants use `configType.warningDialog.title`
   This covers the type-card copy and the warning dialog extraction.
+- **(2026-04-18, T006)** Verified the shared service-config panels with the successful `npm run build` plus:
+  - `BaseServiceConfigPanel.tsx:39` → `useTranslation('msp/service-catalog')`
+  - `BaseServiceConfigPanel.tsx:119` / `:172` → translated section title and quantity label
+  - `service-configurations/ServiceConfigurationPanel.tsx:76` → `useTranslation('msp/service-catalog')`
+  - `service-configurations/ServiceConfigurationPanel.tsx:227` / `:282` → translated bucket-overlay recommendation and Save action
+  This covers the section-heading, field-label, and save/cancel wiring for the shared configuration shell.

@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "BaseServiceConfigPanel.tsx and ServiceConfigurationPanel (configurations) compile with useTranslation — section headings, field labels, save/cancel buttons use t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
