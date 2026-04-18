@@ -98,6 +98,9 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     return 0;
   }
 
+  // `invoices.billing_period_start/end` is misleadingly named — it actually stores the
+  // invoice window (when this cycle may be cut), not a service period. That's why we read
+  // it into `invoiceWindow*` locals here. Column rename to `invoice_window_*` is pending.
   const invoiceWindow = await invoiceBuilder
     .where({ invoice_id: invoiceId, tenant })
     .first(['billing_period_start', 'billing_period_end']);
