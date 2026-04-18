@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "validate-translations.cjs passes for msp/service-catalog (keys consistent across all 9 locales, 0 errors, 0 warnings)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F015", "F016", "F019"]
   },
   {

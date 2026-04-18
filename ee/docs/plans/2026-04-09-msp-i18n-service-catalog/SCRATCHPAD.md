@@ -188,3 +188,4 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `packages/core/src/lib/i18n/config.ts` now includes `pt` in `supportedLocales` and `localeNames.pt = 'Português'`
   - `server/src/middleware/i18nConfig.ts` now includes `pt` in the edge-safe `supportedLocales` list
   This closes the runtime gap discovered during the initial audit so the newly-added `pt` locale tree can actually be matched and resolved in-app.
+- **(2026-04-18, T001)** Reused the post-bootstrap validator run from `F019`: `node scripts/validate-translations.cjs` completed with `Errors: 0`, `Warnings: 0`, `PASSED` across `de/es/fr/it/nl/pl/pt/xx/yy`. This is the direct parity gate for `msp/service-catalog` and also confirms the pseudo-locales still mirror the English key structure after the locale generation cleanup.
