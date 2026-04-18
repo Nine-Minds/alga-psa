@@ -13,6 +13,7 @@ import { getSession } from '@alga-psa/auth';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
+import { getDueDate } from './billingAndTax';
 
 export interface ManualInvoiceItem { // Add export
   service_id: string;
@@ -57,6 +58,7 @@ export const generateManualInvoice = withAuth(async (
   }
 
   const currentDate = Temporal.Now.plainDateISO().toString();
+  const dueDate = await getDueDate(clientId, currentDate);
 
   // Generate invoice number and create invoice record
   const invoiceNumber = await generateInvoiceNumber();
@@ -71,7 +73,7 @@ export const generateManualInvoice = withAuth(async (
     tenant,
     client_id: clientId,
     invoice_date: currentDate,
-    due_date: currentDate, // You may want to calculate this based on payment terms
+    due_date: dueDate,
     invoice_number: invoiceNumber,
     status: 'draft',
     currency_code: request.currency_code || client.default_currency_code || 'USD',

@@ -55,6 +55,9 @@ type InvoicePreviewSelectionRow = {
   client_name?: string | null;
   currency_code?: string | null;
   invoice_is_manual?: boolean | null;
+  // `billing_period_start/end` stores the invoice window, not the service period.
+  // Canonical service periods are in `detail_service_period_*` below / `recurring_service_periods`.
+  // Column rename to `invoice_window_*` is pending.
   billing_period_start?: string | Date | null;
   billing_period_end?: string | Date | null;
   total_amount?: number | string | null;

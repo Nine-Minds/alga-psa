@@ -698,6 +698,8 @@ export class FinancialService extends BaseService<ITransaction> {
           total_amount: request.amount,
           status: 'draft',
           invoice_number: invoiceNumber,
+          // `billing_period_start/end` stores the invoice window, not a service period.
+          // Prepayment credits are not service-backed, so window = "now". Rename pending.
           billing_period_start: now,
           billing_period_end: now,
           credit_applied: 0,

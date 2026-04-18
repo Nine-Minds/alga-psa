@@ -702,6 +702,9 @@ async function fetchRecurringInvoiceHistoryPage(
         'c.client_name',
         trx.raw(`coalesce(rsp_summary.service_period_start, (${detailServicePeriodStartSql})) as service_period_start`),
         trx.raw(`coalesce(rsp_summary.service_period_end, (${detailServicePeriodEndSql})) as service_period_end`),
+        // `i.billing_period_start/end` is the legacy misnamed invoice window; newer rows have the
+        // canonical window in `recurring_service_periods`. Coalesce both into `invoice_window_*`.
+        // Column rename on `invoices` to `invoice_window_*` is pending.
         trx.raw(`coalesce(rsp_summary.invoice_window_start, i.billing_period_start) as invoice_window_start`),
         trx.raw(`coalesce(rsp_summary.invoice_window_end, i.billing_period_end) as invoice_window_end`),
         trx.raw(`coalesce(rsp_summary.cadence_owner, 'client') as cadence_owner`),
