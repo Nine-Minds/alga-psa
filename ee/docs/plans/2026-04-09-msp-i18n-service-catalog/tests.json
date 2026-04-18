@@ -56,7 +56,7 @@
   {
     "id": "T010",
     "description": "Visual QA (xx pseudo-locale) — tax rates list, tax rate detail, service form, service selection dialog, all 4 config type panels, rate tiers, tax settings all show '11111'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F016"]
   },
   {

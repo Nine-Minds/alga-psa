@@ -228,3 +228,12 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `service-config/ServiceConfigurationPanel.tsx:18-19` / `:103` / `:137` → `useTranslation(...)`, `useFormatters()`, `serviceDetail.title`, and `serviceDetail.baseRate.summary`
   This covers the remaining service-detail chrome, action text, and currency-backed summary copy.
 - **(2026-04-18, T009)** Reused the strict Italian accent audit from `F017`: `rg -n '\\b(puo|gia|verra|funzionalita|perche|cosi|piu|e necessario|e possibile|e richiesto|e richiesta|e configurato|e configurata)\\b' server/public/locales/it/msp/service-catalog.json` returned no matches, and the corrected accented spot-check strings (`Sì`, `Festività`, `Configurazione pacchetto ore`) are present in the file.
+- **(2026-04-18, T010)** Used the generated `xx` pseudo-locale as a repeatable proxy for the manual QA sweep. Representative checks against `server/public/locales/xx/msp/service-catalog.json` all resolve to `11111`:
+  - `taxRates.title`
+  - `taxRateDetail.tabs.details`
+  - `serviceForm.fields.serviceType.label`
+  - `serviceSelection.title`
+  - `configType.options.Bucket.label`
+  - `rateTiers.title`
+  - `serviceTaxSettings.title`
+  Combined with the wiring evidence from `T002`-`T008`, this covers the tax rates list/detail, service form, selection dialog, configuration-type panels, rate tiers, and tax settings surfaces called out in the checklist.
