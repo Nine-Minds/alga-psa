@@ -32,7 +32,7 @@
   {
     "id": "F007",
     "description": "Wire AutomaticInvoices.tsx recurring invoice history section: heading, filter placeholder, column headers (Client, Assignment Scope, Cadence Source, Service Period, Invoice Window, Invoice, Actions), cadence source badges (Contract anniversary, Client schedule), Multi-contract invoice badge, Service-period-backed badge, error panel heading and error messages, materialization gap panel (heading, description, service period/invoice window/schedule key labels, Review Service Periods link)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F008",
@@ -182,6 +182,11 @@
   {
     "id": "F037",
     "description": "Run `node scripts/validate-translations.cjs` and resolve any key parity, variable, or accent issues across all 9 locales (exit code 0 required)",
+    "implemented": false
+  },
+  {
+    "id": "F038",
+    "description": "Wire remaining AutomaticInvoices.tsx user-facing strings omitted from the original split: needs-approval panel chrome, grouped-preview limitation note, expand/collapse aria labels, ready-table selection hints, parent-group attribution metadata plural copy, unknown cadence/client fallbacks, and PO overage fallback labels",
     "implemented": false
   }
 ]

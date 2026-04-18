@@ -425,5 +425,13 @@
     "featureIds": [
       "F014"
     ]
+  },
+  {
+    "id": "T051",
+    "description": "Unit: AutomaticInvoices remaining approval/ready chrome resolves through msp/invoicing for the needs-approval panel, grouped-preview limitation note, expand/collapse aria labels, ready-table selection hints, attribution metadata plural copy, and unknown fallback labels",
+    "implemented": false,
+    "featureIds": [
+      "F038"
+    ]
   }
 ]

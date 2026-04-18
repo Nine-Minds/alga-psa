@@ -173,4 +173,65 @@ describe('AutomaticInvoices i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T009: recurring history chrome resolves headers, filter input, cadence badges, and row-menu copy through msp/invoicing', () => {
+    const source = read('../src/components/billing-dashboard/AutomaticInvoices.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../server/public/locales/en/msp/invoicing.json',
+    );
+
+    const keyChecks = [
+      'automaticInvoices.history.title',
+      'automaticInvoices.history.filterPlaceholder',
+      'automaticInvoices.history.columns.client',
+      'automaticInvoices.history.columns.assignmentScope',
+      'automaticInvoices.history.columns.cadenceSource',
+      'automaticInvoices.history.columns.servicePeriod',
+      'automaticInvoices.history.columns.invoiceWindow',
+      'automaticInvoices.history.columns.invoice',
+      'automaticInvoices.history.columns.actions',
+      'automaticInvoices.history.badges.contractAnniversary',
+      'automaticInvoices.history.badges.clientSchedule',
+      'automaticInvoices.history.badges.multiContractInvoice',
+      'automaticInvoices.history.badges.servicePeriodBacked',
+      'common.actions.openMenu',
+    ];
+
+    expect(source).toContain('formatCadenceSourceText(record.cadenceSource)');
+    expect(source).toContain("formatDate(record.invoiceDate)");
+
+    for (const key of keyChecks) {
+      expect(source).toContain(key);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
+
+  it('T010: materialization-gap panel and recurring-history error/loading copy resolve through msp/invoicing', () => {
+    const source = read('../src/components/billing-dashboard/AutomaticInvoices.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../server/public/locales/en/msp/invoicing.json',
+    );
+
+    const keyChecks = [
+      'automaticInvoices.materializationGap.title',
+      'automaticInvoices.materializationGap.description',
+      'automaticInvoices.materializationGap.labels.servicePeriod',
+      'automaticInvoices.materializationGap.labels.invoiceWindow',
+      'automaticInvoices.materializationGap.labels.scheduleKey',
+      'automaticInvoices.materializationGap.reviewLink',
+      'automaticInvoices.materializationGap.helpText',
+      'automaticInvoices.errors.title',
+      'automaticInvoices.errors.loadReady',
+      'automaticInvoices.errors.loadHistory',
+      'automaticInvoices.loading.billingData',
+      'common.labels.unknownClient',
+      'common.actions.retry',
+      'common.actions.close',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(key);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });

@@ -34,7 +34,7 @@ import {
 } from '@alga-psa/billing/actions/billingAndTax';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { formatCurrency } from '@alga-psa/core';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 // Added imports for DropdownMenu
 import {
   DropdownMenu,
@@ -53,6 +53,15 @@ interface AutomaticInvoicesProps {
   refreshTrigger?: number;
 }
 
+type AutomaticInvoiceGroupLabelKey = 'canCombine' | 'separate' | 'blocked' | 'notReady';
+type AutomaticInvoiceIncompatibilityReasonKey =
+  | 'invoiceWindowDiffers'
+  | 'clientDiffers'
+  | 'poScopeDiffers'
+  | 'currencyDiffers'
+  | 'taxTreatmentDiffers'
+  | 'exportShapeDiffers';
+
 type ReadyPeriod = IRecurringDueWorkInvoiceCandidate;
 
 type InvoicedPeriod = RecurringInvoiceHistoryRow;
@@ -68,8 +77,8 @@ interface RecurringInvoiceParentGroup {
     childCount: number;
     aggregateAmountCents: number | null;
     isCombinable: boolean;
-    combinabilitySummaryKey: string;
-    incompatibilityReasons: string[];
+    combinabilitySummaryKey: AutomaticInvoiceGroupLabelKey;
+    incompatibilityReasons: AutomaticInvoiceIncompatibilityReasonKey[];
     canGenerate: boolean;
     blockedReason: string | null;
   };
@@ -83,12 +92,12 @@ type RecurringSelectionGroup = {
   billingCycleId: string | null;
 };
 
-const AUTOMATIC_INVOICE_GROUP_LABELS = {
+const AUTOMATIC_INVOICE_GROUP_LABELS: Record<AutomaticInvoiceGroupLabelKey, string> = {
   canCombine: 'Can combine into 1 invoice',
   separate: 'Must invoice separately',
   blocked: 'Contains blocked items',
   notReady: 'Not ready to invoice',
-} as const;
+};
 
 const getParentGroupSummary = ({
   isCombinable,
@@ -98,10 +107,10 @@ const getParentGroupSummary = ({
 }: {
   isCombinable: boolean;
   canGenerate: boolean;
-  incompatibilityReasons: string[];
+  incompatibilityReasons: AutomaticInvoiceIncompatibilityReasonKey[];
   childCount: number;
 }): {
-  labelKey: keyof typeof AUTOMATIC_INVOICE_GROUP_LABELS;
+  labelKey: AutomaticInvoiceGroupLabelKey;
   className: string;
 } => {
   if (isCombinable) {
@@ -313,23 +322,23 @@ const normalizeScopeValue = (value: string | null | undefined): string => {
   return normalized && normalized.length > 0 ? normalized : '__none__';
 };
 
-const AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS = {
+const AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS: Record<AutomaticInvoiceIncompatibilityReasonKey, string> = {
   invoiceWindowDiffers: 'Invoice window differs',
   clientDiffers: 'Client differs',
   poScopeDiffers: 'PO scope differs',
   currencyDiffers: 'Currency differs',
   taxTreatmentDiffers: 'Tax treatment differs',
   exportShapeDiffers: 'Export shape differs',
-} as const;
+};
 
-const resolveIncompatibilityReasons = (candidate: ReadyPeriod): string[] => {
+const resolveIncompatibilityReasons = (candidate: ReadyPeriod): AutomaticInvoiceIncompatibilityReasonKey[] => {
   const eligibleMembers = candidate.members.filter((member) => member.canGenerate);
   const members = eligibleMembers.length > 0 ? eligibleMembers : candidate.members;
   if (members.length <= 1) {
     return [];
   }
 
-  const reasons: string[] = [];
+  const reasons: AutomaticInvoiceIncompatibilityReasonKey[] = [];
   const uniqueWindows = new Set(
     members.map((member) =>
       `${normalizeScopeValue(member.invoiceWindowStart)}:${normalizeScopeValue(member.invoiceWindowEnd)}`,
@@ -365,6 +374,7 @@ const resolveIncompatibilityReasons = (candidate: ReadyPeriod): string[] => {
 
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, refreshTrigger = 0 }) => {
   const { t } = useTranslation('msp/invoicing');
+  const { formatDate } = useFormatters();
   const router = useRouter();
   const translateAssignmentContext = (contextValue: string | null): string | null => {
     if (!contextValue) {
@@ -593,7 +603,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         console.error('Error loading billing periods:', error);
         if (isMounted) {
           setMaterializationGaps([]);
-          setLoadError('Failed to load billing periods. Please try again.');
+          setLoadError(t('automaticInvoices.errors.loadReady', {
+            defaultValue: 'Failed to load billing periods. Please try again.',
+          }));
         }
       }
       if (isMounted) {
@@ -749,7 +761,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       } catch (error) {
         console.error('Error loading invoiced periods:', error);
         if (isMounted) {
-          setLoadError('Failed to load recurring invoice history. Please try again.');
+          setLoadError(t('automaticInvoices.errors.loadHistory', {
+            defaultValue: 'Failed to load recurring invoice history. Please try again.',
+          }));
         }
       }
       if (isMounted) {
@@ -1221,7 +1235,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           layout="stacked"
           className="py-10 text-muted-foreground"
           spinnerProps={{ size: 'md' }}
-          text="Loading billing data"
+          text={t('automaticInvoices.loading.billingData', {
+            defaultValue: 'Loading billing data',
+          })}
         />
       ) : loadError ? (
         <Alert variant="destructive" className="relative mb-4">
@@ -1246,7 +1262,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 setInvoicedCurrentPage(1);
               }}
             >
-              Retry
+              {t('common.actions.retry', { defaultValue: 'Retry' })}
             </Button>
           </AlertDescription>
         </Alert>
@@ -1389,11 +1405,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <button
                   onClick={() => setErrors({})}
                   className="absolute top-2 right-2 p-1 hover:bg-destructive/20 rounded-full transition-colors"
-                  aria-label="Close error message"
+                  aria-label={t('common.actions.close', { defaultValue: 'Close' })}
                 >
                   <X className="h-5 w-5" />
                 </button>
-                <h4 className="font-semibold mb-2">Errors occurred while finalizing invoices:</h4>
+                <h4 className="font-semibold mb-2">
+                  {t('automaticInvoices.errors.title', {
+                    defaultValue: 'Errors occurred while finalizing invoices:',
+                  })}
+                </h4>
                 <ul className="list-disc pl-5">
                   {Object.entries(errors).map(([client, errorMessage]): React.JSX.Element => (
                     <li key={client}>
@@ -1412,9 +1432,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                   <div className="space-y-3">
                     <div>
-                      <h4 className="font-semibold">Recurring service period repair required</h4>
+                      <h4 className="font-semibold">
+                        {t('automaticInvoices.materializationGap.title', {
+                          defaultValue: 'Recurring service period repair required',
+                        })}
+                      </h4>
                       <p className="text-sm text-muted-foreground">
-                        These client-cadence windows are missing persisted recurring service periods, so they are blocked from ready-to-invoice work until the canonical schedule is repaired.
+                        {t('automaticInvoices.materializationGap.description', {
+                          defaultValue: 'These client-cadence windows are missing persisted recurring service periods, so they are blocked from ready-to-invoice work until the canonical schedule is repaired.',
+                        })}
                       </p>
                     </div>
                     <ul className="space-y-3">
@@ -1426,16 +1452,24 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                         >
                           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                             <div className="space-y-1 text-sm">
-                              <div className="font-medium">{gap.clientName ?? 'Unknown client'}</div>
+                              <div className="font-medium">
+                                {gap.clientName ?? t('common.labels.unknownClient', { defaultValue: 'Unknown client' })}
+                              </div>
                               <div className="text-muted-foreground">{gap.detail}</div>
                               <div>
-                                Service period: {gap.servicePeriodStart} to {gap.servicePeriodEnd}
+                                {t('automaticInvoices.materializationGap.labels.servicePeriod', {
+                                  defaultValue: 'Service period',
+                                })}: {gap.servicePeriodStart} to {gap.servicePeriodEnd}
                               </div>
                               <div>
-                                Invoice window: {gap.invoiceWindowStart} to {gap.invoiceWindowEnd}
+                                {t('automaticInvoices.materializationGap.labels.invoiceWindow', {
+                                  defaultValue: 'Invoice window',
+                                })}: {gap.invoiceWindowStart} to {gap.invoiceWindowEnd}
                               </div>
                               <div className="break-all text-xs text-muted-foreground">
-                                Schedule key: {gap.scheduleKey}
+                                {t('automaticInvoices.materializationGap.labels.scheduleKey', {
+                                  defaultValue: 'Schedule key',
+                                })}: {gap.scheduleKey}
                               </div>
                             </div>
                             <div className="flex flex-col items-start gap-2">
@@ -1443,10 +1477,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                 href={buildServicePeriodRepairHref(gap.scheduleKey)}
                                 className="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
                               >
-                                Review Service Periods
+                                {t('automaticInvoices.materializationGap.reviewLink', {
+                                  defaultValue: 'Review Service Periods',
+                                })}
                               </a>
                               <span className="text-xs text-muted-foreground">
-                                Repair the canonical service-period records instead of generating a compatibility invoice row.
+                                {t('automaticInvoices.materializationGap.helpText', {
+                                  defaultValue: 'Repair the canonical service-period records instead of generating a compatibility invoice row.',
+                                })}
                               </span>
                             </div>
                           </div>
@@ -1592,7 +1630,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                               ) : null}
                               <span>{cadenceSummary}</span>
                               {record.childExecutionRows.some((member) => !member.billingCycleId) ? (
-                                <span>Service-period-backed</span>
+                                <span>
+                                  {t('automaticInvoices.history.badges.servicePeriodBacked', {
+                                    defaultValue: 'Service-period-backed',
+                                  })}
+                                </span>
                               ) : null}
                             </div>
                             <div className="flex flex-wrap gap-2 text-xs">
@@ -1617,10 +1659,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                 {record.parentSummary.incompatibilityReasons
                                   .map((reasonKey) =>
                                     t(`automaticInvoices.incompatibilityReasons.${reasonKey}`, {
-                                      defaultValue:
-                                        AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS[
-                                          reasonKey as keyof typeof AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS
-                                        ],
+                                      defaultValue: AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS[reasonKey],
                                     }))
                                   .join(', ')}
                               </div>
@@ -1805,11 +1844,17 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Recurring Invoice History</h2>
+            <h2 className="text-lg font-semibold">
+              {t('automaticInvoices.history.title', {
+                defaultValue: 'Recurring Invoice History',
+              })}
+            </h2>
             <Input
               id="filter-invoiced-clients-input"
               type="text"
-              placeholder="Filter clients..."
+              placeholder={t('automaticInvoices.history.filterPlaceholder', {
+                defaultValue: 'Filter clients...',
+              })}
               value={invoicedSearchTerm}
               onChange={(e) => setInvoicedSearchTerm(e.target.value)}
               className="w-64"
@@ -1820,64 +1865,89 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             data={invoicedPeriods}
             onRowClick={handleRecurringHistoryRowClick}
             columns={[
-              { title: 'Client', dataIndex: 'clientName' },
               {
-                title: 'Assignment Scope',
+                title: t('automaticInvoices.history.columns.client', { defaultValue: 'Client' }),
+                dataIndex: 'clientName',
+              },
+              {
+                title: t('automaticInvoices.history.columns.assignmentScope', {
+                  defaultValue: 'Assignment Scope',
+                }),
                 dataIndex: 'assignmentSummary',
                 render: (_: unknown, record: InvoicedPeriod) => (
                   <div className="space-y-1">
                     <div>{record.assignmentSummary}</div>
                     {record.isMultiAssignment ? (
-                      <Badge variant="secondary">Multi-contract invoice</Badge>
+                      <Badge variant="secondary">
+                        {t('automaticInvoices.history.badges.multiContractInvoice', {
+                          defaultValue: 'Multi-contract invoice',
+                        })}
+                      </Badge>
                     ) : null}
                   </div>
                 ),
               },
               {
-                title: 'Cadence Source',
+                title: t('automaticInvoices.history.columns.cadenceSource', {
+                  defaultValue: 'Cadence Source',
+                }),
                 dataIndex: 'cadenceSource',
                 render: (_: unknown, record: InvoicedPeriod) => (
                   <div className="space-y-1">
                     <Badge variant={formatCadenceSourceBadge(record.cadenceSource).variant}>
-                      {formatCadenceSourceBadge(record.cadenceSource).label}
+                      {formatCadenceSourceText(record.cadenceSource)}
                     </Badge>
                     {!record.hasBillingCycleBridge ? (
-                      <Badge variant="secondary">Service-period-backed</Badge>
+                      <Badge variant="secondary">
+                        {t('automaticInvoices.history.badges.servicePeriodBacked', {
+                          defaultValue: 'Service-period-backed',
+                        })}
+                      </Badge>
                     ) : null}
                   </div>
                 ),
               },
               {
-                title: 'Service Period',
+                title: t('automaticInvoices.history.columns.servicePeriod', {
+                  defaultValue: 'Service Period',
+                }),
                 dataIndex: 'servicePeriodLabel',
               },
               {
-                title: 'Invoice Window',
+                title: t('automaticInvoices.history.columns.invoiceWindow', {
+                  defaultValue: 'Invoice Window',
+                }),
                 dataIndex: 'invoiceWindowLabel',
               },
               {
-                title: 'Invoice',
+                title: t('automaticInvoices.history.columns.invoice', {
+                  defaultValue: 'Invoice',
+                }),
                 dataIndex: 'invoiceNumber',
                 render: (_: unknown, record: InvoicedPeriod) => (
                   <div className="space-y-1">
                     <div>{record.invoiceNumber ?? record.invoiceId}</div>
                     {record.invoiceDate ? (
                       <div className="text-xs text-muted-foreground">
-                        {toPlainDate(record.invoiceDate).toLocaleString()}
+                        {formatDate(record.invoiceDate)}
                       </div>
                     ) : null}
                   </div>
                 ),
               },
               {
-                title: 'Actions',
+                title: t('automaticInvoices.history.columns.actions', {
+                  defaultValue: 'Actions',
+                }),
                 dataIndex: 'invoiceId',
                 render: (_: unknown, record: InvoicedPeriod) => (
                   <div className="flex justify-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button id={`actions-trigger-invoiced-${record.invoiceId}`} variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
+                          <span className="sr-only">
+                            {t('common.actions.openMenu', { defaultValue: 'Open menu' })}
+                          </span>
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>

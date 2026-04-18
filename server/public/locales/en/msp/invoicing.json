@@ -145,7 +145,7 @@
     },
     "history": {
       "title": "Recurring Invoice History",
-      "filterPlaceholder": "Filter recurring invoice history",
+      "filterPlaceholder": "Filter clients...",
       "columns": {
         "client": "Client",
         "assignmentScope": "Assignment Scope",
@@ -163,14 +163,23 @@
       }
     },
     "materializationGap": {
-      "title": "Missing persisted service periods",
-      "description": "Some recurring schedules have live billing metadata but are missing persisted service-period rows.",
+      "title": "Recurring service period repair required",
+      "description": "These client-cadence windows are missing persisted recurring service periods, so they are blocked from ready-to-invoice work until the canonical schedule is repaired.",
       "labels": {
         "servicePeriod": "Service period",
         "invoiceWindow": "Invoice window",
         "scheduleKey": "Schedule key"
       },
-      "reviewLink": "Review Service Periods"
+      "reviewLink": "Review Service Periods",
+      "helpText": "Repair the canonical service-period records instead of generating a compatibility invoice row."
+    },
+    "errors": {
+      "title": "Errors occurred while finalizing invoices:",
+      "loadReady": "Failed to load billing periods. Please try again.",
+      "loadHistory": "Failed to load recurring invoice history. Please try again."
+    },
+    "loading": {
+      "billingData": "Loading billing data"
     }
   },
   "manualInvoices": {
@@ -715,6 +724,7 @@
       "dueDate": "Due Date",
       "invoice": "Invoice",
       "invoiceNumber": "Invoice Number",
+      "unknownClient": "Unknown client",
       "status": "Status",
       "system": "System",
       "total": "Total"
