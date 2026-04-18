@@ -67,12 +67,13 @@ exports.up = async function up(knex) {
       'invoice_charges and client_locations are compatible for FK - adding foreign key constraint'
     );
     await knex.schema.alterTable('invoice_charges', (table) => {
+      // ON UPDATE CASCADE is not supported by Citus when the distribution
+      // key (tenant) is part of the FK, so we only set ON DELETE.
       table
         .foreign(['location_id', 'tenant'])
         .references(['location_id', 'tenant'])
         .inTable('client_locations')
-        .onDelete('RESTRICT')
-        .onUpdate('CASCADE');
+        .onDelete('RESTRICT');
     });
   } else {
     console.log(
