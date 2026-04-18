@@ -62,4 +62,94 @@ describe('RecurringServicePeriodsTab i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T019: summary labels, table headers, and row state chrome resolve through msp/invoicing', () => {
+    const source = read('../src/components/billing-dashboard/RecurringServicePeriodsTab.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../server/public/locales/en/msp/invoicing.json',
+    );
+
+    const sourceKeyChecks = [
+      'recurringServicePeriods.labels.generated',
+      'recurringServicePeriods.labels.edited',
+      'recurringServicePeriods.labels.billed',
+      'recurringServicePeriods.labels.exceptions',
+      'recurringServicePeriods.table.columns.state',
+      'recurringServicePeriods.table.columns.servicePeriod',
+      'recurringServicePeriods.table.columns.invoiceWindow',
+      'recurringServicePeriods.table.columns.revision',
+      'recurringServicePeriods.table.columns.reason',
+      'recurringServicePeriods.table.columns.allowedActions',
+      'recurringServicePeriods.values.range',
+      'recurringServicePeriods.values.generatedFromSourceCadence',
+    ];
+    const localeKeyChecks = [
+      ...sourceKeyChecks,
+      'recurringServicePeriods.displayStates.generated.label',
+      'recurringServicePeriods.displayStates.generated.detail',
+      'recurringServicePeriods.displayStates.billed.detailLinked',
+      'recurringServicePeriods.displayStates.billed.detailUnlinked',
+      'recurringServicePeriods.provenanceReasons.source_rule_changed',
+      'recurringServicePeriods.provenanceReasons.initial_materialization',
+      'recurringServicePeriods.governanceActions.edit_boundaries',
+      'recurringServicePeriods.governanceActions.invoice_linkage_repair',
+    ];
+
+    expect(source).toContain('translateDisplayStateLabel');
+    expect(source).toContain('translateDisplayStateDetail');
+    expect(source).toContain('translateReasonCode');
+    expect(source).toContain('translateGovernanceAction');
+
+    for (const key of sourceKeyChecks) {
+      expect(source).toContain(key);
+    }
+
+    for (const key of localeKeyChecks) {
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
+
+  it('T020: repair and regeneration-preview panels resolve through msp/invoicing', () => {
+    const source = read('../src/components/billing-dashboard/RecurringServicePeriodsTab.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../server/public/locales/en/msp/invoicing.json',
+    );
+
+    const sourceKeyChecks = [
+      'recurringServicePeriods.labels.repairCompleted',
+      'recurringServicePeriods.repairPanel.title',
+      'recurringServicePeriods.repairPanel.description',
+      'recurringServicePeriods.repairPanel.result',
+      'recurringServicePeriods.actions.repairMissing',
+      'recurringServicePeriods.actions.repairing',
+      'recurringServicePeriods.regenerationPreview.title',
+      'recurringServicePeriods.regenerationPreview.description',
+      'recurringServicePeriods.labels.candidateRecordsJson',
+      'recurringServicePeriods.actions.previewRegeneration',
+      'recurringServicePeriods.actions.previewing',
+      'recurringServicePeriods.labels.conflicts',
+      'recurringServicePeriods.values.noConflicts',
+      'recurringServicePeriods.errors.candidateRecordsArray',
+      'recurringServicePeriods.errors.previewFailed',
+      'recurringServicePeriods.errors.repairFailed',
+    ];
+    const localeKeyChecks = [
+      ...sourceKeyChecks,
+      'recurringServicePeriods.conflicts.kinds.missing_candidate',
+      'recurringServicePeriods.conflicts.kinds.service_period_mismatch',
+      'recurringServicePeriods.conflicts.reasons.missing_candidate',
+      'recurringServicePeriods.conflicts.reasons.service_period_mismatch',
+    ];
+
+    expect(source).toContain('translateConflictKind');
+    expect(source).toContain('translateConflictReason');
+
+    for (const key of sourceKeyChecks) {
+      expect(source).toContain(key);
+    }
+
+    for (const key of localeKeyChecks) {
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });

@@ -62,7 +62,7 @@
   {
     "id": "F013",
     "description": "Wire RecurringServicePeriodsTab.tsx table and panels: table headers (State, Service Period, Invoice Window, Revision, Reason, Allowed Actions), repair panel (heading, description, Repair button), regeneration preview (heading, description, JSON label, Preview Regeneration button, Conflicts count, no-conflicts success message), schedule option label formatting (Contract anniversary, Client schedule, Advance, Arrears, Unknown client)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F014",
