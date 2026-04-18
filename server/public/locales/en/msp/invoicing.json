@@ -612,11 +612,20 @@
       "openMenu": "Open menu",
       "create": "Create New Layout"
     },
-    "loading": "Loading invoice templates",
+    "loading": "Loading invoice layouts",
+    "values": {
+      "thisTemplate": "this template",
+      "copySuffix": " (Copy)",
+      "copyOfName": "Copy of {{name}}",
+      "standardSuffix": " (Standard)"
+    },
     "errors": {
       "cloneFailed": "Failed to clone template.",
+      "cloneEditFailed": "Failed to create editable copy.",
       "setDefaultFailed": "Failed to set template as default.",
-      "fetchFailed": "Failed to fetch templates."
+      "fetchFailed": "Failed to fetch templates.",
+      "deleteValidationFailed": "Failed to validate deletion. Please try again.",
+      "deleteUnexpected": "An unexpected error occurred while deleting the template."
     }
   },
   "externalTax": {

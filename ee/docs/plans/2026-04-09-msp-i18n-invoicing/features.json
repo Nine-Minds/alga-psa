@@ -82,7 +82,7 @@
   {
     "id": "F017",
     "description": "Wire useTranslation in InvoiceTemplates.tsx -- section heading (Invoice Layouts), column headers (Template Name, Type, Default, Actions), type values (Standard, Custom), action items (Edit, Edit as Copy, Clone, Set as Default, Delete), Open menu sr-only text, Create New Layout button, loading text, error messages (Failed to clone/set default/fetch templates)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F018",
