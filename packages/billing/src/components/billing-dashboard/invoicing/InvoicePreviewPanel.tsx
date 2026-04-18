@@ -10,13 +10,12 @@ import type { IInvoiceTemplate, IQuote, TaxSource, InvoiceViewModel as DbInvoice
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { DraftInvoicePropertiesUpdateResult } from '@alga-psa/billing/actions/invoiceModification';
 import {
-  getInvoiceForRendering,
+  getEnrichedInvoiceViewModel,
   getInvoicePurchaseOrderSummary,
   getResolvedInvoiceTemplateId,
   type InvoicePurchaseOrderSummary
 } from '@alga-psa/billing/actions/invoiceQueries';
 import { getQuoteByConvertedInvoiceId } from '@alga-psa/billing/actions/quoteActions';
-import { mapDbInvoiceToWasmViewModel } from '../../../lib/adapters/invoiceAdapters';
 import { PurchaseOrderSummaryBanner } from './PurchaseOrderSummaryBanner';
 import { TemplateRenderer } from '../TemplateRenderer';
 import PaperInvoice from '../PaperInvoice';
@@ -133,24 +132,18 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
       setPoSummary(null);
 
       try {
-        const [dbInvoiceData, summary, templateId] = await Promise.all([
-          getInvoiceForRendering(invoiceId),
+        const [viewModel, summary, templateId] = await Promise.all([
+          getEnrichedInvoiceViewModel(invoiceId),
           getInvoicePurchaseOrderSummary(invoiceId),
           getResolvedInvoiceTemplateId(invoiceId),
         ]);
 
-        if (!dbInvoiceData) {
+        if (!viewModel) {
           throw new Error(`Invoice data for ID ${invoiceId} not found.`);
         }
 
-        // Extract tax_source from the invoice data
-        setTaxSource(dbInvoiceData.tax_source || 'internal');
-
-        const viewModel = mapDbInvoiceToWasmViewModel(dbInvoiceData);
-
-        if (!viewModel) {
-          throw new Error(`Failed to map invoice data for ID ${invoiceId} to view model.`);
-        }
+        // Extract tax source from the enriched view model (mapped as taxSource).
+        setTaxSource(((viewModel as unknown as { taxSource?: TaxSource }).taxSource) || 'internal');
 
         setPoSummary(summary);
         setResolvedTemplateId(templateId);
