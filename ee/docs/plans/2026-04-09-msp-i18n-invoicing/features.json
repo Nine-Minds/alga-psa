@@ -67,7 +67,7 @@
   {
     "id": "F014",
     "description": "Wire useTranslation in BillingCycles.tsx -- page heading, tooltip text, column headers (Client, Contract, Current Billing Cycle, Anchor, Actions), search placeholder, date range label, Search button, View Client Billing link, loading text, error message, No active assignments, Not set, month names (January-December), anchor labels (Weekday N, Rolling, Starts date, Day N)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F015",

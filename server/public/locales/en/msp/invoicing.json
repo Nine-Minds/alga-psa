@@ -495,12 +495,22 @@
     "values": {
       "noActiveAssignments": "No active assignments",
       "unknown": "Unknown",
+      "assignmentId": "Assignment {{id}}",
       "notSet": "Not set",
       "rolling": "Rolling",
       "weekday": "Weekday {{day}}",
       "starts": "Starts {{date}}",
       "day": "Day {{day}}",
+      "monthDay": "{{month}} {{day}}",
       "dash": "—"
+    },
+    "cycles": {
+      "weekly": "Weekly",
+      "bi-weekly": "Bi-Weekly",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "semi-annually": "Semi-Annually",
+      "annually": "Annually"
     },
     "months": {
       "january": "January",
