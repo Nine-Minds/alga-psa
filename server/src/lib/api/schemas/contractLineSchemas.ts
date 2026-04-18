@@ -55,7 +55,8 @@ const baseContractLineSchema = z.object({
   
   // Additional features and settings
   is_active: z.boolean().optional().default(true),
-  features: z.array(z.string()).optional()
+  features: z.array(z.string()).optional(),
+  location_id: uuidSchema.optional().nullable()
 });
 
 // Create contract line schema

@@ -89,6 +89,7 @@ const baseInvoiceItemSchema = z.object({
   applies_to_service_id: uuidSchema.optional(),
   client_contract_id: uuidSchema.optional(),
   contract_name: z.string().optional(),
+  location_id: uuidSchema.optional().nullable(),
   // Accept both names during transition
   is_bundle_header: z.boolean().optional().default(false),
   parent_item_id: uuidSchema.optional(),

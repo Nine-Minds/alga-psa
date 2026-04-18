@@ -637,7 +637,8 @@ const Invoice = {
           knexOrTrx.raw('CAST(ic.total_price AS BIGINT) as total_price'),
           knexOrTrx.raw('CAST(ic.tax_amount AS BIGINT) as tax_amount'),
           knexOrTrx.raw('CAST(ic.net_amount AS BIGINT) as net_amount'),
-          'ic.is_manual'
+          'ic.is_manual',
+          'ic.location_id'
         )
         .where({
           'ic.invoice_id': invoiceId,

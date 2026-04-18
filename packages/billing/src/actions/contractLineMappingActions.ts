@@ -411,6 +411,7 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
             'lines.minimum_billable_time',
             'lines.round_up_to_nearest',
             'tfc.base_rate as default_rate',
+            trx.raw('NULL::uuid as location_id'),
           ])
           .orderBy('lines.display_order', 'asc') as unknown as DetailedContractLineResultRow[];
 

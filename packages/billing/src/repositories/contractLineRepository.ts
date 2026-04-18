@@ -41,6 +41,7 @@ function mapContractLineRow(row: any): IContractLineMapping {
     custom_rate: recurringStorage.custom_rate ?? null,
     billing_timing: recurringStorage.billing_timing,
     cadence_owner: recurringStorage.cadence_owner,
+    location_id: row.location_id ?? null,
     created_at: recurringStorage.created_at,
   };
 }
@@ -80,6 +81,7 @@ export async function fetchContractLineMappings(
       'custom_rate',
       'billing_timing',
       'cadence_owner',
+      'location_id',
       'created_at',
     ]);
   return rows.map(mapContractLineRow);
@@ -151,6 +153,7 @@ export async function fetchDetailedContractLines(
       'cl.custom_rate',
       'cl.billing_timing',
       'cl.cadence_owner',
+      'cl.location_id',
       'cl.created_at',
       'cl.contract_line_name',
       'cl.contract_line_type',
@@ -481,6 +484,7 @@ export async function addContractLine(
       'custom_rate',
       'billing_timing',
       'cadence_owner',
+      'location_id',
       'created_at',
     ]);
 
@@ -587,6 +591,7 @@ export async function updateContractLine(
       'custom_rate',
       'billing_timing',
       'cadence_owner',
+      'location_id',
       'created_at',
     ]);
   return mapContractLineRow(row);

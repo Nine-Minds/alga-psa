@@ -104,6 +104,7 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   discount_percentage?: number;
   applies_to_item_id?: string;
   applies_to_service_id?: string; // Reference a service instead of an item
+  location_id?: string | null;
   client_contract_id?: string; // Reference to the client contract assignment
   contract_name?: string; // Contract name
   is_bundle_header?: boolean; // Whether this item is a contract group header

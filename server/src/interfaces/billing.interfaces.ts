@@ -244,6 +244,7 @@ export interface IContractLine extends TenantEntity {
   custom_rate?: number | null;
   display_order?: number;
   enable_proration?: boolean;
+  location_id?: string | null;
   is_custom?: boolean; // Whether this is a custom contract line (not from preset)
   is_active?: boolean;
   // Hourly contract line fields (contract-line-level, same for all services)

@@ -55,6 +55,7 @@ export interface IContractLineMapping extends TenantEntity {
   custom_rate?: number | null;
   billing_timing?: 'arrears' | 'advance';
   cadence_owner?: CadenceOwner;
+  location_id?: string | null;
   created_at?: ISO8601String;
 }
 
