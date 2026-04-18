@@ -222,3 +222,8 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `UsageServiceConfigPanel.tsx:39` / `:248` / `:336` → `useTranslation(...)`, `usageConfig.title`, and `usageConfig.tiers.addTier`
   - `BucketServiceConfigPanel.tsx:28-29` / `:96` / `:150` → `useTranslation(...)`, `useBillingFrequencyOptions()`, `bucketConfig.title`, and the mismatch warning copy
   This covers the translated field labels, helper text, validation surfaces, and the shared billing-frequency hook migration in the bucket panel.
+- **(2026-04-18, T008)** Verified the service-detail supporting panels with the successful `npm run build` plus:
+  - `service-config/ServiceRateTiers.tsx:28-29` / `:265` / `:343` → `useTranslation(...)`, `useFormatters()`, `rateTiers.title`, and `rateTiers.formattedRate`
+  - `service-config/ServiceTaxSettings.tsx:20` / `:110` → `useTranslation(...)` and `serviceTaxSettings.title`
+  - `service-config/ServiceConfigurationPanel.tsx:18-19` / `:103` / `:137` → `useTranslation(...)`, `useFormatters()`, `serviceDetail.title`, and `serviceDetail.baseRate.summary`
+  This covers the remaining service-detail chrome, action text, and currency-backed summary copy.

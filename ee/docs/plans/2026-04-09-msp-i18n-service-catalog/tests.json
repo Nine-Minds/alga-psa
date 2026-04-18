@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "ServiceRateTiers.tsx, ServiceTaxSettings.tsx, and ServiceConfigurationPanel (service-config) compile with useTranslation — all table headers, card titles, and action buttons use t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F013", "F014"]
   },
   {
