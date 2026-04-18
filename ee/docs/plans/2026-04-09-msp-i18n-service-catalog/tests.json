@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "ServiceForm.tsx compiles with useTranslation — no TypeScript errors, all placeholder/label/button text extracted",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {

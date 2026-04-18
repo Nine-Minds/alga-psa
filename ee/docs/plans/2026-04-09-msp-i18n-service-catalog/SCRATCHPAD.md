@@ -195,3 +195,8 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `packages/billing/src/components/billing-dashboard/TaxRateDetailPanel.tsx:24` → `useTranslation('msp/service-catalog')`
   - `packages/billing/src/components/billing-dashboard/TaxRateDetailPanel.tsx:69` / `:164` → `taxRateDetail.tabs.details` and `taxRateDetail.precedence.title`
   Combined with the successful `npm run build`, this covers both the compile gate and the extracted-label wiring for the two tax-rate screens.
+- **(2026-04-18, T003)** Verified `packages/billing/src/components/billing-dashboard/ServiceForm.tsx` against the same successful `npm run build` plus a targeted grep:
+  - `ServiceForm.tsx:15` → `useTranslation('msp/service-catalog')`
+  - `ServiceForm.tsx:180` / `:190` → translated Service Type and Billing Method labels
+  - `ServiceForm.tsx:244` → translated submit button via `serviceForm.actions.submit`
+  That confirms the form compiles and the placeholder/label/button copy is no longer hardcoded.
