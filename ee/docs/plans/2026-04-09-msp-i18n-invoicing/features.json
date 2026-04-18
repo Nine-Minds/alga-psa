@@ -7,7 +7,7 @@
   {
     "id": "F002",
     "description": "Update ROUTE_NAMESPACES so /msp/billing loads the msp/invoicing namespace alongside any existing billing namespaces",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F003",

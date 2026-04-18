@@ -188,3 +188,6 @@ be translated at render time, not at definition time (move t() calls to render).
   Rationale: unblock component wiring against a stable `msp/invoicing` namespace now, then expand/refine individual keys as each component lands instead of coupling every first component edit to file creation.
   Commands: `node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('server/public/locales/en/msp/invoicing.json','utf8')); console.log(Object.keys(data).join(','));"`
   Gotcha: keeping the JSON top-level key order aligned with the PRD makes the eventual namespace-shape test straightforward and avoids churn when additional locale packs are generated.
+
+- **(2026-04-18) F002 complete:** updated [packages/core/src/lib/i18n/config.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/core/src/lib/i18n/config.ts) so `ROUTE_NAMESPACES['/msp/billing']` preloads `msp/invoicing` alongside the existing billing/report/contract namespaces.
+  Rationale: the invoicing screens render under `/msp/billing` tabs, so namespace preloading must be in place before any `useTranslation('msp/invoicing')` call can resolve outside fallback/default strings.
