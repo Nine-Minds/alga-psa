@@ -153,3 +153,8 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `npx eslint packages/billing/src/components/billing-dashboard/service-config/ServiceSelectionDialog.tsx`
 - **(2026-04-17, F006)** Wired `packages/billing/src/components/billing-dashboard/service-configurations/ConfigurationTypeSelector.tsx` to `useTranslation('msp/service-catalog')`. Moved the local configuration-type option labels/descriptions inside the component body, left the icon map module-scoped, and translated both the card-based selector and dropdown/warning-dialog variants with shared `configType.*` keys. Validation:
   - `npx eslint packages/billing/src/components/billing-dashboard/service-configurations/ConfigurationTypeSelector.tsx`
+- **(2026-04-17, F007)** Wired the shared service-config panels:
+  - `packages/billing/src/components/billing-dashboard/service-configurations/BaseServiceConfigPanel.tsx`
+  - `packages/billing/src/components/billing-dashboard/service-configurations/ServiceConfigurationPanel.tsx`
+  Added `useTranslation('msp/service-catalog')` for the base section title, service label, effective-mode/default-source labels, translated mode/source values, configuration-type label, quantity/custom-rate field copy, and the orchestrator save/cancel + bucket-overlay recommendation labels. Validation:
+  - `npx eslint packages/billing/src/components/billing-dashboard/service-configurations/BaseServiceConfigPanel.tsx packages/billing/src/components/billing-dashboard/service-configurations/ServiceConfigurationPanel.tsx`
