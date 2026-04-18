@@ -80,7 +80,7 @@
   {
     "id": "T014",
     "description": "German (de) — no overflow in tax rate dialog fields, service form labels, configuration type card descriptions, rate tier table headers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
