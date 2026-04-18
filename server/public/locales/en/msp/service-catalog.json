@@ -319,6 +319,9 @@
   },
   "usageConfig": {
     "title": "Usage-Based Configuration",
+    "defaults": {
+      "unitOfMeasure": "Unit"
+    },
     "fields": {
       "unitOfMeasure": {
         "label": "Unit of Measure",
