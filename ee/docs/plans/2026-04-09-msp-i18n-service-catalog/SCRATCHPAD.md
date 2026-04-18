@@ -216,3 +216,9 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `service-configurations/ServiceConfigurationPanel.tsx:76` → `useTranslation('msp/service-catalog')`
   - `service-configurations/ServiceConfigurationPanel.tsx:227` / `:282` → translated bucket-overlay recommendation and Save action
   This covers the section-heading, field-label, and save/cancel wiring for the shared configuration shell.
+- **(2026-04-18, T007)** Verified the four type-specific config panels with the successful `npm run build` plus:
+  - `FixedServiceConfigPanel.tsx:28` / `:69` → `useTranslation('msp/service-catalog')` and `fixedConfig.title`
+  - `HourlyServiceConfigPanel.tsx:30` / `:163` / `:231` → `useTranslation(...)`, `hourlyConfig.title`, and `hourlyConfig.userTypeRates.title`
+  - `UsageServiceConfigPanel.tsx:39` / `:248` / `:336` → `useTranslation(...)`, `usageConfig.title`, and `usageConfig.tiers.addTier`
+  - `BucketServiceConfigPanel.tsx:28-29` / `:96` / `:150` → `useTranslation(...)`, `useBillingFrequencyOptions()`, `bucketConfig.title`, and the mismatch warning copy
+  This covers the translated field labels, helper text, validation surfaces, and the shared billing-frequency hook migration in the bucket panel.

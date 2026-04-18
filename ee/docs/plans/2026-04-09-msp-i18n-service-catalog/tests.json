@@ -38,7 +38,7 @@
   {
     "id": "T007",
     "description": "Fixed, Hourly, Usage, and Bucket config panels all compile with useTranslation — field labels, toggle text, validation messages, helper text extracted",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F009", "F010", "F011"]
   },
   {
