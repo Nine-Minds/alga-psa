@@ -112,7 +112,7 @@
   {
     "id": "F023",
     "description": "Wire useTranslation in PrepaymentInvoices.tsx -- heading (Generate Prepayment Invoice, Generate Credit Memo), descriptions (2 strings), field labels (Type, Client, Amount, Description), type options (Prepayment Invoice, Credit Memo), placeholders (Enter amount, Prepayment for future services, Reason for credit memo), validation errors, submit button states (Generating..., Generate Prepayment Invoice, Generate Credit Memo)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F024",
