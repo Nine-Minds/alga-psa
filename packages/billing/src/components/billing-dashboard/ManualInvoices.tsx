@@ -20,8 +20,8 @@ import type { JSX } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { formatCurrency } from '@alga-psa/core';
 import { useQuickAddClient } from '@alga-psa/ui/context';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Use a constant for environment check since process.env is not available
 const IS_DEVELOPMENT = typeof window !== 'undefined' &&
@@ -81,6 +81,8 @@ const AutomatedItemsTable: React.FC<{
   }>;
   currencyCode?: string;
 }> = ({ items, currencyCode = 'USD' }) => {
+  const { t } = useTranslation('msp/invoicing');
+  const { formatCurrency } = useFormatters();
   console.log('[Render] Rendering automated items table:', {
     count: items.length,
     items: items.map(item => ({
@@ -91,12 +93,18 @@ const AutomatedItemsTable: React.FC<{
 
   return (
     <div className="mb-6">
-      <h3 className="text-sm font-medium mb-2">Automated Line Items</h3>
+      <h3 className="text-sm font-medium mb-2">
+        {t('manualInvoices.automatedItems.title', { defaultValue: 'Automated Line Items' })}
+      </h3>
       <table className="w-full">
         <thead className="text-sm text-muted-foreground">
           <tr>
-            <th className="text-left py-2">Service</th>
-            <th className="text-right py-2">Total</th>
+            <th className="text-left py-2">
+              {t('manualInvoices.automatedItems.service', { defaultValue: 'Service' })}
+            </th>
+            <th className="text-right py-2">
+              {t('manualInvoices.automatedItems.total', { defaultValue: 'Total' })}
+            </th>
           </tr>
         </thead>
         <tbody className="text-sm">
@@ -104,7 +112,7 @@ const AutomatedItemsTable: React.FC<{
             <tr key={i} className="border-t">
               <td className="py-2">{item.service_name}</td>
               {/* Display total_price */}
-              <td className="text-right">{formatCurrency(item.total / 100, 'en-US', currencyCode)}</td>
+              <td className="text-right">{formatCurrency(item.total / 100, currencyCode)}</td>
             </tr>
           ))}
         </tbody>
@@ -138,6 +146,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   onGenerateSuccess,
   invoice, // This is the initial invoice prop
 }) => {
+  const { t } = useTranslation('msp/invoicing');
+  const { formatCurrency } = useFormatters();
   const { renderQuickAddClient } = useQuickAddClient();
   const [clientOptions, setClientOptions] = useState<IClient[]>(clients);
   const [selectedClient, setSelectedClient] = useState<string | null>(
@@ -660,28 +670,39 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             <div className="flex items-center gap-4 mb-6">
               <div>
                 <h2 className="text-lg font-semibold">
-                  {(currentInvoiceData || invoice) ? 'Invoice Details' : 'Generate Manual Invoice'}
+                  {(currentInvoiceData || invoice)
+                    ? t('manualInvoices.detailsTitle', { defaultValue: 'Invoice Details' })
+                    : t('manualInvoices.title', { defaultValue: 'Generate Manual Invoice' })}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {(currentInvoiceData || invoice)
-                    ? 'Manual edits stay periodless by default, while recurring detail-backed lines keep their canonical service periods.'
-                    : 'Use manual invoices for one-off or adjustment lines. They coexist with recurring invoices without redefining recurring service periods.'}
+                    ? t('manualInvoices.detailsDescription', {
+                      defaultValue: 'Manual edits stay periodless by default, while recurring detail-backed lines keep their canonical service periods.',
+                    })
+                    : t('manualInvoices.description', {
+                      defaultValue: 'Use manual invoices for one-off or adjustment lines. They coexist with recurring invoices without redefining recurring service periods.',
+                    })}
                 </p>
               </div>
             </div>
 
             {currentInvoiceData && (
               <div className="mb-6">
-                <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Client</label>
+                <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                  {t('manualInvoices.fields.client', { defaultValue: 'Client' })}
+                </label>
                 <div className="text-[rgb(var(--color-text-900))]">
-                  {clientOptions.find(c => c.client_id === currentInvoiceData.client_id)?.client_name || 'Unknown Client'}
+                  {clientOptions.find(c => c.client_id === currentInvoiceData.client_id)?.client_name
+                    || t('common.labels.unknownClient', { defaultValue: 'Unknown client' })}
                 </div>
               </div>
             )}
 
             {currentInvoiceData && (
               <div className="mb-6">
-                <label htmlFor="invoice-number-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Invoice Number</label>
+                <label htmlFor="invoice-number-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                  {t('manualInvoices.fields.invoiceNumber', { defaultValue: 'Invoice Number' })}
+                </label>
                 <input
                   id="invoice-number-input"
                   type="text"
@@ -702,7 +723,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             <form onSubmit={handleSubmit} className="space-y-6">
               {!invoice && !currentInvoiceData && (
                 <div>
-                  <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Client</label>
+                  <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('manualInvoices.fields.client', { defaultValue: 'Client' })}
+                  </label>
                   <ClientPicker
                     id='client-picker'
                     clients={clientOptions}
@@ -713,6 +736,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     clientTypeFilter={clientTypeFilter}
                     onClientTypeFilterChange={setClientTypeFilter}
                     onAddNew={() => setIsQuickAddClientOpen(true)}
+                    placeholder={t('manualInvoices.placeholders.selectClient', {
+                      defaultValue: 'Select a client',
+                    })}
                   />
                   {renderQuickAddClient({
                     open: isQuickAddClientOpen,
@@ -728,13 +754,19 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
               {!invoice && !currentInvoiceData && (
                 <div className="mb-6">
-                  <label htmlFor="new-invoice-number-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Invoice Number (Optional)</label>
+                  <label htmlFor="new-invoice-number-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('manualInvoices.fields.invoiceNumberOptional', {
+                      defaultValue: 'Invoice Number (Optional)',
+                    })}
+                  </label>
                   <input
                     id="new-invoice-number-input"
                     type="text"
                     // Value is not directly controlled here for new invoices; passed to action on submit
                     // onChange={(e) => { /* No direct state update needed here */ }}
-                    placeholder="Leave blank to auto-generate"
+                    placeholder={t('manualInvoices.placeholders.invoiceNumberOptional', {
+                      defaultValue: 'Leave blank to auto-generate',
+                    })}
                     className="border rounded-md px-3 py-2 w-full max-w-xs shadow-sm focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
@@ -786,7 +818,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
               <div>
                 <h3 className="text-sm font-medium mb-2">
-                  {currentInvoiceData && !currentInvoiceData.is_manual ? 'Manual Line Items' : 'Line Items'}
+                  {currentInvoiceData && !currentInvoiceData.is_manual
+                    ? t('manualInvoices.lineItems.manual', { defaultValue: 'Manual Line Items' })
+                    : t('manualInvoices.lineItems.all', { defaultValue: 'Line Items' })}
                 </h3>
                 <div className="space-y-2">
                   {items.map((item, index) => (
@@ -828,7 +862,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                 </div>
                 <div className="text-lg font-semibold">
                   {/* Always use the calculated total for consistency */}
-                  <>Total: {formatCurrency(calculatedGrandTotal / 100, 'en-US', currencyCode)}</>
+                  <>
+                    {t('manualInvoices.labels.total', { defaultValue: 'Total' })}: {formatCurrency(calculatedGrandTotal / 100, currencyCode)}
+                  </>
                 </div>
               </div>
 

@@ -185,6 +185,7 @@
   "manualInvoices": {
     "title": "Generate Manual Invoice",
     "detailsTitle": "Invoice Details",
+    "detailsDescription": "Manual edits stay periodless by default, while recurring detail-backed lines keep their canonical service periods.",
     "description": "Create a manual invoice and optionally include automated recurring items.",
     "fields": {
       "client": "Client",
@@ -192,9 +193,11 @@
       "invoiceNumberOptional": "Invoice Number (Optional)"
     },
     "placeholders": {
-      "selectClient": "Select a client"
+      "selectClient": "Select a client",
+      "invoiceNumberOptional": "Leave blank to auto-generate"
     },
     "automatedItems": {
+      "title": "Automated Line Items",
       "service": "Service",
       "total": "Total"
     },

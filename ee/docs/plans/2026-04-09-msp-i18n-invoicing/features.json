@@ -37,7 +37,7 @@
   {
     "id": "F008",
     "description": "Wire useTranslation in ManualInvoices.tsx -- form headings (Invoice Details, Generate Manual Invoice), descriptions, field labels (Client, Invoice Number, Invoice Number (Optional)), placeholders, automated items table headers (Service, Total), line item section heading (Manual Line Items, Line Items)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F009",
