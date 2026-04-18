@@ -314,7 +314,6 @@ return (
               id="invoice-templates-table"
               data={invoiceTemplates}
               columns={templateColumns}
-              pagination={false}
               onRowClick={(record) => {
                 if (record.isStandard) {
                   void handleCloneAndEdit(record);
