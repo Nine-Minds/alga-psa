@@ -1,0 +1,1188 @@
+{
+  "common": {
+    "actions": {
+      "add": "Add",
+      "back": "Back",
+      "cancel": "Cancel",
+      "close": "Close",
+      "copy": "Copy",
+      "create": "Create",
+      "delete": "Delete",
+      "download": "Download",
+      "edit": "Edit",
+      "refresh": "Refresh",
+      "remove": "Remove",
+      "retry": "Retry",
+      "save": "Save",
+      "saving": "Saving...",
+      "search": "Search",
+      "select": "Select",
+      "update": "Update",
+      "view": "View"
+    },
+    "states": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "loading": "Loading...",
+      "na": "N/A",
+      "none": "None"
+    },
+    "no": "No",
+    "yes": "Yes"
+  },
+  "enums": {
+    "rmmAgentStatus": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Overdue",
+      "unknown": "Unknown"
+    }
+  },
+  "assetAlertsSection": {
+    "title": "Asset Alerts Section",
+    "description": "Enterprise alert section wrapper for asset-specific RMM alerts and remediation actions"
+  },
+  "assetCommandPalette": {
+    "title": "Command Palette",
+    "description": "Command palette for searching assets and launching asset actions",
+    "register": {
+      "label": "Asset Command Palette",
+      "title": "Asset Command Palette"
+    },
+    "actions": {
+      "createAsset": {
+        "label": "Create asset",
+        "description": "Open quick add to register a new asset"
+      },
+      "refreshData": {
+        "label": "Refresh data",
+        "description": "Re-fetch assets from the server"
+      },
+      "reset": {
+        "label": "Reset",
+        "description": "Remove all active filters and search terms"
+      }
+    },
+    "searchPlaceholder": "Search assets, clients, tickets…",
+    "empty": "No matches yet. Try a different keyword.",
+    "groups": {
+      "quickActions": "Quick actions",
+      "assets": "Assets",
+      "hints": "Hints"
+    },
+    "hint": {
+      "body": "Keep typing to search across the full asset list. Tickets and client lookup will arrive in a later drop.",
+      "badge": "Coming soon"
+    },
+    "values": {
+      "unassigned": "Unassigned"
+    }
+  },
+  "assetDashboard": {
+    "title": "Asset Dashboard",
+    "description": "Top-level asset dashboard wrapper that renders the client asset experience"
+  },
+  "assetDashboardClient": {
+    "title": "Asset Dashboard Client",
+    "description": "Main asset list page with filters, table and grid views, bulk actions, and drawer flows",
+    "reflection": {
+      "label": "Asset Dashboard"
+    },
+    "errors": {
+      "loadDrawerFailed": "Unable to load asset details right now. Please try again."
+    },
+    "details": {
+      "noIp": "No IP",
+      "network": "Network",
+      "local": "Local",
+      "noDetails": "No details available",
+      "unassigned": "Unassigned"
+    },
+    "selection": {
+      "selectAllVisibleAssets": "Select all visible assets",
+      "selectAsset": "Select asset {{name}}",
+      "selectedAssets": "{{count}} asset{{suffix}} selected",
+      "clearSelection": "Clear selection",
+      "bulkActionsComingSoon": "Bulk actions coming soon"
+    },
+    "actions": {
+      "openActionsForAsset": "Open actions for asset {{name}}",
+      "viewDetails": "View details",
+      "editAsset": "Edit asset",
+      "createTicket": "Create ticket",
+      "refreshData": "Refresh data"
+    },
+    "table": {
+      "name": "Name",
+      "tag": "Tag",
+      "type": "Type",
+      "details": "Details",
+      "status": "Status",
+      "agent": "Agent",
+      "client": "Client",
+      "location": "Location",
+      "actions": "Actions"
+    },
+    "metrics": {
+      "totalAssets": {
+        "title": "Total Assets",
+        "helper": "Across all clients"
+      },
+      "filteredView": {
+        "title": "Filtered view",
+        "helper": "Matching active filters"
+      },
+      "automationReady": {
+        "title": "Automation ready",
+        "helper": "Active maintenance schedules",
+        "upcoming": "Upcoming: {{count}}",
+        "overdue": "Overdue: {{count}}"
+      },
+      "activeSchedules": {
+        "title": "Active Schedules",
+        "helper": "Lifecycle automation"
+      },
+      "overdueMaintenance": {
+        "title": "Maintenance Overdue",
+        "helper": "Needs attention"
+      },
+      "upcomingMaintenance": {
+        "title": "Upcoming Maintenance",
+        "helper": "Next 30 days"
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "Search by name, tag, or serial number",
+      "reset": "Reset",
+      "status": "Status",
+      "type": "Type",
+      "agent": "Agent",
+      "columns": "Columns",
+      "client": {
+        "loading": "Loading clients…",
+        "placeholder": "Client",
+        "clear": "Clear client filter"
+      },
+      "rmmManaged": {
+        "managed": "RMM Managed",
+        "unmanaged": "Not Managed"
+      }
+    },
+    "activeFilters": {
+      "status": "Status: {{value}}",
+      "type": "Type: {{value}}",
+      "client": "Client: {{value}}",
+      "agent": "Agent: {{value}}"
+    },
+    "statuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "maintenance": "Maintenance"
+    },
+    "types": {
+      "workstation": "Workstation",
+      "server": "Server",
+      "network_device": "Network Device",
+      "mobile_device": "Mobile Device",
+      "printer": "Printer"
+    },
+    "columns": {
+      "select": "select",
+      "name": "name",
+      "asset_tag": "asset tag",
+      "asset_type": "asset type",
+      "details": "details",
+      "status": "status",
+      "agent_status": "agent status",
+      "client_name": "client name",
+      "location": "location",
+      "actions": "actions"
+    }
+  },
+  "assetDashboardGrid": {
+    "title": "Asset Dashboard Grid",
+    "description": "Composite grid layout for asset detail cards, RMM panels, and related status widgets"
+  },
+  "assetDetailDrawer": {
+    "title": "Asset Detail Drawer",
+    "description": "Drawer-based asset quick view with actions, summary data, and navigation into the full record",
+    "label": "Asset Detail Drawer",
+    "header": {
+      "title": "Asset details",
+      "subtitle": "Stay in context while reviewing lifecycle and configuration"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "maintenance": "Maintenance",
+      "tickets": "Tickets",
+      "configuration": "Configuration",
+      "documents": "Documents"
+    },
+    "helper": {
+      "awaitingSelection": "Awaiting asset selection",
+      "selectedAsset": "{{name}} • {{tab}}"
+    },
+    "statuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "maintenance": "Maintenance"
+    },
+    "empty": {
+      "selectAsset": "Select an asset to view details",
+      "nothingToDisplay": "Nothing to display"
+    },
+    "actions": {
+      "openAssetRecord": "Open asset record",
+      "delete": "Delete"
+    },
+    "overview": {
+      "assetTag": "Asset tag {{tag}} • {{type}}",
+      "client": "Client: {{name}}",
+      "activeSchedules": "Active Schedules",
+      "upcomingMaintenance": "Upcoming Maintenance",
+      "nextOn": "Next on {{date}}",
+      "completedMaintenance": "Completed Maintenance",
+      "compliance": "Compliance {{percent}}%",
+      "lastMaintenance": "Last Maintenance",
+      "noHistory": "No history",
+      "maintenanceDataPending": "Maintenance data will appear once schedules are configured.",
+      "assetSummary": "Asset summary",
+      "recentLifecycleEvents": "Recent lifecycle events"
+    },
+    "maintenance": {
+      "noSchedules": "No maintenance schedules found for this asset yet.",
+      "totalSchedules": "Total Schedules",
+      "active": "Active",
+      "complianceRate": "Compliance Rate",
+      "history": "Maintenance history",
+      "loggedBy": "Logged by {{name}}",
+      "system": "system",
+      "noLogs": "Maintenance logs will appear here after the first service entry."
+    },
+    "tickets": {
+      "empty": "No tickets linked to this asset yet. Use the quick action to create one.",
+      "linked": "Linked {{date}}",
+      "client": "Client: {{name}}",
+      "assignee": "Assignee: {{name}}",
+      "openTicket": "Open ticket"
+    },
+    "configuration": {
+      "coreAttributes": "Core attributes",
+      "serialNumber": "Serial number",
+      "location": "Location",
+      "purchaseDate": "Purchase date",
+      "warrantyEnd": "Warranty end",
+      "notProvided": "Not provided"
+    },
+    "info": {
+      "client": "Client",
+      "unassigned": "Unassigned",
+      "assetTag": "Asset tag",
+      "status": "Status",
+      "created": "Created",
+      "updated": "Updated",
+      "tenant": "Tenant"
+    },
+    "typeDetails": {
+      "workstation": "Workstation details",
+      "networkDevice": "Network device details",
+      "server": "Server details",
+      "mobileDevice": "Mobile device details",
+      "printer": "Printer details",
+      "operatingSystem": "Operating system",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Storage",
+      "gpu": "GPU",
+      "notProvided": "Not provided",
+      "never": "Never",
+      "deviceType": "Device type",
+      "managementIp": "Management IP",
+      "portCount": "Port count",
+      "firmwareVersion": "Firmware version",
+      "poeSupport": "PoE support",
+      "powerDraw": "Power draw",
+      "virtualized": "Virtualized",
+      "primaryIp": "Primary IP",
+      "hypervisor": "Hypervisor",
+      "os": "OS",
+      "model": "Model",
+      "imei": "IMEI",
+      "phoneNumber": "Phone number",
+      "carrier": "Carrier",
+      "lastLogin": "Last login",
+      "lastCheckIn": "Last check-in",
+      "notReported": "Not reported",
+      "networkPrinter": "Network printer",
+      "ipAddress": "IP address",
+      "supportsColor": "Supports color",
+      "supportsDuplex": "Supports duplex",
+      "monthlyDutyCycle": "Monthly duty cycle",
+      "monthlyDutyCycleValue": "{{count}} pages"
+    },
+    "relative": {
+      "momentsAgo": "moments ago",
+      "minutesAgo": "{{count}} minute{{suffix}} ago",
+      "hoursAgo": "{{count}} hour{{suffix}} ago",
+      "daysAgo": "{{count}} day{{suffix}} ago"
+    }
+  },
+  "assetDetailHeader": {
+    "title": "Asset Detail Header",
+    "description": "Header chrome for the asset detail experience including identity, badges, and refresh actions",
+    "backToAssets": "Back to Assets",
+    "assetTag": "Asset Tag: {{tag}}",
+    "actions": {
+      "createTicket": "Create Ticket",
+      "menu": "Actions",
+      "refreshing": "Refreshing...",
+      "refreshData": "Refresh Data",
+      "rebootDevice": "Reboot Device",
+      "editAsset": "Edit Asset",
+      "deleteAsset": "Delete Asset"
+    },
+    "values": {
+      "unknownClient": "Unknown Client"
+    }
+  },
+  "assetDetailTabs": {
+    "title": "Asset Detail Tabs",
+    "description": "Tabbed asset detail navigation for overview, maintenance, documents, history, and related records",
+    "tabs": {
+      "serviceHistory": "Service History",
+      "software": "Software",
+      "maintenance": "Maintenance",
+      "relatedAssets": "Related Assets",
+      "documentsPasswords": "Documents & Passwords",
+      "auditLog": "Audit Log"
+    }
+  },
+  "assetDetailView": {
+    "title": "Asset Detail View",
+    "description": "Asset detail composition with loading, error, metrics, grid panels, and detail tabs",
+    "loading": "Loading asset details...",
+    "errors": {
+      "title": "Error",
+      "notFound": "Asset not found or you do not have permission to view it."
+    }
+  },
+  "assetDetails": {
+    "title": "Asset Details",
+    "description": "Full asset details page with summary cards, associations, documents, and operational actions",
+    "assetTag": "Asset Tag: {{tag}}",
+    "loading": {
+      "details": "Loading details..."
+    },
+    "fields": {
+      "status": "Status",
+      "serialNumber": "Serial Number",
+      "location": "Location",
+      "client": "Client",
+      "purchaseDate": "Purchase Date",
+      "warrantyEnd": "Warranty End",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Storage",
+      "gpu": "GPU",
+      "lastLogin": "Last Login",
+      "managementIp": "Management IP",
+      "portCount": "Port Count",
+      "powerDraw": "Power Draw",
+      "firmwareVersion": "Firmware Version",
+      "poeSupport": "PoE Support",
+      "type": "Type",
+      "hypervisor": "Hypervisor",
+      "primaryIp": "Primary IP",
+      "operatingSystem": "Operating System",
+      "imei": "IMEI",
+      "phoneNumber": "Phone Number",
+      "carrier": "Carrier",
+      "supervisionStatus": "Supervision Status",
+      "ipAddress": "IP Address",
+      "networkPrinter": "Network Printer",
+      "colorSupport": "Color Support",
+      "duplexSupport": "Duplex Support",
+      "monthlyDutyCycle": "Monthly Duty Cycle"
+    },
+    "sections": {
+      "basicInformation": "Basic Information",
+      "workstation": "Workstation Details",
+      "networkDevice": "Network Device Details",
+      "server": "Server Details",
+      "mobileDevice": "Mobile Device Details",
+      "printer": "Printer Details",
+      "relatedAssets": "Related Assets"
+    },
+    "maintenance": {
+      "activeSchedules": "Active Schedules",
+      "overdue": "Overdue",
+      "upcoming": "Upcoming"
+    },
+    "tabs": {
+      "details": "Details",
+      "relatedAssets": "Related Assets",
+      "documents": "Documents"
+    },
+    "relationships": {
+      "parentOf": "Parent of",
+      "childOf": "Child of"
+    },
+    "empty": {
+      "notSpecified": "Not specified",
+      "unassigned": "Unassigned",
+      "never": "Never",
+      "noAdditionalDetails": "No additional details available",
+      "noRelatedAssets": "No related assets found"
+    },
+    "values": {
+      "virtual": "Virtual",
+      "physical": "Physical",
+      "supervised": "Supervised",
+      "unsupervised": "Unsupervised",
+      "pagesUnit": "pages"
+    },
+    "statuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "maintenance": "Maintenance"
+    },
+    "deviceTypes": {
+      "switch": "Switch",
+      "router": "Router",
+      "firewall": "Firewall",
+      "access_point": "Access Point",
+      "load_balancer": "Load Balancer"
+    },
+    "relationshipTypes": {
+      "affected": "Affected",
+      "related": "Related"
+    }
+  },
+  "assetDocuments": {
+    "title": "Asset Documents",
+    "description": "Asset document listing and attachment surface for files associated with an asset"
+  },
+  "assetForm": {
+    "title": "Asset Form",
+    "description": "Primary asset create and edit form with identity, lifecycle, contract, and metadata fields",
+    "heading": "Edit Asset",
+    "loading": {
+      "assetDetails": "Loading asset details..."
+    },
+    "errors": {
+      "assetNotFound": "Asset not found",
+      "loadFailed": "Failed to load asset details",
+      "clientsLoadFailed": "Unable to load clients",
+      "locationsLoadFailed": "Unable to load locations for this client",
+      "updateFailed": "Failed to update asset"
+    },
+    "actions": {
+      "viewClient": "View client",
+      "manageClientLocations": "Manage client locations",
+      "saveChanges": "Save Changes"
+    },
+    "alerts": {
+      "noLocationsSaved": "This client doesn’t have any saved locations yet. Use custom entry or create one from the client record."
+    },
+    "sections": {
+      "basicInformation": "Basic Information",
+      "clientAndLocation": "Client & Location",
+      "assetBasics": "Asset Basics"
+    },
+    "fields": {
+      "customLocationOption": "Custom location",
+      "osType": "OS Type",
+      "osVersion": "OS Version",
+      "cpuModel": "CPU Model",
+      "cpuCores": "CPU Cores",
+      "ramGb": "RAM (GB)",
+      "storageType": "Storage Type",
+      "storageCapacityGb": "Storage Capacity (GB)",
+      "gpuModel": "GPU Model",
+      "deviceType": "Device Type",
+      "managementIp": "Management IP",
+      "portCount": "Port Count",
+      "firmwareVersion": "Firmware Version",
+      "powerDrawWatts": "Power Draw (Watts)",
+      "supportsPoe": "Supports PoE",
+      "primaryIp": "Primary IP",
+      "raidConfig": "RAID Config",
+      "virtualMachine": "Virtual Machine",
+      "hypervisor": "Hypervisor",
+      "model": "Model",
+      "imei": "IMEI",
+      "phoneNumber": "Phone Number",
+      "carrier": "Carrier",
+      "supervisedDevice": "Supervised Device",
+      "ipAddress": "IP Address",
+      "monthlyDutyCycle": "Monthly Duty Cycle",
+      "networkPrinter": "Network Printer",
+      "colorSupport": "Color Support",
+      "duplexSupport": "Duplex Support",
+      "client": "Client",
+      "primaryLocation": "Primary Location",
+      "name": "Name",
+      "assetTag": "Asset Tag",
+      "serialNumber": "Serial Number",
+      "status": "Status",
+      "purchaseDate": "Purchase Date",
+      "warrantyEndDate": "Warranty End Date"
+    },
+    "placeholders": {
+      "loadingClients": "Loading clients…",
+      "selectClient": "Select client",
+      "loadingLocations": "Loading locations…",
+      "selectLocation": "Select a location",
+      "selectClientFirst": "Select a client first",
+      "customLocation": "Enter a custom location or area",
+      "selectPurchaseDate": "Select purchase date",
+      "selectWarrantyEndDate": "Select warranty end date"
+    },
+    "statusOptions": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "maintenance": "Maintenance"
+    },
+    "networkDeviceTypes": {
+      "switch": "Switch",
+      "router": "Router",
+      "firewall": "Firewall",
+      "access_point": "Access Point",
+      "load_balancer": "Load Balancer"
+    },
+    "storageTypes": {
+      "ssd": "SSD",
+      "hdd": "HDD",
+      "nvme": "NVMe"
+    },
+    "osTypes": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Android"
+    },
+    "typeDetails": {
+      "workstation": "Workstation Details",
+      "networkDevice": "Network Device Details",
+      "server": "Server Details",
+      "mobileDevice": "Mobile Device Details",
+      "printer": "Printer Details"
+    }
+  },
+  "assetFormClient": {
+    "title": "Asset Form Client",
+    "description": "Client-only dynamic wrapper for the asset form and edit skeleton experience",
+    "loadingTitle": "Edit Asset"
+  },
+  "assetMetricsBanner": {
+    "title": "Asset Metrics Banner",
+    "description": "Metric cards and rollups for tickets, maintenance, uptime, and asset health indicators",
+    "labels": {
+      "healthStatus": "Health Status",
+      "openTickets": "Open Tickets",
+      "securityStatus": "Security Status",
+      "warranty": "Warranty"
+    },
+    "healthStatuses": {
+      "healthy": "Healthy",
+      "warning": "Warning",
+      "critical": "Critical",
+      "unknown": "Unknown"
+    },
+    "securityStatuses": {
+      "secure": "Secure",
+      "missingPatches": "{{count}} Missing Patches",
+      "critical": "Critical",
+      "unknown": "Unknown"
+    },
+    "openTickets": {
+      "active": "[{{count}} Active]"
+    },
+    "warrantyStatuses": {
+      "expiresIn": "Expires in {{count}} Days",
+      "expired": "Expired",
+      "unknown": "Unknown"
+    }
+  },
+  "assetPatchStatusSection": {
+    "title": "Asset Patch Status Section",
+    "description": "Enterprise patch and antivirus status wrapper shown in the asset detail experience"
+  },
+  "assetSoftwareInventory": {
+    "title": "Asset Software Inventory",
+    "description": "Enterprise software inventory wrapper for installed software and version data"
+  },
+  "associatedAssets": {
+    "title": "Associated Assets",
+    "description": "Parent and child asset relationship management with linked asset actions",
+    "loading": {
+      "assets": "Loading assets..."
+    },
+    "actions": {
+      "addAsset": "Add Asset",
+      "showLess": "Show less",
+      "moreAssets": "{{count}} more asset{{suffix}}"
+    },
+    "errors": {
+      "loadAvailableAssets": "Failed to load available assets",
+      "loadDrawerFailed": "Unable to load asset details right now. Please try again.",
+      "loadAssociatedAssets": "Failed to load associated assets",
+      "selectAtLeastOneAsset": "Please select at least one asset",
+      "associateFailed": "Failed to associate assets - they may already be associated",
+      "associationFailed": "Failed to associate assets",
+      "removeFailed": "Failed to remove asset association"
+    },
+    "success": {
+      "associated": "{{count}} asset{{suffix}} associated successfully",
+      "associatedPartial": "{{count}} asset{{suffix}} associated successfully, {{failed}} failed (may already be associated)",
+      "removed": "Asset association removed"
+    },
+    "empty": {
+      "noneAssociated": "No assets associated with this ticket.",
+      "unknownAsset": "Unknown Asset"
+    },
+    "dialog": {
+      "title": "Add Asset",
+      "loadingAssets": "Loading assets...",
+      "selectedAssetsLabel": "Selected:",
+      "search": {
+        "label": "Search Assets",
+        "placeholder": "Search by name, tag, or serial..."
+      },
+      "empty": {
+        "search": "No assets found matching your search",
+        "available": "No assets available for this client"
+      },
+      "relationship": {
+        "placeholder": "Type..."
+      },
+      "actions": {
+        "addAssets": "Add Asset{{suffix}}"
+      }
+    },
+    "table": {
+      "name": "Name",
+      "assetTag": "Asset Tag",
+      "type": "Type",
+      "status": "Status"
+    },
+    "assetStatuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "maintenance": "Maintenance"
+    },
+    "assetTypes": {
+      "workstation": "Workstation",
+      "server": "Server",
+      "network_device": "Network Device",
+      "mobile_device": "Mobile Device",
+      "printer": "Printer"
+    },
+    "relationshipTypes": {
+      "affected": "Affected",
+      "related": "Related"
+    }
+  },
+  "createTicketFromAssetButton": {
+    "title": "Create Ticket from Asset",
+    "description": "Ticket creation flow launched from an asset with board, status, and category selection",
+    "register": {
+      "label": "Create Ticket from Asset",
+      "title": "Create Ticket from Asset"
+    },
+    "defaultTitle": "Issue with {{name}}",
+    "actions": {
+      "open": "Create Ticket",
+      "create": "Create Ticket",
+      "creating": "Creating..."
+    },
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "board": "Board",
+      "status": "Status",
+      "priority": "Priority"
+    },
+    "placeholders": {
+      "title": "Enter ticket title",
+      "description": "Describe the issue...",
+      "loadingBoards": "Loading boards...",
+      "selectBoard": "Select board...",
+      "selectBoardFirst": "Select board first...",
+      "loadingStatuses": "Loading statuses...",
+      "selectStatus": "Select status...",
+      "loadingPriorities": "Loading priorities...",
+      "selectPriority": "Select priority..."
+    },
+    "errors": {
+      "loadPriorities": "Failed to load priorities",
+      "loadBoards": "Failed to load boards",
+      "loadStatuses": "Failed to load statuses",
+      "requiredFields": "Please fill in title, board, status, and priority",
+      "createFailed": "Failed to create ticket"
+    },
+    "success": {
+      "created": "Ticket created successfully"
+    }
+  },
+  "deleteAssetButton": {
+    "title": "Delete Asset Button",
+    "description": "Delete confirmation flow for removing an asset record",
+    "actions": {
+      "removing": "Removing…"
+    },
+    "entityNameFallback": "this asset",
+    "errors": {
+      "validationFailed": "Failed to validate deletion. Please try again.",
+      "deleteFailed": "Failed to delete asset. Please try again."
+    }
+  },
+  "quickAddAsset": {
+    "title": "Quick Add Asset",
+    "description": "Quick-create asset flow with essential fields for adding a new asset record",
+    "actions": {
+      "addAsset": "Add Asset",
+      "creating": "Creating...",
+      "createAsset": "Create Asset"
+    },
+    "errors": {
+      "fetchClientsFailed": "Failed to fetch clients",
+      "createFailed": "Failed to create asset"
+    },
+    "validation": {
+      "client": "Client",
+      "assetName": "Asset Name",
+      "assetTag": "Asset Tag",
+      "assetType": "Asset Type",
+      "requiredFields": "Please fill in the required fields:"
+    },
+    "fields": {
+      "osType": "OS Type",
+      "osVersion": "OS Version",
+      "deviceType": "Device Type",
+      "managementIp": "Management IP",
+      "model": "Model",
+      "clientRequired": "Client *",
+      "assetNameRequired": "Asset Name *",
+      "assetTagRequired": "Asset Tag *",
+      "typeRequired": "Type *",
+      "status": "Status",
+      "serialNumber": "Serial Number"
+    },
+    "placeholders": {
+      "workstationOsType": "e.g., Windows, macOS, Linux",
+      "workstationOsVersion": "e.g., 11, Monterey, Ubuntu 22.04",
+      "selectDeviceType": "Select device type",
+      "managementIp": "e.g., 192.168.1.1",
+      "serverOsType": "e.g., Windows Server, Ubuntu Server",
+      "serverOsVersion": "e.g., 2022, 22.04 LTS",
+      "selectOsType": "Select OS type",
+      "mobileModel": "e.g., iPhone 14 Pro, Galaxy S23",
+      "printerModel": "e.g., HP LaserJet Pro M404n",
+      "assetName": "Enter asset name",
+      "assetTag": "Enter asset tag",
+      "selectType": "Select type",
+      "selectStatus": "Select status",
+      "serialNumber": "Enter serial number"
+    },
+    "sections": {
+      "typeSpecificDetails": "Type-specific Details"
+    },
+    "statusOptions": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "maintenance": "Maintenance"
+    },
+    "assetTypes": {
+      "workstation": "Workstation",
+      "network_device": "Network Device",
+      "server": "Server",
+      "mobile_device": "Mobile Device",
+      "printer": "Printer"
+    },
+    "networkDeviceTypes": {
+      "switch": "Switch",
+      "router": "Router",
+      "firewall": "Firewall",
+      "accessPoint": "Access Point",
+      "loadBalancer": "Load Balancer"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Android"
+    }
+  },
+  "remoteAccessButton": {
+    "title": "Remote Access Button",
+    "description": "Remote access launcher for assets with supported connection integrations"
+  },
+  "rmmStatusIndicator": {
+    "title": "RMM Status Indicator",
+    "description": "Connected/disconnected RMM status chip and supporting state labels",
+    "titles": {
+      "unknown": "Agent status unknown",
+      "status": "{{status}}{{suffix}}",
+      "lastSeen": " - Last seen: {{value}}"
+    },
+    "relative": {
+      "justNow": "Just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    }
+  },
+  "assetInfoPanel": {
+    "title": "Asset Info & Lifecycle",
+    "description": "General asset information panel for identification, owner, and lifecycle details",
+    "actions": {
+      "copy": "Copy",
+      "copied": "Copied"
+    },
+    "fields": {
+      "client": "Client",
+      "location": "Location",
+      "model": "Model",
+      "serialNumber": "Serial Number",
+      "purchaseDate": "Purchase Date",
+      "warrantyEnd": "Warranty End"
+    },
+    "values": {
+      "unknownClient": "Unknown Client",
+      "unassigned": "Unassigned",
+      "unknownModel": "Unknown Model"
+    }
+  },
+  "assetNotesPanel": {
+    "title": "Notes & Quick Info",
+    "description": "Rich-text notes panel for asset-specific notes and quick operational context",
+    "errors": {
+      "loadTitle": "Notes failed to load",
+      "unknown": "Unknown error"
+    },
+    "lastUpdated": "Last updated: {{value}}"
+  },
+  "hardwareSpecsPanel": {
+    "title": "Hardware Specifications",
+    "description": "Hardware specification panel covering CPU, memory, storage, and device metadata",
+    "fields": {
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Storage",
+      "utilization": "Utilization"
+    },
+    "values": {
+      "unknownCpu": "Unknown CPU",
+      "unknown": "Unknown",
+      "unifiedMemory": "{{size}}GB Unified Memory",
+      "memoryUsed": " ({{size}}GB Used)",
+      "freeStorage": "{{size}} GB Free"
+    },
+    "empty": "No hardware data available",
+    "emptyStorage": "No storage drives detected"
+  },
+  "rmmVitalsPanel": {
+    "title": "RMM Vitals & Connectivity",
+    "description": "RMM vitals panel for heartbeat, monitoring, and endpoint health details",
+    "actions": {
+      "refresh": "Refresh"
+    },
+    "fields": {
+      "agentStatus": "Agent Status",
+      "currentUser": "Current User",
+      "lastCheckIn": "(Last check-in: {{value}})",
+      "uptime": "Uptime",
+      "lastSync": "Last RMM Sync",
+      "network": "Network",
+      "networkValue": "LAN IP: {{lan}} | WAN IP: {{wan}}"
+    },
+    "values": {
+      "never": "Never"
+    },
+    "empty": {
+      "title": "RMM Vitals",
+      "notConnected": "Not connected to RMM"
+    },
+    "uptime": "{{days}} days, {{hours}} hours, {{minutes}} minutes"
+  },
+  "securityPatchingPanel": {
+    "title": "Security & Patching",
+    "description": "Security and patching posture panel for vulnerability and update status indicators",
+    "fields": {
+      "osVersion": "OS Version",
+      "antivirus": "Antivirus",
+      "patchStatus": "Patch Status",
+      "firewall": "Firewall"
+    },
+    "values": {
+      "unknown": "Unknown"
+    },
+    "antivirus": {
+      "running": "✔ Installed & Running",
+      "inactive": "Inactive",
+      "lastScan": "| Last Scan: Today, 3:00 AM"
+    },
+    "patchStatus": {
+      "critical": "Critical",
+      "atRisk": "At Risk",
+      "missingPatches": "- {{count}} Critical OS Patches missing.",
+      "upToDate": "✔ Up to Date"
+    },
+    "firewall": {
+      "on": "✔ On"
+    }
+  },
+  "copyableField": {
+    "title": "Copyable Field",
+    "description": "Shared copy-to-clipboard field used across asset forms and detail panels",
+    "actions": {
+      "copy": "Copy",
+      "copied": "Copied"
+    }
+  },
+  "statusBadge": {
+    "title": "Status Badge",
+    "description": "Shared badge renderer for asset lifecycle and monitoring statuses",
+    "statuses": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Overdue",
+      "healthy": "Healthy",
+      "warning": "Warning",
+      "critical": "Critical",
+      "unknown": "Unknown",
+      "secure": "Secure",
+      "at_risk": "At Risk",
+      "active": "Active",
+      "expiring_soon": "Expiring Soon",
+      "expired": "Expired"
+    }
+  },
+  "utilizationBar": {
+    "title": "Utilization Bar",
+    "description": "Shared progress bar component for utilization and percentage-based asset metrics"
+  },
+  "auditLogTab": {
+    "title": "Audit Log",
+    "description": "Asset audit history tab for timeline events and record changes",
+    "changedBy": "Changed by {{name}}",
+    "userFallback": "user {{id}}",
+    "empty": "No audit history available.",
+    "changeTypes": {
+      "created": "Created",
+      "updated": "Updated"
+    }
+  },
+  "createMaintenanceScheduleDialog": {
+    "title": "Create Maintenance Schedule",
+    "description": "Dialog for defining maintenance schedules and recurrence rules for an asset",
+    "titles": {
+      "create": "Schedule Maintenance",
+      "edit": "Edit Maintenance Schedule"
+    },
+    "actions": {
+      "create": "Create Schedule",
+      "creating": "Creating...",
+      "update": "Update Schedule",
+      "updating": "Updating..."
+    },
+    "fields": {
+      "scheduleName": "Schedule Name *",
+      "description": "Description",
+      "maintenanceType": "Maintenance Type *",
+      "frequency": "Frequency *",
+      "interval": "Interval *",
+      "nextMaintenanceDate": "Next Maintenance Date *",
+      "active": "Active"
+    },
+    "placeholders": {
+      "scheduleName": "e.g., Monthly Server Maintenance",
+      "description": "Optional description...",
+      "maintenanceType": "Select maintenance type",
+      "frequency": "Select frequency",
+      "interval": "1",
+      "nextMaintenanceDate": "Select date"
+    },
+    "frequencyOptions": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "yearly": "Yearly"
+    },
+    "errors": {
+      "scheduleNameRequired": "Schedule name is required",
+      "maintenanceTypeRequired": "Maintenance type is required",
+      "frequencyRequired": "Frequency is required",
+      "nextMaintenanceRequired": "Next maintenance date is required",
+      "frequencyIntervalMin": "Frequency interval must be at least 1",
+      "saveFailed": "Failed to create maintenance schedule"
+    }
+  },
+  "documentsPasswordsTab": {
+    "title": "Documents & Passwords",
+    "description": "Combined tab for asset documents, credentials, and related secure records",
+    "passwords": {
+      "title": "Passwords & Secrets",
+      "comingSoon": "Secure password management coming soon."
+    }
+  },
+  "maintenanceSchedulesTab": {
+    "title": "Maintenance Schedules",
+    "description": "Maintenance schedule management tab for planned service and recurring work",
+    "summary": {
+      "complianceRate": "Compliance Rate",
+      "nextMaintenance": "Next Maintenance",
+      "noneScheduled": "None Scheduled"
+    },
+    "actions": {
+      "scheduleMaintenance": "Schedule Maintenance"
+    },
+    "errors": {
+      "deleteFailed": "Failed to delete maintenance schedule"
+    },
+    "table": {
+      "scheduleName": "Schedule Name",
+      "type": "Type",
+      "frequency": "Frequency",
+      "nextMaintenance": "Next Maintenance",
+      "lastMaintenance": "Last Maintenance",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "frequency": {
+      "every": "Every {{count}} {{frequency}}{{suffix}}",
+      "units": {
+        "daily": "day",
+        "weekly": "week",
+        "monthly": "month",
+        "quarterly": "quarter",
+        "yearly": "year"
+      }
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "types": {
+      "preventive": "Preventive",
+      "inspection": "Inspection",
+      "calibration": "Calibration",
+      "replacement": "Replacement"
+    },
+    "empty": {
+      "schedules": "No maintenance schedules found. Click \"Schedule Maintenance\" to create one."
+    },
+    "history": {
+      "title": "Maintenance History",
+      "performedAt": "Performed At",
+      "performedBy": "Performed By",
+      "notes": "Notes",
+      "empty": "No maintenance history recorded."
+    },
+    "dialog": {
+      "delete": {
+        "title": "Delete Maintenance Schedule",
+        "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+      }
+    }
+  },
+  "relatedAssetsTab": {
+    "title": "Related Assets ({{count}})",
+    "description": "Tab for browsing and managing related asset relationships",
+    "loading": "Loading related assets...",
+    "actions": {
+      "linkAsset": "Link Asset",
+      "unlink": "Unlink",
+      "linkEmptyState": "Link an asset"
+    },
+    "success": {
+      "linked": "Asset linked",
+      "unlinked": "Asset unlinked"
+    },
+    "errors": {
+      "selectAsset": "Select an asset to link",
+      "linkFailed": "Failed to link asset",
+      "unlinkFailed": "Failed to unlink asset"
+    },
+    "table": {
+      "assetName": "Asset Name",
+      "relationship": "Relationship",
+      "linkedDate": "Linked Date",
+      "actions": "Actions"
+    },
+    "empty": {
+      "linked": "No related assets linked."
+    },
+    "dialog": {
+      "title": "Link Asset",
+      "loadingAssets": "Loading assets...",
+      "empty": "No available assets found.",
+      "search": {
+        "label": "Search assets",
+        "placeholder": "Search by name, tag, serial..."
+      },
+      "relationshipType": {
+        "label": "Relationship type",
+        "placeholder": "related"
+      },
+      "table": {
+        "asset": "Asset",
+        "select": "Select"
+      },
+      "actions": {
+        "selected": "Selected",
+        "linking": "Linking...",
+        "confirm": "Link asset"
+      }
+    },
+    "relationshipTypes": {
+      "related": "Related",
+      "affected": "Affected"
+    }
+  },
+  "serviceHistoryTab": {
+    "title": "Service History",
+    "description": "Service history tab summarizing maintenance and ticket activity for the asset",
+    "actions": {
+      "createTicket": "Create Ticket"
+    },
+    "table": {
+      "ticketId": "Ticket ID",
+      "subject": "Subject",
+      "status": "Status",
+      "priority": "Priority",
+      "dateLinked": "Date Linked"
+    },
+    "empty": "No tickets linked to this asset.",
+    "clientFallback": "Unknown Client"
+  },
+  "softwareInventoryTab": {
+    "title": "Software Inventory",
+    "description": "Software inventory tab for installed software, versions, and discovery metadata",
+    "searchPlaceholder": "Search software...",
+    "category": {
+      "placeholder": "Category",
+      "options": {
+        "all": "All",
+        "browser": "Browser",
+        "security": "Security",
+        "productivity": "Productivity",
+        "development": "Development"
+      }
+    },
+    "table": {
+      "name": "Name",
+      "version": "Version",
+      "publisher": "Publisher",
+      "installDate": "Install Date"
+    },
+    "empty": "No software found matching your search.",
+    "totalItems": "Total Items: {{count}}",
+    "values": {
+      "unknown": "Unknown"
+    }
+  }
+}
