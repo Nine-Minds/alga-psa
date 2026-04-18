@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { IInvoiceCharge } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 
 import {
   getActiveClientLocationsForBilling,
@@ -34,43 +34,10 @@ interface ContractGroupedItems {
   };
 }
 
-const renderItemRow = (item: IInvoiceCharge, index: number) => (
-  <tr key={index} className="border-t">
-    <td className="py-2">
-      <div className="flex items-center gap-2">
-        <span>{item.description}</span>
-        {item.service_item_kind === 'product' ? <Badge variant="secondary">Product</Badge> : null}
-        {item.service_item_kind === 'product' && item.service_sku ? (
-          <span className="text-xs text-muted-foreground">{item.service_sku}</span>
-        ) : null}
-      </div>
-    </td>
-    <td className="text-right">{item.quantity}</td>
-    <td className="text-right">${(item.unit_price / 100).toFixed(2)}</td>
-    <td className="text-right">${(item.total_price / 100).toFixed(2)}</td>
-  </tr>
-);
-
-const renderItemsTable = (
-  items: IInvoiceCharge[],
-) => (
-  <table className="w-full">
-    <thead className="text-sm text-muted-foreground">
-      <tr>
-        <th className="text-left py-2">Description</th>
-        <th className="text-right py-2">Quantity</th>
-        <th className="text-right py-2">Rate</th>
-        <th className="text-right py-2">Amount</th>
-      </tr>
-    </thead>
-    <tbody className="text-sm">
-      {items.map((item, i) => renderItemRow(item, i))}
-    </tbody>
-  </table>
-);
-
 const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clientId }) => {
-  const { t } = useTranslation('features/billing');
+  const { t } = useTranslation('msp/invoicing');
+  const { t: tLocation } = useTranslation('features/billing');
+  const { formatCurrency } = useFormatters();
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
 
   useEffect(() => {
@@ -104,6 +71,51 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
     [useLocationGrouping, items, clientLocations],
   );
 
+  const renderItemRow = (item: IInvoiceCharge, index: number) => (
+    <tr key={index} className="border-t">
+      <td className="py-2">
+        <div className="flex items-center gap-2">
+          <span>{item.description}</span>
+          {item.service_item_kind === 'product' ? (
+            <Badge variant="secondary">
+              {t('contractItems.labels.product', { defaultValue: 'Product' })}
+            </Badge>
+          ) : null}
+          {item.service_item_kind === 'product' && item.service_sku ? (
+            <span className="text-xs text-muted-foreground">{item.service_sku}</span>
+          ) : null}
+        </div>
+      </td>
+      <td className="text-right">{item.quantity}</td>
+      <td className="text-right">{formatCurrency(item.unit_price / 100, 'USD')}</td>
+      <td className="text-right">{formatCurrency(item.total_price / 100, 'USD')}</td>
+    </tr>
+  );
+
+  const renderItemsTable = (tableItems: IInvoiceCharge[]) => (
+    <table className="w-full">
+      <thead className="text-sm text-muted-foreground">
+        <tr>
+          <th className="text-left py-2">
+            {t('contractItems.columns.description', { defaultValue: 'Description' })}
+          </th>
+          <th className="text-right py-2">
+            {t('contractItems.columns.quantity', { defaultValue: 'Quantity' })}
+          </th>
+          <th className="text-right py-2">
+            {t('contractItems.columns.rate', { defaultValue: 'Rate' })}
+          </th>
+          <th className="text-right py-2">
+            {t('contractItems.columns.amount', { defaultValue: 'Amount' })}
+          </th>
+        </tr>
+      </thead>
+      <tbody className="text-sm">
+        {tableItems.map((item, i) => renderItemRow(item, i))}
+      </tbody>
+    </table>
+  );
+
   // Location-grouped layout takes precedence when items span ≥2 distinct
   // locations — ensures the MSP detail view matches the quote/contract UX.
   if (useLocationGrouping) {
@@ -123,13 +135,13 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
               <div className="flex flex-col gap-2 border-b border-border bg-muted/40 px-4 py-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {t('invoices.locations.groupHeading', { defaultValue: 'Location' })}
+                    {tLocation('invoices.locations.groupHeading', { defaultValue: 'Location' })}
                   </div>
                   <div className="mt-1">
                     <LocationAddress
                       location={group.location}
                       showName
-                      emptyText={t('invoices.locations.unassigned', {
+                      emptyText={tLocation('invoices.locations.unassigned', {
                         defaultValue: 'Items without a location',
                       })}
                     />
@@ -137,9 +149,9 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
                 </div>
                 <div className="text-sm">
                   <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {t('invoices.locations.subtotal', { defaultValue: 'Location subtotal' })}
+                    {tLocation('invoices.locations.subtotal', { defaultValue: 'Location subtotal' })}
                   </div>
-                  <div className="mt-1 font-semibold">${(subtotal / 100).toFixed(2)}</div>
+                  <div className="mt-1 font-semibold">{formatCurrency(subtotal / 100, 'USD')}</div>
                 </div>
               </div>
               <div className="overflow-x-auto p-4">
@@ -187,19 +199,27 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
             <table className="w-full">
               <thead className="text-sm text-muted-foreground">
                 <tr>
-                  <th className="text-left py-2">Description</th>
-                  <th className="text-right py-2">Quantity</th>
-                  <th className="text-right py-2">Rate</th>
-                  <th className="text-right py-2">Amount</th>
+                  <th className="text-left py-2">
+                    {t('contractItems.columns.description', { defaultValue: 'Description' })}
+                  </th>
+                  <th className="text-right py-2">
+                    {t('contractItems.columns.quantity', { defaultValue: 'Quantity' })}
+                  </th>
+                  <th className="text-right py-2">
+                    {t('contractItems.columns.rate', { defaultValue: 'Rate' })}
+                  </th>
+                  <th className="text-right py-2">
+                    {t('contractItems.columns.amount', { defaultValue: 'Amount' })}
+                  </th>
                 </tr>
               </thead>
               <tbody className="text-sm">
                 {contract.items.map((item, i) => renderItemRow(item, i))}
                 <tr className="border-t font-medium">
                   <td colSpan={3} className="py-2 text-right">
-                    Contract Subtotal:
+                    {t('contractItems.labels.contractSubtotal', { defaultValue: 'Contract Subtotal:' })}
                   </td>
-                  <td className="text-right">${(contract.subtotal / 100).toFixed(2)}</td>
+                  <td className="text-right">{formatCurrency(contract.subtotal / 100, 'USD')}</td>
                 </tr>
               </tbody>
             </table>
@@ -209,24 +229,34 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
 
       {nonContractItems.length > 0 && (
         <div className="border rounded-md p-4" id="invoice-items-non-contract">
-          <h3 className="text-lg font-medium mb-2">Other Items</h3>
+          <h3 className="text-lg font-medium mb-2">
+            {t('contractItems.labels.otherItems', { defaultValue: 'Other Items' })}
+          </h3>
           <table className="w-full">
             <thead className="text-sm text-muted-foreground">
               <tr>
-                <th className="text-left py-2">Description</th>
-                <th className="text-right py-2">Quantity</th>
-                <th className="text-right py-2">Rate</th>
-                <th className="text-right py-2">Amount</th>
+                <th className="text-left py-2">
+                  {t('contractItems.columns.description', { defaultValue: 'Description' })}
+                </th>
+                <th className="text-right py-2">
+                  {t('contractItems.columns.quantity', { defaultValue: 'Quantity' })}
+                </th>
+                <th className="text-right py-2">
+                  {t('contractItems.columns.rate', { defaultValue: 'Rate' })}
+                </th>
+                <th className="text-right py-2">
+                  {t('contractItems.columns.amount', { defaultValue: 'Amount' })}
+                </th>
               </tr>
             </thead>
             <tbody className="text-sm">
               {nonContractItems.map((item, i) => renderItemRow(item, i))}
               <tr className="border-t font-medium">
                 <td colSpan={3} className="py-2 text-right">
-                  Other Items Subtotal:
+                  {t('contractItems.labels.otherItemsSubtotal', { defaultValue: 'Other Items Subtotal:' })}
                 </td>
                 <td className="text-right">
-                  ${(nonContractItems.reduce((sum, item) => sum + item.total_price, 0) / 100).toFixed(2)}
+                  {formatCurrency(nonContractItems.reduce((sum, item) => sum + item.total_price, 0) / 100, 'USD')}
                 </td>
               </tr>
             </tbody>

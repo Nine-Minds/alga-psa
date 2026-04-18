@@ -117,7 +117,7 @@
   {
     "id": "F024",
     "description": "Wire useTranslation in ContractInvoiceItems.tsx -- table headers (Description, Quantity, Rate, Amount), subtotal labels (Contract Subtotal, Other Items Subtotal), section heading (Other Items), Product badge",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F025",
