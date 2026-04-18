@@ -1,0 +1,449 @@
+{
+  "taxRates": {
+    "title": "55555",
+    "loading": "55555",
+    "errors": {
+      "fetchRates": "55555",
+      "loadRegions": "55555",
+      "add": "55555",
+      "update": "55555",
+      "validateDeletion": "55555",
+      "confirmDeletion": "55555"
+    },
+    "deleteEntity": {
+      "fallback": "55555",
+      "withRegion": "55555 {{regionName}} 55555"
+    },
+    "validation": {
+      "requiredFieldsTitle": "55555",
+      "region": "55555",
+      "percentage": "55555",
+      "startDate": "55555"
+    },
+    "table": {
+      "region": "55555",
+      "taxPercentage": "55555",
+      "description": "55555",
+      "startDate": "55555",
+      "endDate": "55555",
+      "actions": "55555",
+      "notAvailable": "55555",
+      "composite": "55555"
+    },
+    "actions": {
+      "openMenu": "55555",
+      "advancedSettings": "55555",
+      "edit": "55555",
+      "delete": "55555",
+      "addNew": "55555",
+      "add": "55555",
+      "update": "55555"
+    },
+    "dialog": {
+      "addTitle": "55555",
+      "editTitle": "55555",
+      "description": "55555",
+      "fields": {
+        "region": "55555",
+        "percentage": "55555",
+        "description": "55555",
+        "startDate": "55555",
+        "endDate": "55555"
+      },
+      "placeholders": {
+        "loadingRegions": "55555",
+        "selectRegion": "55555",
+        "percentage": "55555"
+      }
+    }
+  },
+  "taxRateDetail": {
+    "actions": {
+      "back": "55555"
+    },
+    "subtitle": "55555 {{regionCode}} 55555 {{percentage}} 55555",
+    "tabs": {
+      "details": "55555",
+      "components": "55555",
+      "brackets": "55555",
+      "holidays": "55555"
+    },
+    "fields": {
+      "regionCode": "55555",
+      "taxPercentage": "55555",
+      "description": "55555",
+      "taxType": "55555",
+      "startDate": "55555",
+      "endDate": "55555",
+      "isComposite": "55555",
+      "isActive": "55555"
+    },
+    "values": {
+      "dash": "55555",
+      "noEndDate": "55555",
+      "yes": "55555",
+      "no": "55555",
+      "active": "55555",
+      "inactive": "55555",
+      "composite": "55555"
+    },
+    "precedence": {
+      "title": "55555",
+      "clientExempt": "55555",
+      "serviceSpecific": "55555",
+      "clientDefault": "55555",
+      "regionLookup": "55555"
+    },
+    "components": {
+      "simpleRateMessage": "55555",
+      "enableCompositeMessage": "55555"
+    },
+    "brackets": {
+      "intro": "55555",
+      "precedence": "55555"
+    }
+  },
+  "serviceForm": {
+    "errors": {
+      "loadServiceTypes": "55555",
+      "loadTaxData": "55555",
+      "selectServiceType": "55555",
+      "serviceTypeNotFound": "55555",
+      "create": "55555"
+    },
+    "fields": {
+      "serviceName": {
+        "placeholder": "55555"
+      },
+      "serviceType": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "billingMethod": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "defaultRate": {
+        "placeholder": "55555"
+      },
+      "unitOfMeasure": {
+        "placeholder": "55555"
+      },
+      "description": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "taxRate": {
+        "label": "55555",
+        "placeholderLoading": "55555",
+        "placeholder": "55555"
+      }
+    },
+    "options": {
+      "billingMethod": {
+        "fixed": "55555",
+        "hourly": "55555",
+        "usage": "55555"
+      }
+    },
+    "taxRateOption": {
+      "fallback": "55555",
+      "label": "55555 {{description}} 55555 {{percentage}} 55555"
+    },
+    "actions": {
+      "submit": "55555"
+    }
+  },
+  "serviceSelection": {
+    "title": "55555",
+    "searchPlaceholder": "55555",
+    "errors": {
+      "load": "55555",
+      "add": "55555"
+    },
+    "states": {
+      "loading": "55555",
+      "empty": "55555"
+    },
+    "table": {
+      "itemName": "55555",
+      "type": "55555",
+      "unit": "55555",
+      "rate": "55555",
+      "product": "55555",
+      "service": "55555",
+      "unknown": "55555"
+    },
+    "selection": {
+      "countOne": "55555 {{count}} 55555",
+      "countOther": "55555 {{count}} 55555"
+    },
+    "actions": {
+      "cancel": "55555",
+      "addSelected": "55555",
+      "adding": "55555"
+    },
+    "quickAdd": {
+      "label": "55555",
+      "allType": "55555 {{type}} 55555"
+    }
+  },
+  "configType": {
+    "placeholder": "55555",
+    "options": {
+      "Fixed": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "Hourly": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "Usage": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "Bucket": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "warningDialog": {
+      "title": "55555",
+      "description": "55555",
+      "cancel": "55555",
+      "confirm": "55555"
+    }
+  },
+  "serviceConfig": {
+    "title": "55555",
+    "serviceLabel": "55555",
+    "effectiveModeLabel": "55555",
+    "defaultSourceLabel": "55555",
+    "modes": {
+      "Fixed": "55555",
+      "Hourly": "55555",
+      "Usage": "55555",
+      "Bucket": "55555"
+    },
+    "defaultSources": {
+      "catalog default": "55555",
+      "contract override": "55555",
+      "none": "55555"
+    },
+    "fields": {
+      "configurationType": "55555",
+      "quantity": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555",
+        "errorNegative": "55555"
+      },
+      "customRate": {
+        "label": "55555",
+        "placeholder": "55555",
+        "placeholderDefault": "55555 {{rate}} 55555",
+        "helpCustom": "55555",
+        "helpUseDefault": "55555 {{rate}} 55555",
+        "errorNegative": "55555"
+      }
+    },
+    "bucketOverlay": {
+      "recommendHours": "55555",
+      "recommendUsage": "55555"
+    },
+    "actions": {
+      "cancel": "55555",
+      "save": "55555",
+      "saving": "55555"
+    }
+  },
+  "fixedConfig": {
+    "title": "55555",
+    "fields": {
+      "adjustForPartialPeriods": "55555",
+      "billingCycleAlignment": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555"
+      }
+    },
+    "options": {
+      "start": "55555",
+      "end": "55555",
+      "prorated": "55555"
+    }
+  },
+  "hourlyConfig": {
+    "title": "55555",
+    "fields": {
+      "minimumBillableTime": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555",
+        "errorNegative": "55555"
+      },
+      "roundUpToNearest": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555",
+        "errorNegative": "55555"
+      },
+      "newUserType": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "newUserTypeRate": {
+        "label": "55555",
+        "placeholder": "55555",
+        "errorNegative": "55555"
+      }
+    },
+    "userTypeRates": {
+      "title": "55555",
+      "headers": {
+        "userType": "55555",
+        "rate": "55555"
+      },
+      "options": {
+        "technician": "55555",
+        "engineer": "55555",
+        "consultant": "55555",
+        "project_manager": "55555",
+        "admin": "55555"
+      },
+      "actions": {
+        "addRate": "55555"
+      }
+    }
+  },
+  "usageConfig": {
+    "title": "55555",
+    "defaults": {
+      "unitOfMeasure": "55555"
+    },
+    "fields": {
+      "unitOfMeasure": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555",
+        "errorRequired": "55555"
+      },
+      "minimumUsage": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555",
+        "errorNegative": "55555"
+      },
+      "enableTieredPricing": "55555"
+    },
+    "tiers": {
+      "title": "55555",
+      "addTier": "55555",
+      "empty": "55555",
+      "from": "55555 {{unit}} 55555",
+      "to": "55555 {{unit}} 55555",
+      "ratePer": "55555 {{unit}} 55555",
+      "unlimited": "55555",
+      "help": "55555",
+      "errors": {
+        "onlyLastUnlimited": "55555",
+        "overlap": "55555",
+        "upperGreaterThanLower": "55555",
+        "rateNegative": "55555"
+      }
+    }
+  },
+  "bucketConfig": {
+    "title": "55555",
+    "fields": {
+      "totalMinutes": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555",
+        "errorPositive": "55555"
+      },
+      "billingPeriod": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555",
+        "mismatchPrefix": "55555",
+        "mismatch": "55555 {{billingPeriod}} 55555 {{contractLineBillingFrequency}} 55555"
+      },
+      "overageRate": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555",
+        "errorNegative": "55555"
+      },
+      "allowRollover": "55555"
+    }
+  },
+  "rateTiers": {
+    "title": "55555",
+    "description": "55555",
+    "loading": "55555",
+    "table": {
+      "minQuantity": "55555",
+      "maxQuantity": "55555",
+      "rate": "55555 {{unit}} 55555",
+      "actions": "55555",
+      "unlimited": "55555"
+    },
+    "formattedRate": "55555 {{rate}} 55555 {{unit}} 55555",
+    "errors": {
+      "load": "55555",
+      "save": "55555",
+      "lastTier": "55555",
+      "minPositive": "55555",
+      "maxGreaterThanMin": "55555",
+      "rateNegative": "55555",
+      "overlap": "55555"
+    },
+    "actions": {
+      "addTier": "55555",
+      "save": "55555",
+      "saving": "55555"
+    }
+  },
+  "serviceTaxSettings": {
+    "title": "55555",
+    "fields": {
+      "taxRate": {
+        "label": "55555",
+        "placeholderLoading": "55555",
+        "placeholder": "55555",
+        "help": "55555"
+      }
+    },
+    "options": {
+      "nonTaxable": "55555"
+    },
+    "optionLabel": "55555 {{taxType}} 55555 {{countryCode}} 55555 {{percentage}} 55555",
+    "errors": {
+      "loadTaxRates": "55555",
+      "save": "55555"
+    },
+    "actions": {
+      "save": "55555",
+      "saving": "55555"
+    }
+  },
+  "serviceDetail": {
+    "loading": "55555",
+    "errors": {
+      "notFound": "55555",
+      "load": "55555"
+    },
+    "title": "55555 {{serviceName}} 55555",
+    "description": "55555",
+    "sections": {
+      "unitOfMeasure": "55555",
+      "baseRate": "55555"
+    },
+    "baseRate": {
+      "summary": "55555 {{rate}} 55555 {{unit}} 55555",
+      "help": "55555"
+    }
+  }
+}
