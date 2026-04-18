@@ -205,3 +205,8 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `ServiceSelectionDialog.tsx:31` → `useFormatters()`
   - `ServiceSelectionDialog.tsx:155` / `:262` / `:311` → translated dialog title, rate column header, and Quick Add label
   This covers both the translation wiring and the locale-aware rate-display hook on the selection dialog.
+- **(2026-04-18, T005)** Verified `packages/billing/src/components/billing-dashboard/service-configurations/ConfigurationTypeSelector.tsx` with the successful `npm run build` plus:
+  - `ConfigurationTypeSelector.tsx:46` → `useTranslation('msp/service-catalog')`
+  - `ConfigurationTypeSelector.tsx:53` / `:82` → translated Fixed/Bucket option labels and descriptions are generated via `t()`
+  - `ConfigurationTypeSelector.tsx:157` / `:208` → both warning-dialog variants use `configType.warningDialog.title`
+  This covers the type-card copy and the warning dialog extraction.

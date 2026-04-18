@@ -26,7 +26,7 @@
   {
     "id": "T005",
     "description": "ConfigurationTypeSelector.tsx compiles with useTranslation — type labels, descriptions, and warning dialog text extracted",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
