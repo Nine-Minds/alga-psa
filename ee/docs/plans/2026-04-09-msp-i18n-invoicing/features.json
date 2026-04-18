@@ -122,7 +122,7 @@
   {
     "id": "F025",
     "description": "Wire useTranslation in InvoicingHub.tsx -- section heading (Invoicing), tab labels (Generate, Drafts, Finalized)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F026",
