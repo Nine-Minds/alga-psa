@@ -86,7 +86,7 @@
   {
     "id": "T015",
     "description": "Currency formatting — rate values in ServiceRateTiers and ServiceSelectionDialog use useFormatters() for locale-aware currency display",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F005"]
   },
   {

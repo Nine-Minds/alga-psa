@@ -246,3 +246,9 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - rate-tier table headers: `8-15` chars
   - configuration-type card descriptions: `115-146` chars (longer, but those cards already render multi-line body copy)
   A class scan over `TaxRates.tsx`, `ServiceForm.tsx`, `ConfigurationTypeSelector.tsx`, and `ServiceRateTiers.tsx` found no `truncate` / `text-ellipsis` / `overflow-hidden` constraints on the translated label surfaces; the only fixed-width hit was `ServiceRateTiers.tsx:299` on the Actions column header (`w-[100px]`), which is not one of the long German strings under test.
+- **(2026-04-18, T015)** Verified the locale-aware currency formatting requirement with source-level hits:
+  - `packages/billing/src/components/billing-dashboard/service-config/ServiceSelectionDialog.tsx:31` → `const { formatCurrency } = useFormatters();`
+  - `packages/billing/src/components/billing-dashboard/service-config/ServiceSelectionDialog.tsx` uses `formatCurrency(service.default_rate, service.prices?.[0]?.currency_code || 'USD')` for the rate column
+  - `packages/billing/src/components/billing-dashboard/service-config/ServiceRateTiers.tsx:29` → `const { formatCurrency } = useFormatters();`
+  - `packages/billing/src/components/billing-dashboard/service-config/ServiceRateTiers.tsx:343` → `rateTiers.formattedRate` receives a `formatCurrency(...)` result before rendering
+  This confirms both targeted screens now rely on `useFormatters()` rather than hardcoded `$` string assembly.
