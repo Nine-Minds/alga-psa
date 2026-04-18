@@ -253,3 +253,9 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `packages/billing/src/components/billing-dashboard/service-config/ServiceRateTiers.tsx:343` → `rateTiers.formattedRate` receives a `formatCurrency(...)` result before rendering
   This confirms both targeted screens now rely on `useFormatters()` rather than hardcoded `$` string assembly.
 - **(2026-04-18, T016)** Checked the English dotted-key inventory for the new namespace against `server/public/locales/en/msp/settings.json` and `server/public/locales/en/features/billing.json` with a small comparison script. Result: `mspSettingsCollisions = 0`, `featuresBillingCollisions = 0`. That confirms the new `msp/service-catalog` file introduces a distinct key surface without overlapping either of the adjacent existing namespaces.
+- **(2026-04-18, T017)** Verified the Portuguese runtime path end-to-end:
+  - `packages/core/src/lib/i18n/config.ts:21,35` now include `pt` in `supportedLocales` and `localeNames.pt = 'Português'`
+  - `server/src/middleware/i18nConfig.ts:9` now includes `pt` in the middleware locale list
+  - `find server/public/locales/pt -type f | sort | wc -l` returns `32`, so the full locale tree exists on disk, including `pt/msp/service-catalog.json`
+  - `node scripts/validate-translations.cjs` passes with `pt` included in the checked locale set
+  Together these checks confirm the Portuguese locale can be matched by runtime config and resolved to on-disk translation resources.

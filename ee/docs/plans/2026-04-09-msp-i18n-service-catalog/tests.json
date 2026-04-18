@@ -98,7 +98,7 @@
   {
     "id": "T017",
     "description": "Portuguese locale support wired end-to-end — shared i18n config(s) recognize pt and the language can resolve msp/service-catalog resources",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F021"]
   }
 ]
