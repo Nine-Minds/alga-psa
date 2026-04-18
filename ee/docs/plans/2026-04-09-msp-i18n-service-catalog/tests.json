@@ -8,7 +8,7 @@
   {
     "id": "T002",
     "description": "TaxRates.tsx and TaxRateDetailPanel.tsx compile with useTranslation wiring — no TypeScript errors, all column headers and dialog labels use t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F003"]
   },
   {

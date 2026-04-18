@@ -189,3 +189,9 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `server/src/middleware/i18nConfig.ts` now includes `pt` in the edge-safe `supportedLocales` list
   This closes the runtime gap discovered during the initial audit so the newly-added `pt` locale tree can actually be matched and resolved in-app.
 - **(2026-04-18, T001)** Reused the post-bootstrap validator run from `F019`: `node scripts/validate-translations.cjs` completed with `Errors: 0`, `Warnings: 0`, `PASSED` across `de/es/fr/it/nl/pl/pt/xx/yy`. This is the direct parity gate for `msp/service-catalog` and also confirms the pseudo-locales still mirror the English key structure after the locale generation cleanup.
+- **(2026-04-18, T002)** Verified the TaxRates / TaxRateDetailPanel wiring with a source-level grep plus the already-passing full build from `F020`. Representative hits:
+  - `packages/billing/src/components/billing-dashboard/TaxRates.tsx:34` → `useTranslation('msp/service-catalog')`
+  - `packages/billing/src/components/billing-dashboard/TaxRates.tsx:263` → `t('taxRates.table.region', ...)`
+  - `packages/billing/src/components/billing-dashboard/TaxRateDetailPanel.tsx:24` → `useTranslation('msp/service-catalog')`
+  - `packages/billing/src/components/billing-dashboard/TaxRateDetailPanel.tsx:69` / `:164` → `taxRateDetail.tabs.details` and `taxRateDetail.precedence.title`
+  Combined with the successful `npm run build`, this covers both the compile gate and the extracted-label wiring for the two tax-rate screens.
