@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "ROUTE_NAMESPACES updated — /msp/settings route includes 'msp/service-catalog'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {

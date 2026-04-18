@@ -237,3 +237,4 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `rateTiers.title`
   - `serviceTaxSettings.title`
   Combined with the wiring evidence from `T002`-`T008`, this covers the tax rates list/detail, service form, selection dialog, configuration-type panels, rate tiers, and tax settings surfaces called out in the checklist.
+- **(2026-04-18, T011)** Verified `packages/core/src/lib/i18n/config.ts:154` now maps `/msp/settings` to `['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets', 'msp/billing-settings', 'msp/service-catalog', 'features/billing']`, so the new namespace and the shared billing-enum namespace are both loaded on the service-catalog route.
