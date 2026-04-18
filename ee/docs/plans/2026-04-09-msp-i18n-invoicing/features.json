@@ -57,7 +57,7 @@
   {
     "id": "F012",
     "description": "Wire useTranslation in RecurringServicePeriodsTab.tsx -- page title, description, schedule selector label/placeholder, schedule key label/placeholder, Open Schedule button, error messages, recurring obligation heading and field labels (Client, Cadence source, Billing timing, Charge family, Schedule key), summary stat labels (Generated, Edited, Billed, Exceptions)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F013",

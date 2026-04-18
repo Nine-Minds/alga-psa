@@ -344,6 +344,7 @@
       "scheduleKeyLabel": "Schedule key"
     },
     "actions": {
+      "loadingSchedule": "Loading…",
       "openSchedule": "Open Schedule",
       "repairMissing": "Repair Missing Service Periods",
       "repairing": "Repairing…",
@@ -374,8 +375,67 @@
       "advance": "Advance",
       "arrears": "Arrears",
       "unknownClient": "Unknown client",
+      "range": "{{start}} to {{end}}",
+      "scheduleOptionLabel": "{{client}} · {{entity}} · {{cadence}} · {{timing}}",
       "generatedFromSourceCadence": "Generated from source cadence",
       "noConflicts": "No regeneration conflicts were detected for the supplied candidates."
+    },
+    "displayStates": {
+      "generated": {
+        "label": "Generated",
+        "detail": "Matches the current cadence rules and is awaiting billing or review."
+      },
+      "edited": {
+        "label": "Edited",
+        "detail": "A later revision changed the generated schedule and remains active."
+      },
+      "skipped": {
+        "label": "Skipped",
+        "detail": "This future period is intentionally excluded from due selection until re-edited."
+      },
+      "locked": {
+        "label": "Locked",
+        "detail": "This period is frozen for ordinary edits while awaiting billing or correction."
+      },
+      "billed": {
+        "label": "Billed",
+        "detailLinked": "Linked to invoice detail {{invoiceChargeDetailId}}.",
+        "detailUnlinked": "Linked to billed history."
+      },
+      "superseded": {
+        "label": "Superseded",
+        "detail": "A newer revision replaced this period and this row remains for audit history."
+      },
+      "archived": {
+        "label": "Archived",
+        "detail": "This historical row is retained only for audit and reconciliation."
+      }
+    },
+    "provenanceReasons": {
+      "boundary_adjustment": "Boundary adjusted",
+      "invoice_window_adjustment": "Invoice window adjusted",
+      "activity_window_adjustment": "Activity window adjusted",
+      "skip": "Skipped by billing staff",
+      "defer": "Deferred to a later invoice window",
+      "source_rule_changed": "Regenerated after source rule change",
+      "billing_schedule_changed": "Regenerated after billing schedule change",
+      "cadence_owner_changed": "Regenerated after cadence-owner change",
+      "activity_window_changed": "Regenerated after activity-window change",
+      "backfill_realignment": "Realigned during backfill",
+      "integrity_repair": "Repaired for integrity",
+      "invoice_linkage_repair": "Repaired after invoice-linkage correction",
+      "admin_correction": "Corrected administratively",
+      "initial_materialization": "Generated from source cadence",
+      "backfill_materialization": "Generated during backfill"
+    },
+    "governanceActions": {
+      "view": "view",
+      "edit_boundaries": "edit boundaries",
+      "skip": "skip",
+      "defer": "defer",
+      "regenerate": "regenerate",
+      "invoice_linkage_repair": "invoice linkage repair",
+      "archive": "archive"
     },
     "table": {
       "columns": {
@@ -395,6 +455,20 @@
     "regenerationPreview": {
       "title": "Regeneration Preview",
       "description": "Paste candidate records JSON to preview how preserved edited or billed rows would conflict with regenerated future candidates for this schedule."
+    },
+    "conflicts": {
+      "kinds": {
+        "missing_candidate": "missing candidate",
+        "service_period_mismatch": "service period mismatch",
+        "invoice_window_mismatch": "invoice window mismatch",
+        "activity_window_mismatch": "activity window mismatch"
+      },
+      "reasons": {
+        "missing_candidate": "No regenerated candidate remains for this preserved override slot.",
+        "service_period_mismatch": "The regenerated candidate no longer matches the preserved override service-period boundary.",
+        "invoice_window_mismatch": "The regenerated candidate no longer matches the preserved override invoice window.",
+        "activity_window_mismatch": "The regenerated candidate no longer matches the preserved override activity window."
+      }
     }
   },
   "billingCycles": {
