@@ -12,7 +12,7 @@
   {"id": "F011", "description": "Wire useTranslation in BucketServiceConfigPanel.tsx — section heading, field labels (Total Minutes, Billing Period, Overage Rate), rollover toggle, mismatch warning, helper text, validation messages", "implemented": true},
   {"id": "F012", "description": "Wire useTranslation in ServiceRateTiers.tsx — card title, table headers (Min Quantity, Max Quantity, Rate, Actions), Add Tier button, Save button, loading text, validation errors", "implemented": true},
   {"id": "F013", "description": "Wire useTranslation in ServiceTaxSettings.tsx — card title, select label, Non-Taxable option, helper text, Save button, error messages", "implemented": true},
-  {"id": "F014", "description": "Wire useTranslation in ServiceConfigurationPanel (service-config/) — card title, card description, section headings (Unit of Measure, Base Rate), rate display text, loading/error states", "implemented": false},
+  {"id": "F014", "description": "Wire useTranslation in ServiceConfigurationPanel (service-config/) — card title, card description, section headings (Unit of Measure, Base Rate), rate display text, loading/error states", "implemented": true},
   {"id": "F015", "description": "Generate msp/service-catalog translations for 7 non-English production locales (de, es, fr, it, nl, pl, pt)", "implemented": false},
   {"id": "F016", "description": "Generate pseudo-locale files (xx, yy) for msp/service-catalog via generate-pseudo-locales.cjs", "implemented": false},
   {"id": "F017", "description": "Italian accent audit on it/msp/service-catalog.json", "implemented": false},

@@ -171,3 +171,5 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `npx eslint packages/billing/src/components/billing-dashboard/service-config/ServiceRateTiers.tsx`
 - **(2026-04-17, F013)** Wired `packages/billing/src/components/billing-dashboard/service-config/ServiceTaxSettings.tsx` to `useTranslation('msp/service-catalog')`. Translated the card title, tax-rate select label/placeholders/help text, the `Non-Taxable` option, the dynamic option label template, and the load/save error states plus save-button copy. Validation:
   - `npx eslint packages/billing/src/components/billing-dashboard/service-config/ServiceTaxSettings.tsx`
+- **(2026-04-17, F014)** Wired `packages/billing/src/components/billing-dashboard/service-config/ServiceConfigurationPanel.tsx` to `useTranslation('msp/service-catalog')` and `useFormatters()`. Translated the loading/error states, card title/description, section headings, and switched the base-rate summary to localized `formatCurrency(... )` output before interpolating the unit label. Validation:
+  - `npx eslint packages/billing/src/components/billing-dashboard/service-config/ServiceConfigurationPanel.tsx`
