@@ -181,3 +181,10 @@ be translated at render time, not at definition time (move t() calls to render).
 | purchaseOrder | ~5 |
 | common | ~15 |
 | **Total** | **~515** |
+
+## Progress Log
+
+- **(2026-04-18) F001 complete:** created [server/public/locales/en/msp/invoicing.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/invoicing.json) with the planned top-level namespace groups in PRD order and seeded English keys across all invoicing domains.
+  Rationale: unblock component wiring against a stable `msp/invoicing` namespace now, then expand/refine individual keys as each component lands instead of coupling every first component edit to file creation.
+  Commands: `node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('server/public/locales/en/msp/invoicing.json','utf8')); console.log(Object.keys(data).join(','));"`
+  Gotcha: keeping the JSON top-level key order aligned with the PRD makes the eventual namespace-shape test straightforward and avoids churn when additional locale packs are generated.

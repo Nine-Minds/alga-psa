@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Create server/public/locales/en/msp/invoicing.json with all keys extracted from 22 invoicing components, organized under semantic groups (automaticInvoices, manualInvoices, draftsTab, finalizedTab, recurringServicePeriods, billingCycles, invoicePreview, templateEditor, templates, externalTax, sendEmail, generateTab, prepayment, contractItems, hub, templateManager, taxBadge, annotations, purchaseOrder, common)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F002",

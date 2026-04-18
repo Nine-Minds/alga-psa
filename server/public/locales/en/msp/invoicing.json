@@ -1,0 +1,673 @@
+{
+  "automaticInvoices": {
+    "ready": {
+      "title": "Ready to Invoice",
+      "description": "Review recurring due work and generate draft invoices for the selected periods.",
+      "selectAllExplanation": "Select parent groups or individual rows to control invoice generation.",
+      "filterPlaceholder": "Filter ready-to-invoice rows",
+      "dateRange": "Invoice window",
+      "search": "Search",
+      "columns": {
+        "group": "Group",
+        "servicePeriod": "Service Period",
+        "invoiceWindow": "Invoice Window",
+        "included": "Included"
+      }
+    },
+    "groups": {
+      "item_one": "{{count}} item",
+      "item_other": "{{count}} items",
+      "contract_one": "{{count}} contract",
+      "contract_other": "{{count}} contracts",
+      "line_one": "{{count}} line",
+      "line_other": "{{count}} lines",
+      "canCombine": "Can combine into 1 invoice",
+      "separate": "Must invoice separately",
+      "blocked": "Contains blocked items",
+      "notReady": "Not ready to invoice"
+    },
+    "incompatibilityReasons": {
+      "invoiceWindowDiffers": "Invoice window differs",
+      "clientDiffers": "Client differs",
+      "poScopeDiffers": "PO scope differs",
+      "currencyDiffers": "Currency differs",
+      "taxTreatmentDiffers": "Tax treatment differs",
+      "exportShapeDiffers": "Export shape differs"
+    },
+    "executionRows": {
+      "pendingAmount": "Pending amount",
+      "attributionWarning": "Attribution metadata is incomplete for this due-work item.",
+      "assignmentContext": {
+        "unresolvedTimeEntry": "Unresolved time entry",
+        "unresolvedUsageRecord": "Unresolved usage record",
+        "assignedContractLine": "Assigned contract line",
+        "assignedWorkItem": "Assigned work item",
+        "unresolvedWork": "Unresolved work"
+      }
+    },
+    "actions": {
+      "previewSelected": "Preview Selected",
+      "generateSelected_one": "Generate Invoices for Selected Periods ({{count}})",
+      "generateSelected_other": "Generate Invoices for Selected Periods ({{count}})",
+      "reverseInvoice": "Reverse Invoice",
+      "deleteInvoice": "Delete Invoice",
+      "closePreview": "Close Preview",
+      "generateInvoice": "Generate Invoice"
+    },
+    "dialogs": {
+      "reverse": {
+        "title": "Reverse Invoice",
+        "warning": "Reversing this invoice will remove the generated draft and associated recurring selections.",
+        "confirm": "Reverse Invoice"
+      },
+      "delete": {
+        "title": "Delete Invoice",
+        "description": "Delete this recurring invoice history entry?"
+      },
+      "preview": {
+        "title": "Invoice Preview",
+        "description": "Review the grouped invoice output before generation.",
+        "summary_one": "{{count}} invoice selected",
+        "summary_other": "{{count}} invoices selected",
+        "columns": {
+          "description": "Description",
+          "quantity": "Quantity",
+          "rate": "Rate",
+          "amount": "Amount"
+        },
+        "totals": {
+          "subtotal": "Subtotal",
+          "tax": "Tax",
+          "total": "Total"
+        }
+      },
+      "poOverage": {
+        "title": "Purchase order overage detected",
+        "description": "The selected invoice total is over by {{amount}}.",
+        "allowOverages": "Allow overages",
+        "skipInvoices": "Skip invoices"
+      }
+    },
+    "history": {
+      "title": "Recurring Invoice History",
+      "filterPlaceholder": "Filter recurring invoice history",
+      "columns": {
+        "client": "Client",
+        "assignmentScope": "Assignment Scope",
+        "cadenceSource": "Cadence Source",
+        "servicePeriod": "Service Period",
+        "invoiceWindow": "Invoice Window",
+        "invoice": "Invoice",
+        "actions": "Actions"
+      },
+      "badges": {
+        "contractAnniversary": "Contract anniversary",
+        "clientSchedule": "Client schedule",
+        "multiContractInvoice": "Multi-contract invoice",
+        "servicePeriodBacked": "Service-period-backed"
+      }
+    },
+    "materializationGap": {
+      "title": "Missing persisted service periods",
+      "description": "Some recurring schedules have live billing metadata but are missing persisted service-period rows.",
+      "labels": {
+        "servicePeriod": "Service period",
+        "invoiceWindow": "Invoice window",
+        "scheduleKey": "Schedule key"
+      },
+      "reviewLink": "Review Service Periods"
+    }
+  },
+  "manualInvoices": {
+    "title": "Generate Manual Invoice",
+    "detailsTitle": "Invoice Details",
+    "description": "Create a manual invoice and optionally include automated recurring items.",
+    "fields": {
+      "client": "Client",
+      "invoiceNumber": "Invoice Number",
+      "invoiceNumberOptional": "Invoice Number (Optional)"
+    },
+    "placeholders": {
+      "selectClient": "Select a client"
+    },
+    "automatedItems": {
+      "service": "Service",
+      "total": "Total"
+    },
+    "lineItems": {
+      "manual": "Manual Line Items",
+      "all": "Line Items"
+    },
+    "actions": {
+      "addCharge": "Add Charge",
+      "addDiscount": "Add Discount",
+      "generate": "Generate Invoice",
+      "saveChanges": "Save Changes",
+      "processing": "Processing..."
+    },
+    "labels": {
+      "total": "Total"
+    },
+    "prepayment": {
+      "label": "Apply as prepayment",
+      "description": "Create the invoice as client credit for future value."
+    },
+    "creditExpiration": {
+      "label": "Credit expiration date",
+      "helpText": "Optional date to expire any resulting client credit."
+    },
+    "errors": {
+      "selectClient": "Please select a client",
+      "invoiceNumberUnique": "Invoice number must be unique",
+      "noTaxRateConfigured": "No tax rate is configured for this invoice.",
+      "serviceNotFound": "The selected service could not be found.",
+      "cannotModify": "This invoice can no longer be modified."
+    },
+    "errorFallback": {
+      "title": "Something went wrong",
+      "retry": "Try again"
+    }
+  },
+  "draftsTab": {
+    "title": "Draft Invoices",
+    "searchPlaceholder": "Search draft invoices",
+    "bulkActions_one": "Actions ({{count}})",
+    "bulkActions_other": "Actions ({{count}})",
+    "columns": {
+      "invoiceNumber": "Invoice Number",
+      "client": "Client",
+      "amount": "Amount",
+      "invoiceDate": "Invoice Date",
+      "dueDate": "Due Date",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "actions": {
+      "finalize": "Finalize",
+      "downloadPdf": "Download PDF",
+      "reverseDraft": "Reverse Draft",
+      "generateInvoices": "Generate Invoices"
+    },
+    "status": {
+      "draft": "Draft"
+    },
+    "empty": {
+      "title": "No Draft Invoices",
+      "description": "Generate recurring, manual, or prepayment invoices to see drafts here."
+    },
+    "loading": "Loading draft invoices",
+    "errors": {
+      "loadFailed": "Failed to load draft invoices."
+    },
+    "reverseDialog": {
+      "title": "Reverse draft invoices",
+      "message_one": "Reversing {{count}} draft invoice will delete it and remove its generated charges.",
+      "message_other": "Reversing {{count}} draft invoices will delete them and remove their generated charges.",
+      "confirm": "Reverse Drafts",
+      "cancel": "Cancel"
+    }
+  },
+  "finalizedTab": {
+    "title": "Finalized Invoices",
+    "searchPlaceholder": "Search finalized invoices",
+    "columns": {
+      "invoiceNumber": "Invoice Number",
+      "client": "Client",
+      "amount": "Amount",
+      "finalizedDate": "Finalized Date",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "actions": {
+      "downloadPdfs": "Download PDFs",
+      "sendEmails": "Send Emails",
+      "unfinalizeSelected": "Unfinalize Selected",
+      "downloadPdf": "Download PDF",
+      "sendEmail": "Send Email",
+      "unfinalize": "Unfinalize"
+    },
+    "status": {
+      "finalized": "Finalized"
+    },
+    "empty": {
+      "title": "No Finalized Invoices",
+      "description": "Finalize draft invoices to see them here.",
+      "viewDrafts": "View Drafts"
+    },
+    "loading": "Loading finalized invoices",
+    "errors": {
+      "loadFailed": "Failed to load finalized invoices."
+    }
+  },
+  "recurringServicePeriods": {
+    "title": "Recurring Service Periods",
+    "description": "Review recurring invoice coverage windows for a client contract line, troubleshoot why work is or is not due, and inspect billed history linked to invoice detail rows.",
+    "fields": {
+      "scheduleSelect": "Choose a Schedule",
+      "scheduleSelectPlaceholder": "Select a recent recurring schedule",
+      "scheduleKey": "Schedule Key",
+      "scheduleKeyPlaceholder": "Paste a schedule key (optional if selected above)",
+      "client": "Client",
+      "cadenceSource": "Cadence source",
+      "billingTiming": "Billing timing",
+      "chargeFamily": "Charge family",
+      "scheduleKeyLabel": "Schedule key"
+    },
+    "actions": {
+      "openSchedule": "Open Schedule",
+      "repairMissing": "Repair Missing Service Periods",
+      "repairing": "Repairing…",
+      "previewRegeneration": "Preview Regeneration",
+      "previewing": "Previewing…"
+    },
+    "errors": {
+      "enterScheduleKey": "Enter a schedule key to inspect recurring service periods.",
+      "loadFailed": "Failed to load recurring service periods.",
+      "candidateRecordsArray": "Candidate records JSON must be an array.",
+      "previewFailed": "Failed to preview recurring service-period regeneration.",
+      "repairFailed": "Failed to repair recurring service-period materialization."
+    },
+    "labels": {
+      "recurringObligation": "Recurring Obligation",
+      "generated": "Generated",
+      "edited": "Edited",
+      "billed": "Billed",
+      "exceptions": "Exceptions",
+      "repairCompleted": "Repair completed",
+      "candidateRecordsJson": "Candidate Records JSON",
+      "conflicts": "Conflicts"
+    },
+    "values": {
+      "notLinked": "Not linked",
+      "contractAnniversary": "Contract anniversary",
+      "clientSchedule": "Client schedule",
+      "advance": "Advance",
+      "arrears": "Arrears",
+      "unknownClient": "Unknown client",
+      "generatedFromSourceCadence": "Generated from source cadence",
+      "noConflicts": "No regeneration conflicts were detected for the supplied candidates."
+    },
+    "table": {
+      "columns": {
+        "state": "State",
+        "servicePeriod": "Service Period",
+        "invoiceWindow": "Invoice Window",
+        "revision": "Revision",
+        "reason": "Reason",
+        "allowedActions": "Allowed Actions"
+      }
+    },
+    "repairPanel": {
+      "title": "Missing persisted service periods",
+      "description": "This recurring schedule exists in live billing metadata but has no persisted service-period rows. Repair will materialize future rows only, preserve billed history boundaries, and stamp the new records with backfill provenance.",
+      "result": "Backfilled {{backfilled}} rows, realigned {{realigned}}, skipped {{skipped}} historical candidates, and left {{active}} active rows on this schedule."
+    },
+    "regenerationPreview": {
+      "title": "Regeneration Preview",
+      "description": "Paste candidate records JSON to preview how preserved edited or billed rows would conflict with regenerated future candidates for this schedule."
+    }
+  },
+  "billingCycles": {
+    "title": "Billing Cycles",
+    "tooltip": "Configure client billing schedules and preview the invoice windows they create for client-cadence recurring services.",
+    "description": "Client billing schedules define invoice windows for recurring lines that invoice on the client billing schedule. Contract-anniversary lines can follow their own cadence and are not previewed here.",
+    "searchPlaceholder": "Search clients...",
+    "dateRange": "Billing cycle date range",
+    "search": "Search",
+    "loading": "Loading billing cycles",
+    "errors": {
+      "loadFailed": "Failed to fetch data. Please try again later."
+    },
+    "columns": {
+      "client": "Client",
+      "contract": "Contract",
+      "currentBillingCycle": "Current Billing Cycle",
+      "anchor": "Anchor",
+      "actions": "Actions"
+    },
+    "actions": {
+      "viewClientBilling": "View Client Billing"
+    },
+    "values": {
+      "noActiveAssignments": "No active assignments",
+      "unknown": "Unknown",
+      "notSet": "Not set",
+      "rolling": "Rolling",
+      "weekday": "Weekday {{day}}",
+      "starts": "Starts {{date}}",
+      "day": "Day {{day}}",
+      "dash": "—"
+    },
+    "months": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    }
+  },
+  "invoicePreview": {
+    "title": "Invoice Preview",
+    "templatePlaceholder": "Select an invoice template",
+    "actions": {
+      "finalizeInvoice": "Finalize Invoice",
+      "editItems": "Edit Items",
+      "downloadPdf": "Download PDF",
+      "reverseDraft": "Reverse Draft",
+      "sendEmail": "Send Email",
+      "unfinalize": "Unfinalize",
+      "viewSourceQuote": "View Source Quote"
+    },
+    "loading": "Loading Preview...",
+    "empty": "Select an invoice to preview",
+    "error": "Could not display preview"
+  },
+  "templateEditor": {
+    "actions": {
+      "back": "Back to Invoice Layouts",
+      "cancel": "Cancel",
+      "save": "Save Template",
+      "saving": "Saving..."
+    },
+    "titles": {
+      "create": "Create New Invoice Layout",
+      "edit": "Edit Layout: {{name}}"
+    },
+    "fields": {
+      "templateName": "Template Name",
+      "templateAst": "Template AST",
+      "created": "Created",
+      "lastUpdated": "Last Updated"
+    },
+    "tabs": {
+      "visual": "Visual",
+      "code": "Code"
+    },
+    "alerts": {
+      "codeReadonly": "Code view is read-only for this template."
+    },
+    "errors": {
+      "templateNameRequired": "Template name is required",
+      "astExportFailed": "Failed to export template AST."
+    }
+  },
+  "templates": {
+    "title": "Invoice Layouts",
+    "columns": {
+      "templateName": "Template Name",
+      "type": "Type",
+      "default": "Default",
+      "actions": "Actions"
+    },
+    "types": {
+      "standard": "Standard",
+      "custom": "Custom"
+    },
+    "actions": {
+      "edit": "Edit",
+      "editAsCopy": "Edit as Copy",
+      "clone": "Clone",
+      "setDefault": "Set as Default",
+      "delete": "Delete",
+      "openMenu": "Open menu",
+      "create": "Create New Layout"
+    },
+    "loading": "Loading invoice templates",
+    "errors": {
+      "cloneFailed": "Failed to clone template.",
+      "setDefaultFailed": "Failed to set template as default.",
+      "fetchFailed": "Failed to fetch templates."
+    }
+  },
+  "externalTax": {
+    "title": "External Tax Import",
+    "description": "Review invoices waiting for external tax calculation and import the resulting amounts.",
+    "columns": {
+      "invoice": "Invoice",
+      "client": "Client",
+      "amount": "Amount",
+      "system": "System",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "actions": {
+      "import": "Import",
+      "refresh": "Refresh",
+      "importAll": "Import All",
+      "showHistory": "Show History",
+      "hideHistory": "Hide History"
+    },
+    "summary": {
+      "pending_one": "{{count}} invoice pending tax import",
+      "pending_other": "{{count}} invoices pending tax import",
+      "successful_one": "{{count}} successful",
+      "successful_other": "{{count}} successful",
+      "failed_one": "{{count}} failed",
+      "failed_other": "{{count}} failed"
+    },
+    "progress": {
+      "importing": "Importing taxes...",
+      "importingCount": "Importing {{current}}/{{total}}..."
+    },
+    "empty": {
+      "allUpToDate": "All invoices are up to date"
+    },
+    "helpText": "Imported external tax amounts are written back to invoice detail rows for reconciliation and export.",
+    "alerts": {
+      "pendingTitle": "Tax Pending Import",
+      "pendingDescription": "Tax has been requested from the external accounting system and is awaiting import.",
+      "importedTitle": "Tax Imported from {{adapter}}",
+      "significantDifference": "Difference exceeds 1%"
+    },
+    "reconciliation": {
+      "internal": "Internal",
+      "external": "External",
+      "difference": "Difference",
+      "history": "Import History"
+    },
+    "states": {
+      "loadingHistory": "Loading import history",
+      "emptyHistory": "No prior tax imports found."
+    },
+    "adapterNames": {
+      "quickbooks": "QuickBooks Online",
+      "xero": "Xero",
+      "sage": "Sage"
+    }
+  },
+  "sendEmail": {
+    "title": "Send Invoice Email",
+    "loading": "Loading recipients...",
+    "summary": {
+      "invoices_one": "{{count}} Invoice",
+      "invoices_other": "{{count}} Invoices",
+      "readyToSend_one": "{{count}} ready to send",
+      "readyToSend_other": "{{count}} ready to send",
+      "missingEmail_one": "{{count}} missing email",
+      "missingEmail_other": "{{count}} missing email"
+    },
+    "recipients": {
+      "title": "Recipients",
+      "billingContact": "Billing Contact",
+      "billingEmail": "Billing Email",
+      "clientEmail": "Client Email",
+      "noEmailFound": "No Email Found",
+      "notConfigured": "No email address is configured for this invoice."
+    },
+    "fields": {
+      "due": "Due",
+      "additionalMessage": "Additional Message",
+      "additionalMessagePlaceholder": "Add an optional note to the invoice email."
+    },
+    "preview": "The invoice PDF will be attached to the generated email.",
+    "actions": {
+      "cancel": "Cancel",
+      "send_one": "Send {{count}} Email",
+      "send_other": "Send {{count}} Emails",
+      "sending_one": "Sending {{count}} invoice...",
+      "sending_other": "Sending {{count}} invoices..."
+    }
+  },
+  "generateTab": {
+    "fields": {
+      "invoiceType": "Invoice Type"
+    },
+    "types": {
+      "automatic": "Automatic Invoices",
+      "manual": "Manual Invoice",
+      "prepayment": "Prepayment"
+    },
+    "descriptions": {
+      "automatic": "Generate draft invoices from ready recurring service periods and due work.",
+      "manual": "Create a one-off invoice with manual line items and optional automated charges.",
+      "prepayment": "Create a prepayment invoice or credit memo for future value."
+    },
+    "messages": {
+      "success": "Invoice generated successfully!",
+      "loadFailed": "Failed to load data"
+    }
+  },
+  "prepayment": {
+    "titles": {
+      "prepayment": "Generate Prepayment Invoice",
+      "creditMemo": "Generate Credit Memo"
+    },
+    "descriptions": {
+      "prepayment": "Prepayment invoices create client credit for future value. They do not create recurring service periods; later recurring invoices keep their own service-period coverage.",
+      "creditMemo": "Credit memos adjust financial balances without redefining recurring service-period coverage on the source invoice."
+    },
+    "fields": {
+      "type": "Type",
+      "client": "Client",
+      "amount": "Amount",
+      "description": "Description"
+    },
+    "types": {
+      "prepaymentInvoice": "Prepayment Invoice",
+      "creditMemo": "Credit Memo"
+    },
+    "placeholders": {
+      "amount": "Enter amount",
+      "prepaymentDescription": "Prepayment for future services",
+      "creditMemoDescription": "Reason for credit memo"
+    },
+    "errors": {
+      "allFieldsRequired": "Please fill in all fields",
+      "validAmount": "Please enter a valid amount",
+      "creditMemosUnsupported": "Credit memos are not yet supported",
+      "generateFailed": "Error generating invoice"
+    },
+    "actions": {
+      "generating": "Generating...",
+      "generatePrepayment": "Generate Prepayment Invoice",
+      "generateCreditMemo": "Generate Credit Memo"
+    }
+  },
+  "contractItems": {
+    "columns": {
+      "description": "Description",
+      "quantity": "Quantity",
+      "rate": "Rate",
+      "amount": "Amount"
+    },
+    "labels": {
+      "contractSubtotal": "Contract Subtotal:",
+      "otherItemsSubtotal": "Other Items Subtotal:",
+      "otherItems": "Other Items",
+      "product": "Product"
+    }
+  },
+  "hub": {
+    "title": "Invoicing",
+    "tabs": {
+      "generate": "Generate",
+      "drafts": "Drafts",
+      "finalized": "Finalized"
+    }
+  },
+  "templateManager": {
+    "title": "Invoice Template Manager",
+    "sampleInvoices": "Sample Invoices",
+    "templatePreview": "Template Preview",
+    "invoiceNumber": "Invoice #{{number}}"
+  },
+  "taxBadge": {
+    "labels": {
+      "internal": "Tax: Internal",
+      "external": "Tax: External",
+      "pending": "Tax: Pending"
+    },
+    "tooltips": {
+      "internal": "Tax calculated by Alga PSA based on configured tax rates",
+      "external": "Tax calculated by external accounting system",
+      "pending": "Tax awaiting import from external accounting system",
+      "externalAdapter": "Tax calculated by {{adapter}}",
+      "externalAdapterImportedAt": "Tax calculated by {{adapter}} on {{date}}",
+      "pendingAdapter": "Awaiting tax calculation from {{adapter}}"
+    },
+    "adapterNames": {
+      "quickbooks": "QuickBooks Online",
+      "xero": "Xero",
+      "sage": "Sage"
+    }
+  },
+  "annotations": {
+    "title": "Invoice Annotations",
+    "labels": {
+      "internal": "Internal",
+      "external": "External"
+    },
+    "placeholder": "Add a new annotation",
+    "actions": {
+      "add": "Add Annotation"
+    }
+  },
+  "purchaseOrder": {
+    "labels": {
+      "number": "PO Number",
+      "authorized": "PO Authorized",
+      "consumed": "PO Consumed (Finalized)",
+      "remaining": "PO Remaining"
+    }
+  },
+  "common": {
+    "actions": {
+      "cancel": "Cancel",
+      "close": "Close",
+      "delete": "Delete",
+      "edit": "Edit",
+      "loading": "Loading...",
+      "openMenu": "Open menu",
+      "refresh": "Refresh",
+      "retry": "Try again",
+      "save": "Save",
+      "search": "Search"
+    },
+    "labels": {
+      "actions": "Actions",
+      "amount": "Amount",
+      "client": "Client",
+      "created": "Created",
+      "description": "Description",
+      "difference": "Difference",
+      "dueDate": "Due Date",
+      "invoice": "Invoice",
+      "invoiceNumber": "Invoice Number",
+      "status": "Status",
+      "system": "System",
+      "total": "Total"
+    },
+    "states": {
+      "empty": "No data available",
+      "loading": "Loading...",
+      "notAvailable": "—"
+    }
+  }
+}
