@@ -16,7 +16,7 @@
   {"id": "F015", "description": "Generate msp/service-catalog translations for 7 non-English production locales (de, es, fr, it, nl, pl, pt)", "implemented": true},
   {"id": "F016", "description": "Generate pseudo-locale files (xx, yy) for msp/service-catalog via generate-pseudo-locales.cjs", "implemented": true},
   {"id": "F017", "description": "Italian accent audit on it/msp/service-catalog.json", "implemented": true},
-  {"id": "F018", "description": "Update ROUTE_NAMESPACES to add 'msp/service-catalog' to /msp/settings route", "implemented": false},
+  {"id": "F018", "description": "Update ROUTE_NAMESPACES to add 'msp/service-catalog' to /msp/settings route", "implemented": true},
   {"id": "F019", "description": "validate-translations.cjs passes for msp/service-catalog across all 9 locales (0 errors, 0 warnings)", "implemented": false},
   {"id": "F020", "description": "npm run build succeeds with no TypeScript errors after all wiring", "implemented": false},
   {"id": "F021", "description": "Add Portuguese locale support to shared i18n runtime config(s) so pt/msp/service-catalog.json can be resolved in-app", "implemented": false}
