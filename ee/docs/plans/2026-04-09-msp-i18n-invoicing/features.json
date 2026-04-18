@@ -102,7 +102,7 @@
   {
     "id": "F021",
     "description": "Wire useTranslation in TaxReconciliationView.tsx -- card title (Tax Reconciliation), tooltips (Difference exceeds 1%, Tax amounts match), description, comparison labels (Internal (Alga PSA), External (Accounting)), significant difference alert (heading, description), table headers (Description, Internal Tax, External Tax, Difference), Total label, Line N fallback, loading/no-data states, help text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F022",

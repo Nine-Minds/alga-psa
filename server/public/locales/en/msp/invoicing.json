@@ -680,6 +680,40 @@
       "difference": "Difference",
       "history": "Import History"
     },
+    "reconciliationView": {
+      "title": "Tax Reconciliation",
+      "description": "Compare internal and external tax calculations.",
+      "tooltips": {
+        "significantDifference": "Difference exceeds 1%",
+        "amountsMatch": "Tax amounts match within acceptable range"
+      },
+      "summary": {
+        "internal": "Internal (Alga PSA)",
+        "external": "External (Accounting)"
+      },
+      "alerts": {
+        "significantDifferenceTitle": "Significant Tax Difference Detected",
+        "significantDifferenceDescription": "The difference between internal and external tax calculations exceeds 1%. Please review the line-by-line breakdown below to identify discrepancies."
+      },
+      "sections": {
+        "lineByLineBreakdown": "Line-by-Line Breakdown"
+      },
+      "columns": {
+        "description": "Description",
+        "internalTax": "Internal Tax",
+        "externalTax": "External Tax",
+        "difference": "Difference"
+      },
+      "labels": {
+        "total": "Total",
+        "line": "Line {{index}}"
+      },
+      "states": {
+        "loading": "Loading reconciliation data...",
+        "noData": "No reconciliation data available."
+      },
+      "helpText": "Differences may occur due to rounding, tax rule variations, or timing differences between systems."
+    },
     "states": {
       "loadingHistory": "Loading history...",
       "emptyHistory": "No prior tax imports found."

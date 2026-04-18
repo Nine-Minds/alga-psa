@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@alga-psa/ui/components/Card';
-import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Calculator, Cloud, ArrowRight, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 
 import { getInvoiceTaxReconciliation } from '@alga-psa/billing/actions';
 
@@ -29,17 +30,18 @@ interface ReconciliationData {
   }>;
 }
 
-function formatCurrency(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
-function formatPercent(value: number): string {
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-}
-
 export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps) {
+  const { t } = useTranslation('msp/invoicing');
+  const { formatCurrency, formatNumber } = useFormatters();
   const [data, setData] = useState<ReconciliationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const formatPercent = (value: number) => {
+    return `${value >= 0 ? '+' : ''}${formatNumber(value, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}%`;
+  };
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -61,7 +63,11 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
     return (
       <Card id="tax-reconciliation-view-loading">
         <CardContent className="p-6">
-          <div className="text-center text-muted-foreground">Loading reconciliation data...</div>
+          <div className="text-center text-muted-foreground">
+            {t('externalTax.reconciliationView.states.loading', {
+              defaultValue: 'Loading reconciliation data...',
+            })}
+          </div>
         </CardContent>
       </Card>
     );
@@ -71,7 +77,11 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
     return (
       <Card id="tax-reconciliation-view-no-data">
         <CardContent className="p-6">
-          <div className="text-center text-muted-foreground">No reconciliation data available.</div>
+          <div className="text-center text-muted-foreground">
+            {t('externalTax.reconciliationView.states.noData', {
+              defaultValue: 'No reconciliation data available.',
+            })}
+          </div>
         </CardContent>
       </Card>
     );
@@ -81,19 +91,25 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
     <Card id="tax-reconciliation-view">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          Tax Reconciliation
+          {t('externalTax.reconciliationView.title', { defaultValue: 'Tax Reconciliation' })}
           {data.hasSignificantDifference ? (
-            <Tooltip content="Difference exceeds 1%">
+            <Tooltip content={t('externalTax.reconciliationView.tooltips.significantDifference', {
+              defaultValue: 'Difference exceeds 1%',
+            })}>
               <AlertTriangle className="h-5 w-5 text-amber-500" />
             </Tooltip>
           ) : (
-            <Tooltip content="Tax amounts match within acceptable range">
+            <Tooltip content={t('externalTax.reconciliationView.tooltips.amountsMatch', {
+              defaultValue: 'Tax amounts match within acceptable range',
+            })}>
               <CheckCircle className="h-5 w-5 text-green-500" />
             </Tooltip>
           )}
         </CardTitle>
         <CardDescription>
-          Compare internal and external tax calculations.
+          {t('externalTax.reconciliationView.description', {
+            defaultValue: 'Compare internal and external tax calculations.',
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -102,10 +118,14 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
           <div className="p-4 bg-success/10 rounded-lg border border-success/30">
             <div className="flex items-center gap-2 text-success mb-2">
               <Calculator className="h-4 w-4" />
-              <span className="text-sm font-medium">Internal (Alga PSA)</span>
+              <span className="text-sm font-medium">
+                {t('externalTax.reconciliationView.summary.internal', {
+                  defaultValue: 'Internal (Alga PSA)',
+                })}
+              </span>
             </div>
             <p className="text-2xl font-bold text-success">
-              {formatCurrency(data.internalTax)}
+              {formatCurrency(data.internalTax / 100, 'USD')}
             </p>
           </div>
 
@@ -115,7 +135,7 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
               <span className={`text-sm font-medium mt-1 ${
                 data.hasSignificantDifference ? 'text-warning' : 'text-success'
               }`}>
-                {formatCurrency(data.difference)}
+                {formatCurrency(data.difference / 100, 'USD')}
               </span>
               <span className={`text-xs ${
                 data.hasSignificantDifference ? 'text-warning' : 'text-muted-foreground'
@@ -128,9 +148,13 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
           <Alert variant="info" className="p-4">
             <Cloud className="h-4 w-4" />
             <AlertDescription>
-              <span className="text-sm font-medium block mb-2">External (Accounting)</span>
+              <span className="text-sm font-medium block mb-2">
+                {t('externalTax.reconciliationView.summary.external', {
+                  defaultValue: 'External (Accounting)',
+                })}
+              </span>
               <p className="text-2xl font-bold">
-                {formatCurrency(data.externalTax)}
+                {formatCurrency(data.externalTax / 100, 'USD')}
               </p>
             </AlertDescription>
           </Alert>
@@ -141,10 +165,15 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
           <Alert variant="destructive" showIcon={false}>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <p className="font-medium">Significant Tax Difference Detected</p>
+              <p className="font-medium">
+                {t('externalTax.reconciliationView.alerts.significantDifferenceTitle', {
+                  defaultValue: 'Significant Tax Difference Detected',
+                })}
+              </p>
               <p className="text-sm mt-1">
-                The difference between internal and external tax calculations exceeds 1%.
-                Please review the line-by-line breakdown below to identify discrepancies.
+                {t('externalTax.reconciliationView.alerts.significantDifferenceDescription', {
+                  defaultValue: 'The difference between internal and external tax calculations exceeds 1%. Please review the line-by-line breakdown below to identify discrepancies.',
+                })}
               </p>
             </AlertDescription>
           </Alert>
@@ -152,15 +181,35 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
 
         {/* Line-by-Line Comparison */}
         <div className="space-y-2">
-          <h4 className="text-sm font-medium">Line-by-Line Breakdown</h4>
+          <h4 className="text-sm font-medium">
+            {t('externalTax.reconciliationView.sections.lineByLineBreakdown', {
+              defaultValue: 'Line-by-Line Breakdown',
+            })}
+          </h4>
           <div className="border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted">
                 <tr>
-                  <th className="px-4 py-2 text-left font-medium">Description</th>
-                  <th className="px-4 py-2 text-right font-medium">Internal Tax</th>
-                  <th className="px-4 py-2 text-right font-medium">External Tax</th>
-                  <th className="px-4 py-2 text-right font-medium">Difference</th>
+                  <th className="px-4 py-2 text-left font-medium">
+                    {t('externalTax.reconciliationView.columns.description', {
+                      defaultValue: 'Description',
+                    })}
+                  </th>
+                  <th className="px-4 py-2 text-right font-medium">
+                    {t('externalTax.reconciliationView.columns.internalTax', {
+                      defaultValue: 'Internal Tax',
+                    })}
+                  </th>
+                  <th className="px-4 py-2 text-right font-medium">
+                    {t('externalTax.reconciliationView.columns.externalTax', {
+                      defaultValue: 'External Tax',
+                    })}
+                  </th>
+                  <th className="px-4 py-2 text-right font-medium">
+                    {t('externalTax.reconciliationView.columns.difference', {
+                      defaultValue: 'Difference',
+                    })}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -170,35 +219,40 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
                     className={`border-t ${line.difference !== 0 ? 'bg-warning/10' : ''}`}
                   >
                     <td className="px-4 py-2">
-                      {line.description || `Line ${index + 1}`}
+                      {line.description || t('externalTax.reconciliationView.labels.line', {
+                        index: index + 1,
+                        defaultValue: `Line ${index + 1}`,
+                      })}
                     </td>
                     <td className="px-4 py-2 text-right font-mono">
-                      {formatCurrency(line.internalTax)}
+                      {formatCurrency(line.internalTax / 100, 'USD')}
                     </td>
                     <td className="px-4 py-2 text-right font-mono">
-                      {formatCurrency(line.externalTax)}
+                      {formatCurrency(line.externalTax / 100, 'USD')}
                     </td>
                     <td className={`px-4 py-2 text-right font-mono ${
                       line.difference !== 0 ? 'text-amber-600 font-medium' : 'text-green-600'
                     }`}>
-                      {line.difference >= 0 ? '+' : ''}{formatCurrency(line.difference)}
+                      {line.difference >= 0 ? '+' : ''}{formatCurrency(line.difference / 100, 'USD')}
                     </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot className="bg-muted font-medium">
                 <tr className="border-t-2">
-                  <td className="px-4 py-2">Total</td>
-                  <td className="px-4 py-2 text-right font-mono">
-                    {formatCurrency(data.internalTax)}
+                  <td className="px-4 py-2">
+                    {t('externalTax.reconciliationView.labels.total', { defaultValue: 'Total' })}
                   </td>
                   <td className="px-4 py-2 text-right font-mono">
-                    {formatCurrency(data.externalTax)}
+                    {formatCurrency(data.internalTax / 100, 'USD')}
+                  </td>
+                  <td className="px-4 py-2 text-right font-mono">
+                    {formatCurrency(data.externalTax / 100, 'USD')}
                   </td>
                   <td className={`px-4 py-2 text-right font-mono ${
                     data.difference !== 0 ? 'text-amber-600' : 'text-green-600'
                   }`}>
-                    {data.difference >= 0 ? '+' : ''}{formatCurrency(data.difference)}
+                    {data.difference >= 0 ? '+' : ''}{formatCurrency(data.difference / 100, 'USD')}
                   </td>
                 </tr>
               </tfoot>
@@ -210,8 +264,9 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
         <div className="text-xs text-muted-foreground flex items-center gap-1 pt-4 border-t">
           <Info className="h-3 w-3" />
           <span>
-            Differences may occur due to rounding, tax rule variations, or timing differences
-            between systems.
+            {t('externalTax.reconciliationView.helpText', {
+              defaultValue: 'Differences may occur due to rounding, tax rule variations, or timing differences between systems.',
+            })}
           </span>
         </div>
       </CardContent>
