@@ -281,6 +281,7 @@ interface ManualInvoiceItemInput extends NetAmountItem {
   is_taxable?: boolean; // Still needed for purely manual items without a service
   applies_to_service_id?: string;
   discount_percentage?: number;
+  location_id?: string | null;
 }
 
 
@@ -467,6 +468,7 @@ export async function persistManualInvoiceCharges(
       discount_type: isCredit ? 'fixed' : undefined, // Credits are like fixed discounts
       applies_to_item_id: null, // Manual non-discounts don't apply to others
       applies_to_service_id: null,
+      location_id: requestItem.location_id ?? null,
       created_by: session.user.id,
       created_at: now,
       tenant
@@ -554,6 +556,7 @@ export async function persistManualInvoiceCharges(
       discount_percentage: requestItem.discount_type === 'percentage' ? requestItem.discount_percentage : undefined,
       applies_to_item_id: applicableItemId,
       applies_to_service_id: requestItem.applies_to_service_id, // Store original reference
+      location_id: requestItem.location_id ?? null,
       created_by: session.user.id,
       created_at: now,
       tenant
@@ -707,6 +710,7 @@ async function persistFixedInvoiceCharges(
         applies_to_item_id: null,
         applies_to_service_id: null,
         client_contract_id: charge.client_contract_id ?? null,
+        location_id: charge.location_id ?? null,
         created_by: session.user.id,
         created_at: now,
         tenant
@@ -788,6 +792,7 @@ async function persistFixedInvoiceCharges(
     let planTaxTotal = 0;
     let planTaxRegion: string | null = null;
     let planIsTaxable = false;
+    let planLocationId: string | null = null;
 
     for (const detail of planEntry.details) {
       const allocatedAmountCents = Number(detail.allocated_amount ?? detail.total ?? 0);
@@ -800,6 +805,9 @@ async function persistFixedInvoiceCharges(
       }
       if (detail.is_taxable) {
         planIsTaxable = true;
+      }
+      if (!planLocationId && detail.location_id) {
+        planLocationId = detail.location_id;
       }
     }
 
@@ -823,6 +831,7 @@ async function persistFixedInvoiceCharges(
       is_discount: false,
       is_taxable: planIsTaxable,
       client_contract_id: planEntry.consolidatedItem.client_contract_id ?? null,
+      location_id: planLocationId,
       created_by: session.user.id,
       created_at: now,
       updated_at: now,
@@ -971,6 +980,7 @@ export async function persistInvoiceCharges(
       applies_to_item_id: null,
       applies_to_service_id: null,
       client_contract_id: charge.client_contract_id ?? null,
+      location_id: charge.location_id ?? null,
       created_by: session.user.id,
       created_at: now,
       tenant

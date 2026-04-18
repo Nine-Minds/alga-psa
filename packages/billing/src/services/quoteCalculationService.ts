@@ -28,6 +28,7 @@ interface QuoteItemRow {
   total_price?: number | string | null;
   net_amount?: number | string | null;
   tax_amount?: number | string | null;
+  location_id?: string | null;
 }
 
 function toNumber(value: unknown): number {
@@ -83,6 +84,27 @@ export async function recalculateQuoteFinancials(
         .first()
     : null;
 
+  const distinctLocationIds = Array.from(
+    new Set(
+      items
+        .map((item) => item.location_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    )
+  );
+  const locationRegionMap = new Map<string, string | null>();
+  if (distinctLocationIds.length > 0) {
+    const locationRows = await knexOrTrx('client_locations')
+      .where({ tenant })
+      .whereIn('location_id', distinctLocationIds)
+      .select('location_id', 'region_code');
+    for (const row of locationRows) {
+      locationRegionMap.set(
+        row.location_id as string,
+        (row.region_code as string | null | undefined) ?? null
+      );
+    }
+  }
+
   const taxService = quote.client_id ? new TaxService() : null;
   const quoteDate = toQuoteDate(quote.quote_date);
   const currencyCode = quote.currency_code ?? 'USD';
@@ -111,7 +133,12 @@ export async function recalculateQuoteFinancials(
     const totalPrice = toNumber(item.quantity) * toNumber(item.unit_price);
     const isIncludedInTotals = isItemIncluded(item);
     const isDiscount = item.is_discount === true;
-    const taxRegion = item.tax_region ?? client?.region_code ?? null;
+    // Preserve manual override: if tax_region was explicitly set on the item, keep it.
+    // Otherwise fall back to the item's location.region_code, then to the client default.
+    const locationRegionCode = item.location_id
+      ? (locationRegionMap.get(item.location_id) ?? null)
+      : null;
+    const taxRegion = item.tax_region ?? locationRegionCode ?? client?.region_code ?? null;
 
     const scopedBaseAmount = item.applies_to_item_id
       ? (baseItemTotals.get(item.applies_to_item_id) ?? 0)
