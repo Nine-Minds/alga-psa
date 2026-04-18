@@ -6,10 +6,11 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Cloud, Download, Clock, CheckCircle, XCircle, AlertTriangle, RefreshCw, FileText, Info } from 'lucide-react';
 import { ColumnDefinition } from '@alga-psa/types';
+import { useTranslation } from 'react-i18next';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 
 import {
   getPendingExternalTaxCount,
@@ -35,25 +36,15 @@ interface BatchImportProgress {
   isRunning: boolean;
 }
 
-const ADAPTER_NAMES: Record<string, string> = {
-  quickbooks_online: 'QuickBooks Online',
-  xero: 'Xero',
-  sage: 'Sage',
+const ADAPTER_NAME_KEYS: Record<string, 'quickbooks' | 'xero' | 'sage'> = {
+  quickbooks_online: 'quickbooks',
+  xero: 'xero',
+  sage: 'sage',
 };
 
-function formatCurrency(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-}
-
 export function ExternalTaxBatchImportDashboard() {
+  const { t } = useTranslation('msp/invoicing');
+  const { formatCurrency, formatDate } = useFormatters();
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingInvoices, setPendingInvoices] = useState<PendingInvoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,6 +56,26 @@ export function ExternalTaxBatchImportDashboard() {
     isRunning: false
   });
 
+  const getAdapterName = useCallback((adapterType?: string) => {
+    if (!adapterType) {
+      return t('externalTax.values.unknownSystem', { defaultValue: 'Unknown' });
+    }
+
+    const adapterKey = ADAPTER_NAME_KEYS[adapterType];
+    if (adapterKey) {
+      return t(`externalTax.adapterNames.${adapterKey}`, {
+        defaultValue:
+          adapterKey === 'quickbooks'
+            ? 'QuickBooks Online'
+            : adapterKey === 'xero'
+              ? 'Xero'
+              : 'Sage',
+      });
+    }
+
+    return adapterType;
+  }, [t]);
+
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -75,11 +86,11 @@ export function ExternalTaxBatchImportDashboard() {
       setPendingCount(count);
       setPendingInvoices(invoices);
     } catch (error) {
-      handleError(error, 'Failed to load pending invoices');
+      handleError(error, t('externalTax.errors.loadPendingInvoices', { defaultValue: 'Failed to load pending invoices' }));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadData();
@@ -87,7 +98,7 @@ export function ExternalTaxBatchImportDashboard() {
 
   const handleBatchImport = async () => {
     if (pendingCount === 0) {
-      toast.success('No invoices pending tax import');
+      toast.success(t('externalTax.toasts.noPendingInvoices', { defaultValue: 'No invoices pending tax import' }));
       return;
     }
 
@@ -111,17 +122,33 @@ export function ExternalTaxBatchImportDashboard() {
       });
 
       if (result.failureCount === 0) {
-        toast.success(`Successfully imported tax for ${result.successCount} invoices`);
+        toast.success(t('externalTax.toasts.batchImportedSuccess', {
+          count: result.successCount,
+          defaultValue:
+            result.successCount === 1
+              ? `Successfully imported tax for ${result.successCount} invoice`
+              : `Successfully imported tax for ${result.successCount} invoices`,
+        }));
       } else if (result.successCount > 0) {
-        toast.success(`Imported ${result.successCount} invoices, ${result.failureCount} failed`);
+        toast.success(t('externalTax.toasts.batchImportedPartial', {
+          successCount: result.successCount,
+          failureCount: result.failureCount,
+          defaultValue: `Imported ${result.successCount} invoices, ${result.failureCount} failed`,
+        }));
       } else {
-        toast.error(`Failed to import tax for ${result.failureCount} invoices`);
+        toast.error(t('externalTax.toasts.batchImportedFailed', {
+          count: result.failureCount,
+          defaultValue:
+            result.failureCount === 1
+              ? `Failed to import tax for ${result.failureCount} invoice`
+              : `Failed to import tax for ${result.failureCount} invoices`,
+        }));
       }
 
       // Reload data
       await loadData();
     } catch (error: any) {
-      handleError(error, 'Batch import failed');
+      handleError(error, t('externalTax.errors.batchImportFailed', { defaultValue: 'Batch import failed' }));
       setProgress(prev => ({ ...prev, isRunning: false }));
     }
   };
@@ -131,19 +158,19 @@ export function ExternalTaxBatchImportDashboard() {
       const result = await importExternalTaxForInvoice(invoiceId);
 
       if (result.success) {
-        toast.success('Tax imported successfully');
+        toast.success(t('externalTax.toasts.taxImportedSuccessfully', { defaultValue: 'Tax imported successfully' }));
         await loadData();
       } else {
-        toast.error(result.error ?? 'Failed to import tax');
+        toast.error(result.error ?? t('externalTax.toasts.taxImportFailed', { defaultValue: 'Failed to import tax' }));
       }
     } catch (error: any) {
-      handleError(error, 'Import failed');
+      handleError(error, t('externalTax.errors.importFailed', { defaultValue: 'Import failed' }));
     }
   };
 
   const columns: ColumnDefinition<PendingInvoice>[] = [
     {
-      title: 'Invoice',
+      title: t('externalTax.columns.invoice', { defaultValue: 'Invoice' }),
       dataIndex: 'invoice_number',
       render: (value, record) => (
         <div className="flex items-center gap-2">
@@ -153,31 +180,35 @@ export function ExternalTaxBatchImportDashboard() {
       )
     },
     {
-      title: 'Client',
+      title: t('externalTax.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name'
     },
     {
-      title: 'Amount',
+      title: t('externalTax.columns.amount', { defaultValue: 'Amount' }),
       dataIndex: 'total_amount',
-      render: (value) => formatCurrency(value)
+      render: (value) => formatCurrency(Number(value) / 100, 'USD')
     },
     {
-      title: 'System',
+      title: t('externalTax.columns.system', { defaultValue: 'System' }),
       dataIndex: 'adapter_type',
       render: (value) => (
         <div className="flex items-center gap-1">
           <Cloud className="h-3 w-3 text-blue-600" />
-          <span className="text-sm">{value ? ADAPTER_NAMES[value] ?? value : 'Unknown'}</span>
+          <span className="text-sm">{getAdapterName(value)}</span>
         </div>
       )
     },
     {
-      title: 'Created',
+      title: t('externalTax.columns.created', { defaultValue: 'Created' }),
       dataIndex: 'created_at',
-      render: (value) => formatDate(value)
+      render: (value) => formatDate(value, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
     },
     {
-      title: 'Actions',
+      title: t('externalTax.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'invoice_id',
       render: (value, record) => (
         <Button
@@ -187,7 +218,7 @@ export function ExternalTaxBatchImportDashboard() {
           onClick={() => handleSingleImport(record.invoice_id)}
         >
           <Download className="h-3 w-3 mr-1" />
-          Import
+          {t('externalTax.actions.import', { defaultValue: 'Import' })}
         </Button>
       )
     }
@@ -198,10 +229,12 @@ export function ExternalTaxBatchImportDashboard() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Cloud className="h-5 w-5 text-blue-600" />
-          External Tax Import
+          {t('externalTax.title', { defaultValue: 'External Tax Import' })}
         </CardTitle>
         <CardDescription>
-          Import tax amounts from your accounting system for exported invoices.
+          {t('externalTax.description', {
+            defaultValue: 'Review invoices waiting for external tax calculation and import the resulting amounts.',
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -214,7 +247,13 @@ export function ExternalTaxBatchImportDashboard() {
             <div>
               <p className="text-2xl font-bold">{pendingCount}</p>
               <p className="text-sm text-muted-foreground">
-                {pendingCount === 1 ? 'invoice' : 'invoices'} pending tax import
+                {t('externalTax.summary.pending', {
+                  count: pendingCount,
+                  defaultValue:
+                    pendingCount === 1
+                      ? `${pendingCount} invoice pending tax import`
+                      : `${pendingCount} invoices pending tax import`,
+                })}
               </p>
             </div>
           </div>
@@ -226,7 +265,7 @@ export function ExternalTaxBatchImportDashboard() {
               disabled={isLoading || progress.isRunning}
             >
               <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
+              {t('externalTax.actions.refresh', { defaultValue: 'Refresh' })}
             </Button>
             <Button
               id="batch-import-all-button"
@@ -236,12 +275,16 @@ export function ExternalTaxBatchImportDashboard() {
               {progress.isRunning ? (
                 <>
                   <Download className="h-4 w-4 mr-2 animate-spin" />
-                  Importing {progress.processed}/{progress.total}...
+                  {t('externalTax.progress.importingCount', {
+                    current: progress.processed,
+                    total: progress.total,
+                    defaultValue: `Importing ${progress.processed}/${progress.total}...`,
+                  })}
                 </>
               ) : (
                 <>
                   <Download className="h-4 w-4 mr-2" />
-                  Import All
+                  {t('externalTax.actions.importAll', { defaultValue: 'Import All' })}
                 </>
               )}
             </Button>
@@ -252,7 +295,7 @@ export function ExternalTaxBatchImportDashboard() {
         {progress.isRunning && (
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Importing taxes...</span>
+              <span>{t('externalTax.progress.importing', { defaultValue: 'Importing taxes...' })}</span>
               <span>{progress.processed}/{progress.total}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -276,12 +319,18 @@ export function ExternalTaxBatchImportDashboard() {
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1">
                   <CheckCircle className="h-4 w-4 text-green-600" />
-                  {progress.success} successful
+                  {t('externalTax.summary.successful', {
+                    count: progress.success,
+                    defaultValue: `${progress.success} successful`,
+                  })}
                 </span>
                 {progress.failed > 0 && (
                   <span className="flex items-center gap-1">
                     <XCircle className="h-4 w-4 text-red-600" />
-                    {progress.failed} failed
+                    {t('externalTax.summary.failed', {
+                      count: progress.failed,
+                      defaultValue: `${progress.failed} failed`,
+                    })}
                   </span>
                 )}
               </div>
@@ -299,8 +348,8 @@ export function ExternalTaxBatchImportDashboard() {
         ) : !isLoading ? (
           <div className="text-center py-8 text-muted-foreground">
             <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-600" />
-            <p>All invoices are up to date!</p>
-            <p className="text-sm">No invoices pending external tax import.</p>
+            <p>{t('externalTax.empty.allUpToDate', { defaultValue: 'All invoices are up to date' })}</p>
+            <p className="text-sm">{t('externalTax.empty.nonePending', { defaultValue: 'No invoices pending external tax import.' })}</p>
           </div>
         ) : null}
 
@@ -308,8 +357,9 @@ export function ExternalTaxBatchImportDashboard() {
         <div className="text-xs text-muted-foreground flex items-center gap-1 mt-4 border-t pt-4">
           <Info className="h-3 w-3" />
           <span>
-            Invoices appear here when they are exported with external tax delegation enabled.
-            Import the tax once your accounting system has calculated the tax amounts.
+            {t('externalTax.helpText', {
+              defaultValue: 'Invoices appear here when they are exported with external tax delegation enabled. Import the tax once your accounting system has calculated the tax amounts.',
+            })}
           </span>
         </div>
       </CardContent>

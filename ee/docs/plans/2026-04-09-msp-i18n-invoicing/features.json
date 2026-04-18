@@ -87,7 +87,7 @@
   {
     "id": "F018",
     "description": "Wire useTranslation in ExternalTaxBatchImportDashboard.tsx -- card title (External Tax Import), description, column headers (Invoice, Client, Amount, System, Created, Actions), Import button, summary text (N invoice(s) pending tax import), Refresh/Import All buttons, progress label (Importing taxes...), results summary (N successful, N failed), empty state (All invoices are up to date), help text, adapter names (QuickBooks Online, Xero, Sage), toast messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F019",

@@ -641,10 +641,12 @@
     },
     "actions": {
       "import": "Import",
+      "importing": "Importing...",
       "refresh": "Refresh",
       "importAll": "Import All",
       "showHistory": "Show History",
-      "hideHistory": "Hide History"
+      "hideHistory": "Hide History",
+      "importFromAdapter": "Import Tax from {{adapter}}"
     },
     "summary": {
       "pending_one": "{{count}} invoice pending tax import",
@@ -659,14 +661,18 @@
       "importingCount": "Importing {{current}}/{{total}}..."
     },
     "empty": {
-      "allUpToDate": "All invoices are up to date"
+      "allUpToDate": "All invoices are up to date",
+      "nonePending": "No invoices pending external tax import.",
+      "history": "No import history available."
     },
-    "helpText": "Imported external tax amounts are written back to invoice detail rows for reconciliation and export.",
+    "helpText": "Invoices appear here when they are exported with external tax delegation enabled. Import the tax once your accounting system has calculated the tax amounts.",
     "alerts": {
       "pendingTitle": "Tax Pending Import",
-      "pendingDescription": "Tax has been requested from the external accounting system and is awaiting import.",
+      "pendingDescription": "This invoice was exported to {{adapter}} without tax amounts. Import the calculated tax once the invoice has been processed.",
       "importedTitle": "Tax Imported from {{adapter}}",
-      "significantDifference": "Difference exceeds 1%"
+      "significantDifference": "Difference exceeds 1%",
+      "significantDifferenceTitle": "Significant Tax Difference",
+      "significantDifferenceDescription": "The external tax differs from the internal calculation by more than 1%. Please review the charges to ensure accuracy."
     },
     "reconciliation": {
       "internal": "Internal",
@@ -675,8 +681,33 @@
       "history": "Import History"
     },
     "states": {
-      "loadingHistory": "Loading import history",
+      "loadingHistory": "Loading history...",
       "emptyHistory": "No prior tax imports found."
+    },
+    "tooltips": {
+      "externalRef": "External ref: {{reference}}"
+    },
+    "values": {
+      "unknownSystem": "Unknown",
+      "externalSystem": "External System",
+      "notAvailable": "N/A"
+    },
+    "toasts": {
+      "noPendingInvoices": "No invoices pending tax import",
+      "batchImportedSuccess_one": "Successfully imported tax for {{count}} invoice",
+      "batchImportedSuccess_other": "Successfully imported tax for {{count}} invoices",
+      "batchImportedPartial": "Imported {{successCount}} invoices, {{failureCount}} failed",
+      "batchImportedFailed_one": "Failed to import tax for {{count}} invoice",
+      "batchImportedFailed_other": "Failed to import tax for {{count}} invoices",
+      "taxImportedSuccessfully": "Tax imported successfully",
+      "taxImportedFromAdapter": "Tax imported successfully from {{adapter}}",
+      "taxImportFailed": "Failed to import tax"
+    },
+    "errors": {
+      "loadPendingInvoices": "Failed to load pending invoices",
+      "batchImportFailed": "Batch import failed",
+      "importFailed": "Import failed",
+      "importTaxFailed": "Failed to import tax"
     },
     "adapterNames": {
       "quickbooks": "QuickBooks Online",
