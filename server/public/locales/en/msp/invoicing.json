@@ -15,10 +15,13 @@
       }
     },
     "groups": {
+      "item": "{{count}} item",
       "item_one": "{{count}} item",
       "item_other": "{{count}} items",
+      "contract": "{{count}} contract",
       "contract_one": "{{count}} contract",
       "contract_other": "{{count}} contracts",
+      "line": "{{count}} line",
       "line_one": "{{count}} line",
       "line_other": "{{count}} lines",
       "canCombine": "Can combine into 1 invoice",

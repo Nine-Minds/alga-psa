@@ -68,7 +68,7 @@ interface RecurringInvoiceParentGroup {
     childCount: number;
     aggregateAmountCents: number | null;
     isCombinable: boolean;
-    combinabilitySummary: string;
+    combinabilitySummaryKey: string;
     incompatibilityReasons: string[];
     canGenerate: boolean;
     blockedReason: string | null;
@@ -83,6 +83,13 @@ type RecurringSelectionGroup = {
   billingCycleId: string | null;
 };
 
+const AUTOMATIC_INVOICE_GROUP_LABELS = {
+  canCombine: 'Can combine into 1 invoice',
+  separate: 'Must invoice separately',
+  blocked: 'Contains blocked items',
+  notReady: 'Not ready to invoice',
+} as const;
+
 const getParentGroupSummary = ({
   isCombinable,
   canGenerate,
@@ -94,32 +101,32 @@ const getParentGroupSummary = ({
   incompatibilityReasons: string[];
   childCount: number;
 }): {
-  label: string;
+  labelKey: keyof typeof AUTOMATIC_INVOICE_GROUP_LABELS;
   className: string;
 } => {
   if (isCombinable) {
     return {
-      label: 'Can combine into 1 invoice',
+      labelKey: 'canCombine',
       className: 'border-border/70 text-foreground',
     };
   }
 
   if (incompatibilityReasons.length > 0) {
     return {
-      label: 'Must invoice separately',
+      labelKey: 'separate',
       className: 'border-warning/40 text-warning',
     };
   }
 
   if (!canGenerate) {
     return {
-      label: childCount > 1 ? 'Contains blocked items' : 'Not ready to invoice',
+      labelKey: childCount > 1 ? 'blocked' : 'notReady',
       className: 'border-border/60 text-muted-foreground',
     };
   }
 
   return {
-    label: 'Must invoice separately',
+    labelKey: 'separate',
     className: 'border-warning/40 text-warning',
   };
 };
@@ -153,7 +160,7 @@ const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): Recurring
       childCount: candidate.memberCount,
       aggregateAmountCents,
       isCombinable,
-      combinabilitySummary: parentGroupSummary.label,
+      combinabilitySummaryKey: parentGroupSummary.labelKey,
       incompatibilityReasons,
       canGenerate: candidate.canGenerate,
       blockedReason: candidate.blockedReason ?? null,
@@ -298,6 +305,15 @@ const normalizeScopeValue = (value: string | null | undefined): string => {
   return normalized && normalized.length > 0 ? normalized : '__none__';
 };
 
+const AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS = {
+  invoiceWindowDiffers: 'Invoice window differs',
+  clientDiffers: 'Client differs',
+  poScopeDiffers: 'PO scope differs',
+  currencyDiffers: 'Currency differs',
+  taxTreatmentDiffers: 'Tax treatment differs',
+  exportShapeDiffers: 'Export shape differs',
+} as const;
+
 const resolveIncompatibilityReasons = (candidate: ReadyPeriod): string[] => {
   const eligibleMembers = candidate.members.filter((member) => member.canGenerate);
   const members = eligibleMembers.length > 0 ? eligibleMembers : candidate.members;
@@ -318,22 +334,22 @@ const resolveIncompatibilityReasons = (candidate: ReadyPeriod): string[] => {
   const uniqueExportShapes = new Set(members.map((member) => normalizeScopeValue(member.exportShapeKey)));
 
   if (uniqueWindows.size > 1) {
-    reasons.push('Invoice window differs');
+    reasons.push('invoiceWindowDiffers');
   }
   if (uniqueClients.size > 1) {
-    reasons.push('Client differs');
+    reasons.push('clientDiffers');
   }
   if (uniquePoScopes.size > 1) {
-    reasons.push('PO scope differs');
+    reasons.push('poScopeDiffers');
   }
   if (uniqueCurrencies.size > 1) {
-    reasons.push('Currency differs');
+    reasons.push('currencyDiffers');
   }
   if (uniqueTaxSources.size > 1) {
-    reasons.push('Tax treatment differs');
+    reasons.push('taxTreatmentDiffers');
   }
   if (uniqueExportShapes.size > 1) {
-    reasons.push('Export shape differs');
+    reasons.push('exportShapeDiffers');
   }
 
   return reasons;
@@ -1471,15 +1487,26 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                           <div className="min-w-0 space-y-1">
                             <div className="font-medium">{record.parentSummary.clientName ?? 'Unknown client'}</div>
                             <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                              <span>{record.parentSummary.childCount} item{record.parentSummary.childCount === 1 ? '' : 's'}</span>
+                              <span>
+                                {t('automaticInvoices.groups.item', {
+                                  count: record.parentSummary.childCount,
+                                  defaultValue: `${record.parentSummary.childCount} item${record.parentSummary.childCount === 1 ? '' : 's'}`,
+                                })}
+                              </span>
                               {contractNames.length > 0 ? (
                                 <span title={contractNames.join(', ')}>
-                                  {contractNames.length} contract{contractNames.length === 1 ? '' : 's'}
+                                  {t('automaticInvoices.groups.contract', {
+                                    count: contractNames.length,
+                                    defaultValue: `${contractNames.length} contract${contractNames.length === 1 ? '' : 's'}`,
+                                  })}
                                 </span>
                               ) : null}
                               {contractLineNames.length > 0 ? (
                                 <span title={contractLineNames.join(', ')}>
-                                  {contractLineNames.length} line{contractLineNames.length === 1 ? '' : 's'}
+                                  {t('automaticInvoices.groups.line', {
+                                    count: contractLineNames.length,
+                                    defaultValue: `${contractLineNames.length} line${contractLineNames.length === 1 ? '' : 's'}`,
+                                  })}
                                 </span>
                               ) : null}
                               <span>{cadenceSummary}</span>
@@ -1496,7 +1523,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                   childCount: record.parentSummary.childCount,
                                 }).className}`}
                               >
-                                {record.parentSummary.combinabilitySummary}
+                                {t(`automaticInvoices.groups.${record.parentSummary.combinabilitySummaryKey}`, {
+                                  defaultValue: AUTOMATIC_INVOICE_GROUP_LABELS[record.parentSummary.combinabilitySummaryKey],
+                                })}
                               </span>
                             </div>
                             {!record.parentSummary.isCombinable && record.parentSummary.incompatibilityReasons.length > 0 ? (
@@ -1504,7 +1533,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                 className="text-xs text-muted-foreground"
                                 data-testid={`combinability-reasons-${record.parentSummary.parentGroupKey}`}
                               >
-                                {record.parentSummary.incompatibilityReasons.join(', ')}
+                                {record.parentSummary.incompatibilityReasons
+                                  .map((reasonKey) =>
+                                    t(`automaticInvoices.incompatibilityReasons.${reasonKey}`, {
+                                      defaultValue:
+                                        AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS[
+                                          reasonKey as keyof typeof AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS
+                                        ],
+                                    }))
+                                  .join(', ')}
                               </div>
                             ) : null}
                             {!record.parentSummary.canGenerate && record.parentSummary.blockedReason ? (
@@ -1573,7 +1610,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 	                  if (!isExpanded) {
 	                    return (
 	                      <div className="text-xs text-muted-foreground">
-	                        {record.parentSummary.childCount} item{record.parentSummary.childCount === 1 ? '' : 's'} included
+	                        {`${t('automaticInvoices.groups.item', {
+                          count: record.parentSummary.childCount,
+                          defaultValue: `${record.parentSummary.childCount} item${record.parentSummary.childCount === 1 ? '' : 's'}`,
+                        })} included`}
 	                      </div>
 	                    );
 	                  }

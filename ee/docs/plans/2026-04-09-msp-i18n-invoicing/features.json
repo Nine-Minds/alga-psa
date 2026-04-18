@@ -17,7 +17,7 @@
   {
     "id": "F004",
     "description": "Wire AutomaticInvoices.tsx parent group cell strings: item/items count, contract/contracts count, line/lines count, combinability badges (Can combine into 1 invoice, Must invoice separately, Contains blocked items, Not ready to invoice), incompatibility reasons (Invoice window differs, Client differs, PO scope differs, Currency differs, Tax treatment differs, Export shape differs)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F005",

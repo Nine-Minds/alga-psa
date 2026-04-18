@@ -51,4 +51,44 @@ describe('AutomaticInvoices i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T004: parent-group counts, combinability badges, and incompatibility reasons resolve through msp/invoicing', () => {
+    const source = read('../src/components/billing-dashboard/AutomaticInvoices.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../server/public/locales/en/msp/invoicing.json',
+    );
+
+    const directKeyChecks = [
+      'automaticInvoices.groups.item',
+      'automaticInvoices.groups.contract',
+      'automaticInvoices.groups.line',
+    ];
+
+    const namespaceKeyChecks = [
+      'automaticInvoices.groups.canCombine',
+      'automaticInvoices.groups.separate',
+      'automaticInvoices.groups.blocked',
+      'automaticInvoices.groups.notReady',
+      'automaticInvoices.incompatibilityReasons.invoiceWindowDiffers',
+      'automaticInvoices.incompatibilityReasons.clientDiffers',
+      'automaticInvoices.incompatibilityReasons.poScopeDiffers',
+      'automaticInvoices.incompatibilityReasons.currencyDiffers',
+      'automaticInvoices.incompatibilityReasons.taxTreatmentDiffers',
+      'automaticInvoices.incompatibilityReasons.exportShapeDiffers',
+    ];
+
+    expect(source).toContain('AUTOMATIC_INVOICE_GROUP_LABELS');
+    expect(source).toContain('AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS');
+    expect(source).toContain('t(`automaticInvoices.groups.${record.parentSummary.combinabilitySummaryKey}`');
+    expect(source).toContain('t(`automaticInvoices.incompatibilityReasons.${reasonKey}`');
+
+    for (const key of directKeyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+
+    for (const key of namespaceKeyChecks) {
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });
