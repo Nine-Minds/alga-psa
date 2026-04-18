@@ -331,7 +331,7 @@ export default function XeroIntegrationSettings() {
             </Alert>
           )}
 
-          {status?.error ? (
+          {status?.error && defaultConnection ? (
             <Alert variant={status.connected ? 'info' : 'destructive'}>
               <AlertDescription>{status.error}</AlertDescription>
             </Alert>
