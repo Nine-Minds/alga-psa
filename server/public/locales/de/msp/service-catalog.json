@@ -1,0 +1,449 @@
+{
+  "taxRates": {
+    "errors": {
+      "loadRegions": "Steuerregionen konnten nicht geladen werden.",
+      "validateDeletion": "Der Löschvorgang konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
+      "fetchRates": "Steuersätze konnten nicht abgerufen werden",
+      "add": "Steuersatz konnte nicht hinzugefügt werden",
+      "update": "Der Steuersatz konnte nicht aktualisiert werden",
+      "confirmDeletion": "Die Löschung des Steuersatzes konnte nicht bestätigt werden."
+    },
+    "validation": {
+      "requiredFieldsTitle": "Bitte füllen Sie die erforderlichen Felder aus:",
+      "region": "Steuerregion",
+      "percentage": "Steuerprozentsatz",
+      "startDate": "Startdatum"
+    },
+    "table": {
+      "description": "Beschreibung",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "actions": "Aktionen",
+      "notAvailable": "N/A",
+      "region": "Region",
+      "taxPercentage": "Steuerprozentsatz",
+      "composite": "Zusammengesetzt"
+    },
+    "actions": {
+      "openMenu": "Menü öffnen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "advancedSettings": "Erweiterte Einstellungen",
+      "addNew": "Neuen Steuersatz hinzufügen",
+      "add": "Steuersatz hinzufügen",
+      "update": "Steuersatz aktualisieren"
+    },
+    "dialog": {
+      "fields": {
+        "description": "Beschreibung",
+        "startDate": "Startdatum *",
+        "endDate": "Enddatum (optional)",
+        "region": "Steuerregion *",
+        "percentage": "Steuerprozentsatz *"
+      },
+      "placeholders": {
+        "loadingRegions": "Regionen werden geladen...",
+        "selectRegion": "Wählen Sie Steuerregion aus",
+        "percentage": "Geben Sie den Prozentsatz ein"
+      },
+      "addTitle": "Neuen Steuersatz hinzufügen",
+      "editTitle": "Steuersatz bearbeiten",
+      "description": "Geben Sie die Details zum Steuersatz ein."
+    },
+    "title": "Steuersätze",
+    "loading": "Steuersätze werden geladen",
+    "deleteEntity": {
+      "fallback": "diesem Steuersatz",
+      "withRegion": "{{regionName}} Steuersatz"
+    }
+  },
+  "taxRateDetail": {
+    "fields": {
+      "regionCode": "Regionalcode",
+      "description": "Beschreibung",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "taxPercentage": "Steuerprozentsatz",
+      "taxType": "Steuerart",
+      "isComposite": "Ist zusammengesetzt",
+      "isActive": "Ist Aktiv"
+    },
+    "values": {
+      "dash": "-",
+      "noEndDate": "Kein Enddatum",
+      "yes": "Ja",
+      "no": "NEIN",
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "composite": "Zusammengesetzt"
+    },
+    "actions": {
+      "back": "Zurück zu den Steuersätzen"
+    },
+    "subtitle": "{{regionCode}} – {{percentage}} %",
+    "tabs": {
+      "details": "Einzelheiten",
+      "components": "Komponenten",
+      "brackets": "Staffeln",
+      "holidays": "Feiertage"
+    },
+    "precedence": {
+      "title": "Vorrang bei der Steuerberechnung",
+      "clientExempt": "Das Steuerbefreiungskennzeichen des Kunden wird zuerst überprüft (bei Steuerbefreiung wird keine Steuer erhoben).",
+      "serviceSpecific": "Bei Zuweisung wird ein dienstleistungsspezifischer Steuersatz verwendet",
+      "clientDefault": "Als Fallback wird der Standardsteuersatz des Kunden verwendet",
+      "regionLookup": "Die Suche nach Steuerregionen ermittelt den anwendbaren Steuersatz basierend auf dem Standort"
+    },
+    "components": {
+      "simpleRateMessage": "Dabei handelt es sich um einen einfachen Steuersatz, nicht um einen zusammengesetzten Steuersatz. Steuerkomponenten werden nur für zusammengesetzte Steuern verwendet.",
+      "enableCompositeMessage": "Um Steuerkomponenten zu verwenden, markieren Sie diesen Satz beim Bearbeiten als zusammengesetzt."
+    },
+    "brackets": {
+      "intro": "Progressive Steuerklassen wenden unterschiedliche Steuersätze auf unterschiedliche Teile eines Betrags an.",
+      "precedence": "Bei Festlegung von Tarifen haben diese Vorrang vor dem Pauschalprozentsatz."
+    }
+  },
+  "serviceForm": {
+    "errors": {
+      "loadServiceTypes": "Diensttypen konnten nicht abgerufen werden",
+      "serviceTypeNotFound": "Ausgewählter Diensttyp nicht gefunden",
+      "create": "Dienst konnte nicht erstellt werden",
+      "loadTaxData": "Steuerdaten konnten nicht geladen werden.",
+      "selectServiceType": "Bitte wählen Sie einen Servicetyp aus"
+    },
+    "fields": {
+      "serviceName": {
+        "placeholder": "Dienstname"
+      },
+      "serviceType": {
+        "label": "Servicetyp",
+        "placeholder": "Wählen Sie Servicetyp aus"
+      },
+      "billingMethod": {
+        "label": "Abrechnungsmethode",
+        "placeholder": "Wählen Sie die Abrechnungsmethode aus"
+      },
+      "description": {
+        "label": "Beschreibung",
+        "placeholder": "Servicebeschreibung"
+      },
+      "taxRate": {
+        "label": "Steuersatz",
+        "placeholderLoading": "Steuerdaten werden geladen...",
+        "placeholder": "Steuersatz auswählen (optional)"
+      },
+      "defaultRate": {
+        "placeholder": "Standardtarif"
+      },
+      "unitOfMeasure": {
+        "placeholder": "Maßeinheit"
+      }
+    },
+    "options": {
+      "billingMethod": {
+        "hourly": "Stündlich",
+        "usage": "Nutzungsbasiert",
+        "fixed": "Festpreis"
+      }
+    },
+    "taxRateOption": {
+      "fallback": "N/A",
+      "label": "{{description}} – {{percentage}} %"
+    },
+    "actions": {
+      "submit": "Dienst hinzufügen"
+    }
+  },
+  "serviceSelection": {
+    "table": {
+      "type": "Typ",
+      "unit": "Einheit",
+      "rate": "Tarif",
+      "product": "Produkt",
+      "itemName": "Artikelname",
+      "service": "Service",
+      "unknown": "Unbekannt"
+    },
+    "actions": {
+      "cancel": "Abbrechen",
+      "addSelected": "Ausgewählte Dienste hinzufügen",
+      "adding": "Hinzufügen..."
+    },
+    "title": "Fügen Sie Services und Produkte zum Plan hinzu",
+    "searchPlaceholder": "Dienstleistungen/Produkte suchen...",
+    "errors": {
+      "load": "Dienste konnten nicht geladen werden",
+      "add": "Das Hinzufügen von Diensten zum Plan ist fehlgeschlagen"
+    },
+    "states": {
+      "loading": "Dienste werden geladen...",
+      "empty": "Keine Dienste gefunden"
+    },
+    "selection": {
+      "countOne": "{{count}} Dienst ausgewählt",
+      "countOther": "{{count}} Dienste ausgewählt"
+    },
+    "quickAdd": {
+      "label": "Schnell hinzufügen:",
+      "allType": "Alle {{type}}"
+    }
+  },
+  "configType": {
+    "warningDialog": {
+      "cancel": "Abbrechen",
+      "title": "Konfigurationstyp ändern?",
+      "description": "Beim Ändern des Konfigurationstyps werden alle typspezifischen Einstellungen zurückgesetzt. Diese Aktion kann nicht rückgängig gemacht werden.",
+      "confirm": "Typ ändern"
+    },
+    "placeholder": "Konfigurationstyp auswählen",
+    "options": {
+      "Fixed": {
+        "label": "Festpreis",
+        "description": "Ein Service zum Festpreis mit einheitlicher Abrechnung unabhängig von der Nutzung. Ideal für vorhersehbare Dienste."
+      },
+      "Hourly": {
+        "label": "Stundensatz",
+        "description": "Zeitbasierte Abrechnung mit konfigurierbaren Tarifen. Am besten geeignet für variable Arbeitsbelastungen, die nach Zeitaufwand abgerechnet werden."
+      },
+      "Usage": {
+        "label": "Nutzungsbasiert",
+        "description": "Nutzungsbasierte Abrechnung mit gestaffelten Preisoptionen. Perfekt für Dienstleistungen, die am Verbrauch gemessen werden."
+      },
+      "Bucket": {
+        "label": "Stundenkontingent",
+        "description": "Im Voraus gekaufte Stunden, die im Laufe der Zeit genutzt werden können. Gut für Kunden, die Flexibilität mit einer Budgetobergrenze benötigen."
+      }
+    }
+  },
+  "serviceConfig": {
+    "fields": {
+      "quantity": {
+        "label": "Menge",
+        "placeholder": "Geben Sie die Menge ein",
+        "help": "Anzahl der Einheiten dieses Dienstes",
+        "errorNegative": "Die Menge darf nicht negativ sein"
+      },
+      "customRate": {
+        "label": "Individueller Satz",
+        "placeholder": "Geben Sie den Tarif ein",
+        "placeholderDefault": "Standard: {{rate}}",
+        "helpCustom": "Individueller Tarif für diesen Service",
+        "helpUseDefault": "Lassen Sie das Feld leer, um den Standardtarif zu verwenden ({{rate}})",
+        "errorNegative": "Der Zinssatz darf nicht negativ sein"
+      },
+      "configurationType": "Konfigurationstyp"
+    },
+    "actions": {
+      "cancel": "Abbrechen",
+      "saving": "Sparen...",
+      "save": "Konfiguration speichern"
+    },
+    "title": "Dienstkonfiguration",
+    "serviceLabel": "Service",
+    "effectiveModeLabel": "Effektiver Modus",
+    "defaultSourceLabel": "Standardquelle",
+    "modes": {
+      "Fixed": "Festpreis",
+      "Hourly": "Stundensatz",
+      "Usage": "Nutzungsbasiert",
+      "Bucket": "Stundenkontingent"
+    },
+    "defaultSources": {
+      "catalog default": "Katalogstandard",
+      "contract override": "Vertragsüberschreibung",
+      "none": "keine"
+    },
+    "bucketOverlay": {
+      "recommendHours": "Empfehlen Sie einen Eimer voller Stunden",
+      "recommendUsage": "Empfehlen Sie einen Eimer Verzehr"
+    }
+  },
+  "hourlyConfig": {
+    "fields": {
+      "minimumBillableTime": {
+        "placeholder": "15",
+        "label": "Mindestabrechenbare Zeit (Minuten)",
+        "help": "Mindestzeit für die Abrechnung (z. B. 15 Minuten)",
+        "errorNegative": "Die minimale abrechenbare Zeit darf nicht negativ sein"
+      },
+      "roundUpToNearest": {
+        "placeholder": "15",
+        "label": "Auf den nächsten Wert aufrunden (Minuten)",
+        "help": "Runden Sie Zeiteinträge auf das nächste Inkrement auf",
+        "errorNegative": "Der aufgerundete Wert darf nicht negativ sein"
+      },
+      "newUserType": {
+        "label": "Benutzertyp",
+        "placeholder": "Wählen Sie den Benutzertyp aus"
+      },
+      "newUserTypeRate": {
+        "label": "Tarif",
+        "placeholder": "Geben Sie den Tarif ein",
+        "errorNegative": "Die Benutzertyprate darf nicht negativ sein"
+      }
+    },
+    "userTypeRates": {
+      "headers": {
+        "userType": "Benutzertyp",
+        "rate": "Tarif"
+      },
+      "title": "Benutzertyptarife",
+      "options": {
+        "technician": "Techniker",
+        "engineer": "Ingenieur",
+        "consultant": "Berater",
+        "project_manager": "Projektmanager",
+        "admin": "Administrator"
+      },
+      "actions": {
+        "addRate": "Rate hinzufügen"
+      }
+    },
+    "title": "Konfiguration des Stundensatzes"
+  },
+  "usageConfig": {
+    "defaults": {
+      "unitOfMeasure": "Einheit"
+    },
+    "fields": {
+      "unitOfMeasure": {
+        "errorRequired": "Maßeinheit ist erforderlich",
+        "label": "Maßeinheit",
+        "placeholder": "Geben Sie die Maßeinheit ein",
+        "help": "Die zur Messung der Nutzung verwendete Einheit (z. B. GB, Benutzer, Gerät)"
+      },
+      "minimumUsage": {
+        "placeholder": "0",
+        "label": "Mindestnutzungsschwelle",
+        "help": "Mindestens abrechnungsfähige Nutzung pro Zeitraum (0 für kein Minimum)",
+        "errorNegative": "Die Mindestnutzung darf nicht negativ sein"
+      },
+      "enableTieredPricing": "Aktivieren Sie gestaffelte Preise"
+    },
+    "title": "Nutzungsbasierte Konfiguration",
+    "tiers": {
+      "title": "Preisstufen",
+      "addTier": "Stufe hinzufügen",
+      "empty": "Keine Ebenen konfiguriert. Fügen Sie eine Stufe hinzu, um volumenbasierte Preise zu definieren.",
+      "from": "Von ({{unit}})",
+      "to": "An ({{unit}})",
+      "ratePer": "Preis pro {{unit}}",
+      "unlimited": "Unbegrenzt",
+      "help": "Konfigurieren Sie volumenbasierte Preisstufen. Jede Stufe wendet ihren Tarif auf die Nutzung an, die in ihren Bereich fällt.",
+      "errors": {
+        "onlyLastUnlimited": "Nur die letzte Stufe kann eine unbegrenzte Obergrenze haben",
+        "overlap": "Ebenen dürfen sich nicht überlappen",
+        "upperGreaterThanLower": "Die Obergrenze der Ebene muss größer als die Untergrenze sein",
+        "rateNegative": "Die Staffelsätze dürfen nicht negativ sein"
+      }
+    }
+  },
+  "rateTiers": {
+    "table": {
+      "actions": "Aktionen",
+      "minQuantity": "Mindestmenge",
+      "maxQuantity": "Maximale Menge",
+      "rate": "Rate ({{unit}})",
+      "unlimited": "Unbegrenzt"
+    },
+    "actions": {
+      "saving": "Sparen...",
+      "addTier": "Stufe hinzufügen",
+      "save": "Sparen Sie Tarifstufen"
+    },
+    "title": "Preisstufen und Mengenrabatte",
+    "description": "Konfigurieren Sie unterschiedliche Tarife basierend auf Mengenbereichen. Für größere Mengen können ermäßigte Preise gelten.",
+    "loading": "Tarifstufen werden geladen...",
+    "formattedRate": "{{rate}} pro {{unit}}",
+    "errors": {
+      "load": "Ratenstufen konnten nicht geladen werden",
+      "save": "Tarifstufen konnten nicht gespeichert werden",
+      "lastTier": "Die letzte Ebene kann nicht entfernt werden",
+      "minPositive": "Die Mindestmenge muss größer als 0 sein",
+      "maxGreaterThanMin": "Die maximale Menge muss größer als die minimale Menge sein",
+      "rateNegative": "Der Zinssatz darf nicht negativ sein",
+      "overlap": "Tierbereiche dürfen sich nicht überschneiden"
+    }
+  },
+  "serviceTaxSettings": {
+    "fields": {
+      "taxRate": {
+        "label": "Steuersatz",
+        "placeholderLoading": "Ladepreise...",
+        "placeholder": "Wählen Sie Steuersatz",
+        "help": "Wählen Sie „Nicht steuerpflichtig“, wenn diese Dienstleistung nicht steuerpflichtig sein soll."
+      }
+    },
+    "options": {
+      "nonTaxable": "Nicht steuerpflichtig"
+    },
+    "errors": {
+      "loadTaxRates": "Steuersätze konnten nicht geladen werden.",
+      "save": "Steuereinstellungen konnten nicht gespeichert werden"
+    },
+    "actions": {
+      "saving": "Sparen...",
+      "save": "Steuereinstellungen speichern"
+    },
+    "title": "Steuereinstellungen",
+    "optionLabel": "{{taxType}} ({{countryCode}}) – {{percentage}} %"
+  },
+  "fixedConfig": {
+    "title": "Festpreiskonfiguration",
+    "fields": {
+      "adjustForPartialPeriods": "Passen Sie Teilperioden an",
+      "billingCycleAlignment": {
+        "label": "Ausrichtung des Abrechnungszeitraums",
+        "placeholder": "Ausrichtung auswählen",
+        "help": "Steuert, wie die Teilzeitraumabdeckung berechnet wird, wenn die wiederkehrende Gebühr auf weniger als einen vollständigen Servicezeitraum skaliert werden muss."
+      }
+    },
+    "options": {
+      "start": "Beginn des Abrechnungszeitraums",
+      "end": "Ende des Abrechnungszeitraums",
+      "prorated": "Proportionale Abdeckung"
+    }
+  },
+  "bucketConfig": {
+    "title": "Konfiguration des Stundenkontingents",
+    "fields": {
+      "totalMinutes": {
+        "label": "Gesamtminuten",
+        "placeholder": "Geben Sie die Gesamtstundenzahl ein",
+        "help": "Die Gesamtzahl der in dieser Bucket-Vertragszeile enthaltenen Minuten",
+        "errorPositive": "Die Gesamtminuten müssen größer als Null sein"
+      },
+      "billingPeriod": {
+        "label": "Abrechnungszeitraum",
+        "placeholder": "Wählen Sie den Abrechnungszeitraum aus",
+        "help": "Der Zeitraum, über den die Bucket-Stunden verteilt werden",
+        "mismatchPrefix": "Nichtübereinstimmung:",
+        "mismatch": "Der Abrechnungszeitraum des Stundenkontingents ({{billingPeriod}}) sollte mit der Abrechnungshäufigkeit der Vertragsposition ({{contractLineBillingFrequency}}) übereinstimmen."
+      },
+      "overageRate": {
+        "label": "Überschreitungsrate",
+        "placeholder": "Geben Sie den Überschreitungssatz ein",
+        "help": "Der Stundensatz, der für Stunden berechnet wird, die über das Bucket-Limit hinaus genutzt werden",
+        "errorNegative": "Die Überschreitungsrate darf nicht negativ sein"
+      },
+      "allowRollover": "Lassen Sie ungenutzte Stunden auf die nächste Periode übertragen"
+    }
+  },
+  "serviceDetail": {
+    "loading": "Dienstkonfiguration wird geladen...",
+    "errors": {
+      "notFound": "Dienst nicht gefunden",
+      "load": "Die Dienstkonfiguration konnte nicht geladen werden"
+    },
+    "title": "Dienstkonfiguration: {{serviceName}}",
+    "description": "Konfigurieren Sie Servicedetails, Preise und Steuereinstellungen",
+    "sections": {
+      "unitOfMeasure": "Maßeinheit",
+      "baseRate": "Grundpreis"
+    },
+    "baseRate": {
+      "summary": "{{rate}} pro {{unit}}",
+      "help": "Der Basispreis kann durch die unten aufgeführten mengenbasierten Tarife außer Kraft gesetzt werden."
+    }
+  }
+}
