@@ -191,3 +191,7 @@ be translated at render time, not at definition time (move t() calls to render).
 
 - **(2026-04-18) F002 complete:** updated [packages/core/src/lib/i18n/config.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/core/src/lib/i18n/config.ts) so `ROUTE_NAMESPACES['/msp/billing']` preloads `msp/invoicing` alongside the existing billing/report/contract namespaces.
   Rationale: the invoicing screens render under `/msp/billing` tabs, so namespace preloading must be in place before any `useTranslation('msp/invoicing')` call can resolve outside fallback/default strings.
+
+- **(2026-04-18) F003 complete:** wired the `Ready to Invoice` chrome in [packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx) to `useTranslation('msp/invoicing')` for the section heading, explanatory copy, preview/generate actions, filter controls, and parent-group table headers.
+  Validation: added [packages/billing/tests/AutomaticInvoices.i18n.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/tests/AutomaticInvoices.i18n.test.ts) and ran `npx vitest run --config vitest.config.ts ../packages/billing/tests/AutomaticInvoices.i18n.test.ts` from `server/` (pass).
+  Gotcha: in this test/runtime fallback path, interpolated `defaultValue` strings are rendered literally, so count-bearing button copy needs a pre-expanded fallback string even when the translation key still receives `count` for real locale interpolation.

@@ -34,6 +34,7 @@ import {
 } from '@alga-psa/billing/actions/billingAndTax';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { formatCurrency } from '@alga-psa/core';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 // Added imports for DropdownMenu
 import {
   DropdownMenu,
@@ -339,6 +340,7 @@ const resolveIncompatibilityReasons = (candidate: ReadyPeriod): string[] => {
 };
 
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, refreshTrigger = 0 }) => {
+  const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
   // Drawer removed: client details quick view no longer used here
   const [selectedTargets, setSelectedTargets] = useState<Set<string>>(new Set());
@@ -1199,12 +1201,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h2 className="text-lg font-semibold">Ready to Invoice</h2>
+              <h2 className="text-lg font-semibold">
+                {t('automaticInvoices.ready.title', { defaultValue: 'Ready to Invoice' })}
+              </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.
+                {t('automaticInvoices.ready.description', {
+                  defaultValue: 'Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.',
+                })}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Select All chooses parent rows when a group is combinable and falls back to individual child rows when a group is not combinable.
+                {t('automaticInvoices.ready.selectAllExplanation', {
+                  defaultValue: 'Select All chooses parent rows when a group is combinable and falls back to individual child rows when a group is not combinable.',
+                })}
               </p>
             </div>
             <div className="flex gap-2 items-end">
@@ -1222,7 +1230,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 }
               >
                 <Eye className="h-4 w-4 mr-2" />
-                {isPreviewLoading ? 'Loading...' : 'Preview Selected'}
+                {isPreviewLoading
+                  ? t('common.actions.loading', { defaultValue: 'Loading...' })
+                  : t('automaticInvoices.actions.previewSelected', { defaultValue: 'Preview Selected' })}
               </Button>
               {!previewSupportsDirectGeneration && selectedSelectionGroups.length > 0 ? (
                 <span className="text-xs text-muted-foreground" data-testid="grouped-preview-unavailable-copy">
@@ -1235,7 +1245,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 disabled={selectedExecutionRows.length === 0 || isGenerating}
                 className={selectedExecutionRows.length === 0 ? 'opacity-50' : ''}
               >
-                {isGenerating ? 'Generating...' : `Generate Invoices for Selected Periods (${selectedExecutionRows.length})`}
+                {isGenerating
+                  ? t('manualInvoices.actions.processing', { defaultValue: 'Processing...' })
+                  : t('automaticInvoices.actions.generateSelected', {
+                    count: selectedExecutionRows.length,
+                    defaultValue: `Generate Invoices for Selected Periods (${selectedExecutionRows.length})`,
+                  })}
               </Button>
             </div>
           </div>
@@ -1244,7 +1259,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           <div className="flex items-end gap-4 mb-4">
             <DateRangePicker
               id="billing-period-date-range"
-              label="Service period start date range"
+              label={t('automaticInvoices.ready.dateRange', {
+                defaultValue: 'Service period start date range',
+              })}
               value={pendingDateRange}
               onChange={(range) => setPendingDateRange(range)}
             />
@@ -1254,12 +1271,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               onClick={handleDateRangeSearch}
             >
               <Search className="h-4 w-4 mr-2" />
-              Search
+              {t('automaticInvoices.ready.search', { defaultValue: 'Search' })}
             </Button>
             <Input
               id="filter-clients-input"
               type="text"
-              placeholder="Filter clients..."
+              placeholder={t('automaticInvoices.ready.filterPlaceholder', {
+                defaultValue: 'Filter clients...',
+              })}
               containerClassName=""
               value={clientFilter}
               onChange={(e) => setClientFilter(e.target.value)}
@@ -1397,7 +1416,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 }
               },
 	              {
-	                title: 'Group',
+	                title: t('automaticInvoices.ready.columns.group', { defaultValue: 'Group' }),
 	                dataIndex: 'parentGroupKey',
 	                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
 	                  const isExpanded = expandedParentGroups.has(record.parentSummary.parentGroupKey);
@@ -1515,7 +1534,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 	                },
 	              },
 	              {
-	                title: 'Service Period',
+	                title: t('automaticInvoices.ready.columns.servicePeriod', { defaultValue: 'Service Period' }),
 	                dataIndex: 'servicePeriodLabel',
 	                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
 	                  <div className="space-y-1">
@@ -1535,7 +1554,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 	                ),
 	              },
 	              {
-	                title: 'Invoice Window',
+	                title: t('automaticInvoices.ready.columns.invoiceWindow', { defaultValue: 'Invoice Window' }),
 	                dataIndex: 'windowLabel',
 	                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
                     <div className="space-y-1">
@@ -1547,7 +1566,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   ),
 	              },
 	              {
-	                title: 'Included',
+	                title: t('automaticInvoices.ready.columns.included', { defaultValue: 'Included' }),
 	                dataIndex: 'childExecutionRows',
 	                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
 	                  const isExpanded = expandedParentGroups.has(record.parentSummary.parentGroupKey);

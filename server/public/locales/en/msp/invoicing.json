@@ -47,6 +47,7 @@
     },
     "actions": {
       "previewSelected": "Preview Selected",
+      "generateSelected": "Generate Invoices for Selected Periods ({{count}})",
       "generateSelected_one": "Generate Invoices for Selected Periods ({{count}})",
       "generateSelected_other": "Generate Invoices for Selected Periods ({{count}})",
       "reverseInvoice": "Reverse Invoice",

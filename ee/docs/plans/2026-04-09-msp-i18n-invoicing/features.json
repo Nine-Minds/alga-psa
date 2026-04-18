@@ -12,7 +12,7 @@
   {
     "id": "F003",
     "description": "Wire useTranslation in AutomaticInvoices.tsx -- ready-to-invoice section: heading, sub-headings, select-all explanation, filter placeholder, date range label, search button, parent group column headers (Group, Service Period, Invoice Window, Included)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F004",
