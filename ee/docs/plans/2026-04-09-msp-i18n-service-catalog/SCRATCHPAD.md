@@ -227,3 +227,4 @@ Proceed with the 20 features / 16 tests already in `features.json` / `tests.json
   - `service-config/ServiceTaxSettings.tsx:20` / `:110` → `useTranslation(...)` and `serviceTaxSettings.title`
   - `service-config/ServiceConfigurationPanel.tsx:18-19` / `:103` / `:137` → `useTranslation(...)`, `useFormatters()`, `serviceDetail.title`, and `serviceDetail.baseRate.summary`
   This covers the remaining service-detail chrome, action text, and currency-backed summary copy.
+- **(2026-04-18, T009)** Reused the strict Italian accent audit from `F017`: `rg -n '\\b(puo|gia|verra|funzionalita|perche|cosi|piu|e necessario|e possibile|e richiesto|e richiesta|e configurato|e configurata)\\b' server/public/locales/it/msp/service-catalog.json` returned no matches, and the corrected accented spot-check strings (`Sì`, `Festività`, `Configurazione pacchetto ore`) are present in the file.
