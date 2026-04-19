@@ -154,7 +154,7 @@
   {
     "id": "T019",
     "description": "Unit: RecurringServicePeriodsTab table headers (State, Service Period, Invoice Window, Revision, Reason, Allowed Actions) and summary stat labels (Generated, Edited, Billed, Exceptions) are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
