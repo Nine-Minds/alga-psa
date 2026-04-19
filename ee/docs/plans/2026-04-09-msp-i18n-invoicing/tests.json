@@ -346,7 +346,7 @@
   {
     "id": "T043",
     "description": "Unit: InvoiceAnnotations renders translated heading (Invoice Annotations), Internal/External labels, placeholder, and Add Annotation button via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
