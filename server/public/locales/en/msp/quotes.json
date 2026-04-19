@@ -542,6 +542,10 @@
     "actions": {
       "openQuote": "Open Quote"
     },
+    "errors": {
+      "downloadPdf": "Failed to download PDF. Please try again.",
+      "load": "Failed to load preview"
+    },
     "loading": "Loading Preview..."
   },
   "templateEditor": {
