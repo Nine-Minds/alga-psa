@@ -146,7 +146,7 @@
   {
     "id": "T018",
     "description": "Unit: RecurringServicePeriodsTab renders translated page title (Recurring Service Periods), description, form labels (Choose a Schedule, Schedule Key), and Open Schedule button via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
