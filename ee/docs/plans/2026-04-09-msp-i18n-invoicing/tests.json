@@ -412,7 +412,7 @@
   {
     "id": "T049",
     "description": "Visual: /msp/billing?tab=templates renders template list and editor in xx pseudo-locale with no bare English leakage",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F017"
