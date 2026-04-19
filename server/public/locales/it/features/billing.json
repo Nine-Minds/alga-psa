@@ -152,6 +152,7 @@
   },
   "enums": {
     "billingFrequency": {
+      "weekly": "Settimanale",
       "monthly": "Mensile",
       "quarterly": "Trimestrale",
       "annually": "Annuale"
