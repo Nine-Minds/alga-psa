@@ -274,7 +274,7 @@
   {
     "id": "T034",
     "description": "Unit: SendInvoiceEmailDialog recipient source labels (Billing Contact, Billing Email, Client Email, No Email Found) and email preview text are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
