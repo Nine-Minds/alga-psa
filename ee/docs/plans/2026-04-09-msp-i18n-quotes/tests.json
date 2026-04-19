@@ -99,7 +99,7 @@
   {
     "id": "T016",
     "description": "QuoteTemplatesList.tsx compiles with useTranslation -- all list chrome, action menu items, empty state, and delete confirmation use t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
 

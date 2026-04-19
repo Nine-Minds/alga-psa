@@ -533,6 +533,45 @@ describe('Quotes i18n wiring contract', () => {
     }
   });
 
+  it('T016: QuoteTemplatesList uses msp/quotes keys for list chrome, empty/loading states, and delete confirmation', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuoteTemplatesList.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/quotes.json',
+    );
+
+    expect(source).toContain("import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expect(source).toContain("const { t } = useTranslation('msp/quotes');");
+    expect(source).toContain('const { formatCurrency, formatDate } = useFormatters();');
+
+    const keyChecks = [
+      'quoteTemplates.title',
+      'quoteTemplates.description',
+      'quoteTemplates.loading',
+      'quoteTemplates.empty.inline',
+      'quoteTemplates.actions.templateActions',
+      'quoteTemplates.actions.editTemplate',
+      'quoteTemplates.actions.createQuoteFromTemplate',
+      'quoteTemplates.actions.delete',
+      'quoteTemplates.dialogs.delete.title',
+      'quoteTemplates.dialogs.delete.message',
+      'quoteTemplates.errors.load',
+      'quoteTemplates.errors.delete',
+      'common.actions.newTemplate',
+      'common.actions.delete',
+      'common.actions.cancel',
+      'common.columns.title',
+      'common.columns.items',
+      'common.columns.currency',
+      'common.columns.created',
+      'common.columns.actions',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
+
   it('T029: shared billing-frequency enums expose weekly across constants and all locale files', () => {
     const billingConstants = read('../../src/constants/billing.ts');
     const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'xx', 'yy'];
