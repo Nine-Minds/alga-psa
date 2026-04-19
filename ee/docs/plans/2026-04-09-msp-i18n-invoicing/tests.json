@@ -74,7 +74,7 @@
   {
     "id": "T009",
     "description": "Unit: AutomaticInvoices recurring history section renders translated column headers (Client, Assignment Scope, Cadence Source, Service Period, Invoice Window, Invoice, Actions) and cadence badges",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
