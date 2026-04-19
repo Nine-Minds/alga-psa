@@ -314,7 +314,7 @@
   {
     "id": "T039",
     "description": "Unit: ContractInvoiceItems renders translated table headers (Description, Quantity, Rate, Amount), subtotal labels (Contract Subtotal, Other Items Subtotal), Other Items heading, and Product badge via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
