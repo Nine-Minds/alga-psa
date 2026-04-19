@@ -306,7 +306,7 @@
   {
     "id": "T038",
     "description": "Unit: PrepaymentInvoices renders translated heading, field labels (Type, Client, Amount, Description), type options (Prepayment Invoice, Credit Memo), placeholders, and submit button states via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
