@@ -338,7 +338,7 @@
   {
     "id": "T042",
     "description": "Unit: InvoiceTaxSourceBadge renders translated badge labels (Tax: Internal, Tax: External, Tax: Pending) and tooltip strings via t(); adapter names are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
