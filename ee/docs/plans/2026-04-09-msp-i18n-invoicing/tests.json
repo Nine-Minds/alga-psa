@@ -58,7 +58,7 @@
   {
     "id": "T007",
     "description": "Unit: AutomaticInvoices preview dialog renders translated title, description, invoice count summary with interpolation, table headers (Description, Quantity, Rate, Amount), footer labels (Subtotal, Tax, Total), and action buttons",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
