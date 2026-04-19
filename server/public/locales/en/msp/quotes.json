@@ -576,8 +576,24 @@
   "templatesPage": {
     "title": "Quote Layouts",
     "description": "Design the layouts used to render quote PDFs and previews.",
+    "actions": {
+      "openMenu": "Open menu"
+    },
     "cards": {
       "availableLayouts": "Available Layouts"
+    },
+    "dialogs": {
+      "deleteConfirm": "Are you sure you want to delete \"{{name}}\"?"
+    },
+    "errors": {
+      "clone": "Failed to clone template",
+      "delete": "Failed to delete template",
+      "editCopy": "Failed to create editable copy",
+      "load": "Failed to load quote document templates",
+      "setDefault": "Failed to set default template"
+    },
+    "labels": {
+      "custom": "Custom"
     }
   }
 }
