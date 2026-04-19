@@ -324,6 +324,86 @@ describe('Quotes i18n wiring contract', () => {
     }
   });
 
+  it('T011: QuoteLineItemsEditor uses msp/quotes keys plus shared billing-frequency hooks for line-item chrome', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuoteLineItemsEditor.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/quotes.json',
+    );
+
+    expect(source).toContain("import { useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expect(source).toContain("const { t } = useTranslation('msp/quotes');");
+    expect(source).toContain("import { useBillingFrequencyOptions, useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';");
+    expect(source).toContain('const billingFrequencyOptions = useBillingFrequencyOptions();');
+    expect(source).toContain('const formatBillingFrequency = useFormatBillingFrequency();');
+
+    const keyChecks = [
+      'quoteLineItems.title',
+      'quoteLineItems.columns.move',
+      'quoteLineItems.columns.unitPrice',
+      'quoteLineItems.labels.phaseSection',
+      'quoteLineItems.labels.optional',
+      'quoteLineItems.labels.recurring',
+      'quoteLineItems.actions.addDiscount',
+      'quoteLineItems.actions.hideDiscount',
+      'quoteLineItems.discounts.percentage',
+      'quoteLineItems.discounts.fixed',
+      'quoteLineItems.discounts.targets.namedItem',
+      'quoteLineItems.placeholders.servicePicker',
+      'quoteLineItems.empty',
+      'quoteLineItems.actions.remove',
+      'quoteLineItems.labels.setPrice',
+      'quoteLineItems.labels.noPriceInCurrency',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
+
+  it('T012: QuoteLineItemsEditor no longer renders bare English JSX literals for line-item tables, controls, or hints', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuoteLineItemsEditor.tsx');
+
+    const residualPatterns = [
+      />Line Items</,
+      /placeholder="Search or type custom item name\.\.\."/,
+      />Hide Discount</,
+      />Add Discount</,
+      />Percentage discount</,
+      />Fixed discount</,
+      />Whole quote</,
+      />Specific item</,
+      />Specific service</,
+      /placeholder="Select item"/,
+      /placeholder="Select service"/,
+      />Applies to the full quote subtotal</,
+      />No line items yet\. Use the catalog search above to add your first item\.</,
+      />Move</,
+      />Item</,
+      />Billing</,
+      />Flags</,
+      />Qty</,
+      />Unit Price</,
+      />Total</,
+      />Actions</,
+      /label="Optional"/,
+      /label="Recurring"/,
+      />Phase \/ Section</,
+      />Set price</,
+      />Remove</,
+      />Expand</,
+      />Collapse</,
+      />Discount</,
+      />Markup unavailable</,
+      /Markup can't be calculated because cost is tracked in/,
+      /% markup</,
+    ];
+
+    for (const pattern of residualPatterns) {
+      expect(source).not.toMatch(pattern);
+    }
+  });
+
   it('T029: shared billing-frequency enums expose weekly across constants and all locale files', () => {
     const billingConstants = read('../../src/constants/billing.ts');
     const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'xx', 'yy'];

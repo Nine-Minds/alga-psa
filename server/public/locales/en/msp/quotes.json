@@ -396,7 +396,8 @@
       "badge": "{{sign}}{{value}}% markup",
       "unavailable": "Markup unavailable",
       "unavailableTooltip": "Markup can't be calculated because cost is tracked in {{costCurrency}} and this quote is in {{quoteCurrency}}."
-    }
+    },
+    "empty": "No line items yet. Use the catalog search above to add your first item."
   },
   "quoteRecipients": {
     "trigger": {
