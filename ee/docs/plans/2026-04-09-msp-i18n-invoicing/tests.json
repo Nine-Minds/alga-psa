@@ -290,7 +290,7 @@
   {
     "id": "T036",
     "description": "Unit: TaxReconciliationView significant difference alert, loading/no-data states, and help text are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
