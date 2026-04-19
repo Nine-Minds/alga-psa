@@ -106,7 +106,7 @@
   {
     "id": "T013",
     "description": "Unit: ManualInvoices ErrorFallback renders translated heading (Something went wrong) and Try again button text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]
