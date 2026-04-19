@@ -202,7 +202,7 @@
   {
     "id": "T025",
     "description": "Unit: InvoiceTemplateEditor renders translated back nav text, heading variants, Template Name label, tab labels (Visual, Code), code readonly alert, and Save Template/Saving/Cancel buttons via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
