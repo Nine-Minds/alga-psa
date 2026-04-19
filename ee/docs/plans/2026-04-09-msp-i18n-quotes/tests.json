@@ -21,7 +21,7 @@
   {
     "id": "T004",
     "description": "QuoteForm.tsx has no remaining hardcoded English strings in JSX (grep for bare string literals in rendered output returns 0 matches, excluding technical values like CSS classes, element IDs, and route paths)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
 

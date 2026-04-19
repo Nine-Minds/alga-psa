@@ -76,4 +76,45 @@ describe('Quotes i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T004: QuoteForm no longer renders bare English JSX literals for form labels, actions, or dialog copy', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuoteForm.tsx');
+
+    const residualPatterns = [
+      /text="Loading quote form\.\.\."/,
+      />Quote Accepted</,
+      />Quote Rejected</,
+      />Quote Converted</,
+      />Submit for Approval</,
+      />Send to Client</,
+      />Cancel Quote</,
+      />Convert to Contract</,
+      />Convert to Invoice</,
+      />Convert to Both</,
+      />Create New Revision</,
+      />Title</,
+      />Description \/ Scope</,
+      /placeholder="Select client"/,
+      /placeholder="Select contact"/,
+      /placeholder="Select currency"/,
+      /title="Send Quote to Client"/,
+      />Recipients</,
+      />Additional email addresses \(comma-separated\)</,
+      />Message \(optional\)</,
+      />Approve Quote</,
+      />Request Changes</,
+      />Conversion Preview</,
+      />Contract Items</,
+      />Invoice Items</,
+      />Excluded Items</,
+      />Will Become Contract Lines</,
+      />Will Become Invoice Charges</,
+      />Excluded from Conversion</,
+      /text="Loading conversion preview\.\.\."/,
+    ];
+
+    for (const pattern of residualPatterns) {
+      expect(source).not.toMatch(pattern);
+    }
+  });
 });
