@@ -186,7 +186,7 @@
   {
     "id": "T023",
     "description": "Unit: InvoicePreviewPanel renders translated heading (Invoice Preview), action buttons (Finalize Invoice, Download PDF, Reverse Draft, Send Email, Unfinalize, Edit Items), and template selector placeholder via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
