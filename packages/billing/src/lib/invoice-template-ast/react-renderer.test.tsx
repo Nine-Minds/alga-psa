@@ -188,6 +188,7 @@ describe('renderEvaluatedTemplateAst', () => {
     expect(rendered.html).toContain('border-bottom:1px solid #cbd5e1');
     expect(rendered.html).toContain('padding:0');
     expect(rendered.html).toContain('border:0');
+    expect(rendered.html).toContain('justify-content:space-between');
   });
 
   it('renders multiline plain fields without single-line inset chrome', async () => {

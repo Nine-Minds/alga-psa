@@ -70,5 +70,6 @@ describe('componentSchema', () => {
     expect(paths).toContain('metadata.bindingKey');
     expect(paths).toContain('metadata.format');
     expect(paths).toContain('metadata.emptyValue');
+    expect(paths).toContain('style.justifyContent');
   });
 });

@@ -1,4 +1,12 @@
 import { DEFAULT_INVOICE_PRINT_SETTINGS, resolveTemplatePrintSettings } from '@alga-psa/types';
+import {
+  AlignCenter,
+  AlignHorizontalDistributeCenter,
+  AlignHorizontalSpaceAround,
+  AlignHorizontalSpaceBetween,
+  AlignLeft,
+  AlignRight,
+} from 'lucide-react';
 import type {
   DesignerComponentType,
   DesignerContainerLayout,
@@ -336,6 +344,58 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
             { value: 'underline', label: 'Underline' },
             { value: 'box', label: 'Box' },
             { value: 'none', label: 'None' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'field-layout',
+      title: 'Field Layout',
+      fields: [
+        {
+          kind: 'icon-enum',
+          id: 'fieldJustifyContent',
+          domId: 'designer-field-justify-content',
+          label: 'Label / Value Alignment',
+          path: 'style.justifyContent',
+          columns: 3,
+          options: [
+            {
+              value: 'space-between',
+              label: 'Space Between',
+              tooltip: 'Push label and value to opposite edges',
+              icon: AlignHorizontalSpaceBetween,
+            },
+            {
+              value: 'flex-start',
+              label: 'Start',
+              tooltip: 'Keep label and value packed at the start',
+              icon: AlignLeft,
+            },
+            {
+              value: 'center',
+              label: 'Center',
+              tooltip: 'Center label and value together',
+              icon: AlignCenter,
+            },
+            {
+              value: 'flex-end',
+              label: 'End',
+              tooltip: 'Pack label and value at the end',
+              icon: AlignRight,
+            },
+            {
+              value: 'space-around',
+              label: 'Space Around',
+              tooltip: 'Distribute label and value with space around each',
+              icon: AlignHorizontalSpaceAround,
+            },
+            {
+              value: 'space-evenly',
+              label: 'Space Evenly',
+              tooltip: 'Distribute label and value with even spacing',
+              icon: AlignHorizontalDistributeCenter,
+            },
           ],
         },
       ],
@@ -793,6 +853,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       style: {
         width: 'auto',
         height: 'auto',
+        justifyContent: 'space-between',
       },
       metadata: {
         bindingKey: 'invoice.number',

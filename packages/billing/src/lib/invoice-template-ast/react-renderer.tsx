@@ -142,6 +142,7 @@ const resolveFieldBorderStyle = (
       border: '0',
       backgroundColor: 'transparent',
       display: 'flex',
+      justifyContent: 'space-between',
       alignItems: 'flex-start',
     };
   }
@@ -152,6 +153,7 @@ const resolveFieldBorderStyle = (
       borderRadius: '4px',
       backgroundColor: 'transparent',
       display: 'flex',
+      justifyContent: 'space-between',
       alignItems: 'center',
     };
   }
@@ -162,6 +164,7 @@ const resolveFieldBorderStyle = (
     borderRadius: '0',
     backgroundColor: 'transparent',
     display: 'flex',
+    justifyContent: 'space-between',
     alignItems: 'center',
   };
 };

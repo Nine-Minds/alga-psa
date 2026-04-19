@@ -1,3 +1,5 @@
+import type { LucideIcon } from 'lucide-react';
+
 export type DesignerInspectorSchema = {
   panels: DesignerInspectorPanel[];
 };
@@ -52,6 +54,16 @@ export type DesignerInspectorField =
       path: string;
       domId?: string;
       options: Array<{ value: string; label: string }>;
+      visibleWhen?: DesignerInspectorVisibleWhen;
+    }
+  | {
+      kind: 'icon-enum';
+      id: string;
+      label: string;
+      path: string;
+      domId?: string;
+      options: Array<{ value: string; label: string; icon: LucideIcon; tooltip?: string }>;
+      columns?: number;
       visibleWhen?: DesignerInspectorVisibleWhen;
     }
   | {
