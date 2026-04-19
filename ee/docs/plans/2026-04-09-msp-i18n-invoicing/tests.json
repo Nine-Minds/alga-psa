@@ -421,7 +421,7 @@
   {
     "id": "T050",
     "description": "Visual: /msp/billing?tab=billing-cycles renders billing cycles table in de with translated column headers, anchor labels, and month names",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
