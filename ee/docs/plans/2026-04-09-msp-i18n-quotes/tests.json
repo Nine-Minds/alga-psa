@@ -157,7 +157,7 @@
   {
     "id": "T024",
     "description": "npm run build succeeds with no TypeScript errors after all quote i18n wiring is complete",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
 
