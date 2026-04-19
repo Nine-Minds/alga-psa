@@ -15,7 +15,7 @@
   {
     "id": "T003",
     "description": "QuoteForm.tsx compiles with useTranslation('msp/quotes') -- no TypeScript errors, all form labels, workflow buttons, dialog text, validation messages, and status banners use t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
