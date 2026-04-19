@@ -50,7 +50,7 @@
   {
     "id": "T006",
     "description": "Unit: AutomaticInvoices reverse dialog renders translated warning text, bullet list items, and confirm/cancel buttons",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
