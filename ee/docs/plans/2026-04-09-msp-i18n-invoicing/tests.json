@@ -130,7 +130,7 @@
   {
     "id": "T016",
     "description": "Unit: FinalizedTab renders translated column headers (Invoice Number, Client, Amount, Finalized Date, Status, Actions), Finalized badge, and search placeholder via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
