@@ -127,7 +127,7 @@
   {
     "id": "F026",
     "description": "Wire useTranslation in InvoiceTemplateManager.tsx -- headings (Invoice Template Manager, Sample Invoices, Template Preview), Invoice # prefix",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F027",
