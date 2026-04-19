@@ -37,7 +37,7 @@ import {
   getQuotePreviewSampleScenarioById,
   QUOTE_PREVIEW_SAMPLE_SCENARIOS,
 } from '../../invoice-designer/preview/quoteSampleScenarios';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface QuoteDocumentTemplateEditorProps {
   templateId: string | null;
@@ -59,6 +59,7 @@ const useDebouncedValue = <T,>(value: T, delayMs: number) => {
 
 const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = ({ templateId, standardCode, onBack }) => {
   const { t } = useTranslation('msp/quotes');
+  const { formatDate } = useFormatters();
   const router = useRouter();
   const handleBack = () => onBack ? onBack() : router.push('/msp/billing?tab=quote-templates');
   const isNewTemplate = !templateId;
@@ -635,10 +636,10 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
       <CardFooter className="flex justify-between items-center gap-2 px-0">
         <div className="text-sm text-muted-foreground">
           {template?.created_at && (
-            <p>{t('templateEditor.footer.created', { defaultValue: 'Created:' })} {new Date(template.created_at).toLocaleString()}</p>
+            <p>{t('templateEditor.footer.created', { defaultValue: 'Created:' })} {formatDate(template.created_at, { dateStyle: 'medium', timeStyle: 'short' })}</p>
           )}
           {template?.updated_at && (
-            <p>{t('templateEditor.footer.lastUpdated', { defaultValue: 'Last Updated:' })} {new Date(template.updated_at).toLocaleString()}</p>
+            <p>{t('templateEditor.footer.lastUpdated', { defaultValue: 'Last Updated:' })} {formatDate(template.updated_at, { dateStyle: 'medium', timeStyle: 'short' })}</p>
           )}
         </div>
       </CardFooter>

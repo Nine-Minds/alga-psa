@@ -20,7 +20,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Input } from '@alga-psa/ui/components/Input';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { MoreVertical, Edit, Send, Copy, Download, Trash2, RefreshCw, Bell, FileText, XCircle } from 'lucide-react';
 import type { ColumnDefinition, IQuoteDocumentTemplate, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
 import { listQuotes, downloadQuotePdf, deleteQuote, duplicateQuote, sendQuote } from '../../../actions/quoteActions';
@@ -29,21 +29,6 @@ import QuoteApprovalDashboard from './QuoteApprovalDashboard';
 import QuoteForm from './QuoteForm';
 import QuotePreviewPanel from './QuotePreviewPanel';
 import QuoteStatusBadge from './QuoteStatusBadge';
-
-function formatCurrency(minorUnits: number, currencyCode: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currencyCode,
-  }).format(minorUnits / 100);
-}
-
-function formatDate(value?: string | null): string {
-  if (!value) {
-    return '—';
-  }
-
-  return new Date(value).toLocaleDateString();
-}
 
 type QuoteSubTab = 'active' | 'sent' | 'closed' | 'approval';
 
@@ -85,6 +70,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
   onDelete,
 }) => {
   const { t } = useTranslation('msp/quotes');
+  const { formatCurrency, formatDate } = useFormatters();
   const [clientFilter, setClientFilter] = useState('all');
   const [tableKey, setTableKey] = useState(0);
 
@@ -122,7 +108,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
     {
       title: t('common.columns.total', { defaultValue: 'Total' }),
       dataIndex: 'total_amount',
-      render: (value: number, record) => formatCurrency(Number(value ?? 0), record.currency_code || 'USD'),
+      render: (value: number, record) => formatCurrency(Number(value ?? 0) / 100, record.currency_code || 'USD'),
     },
     {
       title: t('common.columns.status', { defaultValue: 'Status' }),
@@ -132,7 +118,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
     {
       title: t('common.columns.date', { defaultValue: 'Date' }),
       dataIndex: 'quote_date',
-      render: (value: string | null | undefined) => formatDate(value),
+      render: (value: string | null | undefined) => value ? formatDate(value) : '—',
     },
     {
       title: t('common.columns.actions', { defaultValue: 'Actions' }),
@@ -225,7 +211,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
         );
       },
     },
-  ], [onDelete, onDownloadPdf, onDuplicate, onEdit, onSend, t]);
+  ], [formatCurrency, formatDate, onDelete, onDownloadPdf, onDuplicate, onEdit, onSend, t]);
 
   if (filteredByStatus.length === 0) {
     return (

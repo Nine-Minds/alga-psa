@@ -16,7 +16,7 @@
   {"id": "F010", "description": "Wire useTranslation('msp/quotes') in QuoteTemplatesList.tsx -- description text, New Template button, table columns (Title, Items, Currency, Created, Actions), action menu items (Edit Template, Create Quote from Template, Delete), empty state, loading state, delete confirmation dialog", "implemented": true},
   {"id": "F011", "description": "Wire useTranslation('msp/quotes') in QuotePreviewPanel.tsx -- panel heading (Quote Preview), template selector placeholder, Open Quote and Download PDF buttons, empty state (Select a quote to preview), loading state, error fallback (Could not display preview)", "implemented": true},
 
-  {"id": "F012", "description": "Replace hardcoded Intl.NumberFormat('en-US', ...) currency formatting in QuotesTab.tsx, QuoteDetail.tsx, QuoteApprovalDashboard.tsx, QuoteTemplatesList.tsx, and QuoteConversionDialog.tsx with useFormatters().formatCurrency() or equivalent locale-aware pattern", "implemented": false},
+  {"id": "F012", "description": "Replace hardcoded Intl.NumberFormat('en-US', ...) currency formatting in QuotesTab.tsx, QuoteDetail.tsx, QuoteApprovalDashboard.tsx, QuoteTemplatesList.tsx, and QuoteConversionDialog.tsx with useFormatters().formatCurrency() or equivalent locale-aware pattern", "implemented": true},
   {"id": "F013", "description": "Replace hardcoded .toLocaleDateString() date formatting in QuotesTab.tsx, QuoteDetail.tsx, QuoteApprovalDashboard.tsx, and QuoteDocumentTemplateEditor.tsx with useFormatters().formatDate() or equivalent locale-aware pattern", "implemented": false},
 
   {"id": "F014", "description": "Generate msp/quotes translations for 6 non-English locales (de, es, fr, it, nl, pl)", "implemented": false},

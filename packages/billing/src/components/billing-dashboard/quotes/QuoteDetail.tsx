@@ -9,7 +9,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
@@ -29,21 +29,6 @@ interface QuoteDetailProps {
   onBack: () => void;
   onEdit?: () => void;
   onSelectVersion?: (quoteId: string) => void;
-}
-
-function formatCurrency(minorUnits: number, currencyCode: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currencyCode,
-  }).format((minorUnits || 0) / 100);
-}
-
-function formatDate(value?: string | null): string {
-  if (!value) {
-    return '—';
-  }
-
-  return new Date(value).toLocaleDateString();
 }
 
 function formatQuoteNumber(quote: IQuote, templateQuoteLabel: string): string {
@@ -111,6 +96,7 @@ function renderQuoteDetailRow(
 
 const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSelectVersion }) => {
   const { t } = useTranslation('msp/quotes');
+  const { formatCurrency, formatDate } = useFormatters();
   const router = useRouter();
   const { t } = useTranslation('features/billing');
   const [quote, setQuote] = useState<IQuote | null>(null);
@@ -1034,7 +1020,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             <h3 className="text-base font-semibold text-emerald-800 dark:text-emerald-300">{t('quoteForm.alerts.accepted', { defaultValue: 'Quote Accepted' })}</h3>
             <div className="text-sm text-emerald-700 dark:text-emerald-400 space-y-1">
               {quote.accepted_by_name && <p><span className="font-medium">{t('quoteDetail.status.acceptedBy', { defaultValue: 'Accepted by:' })}</span> {quote.accepted_by_name}</p>}
-              {quote.accepted_at && <p><span className="font-medium">{t('quoteDetail.status.acceptedOn', { defaultValue: 'Accepted on:' })}</span> {new Date(quote.accepted_at).toLocaleDateString()}</p>}
+              {quote.accepted_at && <p><span className="font-medium">{t('quoteDetail.status.acceptedOn', { defaultValue: 'Accepted on:' })}</span> {formatDate(quote.accepted_at)}</p>}
             </div>
           </section>
         )}
@@ -1043,7 +1029,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           <section className="space-y-2 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30 p-4">
             <h3 className="text-base font-semibold text-red-800 dark:text-red-300">{t('quoteForm.alerts.rejected', { defaultValue: 'Quote Rejected' })}</h3>
             <div className="text-sm text-red-700 dark:text-red-400 space-y-1">
-              {quote.rejected_at && <p><span className="font-medium">{t('quoteDetail.status.rejectedOn', { defaultValue: 'Rejected on:' })}</span> {new Date(quote.rejected_at).toLocaleDateString()}</p>}
+              {quote.rejected_at && <p><span className="font-medium">{t('quoteDetail.status.rejectedOn', { defaultValue: 'Rejected on:' })}</span> {formatDate(quote.rejected_at)}</p>}
               {quote.rejection_reason && <p><span className="font-medium">{t('quoteDetail.status.reason', { defaultValue: 'Reason:' })}</span> {quote.rejection_reason}</p>}
             </div>
           </section>
