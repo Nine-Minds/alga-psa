@@ -67,6 +67,7 @@
       "validUntil": "Valid Until"
     },
     "states": {
+      "generating": "Generating...",
       "loading": "Loading...",
       "saving": "Saving...",
       "sending": "Sending..."
@@ -218,6 +219,13 @@
   },
   "quoteDetail": {
     "title": "Quote Detail",
+    "actions": {
+      "backToQuotes": "Back to Quotes",
+      "openConvertedContract": "Open Converted Contract",
+      "openConvertedInvoice": "Open Converted Invoice",
+      "preview": "Preview",
+      "saveAsTemplate": "Save as Template"
+    },
     "sections": {
       "activityLog": "Activity Log",
       "clientNotes": "Client Notes",
@@ -230,7 +238,17 @@
     },
     "alerts": {
       "clientConfigurationSubmitted": "Client Configuration Submitted",
+      "clientConfigurationSubmittedDescription": "Review the optional line items below before converting this quote. Selected items are marked as included, and declined items are highlighted for follow-up.",
       "update": "Quote Update"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Approve this quote so it can be sent to the client. You may add an optional comment.",
+        "changesDescription": "Return this quote to draft with requested changes. Please describe what needs to be revised."
+      },
+      "send": {
+        "message": "Optional message to include in the email"
+      }
     },
     "status": {
       "accepted": "Quote Accepted",
@@ -248,6 +266,48 @@
     "clientSelections": {
       "declinedOptionalItem": "Client declined this optional item",
       "selectedOptionalItem": "Client selected this optional item"
+    },
+    "errors": {
+      "approve": "Failed to approve quote",
+      "assignTemplate": "Failed to assign template",
+      "cancel": "Failed to cancel quote",
+      "convert": "Failed to convert quote",
+      "delete": "Failed to delete quote",
+      "deleteUnavailable": "Quote could not be deleted",
+      "downloadPdf": "Failed to generate quote PDF",
+      "duplicate": "Failed to duplicate quote",
+      "load": "Failed to load quote detail",
+      "loadConversionPreview": "Failed to load conversion preview",
+      "notFound": "Quote not found",
+      "preview": "Failed to generate quote preview",
+      "requestChanges": "Failed to request quote changes",
+      "resend": "Failed to resend quote",
+      "revise": "Failed to create quote revision",
+      "saveAsTemplate": "Failed to save quote as template",
+      "send": "Failed to send quote",
+      "sendReminder": "Failed to send quote reminder",
+      "submitForApproval": "Failed to submit quote for approval"
+    },
+    "labels": {
+      "phase": "Phase: {{phase}}",
+      "templateQuote": "Template quote"
+    },
+    "loading": "Loading quote details...",
+    "notices": {
+      "approved": "Quote approved and is ready to send.",
+      "reminderSent": "Quote reminder sent to the configured billing recipients.",
+      "requestedChanges": "Quote returned to draft with requested changes.",
+      "resent": "Quote resent to the configured billing recipients.",
+      "sent": "Quote sent to the client.",
+      "submittedForApproval": "Quote submitted for internal approval.",
+      "templateAssigned": "Document template assigned.",
+      "templateCleared": "Document template cleared (using default)."
+    },
+    "preview": {
+      "loading": "Loading preview..."
+    },
+    "table": {
+      "description": "Description"
     }
   },
   "quoteLineItems": {

@@ -9,6 +9,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
@@ -45,8 +46,8 @@ function formatDate(value?: string | null): string {
   return new Date(value).toLocaleDateString();
 }
 
-function formatQuoteNumber(quote: IQuote): string {
-  const baseNumber = quote.quote_number || 'Template quote';
+function formatQuoteNumber(quote: IQuote, templateQuoteLabel: string): string {
+  const baseNumber = quote.quote_number || templateQuoteLabel;
   return quote.version > 1 ? `${baseNumber} v${quote.version}` : baseNumber;
 }
 
@@ -109,6 +110,7 @@ function renderQuoteDetailRow(
 }
 
 const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSelectVersion }) => {
+  const { t } = useTranslation('msp/quotes');
   const router = useRouter();
   const { t } = useTranslation('features/billing');
   const [quote, setQuote] = useState<IQuote | null>(null);
@@ -153,7 +155,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       ]);
 
       if (!loadedQuote || isActionPermissionError(loadedQuote)) {
-        throw new Error(!loadedQuote ? 'Quote not found' : getErrorMessage(loadedQuote));
+        throw new Error(
+          !loadedQuote
+            ? t('quoteDetail.errors.notFound', { defaultValue: 'Quote not found' })
+            : getErrorMessage(loadedQuote),
+        );
       }
 
       setQuote(loadedQuote);
@@ -167,7 +173,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setError(null);
     } catch (loadError) {
       console.error('Error loading quote detail:', loadError);
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load quote detail');
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : t('quoteDetail.errors.load', { defaultValue: 'Failed to load quote detail' }),
+      );
     } finally {
       setIsLoading(false);
     }
@@ -226,12 +236,21 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       }
 
       if (!result.deleted) {
-        throw new Error(result.message || 'Quote could not be deleted');
+        throw new Error(
+          result.message
+            || t('quoteDetail.errors.deleteUnavailable', {
+              defaultValue: 'Quote could not be deleted',
+            }),
+        );
       }
 
       onBack();
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to delete quote');
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.delete', { defaultValue: 'Failed to delete quote' }),
+      );
     } finally {
       setIsWorking(false);
     }
@@ -254,7 +273,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
       setQuote(result);
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to cancel quote');
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.cancel', { defaultValue: 'Failed to cancel quote' }),
+      );
     } finally {
       setIsWorking(false);
     }
@@ -276,9 +299,19 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       }
 
       setQuote(result);
-      setNotice('Quote submitted for internal approval.');
+      setNotice(
+        t('quoteDetail.notices.submittedForApproval', {
+          defaultValue: 'Quote submitted for internal approval.',
+        }),
+      );
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to submit quote for approval');
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.submitForApproval', {
+            defaultValue: 'Failed to submit quote for approval',
+          }),
+      );
     } finally {
       setIsWorking(false);
     }
@@ -302,9 +335,19 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setQuote(result);
       setApprovalDialogMode(null);
       setApprovalComment('');
-      setNotice('Quote approved and is ready to send.');
+      setNotice(
+        t('quoteDetail.notices.approved', {
+          defaultValue: 'Quote approved and is ready to send.',
+        }),
+      );
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to approve quote');
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.approve', {
+            defaultValue: 'Failed to approve quote',
+          }),
+      );
     } finally {
       setIsWorking(false);
     }
@@ -328,9 +371,19 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setQuote(result);
       setApprovalDialogMode(null);
       setApprovalComment('');
-      setNotice('Quote returned to draft with requested changes.');
+      setNotice(
+        t('quoteDetail.notices.requestedChanges', {
+          defaultValue: 'Quote returned to draft with requested changes.',
+        }),
+      );
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to request quote changes');
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.requestChanges', {
+            defaultValue: 'Failed to request quote changes',
+          }),
+      );
     } finally {
       setIsWorking(false);
     }
@@ -352,9 +405,17 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       }
 
       setQuote(result);
-      setNotice('Quote resent to the configured billing recipients.');
+      setNotice(
+        t('quoteDetail.notices.resent', {
+          defaultValue: 'Quote resent to the configured billing recipients.',
+        }),
+      );
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to resend quote');
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.resend', { defaultValue: 'Failed to resend quote' }),
+      );
     } finally {
       setIsWorking(false);
     }
@@ -376,9 +437,19 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       }
 
       setQuote(result);
-      setNotice('Quote reminder sent to the configured billing recipients.');
+      setNotice(
+        t('quoteDetail.notices.reminderSent', {
+          defaultValue: 'Quote reminder sent to the configured billing recipients.',
+        }),
+      );
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to send quote reminder');
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.sendReminder', {
+            defaultValue: 'Failed to send quote reminder',
+          }),
+      );
     } finally {
       setIsWorking(false);
     }
@@ -401,7 +472,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
       router.push(`/msp/billing?tab=quotes&quoteId=${result.quote_id}&mode=edit`);
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to duplicate quote');
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.duplicate', { defaultValue: 'Failed to duplicate quote' }),
+      );
     } finally {
       setIsWorking(false);
     }
@@ -424,7 +499,13 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
       router.push(`/msp/billing?tab=quotes&quoteId=${result.quote_id}&mode=edit`);
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to save quote as template');
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.saveAsTemplate', {
+            defaultValue: 'Failed to save quote as template',
+          }),
+      );
     } finally {
       setIsWorking(false);
     }
@@ -463,9 +544,15 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setSendMessage('');
       setSendRecipients([]);
       setAdditionalEmails('');
-      setNotice('Quote sent to the client.');
+      setNotice(
+        t('quoteDetail.notices.sent', { defaultValue: 'Quote sent to the client.' }),
+      );
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to send quote');
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.send', { defaultValue: 'Failed to send quote' }),
+      );
     } finally {
       setIsWorking(false);
     }
@@ -488,7 +575,13 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
       router.push(`/msp/billing?tab=quotes&quoteId=${result.quote_id}&mode=edit`);
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to create quote revision');
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.revise', {
+            defaultValue: 'Failed to create quote revision',
+          }),
+      );
     } finally {
       setIsWorking(false);
     }
@@ -519,7 +612,13 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to generate quote PDF');
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.downloadPdf', {
+            defaultValue: 'Failed to generate quote PDF',
+          }),
+      );
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -541,9 +640,23 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       }
 
       setQuote(result);
-      setNotice(templateId ? 'Document template assigned.' : 'Document template cleared (using default).');
+      setNotice(
+        templateId
+          ? t('quoteDetail.notices.templateAssigned', {
+            defaultValue: 'Document template assigned.',
+          })
+          : t('quoteDetail.notices.templateCleared', {
+            defaultValue: 'Document template cleared (using default).',
+          }),
+      );
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to assign template');
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.assignTemplate', {
+            defaultValue: 'Failed to assign template',
+          }),
+      );
     } finally {
       setIsWorking(false);
     }
@@ -566,7 +679,13 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setPreviewHtml(result as { html: string; css: string });
       setIsPreviewOpen(true);
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to generate quote preview');
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.preview', {
+            defaultValue: 'Failed to generate quote preview',
+          }),
+      );
     } finally {
       setIsPreviewLoading2(false);
     }
@@ -591,7 +710,13 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setConversionPreview(preview);
       setIsConversionDialogOpen(true);
     } catch (previewError) {
-      setError(previewError instanceof Error ? previewError.message : 'Failed to load conversion preview');
+      setError(
+        previewError instanceof Error
+          ? previewError.message
+          : t('quoteDetail.errors.loadConversionPreview', {
+            defaultValue: 'Failed to load conversion preview',
+          }),
+      );
     } finally {
       setIsPreviewLoading(false);
     }
@@ -613,28 +738,49 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           throw new Error(result.permissionError);
         }
         setQuote(result.quote);
-        setNotice(`Created draft contract ${result.contract.contract_name}.`);
+        setNotice(
+          t('quoteForm.notices.createdDraftContract', {
+            defaultValue: 'Created draft contract {{name}}.',
+            name: result.contract.contract_name,
+          }),
+        );
       } else if (conversionMode === 'invoice') {
         const result = await convertQuoteToInvoice(quote.quote_id);
         if ('permissionError' in result) {
           throw new Error(result.permissionError);
         }
         setQuote(result.quote);
-        setNotice(`Created draft invoice ${result.invoice.invoice_number}.`);
+        setNotice(
+          t('quoteForm.notices.createdDraftInvoice', {
+            defaultValue: 'Created draft invoice {{name}}.',
+            name: result.invoice.invoice_number,
+          }),
+        );
       } else {
         const result = await convertQuoteToBoth(quote.quote_id);
         if ('permissionError' in result) {
           throw new Error(result.permissionError);
         }
         setQuote(result.quote);
-        setNotice(`Created draft contract ${result.contract.contract_name} and draft invoice ${result.invoice.invoice_number}.`);
+        setNotice(
+          t('quoteForm.notices.createdDraftContractAndInvoice', {
+            defaultValue:
+              'Created draft contract {{contractName}} and draft invoice {{invoiceName}}.',
+            contractName: result.contract.contract_name,
+            invoiceName: result.invoice.invoice_number,
+          }),
+        );
       }
 
       setIsConversionDialogOpen(false);
       setConversionPreview(null);
       setConversionMode(null);
     } catch (conversionError) {
-      setError(conversionError instanceof Error ? conversionError.message : 'Failed to convert quote');
+      setError(
+        conversionError instanceof Error
+          ? conversionError.message
+          : t('quoteDetail.errors.convert', { defaultValue: 'Failed to convert quote' }),
+      );
     } finally {
       setIsWorking(false);
     }
@@ -651,43 +797,43 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       case 'draft':
         return (
           <>
-            {onEdit ? <Button id="quote-detail-edit" onClick={onEdit} disabled={isWorking}>Edit</Button> : null}
+            {onEdit ? <Button id="quote-detail-edit" onClick={onEdit} disabled={isWorking}>{t('common.actions.edit', { defaultValue: 'Edit' })}</Button> : null}
             {approvalRequired ? (
-              <Button id="quote-detail-submit-approval" onClick={() => void handleSubmitForApproval()} disabled={isWorking}>Submit for Approval</Button>
+              <Button id="quote-detail-submit-approval" onClick={() => void handleSubmitForApproval()} disabled={isWorking}>{t('common.actions.submitForApproval', { defaultValue: 'Submit for Approval' })}</Button>
             ) : (
-              <Button id="quote-detail-send" onClick={() => setIsSendDialogOpen(true)} disabled={isWorking}>Send to Client</Button>
+              <Button id="quote-detail-send" onClick={() => setIsSendDialogOpen(true)} disabled={isWorking}>{t('common.actions.sendToClient', { defaultValue: 'Send to Client' })}</Button>
             )}
-            <Button id="quote-detail-delete" variant="outline" onClick={() => void handleDelete()} disabled={isWorking}>Delete</Button>
+            <Button id="quote-detail-delete" variant="outline" onClick={() => void handleDelete()} disabled={isWorking}>{t('common.actions.delete', { defaultValue: 'Delete' })}</Button>
           </>
         );
       case 'pending_approval':
         return (
           <>
-            <Button id="quote-detail-approve" onClick={() => setApprovalDialogMode('approve')} disabled={isWorking}>Approve</Button>
-            <Button id="quote-detail-request-changes" variant="outline" onClick={() => setApprovalDialogMode('changes')} disabled={isWorking}>Request Changes</Button>
+            <Button id="quote-detail-approve" onClick={() => setApprovalDialogMode('approve')} disabled={isWorking}>{t('common.actions.approve', { defaultValue: 'Approve' })}</Button>
+            <Button id="quote-detail-request-changes" variant="outline" onClick={() => setApprovalDialogMode('changes')} disabled={isWorking}>{t('common.actions.requestChanges', { defaultValue: 'Request Changes' })}</Button>
           </>
         );
       case 'sent':
         return (
           <>
-            <Button id="quote-detail-revise" onClick={() => void handleReviseQuote()} disabled={isWorking}>Revise</Button>
-            <Button id="quote-detail-resend" variant="outline" onClick={() => void handleResendQuote()} disabled={isWorking}>Resend</Button>
-            <Button id="quote-detail-reminder" variant="outline" onClick={() => void handleSendReminder()} disabled={isWorking}>Send Reminder</Button>
-            <Button id="quote-detail-cancel" variant="outline" onClick={() => void handleCancelQuote()} disabled={isWorking}>Cancel</Button>
+            <Button id="quote-detail-revise" onClick={() => void handleReviseQuote()} disabled={isWorking}>{t('common.actions.revise', { defaultValue: 'Revise' })}</Button>
+            <Button id="quote-detail-resend" variant="outline" onClick={() => void handleResendQuote()} disabled={isWorking}>{t('common.actions.resend', { defaultValue: 'Resend' })}</Button>
+            <Button id="quote-detail-reminder" variant="outline" onClick={() => void handleSendReminder()} disabled={isWorking}>{t('common.actions.sendReminder', { defaultValue: 'Send Reminder' })}</Button>
+            <Button id="quote-detail-cancel" variant="outline" onClick={() => void handleCancelQuote()} disabled={isWorking}>{t('common.actions.cancel', { defaultValue: 'Cancel' })}</Button>
           </>
         );
       case 'accepted':
         return (
           <>
-            <Button id="quote-detail-convert-contract" onClick={() => void handleOpenConversionDialog('contract')} disabled={isWorking || isPreviewLoading || !canConvertToContract}>Convert to Contract</Button>
-            <Button id="quote-detail-convert-invoice" onClick={() => void handleOpenConversionDialog('invoice')} disabled={isWorking || isPreviewLoading || !canConvertToInvoice}>Convert to Invoice</Button>
-            <Button id="quote-detail-convert-both" onClick={() => void handleOpenConversionDialog('both')} disabled={isWorking || isPreviewLoading || !canConvertToBoth}>Convert to Both</Button>
+            <Button id="quote-detail-convert-contract" onClick={() => void handleOpenConversionDialog('contract')} disabled={isWorking || isPreviewLoading || !canConvertToContract}>{t('quoteForm.actions.convertToContract', { defaultValue: 'Convert to Contract' })}</Button>
+            <Button id="quote-detail-convert-invoice" onClick={() => void handleOpenConversionDialog('invoice')} disabled={isWorking || isPreviewLoading || !canConvertToInvoice}>{t('quoteForm.actions.convertToInvoice', { defaultValue: 'Convert to Invoice' })}</Button>
+            <Button id="quote-detail-convert-both" onClick={() => void handleOpenConversionDialog('both')} disabled={isWorking || isPreviewLoading || !canConvertToBoth}>{t('quoteForm.actions.convertToBoth', { defaultValue: 'Convert to Both' })}</Button>
           </>
         );
       case 'approved':
-        return <Button id="quote-detail-send-approved" onClick={() => setIsSendDialogOpen(true)} disabled={isWorking}>Send to Client</Button>;
+        return <Button id="quote-detail-send-approved" onClick={() => setIsSendDialogOpen(true)} disabled={isWorking}>{t('common.actions.sendToClient', { defaultValue: 'Send to Client' })}</Button>;
       default:
-        return onEdit ? <Button id="quote-detail-edit" onClick={onEdit} disabled={isWorking}>Edit</Button> : null;
+        return onEdit ? <Button id="quote-detail-edit" onClick={onEdit} disabled={isWorking}>{t('common.actions.edit', { defaultValue: 'Edit' })}</Button> : null;
     }
   };
 
@@ -699,7 +845,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             className="py-12 text-muted-foreground"
             layout="stacked"
             spinnerProps={{ size: 'md' }}
-            text="Loading quote details..."
+            text={t('quoteDetail.loading', { defaultValue: 'Loading quote details...' })}
             textClassName="text-muted-foreground"
           />
         </Box>
@@ -711,10 +857,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     return (
       <Card size="2">
         <Box p="4" className="space-y-4">
-          <Button id="quote-detail-back-error" variant="outline" onClick={onBack}>Back to Quotes</Button>
+          <Button id="quote-detail-back-error" variant="outline" onClick={onBack}>{t('quoteDetail.actions.backToQuotes', { defaultValue: 'Back to Quotes' })}</Button>
           <Alert variant="destructive">
-            <AlertTitle>Quote Detail</AlertTitle>
-            <AlertDescription>{error || 'Quote not found'}</AlertDescription>
+            <AlertTitle>{t('quoteDetail.title', { defaultValue: 'Quote Detail' })}</AlertTitle>
+            <AlertDescription>{error || t('quoteDetail.errors.notFound', { defaultValue: 'Quote not found' })}</AlertDescription>
           </Alert>
         </Box>
       </Card>
@@ -726,33 +872,37 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       <Box p="4" className="space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="space-y-1">
-            <div className="text-sm text-muted-foreground">{formatQuoteNumber(quote)}</div>
+            <div className="text-sm text-muted-foreground">{formatQuoteNumber(quote, t('quoteDetail.labels.templateQuote', { defaultValue: 'Template quote' }))}</div>
             <h2 className="text-2xl font-semibold text-foreground">{quote.title}</h2>
             <div>
               <QuoteStatusBadge status={quote.status || 'draft'} />
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button id="quote-detail-back" variant="outline" onClick={onBack}>Back</Button>
+            <Button id="quote-detail-back" variant="outline" onClick={onBack}>{t('common.actions.back', { defaultValue: 'Back' })}</Button>
             {renderPrimaryActions()}
             {!quote.is_template ? (
               <>
-                <Button id="quote-detail-duplicate" variant="outline" onClick={() => void handleDuplicateQuote()} disabled={isWorking}>Duplicate</Button>
-                <Button id="quote-detail-save-template" variant="outline" onClick={() => void handleSaveAsTemplate()} disabled={isWorking}>Save as Template</Button>
+                <Button id="quote-detail-duplicate" variant="outline" onClick={() => void handleDuplicateQuote()} disabled={isWorking}>{t('common.actions.duplicate', { defaultValue: 'Duplicate' })}</Button>
+                <Button id="quote-detail-save-template" variant="outline" onClick={() => void handleSaveAsTemplate()} disabled={isWorking}>{t('quoteDetail.actions.saveAsTemplate', { defaultValue: 'Save as Template' })}</Button>
               </>
             ) : null}
             <Button id="quote-detail-preview-pdf" variant="outline" onClick={() => void handlePreviewPdf()} disabled={isWorking || isPreviewLoading2}>
-              {isPreviewLoading2 ? 'Loading...' : 'Preview'}
+              {isPreviewLoading2
+                ? t('common.states.loading', { defaultValue: 'Loading...' })
+                : t('quoteDetail.actions.preview', { defaultValue: 'Preview' })}
             </Button>
             <Button id="quote-detail-view-pdf" variant="outline" onClick={() => void handleDownloadPdf()} disabled={isWorking || isGeneratingPdf}>
-              {isGeneratingPdf ? 'Generating...' : 'Download PDF'}
+              {isGeneratingPdf
+                ? t('common.states.generating', { defaultValue: 'Generating...' })
+                : t('common.actions.downloadPdf', { defaultValue: 'Download PDF' })}
             </Button>
           </div>
         </div>
 
         {notice ? (
           <Alert>
-            <AlertTitle>Quote Update</AlertTitle>
+            <AlertTitle>{t('quoteDetail.alerts.update', { defaultValue: 'Quote Update' })}</AlertTitle>
             <AlertDescription>{notice}</AlertDescription>
           </Alert>
         ) : null}
@@ -765,7 +915,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                 variant="outline"
                 onClick={() => router.push(`/msp/billing?tab=client-contracts&contractId=${quote.converted_contract_id}`)}
               >
-                Open Converted Contract
+                {t('quoteDetail.actions.openConvertedContract', { defaultValue: 'Open Converted Contract' })}
               </Button>
             ) : null}
             {quote.converted_invoice_id ? (
@@ -774,7 +924,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                 variant="outline"
                 onClick={() => router.push(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${quote.converted_invoice_id}`)}
               >
-                Open Converted Invoice
+                {t('quoteDetail.actions.openConvertedInvoice', { defaultValue: 'Open Converted Invoice' })}
               </Button>
             ) : null}
           </section>
@@ -782,46 +932,46 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
         <section className="grid gap-4 rounded-lg border border-border p-4 md:grid-cols-2 xl:grid-cols-3">
           <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Client</div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.client', { defaultValue: 'Client' })}</div>
             <div className="mt-1 font-medium">{client?.client_name || quote.client_id || '—'}</div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Contact</div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.contact', { defaultValue: 'Contact' })}</div>
             <div className="mt-1 font-medium">{contact?.full_name || quote.contact_id || '—'}</div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Quote Date</div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.quoteDate', { defaultValue: 'Quote Date' })}</div>
             <div className="mt-1 font-medium">{formatDate(quote.quote_date)}</div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Valid Until</div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.validUntil', { defaultValue: 'Valid Until' })}</div>
             <div className="mt-1 font-medium">{formatDate(quote.valid_until)}</div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">PO Number</div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.poNumber', { defaultValue: 'PO Number' })}</div>
             <div className="mt-1 font-medium">{quote.po_number || '—'}</div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Total</div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.total', { defaultValue: 'Total' })}</div>
             <div className="mt-1 font-medium">{formatCurrency(quote.total_amount, quote.currency_code || 'USD')}</div>
           </div>
         </section>
 
         <section className="grid gap-3 rounded-lg border border-border p-4 md:grid-cols-2 xl:grid-cols-4">
           <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Subtotal</div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.subtotal', { defaultValue: 'Subtotal' })}</div>
             <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.subtotal, quote.currency_code || 'USD')}</div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Discounts</div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.discounts', { defaultValue: 'Discounts' })}</div>
             <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.discount_total, quote.currency_code || 'USD')}</div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Tax</div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.tax', { defaultValue: 'Tax' })}</div>
             <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.tax, quote.currency_code || 'USD')}</div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Total</div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.total', { defaultValue: 'Total' })}</div>
             <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.total_amount, quote.currency_code || 'USD')}</div>
           </div>
         </section>
@@ -829,9 +979,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         <section className="rounded-lg border border-border p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <h3 className="text-base font-semibold">Quote Layout</h3>
+              <h3 className="text-base font-semibold">{t('quoteDetail.sections.quoteLayout', { defaultValue: 'Quote Layout' })}</h3>
               <p className="text-sm text-muted-foreground">
-                Choose which layout to use for this quote&apos;s PDF. Leave empty to use the default.
+                {t('quoteForm.fields.quoteLayoutHelp', {
+                  defaultValue: "Choose which layout to use for this quote's PDF. Leave empty to use the default.",
+                })}
               </p>
             </div>
             <div className="w-full md:w-72">
@@ -839,11 +991,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                 id="quote-detail-template-select"
                 value={quote.template_id || undefined}
                 onValueChange={(value) => void handleAssignTemplate(value || null)}
-                placeholder="Use default layout"
+                placeholder={t('quoteForm.placeholders.useDefaultLayout', { defaultValue: 'Use default layout' })}
                 allowClear
-                options={documentTemplates.map((t) => ({
-                  value: t.template_id,
-                  label: `${t.name}${t.isStandard ? ' (Standard)' : ''}`,
+                options={documentTemplates.map((template) => ({
+                  value: template.template_id,
+                  label: `${template.name}${template.isStandard ? ` (${t('common.badges.standard', { defaultValue: 'Standard' })})` : ''}`,
                 }))}
               />
             </div>
@@ -851,7 +1003,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         </section>
 
         <section className="space-y-3 rounded-lg border border-border p-4">
-          <h3 className="text-base font-semibold">Version History</h3>
+          <h3 className="text-base font-semibold">{t('quoteDetail.sections.versionHistory', { defaultValue: 'Version History' })}</h3>
           {versions.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {versions.map((version) => (
@@ -863,47 +1015,50 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                   onClick={() => onSelectVersion?.(version.quote_id)}
                   disabled={version.quote_id === quote.quote_id}
                 >
-                  {formatQuoteNumber(version)}
+                  {formatQuoteNumber(version, t('quoteDetail.labels.templateQuote', { defaultValue: 'Template quote' }))}
                 </Button>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No prior revisions for this quote yet.</p>
+            <p className="text-sm text-muted-foreground">{t('quoteDetail.empty.revisions', { defaultValue: 'No prior revisions for this quote yet.' })}</p>
           )}
         </section>
 
         <section className="space-y-2 rounded-lg border border-border p-4">
-          <h3 className="text-base font-semibold">Scope of Work</h3>
+          <h3 className="text-base font-semibold">{t('quoteDetail.sections.scopeOfWork', { defaultValue: 'Scope of Work' })}</h3>
           <p className="whitespace-pre-wrap text-sm text-foreground">{quote.description || '—'}</p>
         </section>
 
         {quote.status === 'accepted' && (
           <section className="space-y-2 rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 p-4">
-            <h3 className="text-base font-semibold text-emerald-800 dark:text-emerald-300">Quote Accepted</h3>
+            <h3 className="text-base font-semibold text-emerald-800 dark:text-emerald-300">{t('quoteForm.alerts.accepted', { defaultValue: 'Quote Accepted' })}</h3>
             <div className="text-sm text-emerald-700 dark:text-emerald-400 space-y-1">
-              {quote.accepted_by_name && <p><span className="font-medium">Accepted by:</span> {quote.accepted_by_name}</p>}
-              {quote.accepted_at && <p><span className="font-medium">Accepted on:</span> {new Date(quote.accepted_at).toLocaleDateString()}</p>}
+              {quote.accepted_by_name && <p><span className="font-medium">{t('quoteDetail.status.acceptedBy', { defaultValue: 'Accepted by:' })}</span> {quote.accepted_by_name}</p>}
+              {quote.accepted_at && <p><span className="font-medium">{t('quoteDetail.status.acceptedOn', { defaultValue: 'Accepted on:' })}</span> {new Date(quote.accepted_at).toLocaleDateString()}</p>}
             </div>
           </section>
         )}
 
         {quote.status === 'rejected' && (
           <section className="space-y-2 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30 p-4">
-            <h3 className="text-base font-semibold text-red-800 dark:text-red-300">Quote Rejected</h3>
+            <h3 className="text-base font-semibold text-red-800 dark:text-red-300">{t('quoteForm.alerts.rejected', { defaultValue: 'Quote Rejected' })}</h3>
             <div className="text-sm text-red-700 dark:text-red-400 space-y-1">
-              {quote.rejected_at && <p><span className="font-medium">Rejected on:</span> {new Date(quote.rejected_at).toLocaleDateString()}</p>}
-              {quote.rejection_reason && <p><span className="font-medium">Reason:</span> {quote.rejection_reason}</p>}
+              {quote.rejected_at && <p><span className="font-medium">{t('quoteDetail.status.rejectedOn', { defaultValue: 'Rejected on:' })}</span> {new Date(quote.rejected_at).toLocaleDateString()}</p>}
+              {quote.rejection_reason && <p><span className="font-medium">{t('quoteDetail.status.reason', { defaultValue: 'Reason:' })}</span> {quote.rejection_reason}</p>}
             </div>
           </section>
         )}
 
         <section className="space-y-3 rounded-lg border border-border p-4">
-          <h3 className="text-base font-semibold">Line Items</h3>
+          <h3 className="text-base font-semibold">{t('quoteDetail.sections.lineItems', { defaultValue: 'Line Items' })}</h3>
           {quote.status === 'accepted' && acceptedOptionalItems.length > 0 ? (
             <Alert>
-              <AlertTitle>Client Configuration Submitted</AlertTitle>
+              <AlertTitle>{t('quoteDetail.alerts.clientConfigurationSubmitted', { defaultValue: 'Client Configuration Submitted' })}</AlertTitle>
               <AlertDescription>
-                Review the optional line items below before converting this quote. Selected items are marked as included, and declined items are highlighted for follow-up.
+                {t('quoteDetail.alerts.clientConfigurationSubmittedDescription', {
+                  defaultValue:
+                    'Review the optional line items below before converting this quote. Selected items are marked as included, and declined items are highlighted for follow-up.',
+                })}
               </AlertDescription>
             </Alert>
           ) : null}
@@ -975,28 +1130,28 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               </div>
             )
           ) : (
-            <p className="text-sm text-muted-foreground">No line items on this quote yet.</p>
+            <p className="text-sm text-muted-foreground">{t('quoteDetail.empty.lineItems', { defaultValue: 'No line items on this quote yet.' })}</p>
           )}
         </section>
 
         <section className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-2 rounded-lg border border-border p-4">
-            <h3 className="text-base font-semibold">Client Notes</h3>
+            <h3 className="text-base font-semibold">{t('quoteDetail.sections.clientNotes', { defaultValue: 'Client Notes' })}</h3>
             <p className="whitespace-pre-wrap text-sm text-foreground">{quote.client_notes || '—'}</p>
           </div>
           <div className="space-y-2 rounded-lg border border-border p-4">
-            <h3 className="text-base font-semibold">Internal Notes</h3>
+            <h3 className="text-base font-semibold">{t('quoteDetail.sections.internalNotes', { defaultValue: 'Internal Notes' })}</h3>
             <p className="whitespace-pre-wrap text-sm text-foreground">{quote.internal_notes || '—'}</p>
           </div>
         </section>
 
         <section className="space-y-2 rounded-lg border border-border p-4">
-          <h3 className="text-base font-semibold">Terms &amp; Conditions</h3>
+          <h3 className="text-base font-semibold">{t('quoteDetail.sections.termsAndConditions', { defaultValue: 'Terms & Conditions' })}</h3>
           <p className="whitespace-pre-wrap text-sm text-foreground">{quote.terms_and_conditions || '—'}</p>
         </section>
 
         <section className="space-y-3 rounded-lg border border-border p-4">
-          <h3 className="text-base font-semibold">Activity Log</h3>
+          <h3 className="text-base font-semibold">{t('quoteDetail.sections.activityLog', { defaultValue: 'Activity Log' })}</h3>
           {quote.quote_activities?.length ? (
             <div className="space-y-3">
               {quote.quote_activities.map((activity) => (
@@ -1012,7 +1167,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No quote activity recorded yet.</p>
+            <p className="text-sm text-muted-foreground">{t('quoteDetail.empty.activity', { defaultValue: 'No quote activity recorded yet.' })}</p>
           )}
         </section>
       </Box>
@@ -1022,18 +1177,24 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         onClose={() => setIsConversionDialogOpen(false)}
         footer={(
           <div className="flex justify-end space-x-2">
-            <Button id="quote-conversion-cancel" variant="outline" onClick={() => setIsConversionDialogOpen(false)} disabled={isWorking}>Cancel</Button>
+            <Button id="quote-conversion-cancel" variant="outline" onClick={() => setIsConversionDialogOpen(false)} disabled={isWorking}>{t('common.actions.cancel', { defaultValue: 'Cancel' })}</Button>
             <Button id="quote-conversion-confirm" onClick={() => void handleConfirmConversion()} disabled={isWorking || !conversionPreview || (conversionMode === 'contract' && !conversionPreview.contract_items.length) || (conversionMode === 'invoice' && !conversionPreview.invoice_items.length) || (conversionMode === 'both' && (!conversionPreview.contract_items.length || !conversionPreview.invoice_items.length))}>
-              {conversionMode === 'contract' ? 'Create Draft Contract' : conversionMode === 'invoice' ? 'Create Draft Invoice' : 'Create Both Records'}
+              {conversionMode === 'contract'
+                ? t('quoteConversion.actions.contract', { defaultValue: 'Create Draft Contract' })
+                : conversionMode === 'invoice'
+                  ? t('quoteConversion.actions.invoice', { defaultValue: 'Create Draft Invoice' })
+                  : t('quoteConversion.actions.both', { defaultValue: 'Create Both Records' })}
             </Button>
           </div>
         )}
       >
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Conversion Preview</DialogTitle>
+            <DialogTitle>{t('quoteForm.dialogs.conversion.title', { defaultValue: 'Conversion Preview' })}</DialogTitle>
             <DialogDescription>
-              Review what this quote conversion will create before confirming.
+              {t('quoteForm.dialogs.conversion.description', {
+                defaultValue: 'Review what this quote conversion will create before confirming.',
+              })}
             </DialogDescription>
           </DialogHeader>
 
@@ -1041,63 +1202,65 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             <div className="space-y-4">
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="rounded-lg border border-border p-3">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Contract Items</div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('quoteConversion.sections.contractItems', { defaultValue: 'Contract Items' })}</div>
                   <div className="mt-1 text-lg font-semibold">{conversionPreview.contract_items.length}</div>
                 </div>
                 <div className="rounded-lg border border-border p-3">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Invoice Items</div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('quoteConversion.sections.invoiceItems', { defaultValue: 'Invoice Items' })}</div>
                   <div className="mt-1 text-lg font-semibold">{conversionPreview.invoice_items.length}</div>
                 </div>
                 <div className="rounded-lg border border-border p-3">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Excluded Items</div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('quoteConversion.sections.excludedItems', { defaultValue: 'Excluded Items' })}</div>
                   <div className="mt-1 text-lg font-semibold">{conversionPreview.excluded_items.length}</div>
                 </div>
               </div>
 
               <section className="space-y-2 rounded-lg border border-border p-4">
-                <h3 className="text-base font-semibold">Will Become Contract Lines</h3>
+                <h3 className="text-base font-semibold">{t('quoteConversion.sections.willBecomeContractLines', { defaultValue: 'Will Become Contract Lines' })}</h3>
                 {conversionPreview.contract_items.length ? (
                   <div className="space-y-2">
                     {conversionPreview.contract_items.map((item) => (
                       <div key={item.quote_item_id} className="rounded-md border border-border p-3">
                         <div className="font-medium text-foreground">{item.description}</div>
                         <div className="text-sm text-muted-foreground">
-                          {item.billing_method || 'fixed'} • Qty {item.quantity} • {formatCurrency(item.total_price, quote.currency_code || 'USD')}
+                          {item.billing_method || t('quoteConversion.summary.fixed', { defaultValue: 'fixed' })} • {t('quoteLineItems.columns.quantity', { defaultValue: 'Qty' })} {item.quantity} • {formatCurrency(item.total_price, quote.currency_code || 'USD')}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No recurring items will convert to a contract.</p>
+                  <p className="text-sm text-muted-foreground">{t('quoteConversion.empty.contractItems', { defaultValue: 'No recurring items will convert to a contract.' })}</p>
                 )}
               </section>
 
               <section className="space-y-2 rounded-lg border border-border p-4">
-                <h3 className="text-base font-semibold">Will Become Invoice Charges</h3>
+                <h3 className="text-base font-semibold">{t('quoteConversion.sections.willBecomeInvoiceCharges', { defaultValue: 'Will Become Invoice Charges' })}</h3>
                 {conversionPreview.invoice_items.length ? (
                   <div className="space-y-2">
                     {conversionPreview.invoice_items.map((item) => (
                       <div key={item.quote_item_id} className="rounded-md border border-border p-3">
                         <div className="font-medium text-foreground">{item.description}</div>
                         <div className="text-sm text-muted-foreground">
-                          {item.is_discount ? 'Discount' : (item.billing_method || 'fixed')} • Qty {item.quantity} • {formatCurrency(item.total_price, quote.currency_code || 'USD')}
+                          {item.is_discount
+                            ? t('quoteConversion.summary.discount', { defaultValue: 'Discount' })
+                            : (item.billing_method || t('quoteConversion.summary.fixed', { defaultValue: 'fixed' }))} • {t('quoteLineItems.columns.quantity', { defaultValue: 'Qty' })} {item.quantity} • {formatCurrency(item.total_price, quote.currency_code || 'USD')}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No one-time items will convert to an invoice.</p>
+                  <p className="text-sm text-muted-foreground">{t('quoteConversion.empty.invoiceItems', { defaultValue: 'No one-time items will convert to an invoice.' })}</p>
                 )}
               </section>
 
               {conversionPreview.excluded_items.length ? (
                 <section className="space-y-2 rounded-lg border border-border p-4">
-                  <h3 className="text-base font-semibold">Excluded from Conversion</h3>
+                  <h3 className="text-base font-semibold">{t('quoteConversion.sections.excludedFromConversion', { defaultValue: 'Excluded from Conversion' })}</h3>
                   <div className="space-y-2">
                     {conversionPreview.excluded_items.map((item) => (
                       <div key={item.quote_item_id} className="rounded-md border border-border p-3">
                         <div className="font-medium text-foreground">{item.description}</div>
-                        <div className="text-sm text-muted-foreground">{item.reason || 'Not converted'}</div>
+                        <div className="text-sm text-muted-foreground">{item.reason || t('quoteConversion.summary.notConverted', { defaultValue: 'Not converted' })}</div>
                       </div>
                     ))}
                   </div>
@@ -1106,7 +1269,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             </div>
           ) : (
             <div className="flex items-center justify-center py-10">
-              <LoadingIndicator text="Loading conversion preview..." spinnerProps={{ size: 'sm' }} />
+              <LoadingIndicator text={t('quoteConversion.loading', { defaultValue: 'Loading conversion preview...' })} spinnerProps={{ size: 'sm' }} />
             </div>
           )}
 
@@ -1116,11 +1279,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         id="quote-preview-dialog"
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
-        title="Quote Preview"
+        title={t('quotePreview.title', { defaultValue: 'Quote Preview' })}
         className="max-w-4xl"
         footer={(
           <div className="flex justify-end space-x-2">
-            <Button id="quote-preview-close" variant="outline" onClick={() => setIsPreviewOpen(false)}>Close</Button>
+            <Button id="quote-preview-close" variant="outline" onClick={() => setIsPreviewOpen(false)}>{t('common.actions.close', { defaultValue: 'Close' })}</Button>
           </div>
         )}
       >
@@ -1131,7 +1294,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               <div dangerouslySetInnerHTML={{ __html: previewHtml.html }} />
             </div>
           ) : (
-            <div className="p-8 text-center text-sm text-muted-foreground">Loading preview...</div>
+            <div className="p-8 text-center text-sm text-muted-foreground">{t('quoteDetail.preview.loading', { defaultValue: 'Loading preview...' })}</div>
           )}
         </DialogContent>
       </Dialog>
@@ -1139,23 +1302,27 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         id="quote-send-dialog"
         isOpen={isSendDialogOpen}
         onClose={() => setIsSendDialogOpen(false)}
-        title="Send Quote to Client"
+        title={t('quoteForm.dialogs.send.title', { defaultValue: 'Send Quote to Client' })}
         footer={(
           <div className="flex justify-end space-x-2">
-            <Button id="quote-send-cancel" variant="outline" onClick={() => setIsSendDialogOpen(false)} disabled={isWorking}>Cancel</Button>
+            <Button id="quote-send-cancel" variant="outline" onClick={() => setIsSendDialogOpen(false)} disabled={isWorking}>{t('common.actions.cancel', { defaultValue: 'Cancel' })}</Button>
             <Button id="quote-send-confirm" onClick={() => void handleSendQuote()} disabled={isWorking}>
-              {isWorking ? 'Sending...' : 'Send Quote'}
+              {isWorking
+                ? t('common.states.sending', { defaultValue: 'Sending...' })
+                : t('quoteForm.actions.sendQuote', { defaultValue: 'Send Quote' })}
             </Button>
           </div>
         )}
       >
         <DialogContent>
           <DialogDescription>
-            This will email the quote to the client&apos;s billing contacts and change its status to &ldquo;Sent&rdquo;.
+            {t('quoteForm.dialogs.send.description', {
+              defaultValue: 'This will email the quote to the client\'s billing contacts and change its status to "Sent".',
+            })}
           </DialogDescription>
           <div className="space-y-3 py-2">
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Recipients
+              {t('quoteForm.fields.recipients', { defaultValue: 'Recipients' })}
               <QuoteSendRecipientsField
                 id="quote-send-recipients"
                 clientId={quote?.client_id}
@@ -1164,22 +1331,22 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Additional email addresses (comma-separated)
+              {t('quoteForm.fields.additionalEmails', { defaultValue: 'Additional email addresses (comma-separated)' })}
               <input
                 type="text"
                 value={additionalEmails}
                 onChange={(event) => setAdditionalEmails(event.target.value)}
-                placeholder="email@example.com, another@example.com"
+                placeholder={t('quoteForm.placeholders.additionalEmails', { defaultValue: 'email@example.com, another@example.com' })}
                 className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Optional message to include in the email
+              {t('quoteDetail.dialogs.send.message', { defaultValue: 'Optional message to include in the email' })}
               <TextArea
                 value={sendMessage}
                 onChange={(event) => setSendMessage(event.target.value)}
                 rows={3}
-                placeholder="Add a personal note for the client..."
+                placeholder={t('quoteForm.placeholders.message', { defaultValue: 'Add a personal note for the client...' })}
               />
             </label>
           </div>
@@ -1189,7 +1356,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         id="quote-approval-dialog"
         isOpen={approvalDialogMode !== null}
         onClose={() => { setApprovalDialogMode(null); setApprovalComment(''); }}
-        title={approvalDialogMode === 'approve' ? 'Approve Quote' : 'Request Changes'}
+        title={approvalDialogMode === 'approve'
+          ? t('quoteForm.dialogs.approval.approveTitle', { defaultValue: 'Approve Quote' })
+          : t('quoteForm.dialogs.approval.changesTitle', { defaultValue: 'Request Changes' })}
         footer={(
           <div className="flex justify-end space-x-2">
             <Button
@@ -1198,14 +1367,18 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               onClick={() => { setApprovalDialogMode(null); setApprovalComment(''); }}
               disabled={isWorking}
             >
-              Cancel
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               id="quote-approval-confirm"
               onClick={() => void (approvalDialogMode === 'approve' ? handleApproveQuote() : handleRequestChanges())}
               disabled={isWorking || (approvalDialogMode === 'changes' && !approvalComment.trim())}
             >
-              {isWorking ? 'Processing...' : approvalDialogMode === 'approve' ? 'Approve' : 'Request Changes'}
+              {isWorking
+                ? t('quoteForm.dialogs.approval.processing', { defaultValue: 'Processing...' })
+                : approvalDialogMode === 'approve'
+                  ? t('common.actions.approve', { defaultValue: 'Approve' })
+                  : t('common.actions.requestChanges', { defaultValue: 'Request Changes' })}
             </Button>
           </div>
         )}
@@ -1213,17 +1386,25 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         <DialogContent>
           <DialogDescription>
             {approvalDialogMode === 'approve'
-              ? 'Approve this quote so it can be sent to the client. You may add an optional comment.'
-              : 'Return this quote to draft with requested changes. Please describe what needs to be revised.'}
+              ? t('quoteDetail.dialogs.approval.approveDescription', {
+                defaultValue: 'Approve this quote so it can be sent to the client. You may add an optional comment.',
+              })
+              : t('quoteDetail.dialogs.approval.changesDescription', {
+                defaultValue: 'Return this quote to draft with requested changes. Please describe what needs to be revised.',
+              })}
           </DialogDescription>
           <div className="space-y-3 py-2">
             <label className="flex flex-col gap-1 text-sm font-medium">
-              {approvalDialogMode === 'approve' ? 'Comment (optional)' : 'Requested changes'}
+              {approvalDialogMode === 'approve'
+                ? t('quoteForm.dialogs.approval.approveComment', { defaultValue: 'Comment (optional)' })
+                : t('quoteForm.dialogs.approval.changesComment', { defaultValue: 'Requested changes' })}
               <TextArea
                 value={approvalComment}
                 onChange={(event) => setApprovalComment(event.target.value)}
                 rows={3}
-                placeholder={approvalDialogMode === 'approve' ? 'Add an optional note...' : 'Describe the changes needed...'}
+                placeholder={approvalDialogMode === 'approve'
+                  ? t('quoteForm.dialogs.approval.approveCommentPlaceholder', { defaultValue: 'Add an optional note...' })
+                  : t('quoteForm.dialogs.approval.changesCommentPlaceholder', { defaultValue: 'Describe the changes needed...' })}
               />
             </label>
           </div>
