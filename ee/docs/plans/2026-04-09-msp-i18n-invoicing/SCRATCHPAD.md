@@ -314,3 +314,6 @@ be translated at render time, not at definition time (move t() calls to render).
 - **(2026-04-18) F032 complete:** generated [server/public/locales/de/msp/invoicing.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/de/msp/invoicing.json) for the full `msp/invoicing` namespace.
   Validation: spot-checked the generated file with `jq '.automaticInvoices.ready.needsApproval, .sendEmail.summary, .purchaseOrder.labels, .templateManager' server/public/locales/de/msp/invoicing.json` and parsed it with `python3 - <<'PY' ... json.loads(...) ... PY` (pass).
   Decision: after the Spanish `PO` miss, the generator was updated to keep the short PO abbreviation as a literal no-translate token for the remaining locale packs.
+
+- **(2026-04-18) F033 complete:** generated [server/public/locales/nl/msp/invoicing.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/nl/msp/invoicing.json) for the full `msp/invoicing` namespace.
+  Validation: spot-checked the generated file with `jq '.automaticInvoices.ready.needsApproval, .sendEmail.summary, .purchaseOrder.labels, .templateManager' server/public/locales/nl/msp/invoicing.json` and parsed it with `python3 - <<'PY' ... json.loads(...) ... PY` (pass).

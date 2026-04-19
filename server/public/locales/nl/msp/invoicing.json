@@ -1,0 +1,986 @@
+{
+  "automaticInvoices": {
+    "ready": {
+      "title": "Klaar om te factureren",
+      "description": "Beoordeel terugkerende werkzaamheden en genereer conceptfacturen voor de geselecteerde perioden.",
+      "selectAllExplanation": "Selecteer bovenliggende groepen of individuele rijen om het genereren van facturen te beheren.",
+      "filterPlaceholder": "Filter gereed-voor-factuurrijen",
+      "dateRange": "Factuurvenster",
+      "search": "Zoeken",
+      "groupedPreviewUnavailable": "Preview ondersteunt gegroepeerde selecties; direct \"Genereren uit voorbeeld\" blijft slechts een enkele selectie.",
+      "selectionHintCombined": "1 factuur als ouder is geselecteerd",
+      "selectionHintSeparate": "Selecteer artikelen afzonderlijk",
+      "needsApproval": {
+        "title": "Heeft goedkeuring nodig",
+        "description": "Deze terugkerende vensters bevatten factureerbare tijd die nog niet is goedgekeurd. Het gehele factuurvenster wordt geblokkeerd totdat de goedkeuringen zijn voltooid.",
+        "labels": {
+          "servicePeriod": "Serviceperiode",
+          "invoiceWindow": "Factuurvenster"
+        },
+        "unapprovedEntries": "{{count}} niet-goedgekeurde invoer",
+        "unapprovedEntries_one": "{{count}} niet-goedgekeurde invoer",
+        "unapprovedEntries_other": "{{count}} niet-goedgekeurde vermeldingen",
+        "actions": {
+          "reviewApprovals": "Goedkeuringen beoordelen"
+        }
+      },
+      "columns": {
+        "group": "Groep",
+        "servicePeriod": "Serviceperiode",
+        "invoiceWindow": "Factuurvenster",
+        "included": "Inbegrepen"
+      }
+    },
+    "groups": {
+      "item": "{{count}}-item",
+      "item_one": "{{count}}-item",
+      "item_other": "{{count}}-artikelen",
+      "contract": "{{count}}-contract",
+      "contract_one": "{{count}}-contract",
+      "contract_other": "{{count}}-contracten",
+      "line": "{{count}}-lijn",
+      "line_one": "{{count}}-lijn",
+      "line_other": "{{count}}-lijnen",
+      "obligationCount": "{{count}}-verplichting",
+      "obligationCount_one": "{{count}}-verplichting",
+      "obligationCount_other": "{{count}}-verplichtingen",
+      "includedCount": "{{count}}-item inbegrepen",
+      "includedCount_one": "{{count}}-item inbegrepen",
+      "includedCount_other": "{{count}}-items inbegrepen",
+      "attributionMetadataMissing": "Metagegevens van toewijzingsattributie ontbreken ({{count}}-verplichting)",
+      "attributionMetadataMissing_one": "Metagegevens van toewijzingsattributie ontbreken ({{count}}-verplichting)",
+      "attributionMetadataMissing_other": "Metagegevens van toewijzingsattributie ontbreken ({{count}}-verplichtingen)",
+      "actions": {
+        "expand": "Uitbreiden",
+        "collapse": "Instorten"
+      },
+      "canCombine": "Combineerbaar tot 1 factuur",
+      "separate": "Moet apart factureren",
+      "blocked": "Bevat geblokkeerde items",
+      "notReady": "Niet klaar om te factureren"
+    },
+    "incompatibilityReasons": {
+      "invoiceWindowDiffers": "Factuurvenster verschilt",
+      "clientDiffers": "Klant verschilt",
+      "poScopeDiffers": "De reikwijdte van de PO verschilt",
+      "currencyDiffers": "Valuta verschilt",
+      "taxTreatmentDiffers": "De fiscale behandeling verschilt",
+      "exportShapeDiffers": "De exportvorm verschilt"
+    },
+    "executionRows": {
+      "labels": {
+        "cadence": "Cadans",
+        "billingTiming": "Factureringstijdstip",
+        "servicePeriod": "Serviceperiode"
+      },
+      "pendingAmount": "Bedrag in behandeling",
+      "attributionWarning": "Metagegevens van toewijzingsattributie ontbreken",
+      "blockedUntilApproval": "Geblokkeerd tot goedkeuring: {{count}} niet-goedgekeurde invoer.",
+      "blockedUntilApproval_one": "Geblokkeerd tot goedkeuring: {{count}} niet-goedgekeurde invoer.",
+      "blockedUntilApproval_other": "Geblokkeerd tot goedkeuring: {{count}} niet-goedgekeurde vermeldingen.",
+      "assignmentContext": {
+        "unresolvedTimeEntry": "Onopgeloste tijdinvoer",
+        "unresolvedUsageRecord": "Onopgeloste gebruiksrecord",
+        "assignedContractLine": "Toegewezen contractregel",
+        "assignedWorkItem": "Toegewezen werkitem",
+        "unresolvedWork": "Onopgelost werk"
+      }
+    },
+    "actions": {
+      "previewSelected": "Voorbeeld geselecteerd",
+      "generateSelected": "Facturen genereren voor geselecteerde perioden ({{count}})",
+      "generateSelected_one": "Facturen genereren voor geselecteerde perioden ({{count}})",
+      "generateSelected_other": "Facturen genereren voor geselecteerde perioden ({{count}})",
+      "reverseInvoice": "Omgekeerde factuur",
+      "deleteInvoice": "Factuur verwijderen",
+      "closePreview": "Voorbeeld sluiten",
+      "generateInvoice": "Factuur genereren"
+    },
+    "dialogs": {
+      "reverse": {
+        "title": "Terugkerende factuur terugboeken",
+        "warning": "Als u deze factuur terugboekt, worden het gegenereerde concept en de bijbehorende terugkerende selecties verwijderd.",
+        "warningTitle": "Waarschuwing: terugkerende factuur terugboeken",
+        "description": "U staat op het punt de terugkerende factuur terug te boeken voor:",
+        "impactTitle": "Deze actie zal:",
+        "cannotUndo": "Deze actie kan niet ongedaan worden gemaakt!",
+        "confirm": "Ja, omgekeerde factuur",
+        "reversing": "Achteruit rijden...",
+        "error": "Kan terugkerende factuur niet terugboeken",
+        "labels": {
+          "client": "Klant",
+          "cadenceSource": "Cadansbron",
+          "servicePeriod": "Serviceperiode"
+        },
+        "effects": {
+          "deleteDraft": "Verwijder het gegenereerde terugkerende factuurconcept",
+          "reissueCredits": "Geef eventuele tegoeden die op die factuur zijn toegepast opnieuw uit",
+          "unmarkRecords": "Demarkeer gekoppelde tijdsinvoer en gebruiksregistraties als gefactureerd",
+          "retireBridge": "Beëindig het gekoppelde klantcadansbrugrecord en open de gekoppelde terugkerende serviceperioden opnieuw",
+          "reopenPeriods": "Heropen de gekoppelde terugkerende serviceperioden zonder dat metagegevens van de clientcyclusbrug nodig zijn"
+        }
+      },
+      "delete": {
+        "title": "Terugkerende factuur definitief verwijderen?",
+        "message": "Deze actie kan niet ongedaan worden gemaakt. Hiermee wordt de terugkerende factuur definitief verwijderd voor:\nClient: {{client}}\nCadansbron: {{cadenceSource}}\nServiceperiode: {{servicePeriod}}\n{{bridgeEffect}}",
+        "bridgeDeleted": "Het gekoppelde klantcadansbrugrecord wordt ook verwijderd.",
+        "bridgeReopened": "Gekoppelde terugkerende serviceperioden worden heropend zonder dat metagegevens over de clientcyclusbrug nodig zijn.",
+        "confirm": "Ja, definitief verwijderen",
+        "deleting": "Verwijderen...",
+        "error": "Kan terugkerende factuur niet verwijderen"
+      },
+      "preview": {
+        "title": "Factuurvoorbeeld",
+        "description": "Dit is een voorbeeld van hoe de factuur eruit zal zien als deze is voltooid.",
+        "summary_one": "{{count}}-factuur geselecteerd",
+        "summary_other": "{{count}} facturen geselecteerd",
+        "summaryCombined": "Deze selectie genereert één gecombineerde factuur.",
+        "summarySeparate": "Deze selectie genereert {{count}} afzonderlijke facturen.",
+        "invoiceTitle": "Factuur {{index}}",
+        "sections": {
+          "clientDetails": "Bedrijfsgegevens",
+          "invoiceDetails": "Factuurdetails",
+          "lineItems": "Regels"
+        },
+        "fields": {
+          "date": "Datum"
+        },
+        "columns": {
+          "description": "Beschrijving",
+          "quantity": "Hoeveelheid",
+          "rate": "Tarief",
+          "amount": "Hoeveelheid"
+        },
+        "totals": {
+          "subtotal": "Subtotaal",
+          "tax": "Belasting",
+          "total": "Totaal"
+        },
+        "generating": "Genereren...",
+        "generateError": "Kan factuur niet genereren vanuit voorbeeld"
+      },
+      "poOverage": {
+        "title": "Overschrijdingen van inkooporderlimieten",
+        "description": "Het geselecteerde factuurtotaal is voorbij door {{amount}}.",
+        "batchDescription": "Eén of meer facturen zouden het geautoriseerde bedrag van een Inkooporder overschrijden. Wat wil je doen?",
+        "batchItem": "{{clientName}}: voorbij door {{amount}}",
+        "poNumber": "PO {{number}}",
+        "allowOverages": "Overschrijdingen toestaan ​​(genereer alle facturen)",
+        "skipInvoices": "Sla facturen over die hun inkooporder zouden overschrijden",
+        "continue": "Doorgaan",
+        "singleDescription": "Deze factuur zou het door {{amount}} geautoriseerde aankooporderbedrag overschrijden.",
+        "proceedAnyway": "Toch doorgaan?",
+        "proceedConfirm": "Ga hoe dan ook door",
+        "skippedError": "Overgeslagen vanwege PO-overschrijding ({{poLabel}}): voorbij door {{amount}}."
+      }
+    },
+    "history": {
+      "title": "Terugkerende factuurgeschiedenis",
+      "filterPlaceholder": "Klanten filteren...",
+      "columns": {
+        "client": "Klant",
+        "assignmentScope": "Toewijzingsbereik",
+        "cadenceSource": "Cadansbron",
+        "servicePeriod": "Serviceperiode",
+        "invoiceWindow": "Factuurvenster",
+        "invoice": "Factuur",
+        "actions": "Acties"
+      },
+      "badges": {
+        "contractAnniversary": "Contractverjaardag",
+        "clientSchedule": "Cliënt schema",
+        "unknownCadenceSource": "Onbekende cadansbron ({{source}})",
+        "multiContractInvoice": "Factuur voor meerdere contracten",
+        "servicePeriodBacked": "Met serviceperiode-ondersteuning"
+      }
+    },
+    "materializationGap": {
+      "title": "Reparatie tijdens de terugkerende serviceperiode vereist",
+      "description": "In deze client-cadansvensters ontbreken aanhoudende terugkerende serviceperioden, waardoor ze worden geblokkeerd voor werk dat klaar is om te worden gefactureerd totdat het canonieke schema is hersteld.",
+      "labels": {
+        "servicePeriod": "Serviceperiode",
+        "invoiceWindow": "Factuurvenster",
+        "scheduleKey": "Schema sleutel"
+      },
+      "reviewLink": "Bekijk serviceperioden",
+      "helpText": "Herstel de canonieke serviceperioderecords in plaats van een compatibiliteitsfactuurrij te genereren."
+    },
+    "errors": {
+      "title": "Er zijn fouten opgetreden bij het finaliseren van facturen:",
+      "loadReady": "Kan factureringsperioden niet laden. Probeer het opnieuw.",
+      "loadHistory": "Kan terugkerende factuurgeschiedenis niet laden. Probeer het opnieuw."
+    },
+    "loading": {
+      "billingData": "Factureringsgegevens laden"
+    }
+  },
+  "manualInvoices": {
+    "title": "Handmatige factuur genereren",
+    "detailsTitle": "Factuurdetails",
+    "detailsDescription": "Handmatige bewerkingen blijven standaard periodeloos, terwijl terugkerende, op details gebaseerde regels hun canonieke serviceperioden behouden.",
+    "description": "Maak een handmatige factuur en voeg optioneel geautomatiseerde terugkerende items toe.",
+    "fields": {
+      "client": "Klant",
+      "invoiceNumber": "Factuurnummer",
+      "invoiceNumberOptional": "Factuurnummer (optioneel)"
+    },
+    "placeholders": {
+      "selectClient": "Selecteer een klant",
+      "invoiceNumberOptional": "Laat dit leeg om automatisch te genereren"
+    },
+    "automatedItems": {
+      "title": "Geautomatiseerde regelitems",
+      "service": "Dienst",
+      "total": "Totaal",
+      "unknownService": "Onbekende dienst"
+    },
+    "lineItems": {
+      "manual": "Handmatige regelitems",
+      "all": "Regels"
+    },
+    "actions": {
+      "addCharge": "Voeg kosten toe",
+      "addDiscount": "Korting toevoegen",
+      "generate": "Factuur genereren",
+      "saveChanges": "Wijzigingen opslaan",
+      "processing": "Verwerken..."
+    },
+    "labels": {
+      "total": "Totaal"
+    },
+    "prepayment": {
+      "label": "Dit is een vooruitbetalingsfactuur (creëert krediet)",
+      "description": "Markeer dit alleen wanneer de handmatige factuur krediet moet creëren voor toekomstige financiële toepassingen in plaats van de dekking van de terugkerende serviceperiode te vertegenwoordigen."
+    },
+    "creditExpiration": {
+      "label": "Vervaldatum van het krediet",
+      "helpText": "Laat dit veld leeg als er geen vervaldatum is of als u de standaard vervalperiode wilt gebruiken"
+    },
+    "errors": {
+      "selectClient": "Selecteer een klant",
+      "invoiceNumberUnique": "Dit factuurnummer is al in gebruik.",
+      "noTaxRateConfigured": "Er is geen belastingtarief geconfigureerd voor de regio.",
+      "serviceNotFound": "Geselecteerde service niet gevonden.",
+      "cannotModify": "Factuur kan niet worden gewijzigd (betaald/geannuleerd).",
+      "loadItems": "Fout bij het laden van factuuritems",
+      "refresh": "Er is een fout opgetreden bij het vernieuwen van de factuurgegevens.",
+      "updateFailed": "Fout bij bijwerken factuur",
+      "generateFailed": "Fout bij genereren factuur"
+    },
+    "errorFallback": {
+      "title": "Er is iets misgegaan",
+      "retry": "Opnieuw proberen"
+    }
+  },
+  "draftsTab": {
+    "title": "Conceptfacturen",
+    "searchPlaceholder": "Facturen zoeken...",
+    "bulkActions_one": "Acties ({{count}})",
+    "bulkActions_other": "Acties ({{count}})",
+    "columns": {
+      "invoiceNumber": "Factuurnummer",
+      "client": "Klant",
+      "amount": "Hoeveelheid",
+      "invoiceDate": "Factuurdatum",
+      "dueDate": "Vervaldatum",
+      "status": "Status",
+      "actions": "Acties"
+    },
+    "actions": {
+      "finalize": "Voltooien",
+      "finalizeSelected": "Voltooien geselecteerd",
+      "downloadPdf": "PDF downloaden",
+      "reverseDraft": "Omgekeerde diepgang",
+      "reverseSelected": "Omkeren geselecteerd",
+      "generateInvoices": "Facturen genereren"
+    },
+    "status": {
+      "draft": "Voorlopige versie"
+    },
+    "empty": {
+      "title": "Geen conceptfacturen",
+      "description": "Hier verschijnen conceptfacturen zodra u facturen heeft aangemaakt die nog niet zijn afgerond."
+    },
+    "loading": "Conceptfacturen laden...",
+    "errors": {
+      "loadFailed": "Kan conceptfacturen niet laden. Probeer het opnieuw.",
+      "finalizeFailed": "Het is niet gelukt de factuur af te ronden. Probeer het opnieuw.",
+      "bulkFinalizeFailed": "Kan de geselecteerde facturen niet finaliseren. Probeer het opnieuw.",
+      "pdfFailed": "Kan geen PDF genereren. Probeer het opnieuw.",
+      "reverseFailed": "Kan conceptfactuur(en) niet terugboeken. Probeer het opnieuw."
+    },
+    "reverseDialog": {
+      "title": "Omgekeerde conceptfactuur",
+      "title_other": "Conceptfacturen omkeren",
+      "message_one": "Als u deze conceptfactuur terugboekt, wordt deze verwijderd en worden eventuele gekoppelde tijdsvermeldingen of gebruiksregistraties vrijgegeven. Deze actie kan niet ongedaan worden gemaakt.",
+      "message_other": "Als u {{count}}-conceptfacturen terugdraait, worden deze verwijderd en worden eventuele gekoppelde tijdsinvoer- of gebruiksgegevens vrijgegeven. Deze actie kan niet ongedaan worden gemaakt.",
+      "confirm": "Omgekeerde diepgang",
+      "cancel": "Annuleren"
+    }
+  },
+  "finalizedTab": {
+    "title": "Gefinaliseerde facturen",
+    "searchPlaceholder": "Facturen zoeken...",
+    "bulkActions_one": "Acties ({{count}})",
+    "bulkActions_other": "Acties ({{count}})",
+    "columns": {
+      "invoiceNumber": "Factuurnummer",
+      "client": "Klant",
+      "amount": "Hoeveelheid",
+      "finalizedDate": "Definitieve datum",
+      "status": "Status",
+      "actions": "Acties"
+    },
+    "actions": {
+      "downloadPdfs": "PDF's downloaden",
+      "sendEmails": "E-mails verzenden",
+      "unfinalizeSelected": "Finaliseren geselecteerd",
+      "downloadPdf": "PDF downloaden",
+      "sendEmail": "E-mail verzenden",
+      "unfinalize": "Finaliseren ongedaan maken"
+    },
+    "status": {
+      "finalized": "Afgerond"
+    },
+    "empty": {
+      "title": "Geen definitieve facturen",
+      "description": "Voltooi conceptfacturen om ze hier te bekijken.",
+      "viewDrafts": "Bekijk concepten"
+    },
+    "loading": "Facturen worden geladen...",
+    "errors": {
+      "loadFailed": "Facturen laden is mislukt. Probeer het opnieuw.",
+      "pdfFailed": "Kan geen PDF genereren. Probeer het opnieuw.",
+      "bulkPdfFailed": "Kan geen PDF's genereren. Probeer het opnieuw.",
+      "unfinalizeFailed": "Kan de finalisatie van de factuur niet ongedaan maken. Probeer het opnieuw.",
+      "bulkUnfinalizeFailed": "Kan de finalisatie van facturen niet ongedaan maken. Probeer het opnieuw."
+    }
+  },
+  "recurringServicePeriods": {
+    "title": "Terugkerende serviceperioden",
+    "description": "Bekijk de periodieke factuurdekkingsperioden voor een klantcontractregel, los op waarom werk wel of niet moet worden gedaan, en inspecteer de factuurgeschiedenis die is gekoppeld aan factuurdetailrijen.",
+    "fields": {
+      "scheduleSelect": "Kies een schema",
+      "scheduleSelectPlaceholder": "Selecteer een recent terugkerend schema",
+      "scheduleKey": "Schemasleutel",
+      "scheduleKeyPlaceholder": "Plak een schemasleutel (optioneel indien hierboven geselecteerd)",
+      "client": "Klant",
+      "cadenceSource": "Cadansbron",
+      "billingTiming": "Factureringstijdstip",
+      "chargeFamily": "Familie opladen",
+      "scheduleKeyLabel": "Schema sleutel"
+    },
+    "actions": {
+      "loadingSchedule": "Laden…",
+      "openSchedule": "Schema openen",
+      "repairMissing": "Herstel ontbrekende serviceperioden",
+      "repairing": "Repareren…",
+      "previewRegeneration": "Voorbeeld van regeneratie",
+      "previewing": "Voorbeeld bekijken..."
+    },
+    "errors": {
+      "enterScheduleKey": "Voer een planningssleutel in om terugkerende serviceperioden te inspecteren.",
+      "loadFailed": "Kan terugkerende serviceperioden niet laden.",
+      "candidateRecordsArray": "De JSON van kandidaatrecords moet een array zijn.",
+      "previewFailed": "Kan geen voorbeeld bekijken van de terugkerende regeneratie van de serviceperiode.",
+      "repairFailed": "Kan de terugkerende materialisatie van de serviceperiode niet herstellen."
+    },
+    "labels": {
+      "recurringObligation": "Terugkerende verplichting",
+      "generated": "Gegenereerd",
+      "edited": "Bewerkt",
+      "billed": "Gefactureerd",
+      "exceptions": "Uitzonderingen",
+      "repairCompleted": "Reparatie voltooid",
+      "candidateRecordsJson": "Kandidaat registreert JSON",
+      "conflicts": "Conflicten"
+    },
+    "values": {
+      "notLinked": "Niet gekoppeld",
+      "contractAnniversary": "Contractverjaardag",
+      "clientSchedule": "Cliënt schema",
+      "advance": "Vooraf",
+      "arrears": "Achteraf",
+      "unknownClient": "Onbekende klant",
+      "range": "{{start}} tot {{end}}",
+      "scheduleOptionLabel": "{{client}} · {{entity}} · {{cadence}} · {{timing}}",
+      "generatedFromSourceCadence": "Gegenereerd op basis van broncadans",
+      "noConflicts": "Voor de aangeleverde kandidaten zijn geen regeneratieconflicten geconstateerd."
+    },
+    "displayStates": {
+      "generated": {
+        "label": "Gegenereerd",
+        "detail": "Komt overeen met de huidige cadansregels en wacht op facturering of beoordeling."
+      },
+      "edited": {
+        "label": "Bewerkt",
+        "detail": "Een latere revisie veranderde het gegenereerde schema en blijft actief."
+      },
+      "skipped": {
+        "label": "Overgeslagen",
+        "detail": "Deze toekomstige periode is opzettelijk uitgesloten van de juiste selectie totdat deze opnieuw wordt bewerkt."
+      },
+      "locked": {
+        "label": "Vergrendeld",
+        "detail": "Deze periode wordt bevroren voor gewone bewerkingen in afwachting van facturering of correctie."
+      },
+      "billed": {
+        "label": "Gefactureerd",
+        "detailLinked": "Gekoppeld aan factuurdetail {{invoiceChargeDetailId}}.",
+        "detailUnlinked": "Gekoppeld aan de factuurgeschiedenis."
+      },
+      "superseded": {
+        "label": "Vervangen",
+        "detail": "Een nieuwere revisie heeft deze periode vervangen en deze rij blijft bestaan ​​voor de auditgeschiedenis."
+      },
+      "archived": {
+        "label": "Gearchiveerd",
+        "detail": "Deze historische rij wordt alleen bewaard voor controle en afstemming."
+      }
+    },
+    "provenanceReasons": {
+      "boundary_adjustment": "Grens aangepast",
+      "invoice_window_adjustment": "Factuurvenster aangepast",
+      "activity_window_adjustment": "Activiteitenvenster aangepast",
+      "skip": "Overgeslagen door factureringspersoneel",
+      "defer": "Uitgesteld naar een later factuurvenster",
+      "source_rule_changed": "Opnieuw gegenereerd na wijziging van de bronregel",
+      "billing_schedule_changed": "Opnieuw gegenereerd na wijziging van het factureringsschema",
+      "cadence_owner_changed": "Geregenereerd na wijziging van cadanseigenaar",
+      "activity_window_changed": "Geregenereerd na wijziging van het activiteitenvenster",
+      "backfill_realignment": "Opnieuw uitgelijnd tijdens opvullen",
+      "integrity_repair": "Gerepareerd voor integriteit",
+      "invoice_linkage_repair": "Hersteld na correctie van factuurkoppeling",
+      "admin_correction": "Administratief gecorrigeerd",
+      "initial_materialization": "Gegenereerd op basis van broncadans",
+      "backfill_materialization": "Gegenereerd tijdens het aanvullen"
+    },
+    "governanceActions": {
+      "view": "weergave",
+      "edit_boundaries": "grenzen bewerken",
+      "skip": "overslaan",
+      "defer": "verschuiven",
+      "regenerate": "regenereren",
+      "invoice_linkage_repair": "factuur reparatie koppeling",
+      "archive": "archief"
+    },
+    "table": {
+      "columns": {
+        "state": "Staat",
+        "servicePeriod": "Serviceperiode",
+        "invoiceWindow": "Factuurvenster",
+        "revision": "Herziening",
+        "reason": "Reden",
+        "allowedActions": "Toegestane acties"
+      }
+    },
+    "repairPanel": {
+      "title": "Ontbrekende aanhoudende serviceperioden",
+      "description": "Dit terugkerende schema bestaat in live factureringsmetagegevens, maar heeft geen persistente serviceperioderijen. Reparatie zal alleen toekomstige rijen materialiseren, de grenzen van de gefactureerde geschiedenis behouden en de nieuwe records een stempel geven met de herkomst van de aanvulling.",
+      "result": "{{backfilled}}-rijen aangevuld, {{realigned}} opnieuw uitgelijnd, historische {{skipped}}-kandidaten overgeslagen en {{active}} actieve rijen volgens dit schema gelaten."
+    },
+    "regenerationPreview": {
+      "title": "Regeneratie voorbeeld",
+      "description": "Plak de JSON van kandidaatrecords om een ​​voorbeeld te zien van hoe bewaarde, bewerkte of gefactureerde rijen in conflict zouden komen met opnieuw gegenereerde toekomstige kandidaten voor dit schema."
+    },
+    "conflicts": {
+      "kinds": {
+        "missing_candidate": "ontbrekende kandidaat",
+        "service_period_mismatch": "serviceperiode komt niet overeen",
+        "invoice_window_mismatch": "factuurvenster komt niet overeen",
+        "activity_window_mismatch": "activiteitsvenster komt niet overeen"
+      },
+      "reasons": {
+        "missing_candidate": "Er blijft geen geregenereerde kandidaat over voor dit bewaarde overschrijvingsslot.",
+        "service_period_mismatch": "De opnieuw gegenereerde kandidaat komt niet langer overeen met de bewaarde grens van de overschrijvingsserviceperiode.",
+        "invoice_window_mismatch": "De opnieuw gegenereerde kandidaat komt niet meer overeen met het bewaarde overschrijvingsfactuurvenster.",
+        "activity_window_mismatch": "De opnieuw gegenereerde kandidaat komt niet langer overeen met het bewaarde overschrijvingsactiviteitsvenster."
+      }
+    }
+  },
+  "billingCycles": {
+    "title": "Factureringscycli",
+    "tooltip": "Configureer factureringsschema's voor klanten en bekijk een voorbeeld van de factuurvensters die ze creëren voor terugkerende services op basis van klantfrequentie.",
+    "description": "Factureringsschema's voor klanten definiëren factuurvensters voor terugkerende regels die factureren volgens het factureringsschema van de klant. Contractverjaardagslijnen kunnen hun eigen cadans volgen en worden hier niet weergegeven.",
+    "searchPlaceholder": "Klanten zoeken...",
+    "dateRange": "Datumbereik van de factureringscyclus",
+    "search": "Zoeken",
+    "loading": "Factureringscycli laden",
+    "errors": {
+      "loadFailed": "Kan gegevens niet ophalen. Probeer het later opnieuw."
+    },
+    "columns": {
+      "client": "Klant",
+      "contract": "Contract",
+      "currentBillingCycle": "Huidige factureringscyclus",
+      "anchor": "Anker",
+      "actions": "Acties"
+    },
+    "actions": {
+      "viewClientBilling": "Bekijk klantfacturering"
+    },
+    "values": {
+      "noActiveAssignments": "Geen actieve opdrachten",
+      "unknown": "Onbekend",
+      "assignmentId": "Toewijzing {{id}}",
+      "notSet": "Niet ingesteld",
+      "rolling": "Rollend",
+      "weekday": "Weekdag {{day}}",
+      "starts": "Start {{date}}",
+      "day": "Dag {{day}}",
+      "monthDay": "{{month}} {{day}}",
+      "dash": null
+    },
+    "cycles": {
+      "weekly": "Wekelijks",
+      "bi-weekly": "Tweewekelijks",
+      "monthly": "Maandelijks",
+      "quarterly": "Driemaandelijks",
+      "semi-annually": "Halfjaarlijks",
+      "annually": "Jaarlijks"
+    },
+    "months": {
+      "january": "Januari",
+      "february": "Februari",
+      "march": "Maart",
+      "april": "april",
+      "may": "Mei",
+      "june": "juni",
+      "july": "juli",
+      "august": "augustus",
+      "september": "september",
+      "october": "oktober",
+      "november": "November",
+      "december": "December"
+    }
+  },
+  "invoicePreview": {
+    "title": "Factuurvoorbeeld",
+    "templatePlaceholder": "Factuursjabloon selecteren...",
+    "labels": {
+      "standard": "(Standaard)"
+    },
+    "actions": {
+      "finalizeInvoice": "Factuur finaliseren",
+      "editItems": "Artikelen bewerken",
+      "downloadPdf": "PDF downloaden",
+      "reverseDraft": "Omgekeerde diepgang",
+      "sendEmail": "E-mail verzenden",
+      "unfinalize": "Finaliseren ongedaan maken",
+      "viewSourceQuote": "Broncitaat bekijken"
+    },
+    "loading": "Voorbeeld laden...",
+    "empty": "Selecteer een factuur waarvan u een voorbeeld wilt bekijken",
+    "error": "Kan voorbeeld niet weergeven",
+    "errorDescription": "Kan voorbeeld niet weergeven. Er ontbreken mogelijk gegevens.",
+    "errors": {
+      "loadFailed": "Kan voorbeeld niet laden: {{message}}",
+      "actionFailed": "Kan {{action}} niet uitvoeren. Probeer het opnieuw.",
+      "actionLabels": {
+        "finalizeInvoice": "factuur afronden",
+        "downloadPdf": "pdf downloaden",
+        "reverseDraft": "omgekeerde diepgang",
+        "sendEmail": "stuur een e-mail",
+        "unfinalize": "factuur ongedaan maken"
+      }
+    }
+  },
+  "templateEditor": {
+    "actions": {
+      "back": "Terug naar Factuurlay-outs",
+      "cancel": "Annuleren",
+      "save": "Sjabloon opslaan",
+      "saving": "Opslaan..."
+    },
+    "titles": {
+      "create": "Maak een nieuwe factuurlay-out",
+      "edit": "Lay-out bewerken: {{name}}"
+    },
+    "fields": {
+      "templateName": "Sjabloonnaam",
+      "templateAst": "Sjabloon AST (JSON)",
+      "created": "Gemaakt",
+      "lastUpdated": "Laatst bijgewerkt"
+    },
+    "tabs": {
+      "visual": "Visueel",
+      "code": "Code"
+    },
+    "alerts": {
+      "codeReadonly": "De codeweergave wordt gegenereerd vanuit de visuele werkruimte en is alleen-lezen."
+    },
+    "errors": {
+      "loadFailed": "Kan sjabloongegevens niet laden.",
+      "saveFailed": "Kan sjabloon niet opslaan.",
+      "unexpectedSave": "Er is een onverwachte fout opgetreden tijdens het opslaan.",
+      "templateNameRequired": "Sjabloonnaam is vereist",
+      "astExportFailed": "Kan sjabloon AST niet exporteren uit de visuele werkruimte: {{message}}",
+      "unknownAstExport": "Onbekende AST-exportfout"
+    }
+  },
+  "templates": {
+    "title": "Factuurlay-outs",
+    "columns": {
+      "templateName": "Sjabloonnaam",
+      "type": "Type",
+      "default": "Standaard",
+      "actions": "Acties"
+    },
+    "types": {
+      "standard": "Standaard",
+      "custom": "Aangepast"
+    },
+    "actions": {
+      "edit": "Bewerken",
+      "editAsCopy": "Bewerken als kopiëren",
+      "clone": "Kloon",
+      "setDefault": "Instellen als standaard",
+      "delete": "Verwijderen",
+      "openMenu": "Menu openen",
+      "create": "Maak een nieuwe lay-out"
+    },
+    "loading": "Factuurlay-outs laden",
+    "values": {
+      "thisTemplate": "dit sjabloon",
+      "copySuffix": "(Kopiëren)",
+      "copyOfName": "Kopie van {{name}}",
+      "standardSuffix": "(Standaard)"
+    },
+    "errors": {
+      "cloneFailed": "Kan de sjabloon niet klonen.",
+      "cloneEditFailed": "Kan bewerkbare kopie niet maken.",
+      "setDefaultFailed": "Kan de sjabloon niet als standaard instellen.",
+      "fetchFailed": "Kan sjablonen niet ophalen.",
+      "deleteValidationFailed": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
+      "deleteUnexpected": "Er is een onverwachte fout opgetreden tijdens het verwijderen van de sjabloon."
+    }
+  },
+  "externalTax": {
+    "title": "Externe belastingimport",
+    "description": "Bekijk facturen die wachten op externe belastingberekening en importeer de resulterende bedragen.",
+    "columns": {
+      "invoice": "Factuur",
+      "client": "Klant",
+      "amount": "Hoeveelheid",
+      "system": "Systeem",
+      "created": "Gemaakt",
+      "actions": "Acties"
+    },
+    "actions": {
+      "import": "Importeren",
+      "importing": "Importeren...",
+      "refresh": "Vernieuwen",
+      "importAll": "Alles importeren",
+      "showHistory": "Toon geschiedenis",
+      "hideHistory": "Geschiedenis verbergen",
+      "importFromAdapter": "Importbelasting van {{adapter}}"
+    },
+    "summary": {
+      "pending_one": "{{count}} factuur in afwachting van belastingimport",
+      "pending_other": "{{count}} facturen in afwachting van belastingimport",
+      "successful_one": "{{count}} succesvol",
+      "successful_other": "{{count}} succesvol",
+      "failed_one": "{{count}} is mislukt",
+      "failed_other": "{{count}} is mislukt"
+    },
+    "progress": {
+      "importing": "Belastingen importeren...",
+      "importingCount": "{{current}}/{{total}} importeren..."
+    },
+    "empty": {
+      "allUpToDate": "Alle facturen zijn actueel",
+      "nonePending": "Geen facturen in afwachting van externe belastingimport.",
+      "history": "Geen importgeschiedenis beschikbaar."
+    },
+    "helpText": "Facturen verschijnen hier wanneer ze worden geëxporteerd terwijl externe belastingdelegatie is ingeschakeld. Importeer de belasting zodra uw boekhoudsysteem de belastingbedragen heeft berekend.",
+    "alerts": {
+      "pendingTitle": "Belasting in afwachting van import",
+      "pendingDescription": "Deze factuur is zonder belastingbedragen naar {{adapter}} geëxporteerd. Importeer de berekende belasting zodra de factuur is verwerkt.",
+      "importedTitle": "Belasting geïmporteerd uit {{adapter}}",
+      "significantDifference": "Verschil groter dan 1%",
+      "significantDifferenceTitle": "Aanzienlijk belastingverschil",
+      "significantDifferenceDescription": "De externe belasting wijkt ruim 1% af van de interne berekening. Controleer de kosten om de nauwkeurigheid te garanderen."
+    },
+    "reconciliation": {
+      "internal": "Intern",
+      "external": "Extern",
+      "difference": "Verschil",
+      "history": "Geschiedenis importeren"
+    },
+    "reconciliationView": {
+      "title": "Belastingafstemming",
+      "description": "Vergelijk interne en externe belastingberekeningen.",
+      "tooltips": {
+        "significantDifference": "Verschil groter dan 1%",
+        "amountsMatch": "De belastingbedragen komen binnen een acceptabel bereik overeen"
+      },
+      "summary": {
+        "internal": "Intern (Alga PSA)",
+        "external": "Extern (boekhouding)"
+      },
+      "alerts": {
+        "significantDifferenceTitle": "Aanzienlijk belastingverschil gedetecteerd",
+        "significantDifferenceDescription": "Het verschil tussen interne en externe belastingberekeningen bedraagt ​​meer dan 1%. Bekijk de onderstaande uitsplitsing per regel om verschillen te identificeren."
+      },
+      "sections": {
+        "lineByLineBreakdown": "Uitsplitsing per regel"
+      },
+      "columns": {
+        "description": "Beschrijving",
+        "internalTax": "Binnenlandse belasting",
+        "externalTax": "Externe belasting",
+        "difference": "Verschil"
+      },
+      "labels": {
+        "total": "Totaal",
+        "line": "Lijn {{index}}"
+      },
+      "states": {
+        "loading": "Afstemmingsgegevens laden...",
+        "noData": "Geen afstemmingsgegevens beschikbaar."
+      },
+      "helpText": "Er kunnen verschillen optreden als gevolg van afrondingen, variaties in belastingregels of timingverschillen tussen systemen."
+    },
+    "states": {
+      "loadingHistory": "Geschiedenis laden...",
+      "emptyHistory": "Er zijn geen eerdere belastingimporten gevonden."
+    },
+    "tooltips": {
+      "externalRef": "Externe referentie: {{reference}}"
+    },
+    "values": {
+      "unknownSystem": "Onbekend",
+      "externalSystem": "Extern systeem",
+      "notAvailable": "N.v.t."
+    },
+    "toasts": {
+      "noPendingInvoices": "Geen facturen in afwachting van belastingimport",
+      "batchImportedSuccess_one": "Belasting geïmporteerd voor {{count}}-factuur",
+      "batchImportedSuccess_other": "Belasting geïmporteerd voor {{count}}-facturen",
+      "batchImportedPartial": "Geïmporteerde {{successCount}}-facturen, {{failureCount}} mislukt",
+      "batchImportedFailed_one": "Kan de belasting voor {{count}}-factuur niet importeren",
+      "batchImportedFailed_other": "Kan belasting voor {{count}}-facturen niet importeren",
+      "taxImportedSuccessfully": "Belasting geïmporteerd",
+      "taxImportedFromAdapter": "Belasting geïmporteerd vanuit {{adapter}}",
+      "taxImportFailed": "Kan de belasting niet importeren"
+    },
+    "errors": {
+      "loadPendingInvoices": "Kan openstaande facturen niet laden",
+      "batchImportFailed": "Batchimport mislukt",
+      "importFailed": "Importeren mislukt",
+      "importTaxFailed": "Kan de belasting niet importeren"
+    },
+    "adapterNames": {
+      "quickbooks": "QuickBooks Online",
+      "xero": "Xero",
+      "sage": "Verstandig"
+    }
+  },
+  "sendEmail": {
+    "title": "Factuur-e-mail verzenden",
+    "loading": "Gegevens van de ontvanger laden...",
+    "summary": {
+      "invoices_one": "{{count}}-factuur",
+      "invoices_other": "{{count}} Facturen",
+      "readyToSend_one": "{{count}} klaar om te verzenden",
+      "readyToSend_other": "{{count}} klaar om te verzenden",
+      "missingEmail_one": "{{count}} ontbrekende e-mail",
+      "missingEmail_other": "{{count}} ontbrekende e-mail"
+    },
+    "recipients": {
+      "title": "Ontvangers",
+      "billingContact": "Contactpersoon voor facturering",
+      "billingEmail": "Facturerings-e-mailadres",
+      "clientEmail": "Klant-e-mail",
+      "noEmailFound": "Geen e-mailadres gevonden",
+      "notConfigured": "Er is geen e-mailadres geconfigureerd voor deze client."
+    },
+    "fields": {
+      "due": "Vervaldatum",
+      "additionalMessage": "Aanvullend bericht",
+      "additionalMessagePlaceholder": "Voeg een persoonlijke notitie toe om in de e-mail op te nemen..."
+    },
+    "preview": "E-mails worden verzonden vanuit {{fromEmail}} namens {{companyName}}. Elke factuur wordt als PDF bijgevoegd.",
+    "values": {
+      "defaultFromEmail": "noreply@voorbeeld.com",
+      "defaultCompanyName": "Uw bedrijf"
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "sendFallback": "E-mail verzenden",
+      "send_one": "Stuur {{count}} e-mail",
+      "send_other": "Stuur {{count}} e-mails",
+      "sending_one": "{{count}}-factuur verzenden...",
+      "sending_other": "{{count}}-facturen verzenden..."
+    },
+    "toasts": {
+      "noValidRecipients": "Geen geldige ontvangers gevonden",
+      "sentSuccess_one": "{{count}}-factuur succesvol verzonden",
+      "sentSuccess_other": "{{count}} facturen succesvol verzonden",
+      "sentFailure_one": "Kan {{count}}-factuur niet verzenden",
+      "sentFailure_other": "Kan {{count}}-facturen niet verzenden",
+      "sentPartial": "{{successCount}} verzonden, {{failureCount}} mislukt"
+    },
+    "errors": {
+      "loadRecipients": "Kan de gegevens van de ontvanger niet laden",
+      "sendFailed": "Het verzenden van e-mails is niet gelukt"
+    }
+  },
+  "generateTab": {
+    "fields": {
+      "invoiceType": "Factuurtype"
+    },
+    "types": {
+      "automatic": "Automatische facturen",
+      "manual": "Handmatige factuur",
+      "prepayment": "Vooruitbetaling"
+    },
+    "descriptions": {
+      "automatic": "Gebruik factuurvensters om de verschuldigde terugkerende serviceperioden te bekijken voordat u een terugkerende batch genereert.",
+      "manual": "Gebruik handmatige facturen voor eenmalige of correctieregels. Ze herdefiniëren de terugkerende serviceperioden niet.",
+      "prepayment": "Gebruik vooruitbetalings- en kredietstromen voor financiële waarde die gescheiden moeten blijven van de terugkerende serviceperiodedekking."
+    },
+    "messages": {
+      "success": "Factuur succesvol gegenereerd!",
+      "loadFailed": "Laden van gegevens is mislukt"
+    }
+  },
+  "prepayment": {
+    "titles": {
+      "prepayment": "Vooruitbetalingsfactuur genereren",
+      "creditMemo": "Creditnota genereren"
+    },
+    "descriptions": {
+      "prepayment": "Facturen met vooruitbetaling creëren klantkrediet voor toekomstige waarde. Ze creëren geen terugkerende serviceperioden; latere terugkerende facturen behouden hun eigen serviceperiodedekking.",
+      "creditMemo": "Creditnota's passen financiële saldi aan zonder de dekking van de terugkerende serviceperiode op de bronfactuur opnieuw te definiëren."
+    },
+    "fields": {
+      "type": "Type",
+      "client": "Klant",
+      "amount": "Hoeveelheid",
+      "description": "Beschrijving"
+    },
+    "types": {
+      "prepaymentInvoice": "Vooruitbetalingsfactuur",
+      "creditMemo": "Creditnota"
+    },
+    "placeholders": {
+      "amount": "Voer bedrag in",
+      "prepaymentDescription": "Vooruitbetaling voor toekomstige diensten",
+      "creditMemoDescription": "Reden voor creditnota"
+    },
+    "errors": {
+      "allFieldsRequired": "Vul alle velden in",
+      "validAmount": "Voer een geldig bedrag in",
+      "creditMemosUnsupported": "Creditnota's worden nog niet ondersteund",
+      "generateFailed": "Fout bij genereren factuur"
+    },
+    "actions": {
+      "generating": "Genereren...",
+      "generatePrepayment": "Vooruitbetalingsfactuur genereren",
+      "generateCreditMemo": "Creditnota genereren"
+    }
+  },
+  "contractItems": {
+    "columns": {
+      "description": "Beschrijving",
+      "quantity": "Hoeveelheid",
+      "rate": "Tarief",
+      "amount": "Hoeveelheid"
+    },
+    "labels": {
+      "contractSubtotal": "Contractsubtotaal:",
+      "otherItemsSubtotal": "Subtotaal overige artikelen:",
+      "otherItems": "Andere artikelen",
+      "product": "Product"
+    }
+  },
+  "hub": {
+    "title": "Facturatie",
+    "tabs": {
+      "generate": "Genereer",
+      "drafts": "Concepten",
+      "finalized": "Afgerond"
+    }
+  },
+  "templateManager": {
+    "title": "Factuursjabloonbeheerder",
+    "sampleInvoices": "Voorbeeldfacturen",
+    "templatePreview": "Sjabloonvoorbeeld",
+    "invoiceNumber": "Factuur #{{number}}"
+  },
+  "taxBadge": {
+    "labels": {
+      "internal": "Belasting: intern",
+      "external": "Belasting: Extern",
+      "pending": "Belasting: in behandeling"
+    },
+    "tooltips": {
+      "internal": "Belasting berekend door Alga PSA op basis van geconfigureerde belastingtarieven",
+      "external": "Belasting berekend door extern boekhoudsysteem",
+      "pending": "Belasting wacht op import uit extern boekhoudsysteem",
+      "externalAdapter": "Belasting berekend door {{adapter}}",
+      "externalAdapterImportedAt": "Belasting berekend door {{adapter}} op {{date}}",
+      "pendingAdapter": "In afwachting van belastingberekening van {{adapter}}"
+    },
+    "adapterNames": {
+      "quickbooks": "QuickBooks Online",
+      "xero": "Xero",
+      "sage": "Verstandig"
+    }
+  },
+  "annotations": {
+    "title": "Factuurannotaties",
+    "labels": {
+      "internal": "Intern",
+      "external": "Extern"
+    },
+    "placeholder": "Voeg een nieuwe annotatie toe",
+    "actions": {
+      "add": "Annotatie toevoegen"
+    }
+  },
+  "purchaseOrder": {
+    "labels": {
+      "short": "PO",
+      "number": "PO-nummer",
+      "authorized": "PO geautoriseerd",
+      "consumed": "Verbruikte inkooporder (afgerond)",
+      "remaining": "PO Resterend"
+    }
+  },
+  "common": {
+    "actions": {
+      "cancel": "Annuleren",
+      "close": "Sluiten",
+      "delete": "Verwijderen",
+      "edit": "Bewerken",
+      "loading": "Laden...",
+      "openMenu": "Menu openen",
+      "refresh": "Vernieuwen",
+      "retry": "Opnieuw proberen",
+      "save": "Opslaan",
+      "search": "Zoeken"
+    },
+    "labels": {
+      "actions": "Acties",
+      "amount": "Hoeveelheid",
+      "client": "Klant",
+      "created": "Gemaakt",
+      "description": "Beschrijving",
+      "difference": "Verschil",
+      "dueDate": "Vervaldatum",
+      "invoice": "Factuur",
+      "invoiceNumber": "Factuurnummer",
+      "unknownClient": "Onbekende klant",
+      "status": "Status",
+      "system": "Systeem",
+      "total": "Totaal"
+    },
+    "states": {
+      "empty": "Geen gegevens beschikbaar",
+      "loading": "Laden...",
+      "notAvailable": null
+    }
+  }
+}
