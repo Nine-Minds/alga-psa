@@ -326,3 +326,6 @@ be translated at render time, not at definition time (move t() calls to render).
 
 - **(2026-04-18) F035 complete:** generated [server/public/locales/pl/msp/invoicing.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/pl/msp/invoicing.json) for the full `msp/invoicing` namespace.
   Validation: spot-checked the generated file with `jq '.automaticInvoices.ready.needsApproval, .sendEmail.summary, .purchaseOrder.labels, .templateManager' server/public/locales/pl/msp/invoicing.json` and parsed it with `python3 - <<'PY' ... json.loads(...) ... PY` (pass).
+
+- **(2026-04-18) F036 complete:** regenerated pseudo-locales with `node scripts/generate-pseudo-locales.cjs`, which updated [server/public/locales/xx/msp/invoicing.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/invoicing.json) and [server/public/locales/yy/msp/invoicing.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/yy/msp/invoicing.json) from the current English source.
+  Validation: spot-checked pseudo output with `jq '.automaticInvoices.ready.needsApproval, .templateManager, .purchaseOrder.labels' server/public/locales/{xx,yy}/msp/invoicing.json` and confirmed the fill markers plus preserved `{{count}}` / `{{number}}` placeholders are present.

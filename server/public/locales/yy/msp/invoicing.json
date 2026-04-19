@@ -1,0 +1,986 @@
+{
+  "automaticInvoices": {
+    "ready": {
+      "title": "55555",
+      "description": "55555",
+      "selectAllExplanation": "55555",
+      "filterPlaceholder": "55555",
+      "dateRange": "55555",
+      "search": "55555",
+      "groupedPreviewUnavailable": "55555",
+      "selectionHintCombined": "55555",
+      "selectionHintSeparate": "55555",
+      "needsApproval": {
+        "title": "55555",
+        "description": "55555",
+        "labels": {
+          "servicePeriod": "55555",
+          "invoiceWindow": "55555"
+        },
+        "unapprovedEntries": "55555 {{count}} 55555",
+        "unapprovedEntries_one": "55555 {{count}} 55555",
+        "unapprovedEntries_other": "55555 {{count}} 55555",
+        "actions": {
+          "reviewApprovals": "55555"
+        }
+      },
+      "columns": {
+        "group": "55555",
+        "servicePeriod": "55555",
+        "invoiceWindow": "55555",
+        "included": "55555"
+      }
+    },
+    "groups": {
+      "item": "55555 {{count}} 55555",
+      "item_one": "55555 {{count}} 55555",
+      "item_other": "55555 {{count}} 55555",
+      "contract": "55555 {{count}} 55555",
+      "contract_one": "55555 {{count}} 55555",
+      "contract_other": "55555 {{count}} 55555",
+      "line": "55555 {{count}} 55555",
+      "line_one": "55555 {{count}} 55555",
+      "line_other": "55555 {{count}} 55555",
+      "obligationCount": "55555 {{count}} 55555",
+      "obligationCount_one": "55555 {{count}} 55555",
+      "obligationCount_other": "55555 {{count}} 55555",
+      "includedCount": "55555 {{count}} 55555",
+      "includedCount_one": "55555 {{count}} 55555",
+      "includedCount_other": "55555 {{count}} 55555",
+      "attributionMetadataMissing": "55555 {{count}} 55555",
+      "attributionMetadataMissing_one": "55555 {{count}} 55555",
+      "attributionMetadataMissing_other": "55555 {{count}} 55555",
+      "actions": {
+        "expand": "55555",
+        "collapse": "55555"
+      },
+      "canCombine": "55555",
+      "separate": "55555",
+      "blocked": "55555",
+      "notReady": "55555"
+    },
+    "incompatibilityReasons": {
+      "invoiceWindowDiffers": "55555",
+      "clientDiffers": "55555",
+      "poScopeDiffers": "55555",
+      "currencyDiffers": "55555",
+      "taxTreatmentDiffers": "55555",
+      "exportShapeDiffers": "55555"
+    },
+    "executionRows": {
+      "labels": {
+        "cadence": "55555",
+        "billingTiming": "55555",
+        "servicePeriod": "55555"
+      },
+      "pendingAmount": "55555",
+      "attributionWarning": "55555",
+      "blockedUntilApproval": "55555 {{count}} 55555",
+      "blockedUntilApproval_one": "55555 {{count}} 55555",
+      "blockedUntilApproval_other": "55555 {{count}} 55555",
+      "assignmentContext": {
+        "unresolvedTimeEntry": "55555",
+        "unresolvedUsageRecord": "55555",
+        "assignedContractLine": "55555",
+        "assignedWorkItem": "55555",
+        "unresolvedWork": "55555"
+      }
+    },
+    "actions": {
+      "previewSelected": "55555",
+      "generateSelected": "55555 {{count}} 55555",
+      "generateSelected_one": "55555 {{count}} 55555",
+      "generateSelected_other": "55555 {{count}} 55555",
+      "reverseInvoice": "55555",
+      "deleteInvoice": "55555",
+      "closePreview": "55555",
+      "generateInvoice": "55555"
+    },
+    "dialogs": {
+      "reverse": {
+        "title": "55555",
+        "warning": "55555",
+        "warningTitle": "55555",
+        "description": "55555",
+        "impactTitle": "55555",
+        "cannotUndo": "55555",
+        "confirm": "55555",
+        "reversing": "55555",
+        "error": "55555",
+        "labels": {
+          "client": "55555",
+          "cadenceSource": "55555",
+          "servicePeriod": "55555"
+        },
+        "effects": {
+          "deleteDraft": "55555",
+          "reissueCredits": "55555",
+          "unmarkRecords": "55555",
+          "retireBridge": "55555",
+          "reopenPeriods": "55555"
+        }
+      },
+      "delete": {
+        "title": "55555",
+        "message": "55555 {{client}} 55555 {{cadenceSource}} 55555 {{servicePeriod}} 55555 {{bridgeEffect}} 55555",
+        "bridgeDeleted": "55555",
+        "bridgeReopened": "55555",
+        "confirm": "55555",
+        "deleting": "55555",
+        "error": "55555"
+      },
+      "preview": {
+        "title": "55555",
+        "description": "55555",
+        "summary_one": "55555 {{count}} 55555",
+        "summary_other": "55555 {{count}} 55555",
+        "summaryCombined": "55555",
+        "summarySeparate": "55555 {{count}} 55555",
+        "invoiceTitle": "55555 {{index}} 55555",
+        "sections": {
+          "clientDetails": "55555",
+          "invoiceDetails": "55555",
+          "lineItems": "55555"
+        },
+        "fields": {
+          "date": "55555"
+        },
+        "columns": {
+          "description": "55555",
+          "quantity": "55555",
+          "rate": "55555",
+          "amount": "55555"
+        },
+        "totals": {
+          "subtotal": "55555",
+          "tax": "55555",
+          "total": "55555"
+        },
+        "generating": "55555",
+        "generateError": "55555"
+      },
+      "poOverage": {
+        "title": "55555",
+        "description": "55555 {{amount}} 55555",
+        "batchDescription": "55555",
+        "batchItem": "55555 {{clientName}} 55555 {{amount}} 55555",
+        "poNumber": "55555 {{number}} 55555",
+        "allowOverages": "55555",
+        "skipInvoices": "55555",
+        "continue": "55555",
+        "singleDescription": "55555 {{amount}} 55555",
+        "proceedAnyway": "55555",
+        "proceedConfirm": "55555",
+        "skippedError": "55555 {{poLabel}} 55555 {{amount}} 55555"
+      }
+    },
+    "history": {
+      "title": "55555",
+      "filterPlaceholder": "55555",
+      "columns": {
+        "client": "55555",
+        "assignmentScope": "55555",
+        "cadenceSource": "55555",
+        "servicePeriod": "55555",
+        "invoiceWindow": "55555",
+        "invoice": "55555",
+        "actions": "55555"
+      },
+      "badges": {
+        "contractAnniversary": "55555",
+        "clientSchedule": "55555",
+        "unknownCadenceSource": "55555 {{source}} 55555",
+        "multiContractInvoice": "55555",
+        "servicePeriodBacked": "55555"
+      }
+    },
+    "materializationGap": {
+      "title": "55555",
+      "description": "55555",
+      "labels": {
+        "servicePeriod": "55555",
+        "invoiceWindow": "55555",
+        "scheduleKey": "55555"
+      },
+      "reviewLink": "55555",
+      "helpText": "55555"
+    },
+    "errors": {
+      "title": "55555",
+      "loadReady": "55555",
+      "loadHistory": "55555"
+    },
+    "loading": {
+      "billingData": "55555"
+    }
+  },
+  "manualInvoices": {
+    "title": "55555",
+    "detailsTitle": "55555",
+    "detailsDescription": "55555",
+    "description": "55555",
+    "fields": {
+      "client": "55555",
+      "invoiceNumber": "55555",
+      "invoiceNumberOptional": "55555"
+    },
+    "placeholders": {
+      "selectClient": "55555",
+      "invoiceNumberOptional": "55555"
+    },
+    "automatedItems": {
+      "title": "55555",
+      "service": "55555",
+      "total": "55555",
+      "unknownService": "55555"
+    },
+    "lineItems": {
+      "manual": "55555",
+      "all": "55555"
+    },
+    "actions": {
+      "addCharge": "55555",
+      "addDiscount": "55555",
+      "generate": "55555",
+      "saveChanges": "55555",
+      "processing": "55555"
+    },
+    "labels": {
+      "total": "55555"
+    },
+    "prepayment": {
+      "label": "55555",
+      "description": "55555"
+    },
+    "creditExpiration": {
+      "label": "55555",
+      "helpText": "55555"
+    },
+    "errors": {
+      "selectClient": "55555",
+      "invoiceNumberUnique": "55555",
+      "noTaxRateConfigured": "55555",
+      "serviceNotFound": "55555",
+      "cannotModify": "55555",
+      "loadItems": "55555",
+      "refresh": "55555",
+      "updateFailed": "55555",
+      "generateFailed": "55555"
+    },
+    "errorFallback": {
+      "title": "55555",
+      "retry": "55555"
+    }
+  },
+  "draftsTab": {
+    "title": "55555",
+    "searchPlaceholder": "55555",
+    "bulkActions_one": "55555 {{count}} 55555",
+    "bulkActions_other": "55555 {{count}} 55555",
+    "columns": {
+      "invoiceNumber": "55555",
+      "client": "55555",
+      "amount": "55555",
+      "invoiceDate": "55555",
+      "dueDate": "55555",
+      "status": "55555",
+      "actions": "55555"
+    },
+    "actions": {
+      "finalize": "55555",
+      "finalizeSelected": "55555",
+      "downloadPdf": "55555",
+      "reverseDraft": "55555",
+      "reverseSelected": "55555",
+      "generateInvoices": "55555"
+    },
+    "status": {
+      "draft": "55555"
+    },
+    "empty": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "loading": "55555",
+    "errors": {
+      "loadFailed": "55555",
+      "finalizeFailed": "55555",
+      "bulkFinalizeFailed": "55555",
+      "pdfFailed": "55555",
+      "reverseFailed": "55555"
+    },
+    "reverseDialog": {
+      "title": "55555",
+      "title_other": "55555",
+      "message_one": "55555",
+      "message_other": "55555 {{count}} 55555",
+      "confirm": "55555",
+      "cancel": "55555"
+    }
+  },
+  "finalizedTab": {
+    "title": "55555",
+    "searchPlaceholder": "55555",
+    "bulkActions_one": "55555 {{count}} 55555",
+    "bulkActions_other": "55555 {{count}} 55555",
+    "columns": {
+      "invoiceNumber": "55555",
+      "client": "55555",
+      "amount": "55555",
+      "finalizedDate": "55555",
+      "status": "55555",
+      "actions": "55555"
+    },
+    "actions": {
+      "downloadPdfs": "55555",
+      "sendEmails": "55555",
+      "unfinalizeSelected": "55555",
+      "downloadPdf": "55555",
+      "sendEmail": "55555",
+      "unfinalize": "55555"
+    },
+    "status": {
+      "finalized": "55555"
+    },
+    "empty": {
+      "title": "55555",
+      "description": "55555",
+      "viewDrafts": "55555"
+    },
+    "loading": "55555",
+    "errors": {
+      "loadFailed": "55555",
+      "pdfFailed": "55555",
+      "bulkPdfFailed": "55555",
+      "unfinalizeFailed": "55555",
+      "bulkUnfinalizeFailed": "55555"
+    }
+  },
+  "recurringServicePeriods": {
+    "title": "55555",
+    "description": "55555",
+    "fields": {
+      "scheduleSelect": "55555",
+      "scheduleSelectPlaceholder": "55555",
+      "scheduleKey": "55555",
+      "scheduleKeyPlaceholder": "55555",
+      "client": "55555",
+      "cadenceSource": "55555",
+      "billingTiming": "55555",
+      "chargeFamily": "55555",
+      "scheduleKeyLabel": "55555"
+    },
+    "actions": {
+      "loadingSchedule": "55555",
+      "openSchedule": "55555",
+      "repairMissing": "55555",
+      "repairing": "55555",
+      "previewRegeneration": "55555",
+      "previewing": "55555"
+    },
+    "errors": {
+      "enterScheduleKey": "55555",
+      "loadFailed": "55555",
+      "candidateRecordsArray": "55555",
+      "previewFailed": "55555",
+      "repairFailed": "55555"
+    },
+    "labels": {
+      "recurringObligation": "55555",
+      "generated": "55555",
+      "edited": "55555",
+      "billed": "55555",
+      "exceptions": "55555",
+      "repairCompleted": "55555",
+      "candidateRecordsJson": "55555",
+      "conflicts": "55555"
+    },
+    "values": {
+      "notLinked": "55555",
+      "contractAnniversary": "55555",
+      "clientSchedule": "55555",
+      "advance": "55555",
+      "arrears": "55555",
+      "unknownClient": "55555",
+      "range": "55555 {{start}} 55555 {{end}} 55555",
+      "scheduleOptionLabel": "55555 {{client}} 55555 {{entity}} 55555 {{cadence}} 55555 {{timing}} 55555",
+      "generatedFromSourceCadence": "55555",
+      "noConflicts": "55555"
+    },
+    "displayStates": {
+      "generated": {
+        "label": "55555",
+        "detail": "55555"
+      },
+      "edited": {
+        "label": "55555",
+        "detail": "55555"
+      },
+      "skipped": {
+        "label": "55555",
+        "detail": "55555"
+      },
+      "locked": {
+        "label": "55555",
+        "detail": "55555"
+      },
+      "billed": {
+        "label": "55555",
+        "detailLinked": "55555 {{invoiceChargeDetailId}} 55555",
+        "detailUnlinked": "55555"
+      },
+      "superseded": {
+        "label": "55555",
+        "detail": "55555"
+      },
+      "archived": {
+        "label": "55555",
+        "detail": "55555"
+      }
+    },
+    "provenanceReasons": {
+      "boundary_adjustment": "55555",
+      "invoice_window_adjustment": "55555",
+      "activity_window_adjustment": "55555",
+      "skip": "55555",
+      "defer": "55555",
+      "source_rule_changed": "55555",
+      "billing_schedule_changed": "55555",
+      "cadence_owner_changed": "55555",
+      "activity_window_changed": "55555",
+      "backfill_realignment": "55555",
+      "integrity_repair": "55555",
+      "invoice_linkage_repair": "55555",
+      "admin_correction": "55555",
+      "initial_materialization": "55555",
+      "backfill_materialization": "55555"
+    },
+    "governanceActions": {
+      "view": "55555",
+      "edit_boundaries": "55555",
+      "skip": "55555",
+      "defer": "55555",
+      "regenerate": "55555",
+      "invoice_linkage_repair": "55555",
+      "archive": "55555"
+    },
+    "table": {
+      "columns": {
+        "state": "55555",
+        "servicePeriod": "55555",
+        "invoiceWindow": "55555",
+        "revision": "55555",
+        "reason": "55555",
+        "allowedActions": "55555"
+      }
+    },
+    "repairPanel": {
+      "title": "55555",
+      "description": "55555",
+      "result": "55555 {{backfilled}} 55555 {{realigned}} 55555 {{skipped}} 55555 {{active}} 55555"
+    },
+    "regenerationPreview": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "conflicts": {
+      "kinds": {
+        "missing_candidate": "55555",
+        "service_period_mismatch": "55555",
+        "invoice_window_mismatch": "55555",
+        "activity_window_mismatch": "55555"
+      },
+      "reasons": {
+        "missing_candidate": "55555",
+        "service_period_mismatch": "55555",
+        "invoice_window_mismatch": "55555",
+        "activity_window_mismatch": "55555"
+      }
+    }
+  },
+  "billingCycles": {
+    "title": "55555",
+    "tooltip": "55555",
+    "description": "55555",
+    "searchPlaceholder": "55555",
+    "dateRange": "55555",
+    "search": "55555",
+    "loading": "55555",
+    "errors": {
+      "loadFailed": "55555"
+    },
+    "columns": {
+      "client": "55555",
+      "contract": "55555",
+      "currentBillingCycle": "55555",
+      "anchor": "55555",
+      "actions": "55555"
+    },
+    "actions": {
+      "viewClientBilling": "55555"
+    },
+    "values": {
+      "noActiveAssignments": "55555",
+      "unknown": "55555",
+      "assignmentId": "55555 {{id}} 55555",
+      "notSet": "55555",
+      "rolling": "55555",
+      "weekday": "55555 {{day}} 55555",
+      "starts": "55555 {{date}} 55555",
+      "day": "55555 {{day}} 55555",
+      "monthDay": "55555 {{month}} 55555 {{day}} 55555",
+      "dash": "55555"
+    },
+    "cycles": {
+      "weekly": "55555",
+      "bi-weekly": "55555",
+      "monthly": "55555",
+      "quarterly": "55555",
+      "semi-annually": "55555",
+      "annually": "55555"
+    },
+    "months": {
+      "january": "55555",
+      "february": "55555",
+      "march": "55555",
+      "april": "55555",
+      "may": "55555",
+      "june": "55555",
+      "july": "55555",
+      "august": "55555",
+      "september": "55555",
+      "october": "55555",
+      "november": "55555",
+      "december": "55555"
+    }
+  },
+  "invoicePreview": {
+    "title": "55555",
+    "templatePlaceholder": "55555",
+    "labels": {
+      "standard": "55555"
+    },
+    "actions": {
+      "finalizeInvoice": "55555",
+      "editItems": "55555",
+      "downloadPdf": "55555",
+      "reverseDraft": "55555",
+      "sendEmail": "55555",
+      "unfinalize": "55555",
+      "viewSourceQuote": "55555"
+    },
+    "loading": "55555",
+    "empty": "55555",
+    "error": "55555",
+    "errorDescription": "55555",
+    "errors": {
+      "loadFailed": "55555 {{message}} 55555",
+      "actionFailed": "55555 {{action}} 55555",
+      "actionLabels": {
+        "finalizeInvoice": "55555",
+        "downloadPdf": "55555",
+        "reverseDraft": "55555",
+        "sendEmail": "55555",
+        "unfinalize": "55555"
+      }
+    }
+  },
+  "templateEditor": {
+    "actions": {
+      "back": "55555",
+      "cancel": "55555",
+      "save": "55555",
+      "saving": "55555"
+    },
+    "titles": {
+      "create": "55555",
+      "edit": "55555 {{name}} 55555"
+    },
+    "fields": {
+      "templateName": "55555",
+      "templateAst": "55555",
+      "created": "55555",
+      "lastUpdated": "55555"
+    },
+    "tabs": {
+      "visual": "55555",
+      "code": "55555"
+    },
+    "alerts": {
+      "codeReadonly": "55555"
+    },
+    "errors": {
+      "loadFailed": "55555",
+      "saveFailed": "55555",
+      "unexpectedSave": "55555",
+      "templateNameRequired": "55555",
+      "astExportFailed": "55555 {{message}} 55555",
+      "unknownAstExport": "55555"
+    }
+  },
+  "templates": {
+    "title": "55555",
+    "columns": {
+      "templateName": "55555",
+      "type": "55555",
+      "default": "55555",
+      "actions": "55555"
+    },
+    "types": {
+      "standard": "55555",
+      "custom": "55555"
+    },
+    "actions": {
+      "edit": "55555",
+      "editAsCopy": "55555",
+      "clone": "55555",
+      "setDefault": "55555",
+      "delete": "55555",
+      "openMenu": "55555",
+      "create": "55555"
+    },
+    "loading": "55555",
+    "values": {
+      "thisTemplate": "55555",
+      "copySuffix": "55555",
+      "copyOfName": "55555 {{name}} 55555",
+      "standardSuffix": "55555"
+    },
+    "errors": {
+      "cloneFailed": "55555",
+      "cloneEditFailed": "55555",
+      "setDefaultFailed": "55555",
+      "fetchFailed": "55555",
+      "deleteValidationFailed": "55555",
+      "deleteUnexpected": "55555"
+    }
+  },
+  "externalTax": {
+    "title": "55555",
+    "description": "55555",
+    "columns": {
+      "invoice": "55555",
+      "client": "55555",
+      "amount": "55555",
+      "system": "55555",
+      "created": "55555",
+      "actions": "55555"
+    },
+    "actions": {
+      "import": "55555",
+      "importing": "55555",
+      "refresh": "55555",
+      "importAll": "55555",
+      "showHistory": "55555",
+      "hideHistory": "55555",
+      "importFromAdapter": "55555 {{adapter}} 55555"
+    },
+    "summary": {
+      "pending_one": "55555 {{count}} 55555",
+      "pending_other": "55555 {{count}} 55555",
+      "successful_one": "55555 {{count}} 55555",
+      "successful_other": "55555 {{count}} 55555",
+      "failed_one": "55555 {{count}} 55555",
+      "failed_other": "55555 {{count}} 55555"
+    },
+    "progress": {
+      "importing": "55555",
+      "importingCount": "55555 {{current}} 55555 {{total}} 55555"
+    },
+    "empty": {
+      "allUpToDate": "55555",
+      "nonePending": "55555",
+      "history": "55555"
+    },
+    "helpText": "55555",
+    "alerts": {
+      "pendingTitle": "55555",
+      "pendingDescription": "55555 {{adapter}} 55555",
+      "importedTitle": "55555 {{adapter}} 55555",
+      "significantDifference": "55555",
+      "significantDifferenceTitle": "55555",
+      "significantDifferenceDescription": "55555"
+    },
+    "reconciliation": {
+      "internal": "55555",
+      "external": "55555",
+      "difference": "55555",
+      "history": "55555"
+    },
+    "reconciliationView": {
+      "title": "55555",
+      "description": "55555",
+      "tooltips": {
+        "significantDifference": "55555",
+        "amountsMatch": "55555"
+      },
+      "summary": {
+        "internal": "55555",
+        "external": "55555"
+      },
+      "alerts": {
+        "significantDifferenceTitle": "55555",
+        "significantDifferenceDescription": "55555"
+      },
+      "sections": {
+        "lineByLineBreakdown": "55555"
+      },
+      "columns": {
+        "description": "55555",
+        "internalTax": "55555",
+        "externalTax": "55555",
+        "difference": "55555"
+      },
+      "labels": {
+        "total": "55555",
+        "line": "55555 {{index}} 55555"
+      },
+      "states": {
+        "loading": "55555",
+        "noData": "55555"
+      },
+      "helpText": "55555"
+    },
+    "states": {
+      "loadingHistory": "55555",
+      "emptyHistory": "55555"
+    },
+    "tooltips": {
+      "externalRef": "55555 {{reference}} 55555"
+    },
+    "values": {
+      "unknownSystem": "55555",
+      "externalSystem": "55555",
+      "notAvailable": "55555"
+    },
+    "toasts": {
+      "noPendingInvoices": "55555",
+      "batchImportedSuccess_one": "55555 {{count}} 55555",
+      "batchImportedSuccess_other": "55555 {{count}} 55555",
+      "batchImportedPartial": "55555 {{successCount}} 55555 {{failureCount}} 55555",
+      "batchImportedFailed_one": "55555 {{count}} 55555",
+      "batchImportedFailed_other": "55555 {{count}} 55555",
+      "taxImportedSuccessfully": "55555",
+      "taxImportedFromAdapter": "55555 {{adapter}} 55555",
+      "taxImportFailed": "55555"
+    },
+    "errors": {
+      "loadPendingInvoices": "55555",
+      "batchImportFailed": "55555",
+      "importFailed": "55555",
+      "importTaxFailed": "55555"
+    },
+    "adapterNames": {
+      "quickbooks": "55555",
+      "xero": "55555",
+      "sage": "55555"
+    }
+  },
+  "sendEmail": {
+    "title": "55555",
+    "loading": "55555",
+    "summary": {
+      "invoices_one": "55555 {{count}} 55555",
+      "invoices_other": "55555 {{count}} 55555",
+      "readyToSend_one": "55555 {{count}} 55555",
+      "readyToSend_other": "55555 {{count}} 55555",
+      "missingEmail_one": "55555 {{count}} 55555",
+      "missingEmail_other": "55555 {{count}} 55555"
+    },
+    "recipients": {
+      "title": "55555",
+      "billingContact": "55555",
+      "billingEmail": "55555",
+      "clientEmail": "55555",
+      "noEmailFound": "55555",
+      "notConfigured": "55555"
+    },
+    "fields": {
+      "due": "55555",
+      "additionalMessage": "55555",
+      "additionalMessagePlaceholder": "55555"
+    },
+    "preview": "55555 {{fromEmail}} 55555 {{companyName}} 55555",
+    "values": {
+      "defaultFromEmail": "55555",
+      "defaultCompanyName": "55555"
+    },
+    "actions": {
+      "cancel": "55555",
+      "sendFallback": "55555",
+      "send_one": "55555 {{count}} 55555",
+      "send_other": "55555 {{count}} 55555",
+      "sending_one": "55555 {{count}} 55555",
+      "sending_other": "55555 {{count}} 55555"
+    },
+    "toasts": {
+      "noValidRecipients": "55555",
+      "sentSuccess_one": "55555 {{count}} 55555",
+      "sentSuccess_other": "55555 {{count}} 55555",
+      "sentFailure_one": "55555 {{count}} 55555",
+      "sentFailure_other": "55555 {{count}} 55555",
+      "sentPartial": "55555 {{successCount}} 55555 {{failureCount}} 55555"
+    },
+    "errors": {
+      "loadRecipients": "55555",
+      "sendFailed": "55555"
+    }
+  },
+  "generateTab": {
+    "fields": {
+      "invoiceType": "55555"
+    },
+    "types": {
+      "automatic": "55555",
+      "manual": "55555",
+      "prepayment": "55555"
+    },
+    "descriptions": {
+      "automatic": "55555",
+      "manual": "55555",
+      "prepayment": "55555"
+    },
+    "messages": {
+      "success": "55555",
+      "loadFailed": "55555"
+    }
+  },
+  "prepayment": {
+    "titles": {
+      "prepayment": "55555",
+      "creditMemo": "55555"
+    },
+    "descriptions": {
+      "prepayment": "55555",
+      "creditMemo": "55555"
+    },
+    "fields": {
+      "type": "55555",
+      "client": "55555",
+      "amount": "55555",
+      "description": "55555"
+    },
+    "types": {
+      "prepaymentInvoice": "55555",
+      "creditMemo": "55555"
+    },
+    "placeholders": {
+      "amount": "55555",
+      "prepaymentDescription": "55555",
+      "creditMemoDescription": "55555"
+    },
+    "errors": {
+      "allFieldsRequired": "55555",
+      "validAmount": "55555",
+      "creditMemosUnsupported": "55555",
+      "generateFailed": "55555"
+    },
+    "actions": {
+      "generating": "55555",
+      "generatePrepayment": "55555",
+      "generateCreditMemo": "55555"
+    }
+  },
+  "contractItems": {
+    "columns": {
+      "description": "55555",
+      "quantity": "55555",
+      "rate": "55555",
+      "amount": "55555"
+    },
+    "labels": {
+      "contractSubtotal": "55555",
+      "otherItemsSubtotal": "55555",
+      "otherItems": "55555",
+      "product": "55555"
+    }
+  },
+  "hub": {
+    "title": "55555",
+    "tabs": {
+      "generate": "55555",
+      "drafts": "55555",
+      "finalized": "55555"
+    }
+  },
+  "templateManager": {
+    "title": "55555",
+    "sampleInvoices": "55555",
+    "templatePreview": "55555",
+    "invoiceNumber": "55555 {{number}} 55555"
+  },
+  "taxBadge": {
+    "labels": {
+      "internal": "55555",
+      "external": "55555",
+      "pending": "55555"
+    },
+    "tooltips": {
+      "internal": "55555",
+      "external": "55555",
+      "pending": "55555",
+      "externalAdapter": "55555 {{adapter}} 55555",
+      "externalAdapterImportedAt": "55555 {{adapter}} 55555 {{date}} 55555",
+      "pendingAdapter": "55555 {{adapter}} 55555"
+    },
+    "adapterNames": {
+      "quickbooks": "55555",
+      "xero": "55555",
+      "sage": "55555"
+    }
+  },
+  "annotations": {
+    "title": "55555",
+    "labels": {
+      "internal": "55555",
+      "external": "55555"
+    },
+    "placeholder": "55555",
+    "actions": {
+      "add": "55555"
+    }
+  },
+  "purchaseOrder": {
+    "labels": {
+      "short": "55555",
+      "number": "55555",
+      "authorized": "55555",
+      "consumed": "55555",
+      "remaining": "55555"
+    }
+  },
+  "common": {
+    "actions": {
+      "cancel": "55555",
+      "close": "55555",
+      "delete": "55555",
+      "edit": "55555",
+      "loading": "55555",
+      "openMenu": "55555",
+      "refresh": "55555",
+      "retry": "55555",
+      "save": "55555",
+      "search": "55555"
+    },
+    "labels": {
+      "actions": "55555",
+      "amount": "55555",
+      "client": "55555",
+      "created": "55555",
+      "description": "55555",
+      "difference": "55555",
+      "dueDate": "55555",
+      "invoice": "55555",
+      "invoiceNumber": "55555",
+      "unknownClient": "55555",
+      "status": "55555",
+      "system": "55555",
+      "total": "55555"
+    },
+    "states": {
+      "empty": "55555",
+      "loading": "55555",
+      "notAvailable": "55555"
+    }
+  }
+}
