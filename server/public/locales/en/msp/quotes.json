@@ -505,16 +505,30 @@
     "loading": "Loading approval queue..."
   },
   "quoteTemplates": {
-    "description": "Save reusable quote structures to speed up future quote creation.",
+    "title": "Templates",
+    "description": "Quote templates let you save reusable sets of line items, terms, and notes. Select a template when creating a new quote to start with prefilled data.",
     "empty": {
+      "inline": "No quote templates yet. Create a template by clicking \"Save as Template\" from any quote's detail view.",
       "title": "No quote templates yet",
       "description": "Use Save as Template from a quote to create your first reusable template."
     },
     "actions": {
       "createQuoteFromTemplate": "Create Quote from Template",
       "delete": "Delete",
-      "editTemplate": "Edit Template"
-    }
+      "editTemplate": "Edit Template",
+      "templateActions": "Template actions"
+    },
+    "dialogs": {
+      "delete": {
+        "message": "Are you sure you want to delete this quote template? This action cannot be undone.",
+        "title": "Delete Template"
+      }
+    },
+    "errors": {
+      "delete": "Failed to delete template.",
+      "load": "Failed to load templates"
+    },
+    "loading": "Loading templates..."
   },
   "quotePreview": {
     "title": "Quote Preview",
