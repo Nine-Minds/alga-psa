@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getQuoteRecipientContacts } from '../../../actions/quoteRecipientActions';
 import type { IContact, IUser } from '@alga-psa/types';
@@ -54,6 +55,7 @@ export function QuoteSendRecipientsField({
   disabled,
   id,
 }: QuoteSendRecipientsFieldProps): React.JSX.Element {
+  const { t } = useTranslation('msp/quotes');
   const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [userAvatarUrls, setUserAvatarUrls] = useState<Record<string, string | null>>({});
@@ -251,10 +253,10 @@ export function QuoteSendRecipientsField({
   };
 
   const triggerLabel = !clientId
-    ? 'Select a client first'
+    ? t('quoteRecipients.trigger.noClient', { defaultValue: 'Select a client first' })
     : rows.length === 0
-      ? 'No users or contacts available'
-      : 'Add internal user or client contact…';
+      ? t('quoteRecipients.trigger.noneAvailable', { defaultValue: 'No users or contacts available' })
+      : t('quoteRecipients.trigger.add', { defaultValue: 'Add internal user or client contact...' });
 
   const portalContainer = typeof document !== 'undefined' && open ? getPortalContainer() : null;
   const dropdownPositionStyle: React.CSSProperties = portalContainer === document.body
@@ -280,7 +282,9 @@ export function QuoteSendRecipientsField({
           type="text"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by name or email…"
+          placeholder={t('quoteRecipients.searchPlaceholder', {
+            defaultValue: 'Search by name or email...',
+          })}
           className="h-8 border-0 bg-transparent px-0 focus-visible:ring-0"
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
@@ -293,7 +297,9 @@ export function QuoteSendRecipientsField({
       <div className="max-h-60 overflow-y-auto p-1">
         {filteredRows.length === 0 ? (
           <div className="py-6 text-center text-sm text-muted-foreground">
-            {rows.length === 0 ? 'No recipients available' : 'No matches'}
+            {rows.length === 0
+              ? t('quoteRecipients.empty.noneAvailable', { defaultValue: 'No recipients available' })
+              : t('quoteRecipients.empty.noMatches', { defaultValue: 'No matches' })}
           </div>
         ) : (
           filteredRows.map((row) => (
@@ -326,7 +332,9 @@ export function QuoteSendRecipientsField({
                 <div className="truncate text-xs text-muted-foreground">{row.email}</div>
               </div>
               <span className="shrink-0 rounded-full bg-[rgb(var(--color-border-100))] dark:bg-[rgb(var(--color-border-200))] px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                {row.kind === 'internal' ? 'Internal' : 'Contact'}
+                {row.kind === 'internal'
+                  ? t('quoteRecipients.kind.internal', { defaultValue: 'Internal' })
+                  : t('quoteRecipients.kind.contact', { defaultValue: 'Contact' })}
               </span>
             </button>
           ))
@@ -380,7 +388,10 @@ export function QuoteSendRecipientsField({
               <span className="max-w-[12rem] truncate">{r.name}</span>
               <button
                 type="button"
-                aria-label={`Remove ${r.email}`}
+                aria-label={t('quoteRecipients.removeAriaLabel', {
+                  email: r.email,
+                  defaultValue: 'Remove {{email}}',
+                })}
                 onClick={() => removeRecipient(r.key)}
                 disabled={disabled}
                 className="ml-0.5 text-muted-foreground hover:text-foreground disabled:pointer-events-none"
