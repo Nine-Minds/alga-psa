@@ -37,6 +37,7 @@ import {
   getQuotePreviewSampleScenarioById,
   QUOTE_PREVIEW_SAMPLE_SCENARIOS,
 } from '../../invoice-designer/preview/quoteSampleScenarios';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface QuoteDocumentTemplateEditorProps {
   templateId: string | null;
@@ -57,6 +58,7 @@ const useDebouncedValue = <T,>(value: T, delayMs: number) => {
 };
 
 const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = ({ templateId, standardCode, onBack }) => {
+  const { t } = useTranslation('msp/quotes');
   const router = useRouter();
   const handleBack = () => onBack ? onBack() : router.push('/msp/billing?tab=quote-templates');
   const isNewTemplate = !templateId;
@@ -190,7 +192,11 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
             throw new Error(loadedResult.permissionError);
           }
           if (!loadedResult) {
-            throw new Error('Quote document template not found.');
+            throw new Error(
+              t('templateEditor.errors.notFound', {
+                defaultValue: 'Quote document template not found.',
+              }),
+            );
           }
           setTemplate(loadedResult as IQuoteDocumentTemplate);
           return;
@@ -201,23 +207,34 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
           ?? { kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION, layout: { id: 'root', type: 'document', children: [] } };
         const standardName = standardCode
           ? standardCode.replace(/^standard-quote-/, '').replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-          : 'Standard Template';
+          : t('templateEditor.defaults.standardTemplate', { defaultValue: 'Standard Template' });
         setTemplate({
-          name: standardCode ? `Copy of ${standardName}` : '',
+          name: standardCode
+            ? t('templateEditor.defaults.copyOf', {
+              defaultValue: 'Copy of {{name}}',
+              name: standardName,
+            })
+            : '',
           version: 1,
           is_default: false,
           templateAst: initialAst,
         });
       } catch (loadError) {
         console.error('Error loading quote template editor:', loadError);
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load quote template editor');
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : t('templateEditor.errors.load', {
+              defaultValue: 'Failed to load quote template editor',
+            }),
+        );
       } finally {
         setIsLoading(false);
       }
     };
 
     void loadTemplate();
-  }, [standardCode, templateId]);
+  }, [standardCode, t, templateId]);
 
   // Hydrate designer workspace from template AST
   useEffect(() => {
@@ -286,23 +303,27 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
       .then((result) => {
         if (requestId !== previewRunSequence.current) return;
         setAuthoritativePreview(result);
-        dispatch({ type: result.compile.status === 'error' ? 'pipeline-phase-error' : 'pipeline-phase-success', phase: 'shape', ...(result.compile.status === 'error' ? { error: result.compile.error ?? 'Shape failed.' } : {}) } as any);
-        dispatch({ type: result.render.status === 'error' ? 'pipeline-phase-error' : 'pipeline-phase-success', phase: 'render', ...(result.render.status === 'error' ? { error: result.render.error ?? 'Render failed.' } : {}) } as any);
+        dispatch({ type: result.compile.status === 'error' ? 'pipeline-phase-error' : 'pipeline-phase-success', phase: 'shape', ...(result.compile.status === 'error' ? { error: result.compile.error ?? t('templateEditor.pipeline.shapeFailed', { defaultValue: 'Shape failed.' }) } : {}) } as any);
+        dispatch({ type: result.render.status === 'error' ? 'pipeline-phase-error' : 'pipeline-phase-success', phase: 'render', ...(result.render.status === 'error' ? { error: result.render.error ?? t('templateEditor.pipeline.renderFailed', { defaultValue: 'Render failed.' }) } : {}) } as any);
         dispatch({ type: 'pipeline-phase-success', phase: 'verify' });
       })
       .catch((catchError) => {
         if (requestId !== previewRunSequence.current) return;
-        const message = catchError instanceof Error ? catchError.message : 'Preview pipeline failed.';
+        const message = catchError instanceof Error ? catchError.message : t('templateEditor.errors.previewPipeline', { defaultValue: 'Preview pipeline failed.' });
         setAuthoritativePreview(null);
         dispatch({ type: 'pipeline-phase-error', phase: 'shape', error: message });
       });
-  }, [editorTab, manualRunNonce, previewData, previewWorkspace, visualWorkspaceTab]);
+  }, [editorTab, manualRunNonce, previewData, previewWorkspace, t, visualWorkspaceTab]);
 
   const handleSave = async () => {
     if (!template) return;
 
     if (!template.name || template.name.trim() === '') {
-      setError('Template name is required.');
+      setError(
+        t('templateEditor.errors.nameRequired', {
+          defaultValue: 'Template name is required.',
+        }),
+      );
       return;
     }
 
@@ -315,8 +336,13 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
       try {
         ast = exportWorkspaceToTemplateAst(workspace);
       } catch (compilerError) {
-        const message = compilerError instanceof Error ? compilerError.message : 'Unknown AST export error';
-        setError(`Failed to export template AST from visual workspace: ${message}`);
+        const message = compilerError instanceof Error ? compilerError.message : t('templateEditor.errors.unknownAstExport', { defaultValue: 'Unknown AST export error' });
+        setError(
+          t('templateEditor.errors.exportAst', {
+            defaultValue: 'Failed to export template AST from visual workspace: {{message}}',
+            message,
+          }),
+        );
         return;
       }
 
@@ -332,13 +358,24 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
 
       const saveResult = result as { success: boolean; template?: IQuoteDocumentTemplate; error?: string };
       if (!saveResult.success || !saveResult.template) {
-        throw new Error(saveResult.error || 'Failed to save quote template');
+        throw new Error(
+          saveResult.error
+            || t('templateEditor.errors.saveFailed', {
+              defaultValue: 'Failed to save quote template',
+            }),
+        );
       }
 
       setTemplate(saveResult.template);
       router.push(`/msp/billing?tab=quote-templates&templateId=${saveResult.template.template_id}`);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Failed to save quote template');
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : t('templateEditor.errors.saveFailed', {
+            defaultValue: 'Failed to save quote template',
+          }),
+      );
     } finally {
       setIsSaving(false);
     }
@@ -348,42 +385,52 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">{isNewTemplate ? 'New Quote Layout' : 'Edit Quote Layout'}</h1>
-          <p className="text-sm text-muted-foreground">Design the quote layout using the visual editor, then preview with sample data.</p>
+          <h1 className="text-2xl font-semibold text-foreground">
+            {isNewTemplate
+              ? t('templateEditor.headings.newLayout', { defaultValue: 'New Quote Layout' })
+              : t('templateEditor.headings.editLayout', { defaultValue: 'Edit Quote Layout' })}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {t('templateEditor.description', {
+              defaultValue: 'Design the quote layout using the visual editor, then preview with sample data.',
+            })}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button id="quote-template-editor-back" variant="outline" onClick={() => handleBack()}>
-            Back to Layouts
+            {t('templateEditor.actions.backToLayouts', { defaultValue: 'Back to Layouts' })}
           </Button>
           <Button id="quote-template-editor-save" onClick={() => void handleSave()} disabled={isSaving || isLoading}>
-            {isSaving ? 'Saving...' : 'Save Layout'}
+            {isSaving
+              ? t('common.states.saving', { defaultValue: 'Saving...' })
+              : t('templateEditor.actions.saveLayout', { defaultValue: 'Save Layout' })}
           </Button>
         </div>
       </div>
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Quote Layout Editor</AlertTitle>
+          <AlertTitle>{t('templateEditor.title', { defaultValue: 'Quote Layout Editor' })}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
 
       <Card>
         <CardHeader>
-          <CardTitle>Layout Details</CardTitle>
+          <CardTitle>{t('templateEditor.fields.layoutDetails', { defaultValue: 'Layout Details' })}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
-            Template Name
+            {t('templateEditor.fields.templateName', { defaultValue: 'Template Name' })}
             <Input
               value={template?.name || ''}
               onChange={(event) => setTemplate((current) => ({ ...(current ?? {}), name: event.target.value }))}
-              placeholder="Quote Template"
+              placeholder={t('templateEditor.placeholders.templateName', { defaultValue: 'Quote Template' })}
               disabled={isLoading}
             />
           </label>
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
-            Version
+            {t('templateEditor.fields.version', { defaultValue: 'Version' })}
             <Input
               type="number"
               min="1"
@@ -398,8 +445,8 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
 
       <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as EditorTab)} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="visual" data-automation-id="quote-template-editor-visual-tab">Visual</TabsTrigger>
-          <TabsTrigger value="code" data-automation-id="quote-template-editor-code-tab">Code</TabsTrigger>
+          <TabsTrigger value="visual" data-automation-id="quote-template-editor-visual-tab">{t('templateEditor.tabs.visual', { defaultValue: 'Visual' })}</TabsTrigger>
+          <TabsTrigger value="code" data-automation-id="quote-template-editor-code-tab">{t('templateEditor.tabs.code', { defaultValue: 'Code' })}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="visual" className="pt-4 space-y-3">
@@ -410,9 +457,9 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
               data-automation-id="quote-designer-visual-workspace-tabs"
             >
               <TabsList>
-                <TabsTrigger value="design" data-automation-id="quote-designer-design-tab">Design</TabsTrigger>
-                <TabsTrigger value="transforms" data-automation-id="quote-designer-transforms-tab">Transforms</TabsTrigger>
-                <TabsTrigger value="preview" data-automation-id="quote-designer-preview-tab">Preview</TabsTrigger>
+                <TabsTrigger value="design" data-automation-id="quote-designer-design-tab">{t('templateEditor.tabs.design', { defaultValue: 'Design' })}</TabsTrigger>
+                <TabsTrigger value="transforms" data-automation-id="quote-designer-transforms-tab">{t('templateEditor.tabs.transforms', { defaultValue: 'Transforms' })}</TabsTrigger>
+                <TabsTrigger value="preview" data-automation-id="quote-designer-preview-tab">{t('templateEditor.tabs.preview', { defaultValue: 'Preview' })}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="design" className="pt-3">
@@ -436,7 +483,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                 <div className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
                   <div className="space-y-1">
                     <label htmlFor="quote-preview-sample-select" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Sample Scenario
+                      {t('templateEditor.preview.sampleScenario', { defaultValue: 'Sample Scenario' })}
                     </label>
                     <div className="w-fit">
                       <CustomSelect
@@ -447,7 +494,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                         }))}
                         value={activeSample?.id ?? ''}
                         onValueChange={(value: string) => dispatch({ type: 'set-sample', sampleId: value })}
-                        placeholder="Select scenario..."
+                        placeholder={t('templateEditor.preview.selectScenario', { defaultValue: 'Select scenario...' })}
                       />
                     </div>
                     {activeSample && (
@@ -464,11 +511,11 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-                      <span className="font-semibold">Shape</span>
+                      <span className="font-semibold">{t('templateEditor.pipeline.shape', { defaultValue: 'Shape' })}</span>
                       <span className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 py-0.5 uppercase">
                         {displayStatuses.shapeStatus}
                       </span>
-                      <span className="font-semibold">Render</span>
+                      <span className="font-semibold">{t('templateEditor.pipeline.render', { defaultValue: 'Render' })}</span>
                       <span className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 py-0.5 uppercase">
                         {displayStatuses.renderStatus}
                       </span>
@@ -480,13 +527,13 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                       disabled={!previewData || isPreviewRunning}
                       onClick={() => setManualRunNonce((value) => value + 1)}
                     >
-                      Re-run
+                      {t('templateEditor.actions.rerun', { defaultValue: 'Re-run' })}
                     </Button>
                   </div>
 
                   {authoritativePreview?.compile.status === 'error' && (
                     <div className="rounded border border-destructive/30 bg-destructive/10 px-2 py-1 text-xs text-destructive space-y-1">
-                      <p>{authoritativePreview.compile.error ?? 'Shaping failed.'}</p>
+                      <p>{authoritativePreview.compile.error ?? t('templateEditor.pipeline.shapingFailed', { defaultValue: 'Shaping failed.' })}</p>
                       {authoritativePreview.compile.details && (
                         <p className="text-[11px] text-destructive">{authoritativePreview.compile.details}</p>
                       )}
@@ -511,20 +558,24 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                 <div className="border dark:border-[rgb(var(--color-border-200))] rounded overflow-hidden bg-white dark:bg-[rgb(var(--color-card))] min-h-[320px]">
                   {!previewData && (
                     <div className="p-4 text-sm text-slate-500">
-                      Select a sample scenario to generate an authoritative preview.
+                      {t('templateEditor.preview.selectScenarioPrompt', {
+                        defaultValue: 'Select a sample scenario to generate an authoritative preview.',
+                      })}
                     </div>
                   )}
 
                   {previewData && isPreviewRunning && (
                     <div className="p-4 text-sm text-slate-500">
-                      Shaping and rendering preview...
+                      {t('templateEditor.preview.rendering', { defaultValue: 'Shaping and rendering preview...' })}
                     </div>
                   )}
 
                   {previewData && !previewTemplate && (
                     <Alert variant="destructive" className="rounded-none border-x-0 border-b-0">
                       <AlertDescription className="text-sm">
-                        Preview template could not be generated from the current workspace.
+                        {t('templateEditor.preview.templateGenerationFailed', {
+                          defaultValue: 'Preview template could not be generated from the current workspace.',
+                        })}
                       </AlertDescription>
                     </Alert>
                   )}
@@ -532,7 +583,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                   {previewData && previewTemplate && authoritativePreview?.render.status === 'error' && (
                     <Alert variant="destructive" className="rounded-none border-x-0 border-b-0">
                       <AlertDescription className="text-sm">
-                        {authoritativePreview.render.error ?? 'Preview rendering failed.'}
+                        {authoritativePreview.render.error ?? t('templateEditor.preview.renderFailed', { defaultValue: 'Preview rendering failed.' })}
                       </AlertDescription>
                     </Alert>
                   )}
@@ -557,7 +608,9 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
         <TabsContent value="code" className="pt-4">
           <Alert variant="info" className="mb-3">
             <AlertDescription>
-              Code view is generated from the Visual workspace and is read-only.
+              {t('templateEditor.codeReadonly', {
+                defaultValue: 'Code view is generated from the Visual workspace and is read-only.',
+              })}
             </AlertDescription>
           </Alert>
           <div ref={editorContainerRef} className="mt-1 border rounded-md overflow-hidden">
@@ -582,10 +635,10 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
       <CardFooter className="flex justify-between items-center gap-2 px-0">
         <div className="text-sm text-muted-foreground">
           {template?.created_at && (
-            <p>Created: {new Date(template.created_at).toLocaleString()}</p>
+            <p>{t('templateEditor.footer.created', { defaultValue: 'Created:' })} {new Date(template.created_at).toLocaleString()}</p>
           )}
           {template?.updated_at && (
-            <p>Last Updated: {new Date(template.updated_at).toLocaleString()}</p>
+            <p>{t('templateEditor.footer.lastUpdated', { defaultValue: 'Last Updated:' })} {new Date(template.updated_at).toLocaleString()}</p>
           )}
         </div>
       </CardFooter>

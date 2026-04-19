@@ -469,10 +469,57 @@
     "loading": "Loading Preview..."
   },
   "templateEditor": {
+    "actions": {
+      "backToLayouts": "Back to Layouts",
+      "rerun": "Re-run",
+      "saveLayout": "Save Layout"
+    },
+    "codeReadonly": "Code view is generated from the Visual workspace and is read-only.",
+    "defaults": {
+      "copyOf": "Copy of {{name}}",
+      "standardTemplate": "Standard Template"
+    },
     "title": "Quote Layout Editor",
     "description": "Design the quote layout using the visual editor, then preview with sample data.",
+    "errors": {
+      "exportAst": "Failed to export template AST from visual workspace: {{message}}",
+      "load": "Failed to load quote template editor",
+      "nameRequired": "Template name is required.",
+      "notFound": "Quote document template not found.",
+      "previewPipeline": "Preview pipeline failed.",
+      "saveFailed": "Failed to save quote template",
+      "unknownAstExport": "Unknown AST export error"
+    },
     "fields": {
-      "layoutDetails": "Layout Details"
+      "layoutDetails": "Layout Details",
+      "templateName": "Template Name",
+      "version": "Version"
+    },
+    "footer": {
+      "created": "Created:",
+      "lastUpdated": "Last Updated:"
+    },
+    "headings": {
+      "editLayout": "Edit Quote Layout",
+      "newLayout": "New Quote Layout"
+    },
+    "placeholders": {
+      "templateName": "Quote Template"
+    },
+    "preview": {
+      "renderFailed": "Preview rendering failed.",
+      "rendering": "Shaping and rendering preview...",
+      "sampleScenario": "Sample Scenario",
+      "selectScenario": "Select scenario...",
+      "selectScenarioPrompt": "Select a sample scenario to generate an authoritative preview.",
+      "templateGenerationFailed": "Preview template could not be generated from the current workspace."
+    },
+    "pipeline": {
+      "render": "Render",
+      "renderFailed": "Render failed.",
+      "shape": "Shape",
+      "shapeFailed": "Shape failed.",
+      "shapingFailed": "Shaping failed."
     },
     "tabs": {
       "code": "Code",
