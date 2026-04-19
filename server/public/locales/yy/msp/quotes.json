@@ -1,0 +1,632 @@
+{
+  "common": {
+    "actions": {
+      "approve": "55555",
+      "back": "55555",
+      "cancel": "55555",
+      "close": "55555",
+      "clone": "55555",
+      "convert": "55555",
+      "delete": "55555",
+      "downloadPdf": "55555",
+      "duplicate": "55555",
+      "edit": "55555",
+      "editAsCopy": "55555",
+      "newLayout": "55555",
+      "newQuote": "55555",
+      "newTemplate": "55555",
+      "open": "55555",
+      "requestChanges": "55555",
+      "resend": "55555",
+      "revise": "55555",
+      "save": "55555",
+      "saveQuote": "55555",
+      "saveTemplate": "55555",
+      "send": "55555",
+      "sendReminder": "55555",
+      "sendToClient": "55555",
+      "setAsDefault": "55555",
+      "submitForApproval": "55555"
+    },
+    "badges": {
+      "standard": "55555"
+    },
+    "columns": {
+      "actions": "55555",
+      "amount": "55555",
+      "client": "55555",
+      "created": "55555",
+      "currency": "55555",
+      "date": "55555",
+      "default": "55555",
+      "items": "55555",
+      "name": "55555",
+      "quoteDate": "55555",
+      "quoteNumber": "55555",
+      "source": "55555",
+      "status": "55555",
+      "title": "55555",
+      "total": "55555",
+      "validUntil": "55555"
+    },
+    "labels": {
+      "client": "55555",
+      "contact": "55555",
+      "currency": "55555",
+      "description": "55555",
+      "discounts": "55555",
+      "lineItems": "55555",
+      "poNumber": "55555",
+      "quoteDate": "55555",
+      "quoteLayout": "55555",
+      "subtotal": "55555",
+      "tax": "55555",
+      "termsAndConditions": "55555",
+      "title": "55555",
+      "total": "55555",
+      "validUntil": "55555"
+    },
+    "states": {
+      "generating": "55555",
+      "loading": "55555",
+      "saving": "55555",
+      "sending": "55555"
+    }
+  },
+  "quotesTab": {
+    "title": "55555",
+    "actions": {
+      "quoteActions": "55555"
+    },
+    "tabs": {
+      "active": "55555 {{count}} 55555",
+      "approval": "55555",
+      "closed": "55555 {{count}} 55555",
+      "sent": "55555 {{count}} 55555"
+    },
+    "filters": {
+      "allClients": "55555",
+      "client": "55555"
+    },
+    "empty": {
+      "byCategory": "55555",
+      "title": "55555",
+      "description": "55555"
+    },
+    "dialogs": {
+      "delete": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "send": {
+        "additionalEmails": "55555",
+        "additionalEmailsPlaceholder": "55555",
+        "additionalRecipients": "55555",
+        "description": "55555",
+        "message": "55555",
+        "messageOptional": "55555",
+        "messagePlaceholder": "55555",
+        "title": "55555"
+      }
+    },
+    "errors": {
+      "delete": "55555",
+      "duplicate": "55555",
+      "load": "55555",
+      "send": "55555"
+    },
+    "loading": "55555",
+    "rowActions": {
+      "delete": "55555",
+      "downloadPdf": "55555",
+      "duplicate": "55555",
+      "open": "55555",
+      "resend": "55555",
+      "sendReminder": "55555",
+      "sendToClient": "55555"
+    }
+  },
+  "quoteForm": {
+    "actions": {
+      "cancelQuote": "55555",
+      "convertToBoth": "55555",
+      "convertToContract": "55555",
+      "convertToInvoice": "55555",
+      "createNewRevision": "55555",
+      "sendQuote": "55555"
+    },
+    "headings": {
+      "editQuote": "55555",
+      "editTemplate": "55555",
+      "newQuote": "55555",
+      "newTemplate": "55555",
+      "quote": "55555",
+      "quoteWithNumber": "55555 {{quoteNumber}} 55555",
+      "quoteWithNumberAndVersion": "55555 {{quoteNumber}} 55555 {{version}} 55555",
+      "templateQuoteFallback": "55555"
+    },
+    "fields": {
+      "additionalEmails": "55555",
+      "clientNotes": "55555",
+      "createFromTemplate": "55555",
+      "messageOptional": "55555",
+      "quoteLayoutHelp": "55555",
+      "recipients": "55555"
+    },
+    "placeholders": {
+      "additionalEmails": "55555",
+      "message": "55555",
+      "selectClient": "55555",
+      "selectContact": "55555",
+      "selectCurrency": "55555",
+      "startFromScratch": "55555",
+      "useDefaultLayout": "55555"
+    },
+    "alerts": {
+      "accepted": "55555",
+      "converted": "55555",
+      "convertedDescription": "55555",
+      "quote": "55555",
+      "rejected": "55555"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "55555",
+        "approveTitle": "55555",
+        "approveComment": "55555",
+        "approveCommentPlaceholder": "55555",
+        "changesDescription": "55555",
+        "changesTitle": "55555",
+        "changesComment": "55555",
+        "changesCommentPlaceholder": "55555",
+        "processing": "55555"
+      },
+      "conversion": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "send": {
+        "description": "55555",
+        "title": "55555",
+        "additionalEmails": "55555",
+        "message": "55555"
+      }
+    },
+    "errorActions": {
+      "approveQuote": "55555",
+      "cancelQuote": "55555",
+      "requestChanges": "55555",
+      "resendQuote": "55555",
+      "sendQuote": "55555",
+      "sendReminder": "55555",
+      "submitForApproval": "55555"
+    },
+    "errors": {
+      "convert": "55555",
+      "createRevision": "55555",
+      "downloadPdf": "55555",
+      "duplicate": "55555",
+      "load": "55555",
+      "loadConversionPreview": "55555",
+      "notFound": "55555",
+      "save": "55555",
+      "saveFailed": "55555",
+      "workflowAction": "55555 {{action}} 55555"
+    },
+    "loading": "55555",
+    "notices": {
+      "approved": "55555",
+      "cancelled": "55555",
+      "createdDraftContract": "55555 {{name}} 55555",
+      "createdDraftContractAndInvoice": "55555 {{contractName}} 55555 {{invoiceName}} 55555",
+      "createdDraftInvoice": "55555 {{name}} 55555",
+      "reminderSent": "55555",
+      "requestedChanges": "55555",
+      "resent": "55555",
+      "sent": "55555",
+      "submittedForApproval": "55555"
+    },
+    "readOnlyNotice": "55555",
+    "validation": {
+      "clientRequired": "55555",
+      "titleRequired": "55555"
+    }
+  },
+  "quoteDetail": {
+    "title": "55555",
+    "actions": {
+      "backToQuotes": "55555",
+      "openConvertedContract": "55555",
+      "openConvertedInvoice": "55555",
+      "preview": "55555",
+      "saveAsTemplate": "55555"
+    },
+    "sections": {
+      "activityLog": "55555",
+      "clientNotes": "55555",
+      "internalNotes": "55555",
+      "lineItems": "55555",
+      "quoteLayout": "55555",
+      "scopeOfWork": "55555",
+      "termsAndConditions": "55555",
+      "versionHistory": "55555"
+    },
+    "alerts": {
+      "clientConfigurationSubmitted": "55555",
+      "clientConfigurationSubmittedDescription": "55555",
+      "update": "55555"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "55555",
+        "changesDescription": "55555"
+      },
+      "send": {
+        "message": "55555"
+      }
+    },
+    "status": {
+      "accepted": "55555",
+      "acceptedBy": "55555",
+      "acceptedOn": "55555",
+      "reason": "55555",
+      "rejected": "55555",
+      "rejectedOn": "55555"
+    },
+    "empty": {
+      "activity": "55555",
+      "lineItems": "55555",
+      "revisions": "55555"
+    },
+    "clientSelections": {
+      "declinedOptionalItem": "55555",
+      "selectedOptionalItem": "55555"
+    },
+    "errors": {
+      "approve": "55555",
+      "assignTemplate": "55555",
+      "cancel": "55555",
+      "convert": "55555",
+      "delete": "55555",
+      "deleteUnavailable": "55555",
+      "downloadPdf": "55555",
+      "duplicate": "55555",
+      "load": "55555",
+      "loadConversionPreview": "55555",
+      "notFound": "55555",
+      "preview": "55555",
+      "requestChanges": "55555",
+      "resend": "55555",
+      "revise": "55555",
+      "saveAsTemplate": "55555",
+      "send": "55555",
+      "sendReminder": "55555",
+      "submitForApproval": "55555"
+    },
+    "labels": {
+      "phase": "55555 {{phase}} 55555",
+      "templateQuote": "55555"
+    },
+    "loading": "55555",
+    "notices": {
+      "approved": "55555",
+      "reminderSent": "55555",
+      "requestedChanges": "55555",
+      "resent": "55555",
+      "sent": "55555",
+      "submittedForApproval": "55555",
+      "templateAssigned": "55555",
+      "templateCleared": "55555"
+    },
+    "preview": {
+      "loading": "55555"
+    },
+    "table": {
+      "description": "55555"
+    }
+  },
+  "quoteLineItems": {
+    "title": "55555",
+    "actions": {
+      "addDiscount": "55555",
+      "collapse": "55555",
+      "expand": "55555",
+      "hideDiscount": "55555",
+      "remove": "55555"
+    },
+    "billingMethods": {
+      "fixed": "55555",
+      "hourly": "55555",
+      "perUnit": "55555",
+      "usage": "55555"
+    },
+    "columns": {
+      "actions": "55555",
+      "billing": "55555",
+      "flags": "55555",
+      "item": "55555",
+      "move": "55555",
+      "quantity": "55555",
+      "total": "55555",
+      "unitPrice": "55555"
+    },
+    "labels": {
+      "customItem": "55555",
+      "itemCountOne": "55555",
+      "itemCountOther": "55555 {{count}} 55555",
+      "noPriceInCurrency": "55555 {{currencyCode}} 55555",
+      "optional": "55555",
+      "phaseSection": "55555",
+      "recurring": "55555",
+      "service": "55555",
+      "setPrice": "55555",
+      "ungroupedItems": "55555"
+    },
+    "placeholders": {
+      "phaseSection": "55555",
+      "selectItem": "55555",
+      "selectService": "55555",
+      "servicePicker": "55555"
+    },
+    "discounts": {
+      "badge": "55555",
+      "description": {
+        "fixed": "55555",
+        "percentage": "55555 {{value}} 55555"
+      },
+      "fixed": "55555",
+      "fullQuoteSubtotal": "55555",
+      "fullQuote": "55555",
+      "item": "55555",
+      "percentage": "55555",
+      "service": "55555",
+      "targets": {
+        "fullQuote": "55555",
+        "namedItem": "55555 {{name}} 55555",
+        "namedService": "55555 {{name}} 55555",
+        "specificItem": "55555",
+        "specificService": "55555"
+      },
+      "types": {
+        "fixed": "55555",
+        "percentage": "55555"
+      }
+    },
+    "markup": {
+      "badge": "55555 {{sign}} 55555 {{value}} 55555",
+      "unavailable": "55555",
+      "unavailableTooltip": "55555 {{costCurrency}} 55555 {{quoteCurrency}} 55555"
+    },
+    "empty": "55555"
+  },
+  "quoteRecipients": {
+    "trigger": {
+      "add": "55555",
+      "noClient": "55555",
+      "noneAvailable": "55555"
+    },
+    "searchPlaceholder": "55555",
+    "empty": {
+      "noMatches": "55555",
+      "noneAvailable": "55555"
+    },
+    "kind": {
+      "contact": "55555",
+      "internal": "55555"
+    },
+    "removeAriaLabel": "55555 {{email}} 55555"
+  },
+  "quoteConversion": {
+    "title": "55555",
+    "description": "55555 {{title}} 55555",
+    "loading": "55555",
+    "mode": {
+      "contract": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "invoice": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "both": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "sections": {
+      "contractItems": "55555",
+      "conversionMode": "55555",
+      "excludedItems": "55555",
+      "excludedFromConversion": "55555",
+      "invoiceItems": "55555",
+      "itemMappingPreview": "55555",
+      "quoteTotal": "55555",
+      "statusAfterConversion": "55555",
+      "willBecomeContractLines": "55555",
+      "willBecomeInvoiceCharges": "55555"
+    },
+    "empty": {
+      "contractItems": "55555",
+      "invoiceItems": "55555"
+    },
+    "summary": {
+      "converted": "55555",
+      "discount": "55555",
+      "fixed": "55555",
+      "notConverted": "55555"
+    },
+    "partial": {
+      "alreadyConverted": "55555",
+      "contractCreated": "55555",
+      "invoiceCreated": "55555",
+      "remainingItems": "55555",
+      "title": "55555",
+      "description": "55555"
+    },
+    "actions": {
+      "contract": "55555",
+      "convertQuote": "55555",
+      "invoice": "55555",
+      "both": "55555",
+      "converting": "55555"
+    },
+    "errors": {
+      "convert": "55555",
+      "load": "55555",
+      "title": "55555"
+    }
+  },
+  "quoteApproval": {
+    "title": "55555",
+    "description": "55555",
+    "actions": {
+      "backToQuotes": "55555"
+    },
+    "settings": {
+      "label": "55555",
+      "enabled": "55555",
+      "disabled": "55555"
+    },
+    "filters": {
+      "status": "55555",
+      "approved": "55555",
+      "pendingApproval": "55555"
+    },
+    "empty": {
+      "approved": "55555",
+      "pendingApproval": "55555",
+      "title": "55555"
+    },
+    "errors": {
+      "load": "55555",
+      "settings": "55555"
+    },
+    "loading": "55555"
+  },
+  "quoteTemplates": {
+    "title": "55555",
+    "description": "55555",
+    "empty": {
+      "inline": "55555",
+      "title": "55555",
+      "description": "55555"
+    },
+    "actions": {
+      "createQuoteFromTemplate": "55555",
+      "delete": "55555",
+      "editTemplate": "55555",
+      "templateActions": "55555"
+    },
+    "dialogs": {
+      "delete": {
+        "message": "55555",
+        "title": "55555"
+      }
+    },
+    "errors": {
+      "delete": "55555",
+      "load": "55555"
+    },
+    "loading": "55555"
+  },
+  "quotePreview": {
+    "title": "55555",
+    "empty": {
+      "selectQuote": "55555",
+      "unavailable": "55555"
+    },
+    "placeholders": {
+      "selectLayout": "55555"
+    },
+    "actions": {
+      "openQuote": "55555"
+    },
+    "errors": {
+      "downloadPdf": "55555",
+      "load": "55555"
+    },
+    "loading": "55555"
+  },
+  "templateEditor": {
+    "actions": {
+      "backToLayouts": "55555",
+      "rerun": "55555",
+      "saveLayout": "55555"
+    },
+    "codeReadonly": "55555",
+    "defaults": {
+      "copyOf": "55555 {{name}} 55555",
+      "standardTemplate": "55555"
+    },
+    "title": "55555",
+    "description": "55555",
+    "errors": {
+      "exportAst": "55555 {{message}} 55555",
+      "load": "55555",
+      "nameRequired": "55555",
+      "notFound": "55555",
+      "previewPipeline": "55555",
+      "saveFailed": "55555",
+      "unknownAstExport": "55555"
+    },
+    "fields": {
+      "layoutDetails": "55555",
+      "templateName": "55555",
+      "version": "55555"
+    },
+    "footer": {
+      "created": "55555",
+      "lastUpdated": "55555"
+    },
+    "headings": {
+      "editLayout": "55555",
+      "newLayout": "55555"
+    },
+    "placeholders": {
+      "templateName": "55555"
+    },
+    "preview": {
+      "renderFailed": "55555",
+      "rendering": "55555",
+      "sampleScenario": "55555",
+      "selectScenario": "55555",
+      "selectScenarioPrompt": "55555",
+      "templateGenerationFailed": "55555"
+    },
+    "pipeline": {
+      "render": "55555",
+      "shape": "55555"
+    },
+    "tabs": {
+      "code": "55555",
+      "design": "55555",
+      "preview": "55555",
+      "transforms": "55555",
+      "visual": "55555"
+    }
+  },
+  "templatesPage": {
+    "title": "55555",
+    "description": "55555",
+    "actions": {
+      "openMenu": "55555"
+    },
+    "cards": {
+      "availableLayouts": "55555"
+    },
+    "dialogs": {
+      "deleteConfirm": "55555 {{name}} 55555"
+    },
+    "errors": {
+      "clone": "55555",
+      "delete": "55555",
+      "editCopy": "55555",
+      "load": "55555",
+      "setDefault": "55555"
+    },
+    "labels": {
+      "custom": "55555"
+    }
+  }
+}

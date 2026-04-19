@@ -1,0 +1,632 @@
+{
+  "common": {
+    "actions": {
+      "approve": "11111",
+      "back": "11111",
+      "cancel": "11111",
+      "close": "11111",
+      "clone": "11111",
+      "convert": "11111",
+      "delete": "11111",
+      "downloadPdf": "11111",
+      "duplicate": "11111",
+      "edit": "11111",
+      "editAsCopy": "11111",
+      "newLayout": "11111",
+      "newQuote": "11111",
+      "newTemplate": "11111",
+      "open": "11111",
+      "requestChanges": "11111",
+      "resend": "11111",
+      "revise": "11111",
+      "save": "11111",
+      "saveQuote": "11111",
+      "saveTemplate": "11111",
+      "send": "11111",
+      "sendReminder": "11111",
+      "sendToClient": "11111",
+      "setAsDefault": "11111",
+      "submitForApproval": "11111"
+    },
+    "badges": {
+      "standard": "11111"
+    },
+    "columns": {
+      "actions": "11111",
+      "amount": "11111",
+      "client": "11111",
+      "created": "11111",
+      "currency": "11111",
+      "date": "11111",
+      "default": "11111",
+      "items": "11111",
+      "name": "11111",
+      "quoteDate": "11111",
+      "quoteNumber": "11111",
+      "source": "11111",
+      "status": "11111",
+      "title": "11111",
+      "total": "11111",
+      "validUntil": "11111"
+    },
+    "labels": {
+      "client": "11111",
+      "contact": "11111",
+      "currency": "11111",
+      "description": "11111",
+      "discounts": "11111",
+      "lineItems": "11111",
+      "poNumber": "11111",
+      "quoteDate": "11111",
+      "quoteLayout": "11111",
+      "subtotal": "11111",
+      "tax": "11111",
+      "termsAndConditions": "11111",
+      "title": "11111",
+      "total": "11111",
+      "validUntil": "11111"
+    },
+    "states": {
+      "generating": "11111",
+      "loading": "11111",
+      "saving": "11111",
+      "sending": "11111"
+    }
+  },
+  "quotesTab": {
+    "title": "11111",
+    "actions": {
+      "quoteActions": "11111"
+    },
+    "tabs": {
+      "active": "11111 {{count}} 11111",
+      "approval": "11111",
+      "closed": "11111 {{count}} 11111",
+      "sent": "11111 {{count}} 11111"
+    },
+    "filters": {
+      "allClients": "11111",
+      "client": "11111"
+    },
+    "empty": {
+      "byCategory": "11111",
+      "title": "11111",
+      "description": "11111"
+    },
+    "dialogs": {
+      "delete": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "send": {
+        "additionalEmails": "11111",
+        "additionalEmailsPlaceholder": "11111",
+        "additionalRecipients": "11111",
+        "description": "11111",
+        "message": "11111",
+        "messageOptional": "11111",
+        "messagePlaceholder": "11111",
+        "title": "11111"
+      }
+    },
+    "errors": {
+      "delete": "11111",
+      "duplicate": "11111",
+      "load": "11111",
+      "send": "11111"
+    },
+    "loading": "11111",
+    "rowActions": {
+      "delete": "11111",
+      "downloadPdf": "11111",
+      "duplicate": "11111",
+      "open": "11111",
+      "resend": "11111",
+      "sendReminder": "11111",
+      "sendToClient": "11111"
+    }
+  },
+  "quoteForm": {
+    "actions": {
+      "cancelQuote": "11111",
+      "convertToBoth": "11111",
+      "convertToContract": "11111",
+      "convertToInvoice": "11111",
+      "createNewRevision": "11111",
+      "sendQuote": "11111"
+    },
+    "headings": {
+      "editQuote": "11111",
+      "editTemplate": "11111",
+      "newQuote": "11111",
+      "newTemplate": "11111",
+      "quote": "11111",
+      "quoteWithNumber": "11111 {{quoteNumber}} 11111",
+      "quoteWithNumberAndVersion": "11111 {{quoteNumber}} 11111 {{version}} 11111",
+      "templateQuoteFallback": "11111"
+    },
+    "fields": {
+      "additionalEmails": "11111",
+      "clientNotes": "11111",
+      "createFromTemplate": "11111",
+      "messageOptional": "11111",
+      "quoteLayoutHelp": "11111",
+      "recipients": "11111"
+    },
+    "placeholders": {
+      "additionalEmails": "11111",
+      "message": "11111",
+      "selectClient": "11111",
+      "selectContact": "11111",
+      "selectCurrency": "11111",
+      "startFromScratch": "11111",
+      "useDefaultLayout": "11111"
+    },
+    "alerts": {
+      "accepted": "11111",
+      "converted": "11111",
+      "convertedDescription": "11111",
+      "quote": "11111",
+      "rejected": "11111"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "11111",
+        "approveTitle": "11111",
+        "approveComment": "11111",
+        "approveCommentPlaceholder": "11111",
+        "changesDescription": "11111",
+        "changesTitle": "11111",
+        "changesComment": "11111",
+        "changesCommentPlaceholder": "11111",
+        "processing": "11111"
+      },
+      "conversion": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "send": {
+        "description": "11111",
+        "title": "11111",
+        "additionalEmails": "11111",
+        "message": "11111"
+      }
+    },
+    "errorActions": {
+      "approveQuote": "11111",
+      "cancelQuote": "11111",
+      "requestChanges": "11111",
+      "resendQuote": "11111",
+      "sendQuote": "11111",
+      "sendReminder": "11111",
+      "submitForApproval": "11111"
+    },
+    "errors": {
+      "convert": "11111",
+      "createRevision": "11111",
+      "downloadPdf": "11111",
+      "duplicate": "11111",
+      "load": "11111",
+      "loadConversionPreview": "11111",
+      "notFound": "11111",
+      "save": "11111",
+      "saveFailed": "11111",
+      "workflowAction": "11111 {{action}} 11111"
+    },
+    "loading": "11111",
+    "notices": {
+      "approved": "11111",
+      "cancelled": "11111",
+      "createdDraftContract": "11111 {{name}} 11111",
+      "createdDraftContractAndInvoice": "11111 {{contractName}} 11111 {{invoiceName}} 11111",
+      "createdDraftInvoice": "11111 {{name}} 11111",
+      "reminderSent": "11111",
+      "requestedChanges": "11111",
+      "resent": "11111",
+      "sent": "11111",
+      "submittedForApproval": "11111"
+    },
+    "readOnlyNotice": "11111",
+    "validation": {
+      "clientRequired": "11111",
+      "titleRequired": "11111"
+    }
+  },
+  "quoteDetail": {
+    "title": "11111",
+    "actions": {
+      "backToQuotes": "11111",
+      "openConvertedContract": "11111",
+      "openConvertedInvoice": "11111",
+      "preview": "11111",
+      "saveAsTemplate": "11111"
+    },
+    "sections": {
+      "activityLog": "11111",
+      "clientNotes": "11111",
+      "internalNotes": "11111",
+      "lineItems": "11111",
+      "quoteLayout": "11111",
+      "scopeOfWork": "11111",
+      "termsAndConditions": "11111",
+      "versionHistory": "11111"
+    },
+    "alerts": {
+      "clientConfigurationSubmitted": "11111",
+      "clientConfigurationSubmittedDescription": "11111",
+      "update": "11111"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "11111",
+        "changesDescription": "11111"
+      },
+      "send": {
+        "message": "11111"
+      }
+    },
+    "status": {
+      "accepted": "11111",
+      "acceptedBy": "11111",
+      "acceptedOn": "11111",
+      "reason": "11111",
+      "rejected": "11111",
+      "rejectedOn": "11111"
+    },
+    "empty": {
+      "activity": "11111",
+      "lineItems": "11111",
+      "revisions": "11111"
+    },
+    "clientSelections": {
+      "declinedOptionalItem": "11111",
+      "selectedOptionalItem": "11111"
+    },
+    "errors": {
+      "approve": "11111",
+      "assignTemplate": "11111",
+      "cancel": "11111",
+      "convert": "11111",
+      "delete": "11111",
+      "deleteUnavailable": "11111",
+      "downloadPdf": "11111",
+      "duplicate": "11111",
+      "load": "11111",
+      "loadConversionPreview": "11111",
+      "notFound": "11111",
+      "preview": "11111",
+      "requestChanges": "11111",
+      "resend": "11111",
+      "revise": "11111",
+      "saveAsTemplate": "11111",
+      "send": "11111",
+      "sendReminder": "11111",
+      "submitForApproval": "11111"
+    },
+    "labels": {
+      "phase": "11111 {{phase}} 11111",
+      "templateQuote": "11111"
+    },
+    "loading": "11111",
+    "notices": {
+      "approved": "11111",
+      "reminderSent": "11111",
+      "requestedChanges": "11111",
+      "resent": "11111",
+      "sent": "11111",
+      "submittedForApproval": "11111",
+      "templateAssigned": "11111",
+      "templateCleared": "11111"
+    },
+    "preview": {
+      "loading": "11111"
+    },
+    "table": {
+      "description": "11111"
+    }
+  },
+  "quoteLineItems": {
+    "title": "11111",
+    "actions": {
+      "addDiscount": "11111",
+      "collapse": "11111",
+      "expand": "11111",
+      "hideDiscount": "11111",
+      "remove": "11111"
+    },
+    "billingMethods": {
+      "fixed": "11111",
+      "hourly": "11111",
+      "perUnit": "11111",
+      "usage": "11111"
+    },
+    "columns": {
+      "actions": "11111",
+      "billing": "11111",
+      "flags": "11111",
+      "item": "11111",
+      "move": "11111",
+      "quantity": "11111",
+      "total": "11111",
+      "unitPrice": "11111"
+    },
+    "labels": {
+      "customItem": "11111",
+      "itemCountOne": "11111",
+      "itemCountOther": "11111 {{count}} 11111",
+      "noPriceInCurrency": "11111 {{currencyCode}} 11111",
+      "optional": "11111",
+      "phaseSection": "11111",
+      "recurring": "11111",
+      "service": "11111",
+      "setPrice": "11111",
+      "ungroupedItems": "11111"
+    },
+    "placeholders": {
+      "phaseSection": "11111",
+      "selectItem": "11111",
+      "selectService": "11111",
+      "servicePicker": "11111"
+    },
+    "discounts": {
+      "badge": "11111",
+      "description": {
+        "fixed": "11111",
+        "percentage": "11111 {{value}} 11111"
+      },
+      "fixed": "11111",
+      "fullQuoteSubtotal": "11111",
+      "fullQuote": "11111",
+      "item": "11111",
+      "percentage": "11111",
+      "service": "11111",
+      "targets": {
+        "fullQuote": "11111",
+        "namedItem": "11111 {{name}} 11111",
+        "namedService": "11111 {{name}} 11111",
+        "specificItem": "11111",
+        "specificService": "11111"
+      },
+      "types": {
+        "fixed": "11111",
+        "percentage": "11111"
+      }
+    },
+    "markup": {
+      "badge": "11111 {{sign}} 11111 {{value}} 11111",
+      "unavailable": "11111",
+      "unavailableTooltip": "11111 {{costCurrency}} 11111 {{quoteCurrency}} 11111"
+    },
+    "empty": "11111"
+  },
+  "quoteRecipients": {
+    "trigger": {
+      "add": "11111",
+      "noClient": "11111",
+      "noneAvailable": "11111"
+    },
+    "searchPlaceholder": "11111",
+    "empty": {
+      "noMatches": "11111",
+      "noneAvailable": "11111"
+    },
+    "kind": {
+      "contact": "11111",
+      "internal": "11111"
+    },
+    "removeAriaLabel": "11111 {{email}} 11111"
+  },
+  "quoteConversion": {
+    "title": "11111",
+    "description": "11111 {{title}} 11111",
+    "loading": "11111",
+    "mode": {
+      "contract": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "invoice": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "both": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "sections": {
+      "contractItems": "11111",
+      "conversionMode": "11111",
+      "excludedItems": "11111",
+      "excludedFromConversion": "11111",
+      "invoiceItems": "11111",
+      "itemMappingPreview": "11111",
+      "quoteTotal": "11111",
+      "statusAfterConversion": "11111",
+      "willBecomeContractLines": "11111",
+      "willBecomeInvoiceCharges": "11111"
+    },
+    "empty": {
+      "contractItems": "11111",
+      "invoiceItems": "11111"
+    },
+    "summary": {
+      "converted": "11111",
+      "discount": "11111",
+      "fixed": "11111",
+      "notConverted": "11111"
+    },
+    "partial": {
+      "alreadyConverted": "11111",
+      "contractCreated": "11111",
+      "invoiceCreated": "11111",
+      "remainingItems": "11111",
+      "title": "11111",
+      "description": "11111"
+    },
+    "actions": {
+      "contract": "11111",
+      "convertQuote": "11111",
+      "invoice": "11111",
+      "both": "11111",
+      "converting": "11111"
+    },
+    "errors": {
+      "convert": "11111",
+      "load": "11111",
+      "title": "11111"
+    }
+  },
+  "quoteApproval": {
+    "title": "11111",
+    "description": "11111",
+    "actions": {
+      "backToQuotes": "11111"
+    },
+    "settings": {
+      "label": "11111",
+      "enabled": "11111",
+      "disabled": "11111"
+    },
+    "filters": {
+      "status": "11111",
+      "approved": "11111",
+      "pendingApproval": "11111"
+    },
+    "empty": {
+      "approved": "11111",
+      "pendingApproval": "11111",
+      "title": "11111"
+    },
+    "errors": {
+      "load": "11111",
+      "settings": "11111"
+    },
+    "loading": "11111"
+  },
+  "quoteTemplates": {
+    "title": "11111",
+    "description": "11111",
+    "empty": {
+      "inline": "11111",
+      "title": "11111",
+      "description": "11111"
+    },
+    "actions": {
+      "createQuoteFromTemplate": "11111",
+      "delete": "11111",
+      "editTemplate": "11111",
+      "templateActions": "11111"
+    },
+    "dialogs": {
+      "delete": {
+        "message": "11111",
+        "title": "11111"
+      }
+    },
+    "errors": {
+      "delete": "11111",
+      "load": "11111"
+    },
+    "loading": "11111"
+  },
+  "quotePreview": {
+    "title": "11111",
+    "empty": {
+      "selectQuote": "11111",
+      "unavailable": "11111"
+    },
+    "placeholders": {
+      "selectLayout": "11111"
+    },
+    "actions": {
+      "openQuote": "11111"
+    },
+    "errors": {
+      "downloadPdf": "11111",
+      "load": "11111"
+    },
+    "loading": "11111"
+  },
+  "templateEditor": {
+    "actions": {
+      "backToLayouts": "11111",
+      "rerun": "11111",
+      "saveLayout": "11111"
+    },
+    "codeReadonly": "11111",
+    "defaults": {
+      "copyOf": "11111 {{name}} 11111",
+      "standardTemplate": "11111"
+    },
+    "title": "11111",
+    "description": "11111",
+    "errors": {
+      "exportAst": "11111 {{message}} 11111",
+      "load": "11111",
+      "nameRequired": "11111",
+      "notFound": "11111",
+      "previewPipeline": "11111",
+      "saveFailed": "11111",
+      "unknownAstExport": "11111"
+    },
+    "fields": {
+      "layoutDetails": "11111",
+      "templateName": "11111",
+      "version": "11111"
+    },
+    "footer": {
+      "created": "11111",
+      "lastUpdated": "11111"
+    },
+    "headings": {
+      "editLayout": "11111",
+      "newLayout": "11111"
+    },
+    "placeholders": {
+      "templateName": "11111"
+    },
+    "preview": {
+      "renderFailed": "11111",
+      "rendering": "11111",
+      "sampleScenario": "11111",
+      "selectScenario": "11111",
+      "selectScenarioPrompt": "11111",
+      "templateGenerationFailed": "11111"
+    },
+    "pipeline": {
+      "render": "11111",
+      "shape": "11111"
+    },
+    "tabs": {
+      "code": "11111",
+      "design": "11111",
+      "preview": "11111",
+      "transforms": "11111",
+      "visual": "11111"
+    }
+  },
+  "templatesPage": {
+    "title": "11111",
+    "description": "11111",
+    "actions": {
+      "openMenu": "11111"
+    },
+    "cards": {
+      "availableLayouts": "11111"
+    },
+    "dialogs": {
+      "deleteConfirm": "11111 {{name}} 11111"
+    },
+    "errors": {
+      "clone": "11111",
+      "delete": "11111",
+      "editCopy": "11111",
+      "load": "11111",
+      "setDefault": "11111"
+    },
+    "labels": {
+      "custom": "11111"
+    }
+  }
+}

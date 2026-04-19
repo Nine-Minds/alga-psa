@@ -231,6 +231,10 @@ Existing F001-F022 / T001-T027 remain valid. Proceed with the corrected frequenc
   - `node - <<'NODE' ... NODE` parity audit confirmed all six locale files now match `en/msp/quotes.json` at `420` leaf keys each with `missing: 0`, `extra: 0`, and `badVars: 0`.
   - `rg -n "citation|cotation|citaat|cytat|Zitat|citazione|Marcado|__ALGA" server/public/locales/{de,es,fr,it,nl,pl}/msp/quotes.json` -> 0 matches after the domain-term cleanup and interpolation-token sweep.
 - (2026-04-19) Completed `F015`: audited [server/public/locales/it/msp/quotes.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/quotes.json) for the common missing-accent regressions (`perche`, `piu`, `puo`, `cosi`, `gia`, weekday forms, etc.) and found no exact-word matches. Accent presence spot-counts confirmed the file already contains the expected accented vowels (`à: 15`, `è: 12`, `é: 1`, `ò: 2`), so the audit passed without further accent corrections.
+- (2026-04-19) Completed `F016`: regenerated pseudo-locales via `node scripts/generate-pseudo-locales.cjs`, which rebuilt `68` pseudo-locale files from `34` English sources. For this batch the only newly-created artifacts were [server/public/locales/xx/msp/quotes.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/quotes.json) and [server/public/locales/yy/msp/quotes.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/yy/msp/quotes.json). Spot-check validation:
+  - `quotesTab.title` -> `11111` in `xx`, `55555` in `yy`
+  - `quoteRecipients.removeAriaLabel` preserved `{{email}}` as `11111 {{email}} 11111` / `55555 {{email}} 55555`
+  - `quoteLineItems.markup.badge` preserved both `{{sign}}` and `{{value}}` in the expected pseudo-locale fill pattern.
 
 ## Commands / Runbook
 

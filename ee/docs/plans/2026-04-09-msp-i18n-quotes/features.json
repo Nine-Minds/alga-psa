@@ -22,7 +22,7 @@
 
   {"id": "F014", "description": "Generate msp/quotes translations for 6 non-English locales (de, es, fr, it, nl, pl)", "implemented": true},
   {"id": "F015", "description": "Italian accent audit on it/msp/quotes.json -- verify correct usage of accented characters (a with grave, e with grave/acute, i with grave, o with grave, u with grave)", "implemented": true},
-  {"id": "F016", "description": "Generate pseudo-locales (xx, yy) for msp/quotes namespace using generate-pseudo-locales.cjs", "implemented": false},
+  {"id": "F016", "description": "Generate pseudo-locales (xx, yy) for msp/quotes namespace using generate-pseudo-locales.cjs", "implemented": true},
   {"id": "F017", "description": "Run validate-translations.cjs -- all 9 locales pass with 0 errors for msp/quotes (key parity, interpolation variable parity, no empty values)", "implemented": false},
 
   {"id": "F018", "description": "Update ROUTE_NAMESPACES in packages/core/src/lib/i18n/config.ts: add '/msp/quote-approvals' and '/msp/quote-document-templates' routes loading 'msp/quotes', and add 'msp/quotes' to the existing '/msp/billing' entry", "implemented": false},
