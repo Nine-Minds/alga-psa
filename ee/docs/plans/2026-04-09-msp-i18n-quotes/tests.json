@@ -177,7 +177,7 @@
   {
     "id": "T029",
     "description": "The shared billing-frequency enum contract includes `weekly`: `packages/billing/src/constants/billing.ts` exposes it in `BILLING_FREQUENCY_VALUES` / `BILLING_FREQUENCY_LABEL_DEFAULTS`, and all 9 `features/billing.json` locale files contain `enums.billingFrequency.weekly` so weekly quote recurrence can be translated without regressing the existing option list.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   }
 ]

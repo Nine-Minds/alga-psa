@@ -323,4 +323,19 @@ describe('Quotes i18n wiring contract', () => {
       expect(source).not.toMatch(pattern);
     }
   });
+
+  it('T029: shared billing-frequency enums expose weekly across constants and all locale files', () => {
+    const billingConstants = read('../../src/constants/billing.ts');
+    const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'xx', 'yy'];
+
+    expect(billingConstants).toContain("export const BILLING_FREQUENCY_VALUES = ['weekly', 'monthly', 'quarterly', 'annually'] as const;");
+    expect(billingConstants).toContain("weekly: 'Weekly'");
+
+    for (const locale of locales) {
+      const billing = readJson<Record<string, unknown>>(
+        `../../../../server/public/locales/${locale}/features/billing.json`,
+      );
+      expect(getLeaf(billing, 'enums.billingFrequency.weekly')).toBeDefined();
+    }
+  });
 });
