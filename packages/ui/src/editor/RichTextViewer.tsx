@@ -584,6 +584,7 @@ function RichTextViewerInternal({
           key={shouldRemount ? contentKey : 'stable'}
           editor={editor}
           editable={false}
+          formattingToolbar={false}
           theme={blockNoteTheme}
           className="w-full min-w-0"
           style={{
