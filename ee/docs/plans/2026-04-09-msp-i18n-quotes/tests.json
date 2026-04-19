@@ -93,7 +93,7 @@
   {
     "id": "T015",
     "description": "QuoteApprovalDashboard.tsx compiles with useTranslation -- all headings, settings, filter labels, column headers, and empty states use t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {

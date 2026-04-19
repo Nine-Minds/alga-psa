@@ -492,6 +492,47 @@ describe('Quotes i18n wiring contract', () => {
     }
   });
 
+  it('T015: QuoteApprovalDashboard uses msp/quotes keys for page labels, filters, loading/empty states, and table columns', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuoteApprovalDashboard.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/quotes.json',
+    );
+
+    expect(source).toContain("import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expect(source).toContain("const { t } = useTranslation('msp/quotes');");
+    expect(source).toContain('const { formatCurrency, formatDate } = useFormatters();');
+
+    const keyChecks = [
+      'quoteApproval.title',
+      'quoteApproval.description',
+      'quoteApproval.settings.label',
+      'quoteApproval.settings.enabled',
+      'quoteApproval.settings.disabled',
+      'quoteApproval.filters.status',
+      'quoteApproval.filters.pendingApproval',
+      'quoteApproval.filters.approved',
+      'quoteApproval.actions.backToQuotes',
+      'quoteApproval.loading',
+      'quoteApproval.empty.title',
+      'quoteApproval.empty.pendingApproval',
+      'quoteApproval.empty.approved',
+      'quoteApproval.errors.load',
+      'quoteApproval.errors.settings',
+      'common.columns.quoteNumber',
+      'common.columns.client',
+      'common.columns.title',
+      'common.columns.amount',
+      'common.columns.status',
+      'common.columns.quoteDate',
+      'common.columns.validUntil',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
+
   it('T029: shared billing-frequency enums expose weekly across constants and all locale files', () => {
     const billingConstants = read('../../src/constants/billing.ts');
     const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'xx', 'yy'];
