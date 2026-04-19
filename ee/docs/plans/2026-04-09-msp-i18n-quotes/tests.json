@@ -170,7 +170,7 @@
   {
     "id": "T026",
     "description": "QuoteSendRecipientsField.tsx compiles with useTranslation('msp/quotes') -- trigger labels, search placeholder, empty states, kind badges, and Remove {{email}} aria-label all use t(); no remaining hardcoded English strings in JSX; quoteRecipients.* key group present in all 9 locale files",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
 
