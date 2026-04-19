@@ -27,7 +27,7 @@
 
   {"id": "F018", "description": "Update ROUTE_NAMESPACES in packages/core/src/lib/i18n/config.ts: add '/msp/quote-approvals' and '/msp/quote-document-templates' routes loading 'msp/quotes', and add 'msp/quotes' to the existing '/msp/billing' entry", "implemented": true},
 
-  {"id": "F019", "description": "npm run build succeeds with no TypeScript errors after all wiring is complete", "implemented": false},
+  {"id": "F019", "description": "npm run build succeeds with no TypeScript errors after all wiring is complete", "implemented": true},
 
   {"id": "F020", "description": "Wire useTranslation('msp/quotes') for the product markup UI added to QuoteLineItemsEditor.tsx post-planning (commits 6a40d09fa, 3afa5763f) -- markup badge ('+{{value}}% markup' / '{{value}}% markup' with sign handling), 'Markup unavailable' label, and the currency-mismatch tooltip with {{costCurrency}} and {{quoteCurrency}} interpolation. Adds the quoteLineItems.markup.* key group to en/msp/quotes.json.", "implemented": false},
   {"id": "F021", "description": "Wire useTranslation('msp/quotes') in QuoteSendRecipientsField.tsx (new 403-LOC component added post-planning in commits 3afa5763f and ead79deec) -- trigger labels (Select a client first / No users or contacts available / Add internal user or client contact…), search placeholder (Search by name or email…), empty states (No recipients available / No matches), kind badges (Internal/Contact), and Remove {{email}} aria-label. Adds the quoteRecipients.* key group to en/msp/quotes.json.", "implemented": false},

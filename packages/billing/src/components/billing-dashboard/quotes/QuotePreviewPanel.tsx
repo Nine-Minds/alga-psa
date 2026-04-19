@@ -150,9 +150,9 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
           </h3>
           <CustomSelect
             id="quote-preview-layout-select"
-            options={templates.map((t) => ({
-              value: t.template_id,
-              label: `${t.name}${t.isStandard ? ` (${t('common.badges.standard', { defaultValue: 'Standard' })})` : ''}`,
+            options={templates.map((template) => ({
+              value: template.template_id,
+              label: `${template.name}${template.isStandard ? ` (${t('common.badges.standard', { defaultValue: 'Standard' })})` : ''}`,
             }))}
             value={effectiveTemplateId}
             onValueChange={(value) => void handleTemplateChange(value)}

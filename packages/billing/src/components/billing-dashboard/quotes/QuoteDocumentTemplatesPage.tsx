@@ -65,7 +65,7 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
     router.push(`/msp/billing?${params.toString()}`);
   }, [router]);
 
-  const handleCloneTemplate = async (template: IQuoteDocumentTemplate) => {
+  const handleCloneTemplate = useCallback(async (template: IQuoteDocumentTemplate) => {
     try {
       await saveQuoteDocumentTemplate({
         ...template,

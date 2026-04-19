@@ -927,11 +927,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.quoteDate', { defaultValue: 'Quote Date' })}</div>
-            <div className="mt-1 font-medium">{formatDate(quote.quote_date)}</div>
+            <div className="mt-1 font-medium">{quote.quote_date ? formatDate(quote.quote_date) : '—'}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.validUntil', { defaultValue: 'Valid Until' })}</div>
-            <div className="mt-1 font-medium">{formatDate(quote.valid_until)}</div>
+            <div className="mt-1 font-medium">{quote.valid_until ? formatDate(quote.valid_until) : '—'}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.poNumber', { defaultValue: 'PO Number' })}</div>
@@ -1144,7 +1144,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                 <div key={activity.activity_id} className="rounded-md border border-border p-3">
                   <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                     <div className="font-medium text-foreground">{activity.description}</div>
-                    <div className="text-xs text-muted-foreground">{formatDate(activity.created_at)}</div>
+                    <div className="text-xs text-muted-foreground">{activity.created_at ? formatDate(activity.created_at) : '—'}</div>
                   </div>
                   <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
                     {activity.activity_type.replace(/_/g, ' ')}
