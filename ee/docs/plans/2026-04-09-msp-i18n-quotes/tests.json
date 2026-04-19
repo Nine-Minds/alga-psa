@@ -151,7 +151,7 @@
   {
     "id": "T023",
     "description": "ROUTE_NAMESPACES includes '/msp/quote-approvals' and '/msp/quote-document-templates' loading 'msp/quotes', and '/msp/billing' entry includes 'msp/quotes'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {

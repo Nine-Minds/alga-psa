@@ -14,6 +14,18 @@ function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
 }
 
+function expectNamedImport(source: string, modulePath: string, names: string[]): void {
+  const pattern = new RegExp(
+    `import\\s+\\{[^}]*\\}\\s+from '${modulePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}';`,
+  );
+  const match = source.match(pattern);
+  expect(match, `expected import from ${modulePath}`).toBeTruthy();
+  const importLine = match?.[0] ?? '';
+  for (const name of names) {
+    expect(importLine).toContain(name);
+  }
+}
+
 function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
   return dottedPath.split('.').reduce<unknown>((value, key) => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -51,7 +63,7 @@ describe('Quotes i18n wiring contract', () => {
       '../../../../server/public/locales/en/msp/quotes.json',
     );
 
-    expect(source).toContain("import { useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useTranslation']);
     expect(source).toContain("const { t } = useTranslation('msp/quotes');");
 
     const keyChecks = [
@@ -124,7 +136,7 @@ describe('Quotes i18n wiring contract', () => {
       '../../../../server/public/locales/en/msp/quotes.json',
     );
 
-    expect(source).toContain("import { useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useTranslation']);
     expect(source).toContain("const { t } = useTranslation('msp/quotes');");
 
     const keyChecks = [
@@ -201,7 +213,7 @@ describe('Quotes i18n wiring contract', () => {
       '../../../../server/public/locales/en/msp/quotes.json',
     );
 
-    expect(source).toContain("import { useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useTranslation']);
     expect(source).toContain("const { t } = useTranslation('msp/quotes');");
 
     const keyChecks = [
@@ -264,7 +276,7 @@ describe('Quotes i18n wiring contract', () => {
       '../../../../server/public/locales/en/msp/quotes.json',
     );
 
-    expect(source).toContain("import { useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useTranslation']);
     expect(source).toContain("const { t } = useTranslation('msp/quotes');");
 
     const keyChecks = [
@@ -330,9 +342,12 @@ describe('Quotes i18n wiring contract', () => {
       '../../../../server/public/locales/en/msp/quotes.json',
     );
 
-    expect(source).toContain("import { useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useTranslation']);
     expect(source).toContain("const { t } = useTranslation('msp/quotes');");
-    expect(source).toContain("import { useBillingFrequencyOptions, useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';");
+    expectNamedImport(source, '@alga-psa/billing/hooks/useBillingEnumOptions', [
+      'useBillingFrequencyOptions',
+      'useFormatBillingFrequency',
+    ]);
     expect(source).toContain('const billingFrequencyOptions = useBillingFrequencyOptions();');
     expect(source).toContain('const formatBillingFrequency = useFormatBillingFrequency();');
 
@@ -410,7 +425,7 @@ describe('Quotes i18n wiring contract', () => {
       '../../../../server/public/locales/en/msp/quotes.json',
     );
 
-    expect(source).toContain("import { useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useTranslation']);
     expect(source).toContain("const { t } = useTranslation('msp/quotes');");
 
     const keyChecks = [
@@ -450,7 +465,7 @@ describe('Quotes i18n wiring contract', () => {
       '../../../../server/public/locales/en/msp/quotes.json',
     );
 
-    expect(source).toContain("import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useFormatters', 'useTranslation']);
     expect(source).toContain("const { t } = useTranslation('msp/quotes');");
 
     const keyChecks = [
@@ -498,7 +513,7 @@ describe('Quotes i18n wiring contract', () => {
       '../../../../server/public/locales/en/msp/quotes.json',
     );
 
-    expect(source).toContain("import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useFormatters', 'useTranslation']);
     expect(source).toContain("const { t } = useTranslation('msp/quotes');");
     expect(source).toContain('const { formatCurrency, formatDate } = useFormatters();');
 
@@ -539,7 +554,7 @@ describe('Quotes i18n wiring contract', () => {
       '../../../../server/public/locales/en/msp/quotes.json',
     );
 
-    expect(source).toContain("import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useFormatters', 'useTranslation']);
     expect(source).toContain("const { t } = useTranslation('msp/quotes');");
     expect(source).toContain('const { formatCurrency, formatDate } = useFormatters();');
 
@@ -578,7 +593,7 @@ describe('Quotes i18n wiring contract', () => {
       '../../../../server/public/locales/en/msp/quotes.json',
     );
 
-    expect(source).toContain("import { useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useTranslation']);
     expect(source).toContain("const { t } = useTranslation('msp/quotes');");
 
     const keyChecks = [
@@ -628,6 +643,99 @@ describe('Quotes i18n wiring contract', () => {
       expect(source).not.toContain('.toLocaleDateString(');
       expect(source).not.toContain('.toLocaleString(');
     }
+  });
+
+  it('T023: route namespaces load msp/quotes on billing and standalone quote routes', () => {
+    const source = read('../../../../packages/core/src/lib/i18n/config.ts');
+
+    expect(source).toContain("'/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes'");
+    expect(source).toContain("'/msp/quote-approvals': ['common', 'msp/core', 'features/billing', 'msp/quotes']");
+    expect(source).toContain("'/msp/quote-document-templates': ['common', 'msp/core', 'features/billing', 'msp/quotes']");
+  });
+
+  it('T025: QuoteLineItemsEditor markup chrome uses translation keys and locale files expose quoteLineItems.markup', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuoteLineItemsEditor.tsx');
+    const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'xx', 'yy'];
+
+    expect(source).toContain("t('quoteLineItems.markup.unavailableTooltip'");
+    expect(source).toContain("t('quoteLineItems.markup.unavailable'");
+    expect(source).toContain("t('quoteLineItems.markup.badge'");
+    expect(source).not.toContain("`${sign}${markup.toFixed(1)}% markup`");
+    expect(source).not.toContain("content={`Markup can't be calculated because cost is tracked in ${item.cost_currency} and this quote is in ${currencyCode}.`}");
+
+    for (const locale of locales) {
+      const messages = readJson<Record<string, unknown>>(
+        `../../../../server/public/locales/${locale}/msp/quotes.json`,
+      );
+      expect(getLeaf(messages, 'quoteLineItems.markup.badge')).toBeDefined();
+      expect(getLeaf(messages, 'quoteLineItems.markup.unavailable')).toBeDefined();
+      expect(getLeaf(messages, 'quoteLineItems.markup.unavailableTooltip')).toBeDefined();
+    }
+  });
+
+  it('T026: QuoteSendRecipientsField uses quoteRecipients keys without raw combobox literals in rendered JSX paths', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuoteSendRecipientsField.tsx');
+    const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'xx', 'yy'];
+
+    expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useTranslation']);
+    expect(source).toContain("const { t } = useTranslation('msp/quotes');");
+    expect(source).toContain("t('quoteRecipients.trigger.noClient'");
+    expect(source).toContain("t('quoteRecipients.trigger.noneAvailable'");
+    expect(source).toContain("t('quoteRecipients.trigger.add'");
+    expect(source).toContain("t('quoteRecipients.searchPlaceholder'");
+    expect(source).toContain("t('quoteRecipients.empty.noneAvailable'");
+    expect(source).toContain("t('quoteRecipients.empty.noMatches'");
+    expect(source).toContain("t('quoteRecipients.kind.internal'");
+    expect(source).toContain("t('quoteRecipients.kind.contact'");
+    expect(source).toContain("t('quoteRecipients.removeAriaLabel'");
+    expect(source).not.toContain("placeholder=\"Search by name or email…\"");
+    expect(source).not.toContain("{rows.length === 0 ? 'No recipients available' : 'No matches'}");
+    expect(source).not.toContain("{row.kind === 'internal' ? 'Internal' : 'Contact'}");
+    expect(source).not.toContain('aria-label={`Remove ${r.email}`}');
+
+    for (const locale of locales) {
+      const messages = readJson<Record<string, unknown>>(
+        `../../../../server/public/locales/${locale}/msp/quotes.json`,
+      );
+      expect(getLeaf(messages, 'quoteRecipients.trigger.noClient')).toBeDefined();
+      expect(getLeaf(messages, 'quoteRecipients.trigger.noneAvailable')).toBeDefined();
+      expect(getLeaf(messages, 'quoteRecipients.trigger.add')).toBeDefined();
+      expect(getLeaf(messages, 'quoteRecipients.searchPlaceholder')).toBeDefined();
+      expect(getLeaf(messages, 'quoteRecipients.empty.noneAvailable')).toBeDefined();
+      expect(getLeaf(messages, 'quoteRecipients.empty.noMatches')).toBeDefined();
+      expect(getLeaf(messages, 'quoteRecipients.kind.internal')).toBeDefined();
+      expect(getLeaf(messages, 'quoteRecipients.kind.contact')).toBeDefined();
+      expect(getLeaf(messages, 'quoteRecipients.removeAriaLabel')).toBeDefined();
+    }
+  });
+
+  it('T027: msp/core locales expose quote sidebar keys and pseudo/de values are localized', () => {
+    const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'xx', 'yy'];
+
+    for (const locale of locales) {
+      const core = readJson<Record<string, unknown>>(
+        `../../../../server/public/locales/${locale}/msp/core.json`,
+      );
+      expect(getLeaf(core, 'nav.billing.sections.quotes')).toBeDefined();
+      expect(getLeaf(core, 'nav.billing.quotes')).toBeDefined();
+      expect(getLeaf(core, 'nav.billing.quoteBusinessTemplates')).toBeDefined();
+      expect(getLeaf(core, 'nav.billing.quoteLayouts')).toBeDefined();
+    }
+
+    const de = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/de/msp/core.json',
+    );
+    const xx = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/xx/msp/core.json',
+    );
+
+    expect(getLeaf(de, 'nav.billing.sections.quotes')).toBe('Angebote');
+    expect(getLeaf(de, 'nav.billing.quoteBusinessTemplates')).toBe('Angebotsvorlagen');
+    expect(getLeaf(de, 'nav.billing.quoteLayouts')).toBe('Angebotslayouts');
+    expect(getLeaf(xx, 'nav.billing.sections.quotes')).toBe('11111');
+    expect(getLeaf(xx, 'nav.billing.quotes')).toBe('11111');
+    expect(getLeaf(xx, 'nav.billing.quoteBusinessTemplates')).toBe('11111');
+    expect(getLeaf(xx, 'nav.billing.quoteLayouts')).toBe('11111');
   });
 
   it('T030: follow-on formatter cleanup removes remaining locale-pinned quote form and draft-money formatting', () => {
