@@ -142,7 +142,7 @@
   {
     "id": "F029",
     "description": "Wire useTranslation in PurchaseOrderSummaryBanner.tsx -- field labels (PO Number, PO Authorized, PO Consumed (Finalized), PO Remaining)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F030",
