@@ -322,7 +322,7 @@
   {
     "id": "T040",
     "description": "Unit: InvoicingHub renders translated section heading (Invoicing) and tab labels (Generate, Drafts, Finalized) via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
