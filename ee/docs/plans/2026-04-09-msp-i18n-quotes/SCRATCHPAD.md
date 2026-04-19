@@ -162,4 +162,10 @@ Existing F001-F022 / T001-T027 remain valid. Proceed with the corrected frequenc
 
 ## Progress Log
 
-_(empty -- implementation not yet started)_
+- (2026-04-19) Completed `F001`: created [server/public/locales/en/msp/quotes.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/quotes.json) with the planned component-scoped roots (`common`, `quotesTab`, `quoteForm`, `quoteDetail`, `quoteLineItems`, `quoteRecipients`, `quoteConversion`, `quoteApproval`, `quoteTemplates`, `quotePreview`, `templateEditor`, `templatesPage`) and seeded the first shared/base English keys from the PRD + component inventory. Expect follow-on wiring passes (`F002`-`F021`) to expand individual leaf keys as each component is converted.
+
+## Commands / Runbook
+
+- `git status --short`
+- `rg -n '>[[:space:]]*[A-Z][^<{]*<' packages/billing/src/components/billing-dashboard/quotes/*.tsx`
+- `rg -n "'[^']*[A-Za-z][^']*'|\"[^\"]*[A-Za-z][^\"]*\"" packages/billing/src/components/billing-dashboard/quotes/*.tsx`
