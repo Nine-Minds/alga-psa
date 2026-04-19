@@ -170,7 +170,7 @@
   {
     "id": "T021",
     "description": "Unit: BillingCycles renders translated heading (Billing Cycles), tooltip text, column headers (Client, Contract, Current Billing Cycle, Anchor, Actions), and View Client Billing link text via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
