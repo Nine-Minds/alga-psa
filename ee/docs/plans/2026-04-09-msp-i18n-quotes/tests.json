@@ -41,7 +41,7 @@
   {
     "id": "T007",
     "description": "QuotesTab.tsx compiles with useTranslation -- all sub-tab labels, column headers, action menu items, dialogs, and empty states use t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {

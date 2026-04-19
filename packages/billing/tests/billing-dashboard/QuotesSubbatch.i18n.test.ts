@@ -194,4 +194,38 @@ describe('Quotes i18n wiring contract', () => {
       expect(source).not.toMatch(pattern);
     }
   });
+
+  it('T007: QuotesTab uses msp/quotes translation keys for tabs, table chrome, row actions, and dialogs', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuotesTab.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/quotes.json',
+    );
+
+    expect(source).toContain("import { useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expect(source).toContain("const { t } = useTranslation('msp/quotes');");
+
+    const keyChecks = [
+      'quotesTab.title',
+      'quotesTab.tabs.active',
+      'quotesTab.tabs.approval',
+      'quotesTab.actions.quoteActions',
+      'quotesTab.filters.client',
+      'quotesTab.filters.allClients',
+      'quotesTab.empty.byCategory',
+      'quotesTab.dialogs.delete.title',
+      'quotesTab.dialogs.send.title',
+      'quotesTab.dialogs.send.additionalRecipients',
+      'quotesTab.dialogs.send.messagePlaceholder',
+      'quotesTab.errors.load',
+      'quotesTab.loading',
+      'common.columns.quoteNumber',
+      'common.columns.actions',
+      'common.actions.newQuote',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });
