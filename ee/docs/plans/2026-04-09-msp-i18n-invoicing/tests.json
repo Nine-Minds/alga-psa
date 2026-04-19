@@ -226,7 +226,7 @@
   {
     "id": "T028",
     "description": "Unit: InvoiceTemplates action menu items (Edit, Edit as Copy, Clone, Set as Default, Delete) are translated; error messages for clone/set-default/fetch failures are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
