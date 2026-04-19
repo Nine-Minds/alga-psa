@@ -86,7 +86,7 @@
   {
     "id": "T014",
     "description": "QuoteConversionDialog.tsx compiles with useTranslation -- all dialog text, mode labels/descriptions, item category headings, summary labels use t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
 

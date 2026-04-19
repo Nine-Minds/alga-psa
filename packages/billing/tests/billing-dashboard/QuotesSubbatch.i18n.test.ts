@@ -444,6 +444,54 @@ describe('Quotes i18n wiring contract', () => {
     }
   });
 
+  it('T014: QuoteConversionDialog uses msp/quotes keys for dialog copy, mode descriptions, and summary labels', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuoteConversionDialog.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/quotes.json',
+    );
+
+    expect(source).toContain("import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expect(source).toContain("const { t } = useTranslation('msp/quotes');");
+
+    const keyChecks = [
+      'quoteConversion.title',
+      'quoteConversion.description',
+      'quoteConversion.loading',
+      'quoteConversion.errors.title',
+      'quoteConversion.errors.load',
+      'quoteConversion.errors.convert',
+      'quoteConversion.partial.title',
+      'quoteConversion.partial.alreadyConverted',
+      'quoteConversion.partial.contractCreated',
+      'quoteConversion.partial.invoiceCreated',
+      'quoteConversion.partial.remainingItems',
+      'quoteConversion.mode.contract.label',
+      'quoteConversion.mode.contract.description',
+      'quoteConversion.mode.invoice.label',
+      'quoteConversion.mode.invoice.description',
+      'quoteConversion.mode.both.label',
+      'quoteConversion.mode.both.description',
+      'quoteConversion.sections.conversionMode',
+      'quoteConversion.sections.itemMappingPreview',
+      'quoteConversion.sections.contractItems',
+      'quoteConversion.sections.invoiceItems',
+      'quoteConversion.sections.excludedItems',
+      'quoteConversion.sections.quoteTotal',
+      'quoteConversion.sections.statusAfterConversion',
+      'quoteConversion.summary.fixed',
+      'quoteConversion.summary.discount',
+      'quoteConversion.summary.converted',
+      'quoteConversion.actions.converting',
+      'quoteConversion.actions.convertQuote',
+      'common.actions.cancel',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
+
   it('T029: shared billing-frequency enums expose weekly across constants and all locale files', () => {
     const billingConstants = read('../../src/constants/billing.ts');
     const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'xx', 'yy'];
