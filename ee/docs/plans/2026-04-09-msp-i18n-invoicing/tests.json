@@ -242,7 +242,7 @@
   {
     "id": "T030",
     "description": "Unit: ExternalTaxBatchImportDashboard progress labels, results summary (N successful, N failed), empty state (All invoices are up to date), and help text are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
