@@ -529,7 +529,7 @@
       "starts": "Avvia {{date}}",
       "day": "Giorno {{day}}",
       "monthDay": "{{day}} {{month}}",
-      "dash": null
+      "dash": "—"
     },
     "cycles": {
       "weekly": "Settimanale",

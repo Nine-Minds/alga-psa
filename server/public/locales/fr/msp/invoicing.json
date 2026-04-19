@@ -529,7 +529,7 @@
       "starts": "Démarre {{date}}",
       "day": "Jour {{day}}",
       "monthDay": "{{month}} {{day}}",
-      "dash": null
+      "dash": "—"
     },
     "cycles": {
       "weekly": "Hebdomadaire",

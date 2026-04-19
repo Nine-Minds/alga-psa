@@ -529,7 +529,7 @@
       "starts": "Inicia {{date}}",
       "day": "Dia {{day}}",
       "monthDay": "{{month}} {{day}}",
-      "dash": "-"
+      "dash": "—"
     },
     "cycles": {
       "weekly": "Semanalmente",

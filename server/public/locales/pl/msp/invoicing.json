@@ -529,7 +529,7 @@
       "starts": "Uruchamia {{date}}",
       "day": "Dzień {{day}}",
       "monthDay": "{{month}} {{day}}",
-      "dash": null
+      "dash": "—"
     },
     "cycles": {
       "weekly": "Tygodnik",
