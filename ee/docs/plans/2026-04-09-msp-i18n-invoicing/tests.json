@@ -26,7 +26,7 @@
   {
     "id": "T003",
     "description": "Unit: AutomaticInvoices uses t() for ready-to-invoice heading, column headers (Group, Service Period, Invoice Window, Included), and filter placeholder -- no hardcoded English in table chrome",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]

@@ -338,3 +338,5 @@ be translated at render time, not at definition time (move t() calls to render).
 
 - **(2026-04-19) T002 complete:** added [packages/billing/tests/InvoicingLocaleSmoke.i18n.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/tests/InvoicingLocaleSmoke.i18n.test.ts) and ran `npx vitest run --config vitest.config.ts ../packages/billing/tests/InvoicingLocaleSmoke.i18n.test.ts` from `server/` (pass).
   Coverage: the new `T002` assertion locks the English namespace top-level group order/shape to the PRD, and the same file also provides the representative locale smoke coverage needed for `T048-T050`.
+
+- **(2026-04-19) T003 complete:** checklist closed against [AutomaticInvoices.i18n.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/tests/AutomaticInvoices.i18n.test.ts:1) for AutomaticInvoices ready-to-invoice chrome; coverage was added and validated during the paired feature work, so no new code changes were required in this close-out commit.
