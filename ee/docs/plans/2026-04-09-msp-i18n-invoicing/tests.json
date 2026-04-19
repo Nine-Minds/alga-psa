@@ -370,7 +370,7 @@
   {
     "id": "T046",
     "description": "Interpolation variable preservation: all 9 locale files preserve {{variable}} placeholders identically to the English source (validate-translations.cjs covers this)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F031",
