@@ -114,7 +114,7 @@
   {
     "id": "T014",
     "description": "Unit: DraftsTab renders translated column headers (Invoice Number, Client, Amount, Invoice Date, Due Date, Status, Actions), Draft badge, and search placeholder via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
