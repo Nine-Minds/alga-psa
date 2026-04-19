@@ -20,6 +20,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { MoreVertical, Edit, Send, Copy, Download, Trash2, RefreshCw, Bell, FileText, XCircle } from 'lucide-react';
 import type { ColumnDefinition, IQuoteDocumentTemplate, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
 import { listQuotes, downloadQuotePdf, deleteQuote, duplicateQuote, sendQuote } from '../../../actions/quoteActions';
@@ -54,37 +55,6 @@ const SUBTAB_STATUSES: Partial<Record<QuoteSubTab, QuoteStatus[]>> = {
   closed: ['accepted', 'rejected', 'expired', 'converted', 'cancelled', 'superseded', 'archived'],
 };
 
-const BASE_QUOTE_COLUMNS: ColumnDefinition<IQuoteListItem>[] = [
-  {
-    title: 'Quote #',
-    dataIndex: 'display_quote_number',
-  },
-  {
-    title: 'Client',
-    dataIndex: 'client_name',
-    render: (value: string | null | undefined) => value || '—',
-  },
-  {
-    title: 'Title',
-    dataIndex: 'title',
-  },
-  {
-    title: 'Total',
-    dataIndex: 'total_amount',
-    render: (value: number, record) => formatCurrency(Number(value ?? 0), record.currency_code || 'USD'),
-  },
-  {
-    title: 'Status',
-    dataIndex: 'status',
-    render: (value: string | null | undefined) => <QuoteStatusBadge status={(value || 'draft') as QuoteStatus} />,
-  },
-  {
-    title: 'Date',
-    dataIndex: 'quote_date',
-    render: (value: string | null | undefined) => formatDate(value),
-  },
-];
-
 interface QuoteSubTabContentProps {
   quotes: IQuoteListItem[];
   subtab: QuoteSubTab;
@@ -114,6 +84,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
   onDownloadPdf,
   onDelete,
 }) => {
+  const { t } = useTranslation('msp/quotes');
   const [clientFilter, setClientFilter] = useState('all');
   const [tableKey, setTableKey] = useState(0);
 
@@ -135,9 +106,36 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
   }, [filteredByStatus, clientFilter]);
 
   const columns: ColumnDefinition<IQuoteListItem>[] = useMemo(() => [
-    ...BASE_QUOTE_COLUMNS,
     {
-      title: 'Actions',
+      title: t('common.columns.quoteNumber', { defaultValue: 'Quote #' }),
+      dataIndex: 'display_quote_number',
+    },
+    {
+      title: t('common.columns.client', { defaultValue: 'Client' }),
+      dataIndex: 'client_name',
+      render: (value: string | null | undefined) => value || '—',
+    },
+    {
+      title: t('common.columns.title', { defaultValue: 'Title' }),
+      dataIndex: 'title',
+    },
+    {
+      title: t('common.columns.total', { defaultValue: 'Total' }),
+      dataIndex: 'total_amount',
+      render: (value: number, record) => formatCurrency(Number(value ?? 0), record.currency_code || 'USD'),
+    },
+    {
+      title: t('common.columns.status', { defaultValue: 'Status' }),
+      dataIndex: 'status',
+      render: (value: string | null | undefined) => <QuoteStatusBadge status={(value || 'draft') as QuoteStatus} />,
+    },
+    {
+      title: t('common.columns.date', { defaultValue: 'Date' }),
+      dataIndex: 'quote_date',
+      render: (value: string | null | undefined) => formatDate(value),
+    },
+    {
+      title: t('common.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'quote_id',
       width: '5%',
       render: (_: unknown, record: IQuoteListItem) => {
@@ -151,22 +149,20 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
                   id={`quote-row-actions-${record.quote_id}`}
                   variant="ghost"
                   className="h-8 w-8 p-0"
-                  aria-label="Quote actions"
+                  aria-label={t('quotesTab.actions.quoteActions', { defaultValue: 'Quote actions' })}
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {/* Open is always available */}
                 <DropdownMenuItem
                   onClick={() => onEdit(record.quote_id)}
                   className="flex items-center gap-2"
                   id={`open-quote-${record.quote_id}-menu-item`}
                 >
                   <FileText className="h-4 w-4" />
-                  Open
+                  {t('common.actions.open', { defaultValue: 'Open' })}
                 </DropdownMenuItem>
-                {/* Send — draft or approved */}
                 {['draft', 'approved'].includes(status) && (
                   <DropdownMenuItem
                     onClick={() => onSend(record.quote_id)}
@@ -174,10 +170,9 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
                     id={`send-quote-${record.quote_id}-menu-item`}
                   >
                     <Send className="h-4 w-4" />
-                    Send to Client
+                    {t('common.actions.sendToClient', { defaultValue: 'Send to Client' })}
                   </DropdownMenuItem>
                 )}
-                {/* Resend — sent */}
                 {status === 'sent' && (
                   <DropdownMenuItem
                     onClick={() => onSend(record.quote_id)}
@@ -185,10 +180,9 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
                     id={`resend-quote-${record.quote_id}-menu-item`}
                   >
                     <RefreshCw className="h-4 w-4" />
-                    Resend
+                    {t('common.actions.resend', { defaultValue: 'Resend' })}
                   </DropdownMenuItem>
                 )}
-                {/* Send Reminder — sent */}
                 {status === 'sent' && (
                   <DropdownMenuItem
                     onClick={() => onSend(record.quote_id)}
@@ -196,7 +190,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
                     id={`remind-quote-${record.quote_id}-menu-item`}
                   >
                     <Bell className="h-4 w-4" />
-                    Send Reminder
+                    {t('common.actions.sendReminder', { defaultValue: 'Send Reminder' })}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem
@@ -205,7 +199,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
                   id={`download-quote-${record.quote_id}-menu-item`}
                 >
                   <Download className="h-4 w-4" />
-                  Download PDF
+                  {t('common.actions.downloadPdf', { defaultValue: 'Download PDF' })}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => void onDuplicate(record.quote_id)}
@@ -213,7 +207,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
                   id={`duplicate-quote-${record.quote_id}-menu-item`}
                 >
                   <Copy className="h-4 w-4" />
-                  Duplicate
+                  {t('common.actions.duplicate', { defaultValue: 'Duplicate' })}
                 </DropdownMenuItem>
                 {status === 'draft' && (
                   <DropdownMenuItem
@@ -222,7 +216,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
                     id={`delete-quote-${record.quote_id}-menu-item`}
                   >
                     <Trash2 className="h-4 w-4" />
-                    Delete
+                    {t('common.actions.delete', { defaultValue: 'Delete' })}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
@@ -231,12 +225,12 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
         );
       },
     },
-  ], [onEdit, onSend, onDownloadPdf, onDuplicate, onDelete]);
+  ], [onDelete, onDownloadPdf, onDuplicate, onEdit, onSend, t]);
 
   if (filteredByStatus.length === 0) {
     return (
       <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-        No quotes in this category.
+        {t('quotesTab.empty.byCategory', { defaultValue: 'No quotes in this category.' })}
       </div>
     );
   }
@@ -247,14 +241,14 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
         <div className="space-y-3 pr-1">
           {clientOptions.length > 1 && (
             <div className="flex flex-col gap-1 text-sm font-medium text-foreground">
-              <label htmlFor={`quotes-client-filter-${subtab}`}>Client</label>
+              <label htmlFor={`quotes-client-filter-${subtab}`}>{t('quotesTab.filters.client', { defaultValue: 'Client' })}</label>
               <div className="w-fit min-w-[220px]">
                 <CustomSelect
                   id={`quotes-client-filter-${subtab}`}
                   value={clientFilter}
                   onValueChange={(value) => setClientFilter(value)}
                   options={[
-                    { value: 'all', label: 'All clients' },
+                    { value: 'all', label: t('quotesTab.filters.allClients', { defaultValue: 'All clients' }) },
                     ...clientOptions.map((name) => ({ value: name, label: name })),
                   ]}
                 />
@@ -296,6 +290,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
 };
 
 const QuotesTab: React.FC = () => {
+  const { t } = useTranslation('msp/quotes');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [quotes, setQuotes] = useState<IQuoteListItem[]>([]);
@@ -339,7 +334,11 @@ const QuotesTab: React.FC = () => {
       setTemplates(Array.isArray(templatesResult) ? templatesResult : []);
     } catch (loadError) {
       console.error('Error loading quotes:', loadError);
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load quotes');
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : t('quotesTab.errors.load', { defaultValue: 'Failed to load quotes' }),
+      );
     } finally {
       setIsLoading(false);
     }
@@ -420,7 +419,11 @@ const QuotesTab: React.FC = () => {
       setSendMessage('');
     } catch (err) {
       console.error('Failed to send quote:', err);
-      setError(err instanceof Error ? err.message : 'Failed to send quote.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('quotesTab.errors.send', { defaultValue: 'Failed to send quote.' }),
+      );
     } finally {
       setIsSending(false);
     }
@@ -436,7 +439,11 @@ const QuotesTab: React.FC = () => {
       void loadData();
     } catch (err) {
       console.error('Failed to duplicate quote:', err);
-      setError(err instanceof Error ? err.message : 'Failed to duplicate quote.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('quotesTab.errors.duplicate', { defaultValue: 'Failed to duplicate quote.' }),
+      );
     }
   };
 
@@ -456,7 +463,11 @@ const QuotesTab: React.FC = () => {
       setDeleteDialogState({ isOpen: false, quoteId: null });
     } catch (err) {
       console.error('Failed to delete quote:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete quote.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('quotesTab.errors.delete', { defaultValue: 'Failed to delete quote.' }),
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -482,7 +493,7 @@ const QuotesTab: React.FC = () => {
             className="py-12 text-muted-foreground"
             layout="stacked"
             spinnerProps={{ size: 'md' }}
-            text="Loading quotes..."
+            text={t('quotesTab.loading', { defaultValue: 'Loading quotes...' })}
             textClassName="text-muted-foreground"
           />
         </Box>
@@ -511,17 +522,17 @@ const QuotesTab: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Quotes</h2>
+        <h2 className="text-2xl font-bold">{t('quotesTab.title', { defaultValue: 'Quotes' })}</h2>
         <div className="flex flex-wrap gap-2">
           <Button id="quotes-new-quote" onClick={() => router.push('/msp/billing?tab=quotes&quoteId=new')}>
-            New Quote
+            {t('common.actions.newQuote', { defaultValue: 'New Quote' })}
           </Button>
         </div>
       </div>
 
       {error && (
         <Alert variant="destructive" className="mb-4">
-          <AlertTitle>Quotes</AlertTitle>
+          <AlertTitle>{t('quotesTab.title', { defaultValue: 'Quotes' })}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -530,7 +541,7 @@ const QuotesTab: React.FC = () => {
           tabs={[
             {
               id: 'active',
-              label: `Active (${subtabCounts.active})`,
+              label: t('quotesTab.tabs.active', { defaultValue: 'Active ({{count}})', count: subtabCounts.active }),
               content: (
                 <QuoteSubTabContent
                   quotes={quotes}
@@ -550,7 +561,7 @@ const QuotesTab: React.FC = () => {
             },
             {
               id: 'sent',
-              label: `Sent (${subtabCounts.sent})`,
+              label: t('quotesTab.tabs.sent', { defaultValue: 'Sent ({{count}})', count: subtabCounts.sent }),
               content: (
                 <QuoteSubTabContent
                   quotes={quotes}
@@ -570,7 +581,7 @@ const QuotesTab: React.FC = () => {
             },
             {
               id: 'closed',
-              label: `Closed (${subtabCounts.closed})`,
+              label: t('quotesTab.tabs.closed', { defaultValue: 'Closed ({{count}})', count: subtabCounts.closed }),
               content: (
                 <QuoteSubTabContent
                   quotes={quotes}
@@ -590,7 +601,7 @@ const QuotesTab: React.FC = () => {
             },
             {
               id: 'approval',
-              label: 'Approval Queue',
+              label: t('quotesTab.tabs.approval', { defaultValue: 'Approval Queue' }),
               content: <QuoteApprovalDashboard embedded />,
             },
           ]}
@@ -603,10 +614,12 @@ const QuotesTab: React.FC = () => {
         isOpen={deleteDialogState.isOpen}
         onClose={() => setDeleteDialogState({ isOpen: false, quoteId: null })}
         onConfirm={handleDeleteQuote}
-        title="Delete Quote"
-        message="Are you sure you want to delete this quote? This action cannot be undone."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t('quotesTab.dialogs.delete.title', { defaultValue: 'Delete Quote' })}
+        message={t('quotesTab.dialogs.delete.description', {
+          defaultValue: 'Are you sure you want to delete this quote? This action cannot be undone.',
+        })}
+        confirmLabel={t('common.actions.delete', { defaultValue: 'Delete' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
         isConfirming={isDeleting}
       />
 
@@ -614,38 +627,49 @@ const QuotesTab: React.FC = () => {
         id="send-quote-dialog"
         isOpen={sendDialogState.isOpen}
         onClose={() => { setSendDialogState({ isOpen: false, quoteId: null }); setSendAdditionalEmails(''); setSendMessage(''); }}
-        title="Send Quote"
+        title={t('quotesTab.dialogs.send.title', { defaultValue: 'Send Quote' })}
         footer={(
           <div className="flex justify-end space-x-2">
-            <Button id="send-quote-cancel" variant="outline" onClick={() => { setSendDialogState({ isOpen: false, quoteId: null }); setSendAdditionalEmails(''); setSendMessage(''); }} disabled={isSending}>Cancel</Button>
+            <Button id="send-quote-cancel" variant="outline" onClick={() => { setSendDialogState({ isOpen: false, quoteId: null }); setSendAdditionalEmails(''); setSendMessage(''); }} disabled={isSending}>{t('common.actions.cancel', { defaultValue: 'Cancel' })}</Button>
             <Button id="send-quote-confirm" onClick={() => void handleConfirmSendQuote()} disabled={isSending}>
-              {isSending ? 'Sending...' : 'Send Quote'}
+              {isSending
+                ? t('common.states.sending', { defaultValue: 'Sending...' })
+                : t('quoteForm.actions.sendQuote', { defaultValue: 'Send Quote' })}
             </Button>
           </div>
         )}
       >
         <DialogContent>
           <DialogDescription>
-            This will email the quote PDF to the client&apos;s billing contacts and change its status to &ldquo;Sent&rdquo;.
+            {t('quotesTab.dialogs.send.description', {
+              defaultValue:
+                'This will email the quote PDF to the client\'s billing contacts and change its status to "Sent".',
+            })}
           </DialogDescription>
           <div className="space-y-3 py-2">
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Additional recipients (comma-separated)
+              {t('quotesTab.dialogs.send.additionalRecipients', {
+                defaultValue: 'Additional recipients (comma-separated)',
+              })}
               <Input
                 id="send-quote-additional-emails"
                 value={sendAdditionalEmails}
                 onChange={(event) => setSendAdditionalEmails(event.target.value)}
-                placeholder="email@example.com, another@example.com"
+                placeholder={t('quoteForm.placeholders.additionalEmails', {
+                  defaultValue: 'email@example.com, another@example.com',
+                })}
               />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Message (optional)
+              {t('quotesTab.dialogs.send.messageOptional', { defaultValue: 'Message (optional)' })}
               <TextArea
                 id="send-quote-message"
                 value={sendMessage}
                 onChange={(event) => setSendMessage(event.target.value)}
                 rows={3}
-                placeholder="Add a personal note for the recipient..."
+                placeholder={t('quotesTab.dialogs.send.messagePlaceholder', {
+                  defaultValue: 'Add a personal note for the recipient...',
+                })}
               />
             </label>
           </div>

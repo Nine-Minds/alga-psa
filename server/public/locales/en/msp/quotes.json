@@ -75,16 +75,21 @@
   },
   "quotesTab": {
     "title": "Quotes",
+    "actions": {
+      "quoteActions": "Quote actions"
+    },
     "tabs": {
       "active": "Active ({{count}})",
-      "approval": "Approval Queue ({{count}})",
+      "approval": "Approval Queue",
       "closed": "Closed ({{count}})",
       "sent": "Sent ({{count}})"
     },
     "filters": {
+      "allClients": "All clients",
       "client": "Client"
     },
     "empty": {
+      "byCategory": "No quotes in this category.",
       "title": "No quotes found",
       "description": "Create a quote to get started."
     },
@@ -94,13 +99,23 @@
         "description": "This action cannot be undone."
       },
       "send": {
-        "title": "Send Quote to Client",
         "additionalEmails": "Additional Recipients",
         "additionalEmailsPlaceholder": "email@example.com, another@example.com",
+        "additionalRecipients": "Additional recipients (comma-separated)",
+        "description": "This will email the quote PDF to the client's billing contacts and change its status to \"Sent\".",
         "message": "Message",
-        "messagePlaceholder": "Add a personal note for the client..."
+        "messageOptional": "Message (optional)",
+        "messagePlaceholder": "Add a personal note for the recipient...",
+        "title": "Send Quote"
       }
     },
+    "errors": {
+      "delete": "Failed to delete quote.",
+      "duplicate": "Failed to duplicate quote.",
+      "load": "Failed to load quotes",
+      "send": "Failed to send quote."
+    },
+    "loading": "Loading quotes...",
     "rowActions": {
       "delete": "Delete",
       "downloadPdf": "Download PDF",
