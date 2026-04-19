@@ -187,7 +187,7 @@
   {
     "id": "F037",
     "description": "Run `node scripts/validate-translations.cjs` and resolve any key parity, variable, or accent issues across all 9 locales (exit code 0 required)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F038",

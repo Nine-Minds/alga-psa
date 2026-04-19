@@ -528,7 +528,7 @@
       "weekday": "Giorno feriale {{day}}",
       "starts": "Avvia {{date}}",
       "day": "Giorno {{day}}",
-      "monthDay": "TOKEN {{month}} PHVAR1",
+      "monthDay": "{{day}} {{month}}",
       "dash": null
     },
     "cycles": {

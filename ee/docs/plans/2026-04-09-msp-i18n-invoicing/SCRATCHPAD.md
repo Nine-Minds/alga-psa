@@ -329,3 +329,6 @@ be translated at render time, not at definition time (move t() calls to render).
 
 - **(2026-04-18) F036 complete:** regenerated pseudo-locales with `node scripts/generate-pseudo-locales.cjs`, which updated [server/public/locales/xx/msp/invoicing.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/invoicing.json) and [server/public/locales/yy/msp/invoicing.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/yy/msp/invoicing.json) from the current English source.
   Validation: spot-checked pseudo output with `jq '.automaticInvoices.ready.needsApproval, .templateManager, .purchaseOrder.labels' server/public/locales/{xx,yy}/msp/invoicing.json` and confirmed the fill markers plus preserved `{{count}}` / `{{number}}` placeholders are present.
+
+- **(2026-04-18) F037 complete:** ran `node scripts/validate-translations.cjs` and cleared the only reported issue.
+  Validation: first pass failed on [server/public/locales/it/msp/invoicing.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/invoicing.json) `billingCycles.values.monthDay`, where the translator had mangled the placeholder mask into `TOKEN {{month}} PHVAR1`; corrected it to `{{day}} {{month}}` and reran validation (pass, 0 errors / 0 warnings).
