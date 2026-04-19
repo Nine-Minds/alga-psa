@@ -21,7 +21,7 @@
   {"id": "F025", "description": "Replace the remaining user-visible quote formatter hotspots missed by F012/F013: use locale-aware formatting for QuoteForm.tsx currency totals + accepted/rejected banner dates, use useFormatters().formatCurrency() for QuoteLineItemsEditor.tsx money displays, and remove the hardcoded `en-US` locale from quoteLineItemDraft.ts so draft-money helpers no longer force English formatting.", "implemented": true},
 
   {"id": "F014", "description": "Generate msp/quotes translations for 6 non-English locales (de, es, fr, it, nl, pl)", "implemented": true},
-  {"id": "F015", "description": "Italian accent audit on it/msp/quotes.json -- verify correct usage of accented characters (a with grave, e with grave/acute, i with grave, o with grave, u with grave)", "implemented": false},
+  {"id": "F015", "description": "Italian accent audit on it/msp/quotes.json -- verify correct usage of accented characters (a with grave, e with grave/acute, i with grave, o with grave, u with grave)", "implemented": true},
   {"id": "F016", "description": "Generate pseudo-locales (xx, yy) for msp/quotes namespace using generate-pseudo-locales.cjs", "implemented": false},
   {"id": "F017", "description": "Run validate-translations.cjs -- all 9 locales pass with 0 errors for msp/quotes (key parity, interpolation variable parity, no empty values)", "implemented": false},
 
