@@ -18,7 +18,7 @@
   {
     "id": "T002",
     "description": "Namespace file exists: server/public/locales/en/msp/invoicing.json is valid JSON and contains top-level groups matching PRD namespace structure",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ]

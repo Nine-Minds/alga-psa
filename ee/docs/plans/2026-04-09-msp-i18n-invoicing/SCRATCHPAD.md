@@ -335,3 +335,6 @@ be translated at render time, not at definition time (move t() calls to render).
 
 - **(2026-04-19) T001 complete:** reran `node scripts/validate-translations.cjs` after the real/pseudo locale generation work and confirmed full repo-wide parity passes for `de, es, fr, it, nl, pl, pt, xx, yy`.
   Follow-up fix: while authoring locale smoke coverage, found `billingCycles.values.dash` had been machine-translated to `null`/`-` in several real locale files even though validator ignores value semantics; normalized that leaf back to the intended em dash (`—`) across `fr/es/de/nl/it/pl/pt`, then reran validation (pass).
+
+- **(2026-04-19) T002 complete:** added [packages/billing/tests/InvoicingLocaleSmoke.i18n.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/tests/InvoicingLocaleSmoke.i18n.test.ts) and ran `npx vitest run --config vitest.config.ts ../packages/billing/tests/InvoicingLocaleSmoke.i18n.test.ts` from `server/` (pass).
+  Coverage: the new `T002` assertion locks the English namespace top-level group order/shape to the PRD, and the same file also provides the representative locale smoke coverage needed for `T048-T050`.
