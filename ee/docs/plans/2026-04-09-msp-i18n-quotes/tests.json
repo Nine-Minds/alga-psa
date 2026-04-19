@@ -123,6 +123,12 @@
     "featureIds": ["F013"]
   },
   {
+    "id": "T030",
+    "description": "The follow-on formatter cleanup outside F012/F013 is complete: QuoteForm.tsx uses useFormatters() for banner dates and quote totals, QuoteLineItemsEditor.tsx uses useFormatters() for inline money displays, and quoteLineItemDraft.ts no longer hardcodes `en-US` in `formatDraftQuoteMoney()`.",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
     "id": "T020",
     "description": "Italian accent audit passes for it/msp/quotes.json -- all Italian translations use correct grave/acute accents (e.g. 'perche' must be 'perch\u00e9', 'piu' must be 'pi\u00f9')",
     "implemented": false,

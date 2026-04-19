@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -97,6 +97,7 @@ const formatRelativeMinutes = (iso?: string | null): string | null => {
 
 const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = false, onCancel, onSaved }) => {
   const { t } = useTranslation('features/billing');
+  const { formatCurrency: formatLocalizedCurrency, formatDate } = useFormatters();
   const isEditMode = Boolean(quoteId && quoteId !== 'new');
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [form, setForm] = useState<QuoteFormState>(EMPTY_FORM);
@@ -880,7 +881,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
   };
 
   const formatCurrency = (minorUnits: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: form.currency_code || 'USD' }).format((minorUnits || 0) / 100);
+    formatLocalizedCurrency((minorUnits || 0) / 100, form.currency_code || 'USD');
 
   const isReadOnly = isEditMode && !isTemplate && quoteStatus !== 'draft';
 

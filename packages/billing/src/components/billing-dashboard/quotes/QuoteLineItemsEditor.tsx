@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useMemo, useState } from 'react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useBillingFrequencyOptions, useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -189,6 +189,7 @@ function computeMarkupPercent(
 const UNGROUPED_PHASE_KEY = '__ungrouped__';
 
 const getPhaseKey = (phase?: string | null): string => phase?.trim() || UNGROUPED_PHASE_KEY;
+const getPhaseLabel = (phase?: string | null): string => phase?.trim() || 'Ungrouped Items';
 
 const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   items,
@@ -202,6 +203,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   onRemoveLocationGroup,
 }) => {
   const { t } = useTranslation('features/billing');
+  const { formatCurrency } = useFormatters();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const formatBillingFrequency = useFormatBillingFrequency();
   const [servicePickerValue, setServicePickerValue] = useState('');
@@ -262,6 +264,10 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
         return billingMethod ?? '—';
     }
   };
+
+  const formatMoney = (minorUnits: number): string => (
+    formatCurrency((minorUnits || 0) / 100, currencyCode)
+  );
 
   const updateItem = (localId: string, patch: Partial<DraftQuoteItem>) => {
     onChange(items.map((item) => item.local_id === localId ? { ...item, ...patch } : item));
@@ -550,7 +556,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               <InlineEditableValue
                 displayValue={item.needs_price
                   ? t('quoteLineItems.labels.setPrice', { defaultValue: 'Set price' })
-                  : formatDraftQuoteMoney(item.unit_price, currencyCode)}
+                  : formatMoney(item.unit_price)}
                 editValue={(item.unit_price / 100).toFixed(2)}
                 type="number"
                 min="0"
@@ -609,7 +615,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
           )}
         </td>
         <td className={`px-3 py-3 align-top font-medium ${isDiscount ? 'text-amber-700 dark:text-amber-400' : 'text-foreground'}`}>
-          {isDiscount ? `- ${formatDraftQuoteMoney(resolvedTotal, currencyCode)}` : formatDraftQuoteMoney(resolvedTotal, currencyCode)}
+          {isDiscount ? `- ${formatMoney(resolvedTotal)}` : formatMoney(resolvedTotal)}
         </td>
         <td className="px-3 py-3 align-top">
           <Button
