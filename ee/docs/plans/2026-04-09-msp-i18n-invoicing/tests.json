@@ -162,7 +162,7 @@
   {
     "id": "T020",
     "description": "Unit: RecurringServicePeriodsTab repair panel renders translated heading, description, and repair button; regeneration preview section renders translated heading, description, and button text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
