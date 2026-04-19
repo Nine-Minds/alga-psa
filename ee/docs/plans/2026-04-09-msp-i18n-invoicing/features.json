@@ -152,7 +152,7 @@
   {
     "id": "F031",
     "description": "Generate es/msp/invoicing.json translations for all keys",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F032",
