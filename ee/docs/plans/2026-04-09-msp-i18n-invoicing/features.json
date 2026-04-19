@@ -147,7 +147,7 @@
   {
     "id": "F030",
     "description": "Generate fr/msp/invoicing.json translations for all keys",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F031",
@@ -172,6 +172,11 @@
   {
     "id": "F035",
     "description": "Generate pl/msp/invoicing.json translations for all keys",
+    "implemented": false
+  },
+  {
+    "id": "F039",
+    "description": "Generate pt/msp/invoicing.json translations for all keys so repo-wide locale parity validation passes against the existing Portuguese locale pack",
     "implemented": false
   },
   {
