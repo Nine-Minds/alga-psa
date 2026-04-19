@@ -151,4 +151,47 @@ describe('Quotes i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T006: QuoteDetail no longer renders bare English JSX literals for headings, actions, dialogs, or table labels', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuoteDetail.tsx');
+
+    const residualPatterns = [
+      /text="Loading quote details\.\.\."/,
+      />Back to Quotes</,
+      />Quote Detail</,
+      />Back</,
+      />Preview</,
+      />Download PDF</,
+      />Open Converted Contract</,
+      />Open Converted Invoice</,
+      />Quote Layout</,
+      />Version History</,
+      />Scope of Work</,
+      />Quote Accepted</,
+      />Quote Rejected</,
+      />Line Items</,
+      />Client Configuration Submitted</,
+      />Description</,
+      />Billing</,
+      />Unit Price</,
+      />Client Notes</,
+      />Internal Notes</,
+      />Activity Log</,
+      />Conversion Preview</,
+      />Contract Items</,
+      />Invoice Items</,
+      />Excluded Items</,
+      />Quote Preview</,
+      />Close</,
+      />Send Quote to Client</,
+      />Recipients</,
+      />Optional message to include in the email</,
+      />Approve Quote</,
+      />Request Changes</,
+    ];
+
+    for (const pattern of residualPatterns) {
+      expect(source).not.toMatch(pattern);
+    }
+  });
 });

@@ -34,7 +34,7 @@
   {
     "id": "T006",
     "description": "QuoteDetail.tsx has no remaining hardcoded English strings in JSX",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
 
