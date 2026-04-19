@@ -47,7 +47,7 @@
   {
     "id": "T008",
     "description": "QuotesTab.tsx has no remaining hardcoded English strings in JSX",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
 

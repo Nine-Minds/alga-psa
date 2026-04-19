@@ -228,4 +228,33 @@ describe('Quotes i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T008: QuotesTab no longer renders bare English JSX literals for tabs, table labels, menus, or dialogs', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuotesTab.tsx');
+
+    const residualPatterns = [
+      /text="Loading quotes\.\.\."/,
+      />Quotes</,
+      />New Quote</,
+      />Open</,
+      />Send to Client</,
+      />Resend</,
+      />Send Reminder</,
+      />Download PDF</,
+      />Duplicate</,
+      />Delete</,
+      />Client</,
+      />All clients</,
+      />Approval Queue</,
+      />Send Quote</,
+      />Additional recipients \(comma-separated\)</,
+      />Message \(optional\)</,
+      /placeholder="email@example\.com, another@example\.com"/,
+      />Add a personal note for the recipient\.\.\.</,
+    ];
+
+    for (const pattern of residualPatterns) {
+      expect(source).not.toMatch(pattern);
+    }
+  });
 });
