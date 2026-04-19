@@ -1,0 +1,632 @@
+{
+  "common": {
+    "actions": {
+      "approve": "Aprobar",
+      "back": "Atrás",
+      "cancel": "Cancelar",
+      "close": "Cerca",
+      "clone": "Clon",
+      "convert": "Convertir",
+      "delete": "Borrar",
+      "downloadPdf": "Descargar PDF",
+      "duplicate": "Duplicado",
+      "edit": "Editar",
+      "editAsCopy": "Editar como copia",
+      "newLayout": "Nuevo diseño",
+      "newQuote": "Nueva cotización",
+      "newTemplate": "Nueva plantilla",
+      "open": "Abierto",
+      "requestChanges": "Solicitar cambios",
+      "resend": "Reenviar",
+      "revise": "Revisar",
+      "save": "Ahorrar",
+      "saveQuote": "Guardar cotización",
+      "saveTemplate": "Guardar plantilla",
+      "send": "Enviar",
+      "sendReminder": "Enviar recordatorio",
+      "sendToClient": "Enviar al cliente",
+      "setAsDefault": "Establecer como predeterminado",
+      "submitForApproval": "Enviar para aprobación"
+    },
+    "badges": {
+      "standard": "Estándar"
+    },
+    "columns": {
+      "actions": "Comportamiento",
+      "amount": "Cantidad",
+      "client": "Cliente",
+      "created": "Creado",
+      "currency": "Divisa",
+      "date": "Fecha",
+      "default": "Por defecto",
+      "items": "Elementos",
+      "name": "Nombre",
+      "quoteDate": "Fecha de cotización",
+      "quoteNumber": "N.º de cotización",
+      "source": "Fuente",
+      "status": "Estado",
+      "title": "Título",
+      "total": "Total",
+      "validUntil": "Válido hasta"
+    },
+    "labels": {
+      "client": "Cliente",
+      "contact": "Contacto",
+      "currency": "Divisa",
+      "description": "Descripción / Alcance",
+      "discounts": "Descuentos",
+      "lineItems": "Artículos de línea",
+      "poNumber": "Número de orden de compra",
+      "quoteDate": "Fecha de cotización",
+      "quoteLayout": "Diseño de cotización",
+      "subtotal": "Total parcial",
+      "tax": "Impuesto",
+      "termsAndConditions": "Términos y condiciones",
+      "title": "Título",
+      "total": "Total",
+      "validUntil": "Válido hasta"
+    },
+    "states": {
+      "generating": "Generando...",
+      "loading": "Cargando...",
+      "saving": "Ahorro...",
+      "sending": "Envío..."
+    }
+  },
+  "quotesTab": {
+    "title": "Cotizaciones",
+    "actions": {
+      "quoteActions": "Acciones de la cotización"
+    },
+    "tabs": {
+      "active": "Activo ({{count}})",
+      "approval": "Cola de aprobación",
+      "closed": "Cerrado ({{count}})",
+      "sent": "Enviado ({{count}})"
+    },
+    "filters": {
+      "allClients": "Todos los clientes",
+      "client": "Cliente"
+    },
+    "empty": {
+      "byCategory": "No hay cotizaciones en esta categoría.",
+      "title": "No se encontraron cotizaciones",
+      "description": "Cree una cotización para comenzar."
+    },
+    "dialogs": {
+      "delete": {
+        "title": "Eliminar cotización",
+        "description": "Esta acción no se puede deshacer."
+      },
+      "send": {
+        "additionalEmails": "Destinatarios adicionales",
+        "additionalEmailsPlaceholder": "email@example.com, another@example.com",
+        "additionalRecipients": "Destinatarios adicionales (separados por comas)",
+        "description": "Esto enviará el PDF de la cotización por correo electrónico a los contactos de facturación del cliente y cambiará su estado a \"Enviado\".",
+        "message": "Mensaje",
+        "messageOptional": "Mensaje (opcional)",
+        "messagePlaceholder": "Añade una nota personal para el destinatario...",
+        "title": "Enviar cotización"
+      }
+    },
+    "errors": {
+      "delete": "No se pudo eliminar la cotización.",
+      "duplicate": "No se pudo duplicar la cotización.",
+      "load": "No se pudieron cargar las cotizaciones",
+      "send": "No se pudo enviar la cotización."
+    },
+    "loading": "Cargando cotizaciones...",
+    "rowActions": {
+      "delete": "Borrar",
+      "downloadPdf": "Descargar PDF",
+      "duplicate": "Duplicado",
+      "open": "Abierto",
+      "resend": "Reenviar",
+      "sendReminder": "Enviar recordatorio",
+      "sendToClient": "Enviar al cliente"
+    }
+  },
+  "quoteForm": {
+    "actions": {
+      "cancelQuote": "Cancelar cotización",
+      "convertToBoth": "Convertir a ambos",
+      "convertToContract": "Convertir a contrato",
+      "convertToInvoice": "Convertir a factura",
+      "createNewRevision": "Crear nueva revisión",
+      "sendQuote": "Enviar cotización"
+    },
+    "headings": {
+      "editQuote": "Editar cotización",
+      "editTemplate": "Editar plantilla de cotización",
+      "newQuote": "Nueva cotización",
+      "newTemplate": "Nueva plantilla de cotización",
+      "quote": "Cotización",
+      "quoteWithNumber": "Cotización {{quoteNumber}}",
+      "quoteWithNumberAndVersion": "Cotización {{quoteNumber}} v{{version}}",
+      "templateQuoteFallback": "Cotización de plantilla"
+    },
+    "fields": {
+      "additionalEmails": "Direcciones de correo electrónico adicionales (separadas por comas)",
+      "clientNotes": "Notas al cliente",
+      "createFromTemplate": "Crear desde plantilla",
+      "messageOptional": "Mensaje (opcional)",
+      "quoteLayoutHelp": "Elija qué diseño utilizar para el PDF de esta cotización. Déjelo vacío para usar el valor predeterminado.",
+      "recipients": "Destinatarios"
+    },
+    "placeholders": {
+      "additionalEmails": "email@example.com, another@example.com",
+      "message": "Añadir una nota personal para el cliente...",
+      "selectClient": "Seleccionar cliente",
+      "selectContact": "Seleccionar contacto",
+      "selectCurrency": "Seleccionar moneda",
+      "startFromScratch": "Empezar desde el principio",
+      "useDefaultLayout": "Usar diseño predeterminado"
+    },
+    "alerts": {
+      "accepted": "Cotización aceptada",
+      "converted": "Cotización convertida",
+      "convertedDescription": "Esta cotización se ha convertido en un contrato y/o factura.",
+      "quote": "Cotización",
+      "rejected": "Cotización rechazada"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Aprobar esta cotización para que pueda ser enviada al cliente.",
+        "approveTitle": "Aprobar cotización",
+        "approveComment": "Comentario (opcional)",
+        "approveCommentPlaceholder": "Añade una nota opcional...",
+        "changesDescription": "Devuelva esta cotización al borrador con los cambios solicitados.",
+        "changesTitle": "Solicitar cambios",
+        "changesComment": "Cambios solicitados",
+        "changesCommentPlaceholder": "Describe los cambios necesarios...",
+        "processing": "Tratamiento..."
+      },
+      "conversion": {
+        "title": "Vista previa de conversión",
+        "description": "Revise lo que creará esta conversión de cotización antes de confirmar."
+      },
+      "send": {
+        "description": "Esto enviará la cotización por correo electrónico a los contactos de facturación del cliente y cambiará su estado a \"Enviado\".",
+        "title": "Enviar cotización al cliente",
+        "additionalEmails": "Destinatarios adicionales",
+        "message": "Mensaje"
+      }
+    },
+    "errorActions": {
+      "approveQuote": "aprobar cotización",
+      "cancelQuote": "cancelar cotización",
+      "requestChanges": "solicitar cambios",
+      "resendQuote": "reenviar cotización",
+      "sendQuote": "enviar cotización",
+      "sendReminder": "enviar recordatorio",
+      "submitForApproval": "enviar para aprobación"
+    },
+    "errors": {
+      "convert": "No se pudo convertir la cotización",
+      "createRevision": "No se pudo crear la revisión",
+      "downloadPdf": "No se pudo descargar el PDF",
+      "duplicate": "No se pudo duplicar la cotización",
+      "load": "No se pudo cargar el formulario de cotización",
+      "loadConversionPreview": "No se pudo cargar la vista previa de conversión",
+      "notFound": "Cita no encontrada",
+      "save": "No se pudo guardar la cotización",
+      "saveFailed": "Error al guardar la cotización",
+      "workflowAction": "No se pudo {{action}}"
+    },
+    "loading": "Cargando formulario de cotización...",
+    "notices": {
+      "approved": "Cotización aprobada y lista para enviar.",
+      "cancelled": "Cotización cancelada.",
+      "createdDraftContract": "Borrador de contrato creado {{name}}.",
+      "createdDraftContractAndInvoice": "Se creó el borrador de contrato {{contractName}} y el borrador de factura {{invoiceName}}.",
+      "createdDraftInvoice": "Borrador de factura creado {{name}}.",
+      "reminderSent": "Recordatorio de cotización enviado.",
+      "requestedChanges": "La cotización volvió al borrador con los cambios solicitados.",
+      "resent": "Cita resentida.",
+      "sent": "Cotización enviada al cliente.",
+      "submittedForApproval": "Cotización enviada para aprobación interna."
+    },
+    "readOnlyNotice": "Esta cita es de sólo lectura. Para realizar cambios, cree una nueva revisión.",
+    "validation": {
+      "clientRequired": "Se requiere cliente",
+      "titleRequired": "El título es obligatorio a menos que se cree a partir de una plantilla."
+    }
+  },
+  "quoteDetail": {
+    "title": "Detalle de cotización",
+    "actions": {
+      "backToQuotes": "Volver a cotizaciones",
+      "openConvertedContract": "Contrato abierto convertido",
+      "openConvertedInvoice": "Abrir factura convertida",
+      "preview": "Avance",
+      "saveAsTemplate": "Guardar como plantilla"
+    },
+    "sections": {
+      "activityLog": "Registro de actividad",
+      "clientNotes": "Notas del cliente",
+      "internalNotes": "Notas internas",
+      "lineItems": "Artículos de línea",
+      "quoteLayout": "Diseño de cotización",
+      "scopeOfWork": "Alcance del trabajo",
+      "termsAndConditions": "Términos y condiciones",
+      "versionHistory": "Historial de versiones"
+    },
+    "alerts": {
+      "clientConfigurationSubmitted": "Configuración del cliente enviada",
+      "clientConfigurationSubmittedDescription": "Revise las líneas opcionales a continuación antes de convertir esta cotización. Los artículos seleccionados se marcan como incluidos y los artículos rechazados se resaltan para su seguimiento.",
+      "update": "Actualización de cotización"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Aprobar esta cotización para que pueda ser enviada al cliente. Puede agregar un comentario opcional.",
+        "changesDescription": "Devuelva esta cotización al borrador con los cambios solicitados. Por favor describa lo que necesita ser revisado."
+      },
+      "send": {
+        "message": "Mensaje opcional para incluir en el correo electrónico."
+      }
+    },
+    "status": {
+      "accepted": "Cotización aceptada",
+      "acceptedBy": "Aceptado por:",
+      "acceptedOn": "Aceptado el:",
+      "reason": "Razón:",
+      "rejected": "Cotización rechazada",
+      "rejectedOn": "Rechazado el:"
+    },
+    "empty": {
+      "activity": "Aún no se ha registrado ninguna actividad de cotización.",
+      "lineItems": "Aún no hay partidas en esta cotización.",
+      "revisions": "Aún no hay revisiones previas para esta cotización."
+    },
+    "clientSelections": {
+      "declinedOptionalItem": "El cliente rechazó este artículo opcional",
+      "selectedOptionalItem": "El cliente seleccionó este elemento opcional"
+    },
+    "errors": {
+      "approve": "No se pudo aprobar la cotización",
+      "assignTemplate": "No se pudo asignar la plantilla",
+      "cancel": "No se pudo cancelar la cotización",
+      "convert": "No se pudo convertir la cotización",
+      "delete": "No se pudo eliminar la cotización",
+      "deleteUnavailable": "No se pudo eliminar la cita",
+      "downloadPdf": "No se pudo generar el PDF de cotización",
+      "duplicate": "No se pudo duplicar la cotización",
+      "load": "No se pudo cargar el detalle de la cotización",
+      "loadConversionPreview": "No se pudo cargar la vista previa de conversión",
+      "notFound": "Cita no encontrada",
+      "preview": "No se pudo generar la vista previa de la cotización",
+      "requestChanges": "No se pudieron solicitar cambios en la cotización",
+      "resend": "No se pudo reenviar la cotización",
+      "revise": "No se pudo crear la revisión de la cotización",
+      "saveAsTemplate": "No se pudo guardar la cotización como plantilla",
+      "send": "No se pudo enviar la cotización",
+      "sendReminder": "No se pudo enviar el recordatorio de cotización",
+      "submitForApproval": "No se pudo enviar la cotización para su aprobación"
+    },
+    "labels": {
+      "phase": "Fase: {{phase}}",
+      "templateQuote": "Cotización de plantilla"
+    },
+    "loading": "Cargando detalles de la cotización...",
+    "notices": {
+      "approved": "Cotización aprobada y lista para enviar.",
+      "reminderSent": "Recordatorio de cotización enviado a los destinatarios de facturación configurados.",
+      "requestedChanges": "La cotización volvió al borrador con los cambios solicitados.",
+      "resent": "Cotización reenviada a los destinatarios de facturación configurados.",
+      "sent": "Cotización enviada al cliente.",
+      "submittedForApproval": "Cotización enviada para aprobación interna.",
+      "templateAssigned": "Plantilla de documento asignada.",
+      "templateCleared": "Plantilla de documento borrada (usando la predeterminada)."
+    },
+    "preview": {
+      "loading": "Cargando vista previa..."
+    },
+    "table": {
+      "description": "Descripción"
+    }
+  },
+  "quoteLineItems": {
+    "title": "Artículos de línea",
+    "actions": {
+      "addDiscount": "Agregar descuento",
+      "collapse": "Colapsar",
+      "expand": "Expandir",
+      "hideDiscount": "Ocultar descuento",
+      "remove": "Eliminar"
+    },
+    "billingMethods": {
+      "fixed": "Fijado",
+      "hourly": "Cada hora",
+      "perUnit": "Por unidad",
+      "usage": "Basado en el uso"
+    },
+    "columns": {
+      "actions": "Comportamiento",
+      "billing": "Facturación",
+      "flags": "Banderas",
+      "item": "Artículo",
+      "move": "Mover",
+      "quantity": "Cantidad",
+      "total": "Total",
+      "unitPrice": "Precio unitario"
+    },
+    "labels": {
+      "customItem": "Artículo personalizado",
+      "itemCountOne": "1 artículo",
+      "itemCountOther": "{{count}} artículos",
+      "noPriceInCurrency": "Sin precio en {{currencyCode}}",
+      "optional": "Opcional",
+      "phaseSection": "Fase/Tramo",
+      "recurring": "Periódico",
+      "service": "servicio",
+      "setPrice": "precio fijo",
+      "ungroupedItems": "Artículos desagrupados"
+    },
+    "placeholders": {
+      "phaseSection": "p.ej. Descubrimiento, implementación, en curso",
+      "selectItem": "Seleccionar elemento",
+      "selectService": "Seleccionar servicio",
+      "servicePicker": "Busque o escriba el nombre del elemento personalizado..."
+    },
+    "discounts": {
+      "badge": "Descuento",
+      "description": {
+        "fixed": "Descuento",
+        "percentage": "Descuento ({{value}}%)"
+      },
+      "fixed": "Descuento fijo",
+      "fullQuoteSubtotal": "Se aplica al subtotal completo de la cotización",
+      "fullQuote": "cotización completa",
+      "item": "Artículo específico",
+      "percentage": "Descuento porcentual",
+      "service": "Servicio específico",
+      "targets": {
+        "fullQuote": "en cotización completa",
+        "namedItem": "en \"{{name}}\"",
+        "namedService": "en {{name}}",
+        "specificItem": "en un artículo específico",
+        "specificService": "en servicio específico"
+      },
+      "types": {
+        "fixed": "Fijado",
+        "percentage": "Porcentaje"
+      }
+    },
+    "markup": {
+      "badge": "{{sign}}{{value}}% de margen",
+      "unavailable": "Margen no disponible",
+      "unavailableTooltip": "El margen no se puede calcular porque el costo se rastrea en {{costCurrency}} y esta cotización está en {{quoteCurrency}}."
+    },
+    "empty": "Aún no hay líneas de pedido. Utilice la búsqueda de catálogo de arriba para agregar su primer artículo."
+  },
+  "quoteRecipients": {
+    "trigger": {
+      "add": "Agregar usuario interno o contacto de cliente...",
+      "noClient": "Seleccione primero un cliente",
+      "noneAvailable": "No hay usuarios ni contactos disponibles"
+    },
+    "searchPlaceholder": "Buscar por nombre o correo electrónico...",
+    "empty": {
+      "noMatches": "No hay coincidencias",
+      "noneAvailable": "No hay destinatarios disponibles"
+    },
+    "kind": {
+      "contact": "Contacto",
+      "internal": "Interno"
+    },
+    "removeAriaLabel": "Eliminar {{email}}"
+  },
+  "quoteConversion": {
+    "title": "Convertir cotización",
+    "description": "Convertir la cotización aceptada \"{{title}}\" en contratos y/o facturas.",
+    "loading": "Cargando vista previa de conversión...",
+    "mode": {
+      "contract": {
+        "label": "Sólo contrato",
+        "description": "Crea un borrador de contrato con líneas de servicio recurrentes. No se incluirán artículos únicos."
+      },
+      "invoice": {
+        "label": "Sólo factura",
+        "description": "Crea un borrador de factura con cargos únicos. No se incluirán elementos recurrentes."
+      },
+      "both": {
+        "label": "Contrato + Factura",
+        "description": "Crea un borrador de contrato (para artículos recurrentes) y un borrador de factura (para artículos únicos)."
+      }
+    },
+    "sections": {
+      "contractItems": "Artículos del contrato",
+      "conversionMode": "Modo de conversión",
+      "excludedItems": "Artículos excluidos",
+      "excludedFromConversion": "Excluido de la conversión",
+      "invoiceItems": "Artículos de factura",
+      "itemMappingPreview": "Vista previa de asignación de elementos",
+      "quoteTotal": "Total de cotización",
+      "statusAfterConversion": "Estado después de la conversión",
+      "willBecomeContractLines": "Se convertirán en líneas de contrato",
+      "willBecomeInvoiceCharges": "Se convertirán en cargos de factura"
+    },
+    "empty": {
+      "contractItems": "Ningún elemento recurrente se convertirá en un contrato.",
+      "invoiceItems": "Ningún artículo único se convertirá en una factura."
+    },
+    "summary": {
+      "converted": "Convertido",
+      "discount": "Descuento",
+      "fixed": "fijado",
+      "notConverted": "No convertido"
+    },
+    "partial": {
+      "alreadyConverted": "Esta cotización ya ha sido parcialmente convertida.",
+      "contractCreated": "Se creó un contrato.",
+      "invoiceCreated": "Se creó una factura.",
+      "remainingItems": "Puede convertir los elementos restantes.",
+      "title": "Conversión parcial",
+      "description": "Ya existen algunos registros para esta cotización."
+    },
+    "actions": {
+      "contract": "Crear borrador de contrato",
+      "convertQuote": "Convertir cotización",
+      "invoice": "Crear borrador de factura",
+      "both": "Crear ambos registros",
+      "converting": "Mudado..."
+    },
+    "errors": {
+      "convert": "No se pudo convertir la cotización",
+      "load": "No se pudo cargar la vista previa de conversión",
+      "title": "Error"
+    }
+  },
+  "quoteApproval": {
+    "title": "Aprobaciones de cotizaciones",
+    "description": "Revise las cotizaciones en espera de la aprobación del gerente antes de poder enviarlas a los clientes.",
+    "actions": {
+      "backToQuotes": "Volver a cotizaciones"
+    },
+    "settings": {
+      "label": "Se requiere aprobación antes de enviar",
+      "enabled": "Los borradores de cotizaciones deben ser aprobados antes de enviarlos.",
+      "disabled": "Los borradores de cotizaciones se pueden enviar sin aprobación."
+    },
+    "filters": {
+      "status": "Estado",
+      "approved": "Aprobado",
+      "pendingApproval": "Pendiente de aprobación"
+    },
+    "empty": {
+      "approved": "No hay cotizaciones en la cola aprobada en este momento.",
+      "pendingApproval": "No hay cotizaciones en la cola de aprobación pendiente en este momento.",
+      "title": "No se encontraron cotizaciones"
+    },
+    "errors": {
+      "load": "No se pudieron cargar las aprobaciones de cotización",
+      "settings": "No se pudo actualizar la configuración de aprobación de cotización"
+    },
+    "loading": "Cargando cola de aprobación..."
+  },
+  "quoteTemplates": {
+    "title": "Plantillas",
+    "description": "Las plantillas de cotización le permiten guardar conjuntos reutilizables de líneas de pedido, términos y notas. Seleccione una plantilla al crear una nueva cotización para comenzar con datos precargados.",
+    "empty": {
+      "inline": "Aún no hay plantillas de cotización. Cree una plantilla haciendo clic en \"Guardar como plantilla\" desde la vista detallada de cualquier cotización.",
+      "title": "Aún no hay plantillas de cotización",
+      "description": "Utilice Guardar como plantilla a partir de una cotización para crear su primera plantilla reutilizable."
+    },
+    "actions": {
+      "createQuoteFromTemplate": "Crear cotización a partir de plantilla",
+      "delete": "Borrar",
+      "editTemplate": "Editar plantilla",
+      "templateActions": "Acciones de plantilla"
+    },
+    "dialogs": {
+      "delete": {
+        "message": "¿Está seguro de que desea eliminar esta plantilla de cotización? Esta acción no se puede deshacer.",
+        "title": "Eliminar plantilla"
+      }
+    },
+    "errors": {
+      "delete": "No se pudo eliminar la plantilla.",
+      "load": "No se pudieron cargar las plantillas"
+    },
+    "loading": "Cargando plantillas..."
+  },
+  "quotePreview": {
+    "title": "Vista previa de la cotización",
+    "empty": {
+      "selectQuote": "Seleccione una cotización para obtener una vista previa",
+      "unavailable": "No se pudo mostrar la vista previa. Es posible que falten datos."
+    },
+    "placeholders": {
+      "selectLayout": "Seleccione el diseño de la cotización..."
+    },
+    "actions": {
+      "openQuote": "Abrir cotización"
+    },
+    "errors": {
+      "downloadPdf": "No se pudo descargar el PDF. Por favor inténtalo de nuevo.",
+      "load": "No se pudo cargar la vista previa"
+    },
+    "loading": "Cargando vista previa..."
+  },
+  "templateEditor": {
+    "actions": {
+      "backToLayouts": "Volver a diseños",
+      "rerun": "Repetición",
+      "saveLayout": "Guardar diseño"
+    },
+    "codeReadonly": "La vista de código se genera desde el espacio de trabajo visual y es de solo lectura.",
+    "defaults": {
+      "copyOf": "Copia de {{name}}",
+      "standardTemplate": "Plantilla estándar"
+    },
+    "title": "Editor de diseño de cotización",
+    "description": "Diseñe el diseño de la cotización utilizando el editor visual y luego obtenga una vista previa con datos de muestra.",
+    "errors": {
+      "exportAst": "No se pudo exportar la plantilla AST desde el espacio de trabajo visual: {{message}}",
+      "load": "No se pudo cargar el editor de plantillas de cotización",
+      "nameRequired": "El nombre de la plantilla es obligatorio.",
+      "notFound": "No se encontró la plantilla del documento de cotización.",
+      "previewPipeline": "Error en la canalización de vista previa.",
+      "saveFailed": "No se pudo guardar la plantilla de cotización",
+      "unknownAstExport": "Error de exportación AST desconocido"
+    },
+    "fields": {
+      "layoutDetails": "Detalles de diseño",
+      "templateName": "Nombre de la plantilla",
+      "version": "Versión"
+    },
+    "footer": {
+      "created": "Creado:",
+      "lastUpdated": "Última actualización:"
+    },
+    "headings": {
+      "editLayout": "Editar diseño de cotización",
+      "newLayout": "Nuevo diseño de cotización"
+    },
+    "placeholders": {
+      "templateName": "Plantilla de cotización"
+    },
+    "preview": {
+      "renderFailed": "Error al renderizar la vista previa.",
+      "rendering": "Vista previa de modelado y renderizado...",
+      "sampleScenario": "Escenario de muestra",
+      "selectScenario": "Seleccione escenario...",
+      "selectScenarioPrompt": "Seleccione un escenario de muestra para generar una vista previa autorizada.",
+      "templateGenerationFailed": "No se pudo generar la plantilla de vista previa desde el espacio de trabajo actual."
+    },
+    "pipeline": {
+      "render": "Prestar",
+      "shape": "Forma"
+    },
+    "tabs": {
+      "code": "Código",
+      "design": "Diseño",
+      "preview": "Avance",
+      "transforms": "Transforma",
+      "visual": "Visual"
+    }
+  },
+  "templatesPage": {
+    "title": "Diseños de cotización",
+    "description": "Diseñe los diseños utilizados para representar los archivos PDF de cotizaciones y las vistas previas.",
+    "actions": {
+      "openMenu": "abrir menú"
+    },
+    "cards": {
+      "availableLayouts": "Diseños disponibles"
+    },
+    "dialogs": {
+      "deleteConfirm": "¿Está seguro de que desea eliminar \"{{name}}\"?"
+    },
+    "errors": {
+      "clone": "No se pudo clonar la plantilla",
+      "delete": "No se pudo eliminar la plantilla",
+      "editCopy": "No se pudo crear una copia editable",
+      "load": "No se pudieron cargar las plantillas de documentos de cotización",
+      "setDefault": "No se pudo establecer la plantilla predeterminada"
+    },
+    "labels": {
+      "custom": "Costumbre"
+    }
+  }
+}

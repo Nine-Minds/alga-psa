@@ -1,0 +1,632 @@
+{
+  "common": {
+    "actions": {
+      "approve": "Zatwierdzić",
+      "back": "Z powrotem",
+      "cancel": "Anulować",
+      "close": "Zamknąć",
+      "clone": "Klon",
+      "convert": "Konwertować",
+      "delete": "Usuwać",
+      "downloadPdf": "Pobierz PDF",
+      "duplicate": "Duplikat",
+      "edit": "Redagować",
+      "editAsCopy": "Edytuj jako kopię",
+      "newLayout": "Nowy układ",
+      "newQuote": "Nowa wycena",
+      "newTemplate": "Nowy szablon",
+      "open": "Otwarte",
+      "requestChanges": "Poproś o zmiany",
+      "resend": "Wyślij ponownie",
+      "revise": "Poprawiać",
+      "save": "Ratować",
+      "saveQuote": "Zapisz wycenę",
+      "saveTemplate": "Zapisz szablon",
+      "send": "Wysłać",
+      "sendReminder": "Wyślij przypomnienie",
+      "sendToClient": "Wyślij do Klienta",
+      "setAsDefault": "Ustaw jako domyślny",
+      "submitForApproval": "Prześlij do zatwierdzenia"
+    },
+    "badges": {
+      "standard": "Standard"
+    },
+    "columns": {
+      "actions": "Działania",
+      "amount": "Kwota",
+      "client": "Klient",
+      "created": "Stworzony",
+      "currency": "Waluta",
+      "date": "Data",
+      "default": "Domyślny",
+      "items": "Rzeczy",
+      "name": "Nazwa",
+      "quoteDate": "Data wyceny",
+      "quoteNumber": "Nr wyceny",
+      "source": "Źródło",
+      "status": "Status",
+      "title": "Tytuł",
+      "total": "Całkowity",
+      "validUntil": "Ważne do"
+    },
+    "labels": {
+      "client": "Klient",
+      "contact": "Kontakt",
+      "currency": "Waluta",
+      "description": "Opis/Zakres",
+      "discounts": "Rabaty",
+      "lineItems": "Elementy zamówienia",
+      "poNumber": "Numer zamówienia",
+      "quoteDate": "Data wyceny",
+      "quoteLayout": "Układ wyceny",
+      "subtotal": "Suma częściowa",
+      "tax": "Podatek",
+      "termsAndConditions": "Regulamin",
+      "title": "Tytuł",
+      "total": "Całkowity",
+      "validUntil": "Ważne do"
+    },
+    "states": {
+      "generating": "Generowanie...",
+      "loading": "Załadunek...",
+      "saving": "Oszczędność...",
+      "sending": "Przesyłka..."
+    }
+  },
+  "quotesTab": {
+    "title": "Wyceny",
+    "actions": {
+      "quoteActions": "Akcje wyceny"
+    },
+    "tabs": {
+      "active": "Aktywny ({{count}})",
+      "approval": "Kolejka do zatwierdzenia",
+      "closed": "Zamknięte ({{count}})",
+      "sent": "Wysłano ({{count}})"
+    },
+    "filters": {
+      "allClients": "Wszyscy klienci",
+      "client": "Klient"
+    },
+    "empty": {
+      "byCategory": "Brak wycen w tej kategorii.",
+      "title": "Nie znaleziono wycen",
+      "description": "Utwórz wycenę, aby rozpocząć."
+    },
+    "dialogs": {
+      "delete": {
+        "title": "Usuń wycenę",
+        "description": "Tej akcji nie można cofnąć."
+      },
+      "send": {
+        "additionalEmails": "Dodatkowi odbiorcy",
+        "additionalEmailsPlaceholder": "email@example.com, another@example.com",
+        "additionalRecipients": "Dodatkowi odbiorcy (oddzieleni przecinkami)",
+        "description": "Spowoduje to wysłanie pliku PDF z wyceną pocztą e-mail do osób kontaktowych klienta zajmujących się rozliczeniami i zmianę jego statusu na „Wysłane”.",
+        "message": "Wiadomość",
+        "messageOptional": "Wiadomość (opcjonalnie)",
+        "messagePlaceholder": "Dodaj osobistą notatkę dla odbiorcy...",
+        "title": "Wyślij wycenę"
+      }
+    },
+    "errors": {
+      "delete": "Nie udało się usunąć wyceny.",
+      "duplicate": "Nie udało się zduplikować wyceny.",
+      "load": "Nie udało się załadować wycen",
+      "send": "Nie udało się wysłać wyceny."
+    },
+    "loading": "Ładowanie wycen...",
+    "rowActions": {
+      "delete": "Usuwać",
+      "downloadPdf": "Pobierz PDF",
+      "duplicate": "Duplikat",
+      "open": "Otwarte",
+      "resend": "Wyślij ponownie",
+      "sendReminder": "Wyślij przypomnienie",
+      "sendToClient": "Wyślij do Klienta"
+    }
+  },
+  "quoteForm": {
+    "actions": {
+      "cancelQuote": "Anuluj wycenę",
+      "convertToBoth": "Konwertuj na oba",
+      "convertToContract": "Zamień na kontrakt",
+      "convertToInvoice": "Konwertuj na fakturę",
+      "createNewRevision": "Utwórz nową wersję",
+      "sendQuote": "Wyślij wycenę"
+    },
+    "headings": {
+      "editQuote": "Edytuj wycenę",
+      "editTemplate": "Edytuj szablon wyceny",
+      "newQuote": "Nowa wycena",
+      "newTemplate": "Nowy szablon wyceny",
+      "quote": "Wycena",
+      "quoteWithNumber": "Wycena {{quoteNumber}}",
+      "quoteWithNumberAndVersion": "Wycena {{quoteNumber}} v{{version}}",
+      "templateQuoteFallback": "Wycena szablonowa"
+    },
+    "fields": {
+      "additionalEmails": "Dodatkowe adresy e-mail (oddzielone przecinkami)",
+      "clientNotes": "Uwagi dla Klienta",
+      "createFromTemplate": "Utwórz z szablonu",
+      "messageOptional": "Wiadomość (opcjonalnie)",
+      "quoteLayoutHelp": "Wybierz układ PDF dla tej wyceny. Pozostaw puste, aby użyć domyślnego.",
+      "recipients": "Odbiorcy"
+    },
+    "placeholders": {
+      "additionalEmails": "email@example.com, another@example.com",
+      "message": "Dodaj osobistą notatkę dla klienta...",
+      "selectClient": "Wybierz klienta",
+      "selectContact": "Wybierz kontakt",
+      "selectCurrency": "Wybierz walutę",
+      "startFromScratch": "Zaczynać od początku",
+      "useDefaultLayout": "Użyj układu domyślnego"
+    },
+    "alerts": {
+      "accepted": "Wycena zaakceptowana",
+      "converted": "Wycena przekonwertowana",
+      "convertedDescription": "Ta wycena została przekształcona w umowę i/lub fakturę.",
+      "quote": "Wycena",
+      "rejected": "Wycena odrzucona"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Zatwierdź tę wycenę, aby mogła zostać wysłana do klienta.",
+        "approveTitle": "Zatwierdź wycenę",
+        "approveComment": "Komentarz (opcjonalnie)",
+        "approveCommentPlaceholder": "Dodaj opcjonalną notatkę...",
+        "changesDescription": "Zwróć tę wycenę do wersji roboczej z żądanymi zmianami.",
+        "changesTitle": "Poproś o zmiany",
+        "changesComment": "Żądane zmiany",
+        "changesCommentPlaceholder": "Opisz potrzebne zmiany...",
+        "processing": "Przetwarzanie..."
+      },
+      "conversion": {
+        "title": "Podgląd konwersji",
+        "description": "Przed potwierdzeniem sprawdź, co spowoduje ta konwersja wyceny."
+      },
+      "send": {
+        "description": "Spowoduje to wysłanie wyceny e-mailem do kontaktów rozliczeniowych klienta i zmianę jej statusu na „Wysłane”.",
+        "title": "Wyślij wycenę do klienta",
+        "additionalEmails": "Dodatkowi odbiorcy",
+        "message": "Wiadomość"
+      }
+    },
+    "errorActions": {
+      "approveQuote": "zatwierdź wycenę",
+      "cancelQuote": "anulować wycenę",
+      "requestChanges": "zażądać zmian",
+      "resendQuote": "ponownie wyślij wycenę",
+      "sendQuote": "wyślij wycenę",
+      "sendReminder": "wyślij przypomnienie",
+      "submitForApproval": "przesłać do zatwierdzenia"
+    },
+    "errors": {
+      "convert": "Nie udało się przekonwertować wyceny",
+      "createRevision": "Nie udało się utworzyć wersji",
+      "downloadPdf": "Nie udało się pobrać pliku PDF",
+      "duplicate": "Nie udało się zduplikować wyceny",
+      "load": "Nie udało się załadować formularza wyceny",
+      "loadConversionPreview": "Nie udało się załadować podglądu konwersji",
+      "notFound": "Nie znaleziono wyceny",
+      "save": "Nie udało się zapisać wyceny",
+      "saveFailed": "Zapisanie wyceny nie powiodło się",
+      "workflowAction": "Nie udało się {{action}}"
+    },
+    "loading": "Ładowanie formularza wyceny...",
+    "notices": {
+      "approved": "Wycena została zatwierdzona i jest gotowa do wysłania.",
+      "cancelled": "Wycena anulowana.",
+      "createdDraftContract": "Utworzono projekt umowy {{name}}.",
+      "createdDraftContractAndInvoice": "Utworzono wersję roboczą umowy {{contractName}} i wersję roboczą faktury {{invoiceName}}.",
+      "createdDraftInvoice": "Utworzono wersję roboczą faktury {{name}}.",
+      "reminderSent": "Wysłano przypomnienie o wycenie.",
+      "requestedChanges": "Wycena wróciła do wersji roboczej z żądanymi zmianami.",
+      "resent": "Wycena została wysłana ponownie.",
+      "sent": "Wycena wysłana do klienta.",
+      "submittedForApproval": "Wycena została przesłana do wewnętrznego zatwierdzenia."
+    },
+    "readOnlyNotice": "Ta wycena jest tylko do odczytu. Aby wprowadzić zmiany, utwórz nową wersję.",
+    "validation": {
+      "clientRequired": "Klient jest wymagany",
+      "titleRequired": "Tytuł jest wymagany, chyba że tworzysz z szablonu"
+    }
+  },
+  "quoteDetail": {
+    "title": "Szczegóły wyceny",
+    "actions": {
+      "backToQuotes": "Powrót do wycen",
+      "openConvertedContract": "Otwórz przekonwertowany kontrakt",
+      "openConvertedInvoice": "Otwórz przekonwertowaną fakturę",
+      "preview": "Zapowiedź",
+      "saveAsTemplate": "Zapisz jako szablon"
+    },
+    "sections": {
+      "activityLog": "Dziennik aktywności",
+      "clientNotes": "Notatki klienta",
+      "internalNotes": "Notatki wewnętrzne",
+      "lineItems": "Elementy zamówienia",
+      "quoteLayout": "Układ wyceny",
+      "scopeOfWork": "Zakres pracy",
+      "termsAndConditions": "Regulamin",
+      "versionHistory": "Historia wersji"
+    },
+    "alerts": {
+      "clientConfigurationSubmitted": "Konfiguracja klienta została przesłana",
+      "clientConfigurationSubmittedDescription": "Przed konwersją tej wyceny przejrzyj poniższe opcjonalne elementy zamówienia. Wybrane elementy zostaną oznaczone jako uwzględnione, a odrzucone elementy zostaną wyróżnione do sprawdzenia.",
+      "update": "Aktualizacja wyceny"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Zatwierdź tę wycenę, aby mogła zostać wysłana do klienta. Możesz dodać opcjonalny komentarz.",
+        "changesDescription": "Zwróć tę wycenę do wersji roboczej z żądanymi zmianami. Proszę opisać, co należy zmienić."
+      },
+      "send": {
+        "message": "Opcjonalna wiadomość do dołączenia do wiadomości e-mail"
+      }
+    },
+    "status": {
+      "accepted": "Wycena zaakceptowana",
+      "acceptedBy": "Zaakceptowane przez:",
+      "acceptedOn": "Zaakceptowano:",
+      "reason": "Powód:",
+      "rejected": "Wycena odrzucona",
+      "rejectedOn": "Odrzucony w dniu:"
+    },
+    "empty": {
+      "activity": "Nie zarejestrowano jeszcze żadnej aktywności związanej z wyceną.",
+      "lineItems": "Nie ma jeszcze elementów zamówienia w tej ofercie.",
+      "revisions": "Nie ma jeszcze wcześniejszych wersji tej wyceny."
+    },
+    "clientSelections": {
+      "declinedOptionalItem": "Klient odrzucił ten opcjonalny element",
+      "selectedOptionalItem": "Klient wybrał ten opcjonalny element"
+    },
+    "errors": {
+      "approve": "Nie udało się zatwierdzić wyceny",
+      "assignTemplate": "Nie udało się przypisać szablonu",
+      "cancel": "Nie udało się anulować wyceny",
+      "convert": "Nie udało się przekonwertować wyceny",
+      "delete": "Nie udało się usunąć wyceny",
+      "deleteUnavailable": "Nie można usunąć wyceny",
+      "downloadPdf": "Nie udało się wygenerować pliku PDF z wyceną",
+      "duplicate": "Nie udało się zduplikować wyceny",
+      "load": "Nie udało się załadować szczegółów oferty",
+      "loadConversionPreview": "Nie udało się załadować podglądu konwersji",
+      "notFound": "Nie znaleziono wyceny",
+      "preview": "Nie udało się wygenerować podglądu wyceny",
+      "requestChanges": "Nie udało się zażądać zmiany wyceny",
+      "resend": "Nie udało się ponownie wysłać wyceny",
+      "revise": "Nie udało się utworzyć wersji wyceny",
+      "saveAsTemplate": "Nie udało się zapisać wyceny jako szablonu",
+      "send": "Nie udało się wysłać wyceny",
+      "sendReminder": "Nie udało się wysłać przypomnienia o wycenie",
+      "submitForApproval": "Nie udało się przesłać oferty do zatwierdzenia"
+    },
+    "labels": {
+      "phase": "Faza: {{phase}}",
+      "templateQuote": "Wycena szablonowa"
+    },
+    "loading": "Ładowanie szczegółów oferty...",
+    "notices": {
+      "approved": "Wycena została zatwierdzona i jest gotowa do wysłania.",
+      "reminderSent": "Przypomnienie o wycenie wysłane do skonfigurowanych odbiorców rozliczeń.",
+      "requestedChanges": "Wycena wróciła do wersji roboczej z żądanymi zmianami.",
+      "resent": "Wycena została wysłana ponownie do skonfigurowanych odbiorców rozliczeń.",
+      "sent": "Wycena wysłana do klienta.",
+      "submittedForApproval": "Wycena została przesłana do wewnętrznego zatwierdzenia.",
+      "templateAssigned": "Przypisano szablon dokumentu.",
+      "templateCleared": "Szablon dokumentu został wyczyszczony (przy użyciu ustawień domyślnych)."
+    },
+    "preview": {
+      "loading": "Ładowanie podglądu..."
+    },
+    "table": {
+      "description": "Opis"
+    }
+  },
+  "quoteLineItems": {
+    "title": "Elementy zamówienia",
+    "actions": {
+      "addDiscount": "Dodaj rabat",
+      "collapse": "Zawalić się",
+      "expand": "Zwiększać",
+      "hideDiscount": "Ukryj rabat",
+      "remove": "Usunąć"
+    },
+    "billingMethods": {
+      "fixed": "Naprawił",
+      "hourly": "Cogodzinny",
+      "perUnit": "Na jednostkę",
+      "usage": "Oparte na użytkowaniu"
+    },
+    "columns": {
+      "actions": "Działania",
+      "billing": "Rozliczenia",
+      "flags": "Flagi",
+      "item": "Przedmiot",
+      "move": "Przenosić",
+      "quantity": "Ilość",
+      "total": "Całkowity",
+      "unitPrice": "Cena jednostkowa"
+    },
+    "labels": {
+      "customItem": "Przedmiot niestandardowy",
+      "itemCountOne": "1 pozycja",
+      "itemCountOther": "{{count}} elementy",
+      "noPriceInCurrency": "Brak ceny w {{currencyCode}}",
+      "optional": "Fakultatywny",
+      "phaseSection": "Faza / sekcja",
+      "recurring": "Powtarzający się",
+      "service": "praca",
+      "setPrice": "Ustal cenę",
+      "ungroupedItems": "Rozgrupowane elementy"
+    },
+    "placeholders": {
+      "phaseSection": "np. Odkrycie, wdrożenie, w toku",
+      "selectItem": "Wybierz element",
+      "selectService": "Wybierz usługę",
+      "servicePicker": "Wyszukaj lub wpisz niestandardową nazwę elementu..."
+    },
+    "discounts": {
+      "badge": "Rabat",
+      "description": {
+        "fixed": "Rabat",
+        "percentage": "Rabat ({{value}}%)"
+      },
+      "fixed": "Stały rabat",
+      "fullQuoteSubtotal": "Dotyczy sumy częściowej całej wyceny",
+      "fullQuote": "Cała wycena",
+      "item": "Konkretny przedmiot",
+      "percentage": "Rabat procentowy",
+      "service": "Konkretna usługa",
+      "targets": {
+        "fullQuote": "dla całej wyceny",
+        "namedItem": "na „{{name}}”",
+        "namedService": "na {{name}}",
+        "specificItem": "na konkretnym przedmiocie",
+        "specificService": "na konkretną usługę"
+      },
+      "types": {
+        "fixed": "Naprawił",
+        "percentage": "Procent"
+      }
+    },
+    "markup": {
+      "badge": "{{sign}}{{value}}% narzutu",
+      "unavailable": "Narzut niedostępny",
+      "unavailableTooltip": "Nie można obliczyć narzutu, ponieważ koszt jest śledzony w {{costCurrency}}, a ta wycena znajduje się w {{quoteCurrency}}."
+    },
+    "empty": "Nie ma jeszcze żadnych elementów zamówienia. Skorzystaj z wyszukiwania w katalogu powyżej, aby dodać swój pierwszy przedmiot."
+  },
+  "quoteRecipients": {
+    "trigger": {
+      "add": "Dodaj użytkownika wewnętrznego lub kontakt klienta...",
+      "noClient": "Najpierw wybierz klienta",
+      "noneAvailable": "Brak dostępnych użytkowników lub kontaktów"
+    },
+    "searchPlaceholder": "Wyszukaj według nazwy lub adresu e-mail...",
+    "empty": {
+      "noMatches": "Brak dopasowań",
+      "noneAvailable": "Brak dostępnych odbiorców"
+    },
+    "kind": {
+      "contact": "Kontakt",
+      "internal": "Wewnętrzny"
+    },
+    "removeAriaLabel": "Usuń {{email}}"
+  },
+  "quoteConversion": {
+    "title": "Konwertuj wycenę",
+    "description": "Konwertuj zaakceptowaną wycenę „{{title}}” na umowy i/lub faktury.",
+    "loading": "Ładowanie podglądu konwersji...",
+    "mode": {
+      "contract": {
+        "label": "Tylko kontrakt",
+        "description": "Tworzy wersję roboczą umowy z powtarzającymi się liniami usług. Przedmioty jednorazowe nie będą uwzględniane."
+      },
+      "invoice": {
+        "label": "Tylko faktura",
+        "description": "Tworzy wersję roboczą faktury z opłatami jednorazowymi. Elementy powtarzające się nie będą uwzględniane."
+      },
+      "both": {
+        "label": "Umowa + Faktura",
+        "description": "Tworzy zarówno wersję roboczą umowy (dla pozycji cyklicznych), jak i wersję roboczą faktury (dla pozycji jednorazowych)."
+      }
+    },
+    "sections": {
+      "contractItems": "Przedmioty umowy",
+      "conversionMode": "Tryb konwersji",
+      "excludedItems": "Elementy wykluczone",
+      "excludedFromConversion": "Wykluczone z konwersji",
+      "invoiceItems": "Pozycje faktury",
+      "itemMappingPreview": "Podgląd mapowania przedmiotów",
+      "quoteTotal": "Łączna wartość wyceny",
+      "statusAfterConversion": "Stan po konwersji",
+      "willBecomeContractLines": "Staną się liniami kontraktowymi",
+      "willBecomeInvoiceCharges": "Staną się opłatami na fakturze"
+    },
+    "empty": {
+      "contractItems": "Żadne elementy powtarzające się nie zostaną przekształcone w umowę.",
+      "invoiceItems": "Żadne jednorazowe pozycje nie zostaną zamienione na fakturę."
+    },
+    "summary": {
+      "converted": "Przekształcony",
+      "discount": "Rabat",
+      "fixed": "naprawił",
+      "notConverted": "Nie przekonwertowany"
+    },
+    "partial": {
+      "alreadyConverted": "Ta wycena została już częściowo przekonwertowana.",
+      "contractCreated": "Powstała umowa.",
+      "invoiceCreated": "Utworzono fakturę.",
+      "remainingItems": "Pozostałe elementy możesz przekonwertować.",
+      "title": "Częściowa konwersja",
+      "description": "Istnieją już pewne rekordy dla tej wyceny."
+    },
+    "actions": {
+      "contract": "Utwórz wersję roboczą umowy",
+      "convertQuote": "Konwertuj wycenę",
+      "invoice": "Utwórz wersję roboczą faktury",
+      "both": "Utwórz oba rekordy",
+      "converting": "Konwersja..."
+    },
+    "errors": {
+      "convert": "Nie udało się przekonwertować wyceny",
+      "load": "Nie udało się załadować podglądu konwersji",
+      "title": "Błąd"
+    }
+  },
+  "quoteApproval": {
+    "title": "Akceptacje wycen",
+    "description": "Przejrzyj oferty oczekujące na zatwierdzenie przez menedżera, zanim będą mogły zostać wysłane do klientów.",
+    "actions": {
+      "backToQuotes": "Powrót do wycen"
+    },
+    "settings": {
+      "label": "Wymagana akceptacja przed wysłaniem",
+      "enabled": "Projekty ofert muszą zostać zatwierdzone przed wysłaniem.",
+      "disabled": "Projekty ofert można przesyłać bez zatwierdzenia."
+    },
+    "filters": {
+      "status": "Status",
+      "approved": "Zatwierdzony",
+      "pendingApproval": "Oczekujące na zatwierdzenie"
+    },
+    "empty": {
+      "approved": "W tej chwili w zatwierdzonej kolejce nie ma żadnych ofert.",
+      "pendingApproval": "W tej chwili w kolejce oczekujących na zatwierdzenie nie ma żadnych ofert.",
+      "title": "Nie znaleziono wycen"
+    },
+    "errors": {
+      "load": "Nie udało się wczytać zatwierdzeń ofert",
+      "settings": "Nie udało się zaktualizować ustawień zatwierdzania wyceny"
+    },
+    "loading": "Ładowanie kolejki zatwierdzeń..."
+  },
+  "quoteTemplates": {
+    "title": "Szablony",
+    "description": "Szablony ofert umożliwiają zapisywanie zestawów elementów zamówienia, warunków i notatek do ponownego wykorzystania. Wybierz szablon podczas tworzenia nowej oferty, aby rozpocząć od wstępnie wypełnionych danych.",
+    "empty": {
+      "inline": "Nie ma jeszcze szablonów wyceny. Utwórz szablon, klikając „Zapisz jako szablon” w widoku szczegółów dowolnej oferty.",
+      "title": "Nie ma jeszcze szablonów wyceny",
+      "description": "Użyj opcji Zapisz jako szablon z wyceny, aby utworzyć swój pierwszy szablon wielokrotnego użytku."
+    },
+    "actions": {
+      "createQuoteFromTemplate": "Utwórz wycenę z szablonu",
+      "delete": "Usuwać",
+      "editTemplate": "Edytuj szablon",
+      "templateActions": "Działania szablonowe"
+    },
+    "dialogs": {
+      "delete": {
+        "message": "Czy na pewno chcesz usunąć ten szablon wyceny? Tej akcji nie można cofnąć.",
+        "title": "Usuń szablon"
+      }
+    },
+    "errors": {
+      "delete": "Nie udało się usunąć szablonu.",
+      "load": "Nie udało się załadować szablonów"
+    },
+    "loading": "Ładowanie szablonów..."
+  },
+  "quotePreview": {
+    "title": "Podgląd wyceny",
+    "empty": {
+      "selectQuote": "Wybierz wycenę do podglądu",
+      "unavailable": "Nie można wyświetlić podglądu. Może brakować danych."
+    },
+    "placeholders": {
+      "selectLayout": "Wybierz układ oferty..."
+    },
+    "actions": {
+      "openQuote": "Otwórz wycenę"
+    },
+    "errors": {
+      "downloadPdf": "Nie udało się pobrać pliku PDF. Spróbuj ponownie.",
+      "load": "Nie udało się załadować podglądu"
+    },
+    "loading": "Ładowanie podglądu..."
+  },
+  "templateEditor": {
+    "actions": {
+      "backToLayouts": "Powrót do układów",
+      "rerun": "Ponowne odtworzenie",
+      "saveLayout": "Zapisz układ"
+    },
+    "codeReadonly": "Widok kodu jest generowany z obszaru roboczego Visual i jest tylko do odczytu.",
+    "defaults": {
+      "copyOf": "Kopia {{name}}",
+      "standardTemplate": "Standardowy szablon"
+    },
+    "title": "Edytor układu wyceny",
+    "description": "Zaprojektuj układ oferty za pomocą edytora wizualnego, a następnie wyświetl podgląd z przykładowymi danymi.",
+    "errors": {
+      "exportAst": "Nie udało się wyeksportować szablonu AST z wizualnego obszaru roboczego: {{message}}",
+      "load": "Nie udało się załadować edytora szablonów ofert",
+      "nameRequired": "Nazwa szablonu jest wymagana.",
+      "notFound": "Nie znaleziono szablonu dokumentu wyceny.",
+      "previewPipeline": "Potok podglądu nie powiódł się.",
+      "saveFailed": "Nie udało się zapisać szablonu wyceny",
+      "unknownAstExport": "Nieznany błąd eksportu AST"
+    },
+    "fields": {
+      "layoutDetails": "Szczegóły układu",
+      "templateName": "Nazwa szablonu",
+      "version": "Wersja"
+    },
+    "footer": {
+      "created": "Stworzony:",
+      "lastUpdated": "Ostatnia aktualizacja:"
+    },
+    "headings": {
+      "editLayout": "Edytuj układ oferty",
+      "newLayout": "Nowy układ wyceny"
+    },
+    "placeholders": {
+      "templateName": "Szablon wyceny"
+    },
+    "preview": {
+      "renderFailed": "Renderowanie podglądu nie powiodło się.",
+      "rendering": "Podgląd kształtowania i renderowania...",
+      "sampleScenario": "Przykładowy scenariusz",
+      "selectScenario": "Wybierz scenariusz...",
+      "selectScenarioPrompt": "Wybierz przykładowy scenariusz, aby wygenerować wiarygodny podgląd.",
+      "templateGenerationFailed": "Nie można wygenerować szablonu podglądu z bieżącego obszaru roboczego."
+    },
+    "pipeline": {
+      "render": "Oddać",
+      "shape": "Kształt"
+    },
+    "tabs": {
+      "code": "Kod",
+      "design": "Projekt",
+      "preview": "Zapowiedź",
+      "transforms": "Transformuje",
+      "visual": "Wizualny"
+    }
+  },
+  "templatesPage": {
+    "title": "Układy wyceny",
+    "description": "Zaprojektuj układy używane do renderowania plików PDF z ofertami i podglądów.",
+    "actions": {
+      "openMenu": "Otwórz menu"
+    },
+    "cards": {
+      "availableLayouts": "Dostępne układy"
+    },
+    "dialogs": {
+      "deleteConfirm": "Czy na pewno chcesz usunąć „{{name}}”?"
+    },
+    "errors": {
+      "clone": "Nie udało się sklonować szablonu",
+      "delete": "Nie udało się usunąć szablonu",
+      "editCopy": "Nie udało się utworzyć edytowalnej kopii",
+      "load": "Nie udało się załadować szablonów dokumentów ofertowych",
+      "setDefault": "Nie udało się ustawić szablonu domyślnego"
+    },
+    "labels": {
+      "custom": "Zwyczaj"
+    }
+  }
+}

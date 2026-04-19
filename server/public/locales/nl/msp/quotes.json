@@ -1,0 +1,632 @@
+{
+  "common": {
+    "actions": {
+      "approve": "Goedkeuren",
+      "back": "Rug",
+      "cancel": "Annuleren",
+      "close": "Dichtbij",
+      "clone": "Kloon",
+      "convert": "Overzetten",
+      "delete": "Verwijderen",
+      "downloadPdf": "PDF downloaden",
+      "duplicate": "Duplicaat",
+      "edit": "Bewerking",
+      "editAsCopy": "Bewerken als kopiëren",
+      "newLayout": "Nieuwe lay-out",
+      "newQuote": "Nieuwe offerte",
+      "newTemplate": "Nieuwe sjabloon",
+      "open": "Open",
+      "requestChanges": "Wijzigingen aanvragen",
+      "resend": "Opnieuw verzenden",
+      "revise": "Herzien",
+      "save": "Redden",
+      "saveQuote": "Offerte opslaan",
+      "saveTemplate": "Sjabloon opslaan",
+      "send": "Versturen",
+      "sendReminder": "Herinnering verzenden",
+      "sendToClient": "Verzenden naar klant",
+      "setAsDefault": "Instellen als standaard",
+      "submitForApproval": "Ter goedkeuring indienen"
+    },
+    "badges": {
+      "standard": "Standaard"
+    },
+    "columns": {
+      "actions": "Acties",
+      "amount": "Hoeveelheid",
+      "client": "Cliënt",
+      "created": "Gemaakt",
+      "currency": "Munteenheid",
+      "date": "Datum",
+      "default": "Standaard",
+      "items": "Artikelen",
+      "name": "Naam",
+      "quoteDate": "Offertedatum",
+      "quoteNumber": "Offertenr.",
+      "source": "Bron",
+      "status": "Status",
+      "title": "Titel",
+      "total": "Totaal",
+      "validUntil": "Geldig tot"
+    },
+    "labels": {
+      "client": "Cliënt",
+      "contact": "Contactpersoon",
+      "currency": "Munteenheid",
+      "description": "Beschrijving / reikwijdte",
+      "discounts": "Kortingen",
+      "lineItems": "Regelitems",
+      "poNumber": "PO-nummer",
+      "quoteDate": "Offertedatum",
+      "quoteLayout": "Offertelayout",
+      "subtotal": "Subtotaal",
+      "tax": "Belasting",
+      "termsAndConditions": "Algemene voorwaarden",
+      "title": "Titel",
+      "total": "Totaal",
+      "validUntil": "Geldig tot"
+    },
+    "states": {
+      "generating": "Genereren...",
+      "loading": "Laden...",
+      "saving": "Besparing...",
+      "sending": "Verzenden..."
+    }
+  },
+  "quotesTab": {
+    "title": "Offertes",
+    "actions": {
+      "quoteActions": "Offerteacties"
+    },
+    "tabs": {
+      "active": "Actief ({{count}})",
+      "approval": "Goedkeuringswachtrij",
+      "closed": "Gesloten ({{count}})",
+      "sent": "Verzonden ({{count}})"
+    },
+    "filters": {
+      "allClients": "Alle klanten",
+      "client": "Cliënt"
+    },
+    "empty": {
+      "byCategory": "Geen offertes in deze categorie.",
+      "title": "Geen offertes gevonden",
+      "description": "Maak een offerte om te beginnen."
+    },
+    "dialogs": {
+      "delete": {
+        "title": "Offerte verwijderen",
+        "description": "Deze actie kan niet ongedaan worden gemaakt."
+      },
+      "send": {
+        "additionalEmails": "Extra ontvangers",
+        "additionalEmailsPlaceholder": "email@example.com, another@example.com",
+        "additionalRecipients": "Extra ontvangers (door komma's gescheiden)",
+        "description": "Hierdoor wordt de offerte-pdf per e-mail naar de factureringscontacten van de klant verzonden en wordt de status ervan gewijzigd in \"Verzonden\".",
+        "message": "Bericht",
+        "messageOptional": "Bericht (optioneel)",
+        "messagePlaceholder": "Voeg een persoonlijke noot toe voor de ontvanger...",
+        "title": "Offerte verzenden"
+      }
+    },
+    "errors": {
+      "delete": "Kan offerte niet verwijderen.",
+      "duplicate": "Kan de offerte niet dupliceren.",
+      "load": "Kan offertes niet laden",
+      "send": "Kan de offerte niet verzenden."
+    },
+    "loading": "Offertes laden...",
+    "rowActions": {
+      "delete": "Verwijderen",
+      "downloadPdf": "PDF downloaden",
+      "duplicate": "Duplicaat",
+      "open": "Open",
+      "resend": "Opnieuw verzenden",
+      "sendReminder": "Herinnering verzenden",
+      "sendToClient": "Verzenden naar klant"
+    }
+  },
+  "quoteForm": {
+    "actions": {
+      "cancelQuote": "Offerte annuleren",
+      "convertToBoth": "Converteren naar beide",
+      "convertToContract": "Converteren naar contract",
+      "convertToInvoice": "Converteren naar factuur",
+      "createNewRevision": "Nieuwe revisie maken",
+      "sendQuote": "Offerte verzenden"
+    },
+    "headings": {
+      "editQuote": "Offerte bewerken",
+      "editTemplate": "Offertesjabloon bewerken",
+      "newQuote": "Nieuwe offerte",
+      "newTemplate": "Nieuwe offertesjabloon",
+      "quote": "Offerte",
+      "quoteWithNumber": "Offerte {{quoteNumber}}",
+      "quoteWithNumberAndVersion": "Offerte {{quoteNumber}} v{{version}}",
+      "templateQuoteFallback": "Sjabloonofferte"
+    },
+    "fields": {
+      "additionalEmails": "Extra e-mailadressen (door komma's gescheiden)",
+      "clientNotes": "Opmerkingen voor de klant",
+      "createFromTemplate": "Maken vanuit sjabloon",
+      "messageOptional": "Bericht (optioneel)",
+      "quoteLayoutHelp": "Kies welke lay-out u wilt gebruiken voor de PDF van deze offerte. Laat leeg om de standaard te gebruiken.",
+      "recipients": "Ontvangers"
+    },
+    "placeholders": {
+      "additionalEmails": "email@example.com, another@example.com",
+      "message": "Voeg een persoonlijke noot toe voor de klant...",
+      "selectClient": "Selecteer klant",
+      "selectContact": "Selecteer contactpersoon",
+      "selectCurrency": "Selecteer valuta",
+      "startFromScratch": "Begin helemaal opnieuw",
+      "useDefaultLayout": "Gebruik de standaardindeling"
+    },
+    "alerts": {
+      "accepted": "Offerte geaccepteerd",
+      "converted": "Offerte geconverteerd",
+      "convertedDescription": "Deze offerte is omgezet naar een contract en/of factuur.",
+      "quote": "Offerte",
+      "rejected": "Offerte afgewezen"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Keur deze offerte goed zodat deze naar de klant kan worden verzonden.",
+        "approveTitle": "Offerte goedkeuren",
+        "approveComment": "Opmerking (optioneel)",
+        "approveCommentPlaceholder": "Voeg een optionele opmerking toe...",
+        "changesDescription": "Stuur deze offerte terug naar concept met de gevraagde wijzigingen.",
+        "changesTitle": "Wijzigingen aanvragen",
+        "changesComment": "Gevraagde wijzigingen",
+        "changesCommentPlaceholder": "Beschrijf de veranderingen die nodig zijn...",
+        "processing": "Verwerken..."
+      },
+      "conversion": {
+        "title": "Conversievoorbeeld",
+        "description": "Bekijk wat deze offerteconversie zal opleveren voordat u bevestigt."
+      },
+      "send": {
+        "description": "Hierdoor wordt de offerte per e-mail naar de factureringscontacten van de klant verzonden en wordt de status ervan gewijzigd in \"Verzonden\".",
+        "title": "Offerte naar klant sturen",
+        "additionalEmails": "Extra ontvangers",
+        "message": "Bericht"
+      }
+    },
+    "errorActions": {
+      "approveQuote": "offerte goedkeuren",
+      "cancelQuote": "offerte annuleren",
+      "requestChanges": "wijzigingen aanvragen",
+      "resendQuote": "offerte opnieuw verzenden",
+      "sendQuote": "offerte verzenden",
+      "sendReminder": "herinnering sturen",
+      "submitForApproval": "ter goedkeuring indienen"
+    },
+    "errors": {
+      "convert": "Kan offerte niet converteren",
+      "createRevision": "Kan geen revisie maken",
+      "downloadPdf": "Kan PDF niet downloaden",
+      "duplicate": "Kan de offerte niet dupliceren",
+      "load": "Kan het offerteformulier niet laden",
+      "loadConversionPreview": "Kan het conversievoorbeeld niet laden",
+      "notFound": "Offerte niet gevonden",
+      "save": "Kan offerte niet opslaan",
+      "saveFailed": "Het opslaan van de offerte is mislukt",
+      "workflowAction": "Kan {{action}} niet gebruiken"
+    },
+    "loading": "Offerteformulier laden...",
+    "notices": {
+      "approved": "Offerte goedgekeurd en klaar om te verzenden.",
+      "cancelled": "Offerte geannuleerd.",
+      "createdDraftContract": "Conceptcontract {{name}} gemaakt.",
+      "createdDraftContractAndInvoice": "Conceptcontract {{contractName}} en conceptfactuur {{invoiceName}} gemaakt.",
+      "createdDraftInvoice": "Conceptfactuur {{name}} gemaakt.",
+      "reminderSent": "Offerteherinnering verzonden.",
+      "requestedChanges": "Offerte teruggestuurd naar concept met gevraagde wijzigingen.",
+      "resent": "Offerte opnieuw verzonden.",
+      "sent": "Offerte verzonden naar de klant.",
+      "submittedForApproval": "Offerte ingediend voor interne goedkeuring."
+    },
+    "readOnlyNotice": "Deze offerte is alleen-lezen. Als u wijzigingen wilt aanbrengen, maakt u een nieuwe revisie.",
+    "validation": {
+      "clientRequired": "Klant is vereist",
+      "titleRequired": "Titel is vereist, tenzij u op basis van een sjabloon maakt"
+    }
+  },
+  "quoteDetail": {
+    "title": "Offertedetails",
+    "actions": {
+      "backToQuotes": "Terug naar offertes",
+      "openConvertedContract": "Open geconverteerd contract",
+      "openConvertedInvoice": "Open de geconverteerde factuur",
+      "preview": "Voorbeeld",
+      "saveAsTemplate": "Opslaan als sjabloon"
+    },
+    "sections": {
+      "activityLog": "Activiteitenlogboek",
+      "clientNotes": "Klantnotities",
+      "internalNotes": "Interne opmerkingen",
+      "lineItems": "Regelitems",
+      "quoteLayout": "Offertelayout",
+      "scopeOfWork": "Reikwijdte van het werk",
+      "termsAndConditions": "Algemene voorwaarden",
+      "versionHistory": "Versiegeschiedenis"
+    },
+    "alerts": {
+      "clientConfigurationSubmitted": "Clientconfiguratie verzonden",
+      "clientConfigurationSubmittedDescription": "Bekijk de optionele regelitems hieronder voordat u deze offerte converteert. Geselecteerde items worden gemarkeerd als opgenomen en geweigerde items worden gemarkeerd voor follow-up.",
+      "update": "Offerte-update"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Keur deze offerte goed zodat deze naar de klant kan worden verzonden. U kunt optioneel een opmerking toevoegen.",
+        "changesDescription": "Stuur deze offerte terug naar concept met de gevraagde wijzigingen. Beschrijf wat er moet worden herzien."
+      },
+      "send": {
+        "message": "Optioneel bericht om in de e-mail op te nemen"
+      }
+    },
+    "status": {
+      "accepted": "Offerte geaccepteerd",
+      "acceptedBy": "Geaccepteerd door:",
+      "acceptedOn": "Geaccepteerd op:",
+      "reason": "Reden:",
+      "rejected": "Offerte afgewezen",
+      "rejectedOn": "Afgewezen op:"
+    },
+    "empty": {
+      "activity": "Er zijn nog geen offerte-activiteiten geregistreerd.",
+      "lineItems": "Er zijn nog geen regelitems voor deze offerte.",
+      "revisions": "Er zijn nog geen eerdere herzieningen voor deze offerte."
+    },
+    "clientSelections": {
+      "declinedOptionalItem": "Klant heeft dit optionele item afgewezen",
+      "selectedOptionalItem": "Klant heeft dit optionele item geselecteerd"
+    },
+    "errors": {
+      "approve": "Kan de offerte niet goedkeuren",
+      "assignTemplate": "Kan sjabloon niet toewijzen",
+      "cancel": "Kan de offerte niet annuleren",
+      "convert": "Kan offerte niet converteren",
+      "delete": "Kan offerte niet verwijderen",
+      "deleteUnavailable": "Offerte kan niet worden verwijderd",
+      "downloadPdf": "Kan offerte-pdf niet genereren",
+      "duplicate": "Kan de offerte niet dupliceren",
+      "load": "Kan offertedetails niet laden",
+      "loadConversionPreview": "Kan het conversievoorbeeld niet laden",
+      "notFound": "Offerte niet gevonden",
+      "preview": "Kan offertevoorbeeld niet genereren",
+      "requestChanges": "Kan offertewijzigingen niet aanvragen",
+      "resend": "Kan de offerte niet opnieuw verzenden",
+      "revise": "Kan offerterevisie niet maken",
+      "saveAsTemplate": "Kan de offerte niet opslaan als sjabloon",
+      "send": "Kan de offerte niet verzenden",
+      "sendReminder": "Kan de offerteherinnering niet verzenden",
+      "submitForApproval": "Kan de offerte niet ter goedkeuring indienen"
+    },
+    "labels": {
+      "phase": "Fase: {{phase}}",
+      "templateQuote": "Sjabloonofferte"
+    },
+    "loading": "Offertegegevens laden...",
+    "notices": {
+      "approved": "Offerte goedgekeurd en klaar om te verzenden.",
+      "reminderSent": "Offerteherinnering verzonden naar de geconfigureerde factuurontvangers.",
+      "requestedChanges": "Offerte teruggestuurd naar concept met gevraagde wijzigingen.",
+      "resent": "Offerte opnieuw verzonden naar de geconfigureerde factuurontvangers.",
+      "sent": "Offerte verzonden naar de klant.",
+      "submittedForApproval": "Offerte ingediend voor interne goedkeuring.",
+      "templateAssigned": "Documentsjabloon toegewezen.",
+      "templateCleared": "Documentsjabloon gewist (standaard gebruikt)."
+    },
+    "preview": {
+      "loading": "Voorbeeld laden..."
+    },
+    "table": {
+      "description": "Beschrijving"
+    }
+  },
+  "quoteLineItems": {
+    "title": "Regelitems",
+    "actions": {
+      "addDiscount": "Korting toevoegen",
+      "collapse": "Instorten",
+      "expand": "Uitbreiden",
+      "hideDiscount": "Korting verbergen",
+      "remove": "Verwijderen"
+    },
+    "billingMethods": {
+      "fixed": "Vast",
+      "hourly": "Per uur",
+      "perUnit": "Per eenheid",
+      "usage": "Gebruik gebaseerd"
+    },
+    "columns": {
+      "actions": "Acties",
+      "billing": "Facturering",
+      "flags": "Vlaggen",
+      "item": "Item",
+      "move": "Beweging",
+      "quantity": "Aantal",
+      "total": "Totaal",
+      "unitPrice": "Eenheidsprijs"
+    },
+    "labels": {
+      "customItem": "Aangepast artikel",
+      "itemCountOne": "1 artikel",
+      "itemCountOther": "{{count}} artikelen",
+      "noPriceInCurrency": "Geen prijs in {{currencyCode}}",
+      "optional": "Optioneel",
+      "phaseSection": "Fase / Sectie",
+      "recurring": "Terugkerend",
+      "service": "dienst",
+      "setPrice": "Prijs instellen",
+      "ungroupedItems": "Niet-gegroepeerde items"
+    },
+    "placeholders": {
+      "phaseSection": "bijv. Ontdekking, uitrol, doorlopend",
+      "selectItem": "Selecteer artikel",
+      "selectService": "Selecteer dienst",
+      "servicePicker": "Zoek of typ een aangepaste itemnaam..."
+    },
+    "discounts": {
+      "badge": "Korting",
+      "description": {
+        "fixed": "Korting",
+        "percentage": "Korting ({{value}}%)"
+      },
+      "fixed": "Vaste korting",
+      "fullQuoteSubtotal": "Geldt voor het volledige offertesubtotaal",
+      "fullQuote": "Volledige offerte",
+      "item": "Specifiek artikel",
+      "percentage": "Procentuele korting",
+      "service": "Specifieke dienst",
+      "targets": {
+        "fullQuote": "op volledige offerte",
+        "namedItem": "op \"{{name}}\"",
+        "namedService": "op {{name}}",
+        "specificItem": "op een specifiek artikel",
+        "specificService": "op specifieke dienst"
+      },
+      "types": {
+        "fixed": "Vast",
+        "percentage": "Percentage"
+      }
+    },
+    "markup": {
+      "badge": "{{sign}}{{value}}% toeslag",
+      "unavailable": "Toeslag niet beschikbaar",
+      "unavailableTooltip": "De toeslag kan niet worden berekend omdat de kosten worden bijgehouden in {{costCurrency}} en deze offerte in {{quoteCurrency}}."
+    },
+    "empty": "Nog geen regelitems. Gebruik de cataloguszoekopdracht hierboven om uw eerste item toe te voegen."
+  },
+  "quoteRecipients": {
+    "trigger": {
+      "add": "Interne gebruiker of klantcontact toevoegen...",
+      "noClient": "Selecteer eerst een klant",
+      "noneAvailable": "Geen gebruikers of contacten beschikbaar"
+    },
+    "searchPlaceholder": "Zoek op naam of e-mailadres...",
+    "empty": {
+      "noMatches": "Geen overeenkomsten",
+      "noneAvailable": "Geen ontvangers beschikbaar"
+    },
+    "kind": {
+      "contact": "Contactpersoon",
+      "internal": "Intern"
+    },
+    "removeAriaLabel": "{{email}} verwijderen"
+  },
+  "quoteConversion": {
+    "title": "Offerte converteren",
+    "description": "Zet de geaccepteerde offerte \"{{title}}\" om in contracten en/of facturen.",
+    "loading": "Conversievoorbeeld laden...",
+    "mode": {
+      "contract": {
+        "label": "Alleen contract",
+        "description": "Creëert een conceptcontract met terugkerende servicelijnen. Eenmalige artikelen worden niet meegeleverd."
+      },
+      "invoice": {
+        "label": "Alleen factuur",
+        "description": "Creëert een conceptfactuur met eenmalige kosten. Terugkerende items worden niet meegenomen."
+      },
+      "both": {
+        "label": "Contract + Factuur",
+        "description": "Creëert zowel een conceptcontract (voor terugkerende artikelen) als een conceptfactuur (voor eenmalige artikelen)."
+      }
+    },
+    "sections": {
+      "contractItems": "Contractartikelen",
+      "conversionMode": "Conversiemodus",
+      "excludedItems": "Uitgesloten artikelen",
+      "excludedFromConversion": "Uitgesloten van conversie",
+      "invoiceItems": "Factuurartikelen",
+      "itemMappingPreview": "Voorbeeld van itemtoewijzing",
+      "quoteTotal": "Offerte Totaal",
+      "statusAfterConversion": "Status na conversie",
+      "willBecomeContractLines": "Worden contractlijnen",
+      "willBecomeInvoiceCharges": "Worden factuurkosten"
+    },
+    "empty": {
+      "contractItems": "Terugkerende items worden niet omgezet in een contract.",
+      "invoiceItems": "Eenmalige items worden niet omgezet in een factuur."
+    },
+    "summary": {
+      "converted": "Geconverteerd",
+      "discount": "Korting",
+      "fixed": "vast",
+      "notConverted": "Niet omgezet"
+    },
+    "partial": {
+      "alreadyConverted": "Deze offerte is al gedeeltelijk omgezet.",
+      "contractCreated": "Er is een contract gemaakt.",
+      "invoiceCreated": "Er is een factuur aangemaakt.",
+      "remainingItems": "De resterende items kunt u converteren.",
+      "title": "Gedeeltelijke conversie",
+      "description": "Sommige records voor deze offerte bestaan ​​al."
+    },
+    "actions": {
+      "contract": "Conceptcontract maken",
+      "convertQuote": "Offerte converteren",
+      "invoice": "Conceptfactuur maken",
+      "both": "Maak beide records",
+      "converting": "Converteren..."
+    },
+    "errors": {
+      "convert": "Kan offerte niet converteren",
+      "load": "Kan het conversievoorbeeld niet laden",
+      "title": "Fout"
+    }
+  },
+  "quoteApproval": {
+    "title": "Goedkeuringen van offertes",
+    "description": "Beoordeel offertes die wachten op goedkeuring van de manager voordat ze naar klanten kunnen worden verzonden.",
+    "actions": {
+      "backToQuotes": "Terug naar offertes"
+    },
+    "settings": {
+      "label": "Goedkeuring vereist vóór verzending",
+      "enabled": "Conceptoffertes moeten worden goedgekeurd voordat ze worden verzonden.",
+      "disabled": "Conceptoffertes kunnen zonder goedkeuring worden verzonden."
+    },
+    "filters": {
+      "status": "Status",
+      "approved": "Goedgekeurd",
+      "pendingApproval": "In afwachting van goedkeuring"
+    },
+    "empty": {
+      "approved": "Er staan ​​momenteel geen offertes in de goedgekeurde wachtrij.",
+      "pendingApproval": "Er staan ​​momenteel geen offertes in de wachtrij voor goedkeuring.",
+      "title": "Geen offertes gevonden"
+    },
+    "errors": {
+      "load": "Kan offertegoedkeuringen niet laden",
+      "settings": "Kan de instellingen voor het goedkeuren van offertes niet updaten"
+    },
+    "loading": "Goedkeuringswachtrij laden..."
+  },
+  "quoteTemplates": {
+    "title": "Sjablonen",
+    "description": "Met offertesjablonen kunt u herbruikbare sets regelitems, voorwaarden en notities opslaan. Selecteer een sjabloon bij het maken van een nieuwe offerte om te beginnen met vooraf ingevulde gegevens.",
+    "empty": {
+      "inline": "Nog geen offertesjablonen. Maak een sjabloon door op 'Opslaan als sjabloon' te klikken vanuit de detailweergave van een offerte.",
+      "title": "Nog geen offertesjablonen",
+      "description": "Gebruik Opslaan als sjabloon uit een offerte om uw eerste herbruikbare sjabloon te maken."
+    },
+    "actions": {
+      "createQuoteFromTemplate": "Offerte maken op basis van sjabloon",
+      "delete": "Verwijderen",
+      "editTemplate": "Sjabloon bewerken",
+      "templateActions": "Sjabloonacties"
+    },
+    "dialogs": {
+      "delete": {
+        "message": "Weet u zeker dat u deze offertesjabloon wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+        "title": "Sjabloon verwijderen"
+      }
+    },
+    "errors": {
+      "delete": "Kan sjabloon niet verwijderen.",
+      "load": "Kan sjablonen niet laden"
+    },
+    "loading": "Sjablonen laden..."
+  },
+  "quotePreview": {
+    "title": "Voorbeeld van offerte",
+    "empty": {
+      "selectQuote": "Selecteer een offerte om een ​​voorbeeld te bekijken",
+      "unavailable": "Kan voorbeeld niet weergeven. Er ontbreken mogelijk gegevens."
+    },
+    "placeholders": {
+      "selectLayout": "Offerte-indeling selecteren..."
+    },
+    "actions": {
+      "openQuote": "Offerte openen"
+    },
+    "errors": {
+      "downloadPdf": "Kan PDF niet downloaden. Probeer het opnieuw.",
+      "load": "Kan voorbeeld niet laden"
+    },
+    "loading": "Voorbeeld laden..."
+  },
+  "templateEditor": {
+    "actions": {
+      "backToLayouts": "Terug naar Lay-outs",
+      "rerun": "Opnieuw uitvoeren",
+      "saveLayout": "Lay-out opslaan"
+    },
+    "codeReadonly": "De codeweergave wordt gegenereerd vanuit de visuele werkruimte en is alleen-lezen.",
+    "defaults": {
+      "copyOf": "Kopie van {{name}}",
+      "standardTemplate": "Standaard sjabloon"
+    },
+    "title": "Offerte-indelingseditor",
+    "description": "Ontwerp de offerte-indeling met behulp van de visuele editor en bekijk een voorbeeld met voorbeeldgegevens.",
+    "errors": {
+      "exportAst": "Kan sjabloon AST niet exporteren vanuit de visuele werkruimte: {{message}}",
+      "load": "Kan de offertesjablooneditor niet laden",
+      "nameRequired": "Sjabloonnaam is vereist.",
+      "notFound": "Offertedocumentsjabloon niet gevonden.",
+      "previewPipeline": "Preview-pijplijn is mislukt.",
+      "saveFailed": "Kan offertesjabloon niet opslaan",
+      "unknownAstExport": "Onbekende AST-exportfout"
+    },
+    "fields": {
+      "layoutDetails": "Indelingsdetails",
+      "templateName": "Sjabloonnaam",
+      "version": "Versie"
+    },
+    "footer": {
+      "created": "Gemaakt:",
+      "lastUpdated": "Laatst bijgewerkt:"
+    },
+    "headings": {
+      "editLayout": "Offerte-indeling bewerken",
+      "newLayout": "Nieuwe offerte-indeling"
+    },
+    "placeholders": {
+      "templateName": "Offerte sjabloon"
+    },
+    "preview": {
+      "renderFailed": "Voorbeeldweergave mislukt.",
+      "rendering": "Voorbeeld vormgeven en renderen...",
+      "sampleScenario": "Voorbeeldscenario",
+      "selectScenario": "Scenario selecteren...",
+      "selectScenarioPrompt": "Selecteer een voorbeeldscenario om een ​​gezaghebbende preview te genereren.",
+      "templateGenerationFailed": "Voorbeeldsjabloon kan niet worden gegenereerd vanuit de huidige werkruimte."
+    },
+    "pipeline": {
+      "render": "Veroorzaken",
+      "shape": "Vorm"
+    },
+    "tabs": {
+      "code": "Code",
+      "design": "Ontwerp",
+      "preview": "Voorbeeld",
+      "transforms": "Transformeert",
+      "visual": "Visueel"
+    }
+  },
+  "templatesPage": {
+    "title": "Offertelayouts",
+    "description": "Ontwerp de lay-outs die worden gebruikt om offerte-PDF's en voorbeelden weer te geven.",
+    "actions": {
+      "openMenu": "Menu openen"
+    },
+    "cards": {
+      "availableLayouts": "Beschikbare lay-outs"
+    },
+    "dialogs": {
+      "deleteConfirm": "Weet u zeker dat u \"{{name}}\" wilt verwijderen?"
+    },
+    "errors": {
+      "clone": "Kan sjabloon niet klonen",
+      "delete": "Kan sjabloon niet verwijderen",
+      "editCopy": "Kan bewerkbare kopie niet maken",
+      "load": "Kan offertedocumentsjablonen niet laden",
+      "setDefault": "Kan standaardsjabloon niet instellen"
+    },
+    "labels": {
+      "custom": "Aangepast"
+    }
+  }
+}

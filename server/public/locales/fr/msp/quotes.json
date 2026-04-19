@@ -1,0 +1,632 @@
+{
+  "common": {
+    "actions": {
+      "approve": "Approuver",
+      "back": "Dos",
+      "cancel": "Annuler",
+      "close": "Fermer",
+      "clone": "Cloner",
+      "convert": "Convertir",
+      "delete": "Supprimer",
+      "downloadPdf": "Télécharger le PDF",
+      "duplicate": "Double",
+      "edit": "Modifier",
+      "editAsCopy": "Modifier en tant que copie",
+      "newLayout": "Nouvelle mise en page",
+      "newQuote": "Nouveau devis",
+      "newTemplate": "Nouveau modèle",
+      "open": "Ouvrir",
+      "requestChanges": "Demander des modifications",
+      "resend": "Renvoyer",
+      "revise": "Réviser",
+      "save": "Sauvegarder",
+      "saveQuote": "Enregistrer le devis",
+      "saveTemplate": "Enregistrer le modèle",
+      "send": "Envoyer",
+      "sendReminder": "Envoyer un rappel",
+      "sendToClient": "Envoyer au client",
+      "setAsDefault": "Définir par défaut",
+      "submitForApproval": "Soumettre pour approbation"
+    },
+    "badges": {
+      "standard": "Standard"
+    },
+    "columns": {
+      "actions": "Actes",
+      "amount": "Montant",
+      "client": "Client",
+      "created": "Créé",
+      "currency": "Devise",
+      "date": "Date",
+      "default": "Défaut",
+      "items": "Articles",
+      "name": "Nom",
+      "quoteDate": "Date du devis",
+      "quoteNumber": "N° de devis",
+      "source": "Source",
+      "status": "Statut",
+      "title": "Titre",
+      "total": "Total",
+      "validUntil": "Valable jusqu'au"
+    },
+    "labels": {
+      "client": "Client",
+      "contact": "Contact",
+      "currency": "Devise",
+      "description": "Description/Portée",
+      "discounts": "Réductions",
+      "lineItems": "Éléments de campagne",
+      "poNumber": "Numéro de bon de commande",
+      "quoteDate": "Date du devis",
+      "quoteLayout": "Disposition du devis",
+      "subtotal": "Total",
+      "tax": "Impôt",
+      "termsAndConditions": "Conditions générales",
+      "title": "Titre",
+      "total": "Total",
+      "validUntil": "Valable jusqu'au"
+    },
+    "states": {
+      "generating": "Générateur...",
+      "loading": "Chargement...",
+      "saving": "Économie...",
+      "sending": "Envoi..."
+    }
+  },
+  "quotesTab": {
+    "title": "Devis",
+    "actions": {
+      "quoteActions": "Actions du devis"
+    },
+    "tabs": {
+      "active": "Actif ({{count}})",
+      "approval": "File d'attente d'approbation",
+      "closed": "Fermé ({{count}})",
+      "sent": "Envoyé ({{count}})"
+    },
+    "filters": {
+      "allClients": "Tous les clients",
+      "client": "Client"
+    },
+    "empty": {
+      "byCategory": "Aucun devis dans cette catégorie.",
+      "title": "Aucun devis trouvé",
+      "description": "Créez un devis pour commencer."
+    },
+    "dialogs": {
+      "delete": {
+        "title": "Supprimer le devis",
+        "description": "Cette action ne peut pas être annulée."
+      },
+      "send": {
+        "additionalEmails": "Destinataires supplémentaires",
+        "additionalEmailsPlaceholder": "email@example.com, another@example.com",
+        "additionalRecipients": "Destinataires supplémentaires (séparés par des virgules)",
+        "description": "Cela enverra le devis PDF par e-mail aux contacts de facturation du client et changera son statut en « Envoyé ».",
+        "message": "Message",
+        "messageOptional": "Message (facultatif)",
+        "messagePlaceholder": "Ajoutez une note personnelle pour le destinataire...",
+        "title": "Envoyer un devis"
+      }
+    },
+    "errors": {
+      "delete": "Échec de la suppression du devis.",
+      "duplicate": "Échec de la duplication du devis.",
+      "load": "Échec du chargement des devis",
+      "send": "Échec de l'envoi du devis."
+    },
+    "loading": "Chargement des devis...",
+    "rowActions": {
+      "delete": "Supprimer",
+      "downloadPdf": "Télécharger le PDF",
+      "duplicate": "Double",
+      "open": "Ouvrir",
+      "resend": "Renvoyer",
+      "sendReminder": "Envoyer un rappel",
+      "sendToClient": "Envoyer au client"
+    }
+  },
+  "quoteForm": {
+    "actions": {
+      "cancelQuote": "Annuler le devis",
+      "convertToBoth": "Convertir en les deux",
+      "convertToContract": "Convertir en contrat",
+      "convertToInvoice": "Convertir en facture",
+      "createNewRevision": "Créer une nouvelle révision",
+      "sendQuote": "Envoyer un devis"
+    },
+    "headings": {
+      "editQuote": "Modifier le devis",
+      "editTemplate": "Modifier le modèle de devis",
+      "newQuote": "Nouveau devis",
+      "newTemplate": "Nouveau modèle de devis",
+      "quote": "Devis",
+      "quoteWithNumber": "Devis {{quoteNumber}}",
+      "quoteWithNumberAndVersion": "Devis {{quoteNumber}} v{{version}}",
+      "templateQuoteFallback": "Modèle de devis"
+    },
+    "fields": {
+      "additionalEmails": "Adresses e-mail supplémentaires (séparées par des virgules)",
+      "clientNotes": "Notes au client",
+      "createFromTemplate": "Créer à partir d'un modèle",
+      "messageOptional": "Message (facultatif)",
+      "quoteLayoutHelp": "Choisissez la mise en page à utiliser pour le PDF de ce devis. Laissez vide pour utiliser la valeur par défaut.",
+      "recipients": "Destinataires"
+    },
+    "placeholders": {
+      "additionalEmails": "email@example.com, another@example.com",
+      "message": "Ajoutez une note personnelle pour le client...",
+      "selectClient": "Sélectionner un client",
+      "selectContact": "Sélectionnez un contact",
+      "selectCurrency": "Sélectionnez la devise",
+      "startFromScratch": "Repartir de zéro",
+      "useDefaultLayout": "Utiliser la mise en page par défaut"
+    },
+    "alerts": {
+      "accepted": "Devis accepté",
+      "converted": "Devis converti",
+      "convertedDescription": "Ce devis a été converti en contrat et/ou facture.",
+      "quote": "Devis",
+      "rejected": "Devis rejeté"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Approuvez ce devis afin qu’il puisse être envoyé au client.",
+        "approveTitle": "Approuver le devis",
+        "approveComment": "Commentaire (facultatif)",
+        "approveCommentPlaceholder": "Ajouter une note facultative...",
+        "changesDescription": "Renvoyez ce devis à l'ébauche avec les modifications demandées.",
+        "changesTitle": "Demander des modifications",
+        "changesComment": "Modifications demandées",
+        "changesCommentPlaceholder": "Décrivez les changements nécessaires...",
+        "processing": "Traitement..."
+      },
+      "conversion": {
+        "title": "Aperçu des conversions",
+        "description": "Vérifiez ce que cette conversion de devis va créer avant de confirmer."
+      },
+      "send": {
+        "description": "Cela enverra le devis par courrier électronique aux contacts de facturation du client et changera son statut en « Envoyé ».",
+        "title": "Envoyer un devis au client",
+        "additionalEmails": "Destinataires supplémentaires",
+        "message": "Message"
+      }
+    },
+    "errorActions": {
+      "approveQuote": "approuver le devis",
+      "cancelQuote": "annuler le devis",
+      "requestChanges": "demander des modifications",
+      "resendQuote": "renvoyer le devis",
+      "sendQuote": "envoyer un devis",
+      "sendReminder": "envoyer un rappel",
+      "submitForApproval": "soumettre pour approbation"
+    },
+    "errors": {
+      "convert": "Échec de la conversion du devis",
+      "createRevision": "Échec de la création de la révision",
+      "downloadPdf": "Échec du téléchargement du PDF",
+      "duplicate": "Échec de la duplication du devis",
+      "load": "Échec du chargement du formulaire de devis",
+      "loadConversionPreview": "Échec du chargement de l'aperçu de la conversion",
+      "notFound": "Devis introuvable",
+      "save": "Échec de l'enregistrement du devis",
+      "saveFailed": "Échec de l'enregistrement du devis",
+      "workflowAction": "Échec de {{action}}"
+    },
+    "loading": "Chargement du formulaire de devis...",
+    "notices": {
+      "approved": "Devis approuvé et prêt à être envoyé.",
+      "cancelled": "Devis annulé.",
+      "createdDraftContract": "Création d'un projet de contrat {{name}}.",
+      "createdDraftContractAndInvoice": "Création d'un projet de contrat {{contractName}} et d'un projet de facture {{invoiceName}}.",
+      "createdDraftInvoice": "Projet de facture créé {{name}}.",
+      "reminderSent": "Rappel de devis envoyé.",
+      "requestedChanges": "Le devis est revenu à l'état de brouillon avec les modifications demandées.",
+      "resent": "Devis renvoyé.",
+      "sent": "Devis envoyé au client.",
+      "submittedForApproval": "Devis soumis pour approbation interne."
+    },
+    "readOnlyNotice": "Ce devis est en lecture seule. Pour apporter des modifications, créez une nouvelle révision.",
+    "validation": {
+      "clientRequired": "Le client est requis",
+      "titleRequired": "Le titre est requis sauf si vous créez à partir d'un modèle"
+    }
+  },
+  "quoteDetail": {
+    "title": "Détail du devis",
+    "actions": {
+      "backToQuotes": "Retour aux devis",
+      "openConvertedContract": "Contrat converti ouvert",
+      "openConvertedInvoice": "Ouvrir la facture convertie",
+      "preview": "Aperçu",
+      "saveAsTemplate": "Enregistrer comme modèle"
+    },
+    "sections": {
+      "activityLog": "Journal d'activité",
+      "clientNotes": "Notes des clients",
+      "internalNotes": "Notes internes",
+      "lineItems": "Éléments de campagne",
+      "quoteLayout": "Disposition du devis",
+      "scopeOfWork": "Portée des travaux",
+      "termsAndConditions": "Conditions générales",
+      "versionHistory": "Historique des versions"
+    },
+    "alerts": {
+      "clientConfigurationSubmitted": "Configuration client soumise",
+      "clientConfigurationSubmittedDescription": "Examinez les éléments de campagne facultatifs ci-dessous avant de convertir ce devis. Les éléments sélectionnés sont marqués comme inclus et les éléments refusés sont mis en surbrillance pour le suivi.",
+      "update": "Mise à jour du devis"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Approuvez ce devis afin qu’il puisse être envoyé au client. Vous pouvez ajouter un commentaire facultatif.",
+        "changesDescription": "Renvoyez ce devis à l'ébauche avec les modifications demandées. Veuillez décrire ce qui doit être révisé."
+      },
+      "send": {
+        "message": "Message facultatif à inclure dans l'e-mail"
+      }
+    },
+    "status": {
+      "accepted": "Devis accepté",
+      "acceptedBy": "Accepté par :",
+      "acceptedOn": "Accepté le :",
+      "reason": "Raison:",
+      "rejected": "Devis rejeté",
+      "rejectedOn": "Rejeté le :"
+    },
+    "empty": {
+      "activity": "Aucune activité de devis enregistrée pour le moment.",
+      "lineItems": "Aucun élément de campagne sur ce devis pour l'instant.",
+      "revisions": "Aucune révision antérieure pour ce devis pour le moment."
+    },
+    "clientSelections": {
+      "declinedOptionalItem": "Le client a refusé cet élément facultatif",
+      "selectedOptionalItem": "Le client a sélectionné cet élément facultatif"
+    },
+    "errors": {
+      "approve": "Échec de l'approbation du devis",
+      "assignTemplate": "Échec de l'attribution du modèle",
+      "cancel": "Échec de l'annulation du devis",
+      "convert": "Échec de la conversion du devis",
+      "delete": "Échec de la suppression du devis",
+      "deleteUnavailable": "Le devis n'a pas pu être supprimé",
+      "downloadPdf": "Échec de la génération du devis PDF",
+      "duplicate": "Échec de la duplication du devis",
+      "load": "Échec du chargement des détails du devis",
+      "loadConversionPreview": "Échec du chargement de l'aperçu de la conversion",
+      "notFound": "Devis introuvable",
+      "preview": "Échec de la génération de l'aperçu du devis",
+      "requestChanges": "Échec de la demande de modification du devis",
+      "resend": "Échec du renvoi du devis",
+      "revise": "Échec de la création de la révision du devis",
+      "saveAsTemplate": "Échec de l'enregistrement du devis en tant que modèle",
+      "send": "Échec de l'envoi du devis",
+      "sendReminder": "Échec de l'envoi du rappel de devis",
+      "submitForApproval": "Échec de la soumission du devis pour approbation"
+    },
+    "labels": {
+      "phase": "Phase : {{phase}}",
+      "templateQuote": "Modèle de devis"
+    },
+    "loading": "Chargement des détails du devis...",
+    "notices": {
+      "approved": "Devis approuvé et prêt à être envoyé.",
+      "reminderSent": "Rappel de devis envoyé aux destinataires de facturation configurés.",
+      "requestedChanges": "Le devis est revenu à l'état de brouillon avec les modifications demandées.",
+      "resent": "Devis renvoyé aux destinataires de facturation configurés.",
+      "sent": "Devis envoyé au client.",
+      "submittedForApproval": "Devis soumis pour approbation interne.",
+      "templateAssigned": "Modèle de document attribué.",
+      "templateCleared": "Modèle de document effacé (en utilisant la valeur par défaut)."
+    },
+    "preview": {
+      "loading": "Chargement de l'aperçu..."
+    },
+    "table": {
+      "description": "Description"
+    }
+  },
+  "quoteLineItems": {
+    "title": "Éléments de campagne",
+    "actions": {
+      "addDiscount": "Ajouter une remise",
+      "collapse": "Effondrement",
+      "expand": "Développer",
+      "hideDiscount": "Masquer la réduction",
+      "remove": "Retirer"
+    },
+    "billingMethods": {
+      "fixed": "Fixé",
+      "hourly": "Horaire",
+      "perUnit": "Par unité",
+      "usage": "Basé sur l'utilisation"
+    },
+    "columns": {
+      "actions": "Actes",
+      "billing": "Facturation",
+      "flags": "Drapeaux",
+      "item": "Article",
+      "move": "Se déplacer",
+      "quantity": "Qté",
+      "total": "Total",
+      "unitPrice": "Prix ​​unitaire"
+    },
+    "labels": {
+      "customItem": "Article personnalisé",
+      "itemCountOne": "1 article",
+      "itemCountOther": "Articles {{count}}",
+      "noPriceInCurrency": "Pas de prix en {{currencyCode}}",
+      "optional": "Facultatif",
+      "phaseSection": "Phase / Section",
+      "recurring": "Récurrent",
+      "service": "service",
+      "setPrice": "Fixer le prix",
+      "ungroupedItems": "Éléments non regroupés"
+    },
+    "placeholders": {
+      "phaseSection": "par ex. Découverte, déploiement, en cours",
+      "selectItem": "Sélectionner un article",
+      "selectService": "Sélectionnez une prestation",
+      "servicePicker": "Recherchez ou saisissez le nom de l'élément personnalisé..."
+    },
+    "discounts": {
+      "badge": "Rabais",
+      "description": {
+        "fixed": "Rabais",
+        "percentage": "Remise ({{value}}%)"
+      },
+      "fixed": "Remise fixe",
+      "fullQuoteSubtotal": "S'applique au sous-total du devis complet",
+      "fullQuote": "Devis complet",
+      "item": "Article spécifique",
+      "percentage": "Pourcentage de remise",
+      "service": "Prestation spécifique",
+      "targets": {
+        "fullQuote": "sur devis complet",
+        "namedItem": "sur \"{{name}}\"",
+        "namedService": "sur {{name}}",
+        "specificItem": "sur un article spécifique",
+        "specificService": "sur un service spécifique"
+      },
+      "types": {
+        "fixed": "Fixé",
+        "percentage": "Pourcentage"
+      }
+    },
+    "markup": {
+      "badge": "{{sign}}{{value}} % de majoration",
+      "unavailable": "Majoration indisponible",
+      "unavailableTooltip": "La majoration ne peut pas être calculée, car le coût est suivi dans {{costCurrency}} et ce devis se trouve dans {{quoteCurrency}}."
+    },
+    "empty": "Aucun élément de campagne pour l'instant. Utilisez la recherche dans le catalogue ci-dessus pour ajouter votre premier article."
+  },
+  "quoteRecipients": {
+    "trigger": {
+      "add": "Ajouter un utilisateur interne ou un contact client...",
+      "noClient": "Sélectionnez d'abord un client",
+      "noneAvailable": "Aucun utilisateur ou contact disponible"
+    },
+    "searchPlaceholder": "Rechercher par nom ou par email...",
+    "empty": {
+      "noMatches": "Aucune correspondance",
+      "noneAvailable": "Aucun destinataire disponible"
+    },
+    "kind": {
+      "contact": "Contact",
+      "internal": "Interne"
+    },
+    "removeAriaLabel": "Supprimer {{email}}"
+  },
+  "quoteConversion": {
+    "title": "Convertir le devis",
+    "description": "Convertissez le devis accepté \"{{title}}\" en contrats et/ou factures.",
+    "loading": "Chargement de l'aperçu de la conversion...",
+    "mode": {
+      "contract": {
+        "label": "Contrat uniquement",
+        "description": "Crée un projet de contrat avec des lignes de services récurrentes. Les articles ponctuels ne seront pas inclus."
+      },
+      "invoice": {
+        "label": "Facture uniquement",
+        "description": "Crée un brouillon de facture avec des frais uniques. Les éléments récurrents ne seront pas inclus."
+      },
+      "both": {
+        "label": "Contrat + Facture",
+        "description": "Crée à la fois un projet de contrat (pour les articles récurrents) et un projet de facture (pour les articles ponctuels)."
+      }
+    },
+    "sections": {
+      "contractItems": "Articles du contrat",
+      "conversionMode": "Mode de conversion",
+      "excludedItems": "Articles exclus",
+      "excludedFromConversion": "Exclus de la conversion",
+      "invoiceItems": "Postes de facture",
+      "itemMappingPreview": "Aperçu du mappage d'éléments",
+      "quoteTotal": "Total du devis",
+      "statusAfterConversion": "Statut après conversion",
+      "willBecomeContractLines": "Deviendront des lignes contractuelles",
+      "willBecomeInvoiceCharges": "Deviendront des frais facturés"
+    },
+    "empty": {
+      "contractItems": "Aucun élément récurrent ne sera converti en contrat.",
+      "invoiceItems": "Aucun élément ponctuel ne sera converti en facture."
+    },
+    "summary": {
+      "converted": "Converti",
+      "discount": "Rabais",
+      "fixed": "fixé",
+      "notConverted": "Non converti"
+    },
+    "partial": {
+      "alreadyConverted": "Ce devis a déjà été partiellement converti.",
+      "contractCreated": "Un contrat a été créé.",
+      "invoiceCreated": "Une facture a été créée.",
+      "remainingItems": "Vous pouvez convertir les éléments restants.",
+      "title": "Conversion partielle",
+      "description": "Certains enregistrements pour ce devis existent déjà."
+    },
+    "actions": {
+      "contract": "Créer un brouillon de contrat",
+      "convertQuote": "Convertir le devis",
+      "invoice": "Créer une facture provisoire",
+      "both": "Créer les deux enregistrements",
+      "converting": "Conversion..."
+    },
+    "errors": {
+      "convert": "Échec de la conversion du devis",
+      "load": "Échec du chargement de l'aperçu de la conversion",
+      "title": "Erreur"
+    }
+  },
+  "quoteApproval": {
+    "title": "Approbations de devis",
+    "description": "Examinez les devis en attente de l'approbation du responsable avant de pouvoir être envoyés aux clients.",
+    "actions": {
+      "backToQuotes": "Retour aux devis"
+    },
+    "settings": {
+      "label": "Approbation requise avant l’envoi",
+      "enabled": "Les projets de devis doivent être approuvés avant envoi.",
+      "disabled": "Des projets de devis peuvent être envoyés sans approbation."
+    },
+    "filters": {
+      "status": "Statut",
+      "approved": "Approuvé",
+      "pendingApproval": "En attente d'approbation"
+    },
+    "empty": {
+      "approved": "Il n'y a aucun devis dans la file d'attente approuvée pour le moment.",
+      "pendingApproval": "Il n'y a aucun devis dans la file d'attente d'approbation en attente pour le moment.",
+      "title": "Aucun devis trouvé"
+    },
+    "errors": {
+      "load": "Échec du chargement des approbations de devis",
+      "settings": "Échec de la mise à jour des paramètres d'approbation du devis"
+    },
+    "loading": "Chargement de la file d'attente d'approbation..."
+  },
+  "quoteTemplates": {
+    "title": "Modèles",
+    "description": "Les modèles de devis vous permettent d'enregistrer des ensembles réutilisables d'éléments de campagne, de conditions et de notes. Sélectionnez un modèle lors de la création d'un nouveau devis pour commencer avec des données pré-remplies.",
+    "empty": {
+      "inline": "Aucun modèle de devis pour l'instant. Créez un modèle en cliquant sur « Enregistrer en tant que modèle » dans la vue détaillée de n'importe quel devis.",
+      "title": "Aucun modèle de devis pour l'instant",
+      "description": "Utilisez Enregistrer comme modèle à partir d'un devis pour créer votre premier modèle réutilisable."
+    },
+    "actions": {
+      "createQuoteFromTemplate": "Créer un devis à partir d'un modèle",
+      "delete": "Supprimer",
+      "editTemplate": "Modifier le modèle",
+      "templateActions": "Actions du modèle"
+    },
+    "dialogs": {
+      "delete": {
+        "message": "Êtes-vous sûr de vouloir supprimer ce modèle de devis ? Cette action ne peut pas être annulée.",
+        "title": "Supprimer le modèle"
+      }
+    },
+    "errors": {
+      "delete": "Échec de la suppression du modèle.",
+      "load": "Échec du chargement des modèles"
+    },
+    "loading": "Chargement des modèles..."
+  },
+  "quotePreview": {
+    "title": "Aperçu du devis",
+    "empty": {
+      "selectQuote": "Sélectionnez un devis à prévisualiser",
+      "unavailable": "Impossible d'afficher l'aperçu. Des données peuvent être manquantes."
+    },
+    "placeholders": {
+      "selectLayout": "Sélectionnez la mise en page du devis..."
+    },
+    "actions": {
+      "openQuote": "Ouvrir le devis"
+    },
+    "errors": {
+      "downloadPdf": "Échec du téléchargement du PDF. Veuillez réessayer.",
+      "load": "Échec du chargement de l'aperçu"
+    },
+    "loading": "Chargement de l'aperçu..."
+  },
+  "templateEditor": {
+    "actions": {
+      "backToLayouts": "Retour aux mises en page",
+      "rerun": "Rediffusion",
+      "saveLayout": "Enregistrer la mise en page"
+    },
+    "codeReadonly": "La vue Code est générée à partir de l’espace de travail Visual et est en lecture seule.",
+    "defaults": {
+      "copyOf": "Copie de {{name}}",
+      "standardTemplate": "Modèle standard"
+    },
+    "title": "Éditeur de mise en page de devis",
+    "description": "Concevez la mise en page du devis à l'aide de l'éditeur visuel, puis prévisualisez-la avec des exemples de données.",
+    "errors": {
+      "exportAst": "Échec de l'exportation du modèle AST à partir de l'espace de travail visuel : {{message}}",
+      "load": "Échec du chargement de l'éditeur de modèle de devis",
+      "nameRequired": "Le nom du modèle est obligatoire.",
+      "notFound": "Modèle de document de devis introuvable.",
+      "previewPipeline": "Échec du pipeline de prévisualisation.",
+      "saveFailed": "Échec de l'enregistrement du modèle de devis",
+      "unknownAstExport": "Erreur d'exportation AST inconnue"
+    },
+    "fields": {
+      "layoutDetails": "Détails de mise en page",
+      "templateName": "Nom du modèle",
+      "version": "Version"
+    },
+    "footer": {
+      "created": "Créé :",
+      "lastUpdated": "Dernière mise à jour :"
+    },
+    "headings": {
+      "editLayout": "Modifier la présentation du devis",
+      "newLayout": "Nouvelle présentation du devis"
+    },
+    "placeholders": {
+      "templateName": "Modèle de devis"
+    },
+    "preview": {
+      "renderFailed": "Échec du rendu de l'aperçu.",
+      "rendering": "Aperçu de la mise en forme et du rendu...",
+      "sampleScenario": "Exemple de scénario",
+      "selectScenario": "Sélectionnez le scénario...",
+      "selectScenarioPrompt": "Sélectionnez un exemple de scénario pour générer un aperçu faisant autorité.",
+      "templateGenerationFailed": "Le modèle d'aperçu n'a pas pu être généré à partir de l'espace de travail actuel."
+    },
+    "pipeline": {
+      "render": "Rendre",
+      "shape": "Forme"
+    },
+    "tabs": {
+      "code": "Code",
+      "design": "Conception",
+      "preview": "Aperçu",
+      "transforms": "Transformations",
+      "visual": "Visuel"
+    }
+  },
+  "templatesPage": {
+    "title": "Mises en page des devis",
+    "description": "Concevez les mises en page utilisées pour afficher les PDF et les aperçus des devis.",
+    "actions": {
+      "openMenu": "Ouvrir le menu"
+    },
+    "cards": {
+      "availableLayouts": "Dispositions disponibles"
+    },
+    "dialogs": {
+      "deleteConfirm": "Etes-vous sûr de vouloir supprimer « {{name}} » ?"
+    },
+    "errors": {
+      "clone": "Échec du clonage du modèle",
+      "delete": "Échec de la suppression du modèle",
+      "editCopy": "Échec de la création d'une copie modifiable",
+      "load": "Échec du chargement des modèles de documents de devis",
+      "setDefault": "Échec de la définition du modèle par défaut"
+    },
+    "labels": {
+      "custom": "Coutume"
+    }
+  }
+}
