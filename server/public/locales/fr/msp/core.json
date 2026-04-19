@@ -21,11 +21,15 @@
       "sections": {
         "contracts": "Contrats",
         "invoicing": "Facturation",
+        "quotes": "Devis",
         "pricing": "Tarification",
         "trackingReports": "Suivi et rapports"
       },
       "contractTemplates": "Modèles de contrat",
       "clientContracts": "Contrats client",
+      "quotes": "Devis",
+      "quoteBusinessTemplates": "Modèles de devis",
+      "quoteLayouts": "Mises en page des devis",
       "contractLinePresets": "Préréglages de lignes de contrat",
       "invoicing": "Facturation",
       "invoiceLayouts": "Mises en page de facture",

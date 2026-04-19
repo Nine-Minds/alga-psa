@@ -21,11 +21,15 @@
       "sections": {
         "contracts": "Contratos",
         "invoicing": "Facturación",
+        "quotes": "Cotizaciones",
         "pricing": "Precios",
         "trackingReports": "Seguimiento e informes"
       },
       "contractTemplates": "Plantillas de contrato",
       "clientContracts": "Contratos de clientes",
+      "quotes": "Cotizaciones",
+      "quoteBusinessTemplates": "Plantillas de cotización",
+      "quoteLayouts": "Diseños de cotización",
       "contractLinePresets": "Preajustes de líneas de contrato",
       "invoicing": "Facturación",
       "invoiceLayouts": "Diseños de factura",

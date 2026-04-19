@@ -21,11 +21,15 @@
       "sections": {
         "contracts": "Contracten",
         "invoicing": "Facturatie",
+        "quotes": "Offertes",
         "pricing": "Prijzen",
         "trackingReports": "Tracking en rapportage"
       },
       "contractTemplates": "Contractsjablonen",
       "clientContracts": "Klantcontracten",
+      "quotes": "Offertes",
+      "quoteBusinessTemplates": "Offertesjablonen",
+      "quoteLayouts": "Offertelayouts",
       "contractLinePresets": "Voorinstellingen voor contractregels",
       "invoicing": "Facturatie",
       "invoiceLayouts": "Factuurlay-outs",

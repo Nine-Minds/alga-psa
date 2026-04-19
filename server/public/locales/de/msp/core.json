@@ -21,11 +21,15 @@
       "sections": {
         "contracts": "Verträge",
         "invoicing": "Rechnungsstellung",
+        "quotes": "Angebote",
         "pricing": "Preise",
         "trackingReports": "Nachverfolgung & Berichte"
       },
       "contractTemplates": "Vertragsvorlagen",
       "clientContracts": "Kundenverträge",
+      "quotes": "Angebote",
+      "quoteBusinessTemplates": "Angebotsvorlagen",
+      "quoteLayouts": "Angebotslayouts",
       "contractLinePresets": "Vertragspositionsvorlagen",
       "invoicing": "Rechnungsstellung",
       "invoiceLayouts": "Rechnungslayouts",
