@@ -298,7 +298,7 @@
   {
     "id": "T037",
     "description": "Unit: GenerateTab renders translated Invoice Type label, all type option labels (Automatic Invoices, Manual Invoice, Prepayment), and type descriptions via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
