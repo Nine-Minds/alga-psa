@@ -194,7 +194,7 @@
   {
     "id": "T024",
     "description": "Unit: InvoicePreviewPanel empty state (Select an invoice to preview), loading text (Loading Preview...), and error fallback (Could not display preview) are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
