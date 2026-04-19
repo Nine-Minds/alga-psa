@@ -234,7 +234,7 @@
   {
     "id": "T029",
     "description": "Unit: ExternalTaxBatchImportDashboard renders translated card title (External Tax Import), description, column headers (Invoice, Client, Amount, System, Created, Actions), and Import button text via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
