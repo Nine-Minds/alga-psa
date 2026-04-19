@@ -90,7 +90,7 @@
   {
     "id": "T011",
     "description": "Unit: ManualInvoices form renders translated headings (Invoice Details / Generate Manual Invoice), field labels (Client, Invoice Number), and descriptions via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
