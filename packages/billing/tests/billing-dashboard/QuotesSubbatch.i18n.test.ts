@@ -290,4 +290,37 @@ describe('Quotes i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T010: QuoteDocumentTemplateEditor no longer renders bare English JSX literals for editor chrome or preview status copy', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tsx');
+
+    const residualPatterns = [
+      />New Quote Layout</,
+      />Edit Quote Layout</,
+      />Back to Layouts</,
+      />Save Layout</,
+      />Layout Details</,
+      />Template Name</,
+      />Version</,
+      />Visual</,
+      />Code</,
+      />Design</,
+      />Transforms</,
+      />Preview</,
+      />Sample Scenario</,
+      /placeholder="Select scenario\.\.\."/,
+      />Shape</,
+      />Render</,
+      />Re-run</,
+      />Select a sample scenario to generate an authoritative preview\.</,
+      />Shaping and rendering preview\.\.\.</,
+      />Code view is generated from the Visual workspace and is read-only\.</,
+      />Created:</,
+      />Last Updated:</,
+    ];
+
+    for (const pattern of residualPatterns) {
+      expect(source).not.toMatch(pattern);
+    }
+  });
 });
