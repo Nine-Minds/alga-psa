@@ -132,7 +132,7 @@
   {
     "id": "F027",
     "description": "Wire useTranslation in InvoiceTaxSourceBadge.tsx -- badge labels (Tax: Internal, Tax: External, Tax: Pending), tooltip strings for each tax source, adapter name mappings, dynamic tooltip text patterns (Tax calculated by adapter, Awaiting tax calculation from adapter)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F028",
