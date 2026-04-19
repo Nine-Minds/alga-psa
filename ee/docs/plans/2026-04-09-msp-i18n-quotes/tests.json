@@ -164,7 +164,7 @@
   {
     "id": "T025",
     "description": "QuoteLineItemsEditor.tsx markup badge and currency-mismatch tooltip use t() with {{value}}, {{costCurrency}}, and {{quoteCurrency}} interpolation -- no remaining hardcoded 'Markup unavailable', '% markup', or 'Markup can't be calculated...' literals in JSX, and the new keys exist under quoteLineItems.markup.* in all 9 locale files",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
