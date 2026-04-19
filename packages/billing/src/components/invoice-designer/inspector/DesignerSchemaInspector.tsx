@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import {
   buildInvoiceExpressionPathOptions,
   type SharedExpressionPathOption,
@@ -699,6 +700,42 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
             onValueChange={(value: string) => setNodeProp(node.id, field.path, value, true)}
             size="sm"
           />
+        </div>
+      );
+    }
+
+    if (field.kind === 'icon-enum') {
+      const value = resolveValue(field);
+      const valueAsString = typeof value === 'string' ? value : field.options[0]?.value ?? '';
+      const columns = field.columns ?? Math.min(field.options.length, 3);
+      return (
+        <div key={field.id}>
+          <p className="text-xs text-slate-500 block mb-1">{field.label}</p>
+          <div id={domId} className="grid gap-1" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+            {field.options.map((option) => {
+              const Icon = option.icon;
+              const isSelected = option.value === valueAsString;
+              return (
+                <Tooltip key={option.value} content={option.tooltip ?? option.label}>
+                  <button
+                    type="button"
+                    onClick={() => setNodeProp(node.id, field.path, option.value, true)}
+                    className={[
+                      'h-8 rounded border transition-colors inline-flex items-center justify-center',
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                        : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ].join(' ')}
+                    aria-pressed={isSelected}
+                    aria-label={`${field.label}: ${option.label}`}
+                    data-automation-id={`designer-inspector-icon-enum-${field.id}-${option.value}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </button>
+                </Tooltip>
+              );
+            })}
+          </div>
         </div>
       );
     }

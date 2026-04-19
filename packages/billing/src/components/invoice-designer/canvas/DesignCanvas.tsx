@@ -949,6 +949,14 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
 
   const draggablePointerDown = listeners?.onPointerDown;
   const previewContent = useMemo(() => getPreviewContent(node, previewData), [node, previewData]);
+  const fieldNodeStyle = isFieldNode ? getNodeStyle(node) : undefined;
+  const fieldLayoutStyle = isFieldNode
+    ? {
+        justifyContent: fieldNodeStyle?.justifyContent ?? 'space-between',
+        alignItems: fieldNodeStyle?.alignItems ?? (previewContent.singleLine ? 'center' : 'flex-start'),
+        gap: fieldNodeStyle?.gap,
+      }
+    : undefined;
   const pointerDownPositionRef = useRef<{ x: number; y: number } | null>(null);
   const pointerDownSelectedRef = useRef(false);
   const pointerMovedRef = useRef(false);
@@ -1150,6 +1158,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
                 previewContent.singleLine ? 'whitespace-nowrap overflow-hidden' : 'items-start',
                 previewContent.isPlaceholder && 'text-slate-400'
               )}
+              style={fieldLayoutStyle}
             >
               {fieldDisplayLabel && (
                 <span
