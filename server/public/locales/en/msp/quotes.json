@@ -111,17 +111,31 @@
     }
   },
   "quoteForm": {
+    "actions": {
+      "cancelQuote": "Cancel Quote",
+      "convertToBoth": "Convert to Both",
+      "convertToContract": "Convert to Contract",
+      "convertToInvoice": "Convert to Invoice",
+      "createNewRevision": "Create New Revision",
+      "sendQuote": "Send Quote"
+    },
     "headings": {
       "editQuote": "Edit Quote",
       "editTemplate": "Edit Quote Template",
       "newQuote": "New Quote",
       "newTemplate": "New Quote Template",
+      "quote": "Quote",
+      "quoteWithNumber": "Quote {{quoteNumber}}",
+      "quoteWithNumberAndVersion": "Quote {{quoteNumber}} v{{version}}",
       "templateQuoteFallback": "Template quote"
     },
     "fields": {
+      "additionalEmails": "Additional email addresses (comma-separated)",
       "clientNotes": "Notes to Client",
       "createFromTemplate": "Create From Template",
-      "quoteLayoutHelp": "Choose which layout to use for this quote's PDF. Leave empty to use the default."
+      "messageOptional": "Message (optional)",
+      "quoteLayoutHelp": "Choose which layout to use for this quote's PDF. Leave empty to use the default.",
+      "recipients": "Recipients"
     },
     "placeholders": {
       "additionalEmails": "email@example.com, another@example.com",
@@ -136,6 +150,7 @@
       "accepted": "Quote Accepted",
       "converted": "Quote Converted",
       "convertedDescription": "This quote has been converted to a contract and/or invoice.",
+      "quote": "Quote",
       "rejected": "Quote Rejected"
     },
     "dialogs": {
@@ -155,10 +170,50 @@
         "description": "Review what this quote conversion will create before confirming."
       },
       "send": {
+        "description": "This will email the quote to the client's billing contacts and change its status to \"Sent\".",
         "title": "Send Quote to Client",
         "additionalEmails": "Additional Recipients",
         "message": "Message"
       }
+    },
+    "errorActions": {
+      "approveQuote": "approve quote",
+      "cancelQuote": "cancel quote",
+      "requestChanges": "request changes",
+      "resendQuote": "resend quote",
+      "sendQuote": "send quote",
+      "sendReminder": "send reminder",
+      "submitForApproval": "submit for approval"
+    },
+    "errors": {
+      "convert": "Failed to convert quote",
+      "createRevision": "Failed to create revision",
+      "downloadPdf": "Failed to download PDF",
+      "duplicate": "Failed to duplicate quote",
+      "load": "Failed to load quote form",
+      "loadConversionPreview": "Failed to load conversion preview",
+      "notFound": "Quote not found",
+      "save": "Failed to save quote",
+      "saveFailed": "Quote save failed",
+      "workflowAction": "Failed to {{action}}"
+    },
+    "loading": "Loading quote form...",
+    "notices": {
+      "approved": "Quote approved and is ready to send.",
+      "cancelled": "Quote cancelled.",
+      "createdDraftContract": "Created draft contract {{name}}.",
+      "createdDraftContractAndInvoice": "Created draft contract {{contractName}} and draft invoice {{invoiceName}}.",
+      "createdDraftInvoice": "Created draft invoice {{name}}.",
+      "reminderSent": "Quote reminder sent.",
+      "requestedChanges": "Quote returned to draft with requested changes.",
+      "resent": "Quote resent.",
+      "sent": "Quote sent to the client.",
+      "submittedForApproval": "Quote submitted for internal approval."
+    },
+    "readOnlyNotice": "This quote is read-only. To make changes, create a new revision.",
+    "validation": {
+      "clientRequired": "Client is required",
+      "titleRequired": "Title is required unless creating from template"
     }
   },
   "quoteDetail": {
