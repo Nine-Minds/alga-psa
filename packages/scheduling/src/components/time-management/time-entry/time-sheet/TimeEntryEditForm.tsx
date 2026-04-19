@@ -289,6 +289,17 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
   };
 }, []);
 
+  const markEntryAsDirty = useCallback((updatedEntry: typeof entry) => {
+    if (!entry?.entry_id) {
+      return updatedEntry;
+    }
+
+    return {
+      ...updatedEntry,
+      isDirty: true,
+    };
+  }, [entry?.entry_id]);
+
   const handleSave = useCallback(() => {
     if (!onSave) return;
 
@@ -322,7 +333,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
     const currentDate = type === 'start' ? parseISO(entry.start_time) : parseISO(entry.end_time);
     const newTime = parseTimeToDate(value, currentDate);
 
-    const updatedEntry = updateBillableDuration(
+    const updatedEntry = markEntryAsDirty(updateBillableDuration(
       {
         ...entry,
         [type === 'start' ? 'start_time' : 'end_time']: formatISO(newTime)
@@ -331,7 +342,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
         type === 'start' ? newTime : parseISO(entry.start_time),
         type === 'end' ? newTime : parseISO(entry.end_time)
       )
-    );
+    ));
 
     onUpdateEntry(index, updatedEntry);
     onUpdateTimeInputs({
@@ -342,7 +353,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
     if (showErrors) {
       validateTimes();
     }
-  }, [isEditable, entry, index, onUpdateEntry, onUpdateTimeInputs, showErrors, validateTimes]);
+  }, [isEditable, entry, index, markEntryAsDirty, onUpdateEntry, onUpdateTimeInputs, showErrors, updateBillableDuration, validateTimes]);
 
 
 
@@ -360,11 +371,11 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
     const newBillableDuration = entry.billable_duration === 0 ? 0 : totalMinutes;
 
-    const updatedEntry = {
+    const updatedEntry = markEntryAsDirty({
       ...entry,
       end_time: formatISO(newEndTime),
       billable_duration: newBillableDuration
-    };
+    });
 
     console.log('Duration change:', {
       hours,
@@ -383,7 +394,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
     if (showErrors) {
       validateTimes();
     }
-  }, [durationHours, durationMinutes, entry, index, isEditable, onUpdateEntry, onUpdateTimeInputs, showErrors, validateTimes]);
+  }, [durationHours, durationMinutes, entry, index, isEditable, markEntryAsDirty, onUpdateEntry, onUpdateTimeInputs, showErrors, validateTimes]);
 
   return (
     <div className="space-y-5">
@@ -421,11 +432,11 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           onValueChange={(value) => {
             if (entry) {
               const isServiceOverridden = entry._isServicePrefilled && value !== entry._originalServiceId;
-              const updatedEntry = {
+              const updatedEntry = markEntryAsDirty({
                 ...entry,
                 service_id: value,
                 _serviceOverridden: isServiceOverridden
-              };
+              });
               onUpdateEntry(index, updatedEntry);
               setValidationErrors(prev => ({
                 ...prev,
@@ -584,9 +595,11 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
                   onUpdateEntry(
                     index,
-                    checked
-                      ? { ...entry, billable_duration: duration }
-                      : { ...entry, billable_duration: 0 }
+                    markEntryAsDirty(
+                      checked
+                        ? { ...entry, billable_duration: duration }
+                        : { ...entry, billable_duration: 0 }
+                    )
                   );
                 }
               }}
@@ -613,7 +626,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           value={entry?.notes || ''}
           onChange={(e) => {
             if (entry) {
-              const updatedEntry = { ...entry, notes: e.target.value };
+              const updatedEntry = markEntryAsDirty({ ...entry, notes: e.target.value });
               onUpdateEntry(index, updatedEntry);
             }
           }}
