@@ -25,7 +25,7 @@
   {"id": "F016", "description": "Generate pseudo-locales (xx, yy) for msp/quotes namespace using generate-pseudo-locales.cjs", "implemented": true},
   {"id": "F017", "description": "Run validate-translations.cjs -- all 9 locales pass with 0 errors for msp/quotes (key parity, interpolation variable parity, no empty values)", "implemented": true},
 
-  {"id": "F018", "description": "Update ROUTE_NAMESPACES in packages/core/src/lib/i18n/config.ts: add '/msp/quote-approvals' and '/msp/quote-document-templates' routes loading 'msp/quotes', and add 'msp/quotes' to the existing '/msp/billing' entry", "implemented": false},
+  {"id": "F018", "description": "Update ROUTE_NAMESPACES in packages/core/src/lib/i18n/config.ts: add '/msp/quote-approvals' and '/msp/quote-document-templates' routes loading 'msp/quotes', and add 'msp/quotes' to the existing '/msp/billing' entry", "implemented": true},
 
   {"id": "F019", "description": "npm run build succeeds with no TypeScript errors after all wiring is complete", "implemented": false},
 
