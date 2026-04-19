@@ -250,7 +250,7 @@
   {
     "id": "T031",
     "description": "Unit: ExternalTaxImportPanel renders translated panel title, pending/imported alerts, import button text (with adapter name interpolation), and reconciliation labels (Internal, External, Difference) via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
