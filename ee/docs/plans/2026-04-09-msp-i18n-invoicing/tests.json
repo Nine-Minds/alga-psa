@@ -122,7 +122,7 @@
   {
     "id": "T015",
     "description": "Unit: DraftsTab empty state renders translated heading (No Draft Invoices), description, and Generate Invoices button; reverse confirmation dialog renders translated title, message (with count interpolation for single/plural), and confirm/cancel labels",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
