@@ -258,7 +258,7 @@
   {
     "id": "T032",
     "description": "Unit: ExternalTaxImportPanel history heading, loading/empty history text, significant difference warning, and help text are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
