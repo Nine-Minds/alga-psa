@@ -1,0 +1,639 @@
+{
+  "common": {
+    "actions": {
+      "approve": "Approve",
+      "back": "Back",
+      "cancel": "Cancel",
+      "close": "Close",
+      "clone": "Clone",
+      "convert": "Convert",
+      "delete": "Delete",
+      "downloadPdf": "Download PDF",
+      "duplicate": "Duplicate",
+      "edit": "Edit",
+      "editAsCopy": "Edit as Copy",
+      "newLayout": "New Layout",
+      "newQuote": "New Quote",
+      "newTemplate": "New Template",
+      "open": "Open",
+      "requestChanges": "Request Changes",
+      "resend": "Resend",
+      "revise": "Revise",
+      "save": "Save",
+      "saveQuote": "Save Quote",
+      "saveTemplate": "Save Template",
+      "send": "Send",
+      "sendReminder": "Send Reminder",
+      "sendToClient": "Send to Client",
+      "setAsDefault": "Set as Default",
+      "submitForApproval": "Submit for Approval"
+    },
+    "badges": {
+      "standard": "Standard"
+    },
+    "columns": {
+      "actions": "Actions",
+      "amount": "Amount",
+      "client": "Client",
+      "created": "Created",
+      "currency": "Currency",
+      "date": "Date",
+      "default": "Default",
+      "items": "Items",
+      "name": "Name",
+      "quoteDate": "Quote Date",
+      "quoteNumber": "Quote #",
+      "source": "Source",
+      "status": "Status",
+      "title": "Title",
+      "total": "Total",
+      "validUntil": "Valid Until"
+    },
+    "labels": {
+      "client": "Client",
+      "contact": "Contact",
+      "currency": "Currency",
+      "description": "Description / Scope",
+      "discounts": "Discounts",
+      "lineItems": "Line Items",
+      "poNumber": "PO Number",
+      "quoteDate": "Quote Date",
+      "quoteLayout": "Quote Layout",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "termsAndConditions": "Terms & Conditions",
+      "title": "Title",
+      "total": "Total",
+      "validUntil": "Valid Until"
+    },
+    "states": {
+      "generating": "Generating...",
+      "loading": "Loading...",
+      "saving": "Saving...",
+      "sending": "Sending..."
+    }
+  },
+  "quotesTab": {
+    "title": "Quotes",
+    "actions": {
+      "quoteActions": "Quote actions"
+    },
+    "tabs": {
+      "active": "Active ({{count}})",
+      "approval": "Approval Queue",
+      "closed": "Closed ({{count}})",
+      "sent": "Sent ({{count}})"
+    },
+    "filters": {
+      "allClients": "All clients",
+      "client": "Client"
+    },
+    "empty": {
+      "byCategory": "No quotes in this category.",
+      "title": "No quotes found",
+      "description": "Create a quote to get started."
+    },
+    "dialogs": {
+      "delete": {
+        "title": "Delete Quote",
+        "description": "This action cannot be undone."
+      },
+      "send": {
+        "additionalEmails": "Additional Recipients",
+        "additionalEmailsPlaceholder": "email@example.com, another@example.com",
+        "additionalRecipients": "Additional recipients (comma-separated)",
+        "description": "This will email the quote PDF to the client's billing contacts and change its status to \"Sent\".",
+        "message": "Message",
+        "messageOptional": "Message (optional)",
+        "messagePlaceholder": "Add a personal note for the recipient...",
+        "title": "Send Quote"
+      }
+    },
+    "errors": {
+      "delete": "Failed to delete quote.",
+      "duplicate": "Failed to duplicate quote.",
+      "load": "Failed to load quotes",
+      "send": "Failed to send quote."
+    },
+    "loading": "Loading quotes...",
+    "rowActions": {
+      "delete": "Delete",
+      "downloadPdf": "Download PDF",
+      "duplicate": "Duplicate",
+      "open": "Open",
+      "resend": "Resend",
+      "sendReminder": "Send Reminder",
+      "sendToClient": "Send to Client"
+    }
+  },
+  "quoteForm": {
+    "actions": {
+      "cancelQuote": "Cancel Quote",
+      "convertToBoth": "Convert to Both",
+      "convertToContract": "Convert to Contract",
+      "convertToInvoice": "Convert to Invoice",
+      "createNewRevision": "Create New Revision",
+      "sendQuote": "Send Quote"
+    },
+    "headings": {
+      "editQuote": "Edit Quote",
+      "editTemplate": "Edit Quote Template",
+      "newQuote": "New Quote",
+      "newTemplate": "New Quote Template",
+      "quote": "Quote",
+      "quoteWithNumber": "Quote {{quoteNumber}}",
+      "quoteWithNumberAndVersion": "Quote {{quoteNumber}} v{{version}}",
+      "templateQuoteFallback": "Template quote"
+    },
+    "fields": {
+      "additionalEmails": "Additional email addresses (comma-separated)",
+      "clientNotes": "Notes to Client",
+      "createFromTemplate": "Create From Template",
+      "messageOptional": "Message (optional)",
+      "quoteLayoutHelp": "Choose which layout to use for this quote's PDF. Leave empty to use the default.",
+      "recipients": "Recipients"
+    },
+    "placeholders": {
+      "additionalEmails": "email@example.com, another@example.com",
+      "message": "Add a personal note for the client...",
+      "selectClient": "Select client",
+      "selectContact": "Select contact",
+      "selectCurrency": "Select currency",
+      "startFromScratch": "Start from scratch",
+      "useDefaultLayout": "Use default layout"
+    },
+    "alerts": {
+      "accepted": "Quote Accepted",
+      "converted": "Quote Converted",
+      "convertedDescription": "This quote has been converted to a contract and/or invoice.",
+      "quote": "Quote",
+      "rejected": "Quote Rejected"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Approve this quote so it can be sent to the client.",
+        "approveTitle": "Approve Quote",
+        "approveComment": "Comment (optional)",
+        "approveCommentPlaceholder": "Add an optional note...",
+        "changesDescription": "Return this quote to draft with requested changes.",
+        "changesTitle": "Request Changes",
+        "changesComment": "Requested changes",
+        "changesCommentPlaceholder": "Describe the changes needed...",
+        "processing": "Processing..."
+      },
+      "conversion": {
+        "title": "Conversion Preview",
+        "description": "Review what this quote conversion will create before confirming."
+      },
+      "send": {
+        "description": "This will email the quote to the client's billing contacts and change its status to \"Sent\".",
+        "title": "Send Quote to Client",
+        "additionalEmails": "Additional Recipients",
+        "message": "Message"
+      }
+    },
+    "errorActions": {
+      "approveQuote": "approve quote",
+      "cancelQuote": "cancel quote",
+      "requestChanges": "request changes",
+      "resendQuote": "resend quote",
+      "sendQuote": "send quote",
+      "sendReminder": "send reminder",
+      "submitForApproval": "submit for approval"
+    },
+    "errors": {
+      "convert": "Failed to convert quote",
+      "createRevision": "Failed to create revision",
+      "downloadPdf": "Failed to download PDF",
+      "duplicate": "Failed to duplicate quote",
+      "load": "Failed to load quote form",
+      "loadConversionPreview": "Failed to load conversion preview",
+      "notFound": "Quote not found",
+      "save": "Failed to save quote",
+      "saveFailed": "Quote save failed",
+      "workflowAction": "Failed to {{action}}"
+    },
+    "loading": "Loading quote form...",
+    "notices": {
+      "approved": "Quote approved and is ready to send.",
+      "cancelled": "Quote cancelled.",
+      "createdDraftContract": "Created draft contract {{name}}.",
+      "createdDraftContractAndInvoice": "Created draft contract {{contractName}} and draft invoice {{invoiceName}}.",
+      "createdDraftInvoice": "Created draft invoice {{name}}.",
+      "reminderSent": "Quote reminder sent.",
+      "requestedChanges": "Quote returned to draft with requested changes.",
+      "resent": "Quote resent.",
+      "sent": "Quote sent to the client.",
+      "submittedForApproval": "Quote submitted for internal approval."
+    },
+    "readOnlyNotice": "This quote is read-only. To make changes, create a new revision.",
+    "validation": {
+      "clientRequired": "Client is required",
+      "titleRequired": "Title is required unless creating from template"
+    }
+  },
+  "quoteDetail": {
+    "title": "Quote Detail",
+    "actions": {
+      "backToQuotes": "Back to Quotes",
+      "openConvertedContract": "Open Converted Contract",
+      "openConvertedInvoice": "Open Converted Invoice",
+      "preview": "Preview",
+      "saveAsTemplate": "Save as Template"
+    },
+    "sections": {
+      "activityLog": "Activity Log",
+      "clientNotes": "Client Notes",
+      "internalNotes": "Internal Notes",
+      "lineItems": "Line Items",
+      "quoteLayout": "Quote Layout",
+      "scopeOfWork": "Scope of Work",
+      "termsAndConditions": "Terms & Conditions",
+      "versionHistory": "Version History"
+    },
+    "alerts": {
+      "clientConfigurationSubmitted": "Client Configuration Submitted",
+      "clientConfigurationSubmittedDescription": "Review the optional line items below before converting this quote. Selected items are marked as included, and declined items are highlighted for follow-up.",
+      "update": "Quote Update"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Approve this quote so it can be sent to the client. You may add an optional comment.",
+        "changesDescription": "Return this quote to draft with requested changes. Please describe what needs to be revised."
+      },
+      "send": {
+        "message": "Optional message to include in the email"
+      }
+    },
+    "status": {
+      "accepted": "Quote Accepted",
+      "acceptedBy": "Accepted by:",
+      "acceptedOn": "Accepted on:",
+      "reason": "Reason:",
+      "rejected": "Quote Rejected",
+      "rejectedOn": "Rejected on:"
+    },
+    "empty": {
+      "activity": "No quote activity recorded yet.",
+      "lineItems": "No line items on this quote yet.",
+      "revisions": "No prior revisions for this quote yet."
+    },
+    "clientSelections": {
+      "declinedOptionalItem": "Client declined this optional item",
+      "selectedOptionalItem": "Client selected this optional item"
+    },
+    "errors": {
+      "approve": "Failed to approve quote",
+      "assignTemplate": "Failed to assign template",
+      "cancel": "Failed to cancel quote",
+      "convert": "Failed to convert quote",
+      "delete": "Failed to delete quote",
+      "deleteUnavailable": "Quote could not be deleted",
+      "downloadPdf": "Failed to generate quote PDF",
+      "duplicate": "Failed to duplicate quote",
+      "load": "Failed to load quote detail",
+      "loadConversionPreview": "Failed to load conversion preview",
+      "notFound": "Quote not found",
+      "preview": "Failed to generate quote preview",
+      "requestChanges": "Failed to request quote changes",
+      "resend": "Failed to resend quote",
+      "revise": "Failed to create quote revision",
+      "saveAsTemplate": "Failed to save quote as template",
+      "send": "Failed to send quote",
+      "sendReminder": "Failed to send quote reminder",
+      "submitForApproval": "Failed to submit quote for approval"
+    },
+    "labels": {
+      "phase": "Phase: {{phase}}",
+      "templateQuote": "Template quote"
+    },
+    "loading": "Loading quote details...",
+    "notices": {
+      "approved": "Quote approved and is ready to send.",
+      "reminderSent": "Quote reminder sent to the configured billing recipients.",
+      "requestedChanges": "Quote returned to draft with requested changes.",
+      "resent": "Quote resent to the configured billing recipients.",
+      "sent": "Quote sent to the client.",
+      "submittedForApproval": "Quote submitted for internal approval.",
+      "templateAssigned": "Document template assigned.",
+      "templateCleared": "Document template cleared (using default)."
+    },
+    "preview": {
+      "loading": "Loading preview..."
+    },
+    "table": {
+      "description": "Description"
+    }
+  },
+  "quoteLineItems": {
+    "title": "Line Items",
+    "actions": {
+      "addDiscount": "Add Discount",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "hideDiscount": "Hide Discount",
+      "remove": "Remove"
+    },
+    "billingMethods": {
+      "fixed": "Fixed",
+      "hourly": "Hourly",
+      "perUnit": "Per Unit",
+      "usage": "Usage Based"
+    },
+    "columns": {
+      "actions": "Actions",
+      "billing": "Billing",
+      "flags": "Flags",
+      "item": "Item",
+      "move": "Move",
+      "quantity": "Qty",
+      "total": "Total",
+      "unitPrice": "Unit Price"
+    },
+    "labels": {
+      "customItem": "Custom item",
+      "itemCountOne": "1 item",
+      "itemCountOther": "{{count}} items",
+      "noPriceInCurrency": "No price in {{currencyCode}}",
+      "optional": "Optional",
+      "phaseSection": "Phase / Section",
+      "recurring": "Recurring",
+      "service": "service",
+      "setPrice": "Set price",
+      "ungroupedItems": "Ungrouped Items"
+    },
+    "placeholders": {
+      "phaseSection": "e.g. Discovery, Rollout, Ongoing",
+      "selectItem": "Select item",
+      "selectService": "Select service",
+      "servicePicker": "Search or type custom item name..."
+    },
+    "discounts": {
+      "badge": "Discount",
+      "description": {
+        "fixed": "Discount",
+        "percentage": "Discount ({{value}}%)"
+      },
+      "fixed": "Fixed discount",
+      "fullQuoteSubtotal": "Applies to the full quote subtotal",
+      "fullQuote": "Whole quote",
+      "item": "Specific item",
+      "percentage": "Percentage discount",
+      "service": "Specific service",
+      "targets": {
+        "fullQuote": "on full quote",
+        "namedItem": "on \"{{name}}\"",
+        "namedService": "on {{name}}",
+        "specificItem": "on specific item",
+        "specificService": "on specific service"
+      },
+      "types": {
+        "fixed": "Fixed",
+        "percentage": "Percentage"
+      }
+    },
+    "markup": {
+      "badge": "{{sign}}{{value}}% markup",
+      "unavailable": "Markup unavailable",
+      "unavailableTooltip": "Markup can't be calculated because cost is tracked in {{costCurrency}} and this quote is in {{quoteCurrency}}."
+    },
+    "empty": "No line items yet. Use the catalog search above to add your first item."
+  },
+  "quoteRecipients": {
+    "trigger": {
+      "add": "Add internal user or client contact...",
+      "noClient": "Select a client first",
+      "noneAvailable": "No users or contacts available"
+    },
+    "searchPlaceholder": "Search by name or email...",
+    "empty": {
+      "noMatches": "No matches",
+      "noneAvailable": "No recipients available"
+    },
+    "kind": {
+      "contact": "Contact",
+      "internal": "Internal"
+    },
+    "removeAriaLabel": "Remove {{email}}"
+  },
+  "quoteConversion": {
+    "title": "Convert Quote",
+    "description": "Convert the accepted quote \"{{title}}\" into contracts and/or invoices.",
+    "loading": "Loading conversion preview...",
+    "mode": {
+      "contract": {
+        "label": "Contract Only",
+        "description": "Creates a draft contract with recurring service lines. One-time items will not be included."
+      },
+      "invoice": {
+        "label": "Invoice Only",
+        "description": "Creates a draft invoice with one-time charges. Recurring items will not be included."
+      },
+      "both": {
+        "label": "Contract + Invoice",
+        "description": "Creates both a draft contract (for recurring items) and a draft invoice (for one-time items)."
+      }
+    },
+    "sections": {
+      "contractItems": "Contract Items",
+      "conversionMode": "Conversion Mode",
+      "excludedItems": "Excluded Items",
+      "excludedFromConversion": "Excluded from Conversion",
+      "invoiceItems": "Invoice Items",
+      "itemMappingPreview": "Item Mapping Preview",
+      "quoteTotal": "Quote Total",
+      "statusAfterConversion": "Status After Conversion",
+      "willBecomeContractLines": "Will Become Contract Lines",
+      "willBecomeInvoiceCharges": "Will Become Invoice Charges"
+    },
+    "empty": {
+      "contractItems": "No recurring items will convert to a contract.",
+      "invoiceItems": "No one-time items will convert to an invoice."
+    },
+    "summary": {
+      "converted": "Converted",
+      "discount": "Discount",
+      "fixed": "fixed",
+      "notConverted": "Not converted"
+    },
+    "partial": {
+      "alreadyConverted": "This quote has already been partially converted.",
+      "contractCreated": "A contract was created.",
+      "invoiceCreated": "An invoice was created.",
+      "remainingItems": "You can convert the remaining items.",
+      "title": "Partial Conversion",
+      "description": "Some records for this quote already exist."
+    },
+    "actions": {
+      "contract": "Create Draft Contract",
+      "convertQuote": "Convert Quote",
+      "invoice": "Create Draft Invoice",
+      "both": "Create Both Records",
+      "converting": "Converting..."
+    },
+    "errors": {
+      "convert": "Failed to convert quote",
+      "load": "Failed to load conversion preview",
+      "title": "Error"
+    }
+  },
+  "quoteApproval": {
+    "title": "Quote Approvals",
+    "description": "Review quotes waiting for manager approval before they can be sent to clients.",
+    "actions": {
+      "backToQuotes": "Back to Quotes"
+    },
+    "settings": {
+      "label": "Approval required before sending",
+      "enabled": "Draft quotes must be approved before sending.",
+      "disabled": "Draft quotes can be sent without approval."
+    },
+    "filters": {
+      "status": "Status",
+      "approved": "Approved",
+      "pendingApproval": "Pending Approval"
+    },
+    "empty": {
+      "approved": "There are no quotes in the approved queue right now.",
+      "pendingApproval": "There are no quotes in the pending approval queue right now.",
+      "title": "No quotes found"
+    },
+    "errors": {
+      "load": "Failed to load quote approvals",
+      "settings": "Failed to update quote approval settings"
+    },
+    "loading": "Loading approval queue..."
+  },
+  "quoteTemplates": {
+    "title": "Templates",
+    "description": "Quote templates let you save reusable sets of line items, terms, and notes. Select a template when creating a new quote to start with prefilled data.",
+    "empty": {
+      "inline": "No quote templates yet. Create a template by clicking \"Save as Template\" from any quote's detail view.",
+      "title": "No quote templates yet",
+      "description": "Use Save as Template from a quote to create your first reusable template."
+    },
+    "actions": {
+      "createQuoteFromTemplate": "Create Quote from Template",
+      "delete": "Delete",
+      "editTemplate": "Edit Template",
+      "templateActions": "Template actions"
+    },
+    "dialogs": {
+      "delete": {
+        "message": "Are you sure you want to delete this quote template? This action cannot be undone.",
+        "title": "Delete Template"
+      }
+    },
+    "errors": {
+      "delete": "Failed to delete template.",
+      "load": "Failed to load templates"
+    },
+    "loading": "Loading templates..."
+  },
+  "quotePreview": {
+    "title": "Quote Preview",
+    "empty": {
+      "selectQuote": "Select a quote to preview",
+      "unavailable": "Could not display preview. Data might be missing."
+    },
+    "placeholders": {
+      "selectLayout": "Select quote layout..."
+    },
+    "actions": {
+      "openQuote": "Open Quote"
+    },
+    "errors": {
+      "downloadPdf": "Failed to download PDF. Please try again.",
+      "load": "Failed to load preview"
+    },
+    "loading": "Loading Preview..."
+  },
+  "templateEditor": {
+    "actions": {
+      "backToLayouts": "Back to Layouts",
+      "rerun": "Re-run",
+      "saveLayout": "Save Layout"
+    },
+    "codeReadonly": "Code view is generated from the Visual workspace and is read-only.",
+    "defaults": {
+      "copyOf": "Copy of {{name}}",
+      "standardTemplate": "Standard Template"
+    },
+    "title": "Quote Layout Editor",
+    "description": "Design the quote layout using the visual editor, then preview with sample data.",
+    "errors": {
+      "exportAst": "Failed to export template AST from visual workspace: {{message}}",
+      "load": "Failed to load quote template editor",
+      "nameRequired": "Template name is required.",
+      "notFound": "Quote document template not found.",
+      "previewPipeline": "Preview pipeline failed.",
+      "saveFailed": "Failed to save quote template",
+      "unknownAstExport": "Unknown AST export error"
+    },
+    "fields": {
+      "layoutDetails": "Layout Details",
+      "templateName": "Template Name",
+      "version": "Version"
+    },
+    "footer": {
+      "created": "Created:",
+      "lastUpdated": "Last Updated:"
+    },
+    "headings": {
+      "editLayout": "Edit Quote Layout",
+      "newLayout": "New Quote Layout"
+    },
+    "placeholders": {
+      "templateName": "Quote Template"
+    },
+    "preview": {
+      "renderFailed": "Preview rendering failed.",
+      "rendering": "Shaping and rendering preview...",
+      "sampleScenario": "Sample Scenario",
+      "selectScenario": "Select scenario...",
+      "selectScenarioPrompt": "Select a sample scenario to generate an authoritative preview.",
+      "templateGenerationFailed": "Preview template could not be generated from the current workspace."
+    },
+    "pipeline": {
+      "render": "Render",
+      "renderFailed": "Render failed.",
+      "shape": "Shape",
+      "shapeFailed": "Shape failed.",
+      "shapingFailed": "Shaping failed."
+    },
+    "tabs": {
+      "code": "Code",
+      "design": "Design",
+      "preview": "Preview",
+      "transforms": "Transforms",
+      "visual": "Visual"
+    },
+    "pipeline": {
+      "render": "Render",
+      "shape": "Shape"
+    }
+  },
+  "templatesPage": {
+    "title": "Quote Layouts",
+    "description": "Design the layouts used to render quote PDFs and previews.",
+    "actions": {
+      "openMenu": "Open menu"
+    },
+    "cards": {
+      "availableLayouts": "Available Layouts"
+    },
+    "dialogs": {
+      "deleteConfirm": "Are you sure you want to delete \"{{name}}\"?"
+    },
+    "errors": {
+      "clone": "Failed to clone template",
+      "delete": "Failed to delete template",
+      "editCopy": "Failed to create editable copy",
+      "load": "Failed to load quote document templates",
+      "setDefault": "Failed to set default template"
+    },
+    "labels": {
+      "custom": "Custom"
+    }
+  }
+}

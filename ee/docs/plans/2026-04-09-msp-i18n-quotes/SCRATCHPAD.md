@@ -235,6 +235,7 @@ Existing F001-F022 / T001-T027 remain valid. Proceed with the corrected frequenc
   - `quotesTab.title` -> `11111` in `xx`, `55555` in `yy`
   - `quoteRecipients.removeAriaLabel` preserved `{{email}}` as `11111 {{email}} 11111` / `55555 {{email}} 55555`
   - `quoteLineItems.markup.badge` preserved both `{{sign}}` and `{{value}}` in the expected pseudo-locale fill pattern.
+- (2026-04-19) Completed `F017`: ran `node scripts/validate-translations.cjs` and got `Errors: 0`, `Warnings: 0`, `PASSED` across `de`, `es`, `fr`, `it`, `nl`, `pl`, `pt`, `xx`, and `yy`. The only prerequisite fix was repo-level fallback plumbing for Portuguese: bootstrapped [server/public/locales/pt/msp/quotes.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/pt/msp/quotes.json) from the English namespace and added the missing `enums.billingFrequency.weekly` key to [server/public/locales/pt/features/billing.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/pt/features/billing.json), because the validator checks every real locale directory under `server/public/locales/`, not just the six translated quote locales plus English.
 
 ## Commands / Runbook
 
