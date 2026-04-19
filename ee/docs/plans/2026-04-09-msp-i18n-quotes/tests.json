@@ -8,7 +8,7 @@
   {
     "id": "T002",
     "description": "validate-translations.cjs passes for msp/quotes namespace -- all 9 locales have identical key sets with no missing keys or empty values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F014", "F016", "F017"]
   },
 

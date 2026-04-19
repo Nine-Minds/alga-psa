@@ -251,6 +251,7 @@ Existing F001-F022 / T001-T027 remain valid. Proceed with the corrected frequenc
   - `node - <<'NODE' ... NODE` spot check confirmed `de` now renders `Angebote / Angebotsvorlagen / Angebotslayouts` and `xx` renders `11111` for the Quotes section header and all three items.
   - `node scripts/generate-pseudo-locales.cjs` -> regenerated pseudo locale artifacts after the English core backfill.
   - `node scripts/validate-translations.cjs` -> `Errors: 0`, `Warnings: 0`, `PASSED` after the `msp/core` additions.
+- (2026-04-19) Completed `T002`: reran `node scripts/validate-translations.cjs` after the final locale work (`F017` + `F022`) and the translation validator still reports `Locales checked: 9`, `Errors: 0`, `Warnings: 0`, `PASSED`. This covers `msp/quotes` key parity / empty-value checks across `de`, `es`, `fr`, `it`, `nl`, `pl`, `pt`, `xx`, and `yy`.
 
 ## Commands / Runbook
 
