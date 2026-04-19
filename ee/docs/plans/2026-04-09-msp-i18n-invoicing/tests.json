@@ -138,7 +138,7 @@
   {
     "id": "T017",
     "description": "Unit: FinalizedTab empty state renders translated heading (No Finalized Invoices), description, and View Drafts button; bulk actions (Download PDFs, Send Emails, Unfinalize Selected) are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
