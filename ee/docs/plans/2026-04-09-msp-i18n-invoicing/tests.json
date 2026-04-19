@@ -384,7 +384,7 @@
   {
     "id": "T047",
     "description": "Regression: existing billing test suites pass after i18n wiring (no broken imports, no missing providers)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F008",
