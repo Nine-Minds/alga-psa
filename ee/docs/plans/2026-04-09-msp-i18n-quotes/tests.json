@@ -28,7 +28,7 @@
   {
     "id": "T005",
     "description": "QuoteDetail.tsx compiles with useTranslation('msp/quotes') -- no TypeScript errors, all section headings, field labels, action buttons, dialogs, banners, and activity log use t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {

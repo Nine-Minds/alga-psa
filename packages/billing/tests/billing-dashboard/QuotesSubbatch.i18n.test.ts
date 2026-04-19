@@ -117,4 +117,38 @@ describe('Quotes i18n wiring contract', () => {
       expect(source).not.toMatch(pattern);
     }
   });
+
+  it('T005: QuoteDetail uses msp/quotes translation keys for sections, actions, dialogs, and line-item badges', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuoteDetail.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/quotes.json',
+    );
+
+    expect(source).toContain("import { useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expect(source).toContain("const { t } = useTranslation('msp/quotes');");
+
+    const keyChecks = [
+      'quoteDetail.sections.quoteLayout',
+      'quoteDetail.sections.versionHistory',
+      'quoteDetail.sections.activityLog',
+      'quoteDetail.actions.backToQuotes',
+      'quoteDetail.actions.openConvertedContract',
+      'quoteDetail.alerts.clientConfigurationSubmitted',
+      'quoteDetail.clientSelections.selectedOptionalItem',
+      'quoteDetail.dialogs.approval.approveDescription',
+      'quoteDetail.dialogs.send.message',
+      'quoteDetail.errors.load',
+      'quoteDetail.notices.templateAssigned',
+      'quoteDetail.preview.loading',
+      'quoteDetail.table.description',
+      'quoteDetail.labels.phase',
+      'quoteForm.dialogs.conversion.title',
+      'quoteConversion.sections.willBecomeInvoiceCharges',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });
