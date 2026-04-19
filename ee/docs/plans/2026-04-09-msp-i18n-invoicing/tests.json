@@ -354,7 +354,7 @@
   {
     "id": "T044",
     "description": "Unit: PurchaseOrderSummaryBanner renders translated field labels (PO Number, PO Authorized, PO Consumed (Finalized), PO Remaining) via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
