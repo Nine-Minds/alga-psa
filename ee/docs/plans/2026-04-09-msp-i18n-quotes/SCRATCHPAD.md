@@ -253,6 +253,7 @@ Existing F001-F022 / T001-T027 remain valid. Proceed with the corrected frequenc
   - `node scripts/validate-translations.cjs` -> `Errors: 0`, `Warnings: 0`, `PASSED` after the `msp/core` additions.
 - (2026-04-19) Completed `T002`: reran `node scripts/validate-translations.cjs` after the final locale work (`F017` + `F022`) and the translation validator still reports `Locales checked: 9`, `Errors: 0`, `Warnings: 0`, `PASSED`. This covers `msp/quotes` key parity / empty-value checks across `de`, `es`, `fr`, `it`, `nl`, `pl`, `pt`, `xx`, and `yy`.
 - (2026-04-19) Completed `T020`: reran the Italian accent audit on [server/public/locales/it/msp/quotes.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/quotes.json). A source scan found no unaccented regressions for the common problem words (`perche`, `piu`, `puo`, `cosi`, `gia`), and the file still contains the expected accented-vowel mix (`à: 15`, `è: 12`, `é: 1`, `ò: 2`).
+- (2026-04-19) Completed `T021`: recursively walked [server/public/locales/xx/msp/quotes.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/quotes.json) and confirmed every string leaf contains the expected `11111` pseudo-locale fill pattern (`missing: 0`). This covers the visual-QA expectation that the quote namespace no longer falls back to readable English in `xx`.
 
 ## Commands / Runbook
 

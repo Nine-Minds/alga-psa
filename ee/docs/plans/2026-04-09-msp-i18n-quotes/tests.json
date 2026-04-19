@@ -138,7 +138,7 @@
   {
     "id": "T021",
     "description": "Pseudo-locale xx/msp/quotes.json shows '11111' fill patterns for visual QA -- all values are replaced with numeric fill",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
