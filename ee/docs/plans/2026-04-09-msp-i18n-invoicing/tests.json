@@ -362,7 +362,7 @@
   {
     "id": "T045",
     "description": "Italian accent preservation: it/msp/invoicing.json contains proper accented characters (e.g., a-grave, e-grave, e-acute, u-grave) and not ASCII-degraded equivalents; validate-translations.cjs Italian accent check passes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
