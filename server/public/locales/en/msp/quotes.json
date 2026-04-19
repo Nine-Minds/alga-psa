@@ -327,6 +327,19 @@
   },
   "quoteLineItems": {
     "title": "Line Items",
+    "actions": {
+      "addDiscount": "Add Discount",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "hideDiscount": "Hide Discount",
+      "remove": "Remove"
+    },
+    "billingMethods": {
+      "fixed": "Fixed",
+      "hourly": "Hourly",
+      "perUnit": "Per Unit",
+      "usage": "Usage Based"
+    },
     "columns": {
       "actions": "Actions",
       "billing": "Billing",
@@ -339,22 +352,48 @@
     },
     "labels": {
       "customItem": "Custom item",
+      "itemCountOne": "1 item",
+      "itemCountOther": "{{count}} items",
+      "noPriceInCurrency": "No price in {{currencyCode}}",
       "optional": "Optional",
       "phaseSection": "Phase / Section",
       "recurring": "Recurring",
+      "service": "service",
+      "setPrice": "Set price",
       "ungroupedItems": "Ungrouped Items"
     },
     "placeholders": {
-      "phaseSection": "e.g. Discovery, Rollout, Ongoing"
+      "phaseSection": "e.g. Discovery, Rollout, Ongoing",
+      "selectItem": "Select item",
+      "selectService": "Select service",
+      "servicePicker": "Search or type custom item name..."
     },
     "discounts": {
+      "badge": "Discount",
+      "description": {
+        "fixed": "Discount",
+        "percentage": "Discount ({{value}}%)"
+      },
       "fixed": "Fixed discount",
+      "fullQuoteSubtotal": "Applies to the full quote subtotal",
       "fullQuote": "Whole quote",
+      "item": "Specific item",
       "percentage": "Percentage discount",
-      "service": "Specific service"
+      "service": "Specific service",
+      "targets": {
+        "fullQuote": "on full quote",
+        "namedItem": "on \"{{name}}\"",
+        "namedService": "on {{name}}",
+        "specificItem": "on specific item",
+        "specificService": "on specific service"
+      },
+      "types": {
+        "fixed": "Fixed",
+        "percentage": "Percentage"
+      }
     },
     "markup": {
-      "badge": "{{value}}% markup",
+      "badge": "{{sign}}{{value}}% markup",
       "unavailable": "Markup unavailable",
       "unavailableTooltip": "Markup can't be calculated because cost is tracked in {{costCurrency}} and this quote is in {{quoteCurrency}}."
     }
