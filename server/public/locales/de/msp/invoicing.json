@@ -1,0 +1,986 @@
+{
+  "automaticInvoices": {
+    "ready": {
+      "title": "Bereit zur Rechnungsstellung",
+      "description": "Überprüfen Sie wiederkehrende fällige Arbeiten und erstellen Sie Rechnungsentwürfe für die ausgewählten Zeiträume.",
+      "selectAllExplanation": "Wählen Sie übergeordnete Gruppen oder einzelne Zeilen aus, um die Rechnungserstellung zu steuern.",
+      "filterPlaceholder": "Filtern Sie rechnungsfertige Zeilen",
+      "dateRange": "Rechnungsfenster",
+      "search": "Suchen",
+      "groupedPreviewUnavailable": "Die Vorschau unterstützt gruppierte Auswahlen. Direktes „Generieren aus Vorschau“ bleibt nur Einzelauswahl.",
+      "selectionHintCombined": "1 Rechnung, wenn Eltern ausgewählt wurden",
+      "selectionHintSeparate": "Wählen Sie Elemente einzeln aus",
+      "needsApproval": {
+        "title": "Genehmigung erforderlich",
+        "description": "Diese wiederkehrenden Fenster enthalten abrechnungsfähige Zeit, die noch nicht genehmigt wurde. Das gesamte Rechnungsfenster ist blockiert, bis die Genehmigungen abgeschlossen sind.",
+        "labels": {
+          "servicePeriod": "Servicezeitraum",
+          "invoiceWindow": "Rechnungsfenster"
+        },
+        "unapprovedEntries": "{{count}} nicht genehmigter Eintrag",
+        "unapprovedEntries_one": "{{count}} nicht genehmigter Eintrag",
+        "unapprovedEntries_other": "{{count}} nicht genehmigte Einträge",
+        "actions": {
+          "reviewApprovals": "Überprüfen Sie die Genehmigungen"
+        }
+      },
+      "columns": {
+        "group": "Gruppe",
+        "servicePeriod": "Leistungszeitraum",
+        "invoiceWindow": "Rechnungsfenster",
+        "included": "Im Lieferumfang enthalten"
+      }
+    },
+    "groups": {
+      "item": "{{count}}-Element",
+      "item_one": "{{count}}-Element",
+      "item_other": "{{count}}-Elemente",
+      "contract": "{{count}}-Vertrag",
+      "contract_one": "{{count}}-Vertrag",
+      "contract_other": "{{count}}-Verträge",
+      "line": "{{count}}-Zeile",
+      "line_one": "{{count}}-Zeile",
+      "line_other": "{{count}}-Zeilen",
+      "obligationCount": "{{count}}-Verpflichtung",
+      "obligationCount_one": "{{count}}-Verpflichtung",
+      "obligationCount_other": "{{count}}-Verpflichtungen",
+      "includedCount": "{{count}}-Artikel enthalten",
+      "includedCount_one": "{{count}}-Artikel enthalten",
+      "includedCount_other": "{{count}}-Artikel enthalten",
+      "attributionMetadataMissing": "Metadaten zur Zuweisungszuordnung fehlen ({{count}}-Pflicht)",
+      "attributionMetadataMissing_one": "Metadaten zur Zuweisungszuordnung fehlen ({{count}}-Pflicht)",
+      "attributionMetadataMissing_other": "Metadaten zur Zuweisungszuordnung fehlen ({{count}}-Verpflichtungen)",
+      "actions": {
+        "expand": "Expandieren",
+        "collapse": "Zusammenbruch"
+      },
+      "canCombine": "Kann zu einer Rechnung zusammengefasst werden",
+      "separate": "Muss separat in Rechnung gestellt werden",
+      "blocked": "Enthält blockierte Elemente",
+      "notReady": "Nicht bereit zur Rechnungsstellung"
+    },
+    "incompatibilityReasons": {
+      "invoiceWindowDiffers": "Das Rechnungsfenster ist unterschiedlich",
+      "clientDiffers": "Der Kunde ist unterschiedlich",
+      "poScopeDiffers": "Der PO-Umfang ist unterschiedlich",
+      "currencyDiffers": "Die Währung ist unterschiedlich",
+      "taxTreatmentDiffers": "Die steuerliche Behandlung ist unterschiedlich",
+      "exportShapeDiffers": "Die Exportform ist unterschiedlich"
+    },
+    "executionRows": {
+      "labels": {
+        "cadence": "Kadenz",
+        "billingTiming": "Zeitpunkt der Abrechnung",
+        "servicePeriod": "Servicezeitraum"
+      },
+      "pendingAmount": "Ausstehender Betrag",
+      "attributionWarning": "Metadaten zur Zuweisungszuordnung fehlen",
+      "blockedUntilApproval": "Bis zur Genehmigung blockiert: {{count}} nicht genehmigter Eintrag.",
+      "blockedUntilApproval_one": "Bis zur Genehmigung blockiert: {{count}} nicht genehmigter Eintrag.",
+      "blockedUntilApproval_other": "Bis zur Genehmigung blockiert: {{count}} nicht genehmigte Einträge.",
+      "assignmentContext": {
+        "unresolvedTimeEntry": "Ungelöster Zeiteintrag",
+        "unresolvedUsageRecord": "Ungelöster Nutzungsdatensatz",
+        "assignedContractLine": "Zugewiesene Vertragszeile",
+        "assignedWorkItem": "Zugewiesenes Arbeitselement",
+        "unresolvedWork": "Ungelöste Arbeit"
+      }
+    },
+    "actions": {
+      "previewSelected": "Vorschau ausgewählt",
+      "generateSelected": "Rechnungen für ausgewählte Zeiträume erstellen ({{count}})",
+      "generateSelected_one": "Rechnungen für ausgewählte Zeiträume erstellen ({{count}})",
+      "generateSelected_other": "Rechnungen für ausgewählte Zeiträume erstellen ({{count}})",
+      "reverseInvoice": "Rechnung stornieren",
+      "deleteInvoice": "Rechnung löschen",
+      "closePreview": "Vorschau schließen",
+      "generateInvoice": "Rechnung erstellen"
+    },
+    "dialogs": {
+      "reverse": {
+        "title": "Wiederkehrende Rechnung stornieren",
+        "warning": "Durch das Stornieren dieser Rechnung werden der generierte Entwurf und die zugehörigen wiederkehrenden Auswahlen entfernt.",
+        "warningTitle": "Warnung: Wiederkehrende Rechnung stornieren",
+        "description": "Sie sind im Begriff, die wiederkehrende Rechnung für Folgendes zu stornieren:",
+        "impactTitle": "Diese Aktion wird:",
+        "cannotUndo": "Diese Aktion kann nicht rückgängig gemacht werden!",
+        "confirm": "Ja, Rechnung stornieren",
+        "reversing": "Rückwärtsfahren...",
+        "error": "Die wiederkehrende Rechnung konnte nicht storniert werden",
+        "labels": {
+          "client": "Kunde",
+          "cadenceSource": "Trittfrequenzquelle",
+          "servicePeriod": "Servicezeitraum"
+        },
+        "effects": {
+          "deleteDraft": "Löschen Sie den generierten wiederkehrenden Rechnungsentwurf",
+          "reissueCredits": "Stellen Sie alle Gutschriften, die dieser Rechnung zugewiesen wurden, erneut aus",
+          "unmarkRecords": "Heben Sie die Markierung verknüpfter Zeiteinträge und Nutzungsdatensätze als in Rechnung gestellt auf",
+          "retireBridge": "Ziehen Sie den verknüpften Client-Cadence-Bridge-Datensatz zurück und öffnen Sie die verknüpften wiederkehrenden Servicezeiträume erneut",
+          "reopenPeriods": "Öffnen Sie die verknüpften wiederkehrenden Servicezeiträume erneut, ohne dass Metadaten für die Client-Zyklus-Brücke erforderlich sind"
+        }
+      },
+      "delete": {
+        "title": "Wiederkehrende Rechnung endgültig löschen?",
+        "message": "Diese Aktion kann nicht rückgängig gemacht werden. Dadurch wird die wiederkehrende Rechnung dauerhaft gelöscht für: \nKunde: {{client}}\nTaktfrequenzquelle: {{cadenceSource}}\nDienstzeitraum: {{servicePeriod}}\n{{bridgeEffect}}",
+        "bridgeDeleted": "Der verknüpfte Client-Cadence-Bridge-Datensatz wird ebenfalls gelöscht.",
+        "bridgeReopened": "Verknüpfte wiederkehrende Servicezeiträume werden wieder geöffnet, ohne dass Metadaten für die Client-Zyklus-Brücke erforderlich sind.",
+        "confirm": "Ja, dauerhaft löschen",
+        "deleting": "Wird gelöscht...",
+        "error": "Die wiederkehrende Rechnung konnte nicht gelöscht werden"
+      },
+      "preview": {
+        "title": "Rechnungsvorschau",
+        "description": "Dies ist eine Vorschau, wie die Rechnung nach Fertigstellung aussehen wird.",
+        "summary_one": "{{count}}-Rechnung ausgewählt",
+        "summary_other": "{{count}}-Rechnungen ausgewählt",
+        "summaryCombined": "Durch diese Auswahl wird eine kombinierte Rechnung generiert.",
+        "summarySeparate": "Durch diese Auswahl werden separate {{count}}-Rechnungen generiert.",
+        "invoiceTitle": "Rechnung {{index}}",
+        "sections": {
+          "clientDetails": "Unternehmensdetails",
+          "invoiceDetails": "Rechnungsdetails",
+          "lineItems": "Positionen"
+        },
+        "fields": {
+          "date": "Datum"
+        },
+        "columns": {
+          "description": "Beschreibung",
+          "quantity": "Menge",
+          "rate": "Rate",
+          "amount": "Betrag"
+        },
+        "totals": {
+          "subtotal": "Zwischensumme",
+          "tax": "Steuer",
+          "total": "Gesamt"
+        },
+        "generating": "Generieren...",
+        "generateError": "Die Rechnung konnte aus der Vorschau nicht erstellt werden"
+      },
+      "poOverage": {
+        "title": "Überschreitungen des Bestelllimits",
+        "description": "Der ausgewählte Rechnungsbetrag ist um {{amount}} überschritten.",
+        "batchDescription": "Eine oder mehrere Rechnungen würden den in der Bestellung genehmigten Betrag überschreiten. Was möchten Sie tun?",
+        "batchItem": "{{clientName}}: vorbei an {{amount}}",
+        "poNumber": "PO {{number}}",
+        "allowOverages": "Überschreitungen zulassen (alle Rechnungen erstellen)",
+        "skipInvoices": "Überspringen Sie Rechnungen, die ihre Bestellung überschreiten würden",
+        "continue": "Weiter",
+        "singleDescription": "Diese Rechnung würde den für die Bestellung autorisierten Betrag um {{amount}} überschreiten.",
+        "proceedAnyway": "Trotzdem weitermachen?",
+        "proceedConfirm": "Fahren Sie trotzdem fort",
+        "skippedError": "Übersprungen wegen PO-Überschreitung ({{poLabel}}): über {{amount}}."
+      }
+    },
+    "history": {
+      "title": "Wiederkehrende Rechnungshistorie",
+      "filterPlaceholder": "Kunden filtern...",
+      "columns": {
+        "client": "Kunde",
+        "assignmentScope": "Aufgabenumfang",
+        "cadenceSource": "Trittfrequenzquelle",
+        "servicePeriod": "Leistungszeitraum",
+        "invoiceWindow": "Rechnungsfenster",
+        "invoice": "Rechnung",
+        "actions": "Aktionen"
+      },
+      "badges": {
+        "contractAnniversary": "Vertragsjubiläum",
+        "clientSchedule": "Kundenplan",
+        "unknownCadenceSource": "Unbekannte Trittfrequenzquelle ({{source}})",
+        "multiContractInvoice": "Rechnung mit mehreren Verträgen",
+        "servicePeriodBacked": "Servicezeitbesichert"
+      }
+    },
+    "materializationGap": {
+      "title": "Wiederkehrende Reparaturen im Servicezeitraum erforderlich",
+      "description": "In diesen Client-Kadenzfenstern fehlen dauerhaft wiederkehrende Servicezeiträume, daher sind sie für die Rechnungsstellung gesperrt, bis der kanonische Zeitplan repariert ist.",
+      "labels": {
+        "servicePeriod": "Servicezeitraum",
+        "invoiceWindow": "Rechnungsfenster",
+        "scheduleKey": "Zeitplanschlüssel"
+      },
+      "reviewLink": "Überprüfen Sie die Servicezeiträume",
+      "helpText": "Reparieren Sie die kanonischen Servicezeitraumdatensätze, anstatt eine Kompatibilitätsrechnungszeile zu erstellen."
+    },
+    "errors": {
+      "title": "Beim Abschluss der Rechnungen sind Fehler aufgetreten:",
+      "loadReady": "Abrechnungszeiträume konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+      "loadHistory": "Der Verlauf der wiederkehrenden Rechnungen konnte nicht geladen werden. Bitte versuchen Sie es erneut."
+    },
+    "loading": {
+      "billingData": "Abrechnungsdaten werden geladen"
+    }
+  },
+  "manualInvoices": {
+    "title": "Erstellen Sie eine manuelle Rechnung",
+    "detailsTitle": "Rechnungsdetails",
+    "detailsDescription": "Manuelle Bearbeitungen bleiben standardmäßig ohne Zeitrahmen, während wiederkehrende, durch Details unterstützte Zeilen ihre kanonischen Dienstzeiträume behalten.",
+    "description": "Erstellen Sie eine manuelle Rechnung und fügen Sie optional automatisierte wiederkehrende Artikel hinzu.",
+    "fields": {
+      "client": "Kunde",
+      "invoiceNumber": "Rechnungsnummer",
+      "invoiceNumberOptional": "Rechnungsnummer (optional)"
+    },
+    "placeholders": {
+      "selectClient": "Wählen Sie einen Kunden aus",
+      "invoiceNumberOptional": "Für die automatische Generierung leer lassen"
+    },
+    "automatedItems": {
+      "title": "Automatisierte Werbebuchungen",
+      "service": "Service",
+      "total": "Gesamt",
+      "unknownService": "Unbekannter Dienst"
+    },
+    "lineItems": {
+      "manual": "Manuelle Einzelposten",
+      "all": "Positionen"
+    },
+    "actions": {
+      "addCharge": "Gebühr hinzufügen",
+      "addDiscount": "Rabatt hinzufügen",
+      "generate": "Rechnung erstellen",
+      "saveChanges": "Änderungen speichern",
+      "processing": "Wird verarbeitet..."
+    },
+    "labels": {
+      "total": "Gesamt"
+    },
+    "prepayment": {
+      "label": "Dies ist eine Vorauszahlungsrechnung (erstellt Gutschrift)",
+      "description": "Markieren Sie dies nur, wenn die manuelle Rechnung eine Gutschrift für künftige Finanzanwendungen erstellen soll, anstatt eine wiederkehrende Abdeckung des Dienstzeitraums darzustellen."
+    },
+    "creditExpiration": {
+      "label": "Ablaufdatum des Kredits",
+      "helpText": "Lassen Sie das Feld leer, wenn kein Ablaufdatum vorliegt oder der Standardablaufzeitraum verwendet werden soll"
+    },
+    "errors": {
+      "selectClient": "Bitte wähle einen Kunden aus",
+      "invoiceNumberUnique": "Diese Rechnungsnummer wird bereits verwendet.",
+      "noTaxRateConfigured": "Für die Region ist kein Steuersatz konfiguriert.",
+      "serviceNotFound": "Ausgewählter Dienst nicht gefunden.",
+      "cannotModify": "Die Rechnung kann nicht geändert (bezahlt/storniert) werden.",
+      "loadItems": "Fehler beim Laden der Rechnungspositionen",
+      "refresh": "Beim Aktualisieren der Rechnungsdaten ist ein Fehler aufgetreten.",
+      "updateFailed": "Fehler beim Aktualisieren der Rechnung",
+      "generateFailed": "Fehler beim Generieren der Rechnung"
+    },
+    "errorFallback": {
+      "title": "Etwas ist schief gelaufen",
+      "retry": "Erneut versuchen"
+    }
+  },
+  "draftsTab": {
+    "title": "Rechnungsentwürfe",
+    "searchPlaceholder": "Rechnungen suchen...",
+    "bulkActions_one": "Aktionen ({{count}})",
+    "bulkActions_other": "Aktionen ({{count}})",
+    "columns": {
+      "invoiceNumber": "Rechnungsnummer",
+      "client": "Kunde",
+      "amount": "Betrag",
+      "invoiceDate": "Rechnungsdatum",
+      "dueDate": "Fälligkeitsdatum",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "actions": {
+      "finalize": "Abschließen",
+      "finalizeSelected": "Ausgewählte finalisieren",
+      "downloadPdf": "PDF herunterladen",
+      "reverseDraft": "Umgekehrter Entwurf",
+      "reverseSelected": "Umgekehrt ausgewählt",
+      "generateInvoices": "Rechnungen erstellen"
+    },
+    "status": {
+      "draft": "Entwurf"
+    },
+    "empty": {
+      "title": "Keine Rechnungsentwürfe",
+      "description": "Rechnungsentwürfe werden hier angezeigt, sobald Sie Rechnungen erstellen, die noch nicht abgeschlossen sind."
+    },
+    "loading": "Rechnungsentwürfe werden geladen...",
+    "errors": {
+      "loadFailed": "Rechnungsentwürfe konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+      "finalizeFailed": "Rechnung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
+      "bulkFinalizeFailed": "Ausgewählte Rechnungen konnten nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
+      "pdfFailed": "PDF konnte nicht generiert werden. Bitte versuchen Sie es erneut.",
+      "reverseFailed": "Rechnungsentwürfe konnten nicht storniert werden. Bitte versuchen Sie es erneut."
+    },
+    "reverseDialog": {
+      "title": "Rechnungsentwurf umkehren",
+      "title_other": "Rechnungsentwürfe stornieren",
+      "message_one": "Wenn Sie diesen Rechnungsentwurf stornieren, wird er gelöscht und alle verknüpften Zeiteinträge oder Nutzungsdatensätze werden freigegeben. Diese Aktion kann nicht rückgängig gemacht werden.",
+      "message_other": "Durch das Stornieren von {{count}}-Rechnungsentwürfen werden diese gelöscht und alle verknüpften Zeiteinträge oder Nutzungsdatensätze werden freigegeben. Diese Aktion kann nicht rückgängig gemacht werden.",
+      "confirm": "Umgekehrter Entwurf",
+      "cancel": "Abbrechen"
+    }
+  },
+  "finalizedTab": {
+    "title": "Abgeschlossene Rechnungen",
+    "searchPlaceholder": "Rechnungen suchen...",
+    "bulkActions_one": "Aktionen ({{count}})",
+    "bulkActions_other": "Aktionen ({{count}})",
+    "columns": {
+      "invoiceNumber": "Rechnungsnummer",
+      "client": "Kunde",
+      "amount": "Betrag",
+      "finalizedDate": "Endgültiges Datum",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "actions": {
+      "downloadPdfs": "PDFs herunterladen",
+      "sendEmails": "E-Mails senden",
+      "unfinalizeSelected": "Auswahl aufheben",
+      "downloadPdf": "PDF herunterladen",
+      "sendEmail": "E-Mail senden",
+      "unfinalize": "Abschließen aufheben"
+    },
+    "status": {
+      "finalized": "Finalisiert"
+    },
+    "empty": {
+      "title": "Keine abgeschlossenen Rechnungen",
+      "description": "Schließen Sie Rechnungsentwürfe ab, um sie hier anzuzeigen.",
+      "viewDrafts": "Entwürfe anzeigen"
+    },
+    "loading": "Rechnungen werden geladen...",
+    "errors": {
+      "loadFailed": "Rechnungen konnten nicht geladen werden. Bitte versuche es erneut.",
+      "pdfFailed": "PDF konnte nicht generiert werden. Bitte versuchen Sie es erneut.",
+      "bulkPdfFailed": "PDFs konnten nicht generiert werden. Bitte versuchen Sie es erneut.",
+      "unfinalizeFailed": "Die Rechnung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
+      "bulkUnfinalizeFailed": "Rechnungen konnten nicht abgeschlossen werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "recurringServicePeriods": {
+    "title": "Wiederkehrende Servicezeiträume",
+    "description": "Überprüfen Sie wiederkehrende Rechnungsdeckungsfenster für eine Kundenvertragsposition, ermitteln Sie, warum Arbeiten fällig sind oder nicht, und überprüfen Sie den mit Rechnungsdetailzeilen verknüpften Rechnungsverlauf.",
+    "fields": {
+      "scheduleSelect": "Wählen Sie einen Zeitplan",
+      "scheduleSelectPlaceholder": "Wählen Sie einen aktuellen wiederkehrenden Zeitplan aus",
+      "scheduleKey": "Zeitplanschlüssel",
+      "scheduleKeyPlaceholder": "Fügen Sie einen Zeitplanschlüssel ein (optional, wenn oben ausgewählt)",
+      "client": "Kunde",
+      "cadenceSource": "Trittfrequenzquelle",
+      "billingTiming": "Zeitpunkt der Abrechnung",
+      "chargeFamily": "Familie aufladen",
+      "scheduleKeyLabel": "Zeitplanschlüssel"
+    },
+    "actions": {
+      "loadingSchedule": "Wird geladen…",
+      "openSchedule": "Öffnen Sie den Zeitplan",
+      "repairMissing": "Fehlende Servicezeiten reparieren",
+      "repairing": "Reparieren…",
+      "previewRegeneration": "Vorschau der Regeneration",
+      "previewing": "Vorschau..."
+    },
+    "errors": {
+      "enterScheduleKey": "Geben Sie einen Zeitplanschlüssel ein, um wiederkehrende Servicezeiträume zu überprüfen.",
+      "loadFailed": "Wiederkehrende Servicezeiträume konnten nicht geladen werden.",
+      "candidateRecordsArray": "Kandidatendatensätze JSON müssen ein Array sein.",
+      "previewFailed": "Die Vorschau der wiederkehrenden Servicezeitraum-Regeneration konnte nicht angezeigt werden.",
+      "repairFailed": "Die wiederkehrende Servicezeitraum-Materialisierung konnte nicht repariert werden."
+    },
+    "labels": {
+      "recurringObligation": "Wiederkehrende Verpflichtung",
+      "generated": "Generiert",
+      "edited": "Bearbeitet",
+      "billed": "Abgerechnet",
+      "exceptions": "Ausnahmen",
+      "repairCompleted": "Reparatur abgeschlossen",
+      "candidateRecordsJson": "Kandidatendatensätze JSON",
+      "conflicts": "Konflikte"
+    },
+    "values": {
+      "notLinked": "Nicht verlinkt",
+      "contractAnniversary": "Vertragsjubiläum",
+      "clientSchedule": "Kundenplan",
+      "advance": "Im Voraus",
+      "arrears": "Nachträglich",
+      "unknownClient": "Unbekannter Kunde",
+      "range": "{{start}} bis {{end}}",
+      "scheduleOptionLabel": "{{client}} · {{entity}} · {{cadence}} · {{timing}}",
+      "generatedFromSourceCadence": "Generiert aus der Quellkadenz",
+      "noConflicts": "Für die bereitgestellten Kandidaten wurden keine Regenerationskonflikte festgestellt."
+    },
+    "displayStates": {
+      "generated": {
+        "label": "Generiert",
+        "detail": "Entspricht den aktuellen Trittfrequenzregeln und wartet auf Abrechnung oder Überprüfung."
+      },
+      "edited": {
+        "label": "Bearbeitet",
+        "detail": "Eine spätere Revision hat den generierten Zeitplan geändert und bleibt aktiv."
+      },
+      "skipped": {
+        "label": "Übersprungen",
+        "detail": "Dieser zukünftige Zeitraum wird bis zur erneuten Bearbeitung bewusst von der ordnungsgemäßen Auswahl ausgeschlossen."
+      },
+      "locked": {
+        "label": "Gesperrt",
+        "detail": "Dieser Zeitraum wird für normale Änderungen eingefroren, während auf die Abrechnung oder Korrektur gewartet wird."
+      },
+      "billed": {
+        "label": "Abgerechnet",
+        "detailLinked": "Verknüpft mit Rechnungsdetail {{invoiceChargeDetailId}}.",
+        "detailUnlinked": "Mit dem Abrechnungsverlauf verknüpft."
+      },
+      "superseded": {
+        "label": "Ersetzt",
+        "detail": "Dieser Zeitraum wurde durch eine neuere Revision ersetzt und diese Zeile bleibt für den Prüfverlauf erhalten."
+      },
+      "archived": {
+        "label": "Archiviert",
+        "detail": "Diese historische Zeile wird nur zur Prüfung und zum Abgleich aufbewahrt."
+      }
+    },
+    "provenanceReasons": {
+      "boundary_adjustment": "Grenze angepasst",
+      "invoice_window_adjustment": "Rechnungsfenster angepasst",
+      "activity_window_adjustment": "Aktivitätsfenster angepasst",
+      "skip": "Vom Abrechnungspersonal übersprungen",
+      "defer": "Auf ein späteres Rechnungsfenster verschoben",
+      "source_rule_changed": "Nach Änderung der Quellregel neu generiert",
+      "billing_schedule_changed": "Nach Änderung des Abrechnungsplans neu generiert",
+      "cadence_owner_changed": "Nach dem Wechsel des Cadence-Besitzers neu generiert",
+      "activity_window_changed": "Nach Änderung des Aktivitätsfensters neu generiert",
+      "backfill_realignment": "Beim Auffüllen neu ausgerichtet",
+      "integrity_repair": "Aus Gründen der Integrität repariert",
+      "invoice_linkage_repair": "Nach Korrektur der Rechnungsverknüpfung repariert",
+      "admin_correction": "Administrativ korrigiert",
+      "initial_materialization": "Generiert aus der Quellkadenz",
+      "backfill_materialization": "Wird während des Backfills generiert"
+    },
+    "governanceActions": {
+      "view": "Sicht",
+      "edit_boundaries": "Grenzen bearbeiten",
+      "skip": "überspringen",
+      "defer": "verschieben",
+      "regenerate": "regenerieren",
+      "invoice_linkage_repair": "Reparatur der Rechnungsverknüpfung",
+      "archive": "Archiv"
+    },
+    "table": {
+      "columns": {
+        "state": "Bundesland",
+        "servicePeriod": "Leistungszeitraum",
+        "invoiceWindow": "Rechnungsfenster",
+        "revision": "Revision",
+        "reason": "Grund",
+        "allowedActions": "Zulässige Aktionen"
+      }
+    },
+    "repairPanel": {
+      "title": "Fehlende persistente Servicezeiträume",
+      "description": "Dieser wiederkehrende Zeitplan ist in Live-Abrechnungsmetadaten vorhanden, verfügt jedoch über keine persistenten Servicezeitraumzeilen. Durch die Reparatur werden nur zukünftige Zeilen materialisiert, die Grenzen des Abrechnungsverlaufs bleiben erhalten und die neuen Datensätze werden mit der Backfill-Herkunft versehen.",
+      "result": "{{backfilled}}-Zeilen wurden aufgefüllt, {{realigned}} neu ausgerichtet, historische {{skipped}}-Kandidaten übersprungen und {{active}}-Zeilen in diesem Zeitplan aktiv gelassen."
+    },
+    "regenerationPreview": {
+      "title": "Regenerationsvorschau",
+      "description": "Fügen Sie JSON-Kandidatendatensätze ein, um eine Vorschau der Konflikte zwischen beibehaltenen bearbeiteten oder abgerechneten Zeilen und neu generierten zukünftigen Kandidaten für diesen Zeitplan anzuzeigen."
+    },
+    "conflicts": {
+      "kinds": {
+        "missing_candidate": "fehlender Kandidat",
+        "service_period_mismatch": "Nichtübereinstimmung der Dienstzeit",
+        "invoice_window_mismatch": "Nicht übereinstimmendes Rechnungsfenster",
+        "activity_window_mismatch": "Nichtübereinstimmung des Aktivitätsfensters"
+      },
+      "reasons": {
+        "missing_candidate": "Für diesen beibehaltenen Override-Slot bleibt kein neu generierter Kandidat übrig.",
+        "service_period_mismatch": "Der neu generierte Kandidat entspricht nicht mehr der beibehaltenen Überschreibungsdienstzeitraumgrenze.",
+        "invoice_window_mismatch": "Der neu generierte Kandidat stimmt nicht mehr mit dem beibehaltenen Override-Rechnungsfenster überein.",
+        "activity_window_mismatch": "Der neu generierte Kandidat stimmt nicht mehr mit dem beibehaltenen Override-Aktivitätsfenster überein."
+      }
+    }
+  },
+  "billingCycles": {
+    "title": "Abrechnungszyklen",
+    "tooltip": "Konfigurieren Sie Kundenabrechnungspläne und zeigen Sie eine Vorschau der Rechnungsfenster an, die sie für wiederkehrende Dienste im Kundenrhythmus erstellen.",
+    "description": "Kundenabrechnungspläne definieren Rechnungsfenster für wiederkehrende Zeilen, die nach dem Kundenabrechnungsplan fakturieren. Vertragsjubiläumszeilen können ihrem eigenen Rhythmus folgen und werden hier nicht in der Vorschau angezeigt.",
+    "searchPlaceholder": "Kunden suchen...",
+    "dateRange": "Datumsbereich des Abrechnungszyklus",
+    "search": "Suchen",
+    "loading": "Abrechnungszyklen werden geladen",
+    "errors": {
+      "loadFailed": "Daten konnten nicht abgerufen werden. Bitte versuchen Sie es später noch einmal."
+    },
+    "columns": {
+      "client": "Kunde",
+      "contract": "Vertrag",
+      "currentBillingCycle": "Aktueller Abrechnungszeitraum",
+      "anchor": "Anker",
+      "actions": "Aktionen"
+    },
+    "actions": {
+      "viewClientBilling": "Kundenabrechnung anzeigen"
+    },
+    "values": {
+      "noActiveAssignments": "Keine aktiven Aufgaben",
+      "unknown": "Unbekannt",
+      "assignmentId": "Zuweisung {{id}}",
+      "notSet": "Nicht festgelegt",
+      "rolling": "Rollen",
+      "weekday": "Wochentag {{day}}",
+      "starts": "Startet {{date}}",
+      "day": "Tag {{day}}",
+      "monthDay": "{{month}} {{day}}",
+      "dash": null
+    },
+    "cycles": {
+      "weekly": "Wöchentlich",
+      "bi-weekly": "Zweiwöchentlich",
+      "monthly": "Monatlich",
+      "quarterly": "Vierteljährlich",
+      "semi-annually": "Halbjährlich",
+      "annually": "Jährlich"
+    },
+    "months": {
+      "january": "Januar",
+      "february": "Februar",
+      "march": "März",
+      "april": "April",
+      "may": "Mai",
+      "june": "Juni",
+      "july": "Juli",
+      "august": "August",
+      "september": "September",
+      "october": "Oktober",
+      "november": "November",
+      "december": "Dezember"
+    }
+  },
+  "invoicePreview": {
+    "title": "Rechnungsvorschau",
+    "templatePlaceholder": "Rechnungsvorlage auswählen...",
+    "labels": {
+      "standard": "(Standard)"
+    },
+    "actions": {
+      "finalizeInvoice": "Rechnung abschließen",
+      "editItems": "Elemente bearbeiten",
+      "downloadPdf": "PDF herunterladen",
+      "reverseDraft": "Umgekehrter Entwurf",
+      "sendEmail": "E-Mail senden",
+      "unfinalize": "Abschließen aufheben",
+      "viewSourceQuote": "Quellzitat anzeigen"
+    },
+    "loading": "Vorschau wird geladen...",
+    "empty": "Wählen Sie eine Rechnung zur Vorschau aus",
+    "error": "Vorschau konnte nicht angezeigt werden",
+    "errorDescription": "Vorschau konnte nicht angezeigt werden. Möglicherweise fehlen Daten.",
+    "errors": {
+      "loadFailed": "Vorschau konnte nicht geladen werden: {{message}}",
+      "actionFailed": "Fehler bei {{action}}. Bitte versuchen Sie es erneut.",
+      "actionLabels": {
+        "finalizeInvoice": "Rechnung abschließen",
+        "downloadPdf": "PDF herunterladen",
+        "reverseDraft": "umgekehrter Entwurf",
+        "sendEmail": "E-Mail senden",
+        "unfinalize": "Rechnung rückgängig machen"
+      }
+    }
+  },
+  "templateEditor": {
+    "actions": {
+      "back": "Zurück zu Rechnungslayouts",
+      "cancel": "Abbrechen",
+      "save": "Vorlage speichern",
+      "saving": "Wird gespeichert..."
+    },
+    "titles": {
+      "create": "Erstellen Sie ein neues Rechnungslayout",
+      "edit": "Layout bearbeiten: {{name}}"
+    },
+    "fields": {
+      "templateName": "Vorlagenname",
+      "templateAst": "Vorlage AST (JSON)",
+      "created": "Erstellt",
+      "lastUpdated": "Zuletzt aktualisiert"
+    },
+    "tabs": {
+      "visual": "Visuell",
+      "code": "Code"
+    },
+    "alerts": {
+      "codeReadonly": "Die Codeansicht wird aus dem visuellen Arbeitsbereich generiert und ist schreibgeschützt."
+    },
+    "errors": {
+      "loadFailed": "Vorlagendaten konnten nicht geladen werden.",
+      "saveFailed": "Vorlage konnte nicht gespeichert werden.",
+      "unexpectedSave": "Beim Speichern ist ein unerwarteter Fehler aufgetreten.",
+      "templateNameRequired": "Der Name der Vorlage ist erforderlich",
+      "astExportFailed": "Die AST-Vorlage konnte nicht aus dem visuellen Arbeitsbereich exportiert werden: {{message}}",
+      "unknownAstExport": "Unbekannter AST-Exportfehler"
+    }
+  },
+  "templates": {
+    "title": "Rechnungslayouts",
+    "columns": {
+      "templateName": "Vorlagenname",
+      "type": "Typ",
+      "default": "Standard",
+      "actions": "Aktionen"
+    },
+    "types": {
+      "standard": "Standard",
+      "custom": "Brauch"
+    },
+    "actions": {
+      "edit": "Bearbeiten",
+      "editAsCopy": "Als Kopie bearbeiten",
+      "clone": "Klon",
+      "setDefault": "Als Standard festlegen",
+      "delete": "Löschen",
+      "openMenu": "Menü öffnen",
+      "create": "Neues Layout erstellen"
+    },
+    "loading": "Laden von Rechnungslayouts",
+    "values": {
+      "thisTemplate": "diese Vorlage",
+      "copySuffix": "(Kopie)",
+      "copyOfName": "Kopie von {{name}}",
+      "standardSuffix": "(Standard)"
+    },
+    "errors": {
+      "cloneFailed": "Vorlage konnte nicht geklont werden.",
+      "cloneEditFailed": "Es konnte keine bearbeitbare Kopie erstellt werden.",
+      "setDefaultFailed": "Die Vorlage konnte nicht als Standard festgelegt werden.",
+      "fetchFailed": "Vorlagen konnten nicht abgerufen werden.",
+      "deleteValidationFailed": "Der Löschvorgang konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
+      "deleteUnexpected": "Beim Löschen der Vorlage ist ein unerwarteter Fehler aufgetreten."
+    }
+  },
+  "externalTax": {
+    "title": "Externer Steuerimport",
+    "description": "Überprüfen Sie Rechnungen, die auf eine externe Steuerberechnung warten, und importieren Sie die resultierenden Beträge.",
+    "columns": {
+      "invoice": "Rechnung",
+      "client": "Kunde",
+      "amount": "Betrag",
+      "system": "System",
+      "created": "Erstellt",
+      "actions": "Aktionen"
+    },
+    "actions": {
+      "import": "Importieren",
+      "importing": "Wird importiert...",
+      "refresh": "Aktualisieren",
+      "importAll": "Alle importieren",
+      "showHistory": "Verlauf anzeigen",
+      "hideHistory": "Verlauf ausblenden",
+      "importFromAdapter": "Einfuhrsteuer von {{adapter}}"
+    },
+    "summary": {
+      "pending_one": "{{count}}-Rechnung mit ausstehender Steuereinfuhr",
+      "pending_other": "{{count}}-Rechnungen mit ausstehender Steuereinfuhr",
+      "successful_one": "{{count}} erfolgreich",
+      "successful_other": "{{count}} erfolgreich",
+      "failed_one": "{{count}} ist fehlgeschlagen",
+      "failed_other": "{{count}} ist fehlgeschlagen"
+    },
+    "progress": {
+      "importing": "Einfuhrsteuern...",
+      "importingCount": "{{current}}/{{total}} wird importiert..."
+    },
+    "empty": {
+      "allUpToDate": "Alle Rechnungen sind aktuell",
+      "nonePending": "Keine Rechnungen mit ausstehender externer Steuereinfuhr.",
+      "history": "Kein Importverlauf verfügbar."
+    },
+    "helpText": "Rechnungen werden hier angezeigt, wenn sie mit aktivierter externer Steuerdelegation exportiert werden. Importieren Sie die Steuer, sobald Ihr Buchhaltungssystem die Steuerbeträge berechnet hat.",
+    "alerts": {
+      "pendingTitle": "Steuer ausstehende Einfuhr",
+      "pendingDescription": "Diese Rechnung wurde ohne Steuerbeträge nach {{adapter}} exportiert. Importieren Sie die berechnete Steuer, sobald die Rechnung verarbeitet wurde.",
+      "importedTitle": "Steuer importiert aus {{adapter}}",
+      "significantDifference": "Differenz übersteigt 1 %",
+      "significantDifferenceTitle": "Erheblicher Steuerunterschied",
+      "significantDifferenceDescription": "Die externe Steuer weicht von der internen Berechnung um mehr als 1 % ab. Bitte überprüfen Sie die Gebühren, um die Richtigkeit sicherzustellen."
+    },
+    "reconciliation": {
+      "internal": "Intern",
+      "external": "Extern",
+      "difference": "Unterschied",
+      "history": "Importverlauf"
+    },
+    "reconciliationView": {
+      "title": "Steuerausgleich",
+      "description": "Vergleichen Sie interne und externe Steuerberechnungen.",
+      "tooltips": {
+        "significantDifference": "Differenz übersteigt 1 %",
+        "amountsMatch": "Die Steuerbeträge liegen im akzeptablen Bereich"
+      },
+      "summary": {
+        "internal": "Intern (Algen-PSA)",
+        "external": "Extern (Buchhaltung)"
+      },
+      "alerts": {
+        "significantDifferenceTitle": "Erheblicher Steuerunterschied festgestellt",
+        "significantDifferenceDescription": "Der Unterschied zwischen internen und externen Steuerberechnungen beträgt mehr als 1 %. Bitte überprüfen Sie die nachstehende zeilenweise Aufschlüsselung, um Abweichungen festzustellen."
+      },
+      "sections": {
+        "lineByLineBreakdown": "Zeilenweise Aufschlüsselung"
+      },
+      "columns": {
+        "description": "Beschreibung",
+        "internalTax": "Interne Steuer",
+        "externalTax": "Externe Steuer",
+        "difference": "Unterschied"
+      },
+      "labels": {
+        "total": "Gesamt",
+        "line": "Zeile {{index}}"
+      },
+      "states": {
+        "loading": "Abgleichsdaten werden geladen...",
+        "noData": "Keine Abgleichsdaten verfügbar."
+      },
+      "helpText": "Unterschiede können aufgrund von Rundungen, unterschiedlichen Steuerregeln oder zeitlichen Unterschieden zwischen Systemen auftreten."
+    },
+    "states": {
+      "loadingHistory": "Verlauf wird geladen...",
+      "emptyHistory": "Keine früheren Steuereinfuhren gefunden."
+    },
+    "tooltips": {
+      "externalRef": "Externe Referenz: {{reference}}"
+    },
+    "values": {
+      "unknownSystem": "Unbekannt",
+      "externalSystem": "Externes System",
+      "notAvailable": "N / A"
+    },
+    "toasts": {
+      "noPendingInvoices": "Keine Rechnungen bis zur Steuereinfuhr",
+      "batchImportedSuccess_one": "Steuer für {{count}}-Rechnung erfolgreich importiert",
+      "batchImportedSuccess_other": "Steuer für {{count}}-Rechnungen erfolgreich importiert",
+      "batchImportedPartial": "Der Import von {{successCount}}-Rechnungen, {{failureCount}} ist fehlgeschlagen",
+      "batchImportedFailed_one": "Einfuhrsteuer für {{count}}-Rechnung fehlgeschlagen",
+      "batchImportedFailed_other": "Die Einfuhrsteuer für {{count}}-Rechnungen konnte nicht importiert werden",
+      "taxImportedSuccessfully": "Steuer erfolgreich importiert",
+      "taxImportedFromAdapter": "Steuer erfolgreich aus {{adapter}} importiert",
+      "taxImportFailed": "Einfuhrsteuer fehlgeschlagen"
+    },
+    "errors": {
+      "loadPendingInvoices": "Ausstehende Rechnungen konnten nicht geladen werden",
+      "batchImportFailed": "Der Batch-Import ist fehlgeschlagen",
+      "importFailed": "Import fehlgeschlagen",
+      "importTaxFailed": "Einfuhrsteuer fehlgeschlagen"
+    },
+    "adapterNames": {
+      "quickbooks": "QuickBooks Online",
+      "xero": "Xero",
+      "sage": "Salbei"
+    }
+  },
+  "sendEmail": {
+    "title": "Rechnung per E-Mail senden",
+    "loading": "Empfängerinformationen werden geladen...",
+    "summary": {
+      "invoices_one": "{{count}} Rechnung",
+      "invoices_other": "{{count}} Rechnungen",
+      "readyToSend_one": "{{count}} bereit zum Senden",
+      "readyToSend_other": "{{count}} bereit zum Senden",
+      "missingEmail_one": "{{count}} fehlt E-Mail",
+      "missingEmail_other": "{{count}} fehlt E-Mail"
+    },
+    "recipients": {
+      "title": "Empfänger",
+      "billingContact": "Rechnungskontakt",
+      "billingEmail": "Rechnungs-E-Mail",
+      "clientEmail": "Kunden-E-Mail",
+      "noEmailFound": "Keine E-Mail gefunden",
+      "notConfigured": "Für diesen Client ist keine E-Mail-Adresse konfiguriert."
+    },
+    "fields": {
+      "due": "Fällig",
+      "additionalMessage": "Zusätzliche Nachricht",
+      "additionalMessagePlaceholder": "Fügen Sie eine persönliche Notiz hinzu, die Sie in die E-Mail einfügen möchten..."
+    },
+    "preview": "E-Mails werden von {{fromEmail}} im Namen von {{companyName}} gesendet. Jede Rechnung wird als PDF beigefügt.",
+    "values": {
+      "defaultFromEmail": "noreply@example.com",
+      "defaultCompanyName": "Ihr Unternehmen"
+    },
+    "actions": {
+      "cancel": "Abbrechen",
+      "sendFallback": "E-Mail senden",
+      "send_one": "Senden Sie eine {{count}}-E-Mail",
+      "send_other": "Senden Sie {{count}}-E-Mails",
+      "sending_one": "{{count}}-Rechnung wird gesendet...",
+      "sending_other": "{{count}}-Rechnungen werden gesendet..."
+    },
+    "toasts": {
+      "noValidRecipients": "Keine gültigen Empfänger gefunden",
+      "sentSuccess_one": "{{count}}-Rechnung erfolgreich gesendet",
+      "sentSuccess_other": "{{count}}-Rechnungen erfolgreich gesendet",
+      "sentFailure_one": "{{count}}-Rechnung konnte nicht gesendet werden",
+      "sentFailure_other": "{{count}}-Rechnungen konnten nicht gesendet werden",
+      "sentPartial": "{{successCount}} gesendet, {{failureCount}} fehlgeschlagen"
+    },
+    "errors": {
+      "loadRecipients": "Empfängerinformationen konnten nicht geladen werden",
+      "sendFailed": "E-Mails konnten nicht gesendet werden"
+    }
+  },
+  "generateTab": {
+    "fields": {
+      "invoiceType": "Rechnungstyp"
+    },
+    "types": {
+      "automatic": "Automatische Rechnungen",
+      "manual": "Manuelle Rechnung",
+      "prepayment": "Vorauszahlung"
+    },
+    "descriptions": {
+      "automatic": "Verwenden Sie Rechnungsfenster, um fällige wiederkehrende Servicezeiträume zu überprüfen, bevor Sie einen wiederkehrenden Stapel generieren.",
+      "manual": "Verwenden Sie manuelle Rechnungen für einmalige oder Anpassungspositionen. Sie definieren wiederkehrende Servicezeiträume nicht neu.",
+      "prepayment": "Nutzen Sie Vorauszahlungs- und Kreditströme für einen finanziellen Mehrwert, der von der wiederkehrenden Deckung über Dienstzeiträume getrennt bleiben sollte."
+    },
+    "messages": {
+      "success": "Rechnung erfolgreich erstellt!",
+      "loadFailed": "Daten konnten nicht geladen werden"
+    }
+  },
+  "prepayment": {
+    "titles": {
+      "prepayment": "Erstellen Sie eine Vorauszahlungsrechnung",
+      "creditMemo": "Gutschrift erstellen"
+    },
+    "descriptions": {
+      "prepayment": "Vorauszahlungsrechnungen schaffen eine Gutschrift des Kunden für den zukünftigen Wert. Sie schaffen keine wiederkehrenden Servicezeiträume; Später wiederkehrende Rechnungen behalten ihren eigenen Leistungszeitraumschutz.",
+      "creditMemo": "Gutschriften passen Finanzsalden an, ohne die Abdeckung wiederkehrender Serviceperioden auf der Quellrechnung neu zu definieren."
+    },
+    "fields": {
+      "type": "Typ",
+      "client": "Kunde",
+      "amount": "Betrag",
+      "description": "Beschreibung"
+    },
+    "types": {
+      "prepaymentInvoice": "Vorauszahlungsrechnung",
+      "creditMemo": "Gutschrift"
+    },
+    "placeholders": {
+      "amount": "Betrag eingeben",
+      "prepaymentDescription": "Vorauszahlung für zukünftige Dienstleistungen",
+      "creditMemoDescription": "Grund für die Gutschrift"
+    },
+    "errors": {
+      "allFieldsRequired": "Bitte füllen Sie alle Felder aus",
+      "validAmount": "Bitte geben Sie einen gültigen Betrag ein",
+      "creditMemosUnsupported": "Gutschriften werden noch nicht unterstützt",
+      "generateFailed": "Fehler beim Generieren der Rechnung"
+    },
+    "actions": {
+      "generating": "Generieren...",
+      "generatePrepayment": "Erstellen Sie eine Vorauszahlungsrechnung",
+      "generateCreditMemo": "Gutschrift erstellen"
+    }
+  },
+  "contractItems": {
+    "columns": {
+      "description": "Beschreibung",
+      "quantity": "Menge",
+      "rate": "Rate",
+      "amount": "Betrag"
+    },
+    "labels": {
+      "contractSubtotal": "Vertragszwischensumme:",
+      "otherItemsSubtotal": "Zwischensumme sonstiger Posten:",
+      "otherItems": "Andere Artikel",
+      "product": "Produkt"
+    }
+  },
+  "hub": {
+    "title": "Rechnungsstellung",
+    "tabs": {
+      "generate": "Erzeugen",
+      "drafts": "Entwürfe",
+      "finalized": "Finalisiert"
+    }
+  },
+  "templateManager": {
+    "title": "Rechnungsvorlagen-Manager",
+    "sampleInvoices": "Musterrechnungen",
+    "templatePreview": "Vorlagenvorschau",
+    "invoiceNumber": "Rechnung #{{number}}"
+  },
+  "taxBadge": {
+    "labels": {
+      "internal": "Steuer: Intern",
+      "external": "Steuer: Extern",
+      "pending": "Steuer: Ausstehend"
+    },
+    "tooltips": {
+      "internal": "Die von Alga PSA berechnete Steuer basiert auf den konfigurierten Steuersätzen",
+      "external": "Die Steuer wird durch ein externes Buchhaltungssystem berechnet",
+      "pending": "Steuer wartet auf Import aus externem Buchhaltungssystem",
+      "externalAdapter": "Von {{adapter}} berechnete Steuer",
+      "externalAdapterImportedAt": "Von {{adapter}} auf {{date}} berechnete Steuer",
+      "pendingAdapter": "Warten auf Steuerberechnung von {{adapter}}"
+    },
+    "adapterNames": {
+      "quickbooks": "QuickBooks Online",
+      "xero": "Xero",
+      "sage": "Salbei"
+    }
+  },
+  "annotations": {
+    "title": "Anmerkungen zur Rechnung",
+    "labels": {
+      "internal": "Intern",
+      "external": "Extern"
+    },
+    "placeholder": "Fügen Sie eine neue Anmerkung hinzu",
+    "actions": {
+      "add": "Anmerkung hinzufügen"
+    }
+  },
+  "purchaseOrder": {
+    "labels": {
+      "short": "PO",
+      "number": "Bestellnummer",
+      "authorized": "PO autorisiert",
+      "consumed": "Bestellung verbraucht (abgeschlossen)",
+      "remaining": "PO Verbleibend"
+    }
+  },
+  "common": {
+    "actions": {
+      "cancel": "Abbrechen",
+      "close": "Schließen",
+      "delete": "Löschen",
+      "edit": "Bearbeiten",
+      "loading": "Wird geladen...",
+      "openMenu": "Menü öffnen",
+      "refresh": "Aktualisieren",
+      "retry": "Erneut versuchen",
+      "save": "Speichern",
+      "search": "Suchen"
+    },
+    "labels": {
+      "actions": "Aktionen",
+      "amount": "Betrag",
+      "client": "Kunde",
+      "created": "Erstellt",
+      "description": "Beschreibung",
+      "difference": "Unterschied",
+      "dueDate": "Fälligkeitsdatum",
+      "invoice": "Rechnung",
+      "invoiceNumber": "Rechnungsnummer",
+      "unknownClient": "Unbekannter Kunde",
+      "status": "Status",
+      "system": "System",
+      "total": "Gesamt"
+    },
+    "states": {
+      "empty": "Keine Daten verfügbar",
+      "loading": "Wird geladen...",
+      "notAvailable": null
+    }
+  }
+}
