@@ -1,0 +1,986 @@
+{
+  "automaticInvoices": {
+    "ready": {
+      "title": "Pronto per la fatturazione",
+      "description": "Esamina il lavoro ricorrente dovuto e genera bozze di fatture per i periodi selezionati.",
+      "selectAllExplanation": "Seleziona gruppi principali o singole righe per controllare la generazione della fattura.",
+      "filterPlaceholder": "Filtra le righe pronte per la fatturazione",
+      "dateRange": "Finestra fattura",
+      "search": "Cerca",
+      "groupedPreviewUnavailable": "L'anteprima supporta selezioni raggruppate; La funzione \"Genera da anteprima\" diretta rimane solo a selezione singola.",
+      "selectionHintCombined": "1 fattura se selezionato dal genitore",
+      "selectionHintSeparate": "Seleziona gli elementi individualmente",
+      "needsApproval": {
+        "title": "Necessita di approvazione",
+        "description": "Queste finestre ricorrenti contengono tempo fatturabile non ancora approvato. L'intera finestra della fattura è bloccata fino al completamento delle approvazioni.",
+        "labels": {
+          "servicePeriod": "Periodo di servizio",
+          "invoiceWindow": "Finestra fattura"
+        },
+        "unapprovedEntries": "{{count}} voce non approvata",
+        "unapprovedEntries_one": "{{count}} voce non approvata",
+        "unapprovedEntries_other": "{{count}} voci non approvate",
+        "actions": {
+          "reviewApprovals": "Esaminare le approvazioni"
+        }
+      },
+      "columns": {
+        "group": "Gruppo",
+        "servicePeriod": "Periodo di servizio",
+        "invoiceWindow": "Finestra fattura",
+        "included": "Incluso"
+      }
+    },
+    "groups": {
+      "item": "Articolo {{count}}",
+      "item_one": "Articolo {{count}}",
+      "item_other": "Articoli {{count}}",
+      "contract": "Contratto {{count}}",
+      "contract_one": "Contratto {{count}}",
+      "contract_other": "Contratti {{count}}",
+      "line": "Linea {{count}}",
+      "line_one": "Linea {{count}}",
+      "line_other": "Linee {{count}}",
+      "obligationCount": "Obbligo di {{count}}",
+      "obligationCount_one": "Obbligo di {{count}}",
+      "obligationCount_other": "Obblighi {{count}}",
+      "includedCount": "Articolo {{count}} incluso",
+      "includedCount_one": "Articolo {{count}} incluso",
+      "includedCount_other": "Articoli {{count}} inclusi",
+      "attributionMetadataMissing": "Metadati di attribuzione dell'assegnazione mancanti (obbligo {{count}})",
+      "attributionMetadataMissing_one": "Metadati di attribuzione dell'assegnazione mancanti (obbligo {{count}})",
+      "attributionMetadataMissing_other": "Metadati di attribuzione dell'assegnazione mancanti (obblighi {{count}})",
+      "actions": {
+        "expand": "Espandere",
+        "collapse": "Crollo"
+      },
+      "canCombine": "Può essere combinato in 1 fattura",
+      "separate": "Deve fatturare separatamente",
+      "blocked": "Contiene elementi bloccati",
+      "notReady": "Non pronto per la fatturazione"
+    },
+    "incompatibilityReasons": {
+      "invoiceWindowDiffers": "La finestra della fattura è diversa",
+      "clientDiffers": "Il cliente è diverso",
+      "poScopeDiffers": "L'ambito del PO è diverso",
+      "currencyDiffers": "La valuta è diversa",
+      "taxTreatmentDiffers": "Il trattamento fiscale è diverso",
+      "exportShapeDiffers": "La forma di esportazione è diversa"
+    },
+    "executionRows": {
+      "labels": {
+        "cadence": "Cadenza",
+        "billingTiming": "Tempistiche di fatturazione",
+        "servicePeriod": "Periodo di servizio"
+      },
+      "pendingAmount": "Importo in sospeso",
+      "attributionWarning": "Metadati di attribuzione dell'assegnazione mancanti",
+      "blockedUntilApproval": "Bloccato fino all'approvazione: {{count}} voce non approvata.",
+      "blockedUntilApproval_one": "Bloccato fino all'approvazione: {{count}} voce non approvata.",
+      "blockedUntilApproval_other": "Bloccato fino all'approvazione: voci non approvate {{count}}.",
+      "assignmentContext": {
+        "unresolvedTimeEntry": "Inserimento dell'ora non risolto",
+        "unresolvedUsageRecord": "Record di utilizzo non risolto",
+        "assignedContractLine": "Linea contrattuale assegnata",
+        "assignedWorkItem": "Elemento di lavoro assegnato",
+        "unresolvedWork": "Lavoro irrisolto"
+      }
+    },
+    "actions": {
+      "previewSelected": "Anteprima selezionata",
+      "generateSelected": "Genera fatture per periodi selezionati ({{count}})",
+      "generateSelected_one": "Genera fatture per periodi selezionati ({{count}})",
+      "generateSelected_other": "Genera fatture per periodi selezionati ({{count}})",
+      "reverseInvoice": "Fattura inversa",
+      "deleteInvoice": "Elimina fattura",
+      "closePreview": "Chiudi anteprima",
+      "generateInvoice": "Genera fattura"
+    },
+    "dialogs": {
+      "reverse": {
+        "title": "Storna fattura ricorrente",
+        "warning": "Lo storno di questa fattura rimuoverà la bozza generata e le selezioni ricorrenti associate.",
+        "warningTitle": "Avvertenza: storno della fattura ricorrente",
+        "description": "Stai per stornare la fattura ricorrente per:",
+        "impactTitle": "Questa azione:",
+        "cannotUndo": "Questa azione non può essere annullata!",
+        "confirm": "Sì, fattura inversa",
+        "reversing": "Inversione...",
+        "error": "Impossibile stornare la fattura ricorrente",
+        "labels": {
+          "client": "Cliente",
+          "cadenceSource": "Sorgente cadenza",
+          "servicePeriod": "Periodo di servizio"
+        },
+        "effects": {
+          "deleteDraft": "Elimina la bozza della fattura ricorrente generata",
+          "reissueCredits": "Riemettere eventuali crediti applicati a tale fattura",
+          "unmarkRecords": "Deselezionare le voci di tempo e i record di utilizzo collegati come fatturati",
+          "retireBridge": "Ritirare il record del ponte di cadenza del client collegato e riaprire i periodi di servizio ricorrenti collegati",
+          "reopenPeriods": "Riapri i periodi di servizio ricorrenti collegati senza richiedere i metadati del bridge del ciclo client"
+        }
+      },
+      "delete": {
+        "title": "Eliminare definitivamente la fattura ricorrente?",
+        "message": "Questa azione non può essere annullata. Questa operazione eliminerà definitivamente la fattura ricorrente per:\nCliente: {{client}}\nOrigine cadenza: {{cadenceSource}}\nPeriodo di servizio: {{servicePeriod}}\n{{bridgeEffect}}",
+        "bridgeDeleted": "Verrà eliminato anche il record del ponte di cadenza del client collegato.",
+        "bridgeReopened": "I periodi di servizio ricorrenti collegati verranno riaperti senza richiedere i metadati del bridge ciclo client.",
+        "confirm": "Sì, elimina definitivamente",
+        "deleting": "Eliminazione...",
+        "error": "Impossibile eliminare la fattura ricorrente"
+      },
+      "preview": {
+        "title": "Anteprima della fattura",
+        "description": "Questa è un'anteprima di come apparirà la fattura una volta finalizzata.",
+        "summary_one": "Fattura {{count}} selezionata",
+        "summary_other": "Fatture {{count}} selezionate",
+        "summaryCombined": "Questa selezione genererà una fattura combinata.",
+        "summarySeparate": "Questa selezione genererà fatture separate {{count}}.",
+        "invoiceTitle": "Fattura {{index}}",
+        "sections": {
+          "clientDetails": "Dettagli aziendali",
+          "invoiceDetails": "Dettagli fattura",
+          "lineItems": "Voci"
+        },
+        "fields": {
+          "date": "Data"
+        },
+        "columns": {
+          "description": "Descrizione",
+          "quantity": "Quantità",
+          "rate": "Tariffa",
+          "amount": "Importo"
+        },
+        "totals": {
+          "subtotal": "Subtotale",
+          "tax": "Imposta",
+          "total": "Totale"
+        },
+        "generating": "Generazione...",
+        "generateError": "Impossibile generare la fattura dall'anteprima"
+      },
+      "poOverage": {
+        "title": "Eccessioni del limite dell'ordine di acquisto",
+        "description": "Il totale della fattura selezionata è terminato da {{amount}}.",
+        "batchDescription": "Una o più fatture supererebbero l'importo autorizzato dell'Ordine di acquisto. Cosa vuoi fare?",
+        "batchItem": "{{clientName}}: superato da {{amount}}",
+        "poNumber": "PO {{number}}",
+        "allowOverages": "Consenti eccedenze (genera tutte le fatture)",
+        "skipInvoices": "Salta le fatture che supererebbero il loro ordine di acquisto",
+        "continue": "Continua",
+        "singleDescription": "Questa fattura supererebbe l'importo autorizzato dell'ordine di acquisto da {{amount}}.",
+        "proceedAnyway": "Procedere comunque?",
+        "proceedConfirm": "Procedi comunque",
+        "skippedError": "Saltato a causa dell'eccesso di PO ({{poLabel}}): superato da {{amount}}."
+      }
+    },
+    "history": {
+      "title": "Cronologia fatture ricorrenti",
+      "filterPlaceholder": "Filtra clienti...",
+      "columns": {
+        "client": "Cliente",
+        "assignmentScope": "Ambito dell'incarico",
+        "cadenceSource": "Sorgente cadenza",
+        "servicePeriod": "Periodo di servizio",
+        "invoiceWindow": "Finestra fattura",
+        "invoice": "Fattura",
+        "actions": "Azioni"
+      },
+      "badges": {
+        "contractAnniversary": "Anniversario del contratto",
+        "clientSchedule": "Programma del cliente",
+        "unknownCadenceSource": "Sorgente cadenza sconosciuta ({{source}})",
+        "multiContractInvoice": "Fattura multi-contratto",
+        "servicePeriodBacked": "Con periodo di servizio garantito"
+      }
+    },
+    "materializationGap": {
+      "title": "È necessaria una riparazione periodica nel periodo di servizio",
+      "description": "A queste finestre di cadenza client mancano periodi di servizio ricorrenti persistenti, quindi il lavoro pronto per la fatturazione è bloccato finché la pianificazione canonica non viene riparata.",
+      "labels": {
+        "servicePeriod": "Periodo di servizio",
+        "invoiceWindow": "Finestra fattura",
+        "scheduleKey": "Chiave di pianificazione"
+      },
+      "reviewLink": "Revisione dei periodi di servizio",
+      "helpText": "Riparare i record canonici del periodo di servizio invece di generare una riga della fattura di compatibilità."
+    },
+    "errors": {
+      "title": "Si sono verificati errori durante la finalizzazione delle fatture:",
+      "loadReady": "Impossibile caricare i periodi di fatturazione. Per favore riprova.",
+      "loadHistory": "Impossibile caricare la cronologia delle fatture ricorrenti. Per favore riprova."
+    },
+    "loading": {
+      "billingData": "Caricamento dati di fatturazione"
+    }
+  },
+  "manualInvoices": {
+    "title": "Genera fattura manuale",
+    "detailsTitle": "Dettagli fattura",
+    "detailsDescription": "Le modifiche manuali rimangono senza periodo per impostazione predefinita, mentre le righe ricorrenti supportate dai dettagli mantengono i periodi di servizio canonici.",
+    "description": "Crea una fattura manuale e facoltativamente includi elementi ricorrenti automatizzati.",
+    "fields": {
+      "client": "Cliente",
+      "invoiceNumber": "Numero della fattura",
+      "invoiceNumberOptional": "Numero fattura (facoltativo)"
+    },
+    "placeholders": {
+      "selectClient": "Seleziona un cliente",
+      "invoiceNumberOptional": "Lascia vuoto per generare automaticamente"
+    },
+    "automatedItems": {
+      "title": "Elementi pubblicitari automatizzati",
+      "service": "Servizio",
+      "total": "Totale",
+      "unknownService": "Servizio sconosciuto"
+    },
+    "lineItems": {
+      "manual": "Elementi pubblicitari manuali",
+      "all": "Voci"
+    },
+    "actions": {
+      "addCharge": "Aggiungi addebito",
+      "addDiscount": "Aggiungi sconto",
+      "generate": "Genera fattura",
+      "saveChanges": "Salva modifiche",
+      "processing": "Elaborazione..."
+    },
+    "labels": {
+      "total": "Totale"
+    },
+    "prepayment": {
+      "label": "Questa è una fattura di pagamento anticipato (crea credito)",
+      "description": "Contrassegnalo solo quando la fattura manuale dovrebbe creare credito per future applicazioni finanziarie invece di rappresentare una copertura del periodo di servizio ricorrente."
+    },
+    "creditExpiration": {
+      "label": "Data di scadenza del credito",
+      "helpText": "Lascia vuoto per nessuna scadenza o per utilizzare il periodo di scadenza predefinito"
+    },
+    "errors": {
+      "selectClient": "Seleziona un cliente",
+      "invoiceNumberUnique": "Questo numero di fattura è già in uso.",
+      "noTaxRateConfigured": "Nessuna aliquota fiscale configurata per la regione.",
+      "serviceNotFound": "Servizio selezionato non trovato.",
+      "cannotModify": "La fattura non può essere modificata (pagata/annullata).",
+      "loadItems": "Errore durante il caricamento degli elementi della fattura",
+      "refresh": "Si è verificato un errore durante l'aggiornamento dei dati della fattura.",
+      "updateFailed": "Errore durante l'aggiornamento della fattura",
+      "generateFailed": "Errore nella generazione della fattura"
+    },
+    "errorFallback": {
+      "title": "Qualcosa è andato storto",
+      "retry": "Riprova"
+    }
+  },
+  "draftsTab": {
+    "title": "Bozze di fatture",
+    "searchPlaceholder": "Cerca fatture...",
+    "bulkActions_one": "Azioni ({{count}})",
+    "bulkActions_other": "Azioni ({{count}})",
+    "columns": {
+      "invoiceNumber": "Numero della fattura",
+      "client": "Cliente",
+      "amount": "Importo",
+      "invoiceDate": "Data fattura",
+      "dueDate": "Scadenza",
+      "status": "Stato",
+      "actions": "Azioni"
+    },
+    "actions": {
+      "finalize": "Finalizzare",
+      "finalizeSelected": "Finalizza selezionato",
+      "downloadPdf": "Scarica PDF",
+      "reverseDraft": "Bozza inversa",
+      "reverseSelected": "Inverti selezionato",
+      "generateInvoices": "Genera fatture"
+    },
+    "status": {
+      "draft": "Bozza"
+    },
+    "empty": {
+      "title": "Nessuna bozza di fattura",
+      "description": "Le bozze di fattura verranno visualizzate qui una volta create le fatture che non sono state finalizzate."
+    },
+    "loading": "Caricamento bozze di fatture...",
+    "errors": {
+      "loadFailed": "Impossibile caricare le bozze delle fatture. Per favore riprova.",
+      "finalizeFailed": "Impossibile finalizzare la fattura. Per favore riprova.",
+      "bulkFinalizeFailed": "Impossibile finalizzare le fatture selezionate. Per favore riprova.",
+      "pdfFailed": "Impossibile generare il PDF. Per favore riprova.",
+      "reverseFailed": "Impossibile stornare le bozze di fattura/e. Per favore riprova."
+    },
+    "reverseDialog": {
+      "title": "Progetto di fattura inversa",
+      "title_other": "Storno bozze di fatture",
+      "message_one": "Lo storno di questa bozza di fattura la eliminerà e rilascerà eventuali voci di tempo o record di utilizzo collegati. Questa azione non può essere annullata.",
+      "message_other": "Lo storno delle bozze di fattura {{count}} le eliminerà e rilascerà eventuali voci di tempo o record di utilizzo collegati. Questa azione non può essere annullata.",
+      "confirm": "Bozza inversa",
+      "cancel": "Annulla"
+    }
+  },
+  "finalizedTab": {
+    "title": "Fatture finalizzate",
+    "searchPlaceholder": "Cerca fatture...",
+    "bulkActions_one": "Azioni ({{count}})",
+    "bulkActions_other": "Azioni ({{count}})",
+    "columns": {
+      "invoiceNumber": "Numero della fattura",
+      "client": "Cliente",
+      "amount": "Importo",
+      "finalizedDate": "Data definitiva",
+      "status": "Stato",
+      "actions": "Azioni"
+    },
+    "actions": {
+      "downloadPdfs": "Scarica PDF",
+      "sendEmails": "Invia e-mail",
+      "unfinalizeSelected": "Definalizza selezionato",
+      "downloadPdf": "Scarica PDF",
+      "sendEmail": "Invia e-mail",
+      "unfinalize": "Definalizza"
+    },
+    "status": {
+      "finalized": "Finalizzata"
+    },
+    "empty": {
+      "title": "Nessuna fattura definitiva",
+      "description": "Finalizza le bozze delle fatture per vederle qui.",
+      "viewDrafts": "Visualizza bozze"
+    },
+    "loading": "Caricamento fatture...",
+    "errors": {
+      "loadFailed": "Impossibile caricare le fatture. Riprova.",
+      "pdfFailed": "Impossibile generare il PDF. Per favore riprova.",
+      "bulkPdfFailed": "Impossibile generare PDF. Per favore riprova.",
+      "unfinalizeFailed": "Impossibile definalizzare la fattura. Per favore riprova.",
+      "bulkUnfinalizeFailed": "Impossibile definalizzare le fatture. Per favore riprova."
+    }
+  },
+  "recurringServicePeriods": {
+    "title": "Periodi di servizio ricorrenti",
+    "description": "Esamina le finestre ricorrenti di copertura delle fatture per una riga di contratto del cliente, risolvi i problemi relativi al motivo per cui il lavoro è o non è dovuto e controlla la cronologia fatturata collegata alle righe dei dettagli della fattura.",
+    "fields": {
+      "scheduleSelect": "Scegli un programma",
+      "scheduleSelectPlaceholder": "Seleziona una pianificazione ricorrente recente",
+      "scheduleKey": "Chiave di pianificazione",
+      "scheduleKeyPlaceholder": "Incolla una chiave di pianificazione (facoltativo se selezionato sopra)",
+      "client": "Cliente",
+      "cadenceSource": "Sorgente cadenza",
+      "billingTiming": "Tempistiche di fatturazione",
+      "chargeFamily": "Carica famiglia",
+      "scheduleKeyLabel": "Chiave di pianificazione"
+    },
+    "actions": {
+      "loadingSchedule": "Caricamento…",
+      "openSchedule": "Apri il programma",
+      "repairMissing": "Riparare i periodi di servizio mancanti",
+      "repairing": "Riparazione…",
+      "previewRegeneration": "Anteprima della rigenerazione",
+      "previewing": "Anteprima…"
+    },
+    "errors": {
+      "enterScheduleKey": "Inserisci una chiave di pianificazione per controllare i periodi di servizio ricorrenti.",
+      "loadFailed": "Impossibile caricare i periodi di servizio ricorrenti.",
+      "candidateRecordsArray": "I record candidati JSON devono essere un array.",
+      "previewFailed": "Impossibile visualizzare l'anteprima della rigenerazione del periodo di servizio ricorrente.",
+      "repairFailed": "Impossibile riparare la materializzazione del periodo di servizio ricorrente."
+    },
+    "labels": {
+      "recurringObligation": "Obbligazione ricorrente",
+      "generated": "Generato",
+      "edited": "Modificato",
+      "billed": "Fatturato",
+      "exceptions": "Eccezioni",
+      "repairCompleted": "Riparazione completata",
+      "candidateRecordsJson": "Il candidato registra JSON",
+      "conflicts": "Conflitti"
+    },
+    "values": {
+      "notLinked": "Non collegato",
+      "contractAnniversary": "Anniversario del contratto",
+      "clientSchedule": "Programma del cliente",
+      "advance": "Anticipato",
+      "arrears": "Posticipato",
+      "unknownClient": "Cliente sconosciuto",
+      "range": "{{start}} al {{end}}",
+      "scheduleOptionLabel": "{{client}} · {{entity}} · {{cadence}} · {{timing}}",
+      "generatedFromSourceCadence": "Generato dalla cadenza della sorgente",
+      "noConflicts": "Non sono stati rilevati conflitti di rigenerazione per i candidati forniti."
+    },
+    "displayStates": {
+      "generated": {
+        "label": "Generato",
+        "detail": "Corrisponde alle attuali regole di cadenza ed è in attesa di fatturazione o revisione."
+      },
+      "edited": {
+        "label": "Modificato",
+        "detail": "Una revisione successiva ha modificato la pianificazione generata e rimane attiva."
+      },
+      "skipped": {
+        "label": "Saltato",
+        "detail": "Questo periodo futuro è intenzionalmente escluso dalla dovuta selezione fino alla nuova modifica."
+      },
+      "locked": {
+        "label": "Bloccato",
+        "detail": "Questo periodo è congelato per modifiche ordinarie in attesa di fatturazione o correzione."
+      },
+      "billed": {
+        "label": "Fatturato",
+        "detailLinked": "Collegato al dettaglio della fattura {{invoiceChargeDetailId}}.",
+        "detailUnlinked": "Collegato alla cronologia fatturata."
+      },
+      "superseded": {
+        "label": "Sostituito",
+        "detail": "Una revisione più recente ha sostituito questo periodo e questa riga rimane per la cronologia degli audit."
+      },
+      "archived": {
+        "label": "Archiviato",
+        "detail": "Questa riga storica viene conservata solo per il controllo e la riconciliazione."
+      }
+    },
+    "provenanceReasons": {
+      "boundary_adjustment": "Confine modificato",
+      "invoice_window_adjustment": "Finestra della fattura modificata",
+      "activity_window_adjustment": "Finestra di attività modificata",
+      "skip": "Saltato dal personale addetto alla fatturazione",
+      "defer": "Rinviato a una finestra di fatturazione successiva",
+      "source_rule_changed": "Rigenerato dopo la modifica della regola di origine",
+      "billing_schedule_changed": "Rigenerato dopo la modifica del programma di fatturazione",
+      "cadence_owner_changed": "Rigenerato dopo il cambio del proprietario della cadenza",
+      "activity_window_changed": "Rigenerato dopo la modifica della finestra di attività",
+      "backfill_realignment": "Riallineato durante il riempimento",
+      "integrity_repair": "Riparato per integrità",
+      "invoice_linkage_repair": "Riparato dopo la correzione del collegamento della fattura",
+      "admin_correction": "Corretto amministrativamente",
+      "initial_materialization": "Generato dalla cadenza della sorgente",
+      "backfill_materialization": "Generato durante il riempimento"
+    },
+    "governanceActions": {
+      "view": "visualizzazione",
+      "edit_boundaries": "modificare i confini",
+      "skip": "saltare",
+      "defer": "rinviare",
+      "regenerate": "rigenerare",
+      "invoice_linkage_repair": "riparazione del collegamento delle fatture",
+      "archive": "archivio"
+    },
+    "table": {
+      "columns": {
+        "state": "Stato",
+        "servicePeriod": "Periodo di servizio",
+        "invoiceWindow": "Finestra fattura",
+        "revision": "Revisione",
+        "reason": "Motivo",
+        "allowedActions": "Azioni consentite"
+      }
+    },
+    "repairPanel": {
+      "title": "Periodi di servizio persistenti mancanti",
+      "description": "Questa pianificazione ricorrente esiste nei metadati di fatturazione in tempo reale ma non presenta righe persistenti relative al periodo di servizio. La riparazione materializzerà solo le righe future, manterrà i limiti della cronologia fatturata e contrassegnerà i nuovi record con la provenienza del recupero.",
+      "result": "Riempite le righe {{backfilled}}, riallineate {{realigned}}, saltate i candidati storici {{skipped}} e lasciate le righe attive {{active}} in questa pianificazione."
+    },
+    "regenerationPreview": {
+      "title": "Anteprima della rigenerazione",
+      "description": "Incolla i record candidati JSON per visualizzare in anteprima il modo in cui le righe modificate o fatturate conservate entrerebbero in conflitto con i futuri candidati rigenerati per questa pianificazione."
+    },
+    "conflicts": {
+      "kinds": {
+        "missing_candidate": "candidato mancante",
+        "service_period_mismatch": "mancata corrispondenza del periodo di servizio",
+        "invoice_window_mismatch": "mancata corrispondenza della finestra della fattura",
+        "activity_window_mismatch": "mancata corrispondenza della finestra di attività"
+      },
+      "reasons": {
+        "missing_candidate": "Non rimane alcun candidato rigenerato per questo slot di override conservato.",
+        "service_period_mismatch": "Il candidato rigenerato non corrisponde più al limite del periodo di servizio di override conservato.",
+        "invoice_window_mismatch": "Il candidato rigenerato non corrisponde più alla finestra della fattura di sostituzione conservata.",
+        "activity_window_mismatch": "Il candidato rigenerato non corrisponde più alla finestra di attività di sostituzione conservata."
+      }
+    }
+  },
+  "billingCycles": {
+    "title": "Cicli di fatturazione",
+    "tooltip": "Configura le pianificazioni di fatturazione dei clienti e visualizza in anteprima le finestre di fatturazione create per i servizi ricorrenti in base alla cadenza del cliente.",
+    "description": "Le pianificazioni di fatturazione cliente definiscono le finestre di fatturazione per le righe ricorrenti che fatturano in base alla pianificazione di fatturazione cliente. Le linee contratto-anniversario possono seguire la propria cadenza e non sono qui previste in anteprima.",
+    "searchPlaceholder": "Cerca clienti...",
+    "dateRange": "Intervallo di date del ciclo di fatturazione",
+    "search": "Cerca",
+    "loading": "Caricamento cicli di fatturazione",
+    "errors": {
+      "loadFailed": "Impossibile recuperare i dati. Per favore riprova più tardi."
+    },
+    "columns": {
+      "client": "Cliente",
+      "contract": "Contratto",
+      "currentBillingCycle": "Ciclo di fatturazione attuale",
+      "anchor": "Ancorare",
+      "actions": "Azioni"
+    },
+    "actions": {
+      "viewClientBilling": "Visualizza fatturazione cliente"
+    },
+    "values": {
+      "noActiveAssignments": "Nessun incarico attivo",
+      "unknown": "Sconosciuto",
+      "assignmentId": "Assegnazione {{id}}",
+      "notSet": "Non impostato",
+      "rolling": "Rotolamento",
+      "weekday": "Giorno feriale {{day}}",
+      "starts": "Avvia {{date}}",
+      "day": "Giorno {{day}}",
+      "monthDay": "TOKEN {{month}} PHVAR1",
+      "dash": null
+    },
+    "cycles": {
+      "weekly": "Settimanale",
+      "bi-weekly": "Bisettimanale",
+      "monthly": "Mensile",
+      "quarterly": "Trimestrale",
+      "semi-annually": "Semestrale",
+      "annually": "Annualmente"
+    },
+    "months": {
+      "january": "Gennaio",
+      "february": "Febbraio",
+      "march": "Marzo",
+      "april": "aprile",
+      "may": "Mag",
+      "june": "Giugno",
+      "july": "Luglio",
+      "august": "agosto",
+      "september": "settembre",
+      "october": "ottobre",
+      "november": "novembre",
+      "december": "Dicembre"
+    }
+  },
+  "invoicePreview": {
+    "title": "Anteprima della fattura",
+    "templatePlaceholder": "Seleziona il modello di fattura...",
+    "labels": {
+      "standard": "(Standard)"
+    },
+    "actions": {
+      "finalizeInvoice": "Finalizza fattura",
+      "editItems": "Modifica elementi",
+      "downloadPdf": "Scarica PDF",
+      "reverseDraft": "Bozza inversa",
+      "sendEmail": "Invia e-mail",
+      "unfinalize": "Definalizza",
+      "viewSourceQuote": "Visualizza citazione della fonte"
+    },
+    "loading": "Caricamento anteprima...",
+    "empty": "Seleziona una fattura per visualizzarne l'anteprima",
+    "error": "Impossibile visualizzare l'anteprima",
+    "errorDescription": "Impossibile visualizzare l'anteprima. Potrebbero mancare dei dati.",
+    "errors": {
+      "loadFailed": "Impossibile caricare l'anteprima: {{message}}",
+      "actionFailed": "Impossibile eseguire {{action}}. Per favore riprova.",
+      "actionLabels": {
+        "finalizeInvoice": "finalizzare la fattura",
+        "downloadPdf": "scarica PDF",
+        "reverseDraft": "progetto inverso",
+        "sendEmail": "inviare e-mail",
+        "unfinalize": "annullare la finalizzazione della fattura"
+      }
+    }
+  },
+  "templateEditor": {
+    "actions": {
+      "back": "Torna ai layout di fattura",
+      "cancel": "Annulla",
+      "save": "Salva modello",
+      "saving": "Salvataggio..."
+    },
+    "titles": {
+      "create": "Crea un nuovo layout di fattura",
+      "edit": "Modifica layout: {{name}}"
+    },
+    "fields": {
+      "templateName": "Nome del modello",
+      "templateAst": "Modello AST (JSON)",
+      "created": "Creato",
+      "lastUpdated": "Ultimo aggiornamento"
+    },
+    "tabs": {
+      "visual": "Visivo",
+      "code": "Codice"
+    },
+    "alerts": {
+      "codeReadonly": "La visualizzazione codice viene generata dall'area di lavoro visiva ed è di sola lettura."
+    },
+    "errors": {
+      "loadFailed": "Impossibile caricare i dati del modello.",
+      "saveFailed": "Impossibile salvare il modello.",
+      "unexpectedSave": "Si è verificato un errore imprevisto durante il salvataggio.",
+      "templateNameRequired": "Il nome del modello è obbligatorio",
+      "astExportFailed": "Impossibile esportare il modello AST dall'area di lavoro visiva: {{message}}",
+      "unknownAstExport": "Errore di esportazione AST sconosciuto"
+    }
+  },
+  "templates": {
+    "title": "Layout fattura",
+    "columns": {
+      "templateName": "Nome del modello",
+      "type": "Tipo",
+      "default": "Predefinito",
+      "actions": "Azioni"
+    },
+    "types": {
+      "standard": "Standard",
+      "custom": "Costume"
+    },
+    "actions": {
+      "edit": "Modifica",
+      "editAsCopy": "Modifica come copia",
+      "clone": "Clone",
+      "setDefault": "Imposta come predefinito",
+      "delete": "Elimina",
+      "openMenu": "Apri il menu",
+      "create": "Crea nuovo layout"
+    },
+    "loading": "Caricamento dei layout delle fatture",
+    "values": {
+      "thisTemplate": "questo modello",
+      "copySuffix": "(Copia)",
+      "copyOfName": "Copia di {{name}}",
+      "standardSuffix": "(Standard)"
+    },
+    "errors": {
+      "cloneFailed": "Impossibile clonare il modello.",
+      "cloneEditFailed": "Impossibile creare una copia modificabile.",
+      "setDefaultFailed": "Impossibile impostare il modello come predefinito.",
+      "fetchFailed": "Impossibile recuperare i modelli.",
+      "deleteValidationFailed": "Impossibile convalidare l'eliminazione. Per favore riprova.",
+      "deleteUnexpected": "Si è verificato un errore imprevisto durante l'eliminazione del modello."
+    }
+  },
+  "externalTax": {
+    "title": "Importazione fiscale esterna",
+    "description": "Esamina le fatture in attesa del calcolo delle imposte esterne e importa gli importi risultanti.",
+    "columns": {
+      "invoice": "Fattura",
+      "client": "Cliente",
+      "amount": "Importo",
+      "system": "Sistema",
+      "created": "Creato",
+      "actions": "Azioni"
+    },
+    "actions": {
+      "import": "Importa",
+      "importing": "Importazione...",
+      "refresh": "Aggiorna",
+      "importAll": "Importa tutto",
+      "showHistory": "Mostra cronologia",
+      "hideHistory": "Nascondi cronologia",
+      "importFromAdapter": "Tassa di importazione da {{adapter}}"
+    },
+    "summary": {
+      "pending_one": "{{count}} fattura in attesa di importazione fiscale",
+      "pending_other": "{{count}} fatture in attesa di importazione fiscale",
+      "successful_one": "{{count}} riuscito",
+      "successful_other": "{{count}} riuscito",
+      "failed_one": "{{count}} non riuscito",
+      "failed_other": "{{count}} non riuscito"
+    },
+    "progress": {
+      "importing": "Tasse sull'importazione...",
+      "importingCount": "Importazione di {{current}}/{{total}}..."
+    },
+    "empty": {
+      "allUpToDate": "Tutte le fatture sono aggiornate",
+      "nonePending": "Nessuna fattura in attesa di importazione fiscale esterna.",
+      "history": "Nessuna cronologia di importazione disponibile."
+    },
+    "helpText": "Le fatture vengono visualizzate qui quando vengono esportate con la delega fiscale esterna abilitata. Importa l'imposta una volta che il tuo sistema contabile ha calcolato gli importi delle imposte.",
+    "alerts": {
+      "pendingTitle": "Importazione in sospeso",
+      "pendingDescription": "Questa fattura è stata esportata in {{adapter}} senza importi fiscali. Importa l'imposta calcolata una volta elaborata la fattura.",
+      "importedTitle": "Tasse importate da {{adapter}}",
+      "significantDifference": "La differenza supera l'1%",
+      "significantDifferenceTitle": "Differenza fiscale significativa",
+      "significantDifferenceDescription": "L'imposta esterna differisce dal calcolo interno di oltre l'1%. Si prega di rivedere gli addebiti per garantirne la precisione."
+    },
+    "reconciliation": {
+      "internal": "Interno",
+      "external": "Esterno",
+      "difference": "Differenza",
+      "history": "Importa cronologia"
+    },
+    "reconciliationView": {
+      "title": "Riconciliazione fiscale",
+      "description": "Confronta i calcoli delle imposte interne ed esterne.",
+      "tooltips": {
+        "significantDifference": "La differenza supera l'1%",
+        "amountsMatch": "Gli importi delle imposte corrispondono entro un intervallo accettabile"
+      },
+      "summary": {
+        "internal": "Interno (Alga PSA)",
+        "external": "Esterno (contabilità)"
+      },
+      "alerts": {
+        "significantDifferenceTitle": "Rilevata differenza fiscale significativa",
+        "significantDifferenceDescription": "La differenza tra il calcolo delle imposte interne ed esterne supera l'1%. Si prega di rivedere la ripartizione riga per riga di seguito per identificare le discrepanze."
+      },
+      "sections": {
+        "lineByLineBreakdown": "Ripartizione riga per riga"
+      },
+      "columns": {
+        "description": "Descrizione",
+        "internalTax": "Imposta interna",
+        "externalTax": "Imposta esterna",
+        "difference": "Differenza"
+      },
+      "labels": {
+        "total": "Totale",
+        "line": "Riga {{index}}"
+      },
+      "states": {
+        "loading": "Caricamento dei dati di riconciliazione...",
+        "noData": "Nessun dato di riconciliazione disponibile."
+      },
+      "helpText": "Possono verificarsi differenze dovute ad arrotondamenti, variazioni delle regole fiscali o differenze temporali tra i sistemi."
+    },
+    "states": {
+      "loadingHistory": "Caricamento cronologia...",
+      "emptyHistory": "Nessuna importazione fiscale precedente trovata."
+    },
+    "tooltips": {
+      "externalRef": "Rif. esterno: {{reference}}"
+    },
+    "values": {
+      "unknownSystem": "Sconosciuto",
+      "externalSystem": "Sistema esterno",
+      "notAvailable": "N/D"
+    },
+    "toasts": {
+      "noPendingInvoices": "Nessuna fattura in attesa di importazione fiscale",
+      "batchImportedSuccess_one": "Imposta importata correttamente per la fattura {{count}}",
+      "batchImportedSuccess_other": "Imposta importata correttamente per fatture {{count}}",
+      "batchImportedPartial": "Fatture {{successCount}} importate, {{failureCount}} non riuscito",
+      "batchImportedFailed_one": "Impossibile importare l'imposta per la fattura {{count}}",
+      "batchImportedFailed_other": "Impossibile importare l'imposta per le fatture {{count}}",
+      "taxImportedSuccessfully": "Imposta importata correttamente",
+      "taxImportedFromAdapter": "Imposta importata correttamente da {{adapter}}",
+      "taxImportFailed": "Impossibile importare la tassa"
+    },
+    "errors": {
+      "loadPendingInvoices": "Impossibile caricare le fatture in sospeso",
+      "batchImportFailed": "L'importazione batch non è riuscita",
+      "importFailed": "Importazione non riuscita",
+      "importTaxFailed": "Impossibile importare la tassa"
+    },
+    "adapterNames": {
+      "quickbooks": "QuickBooks in linea",
+      "xero": "Xero",
+      "sage": "Saggio"
+    }
+  },
+  "sendEmail": {
+    "title": "Invia e-mail di fatturazione",
+    "loading": "Caricamento delle informazioni sul destinatario...",
+    "summary": {
+      "invoices_one": "{{count}} Fattura",
+      "invoices_other": "{{count}} Fatture",
+      "readyToSend_one": "{{count}} pronto per l'invio",
+      "readyToSend_other": "{{count}} pronto per l'invio",
+      "missingEmail_one": "{{count}} e-mail mancante",
+      "missingEmail_other": "{{count}} e-mail mancante"
+    },
+    "recipients": {
+      "title": "Destinatari",
+      "billingContact": "Contatto per la fatturazione",
+      "billingEmail": "E-mail di fatturazione",
+      "clientEmail": "Email cliente",
+      "noEmailFound": "Nessuna e-mail trovata",
+      "notConfigured": "Nessun indirizzo email è configurato per questo client."
+    },
+    "fields": {
+      "due": "Scadenza",
+      "additionalMessage": "Messaggio aggiuntivo",
+      "additionalMessagePlaceholder": "Aggiungi una nota personale da includere nell'e-mail..."
+    },
+    "preview": "Le e-mail verranno inviate da {{fromEmail}} per conto di {{companyName}}. Ogni fattura verrà allegata in formato PDF.",
+    "values": {
+      "defaultFromEmail": "noreply@esempio.com",
+      "defaultCompanyName": "La tua azienda"
+    },
+    "actions": {
+      "cancel": "Annulla",
+      "sendFallback": "Invia e-mail",
+      "send_one": "Invia e-mail {{count}}",
+      "send_other": "Invia e-mail {{count}}",
+      "sending_one": "Invio fattura {{count}}...",
+      "sending_other": "Invio fatture {{count}}..."
+    },
+    "toasts": {
+      "noValidRecipients": "Nessun destinatario valido trovato",
+      "sentSuccess_one": "Fattura {{count}} inviata con successo",
+      "sentSuccess_other": "Fatture {{count}} inviate con successo",
+      "sentFailure_one": "Impossibile inviare la fattura {{count}}",
+      "sentFailure_other": "Impossibile inviare fatture {{count}}",
+      "sentPartial": "{{successCount}} inviato, {{failureCount}} non riuscito"
+    },
+    "errors": {
+      "loadRecipients": "Impossibile caricare le informazioni sul destinatario",
+      "sendFailed": "Impossibile inviare e-mail"
+    }
+  },
+  "generateTab": {
+    "fields": {
+      "invoiceType": "Tipo di fattura"
+    },
+    "types": {
+      "automatic": "Fatture automatiche",
+      "manual": "Fattura manuale",
+      "prepayment": "Acconto"
+    },
+    "descriptions": {
+      "automatic": "Utilizza le finestre delle fatture per rivedere i periodi di servizio ricorrenti dovuti prima di generare un batch ricorrente.",
+      "manual": "Utilizzare fatture manuali per righe una tantum o di rettifica. Non ridefiniscono i periodi di servizio ricorrenti.",
+      "prepayment": "Utilizzare il pagamento anticipato e i flussi di credito per un valore finanziario che dovrebbe rimanere separato dalla copertura del periodo di servizio ricorrente."
+    },
+    "messages": {
+      "success": "Fattura generata con successo!",
+      "loadFailed": "Impossibile caricare i dati"
+    }
+  },
+  "prepayment": {
+    "titles": {
+      "prepayment": "Genera fattura di pagamento anticipato",
+      "creditMemo": "Genera nota di credito"
+    },
+    "descriptions": {
+      "prepayment": "Le fatture con pagamento anticipato creano credito al cliente per un valore futuro. Non creano periodi di servizio ricorrenti; le fatture ricorrenti successive mantengono la propria copertura del periodo di servizio.",
+      "creditMemo": "Le note di credito regolano i saldi finanziari senza ridefinire la copertura del periodo di servizio ricorrente nella fattura di origine."
+    },
+    "fields": {
+      "type": "Tipo",
+      "client": "Cliente",
+      "amount": "Importo",
+      "description": "Descrizione"
+    },
+    "types": {
+      "prepaymentInvoice": "Fattura di pagamento anticipato",
+      "creditMemo": "Nota di credito"
+    },
+    "placeholders": {
+      "amount": "Inserisci l'importo",
+      "prepaymentDescription": "Pagamento anticipato per servizi futuri",
+      "creditMemoDescription": "Motivo della nota di credito"
+    },
+    "errors": {
+      "allFieldsRequired": "Si prega di compilare tutti i campi",
+      "validAmount": "Inserisci un importo valido",
+      "creditMemosUnsupported": "Le note di credito non sono ancora supportate",
+      "generateFailed": "Errore nella generazione della fattura"
+    },
+    "actions": {
+      "generating": "Generazione...",
+      "generatePrepayment": "Genera fattura di pagamento anticipato",
+      "generateCreditMemo": "Genera nota di credito"
+    }
+  },
+  "contractItems": {
+    "columns": {
+      "description": "Descrizione",
+      "quantity": "Quantità",
+      "rate": "Tariffa",
+      "amount": "Importo"
+    },
+    "labels": {
+      "contractSubtotal": "Totale parziale del contratto:",
+      "otherItemsSubtotal": "Totale parziale di altri articoli:",
+      "otherItems": "Altri articoli",
+      "product": "Prodotto"
+    }
+  },
+  "hub": {
+    "title": "Fatturazione",
+    "tabs": {
+      "generate": "Generare",
+      "drafts": "Bozze",
+      "finalized": "Finalizzata"
+    }
+  },
+  "templateManager": {
+    "title": "Gestore modelli di fattura",
+    "sampleInvoices": "Fatture campione",
+    "templatePreview": "Anteprima del modello",
+    "invoiceNumber": "Fattura #{{number}}"
+  },
+  "taxBadge": {
+    "labels": {
+      "internal": "Tasse: interne",
+      "external": "Tassa: esterna",
+      "pending": "Tasse: in sospeso"
+    },
+    "tooltips": {
+      "internal": "Imposta calcolata da Alga PSA in base alle aliquote fiscali configurate",
+      "external": "Imposta calcolata dal sistema contabile esterno",
+      "pending": "Imposta in attesa di importazione dal sistema contabile esterno",
+      "externalAdapter": "Imposta calcolata da {{adapter}}",
+      "externalAdapterImportedAt": "Imposta calcolata da {{adapter}} su {{date}}",
+      "pendingAdapter": "In attesa del calcolo delle imposte da {{adapter}}"
+    },
+    "adapterNames": {
+      "quickbooks": "QuickBooks in linea",
+      "xero": "Xero",
+      "sage": "Saggio"
+    }
+  },
+  "annotations": {
+    "title": "Annotazioni sulle fatture",
+    "labels": {
+      "internal": "Interno",
+      "external": "Esterno"
+    },
+    "placeholder": "Aggiungi una nuova annotazione",
+    "actions": {
+      "add": "Aggiungi annotazione"
+    }
+  },
+  "purchaseOrder": {
+    "labels": {
+      "short": "PO",
+      "number": "Numero dell'ordine d'acquisto",
+      "authorized": "PO autorizzato",
+      "consumed": "PO consumato (finalizzato)",
+      "remaining": "PO rimanente"
+    }
+  },
+  "common": {
+    "actions": {
+      "cancel": "Annulla",
+      "close": "Chiudi",
+      "delete": "Elimina",
+      "edit": "Modifica",
+      "loading": "Caricamento...",
+      "openMenu": "Apri il menu",
+      "refresh": "Aggiorna",
+      "retry": "Riprova",
+      "save": "Salva",
+      "search": "Cerca"
+    },
+    "labels": {
+      "actions": "Azioni",
+      "amount": "Importo",
+      "client": "Cliente",
+      "created": "Creato",
+      "description": "Descrizione",
+      "difference": "Differenza",
+      "dueDate": "Scadenza",
+      "invoice": "Fattura",
+      "invoiceNumber": "Numero della fattura",
+      "unknownClient": "Cliente sconosciuto",
+      "status": "Stato",
+      "system": "Sistema",
+      "total": "Totale"
+    },
+    "states": {
+      "empty": "Nessun dato disponibile",
+      "loading": "Caricamento...",
+      "notAvailable": null
+    }
+  }
+}
