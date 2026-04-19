@@ -218,7 +218,7 @@
   {
     "id": "T027",
     "description": "Unit: InvoiceTemplates renders translated section heading (Invoice Layouts), column headers (Template Name, Type, Default, Actions), type labels (Standard, Custom), and Create New Layout button via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
