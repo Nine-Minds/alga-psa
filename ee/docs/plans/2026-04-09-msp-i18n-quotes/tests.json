@@ -54,7 +54,7 @@
   {
     "id": "T009",
     "description": "QuoteDocumentTemplateEditor.tsx compiles with useTranslation -- all headings, tab labels, status labels, buttons, and error messages use t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {

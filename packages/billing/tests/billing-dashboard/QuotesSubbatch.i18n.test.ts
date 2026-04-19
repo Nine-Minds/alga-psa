@@ -257,4 +257,37 @@ describe('Quotes i18n wiring contract', () => {
       expect(source).not.toMatch(pattern);
     }
   });
+
+  it('T009: QuoteDocumentTemplateEditor uses msp/quotes translation keys for editor chrome, preview pipeline, and footer metadata', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/quotes.json',
+    );
+
+    expect(source).toContain("import { useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expect(source).toContain("const { t } = useTranslation('msp/quotes');");
+
+    const keyChecks = [
+      'templateEditor.title',
+      'templateEditor.headings.newLayout',
+      'templateEditor.actions.backToLayouts',
+      'templateEditor.actions.saveLayout',
+      'templateEditor.fields.layoutDetails',
+      'templateEditor.fields.templateName',
+      'templateEditor.tabs.visual',
+      'templateEditor.tabs.preview',
+      'templateEditor.preview.sampleScenario',
+      'templateEditor.preview.selectScenarioPrompt',
+      'templateEditor.pipeline.shape',
+      'templateEditor.actions.rerun',
+      'templateEditor.codeReadonly',
+      'templateEditor.footer.created',
+      'templateEditor.errors.saveFailed',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });
