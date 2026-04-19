@@ -320,3 +320,6 @@ be translated at render time, not at definition time (move t() calls to render).
 
 - **(2026-04-18) F034 complete:** generated [server/public/locales/it/msp/invoicing.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/invoicing.json) for the full `msp/invoicing` namespace.
   Validation: spot-checked the generated file with `jq '.automaticInvoices.ready.needsApproval, .sendEmail.summary, .purchaseOrder.labels, .templateManager' server/public/locales/it/msp/invoicing.json`, parsed it with `python3 - <<'PY' ... json.loads(...) ... PY`, and audited accent coverage with `python3 - <<'PY' ... print(sorted(set(ch for ch in text if ch in \"àèéìòù\"))) ... PY` (pass; file includes `àèéìòù`).
+
+- **(2026-04-18) F039 complete:** generated [server/public/locales/pt/msp/invoicing.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/pt/msp/invoicing.json) so repo-wide locale parity validation can succeed against the already-shipped Portuguese locale pack.
+  Validation: spot-checked the generated file with `jq '.automaticInvoices.ready.needsApproval, .sendEmail.summary, .purchaseOrder.labels, .templateManager' server/public/locales/pt/msp/invoicing.json` and parsed it with `python3 - <<'PY' ... json.loads(...) ... PY` (pass).
