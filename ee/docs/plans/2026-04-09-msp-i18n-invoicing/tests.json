@@ -42,7 +42,7 @@
   {
     "id": "T005",
     "description": "Unit: AutomaticInvoices child execution row labels (cadence, billing timing, assignment context strings) render via t(); Pending amount and attribution metadata warning are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
