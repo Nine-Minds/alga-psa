@@ -144,7 +144,7 @@
   {
     "id": "T022",
     "description": "Interpolation variables are preserved in all 9 locale files -- every t() call with variables (e.g. {{count}}, {{name}}) has matching variables in all translations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F016", "F017"]
   },
 
