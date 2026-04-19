@@ -6,32 +6,24 @@
 
 ## Status Recheck (2026-04-17)
 
-**Still 0% implemented.** Verified against the current codebase:
+**Correction (2026-04-17 re-read):** an earlier version of this section said "Still 0% implemented" — that was based on stale `ls` output against `origin/main`. The **actual** state on branch `i18n/billing_credits` (32 commits ahead of origin/main) is:
 
-- `server/public/locales/en/msp/credits.json` — **does not exist**.
-- All 8 client components below still have `useTranslation=0`:
-  `credits/CreditsPage.tsx`, `credits/AddCreditButton.tsx`, `credits/BackButton.tsx`,
-  `billing-dashboard/CreditManagement.tsx`, `billing-dashboard/CreditReconciliation.tsx`,
-  `billing-dashboard/CreditApplicationUI.tsx`, `billing-dashboard/CreditExpirationInfo.tsx`,
-  `billing-dashboard/CreditExpirationModificationDialog.tsx`.
-- `/msp/billing/credits` **not yet** in `ROUTE_NAMESPACES`.
-- `features.json` / `tests.json`: 0/22 features, 0/31 tests marked implemented.
+- `features.json`: **22/22** features implemented.
+- `tests.json`: **31/31** tests implemented.
+- `server/public/locales/en/msp/credits.json` **exists** (plus de/es/fr/it/nl/pl/xx/yy — 9 locale files total, 185 lines each).
+- All 8 client components wired with `useTranslation('msp/credits')` (except `CreditsPage.tsx` which delegates to the new `CreditsPageClient.tsx` wrapper per the server-component decision).
+- New file: `packages/billing/src/components/credits/CreditsPageClient.tsx` (350 LOC) implementing the recommended server→client split.
+- `/msp/billing/credits` added to `ROUTE_NAMESPACES` in `packages/core/src/lib/i18n/config.ts`.
+- Seven new Vitest suites under `packages/billing/tests/` (`CreditsPage`, `CreditControls`, `CreditManagement`, `CreditReconciliation`, `CreditApplicationExpiration`, `CreditsLocaleSmoke`, `creditsNamespaceAndRoute`).
 
-### Adjacent work that shipped since 2026-04-09 (affects this plan)
+Status on this branch: **implementation complete, pending merge to `main`**. On `origin/main` the plan is still 0%.
 
-| Change | Impact on this plan |
+### Adjacent work (context)
+
+| Change | Impact |
 |---|---|
-| Billing-settings plan (`2026-04-09-msp-i18n-billing-settings`) shipped — completed **F006 "translate credit expiration settings"** and **T008 CreditExpirationSettings i18n wiring**. Namespace: `msp/billing-settings`, not `msp/credits`. | `CreditExpirationSettings` is the *settings page* under `/msp/settings`. It is **not** one of the 10 files in this plan (which covers the *dashboard-side* `CreditExpirationInfo.tsx` + `CreditExpirationModificationDialog.tsx`). No rescoping needed, but when reusing copy (e.g., "Expiration Period", "Notification Days"), mirror the keys already in `msp/billing-settings.json` to avoid translation drift. |
-| Enum-labels pattern adopted 2026-04-14 (`.ai/translation/enum-labels-pattern.md`, `useBillingFrequencyOptions` / `useFormatBillingFrequency`). | No shared billing-frequency enum rendering found in the 10 credit components, so no migration required here. Keep the pattern in mind if new enum surfaces appear during wiring. |
-| No edits to the 10 credit component files since 2026-04-09. | PRD file inventory and LOC counts in the PRD remain accurate; proceed as written. |
-
-### Minor PRD corrections observed during recheck
-
-- PRD says `CreditsTabs.tsx` is 53 LOC — still accurate.
-- PRD says `CreditReconciliation.tsx` is 604 LOC — current file matches.
-- PRD's `actions.ts` guidance is still correct; `'Authentication required'` and `'Transfer amount must be greater than zero'` remain the only user-surfacing error strings.
-
-No structural changes to the plan are required. This batch is ready to start as-is; the branch `i18n/billing_credits` appears set up for this work.
+| Billing-settings plan (`2026-04-09-msp-i18n-billing-settings`) shipped — `CreditExpirationSettings` lives in `msp/billing-settings`, not `msp/credits`. | No file overlap; the dashboard-side `CreditExpirationInfo.tsx` + `CreditExpirationModificationDialog.tsx` are covered here. Terminology mirrored across namespaces. |
+| Enum-labels pattern adopted 2026-04-14 (`.ai/translation/enum-labels-pattern.md`). | No shared billing-frequency enum rendering in the 10 credit components — no migration needed. |
 
 ---
 

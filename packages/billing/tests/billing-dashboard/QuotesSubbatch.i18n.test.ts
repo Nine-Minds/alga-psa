@@ -600,6 +600,50 @@ describe('Quotes i18n wiring contract', () => {
     }
   });
 
+  it('T018: F012 currency formatter targets use locale-aware formatters instead of en-US helpers', () => {
+    const files = [
+      '../../src/components/billing-dashboard/quotes/QuotesTab.tsx',
+      '../../src/components/billing-dashboard/quotes/QuoteDetail.tsx',
+      '../../src/components/billing-dashboard/quotes/QuoteConversionDialog.tsx',
+      '../../src/components/billing-dashboard/quotes/QuoteApprovalDashboard.tsx',
+      '../../src/components/billing-dashboard/quotes/QuoteTemplatesList.tsx',
+    ].map(read);
+
+    for (const source of files) {
+      expect(source).toContain('useFormatters');
+      expect(source).not.toContain("Intl.NumberFormat('en-US'");
+    }
+  });
+
+  it('T019: F013 date formatter targets use locale-aware formatters instead of toLocaleDateString/toLocaleString', () => {
+    const files = [
+      '../../src/components/billing-dashboard/quotes/QuotesTab.tsx',
+      '../../src/components/billing-dashboard/quotes/QuoteDetail.tsx',
+      '../../src/components/billing-dashboard/quotes/QuoteApprovalDashboard.tsx',
+      '../../src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tsx',
+    ].map(read);
+
+    for (const source of files) {
+      expect(source).toContain('useFormatters');
+      expect(source).not.toContain('.toLocaleDateString(');
+      expect(source).not.toContain('.toLocaleString(');
+    }
+  });
+
+  it('T030: follow-on formatter cleanup removes remaining locale-pinned quote form and draft-money formatting', () => {
+    const quoteForm = read('../../src/components/billing-dashboard/quotes/QuoteForm.tsx');
+    const lineItemsEditor = read('../../src/components/billing-dashboard/quotes/QuoteLineItemsEditor.tsx');
+    const draftMoney = read('../../src/components/billing-dashboard/quotes/quoteLineItemDraft.ts');
+
+    expect(quoteForm).toContain('useFormatters');
+    expect(quoteForm).not.toContain("Intl.NumberFormat('en-US'");
+    expect(quoteForm).not.toContain('.toLocaleDateString(');
+    expect(lineItemsEditor).toContain('useFormatters');
+    expect(lineItemsEditor).not.toContain('formatDraftQuoteMoney(');
+    expect(draftMoney).toContain('new Intl.NumberFormat(undefined,');
+    expect(draftMoney).not.toContain("Intl.NumberFormat('en-US'");
+  });
+
   it('T029: shared billing-frequency enums expose weekly across constants and all locale files', () => {
     const billingConstants = read('../../src/constants/billing.ts');
     const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'xx', 'yy'];

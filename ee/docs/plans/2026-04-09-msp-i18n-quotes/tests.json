@@ -112,20 +112,20 @@
   {
     "id": "T018",
     "description": "Currency formatting uses locale-aware formatter instead of hardcoded 'en-US' in all 5 affected components",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
 
   {
     "id": "T019",
     "description": "Date formatting uses locale-aware formatter instead of hardcoded .toLocaleDateString() in all 4 affected components",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
     "id": "T030",
     "description": "The follow-on formatter cleanup outside F012/F013 is complete: QuoteForm.tsx uses useFormatters() for banner dates and quote totals, QuoteLineItemsEditor.tsx uses useFormatters() for inline money displays, and quoteLineItemDraft.ts no longer hardcodes `en-US` in `formatDraftQuoteMoney()`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
