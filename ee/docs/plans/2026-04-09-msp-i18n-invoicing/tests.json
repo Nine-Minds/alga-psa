@@ -266,7 +266,7 @@
   {
     "id": "T033",
     "description": "Unit: SendInvoiceEmailDialog renders translated dialog title, summary labels with count interpolation (N Invoice(s), N ready to send, N missing email), Recipients heading, and send/cancel buttons via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
