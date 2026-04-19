@@ -1,0 +1,120 @@
+# Scratchpad — MSP Workflows i18n (Batch 2b-9)
+
+> Rolling notes. Append freely. Never silently change PRD scope — if scope shifts, update PRD first, then note the change here.
+
+## 2026-04-18 — Initial scope discovery
+
+### File counts (non-test `.tsx`)
+- `ee/server/src/components/workflow-designer/`: **34** (+ ~20 `.ts` helpers, +40 `__tests__/*.test.{ts,tsx}`)
+- `ee/server/src/components/workflow-graph/`: **1** (`WorkflowGraph.tsx`)
+- `ee/server/src/components/workflow-run-studio/`: **1** (`RunStudioShell.tsx`)
+- `ee/packages/workflows/src/components/workflow/`: **12**
+
+**Real total: 48 user-visible components.** The plan's "~104" figure in `MSP_i18n_plan.md` was inflated by test files and pure-TS helpers. Updated accordingly.
+
+### Zero existing wiring confirmed
+- `useTranslation`/`useFormatters` grep across all four directories returned **zero matches**.
+- `^export const [A-Z_]+(_DISPLAY|_LABELS|_OPTIONS|_MAP)\s*[:=]` pattern: zero matches → no constant-based label maps to delete. The anti-pattern here is **inline option arrays inside components**, not exported constants.
+
+### Inline option arrays found (13 distinct enums)
+All identified at `ee/server/src/components/workflow-designer/...`:
+- `WorkflowRunList.tsx:86-98` — workflowRunStatus + workflowRunSort
+- `WorkflowRunDetails.tsx:175-188, 550` — workflowStepStatus + workflowLogLevel + filter sentinels
+- `WorkflowEventList.tsx:73-76` — workflowEventStatus
+- `WorkflowAiSchemaSection.tsx:51-64` — workflowAiSchemaType (duplicated array for object-property and array-item selects)
+- `WorkflowActionInputSourceMode.tsx:27-28` — workflowInputSourceMode
+- `workflowReferenceSelector.tsx:399-403` — workflowReferenceSection (rendered conditionally on model.*.length>0)
+- `WorkflowDesigner.tsx:3713-3714, 4724-4725, 6249-6250, 6550-6551, 6614-6615` — workflowTriggerMode + workflowCanvasView + workflowOnError + workflowWaitMode + workflowWaitTiming
+
+### Decision — single namespace
+- Use `msp/workflows` (one namespace) instead of splitting into `msp/workflow-designer` + `msp/workflow-runs` + `msp/workflow-tasks`.
+- **Why:** one MSP feature area; no current client-portal consumer; a single namespace keeps `ROUTE_NAMESPACES` simple; key count estimate (~1,000-1,500) is well within precedent (msp/clients has 953 keys in one file).
+- **How to apply:** every component in the four directories calls `useTranslation('msp/workflows')`. If a task component is ever reused in client portal, consider extracting `features/workflow-tasks` at that time.
+
+### Decision — enum hooks live in `ee/packages/workflows`
+- Colocate with the rest of the workflows package:
+  - `ee/packages/workflows/src/constants/workflowEnums.ts` — VALUES + LABEL_DEFAULTS for all 13 enums.
+  - `ee/packages/workflows/src/hooks/useWorkflowEnumOptions.ts` — `useXOptions()` / `useFormatX()` for each.
+- Style follows `packages/billing/src/hooks/useBillingEnumOptions.ts` (LocalizedOption<V> shape, defaultValue fallback).
+- **Why:** matches the precedent set by Batch 2b-4 (billing) and Batch 6 (KB); keeps hook and source-of-truth values in the same package.
+
+### Decision — filter sentinels stay in components
+- "All statuses" / "All levels" / "All types" rows in filter dropdowns are *not* enum values. They stay as `t('filters.allStatuses')` etc. in the consuming component, prepended to the hook output:
+  ```tsx
+  const statusOptions = useWorkflowRunStatusOptions();
+  const options = [{ value: 'all', label: t('filters.allStatuses') }, ...statusOptions];
+  ```
+- **Why:** the sentinel is a UI convention, not part of the enum domain; bundling it into the hook would make the hook's return type misleading.
+
+### Decision — `getActivityStatusOptions` out of scope
+- Lives in `ee/packages/workflows/src/actions/activity-actions/activityStatusActions.ts`; returns `{ value, label }` tuples from DB rows (activity status labels are tenant data, not UI chrome).
+- No migration needed for this batch. Listed as deferred in the enum-labels backlog (F050).
+
+### Decision — Single namespace for tasks vs. splitting
+- `ee/packages/workflows/src/components/workflow/Task*.tsx` and `DynamicForm.tsx` are only mounted today under MSP routes. They render inside `/msp/workflow-editor/<id>` (task assignment step rendering) and prospectively in a dedicated inbox page under MSP.
+- Keep these in `msp/workflows` for now. Open question #1 in PRD stays "answered no" unless a client-portal consumer appears.
+
+### Backlog / deferred
+- `FormExample.tsx`, `TaskInboxExample.tsx`, `ConditionalFormExample.tsx` — demo components. Not mounted in production. Defer unless extraction is trivial.
+- Workflow action registry labels — separate initiative (registry API returns labels as data).
+- Expression editor (Monaco) vendor UI — out of scope.
+- React Flow node body text driven by workflow-definition data — out of scope.
+- Dead-letter engine log messages — out of scope (server-side).
+
+### Validation commands
+```bash
+# Validate translation coverage
+node scripts/validate-translations.cjs
+
+# Regenerate pseudo-locales after adding/changing English keys
+node scripts/generate-pseudo-locales.cjs
+
+# Enum anti-pattern audit (must return zero after WF-A merges)
+rg -n "\{\s*value:\s*['\"][^'\"]+['\"]\s*,\s*label:\s*['\"][A-Z][^'\"]*['\"]" \
+  ee/server/src/components/workflow-designer \
+  ee/server/src/components/workflow-graph \
+  ee/server/src/components/workflow-run-studio \
+  ee/packages/workflows/src/components/workflow
+
+# Hardcoded locale formatting (must return zero after WF-B)
+rg -n "toLocaleDateString\(['\"]en|toLocaleString\(['\"]en" \
+  ee/server/src/components/workflow-designer \
+  ee/server/src/components/workflow-run-studio
+
+# Italian accent audit (run after WF-F translations)
+grep -n ' e [a-z]\| puo \| gia \| verra \| funzionalita\| necessario' \
+  server/public/locales/it/msp/workflows.json
+```
+
+### Gotchas
+- **Backend status codes.** `RUNNING / SUCCEEDED / FAILED` etc. are persisted verbatim in DB/Temporal. Use the raw value as the translation-key segment (`enums.workflowRunStatus.RUNNING`, not `.running`). Do NOT normalize casing.
+- **Feature flag fallback.** When `msp-i18n-enabled` is off, `I18nWrapper` still renders but forces locale='en'. Every `t()` must pass `defaultValue` so flag-off users see the same English copy as today. Missing `defaultValue` = flag-off regression where users see the raw key.
+- **Vitest assertions.** ~40 test files in `workflow-designer/__tests__/`. Several assert on English text (`getByText('Running')`). Migrating the status from inline array to hook means those assertions need to change to `getByRole` or to assert on option values rather than labels. Budget extra time in WF-B/WF-C/WF-D.
+- **WorkflowDesigner.tsx is ~7k lines.** Plan WF-C carefully — consider splitting extraction by section (toolbar, palette sidebar, properties sidebar, canvas overlay) if the PR gets too big to review in one pass.
+- **Namespace mismatch.** If a `t()` call in a workflow component accidentally uses `msp/core` or `msp/settings` instead of `msp/workflows`, the key will resolve if the target namespace happens to have that key, otherwise it renders the raw key. Lint-style regression test (T040) catches these.
+
+### PR breakdown estimate
+| PR | Sub-batch | Files touched | Risk |
+|----|-----------|---------------|------|
+| 1 | WF-A foundation | `config.ts`, `workflowEnums.ts`, `useWorkflowEnumOptions.ts`, 9 new `msp/workflows.json` files, pseudo-locale gen | Low |
+| 2 | WF-B run studio + run list | 12 component files, `msp/workflows.json` (en) additions | Medium (Vitest updates) |
+| 3 | WF-E task + form | 9 component files | Low |
+| 4 | WF-C designer shell | 3 files but WorkflowDesigner is 7k lines | High (review burden) |
+| 5 | WF-D designer editors + mapping | 22 component files | Medium |
+| 6 | WF-F translations + QA | locale files only | Low (mechanical) |
+
+Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
+
+### Open TODOs
+- [ ] Confirm with design that German "Workflow-Abläufe" / "Arbeitsabläufe" pick in core.json before WF-F translates the workflows namespace.
+- [ ] Determine whether `ExpressionEditor` hover/completion messages are user-facing or dev-only (blocks part of F028).
+- [ ] Decide whether to write the audit test (T040) as a unit test or extend the existing `ContractLinesSubbatch.i18n.test.ts` pattern.
+- [ ] Confirm no active workflow-run-studio redesign is in flight that would conflict with this batch's shell changes.
+
+### Links
+- Main plan: `.ai/translation/MSP_i18n_plan.md`
+- Translation guide: `.ai/translation/translation-guide.md`
+- Enum pattern (with backlog this batch should update): `.ai/translation/enum-labels-pattern.md`
+- File-structure reference (update after WF-F): `.ai/translation/translation_files_structure.md`
+- Example hook style: `packages/billing/src/hooks/useBillingEnumOptions.ts`
+- Example batch SCRATCHPAD style: `ee/docs/plans/2026-04-09-msp-i18n-credits/SCRATCHPAD.md`
