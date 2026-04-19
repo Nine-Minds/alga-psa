@@ -163,6 +163,7 @@ Existing F001-F022 / T001-T027 remain valid. Proceed with the corrected frequenc
 ## Progress Log
 
 - (2026-04-19) Completed `F001`: created [server/public/locales/en/msp/quotes.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/quotes.json) with the planned component-scoped roots (`common`, `quotesTab`, `quoteForm`, `quoteDetail`, `quoteLineItems`, `quoteRecipients`, `quoteConversion`, `quoteApproval`, `quoteTemplates`, `quotePreview`, `templateEditor`, `templatesPage`) and seeded the first shared/base English keys from the PRD + component inventory. Expect follow-on wiring passes (`F002`-`F021`) to expand individual leaf keys as each component is converted.
+- (2026-04-19) Completed `T001`: added [packages/billing/tests/billing-dashboard/QuotesSubbatch.i18n.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/tests/billing-dashboard/QuotesSubbatch.i18n.test.ts) with a node-side contract test that parses `en/msp/quotes.json` and asserts the namespace exposes the planned top-level groups in order. Validation command: `cd packages/billing && npx vitest run tests/billing-dashboard/QuotesSubbatch.i18n.test.ts`.
 
 ## Commands / Runbook
 

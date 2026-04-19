@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "en/msp/quotes.json exists and is valid JSON with component-scoped root keys (quotesTab, quoteForm, quoteDetail, quoteLineItems, quoteConversion, quoteApproval, quoteTemplates, quotePreview, templateEditor, templatesPage, common)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
