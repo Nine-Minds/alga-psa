@@ -98,7 +98,7 @@
   {
     "id": "T012",
     "description": "Unit: ManualInvoices renders translated button states (Add Charge, Add Discount, Save Changes, Generate Invoice, Processing...), validation errors, and prepayment checkbox label",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]
