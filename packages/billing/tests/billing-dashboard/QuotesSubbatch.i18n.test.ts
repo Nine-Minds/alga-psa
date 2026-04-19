@@ -572,6 +572,34 @@ describe('Quotes i18n wiring contract', () => {
     }
   });
 
+  it('T017: QuotePreviewPanel uses msp/quotes keys for panel chrome, actions, and empty/loading/error states', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuotePreviewPanel.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/quotes.json',
+    );
+
+    expect(source).toContain("import { useTranslation } from '@alga-psa/ui/lib/i18n/client';");
+    expect(source).toContain("const { t } = useTranslation('msp/quotes');");
+
+    const keyChecks = [
+      'quotePreview.title',
+      'quotePreview.empty.selectQuote',
+      'quotePreview.empty.unavailable',
+      'quotePreview.placeholders.selectLayout',
+      'quotePreview.loading',
+      'quotePreview.actions.openQuote',
+      'quotePreview.errors.downloadPdf',
+      'quotePreview.errors.load',
+      'common.actions.downloadPdf',
+      'common.badges.standard',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
+
   it('T029: shared billing-frequency enums expose weekly across constants and all locale files', () => {
     const billingConstants = read('../../src/constants/billing.ts');
     const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'xx', 'yy'];

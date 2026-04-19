@@ -106,7 +106,7 @@
   {
     "id": "T017",
     "description": "QuotePreviewPanel.tsx compiles with useTranslation -- panel heading, button labels, empty/loading/error states use t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
