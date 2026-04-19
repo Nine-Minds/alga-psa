@@ -400,7 +400,7 @@
   {
     "id": "T048",
     "description": "Visual: /msp/billing?tab=invoicing renders all 3 sub-tabs (Generate, Drafts, Finalized) in xx pseudo-locale with no bare English leakage in the UI chrome",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F010",
