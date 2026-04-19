@@ -282,7 +282,7 @@
   {
     "id": "T035",
     "description": "Unit: TaxReconciliationView renders translated card title (Tax Reconciliation), comparison labels, table headers, and Total label via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
