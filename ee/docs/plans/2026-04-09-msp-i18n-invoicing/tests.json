@@ -210,7 +210,7 @@
   {
     "id": "T026",
     "description": "Unit: InvoiceTemplateEditor validation error (Template name is required) and timestamp labels (Created, Last Updated) are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
