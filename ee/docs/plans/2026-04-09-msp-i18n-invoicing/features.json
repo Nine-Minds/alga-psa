@@ -137,7 +137,7 @@
   {
     "id": "F028",
     "description": "Wire useTranslation in InvoiceAnnotations.tsx -- heading (Invoice Annotations), Internal/External labels, placeholder (Add a new annotation), Add Annotation button",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F029",
