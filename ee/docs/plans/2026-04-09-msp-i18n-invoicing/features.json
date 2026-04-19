@@ -187,6 +187,6 @@
   {
     "id": "F038",
     "description": "Wire remaining AutomaticInvoices.tsx user-facing strings omitted from the original split: needs-approval panel chrome, grouped-preview limitation note, expand/collapse aria labels, ready-table selection hints, parent-group attribution metadata plural copy, unknown cadence/client fallbacks, and PO overage fallback labels",
-    "implemented": false
+    "implemented": true
   }
 ]

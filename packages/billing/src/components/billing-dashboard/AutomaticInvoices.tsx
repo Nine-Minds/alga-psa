@@ -229,7 +229,12 @@ const isInvoiceDraftStatus = (status: string | null | undefined): boolean =>
 
 const formatCadenceSourceBadge = (
   cadenceSource: string | null | undefined,
-): { label: string; labelKey?: string; variant: 'outline' | 'secondary' } => {
+): {
+  label: string;
+  labelKey?: string;
+  labelValues?: Record<string, string>;
+  variant: 'outline' | 'secondary';
+} => {
   switch (cadenceSource) {
     case 'contract_anniversary':
       return {
@@ -244,25 +249,14 @@ const formatCadenceSourceBadge = (
         variant: 'outline',
       };
     default:
+      const source = cadenceSource?.trim() ? cadenceSource : 'missing';
       return {
-        label: `Unknown cadence source (${cadenceSource?.trim() ? cadenceSource : 'missing'})`,
+        label: `Unknown cadence source (${source})`,
+        labelKey: 'automaticInvoices.history.badges.unknownCadenceSource',
+        labelValues: { source },
         variant: 'secondary',
       };
   }
-};
-
-const summarizeCadenceSources = (cadenceSources: Array<string | null | undefined>): string => {
-  const labels = Array.from(
-    new Set(
-      cadenceSources.map((source) => formatCadenceSourceBadge(source).label),
-    ),
-  );
-
-  if (labels.length === 0) {
-    return 'Unknown cadence source';
-  }
-
-  return labels.join(' + ');
 };
 
 const parseNonContractSelectionFromScheduleKey = (scheduleKey: string | null | undefined): {
@@ -424,9 +418,19 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const formatCadenceSourceText = (cadenceSource: string | null | undefined): string => {
     const badge = formatCadenceSourceBadge(cadenceSource);
     return badge.labelKey
-      ? t(badge.labelKey, { defaultValue: badge.label })
+      ? t(badge.labelKey, {
+        ...badge.labelValues,
+        defaultValue: badge.label,
+      })
       : badge.label;
   };
+  const formatPoLabel = (poNumber: string | null | undefined): string =>
+    poNumber
+      ? t('automaticInvoices.dialogs.poOverage.poNumber', {
+        number: poNumber,
+        defaultValue: `PO ${poNumber}`,
+      })
+      : t('purchaseOrder.labels.short', { defaultValue: 'PO' });
   // Drawer removed: client details quick view no longer used here
   const [selectedTargets, setSelectedTargets] = useState<Set<string>>(new Set());
   const [expandedParentGroups, setExpandedParentGroups] = useState<Set<string>>(new Set());
@@ -1021,9 +1025,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           newErrors[info.clientName] =
             t('automaticInvoices.dialogs.poOverage.skippedError', {
               amount: formatCurrency(info.overageCents),
-              poLabel: info.poNumber ? `PO ${info.poNumber}` : 'PO',
+              poLabel: formatPoLabel(info.poNumber),
               defaultValue:
-                `Skipped due to PO overage (${info.poNumber ? `PO ${info.poNumber}` : 'PO'}): `
+                `Skipped due to PO overage (${formatPoLabel(info.poNumber)}): `
                 + `over by ${formatCurrency(info.overageCents)}.`,
             });
         }
@@ -1271,14 +1275,19 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         <div>
           {needsApprovalParentGroups.length > 0 ? (
             <div className="mb-6 rounded-md border border-warning/40 bg-warning/5 p-4" data-testid="needs-approval-section">
-              <h2 className="text-lg font-semibold">Needs Approval</h2>
+              <h2 className="text-lg font-semibold">
+                {t('automaticInvoices.ready.needsApproval.title', {
+                  defaultValue: 'Needs Approval',
+                })}
+              </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                These recurring windows contain billable time that is not approved yet. The entire invoice window is blocked until approvals are complete.
+                {t('automaticInvoices.ready.needsApproval.description', {
+                  defaultValue: 'These recurring windows contain billable time that is not approved yet. The entire invoice window is blocked until approvals are complete.',
+                })}
               </p>
               <div className="mt-4 space-y-3">
                 {needsApprovalParentGroups.map((group) => {
                   const blockedEntryCount = group.candidate.approvalBlockedEntryCount ?? 0;
-                  const blockedEntryLabel = blockedEntryCount === 1 ? 'entry' : 'entries';
                   return (
                     <div
                       key={`needs-approval-${group.parentSummary.candidateKey}`}
@@ -1287,11 +1296,26 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     >
                       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div className="space-y-1 text-sm">
-                          <div className="font-medium">{group.parentSummary.clientName ?? 'Unknown client'}</div>
-                          <div>Service period: {group.parentSummary.servicePeriodLabel}</div>
-                          <div>Invoice window: {group.parentSummary.windowLabel}</div>
+                          <div className="font-medium">
+                            {group.parentSummary.clientName ?? t('common.labels.unknownClient', {
+                              defaultValue: 'Unknown client',
+                            })}
+                          </div>
+                          <div>
+                            {t('automaticInvoices.ready.needsApproval.labels.servicePeriod', {
+                              defaultValue: 'Service period',
+                            })}: {group.parentSummary.servicePeriodLabel}
+                          </div>
+                          <div>
+                            {t('automaticInvoices.ready.needsApproval.labels.invoiceWindow', {
+                              defaultValue: 'Invoice window',
+                            })}: {group.parentSummary.windowLabel}
+                          </div>
                           <div className="text-warning">
-                            {blockedEntryCount} unapproved {blockedEntryLabel}
+                            {t('automaticInvoices.ready.needsApproval.unapprovedEntries', {
+                              count: blockedEntryCount,
+                              defaultValue: `${blockedEntryCount} unapproved ${blockedEntryCount === 1 ? 'entry' : 'entries'}`,
+                            })}
                           </div>
                         </div>
                         <a
@@ -1302,7 +1326,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                           })}
                           className="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
                         >
-                          Review Approvals
+                          {t('automaticInvoices.ready.needsApproval.actions.reviewApprovals', {
+                            defaultValue: 'Review Approvals',
+                          })}
                         </a>
                       </div>
                     </div>
@@ -1349,7 +1375,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               </Button>
               {!previewSupportsDirectGeneration && selectedSelectionGroups.length > 0 ? (
                 <span className="text-xs text-muted-foreground" data-testid="grouped-preview-unavailable-copy">
-                  Preview supports grouped selections; direct "Generate from preview" remains single-selection only.
+                  {t('automaticInvoices.ready.groupedPreviewUnavailable', {
+                    defaultValue: 'Preview supports grouped selections; direct "Generate from preview" remains single-selection only.',
+                  })}
                 </span>
               ) : null}
               <Button
@@ -1581,7 +1609,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     );
                     const attributionSummaryLabels = record.candidate.attributionSummary?.labels ?? [];
                     const assignmentLabels = Array.from(new Set([...attributionSummaryLabels, ...assignmentContexts]));
-	                    const cadenceSummary = summarizeCadenceSources(record.candidate.cadenceSources);
+	                    const cadenceSummary = Array.from(
+                        new Set(
+                          ((record.candidate.cadenceSources ?? []).length > 0
+                            ? record.candidate.cadenceSources
+                            : [null]).map((source) => formatCadenceSourceText(source)),
+                        ),
+                      ).join(' + ');
                       const shouldShowAssignmentContexts =
                         !isExpanded
                         && contractNames.length === 0
@@ -1599,12 +1633,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                               event.stopPropagation();
                               toggleParentGroupExpansion(record.parentSummary.parentGroupKey);
                             }}
-                            aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                            aria-label={isExpanded
+                              ? t('automaticInvoices.groups.actions.collapse', { defaultValue: 'Collapse' })
+                              : t('automaticInvoices.groups.actions.expand', { defaultValue: 'Expand' })}
                           >
                             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </Button>
                           <div className="min-w-0 space-y-1">
-                            <div className="font-medium">{record.parentSummary.clientName ?? 'Unknown client'}</div>
+                            <div className="font-medium">
+                              {record.parentSummary.clientName ?? t('common.labels.unknownClient', {
+                                defaultValue: 'Unknown client',
+                              })}
+                            </div>
                             <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                               <span>
                                 {t('automaticInvoices.groups.item', {
@@ -1665,7 +1705,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                               </div>
                             ) : null}
                             {!record.parentSummary.canGenerate && record.parentSummary.blockedReason ? (
-                              <div className="text-xs text-muted-foreground">{record.parentSummary.blockedReason}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {formatBlockedReason(record.parentSummary.blockedReason)}
+                              </div>
                             ) : null}
                             {shouldShowAssignmentContexts ? assignmentLabels.map((contextValue) => (
                               <div
@@ -1681,7 +1723,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                 className="text-xs text-warning"
                                 data-testid={`contract-metadata-warning-${record.parentSummary.candidateKey}`}
                               >
-                                Assignment attribution metadata missing ({contractMetadataMissingCount} obligation{contractMetadataMissingCount === 1 ? '' : 's'})
+                                {t('automaticInvoices.groups.attributionMetadataMissing', {
+                                  count: contractMetadataMissingCount,
+                                  defaultValue: `Assignment attribution metadata missing (${contractMetadataMissingCount} obligation${contractMetadataMissingCount === 1 ? '' : 's'})`,
+                                })}
                               </div>
                             ) : null}
                           </div>
@@ -1697,7 +1742,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 	                  <div className="space-y-1">
 	                    <div>{record.parentSummary.servicePeriodLabel}</div>
 	                    <div className="text-xs text-muted-foreground">
-	                      {record.parentSummary.childCount} obligation{record.parentSummary.childCount === 1 ? '' : 's'}
+	                      {t('automaticInvoices.groups.obligationCount', {
+                          count: record.parentSummary.childCount,
+                          defaultValue: `${record.parentSummary.childCount} obligation${record.parentSummary.childCount === 1 ? '' : 's'}`,
+                        })}
 	                    </div>
 	                    {record.parentSummary.aggregateAmountCents !== null ? (
 	                      <div
@@ -1717,7 +1765,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     <div className="space-y-1">
                       <div>{record.parentSummary.windowLabel}</div>
                       <div className="text-xs text-muted-foreground">
-                        {record.parentSummary.isCombinable ? '1 invoice if parent selected' : 'Select items individually'}
+                        {record.parentSummary.isCombinable
+                          ? t('automaticInvoices.ready.selectionHintCombined', {
+                            defaultValue: '1 invoice if parent selected',
+                          })
+                          : t('automaticInvoices.ready.selectionHintSeparate', {
+                            defaultValue: 'Select items individually',
+                          })}
                       </div>
                     </div>
                   ),
@@ -1730,10 +1784,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 	                  if (!isExpanded) {
 	                    return (
 	                      <div className="text-xs text-muted-foreground">
-	                        {`${t('automaticInvoices.groups.item', {
+	                        {t('automaticInvoices.groups.includedCount', {
                           count: record.parentSummary.childCount,
-                          defaultValue: `${record.parentSummary.childCount} item${record.parentSummary.childCount === 1 ? '' : 's'}`,
-                        })} included`}
+                          defaultValue: `${record.parentSummary.childCount} item${record.parentSummary.childCount === 1 ? '' : 's'} included`,
+                        })}
 	                      </div>
 	                    );
 	                  }
@@ -2353,7 +2407,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     amount: formatCurrency(info.overageCents),
                     defaultValue: `${info.clientName}: over by ${formatCurrency(info.overageCents)}`,
                   })}
-                  {info.poNumber ? ` (PO ${info.poNumber})` : ''}
+                  {info.poNumber ? ` (${formatPoLabel(info.poNumber)})` : ''}
                 </li>
               ))}
             </ul>

@@ -7,6 +7,23 @@
       "filterPlaceholder": "Filter ready-to-invoice rows",
       "dateRange": "Invoice window",
       "search": "Search",
+      "groupedPreviewUnavailable": "Preview supports grouped selections; direct \"Generate from preview\" remains single-selection only.",
+      "selectionHintCombined": "1 invoice if parent selected",
+      "selectionHintSeparate": "Select items individually",
+      "needsApproval": {
+        "title": "Needs Approval",
+        "description": "These recurring windows contain billable time that is not approved yet. The entire invoice window is blocked until approvals are complete.",
+        "labels": {
+          "servicePeriod": "Service period",
+          "invoiceWindow": "Invoice window"
+        },
+        "unapprovedEntries": "{{count}} unapproved entry",
+        "unapprovedEntries_one": "{{count}} unapproved entry",
+        "unapprovedEntries_other": "{{count}} unapproved entries",
+        "actions": {
+          "reviewApprovals": "Review Approvals"
+        }
+      },
       "columns": {
         "group": "Group",
         "servicePeriod": "Service Period",
@@ -24,6 +41,19 @@
       "line": "{{count}} line",
       "line_one": "{{count}} line",
       "line_other": "{{count}} lines",
+      "obligationCount": "{{count}} obligation",
+      "obligationCount_one": "{{count}} obligation",
+      "obligationCount_other": "{{count}} obligations",
+      "includedCount": "{{count}} item included",
+      "includedCount_one": "{{count}} item included",
+      "includedCount_other": "{{count}} items included",
+      "attributionMetadataMissing": "Assignment attribution metadata missing ({{count}} obligation)",
+      "attributionMetadataMissing_one": "Assignment attribution metadata missing ({{count}} obligation)",
+      "attributionMetadataMissing_other": "Assignment attribution metadata missing ({{count}} obligations)",
+      "actions": {
+        "expand": "Expand",
+        "collapse": "Collapse"
+      },
       "canCombine": "Can combine into 1 invoice",
       "separate": "Must invoice separately",
       "blocked": "Contains blocked items",
@@ -134,6 +164,7 @@
         "description": "The selected invoice total is over by {{amount}}.",
         "batchDescription": "One or more invoices would exceed a Purchase Order authorized amount. What do you want to do?",
         "batchItem": "{{clientName}}: over by {{amount}}",
+        "poNumber": "PO {{number}}",
         "allowOverages": "Allow overages (generate all invoices)",
         "skipInvoices": "Skip invoices that would overrun their PO",
         "continue": "Continue",
@@ -158,6 +189,7 @@
       "badges": {
         "contractAnniversary": "Contract anniversary",
         "clientSchedule": "Client schedule",
+        "unknownCadenceSource": "Unknown cadence source ({{source}})",
         "multiContractInvoice": "Multi-contract invoice",
         "servicePeriodBacked": "Service-period-backed"
       }
@@ -915,6 +947,7 @@
   },
   "purchaseOrder": {
     "labels": {
+      "short": "PO",
       "number": "PO Number",
       "authorized": "PO Authorized",
       "consumed": "PO Consumed (Finalized)",

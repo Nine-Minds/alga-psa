@@ -234,4 +234,40 @@ describe('AutomaticInvoices i18n wiring contract', () => {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
+
+  it('T051: remaining approval/ready-table chrome resolves through msp/invoicing for approval panels, selection hints, unknown fallbacks, metadata plural copy, and PO fallback labels', () => {
+    const source = read('../src/components/billing-dashboard/AutomaticInvoices.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../server/public/locales/en/msp/invoicing.json',
+    );
+
+    const keyChecks = [
+      'automaticInvoices.ready.groupedPreviewUnavailable',
+      'automaticInvoices.ready.selectionHintCombined',
+      'automaticInvoices.ready.selectionHintSeparate',
+      'automaticInvoices.ready.needsApproval.title',
+      'automaticInvoices.ready.needsApproval.description',
+      'automaticInvoices.ready.needsApproval.labels.servicePeriod',
+      'automaticInvoices.ready.needsApproval.labels.invoiceWindow',
+      'automaticInvoices.ready.needsApproval.unapprovedEntries',
+      'automaticInvoices.ready.needsApproval.actions.reviewApprovals',
+      'automaticInvoices.groups.obligationCount',
+      'automaticInvoices.groups.includedCount',
+      'automaticInvoices.groups.attributionMetadataMissing',
+      'automaticInvoices.groups.actions.expand',
+      'automaticInvoices.groups.actions.collapse',
+      'automaticInvoices.history.badges.unknownCadenceSource',
+      'purchaseOrder.labels.short',
+      'automaticInvoices.dialogs.poOverage.poNumber',
+    ];
+
+    expect(source).toContain('formatPoLabel');
+    expect(source).toContain('formatBlockedReason(record.parentSummary.blockedReason)');
+    expect(source).toContain("t('common.labels.unknownClient'");
+
+    for (const key of keyChecks) {
+      expect(source).toContain(key);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
 });
