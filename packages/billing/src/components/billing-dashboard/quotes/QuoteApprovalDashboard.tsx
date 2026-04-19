@@ -10,30 +10,18 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { ColumnDefinition, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getQuoteApprovalSettings, listQuotes, updateQuoteApprovalSettings } from '../../../actions/quoteActions';
 import QuoteDetail from './QuoteDetail';
 import QuoteStatusBadge from './QuoteStatusBadge';
-
-function formatCurrency(minorUnits: number, currencyCode: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currencyCode,
-  }).format((minorUnits || 0) / 100);
-}
-
-function formatDate(value?: string | null): string {
-  if (!value) {
-    return '—';
-  }
-
-  return new Date(value).toLocaleDateString();
-}
 
 interface QuoteApprovalDashboardProps {
   embedded?: boolean;
 }
 
 const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedded = false }) => {
+  const { t } = useTranslation('msp/quotes');
+  const { formatCurrency, formatDate } = useFormatters();
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedQuoteId = embedded ? null : searchParams?.get('quoteId');
@@ -70,7 +58,9 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
       setError(null);
     } catch (loadError) {
       console.error('Error loading quote approvals:', loadError);
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load quote approvals');
+      setError(loadError instanceof Error ? loadError.message : t('quoteApproval.errors.load', {
+        defaultValue: 'Failed to load quote approvals',
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -92,7 +82,9 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
       }
       setApprovalRequired(result.approvalRequired);
     } catch (settingsError) {
-      setError(settingsError instanceof Error ? settingsError.message : 'Failed to update quote approval settings');
+      setError(settingsError instanceof Error ? settingsError.message : t('quoteApproval.errors.settings', {
+        defaultValue: 'Failed to update quote approval settings',
+      }));
     } finally {
       setIsSavingSettings(false);
     }
@@ -100,41 +92,41 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
 
   const columns: ColumnDefinition<IQuoteListItem>[] = useMemo(() => ([
     {
-      title: 'Quote #',
+      title: t('common.columns.quoteNumber', { defaultValue: 'Quote #' }),
       dataIndex: 'display_quote_number' as const,
       render: (value: string | null | undefined) => value || '—',
     },
     {
-      title: 'Client',
+      title: t('common.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name' as const,
       render: (value: string | null | undefined) => value || '—',
     },
     {
-      title: 'Title',
+      title: t('common.columns.title', { defaultValue: 'Title' }),
       dataIndex: 'title' as const,
       render: (value: string | null | undefined) => value || '—',
     },
     {
-      title: 'Amount',
+      title: t('common.columns.amount', { defaultValue: 'Amount' }),
       dataIndex: 'total_amount',
-      render: (value: number, record) => formatCurrency(Number(value ?? 0), record.currency_code || 'USD'),
+      render: (value: number, record) => formatCurrency(Number(value ?? 0) / 100, record.currency_code || 'USD'),
     },
     {
-      title: 'Status',
+      title: t('common.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       render: (value: string | null | undefined) => <QuoteStatusBadge status={(value || 'draft') as QuoteStatus} />,
     },
     {
-      title: 'Quote Date',
+      title: t('common.columns.quoteDate', { defaultValue: 'Quote Date' }),
       dataIndex: 'quote_date',
-      render: (value: string | null | undefined) => formatDate(value),
+      render: (value: string | null | undefined) => value ? formatDate(value) : '—',
     },
     {
-      title: 'Valid Until',
+      title: t('common.columns.validUntil', { defaultValue: 'Valid Until' }),
       dataIndex: 'valid_until',
-      render: (value: string | null | undefined) => formatDate(value),
+      render: (value: string | null | undefined) => value ? formatDate(value) : '—',
     },
-  ]), []);
+  ]), [formatCurrency, formatDate, t]);
 
   if (selectedQuoteId) {
     return (
@@ -158,12 +150,22 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
     <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          {!embedded && <h1 className="text-2xl font-semibold text-foreground">Quote Approvals</h1>}
-          <p className="text-sm text-muted-foreground">Review quotes waiting for manager approval before they can be sent to clients.</p>
+          {!embedded && (
+            <h1 className="text-2xl font-semibold text-foreground">
+              {t('quoteApproval.title', { defaultValue: 'Quote Approvals' })}
+            </h1>
+          )}
+          <p className="text-sm text-muted-foreground">
+            {t('quoteApproval.description', {
+              defaultValue: 'Review quotes waiting for manager approval before they can be sent to clients.',
+            })}
+          </p>
         </div>
         <div className="flex flex-wrap items-end gap-4">
           <div className="space-y-1">
-            <div className="text-sm font-medium text-foreground">Approval required before sending</div>
+            <div className="text-sm font-medium text-foreground">
+              {t('quoteApproval.settings.label', { defaultValue: 'Approval required before sending' })}
+            </div>
             <div className="flex items-center gap-3">
               <Switch
                 checked={approvalRequired}
@@ -171,27 +173,41 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
                 disabled={isSavingSettings}
               />
               <span className="text-sm text-muted-foreground">
-                {approvalRequired ? 'Draft quotes must be approved before sending.' : 'Draft quotes can be sent without approval.'}
+                {approvalRequired
+                  ? t('quoteApproval.settings.enabled', {
+                    defaultValue: 'Draft quotes must be approved before sending.',
+                  })
+                  : t('quoteApproval.settings.disabled', {
+                    defaultValue: 'Draft quotes can be sent without approval.',
+                  })}
               </span>
             </div>
           </div>
           <div className="flex flex-col gap-1 text-sm font-medium text-foreground">
-            <label htmlFor="quote-approvals-status-filter">Status</label>
+            <label htmlFor="quote-approvals-status-filter">
+              {t('quoteApproval.filters.status', { defaultValue: 'Status' })}
+            </label>
             <div className="min-w-[180px]">
               <CustomSelect
                 id="quote-approvals-status-filter"
                 value={statusFilter}
                 onValueChange={(value) => setStatusFilter(value as 'pending_approval' | 'approved')}
                 options={[
-                  { value: 'pending_approval', label: 'Pending Approval' },
-                  { value: 'approved', label: 'Approved' },
+                  {
+                    value: 'pending_approval',
+                    label: t('quoteApproval.filters.pendingApproval', { defaultValue: 'Pending Approval' }),
+                  },
+                  {
+                    value: 'approved',
+                    label: t('quoteApproval.filters.approved', { defaultValue: 'Approved' }),
+                  },
                 ]}
               />
             </div>
           </div>
           {!embedded && (
             <Button id="quote-approvals-back-billing" variant="outline" onClick={() => router.push('/msp/billing?tab=quotes')}>
-              Back to Quotes
+              {t('quoteApproval.actions.backToQuotes', { defaultValue: 'Back to Quotes' })}
             </Button>
           )}
         </div>
@@ -199,7 +215,7 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Quote Approvals</AlertTitle>
+          <AlertTitle>{t('quoteApproval.title', { defaultValue: 'Quote Approvals' })}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : isLoading ? (
@@ -207,14 +223,20 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
           className="py-12 text-muted-foreground"
           layout="stacked"
           spinnerProps={{ size: 'md' }}
-          text="Loading approval queue..."
+          text={t('quoteApproval.loading', { defaultValue: 'Loading approval queue...' })}
           textClassName="text-muted-foreground"
         />
       ) : quotes.length === 0 ? (
         <Alert>
-          <AlertTitle>No quotes found</AlertTitle>
+          <AlertTitle>{t('quoteApproval.empty.title', { defaultValue: 'No quotes found' })}</AlertTitle>
           <AlertDescription>
-            There are no quotes in the {statusFilter === 'pending_approval' ? 'pending approval' : 'approved'} queue right now.
+            {statusFilter === 'pending_approval'
+              ? t('quoteApproval.empty.pendingApproval', {
+                defaultValue: 'There are no quotes in the pending approval queue right now.',
+              })
+              : t('quoteApproval.empty.approved', {
+                defaultValue: 'There are no quotes in the approved queue right now.',
+              })}
           </AlertDescription>
         </Alert>
       ) : (

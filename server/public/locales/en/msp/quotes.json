@@ -480,10 +480,13 @@
   "quoteApproval": {
     "title": "Quote Approvals",
     "description": "Review quotes waiting for manager approval before they can be sent to clients.",
+    "actions": {
+      "backToQuotes": "Back to Quotes"
+    },
     "settings": {
       "label": "Approval required before sending",
-      "enabled": "Quotes must be approved before they can be sent to clients.",
-      "disabled": "Quotes can be sent to clients without manager approval."
+      "enabled": "Draft quotes must be approved before sending.",
+      "disabled": "Draft quotes can be sent without approval."
     },
     "filters": {
       "status": "Status",
@@ -491,8 +494,15 @@
       "pendingApproval": "Pending Approval"
     },
     "empty": {
+      "approved": "There are no quotes in the approved queue right now.",
+      "pendingApproval": "There are no quotes in the pending approval queue right now.",
       "title": "No quotes found"
-    }
+    },
+    "errors": {
+      "load": "Failed to load quote approvals",
+      "settings": "Failed to update quote approval settings"
+    },
+    "loading": "Loading approval queue..."
   },
   "quoteTemplates": {
     "description": "Save reusable quote structures to speed up future quote creation.",
