@@ -418,6 +418,7 @@
   },
   "quoteConversion": {
     "title": "Convert Quote",
+    "description": "Convert the accepted quote \"{{title}}\" into contracts and/or invoices.",
     "loading": "Loading conversion preview...",
     "mode": {
       "contract": {
@@ -434,6 +435,7 @@
       }
     },
     "sections": {
+      "contractItems": "Contract Items",
       "conversionMode": "Conversion Mode",
       "excludedItems": "Excluded Items",
       "excludedFromConversion": "Excluded from Conversion",
@@ -455,14 +457,24 @@
       "notConverted": "Not converted"
     },
     "partial": {
+      "alreadyConverted": "This quote has already been partially converted.",
+      "contractCreated": "A contract was created.",
+      "invoiceCreated": "An invoice was created.",
+      "remainingItems": "You can convert the remaining items.",
       "title": "Partial Conversion",
       "description": "Some records for this quote already exist."
     },
     "actions": {
       "contract": "Create Draft Contract",
+      "convertQuote": "Convert Quote",
       "invoice": "Create Draft Invoice",
       "both": "Create Both Records",
       "converting": "Converting..."
+    },
+    "errors": {
+      "convert": "Failed to convert quote",
+      "load": "Failed to load conversion preview",
+      "title": "Error"
     }
   },
   "quoteApproval": {
