@@ -84,7 +84,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       initializeEntries({
         existingEntries: existingEntries?.slice(0, 1).map(entry => ({
           ...entry,
-          notes: entry.notes || workItem.description || ''
+          notes: entry.notes || ''
         })) || [],
         defaultStartTime,
         defaultEndTime,
