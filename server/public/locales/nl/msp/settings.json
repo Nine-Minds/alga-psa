@@ -1353,5 +1353,19 @@
       "adminLocked": "Machtigingen van de beheerdersrol kunnen niet worden gewijzigd",
       "permissionsUpdated": "Machtigingen succesvol bijgewerkt"
     }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Schema niet gevonden",
+      "scheduleUpdated": "Schema succesvol bijgewerkt",
+      "scheduleCreated": "Schema succesvol aangemaakt",
+      "scheduleDeleted": "Schema succesvol verwijderd",
+      "defaultHoursCreated": "Standaard openingstijdenschema aangemaakt",
+      "scheduleRequired": "Selecteer eerst een schema",
+      "holidayNameRequired": "Naam van de feestdag is vereist",
+      "holidayDateRequired": "Datum van de feestdag is vereist",
+      "holidayAdded": "Feestdag succesvol toegevoegd",
+      "holidayDeleted": "Feestdag succesvol verwijderd"
+    }
   }
 }

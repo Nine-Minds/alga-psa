@@ -1353,5 +1353,19 @@
       "adminLocked": "Los permisos del rol de administrador no se pueden modificar",
       "permissionsUpdated": "Permisos actualizados correctamente"
     }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Horario no encontrado",
+      "scheduleUpdated": "Horario actualizado correctamente",
+      "scheduleCreated": "Horario creado correctamente",
+      "scheduleDeleted": "Horario eliminado correctamente",
+      "defaultHoursCreated": "Horario de atención predeterminado creado",
+      "scheduleRequired": "Seleccione primero un horario",
+      "holidayNameRequired": "El nombre del festivo es obligatorio",
+      "holidayDateRequired": "La fecha del festivo es obligatoria",
+      "holidayAdded": "Festivo añadido correctamente",
+      "holidayDeleted": "Festivo eliminado correctamente"
+    }
   }
 }
