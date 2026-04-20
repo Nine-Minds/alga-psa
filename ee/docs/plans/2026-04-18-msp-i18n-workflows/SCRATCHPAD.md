@@ -648,6 +648,22 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
 - Results:
   - ESLint reports 0 errors across the three files; warnings are the pre-existing `no-non-null-assertion`, `no-unused-vars` backlog.
   - translation validation passed with 0 missing/extra keys.
+
+### F028 complete — expression editor surfaces localized
+- `ExpressionEditor.tsx` — translated the Monaco `ariaLabel` default to `expressionEditor.ariaLabel` (`'Expression editor'`). All other Monaco-internal UI (tooltips, error squiggles, command palette, keyboard shortcut list) stays vendor-rendered per PRD risk note "Vendor Monaco UI remains untranslated."
+- `ExpressionEditorField.tsx` — translated the field-wrapper default placeholder (`'Enter expression...'`) and the inline field-picker `CustomSelect` placeholder (`'Insert field'`). The `placeholder` prop still accepts caller overrides; the `resolvedPlaceholder` inside the component falls back to the translated default when none is provided.
+- `mapping/ExpressionAutocomplete.tsx` — translated the listbox `aria-label` (`'Expression autocomplete suggestions'`). Suggestion rows render path/type/description from context data, which is not chrome.
+- `mapping/ExpressionTextArea.tsx` — translated the fallback placeholder `'Enter JSONata expression...'` via the same optional-prop + resolved-value pattern.
+- Added `expressionEditor.*` (5 keys: `ariaLabel`, `autocompleteAria`, `textAreaPlaceholder`, `field.placeholder`, `field.insertFieldPlaceholder`) to `server/public/locales/en/msp/workflows.json`, synced the same stub structure into `fr/es/de/nl/it/pl/xx/yy`.
+- Deliberately out of scope:
+  - Monaco's built-in UI (suggestion widget, hover popover, problem markers) — PRD calls this out explicitly.
+  - Inline data `description` strings in the seeded context schema (`Workflow state`, `Trace ID`, `Error name`, etc.) — these surface in Monaco tooltips and are seeded by this file for the UI-rendered schema; translating them would desync Monaco's schema store with other providers that share the same context. Revisit via the expression-context provider if/when those tooltips become reader-facing chrome rather than developer diagnostics.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx ee/server/src/components/workflow-designer/expression-editor/ExpressionEditorField.tsx ee/server/src/components/workflow-designer/mapping/ExpressionAutocomplete.tsx ee/server/src/components/workflow-designer/mapping/ExpressionTextArea.tsx
+  node scripts/validate-translations.cjs
+  ```
+- Results: ESLint 0 errors (remaining warnings are the file's existing `no-unused-vars` backlog); translation validation passed with 0 missing/extra keys.
 - Checks run:
   ```bash
   npx eslint ee/server/src/components/workflow-graph/WorkflowGraph.tsx

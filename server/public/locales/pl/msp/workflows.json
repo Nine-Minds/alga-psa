@@ -699,6 +699,15 @@
       "systemEventMissingSchema": "This system event is missing a valid schema and cannot be selected until fixed."
     }
   },
+  "expressionEditor": {
+    "ariaLabel": "Expression editor",
+    "autocompleteAria": "Expression autocomplete suggestions",
+    "textAreaPlaceholder": "Enter JSONata expression...",
+    "field": {
+      "placeholder": "Enter expression...",
+      "insertFieldPlaceholder": "Insert field"
+    }
+  },
   "sourceDataTree": {
     "searchPlaceholder": "Search fields...",
     "sections": {

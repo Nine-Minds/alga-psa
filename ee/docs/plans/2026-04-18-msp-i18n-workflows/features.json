@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "Extract all user-visible strings in expression-editor/ExpressionEditor.tsx, ExpressionEditorField.tsx, ExpressionTextArea.tsx, mapping/ExpressionAutocomplete.tsx (placeholders, validation banner, help text). Vendor Monaco UI remains untranslated.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-D", "Risks"]
   },
   {

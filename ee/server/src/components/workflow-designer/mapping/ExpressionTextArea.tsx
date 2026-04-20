@@ -11,6 +11,7 @@
 
 import React, { useCallback, useMemo } from 'react';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   ExpressionAutocomplete,
   buildSuggestionsFromContext
@@ -103,10 +104,12 @@ export const ExpressionTextArea: React.FC<ExpressionTextAreaProps> = ({
   onChange,
   fieldOptions,
   rows = 2,
-  placeholder = 'Enter JSONata expression...',
+  placeholder,
   className = '',
   disabled = false
 }) => {
+  const { t } = useTranslation('msp/workflows');
+  const resolvedPlaceholder = placeholder ?? t('expressionEditor.textAreaPlaceholder', { defaultValue: 'Enter JSONata expression...' });
   // Build autocomplete suggestions from field options
   const suggestions = useMemo(
     () => buildSuggestionsFromOptions(fieldOptions),
@@ -142,7 +145,7 @@ export const ExpressionTextArea: React.FC<ExpressionTextAreaProps> = ({
         onFocus={autocompleteHandlers.handleFocus}
         onBlur={autocompleteHandlers.handleBlur}
         rows={rows}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         className={`font-mono text-sm ${className}`}
         disabled={disabled}
         autoComplete="off"
