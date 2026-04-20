@@ -1184,5 +1184,13 @@
     "values": {
       "unknown": "55555"
     }
+  },
+  "alerts": {
+    "messages": {
+      "alertAcknowledged": "55555",
+      "acknowledgeFailed": "55555",
+      "ticketCreated": "55555",
+      "ticketCreateFailed": "55555"
+    }
   }
 }

@@ -14,6 +14,7 @@ import type { Asset } from '@/interfaces/asset.interfaces';
 import type { RmmAlert } from '../../interfaces/rmm.interfaces';
 import { getAssetAlerts, acknowledgeRmmAlert, createTicketFromRmmAlert } from '../../lib/actions/integrations/ninjaoneActions';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface AssetAlertsSectionProps {
   asset: Asset;
@@ -66,6 +67,7 @@ function getSeverityClasses(severity: string): string {
  * Asset Alerts Section
  */
 export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSectionProps) {
+  const { t } = useTranslation('msp/assets');
   const [alerts, setAlerts] = useState<RmmAlert[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -103,7 +105,7 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
     try {
       const result = await acknowledgeRmmAlert(alertId);
       if (result.success) {
-        toast.success('Alert acknowledged');
+        toast.success(t('alerts.messages.alertAcknowledged'));
         // Update local state
         setAlerts(prev => prev.map(a =>
           a.alert_id === alertId
@@ -111,10 +113,10 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
             : a
         ));
       } else {
-        toast.error(result.error || 'Failed to acknowledge alert');
+        toast.error(result.error || t('alerts.messages.acknowledgeFailed'));
       }
     } catch (error) {
-      toast.error('Failed to acknowledge alert');
+      toast.error(t('alerts.messages.acknowledgeFailed'));
     } finally {
       setProcessingAlertId(null);
     }
@@ -125,7 +127,7 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
     try {
       const result = await createTicketFromRmmAlert(alertId);
       if (result.success && result.ticketId) {
-        toast.success('Ticket created successfully');
+        toast.success(t('alerts.messages.ticketCreated'));
         // Update local state
         setAlerts(prev => prev.map(a =>
           a.alert_id === alertId
@@ -133,10 +135,10 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
             : a
         ));
       } else {
-        toast.error(result.error || 'Failed to create ticket');
+        toast.error(result.error || t('alerts.messages.ticketCreateFailed'));
       }
     } catch (error) {
-      toast.error('Failed to create ticket');
+      toast.error(t('alerts.messages.ticketCreateFailed'));
     } finally {
       setProcessingAlertId(null);
     }
