@@ -563,6 +563,35 @@
       "exportFailed": "Failed to export audit logs"
     }
   },
+  "graph": {
+    "start": {
+      "label": "Start"
+    },
+    "states": {
+      "buildingGraph": "Building graph…"
+    },
+    "errors": {
+      "buildFailed": "Failed to build workflow graph.",
+      "renderErrorTitle": "Graph render error",
+      "switchToList": "Switch to List view to continue editing."
+    },
+    "empty": {
+      "readonly": "Select a step from the panel to get started.",
+      "dropFirst": "Drop to add as the first step",
+      "dragPrompt": "Drag a step from the panel, or select one to get started."
+    },
+    "mapping": {
+      "unmappedTitle": "{{count}} required fields unmapped",
+      "unmappedBadge": "{{count}} req unmapped",
+      "allMapped": "All required fields mapped"
+    },
+    "insert": {
+      "title": "Drop a step here to insert"
+    },
+    "actions": {
+      "deleteStep": "Delete step"
+    }
+  },
   "runStudio": {
     "header": {
       "kicker": "Run Studio",

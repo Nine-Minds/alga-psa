@@ -490,3 +490,22 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   - ESLint reports 0 errors; remaining warnings are pre-existing `no-empty`, `exhaustive-deps`, non-null-assertion, and `any` sites unrelated to the i18n extraction.
   - translation validation passed with 0 missing/extra keys.
 - Deliberately left `new Date(...).toLocaleString()` calls (`started`, `scheduled for`, `created`, `resolved`, timeline entry created/resolved lines) for `F022`, and `getWorkflowRunTriggerLabel`/`getWorkflowScheduleStatusLabel` helper output for `F051`.
+
+### F021 complete — WorkflowGraph chrome strings extracted
+- Updated `ee/server/src/components/workflow-graph/WorkflowGraph.tsx` to use `useTranslation('msp/workflows')` inside the four render-level node components and the main export:
+  - `StartNode` — translated start-node label via `graph.start.label`, falling back to the incoming `data.label` for non-localized callers.
+  - `StepNode` — translated the input-mapping badge/title (`{{count}} req unmapped` and `{{count}} required fields unmapped`), the "All required fields mapped" tooltip/aria-label, and the "Delete step" button title/aria-label.
+  - `InsertNode` — translated the "Drop a step here to insert" droppable title.
+  - `WorkflowGraph` body — translated the "Building graph…" loading state, the "Graph render error" + "Switch to List view to continue editing." build-error card, the readonly empty-state message, and both droppable empty-state messages ("Drop to add as the first step" and "Drag a step from the panel…").
+- Added `graph.*` keys to `server/public/locales/en/msp/workflows.json` (13 keys covering start, states, errors, empty, mapping, insert, actions) and synced the same stub structure into `fr/es/de/nl/it/pl/xx/yy`.
+- Cross-checked every `t('graph.*')` key referenced in the component against `en/msp/workflows.json`:
+  - 13 keys referenced, 0 missing.
+- Backlog: `buildWorkflowGraph.ts` still hard-codes the `next` loop-back edge label. Internal sentinels (`Start`, `Join`, `Done`) in that helper are purely comparison values not shown to users (they drive the ✓/⋯ glyph choice), so left as-is. Edge `next` label is user-visible on the canvas — file a follow-up item to make it translation-aware by threading a label override through `buildWorkflowGraph` options.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-graph/WorkflowGraph.tsx
+  node scripts/validate-translations.cjs
+  ```
+- Results:
+  - ESLint reports 0 errors; remaining warnings are pre-existing `any` / non-null-assertion / `explicit-function-return-type` sites, plus the already-present backlog.
+  - translation validation passed with 0 missing/extra keys.

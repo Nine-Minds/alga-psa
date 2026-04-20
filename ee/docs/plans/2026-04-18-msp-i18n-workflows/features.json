@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "Extract static chrome strings in WorkflowGraph.tsx (empty state, mini-map labels, zoom/fit controls) to t() calls; node body text driven by workflow data remains unchanged.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-B", "Risks"]
   },
   {
