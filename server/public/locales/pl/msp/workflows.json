@@ -65,7 +65,7 @@
     "table": {
       "runId": "Run ID",
       "workflow": "Workflow",
-      "version": "Version",
+      "version": "Wersja",
       "tenant": "Tenant",
       "triggerPayload": "Trigger payload",
       "status": "Status",
@@ -516,7 +516,7 @@
       "columns": {
         "runId": "Run ID",
         "workflow": "Workflow",
-        "version": "Version",
+        "version": "Wersja",
         "status": "Status",
         "retries": "Retries",
         "failedSteps": "Failed Steps",
@@ -595,6 +595,71 @@
         "unknown": "Validation status unknown"
       }
     },
+    "form": {
+      "nameLabel": "Nazwa przepływu pracy",
+      "versionLabel": "Wersja",
+      "descriptionLabel": "Opis",
+      "latestPublishedVersion": "Ostatnia opublikowana wersja: {{version}}",
+      "triggerTypeLabel": "Typ wyzwalacza",
+      "triggerTypePlaceholder": "Wybierz typ wyzwalacza",
+      "triggerTypeHelp": "Wybierz, czy ten przepływ pracy uruchamia się ręcznie czy na podstawie zdarzenia. Harmonogramy wielokrotnego użytku są zarządzane w panelu sterowania.",
+      "manualTriggerNote": "Ten przepływ pracy nie ma wyzwalacza. Nadal można go uruchomić ręcznie i zaplanować z panelu sterowania, gdy będzie miał przypięty schemat payloadu i opublikowaną wersję.",
+      "eventCategoryLabel": "Kategoria zdarzenia",
+      "eventLabel": "Zdarzenie",
+      "selectEventCategory": "Wybierz kategorię zdarzenia",
+      "selectEvent": "Select event",
+      "selectCategoryFirst": "Najpierw wybierz kategorię",
+      "inputDataLabel": "Dane wejściowe przepływu pracy",
+      "inputDataEvent": "Twoje kroki odczytują dane z wybranego wyzwalacza.",
+      "inputDataTimePrefix": "Ten przepływ pracy otrzymuje stały syntetyczny payload zegara. Kontrakt jest przypięty do",
+      "inputDataManualPrefix": "Żaden wyzwalacz nie używa",
+      "inputDataManualSuffix": "domyślnie. Zmień to w zaawansowanych ustawieniach schematu, jeśli ten przepływ pracy wymaga innego kontraktu ręcznego.",
+      "triggerMappingRequired": "Wymagane jest mapowanie wyzwalacza. Otwórz zaawansowane ustawienia schematu, aby je skonfigurować.",
+      "schemaLocked": "Wersja schematu zablokowana",
+      "schemaAutoSelected": "Wybrane automatycznie z wyzwalacza",
+      "schemaSuffixClock": " do stałego kontraktu payloadu zegara.",
+      "schemaSuffixPinned": ", aby utrzymać stabilność tego przepływu pracy, gdy zmienią się schematy wyzwalaczy.",
+      "chooseTriggerHint": "Wybierz wyzwalacz, aby zdefiniować dostępne pola.",
+      "schemaLoadErrorPrefix": "Nie udało się załadować informacji o schemacie dla",
+      "schemaLoadErrorSuffix": "Sprawdź wpis w katalogu zdarzeń.",
+      "draftDifferent": "Kontrakt wersji roboczej różni się od opublikowanego",
+      "publishedUsesPrefix": "Opublikowana wersja używa",
+      "draftResolvesTo": "Ta wersja robocza obecnie rozstrzyga się do",
+      "lockToPublished": "Zablokuj na opublikowanym kontrakcie",
+      "advancedSchemaSettings": "Zaawansowane ustawienia schematu",
+      "inferredSchemaPrefix": "Aktualnie wywnioskowany schemat:",
+      "noSchemaInferred": "Jeszcze nie wywnioskowano schematu.",
+      "unknownSchemaRef": "Nieznane odwołanie do schematu. Otwórz zaawansowane ustawienia schematu i wybierz prawidłową wersję.",
+      "workflowStepsHeading": "Kroki przepływu pracy",
+      "workflowStepsListHint": "Przeciągnij kroki, aby zmienić kolejność lub przenieść między potokami.",
+      "workflowStepsGraphHint": "Przesuwaj/powiększaj graf. Gałęzie są wyświetlane w oddzielnych torach.",
+      "workflowStepsViewAria": "Widok kroków przepływu pracy",
+      "warningsCount": "{{count}} ostrzeżeń"
+    },
+    "stepPanel": {
+      "readOnly": "Dostęp tylko do odczytu: edycja kroków jest wyłączona.",
+      "selectPrompt": "Wybierz krok, aby edytować jego konfigurację."
+    },
+    "stepConfig": {
+      "eventLabel": "Zdarzenie",
+      "selectEvent": "Select event",
+      "correlationKey": "Wyrażenie klucza korelacji",
+      "payloadFilters": "Filtry payloadu",
+      "addFilter": "Dodaj filtr",
+      "noFiltersConfigured": "Brak skonfigurowanych filtrów.",
+      "loadingEventSchema": "Ładowanie pól schematu zdarzenia...",
+      "timeoutMs": "Limit czasu (ms)",
+      "assignOnResume": "Przypisz przy wznowieniu",
+      "fieldLabel": "Pole",
+      "fieldPathLabel": "Ścieżka pola",
+      "dataContextToggle": "Do jakich danych mam tutaj dostęp?"
+    },
+    "mappingExpr": {
+      "add": "Dodaj",
+      "remove": "Usuń",
+      "empty": "Brak mapowań.",
+      "expressionLabel": "Wyrażenie"
+    },
     "validation": {
       "badge": {
         "invalid": "Nieprawidłowy",
@@ -628,12 +693,17 @@
       "hidePalette": "Hide palette",
       "searchPlaceholder": "Szukaj",
       "dragHint": "Drop on pipeline to add",
+      "chooseAction": "Wybierz akcję po dodaniu tego kroku",
+      "returnsSummary": "Zwraca: {{list}}{{suffix}}",
       "categories": {
         "Control": "Control",
         "Core": "Core",
         "Transform": "Transform",
         "AI": "AI",
-        "Apps": "Apps"
+        "Apps": "Apps",
+        "Action": "Akcja",
+        "Email": "E-mail",
+        "Nodes": "Węzły"
       },
       "controlBlocks": {
         "control.if": {
@@ -655,6 +725,40 @@
         "control.return": {
           "label": "Zwróć",
           "description": "Stop execution"
+        }
+      },
+      "nodes": {
+        "state.set": {
+          "label": "Ustaw stan",
+          "description": "Zaktualizuj stan przepływu pracy"
+        },
+        "event.wait": {
+          "label": "Czekaj na zdarzenie",
+          "description": "Czekaj na zewnętrzne zdarzenie"
+        },
+        "time.wait": {
+          "label": "Czekaj na czas",
+          "description": "Czekaj przez określony czas lub do konkretnej daty/godziny"
+        },
+        "transform.assign": {
+          "label": "Przypisz",
+          "description": "Przypisz wartości do payloadu lub zmiennych"
+        },
+        "action.call": {
+          "label": "Wywołaj akcję",
+          "description": "Wywołaj zarejestrowaną akcję"
+        },
+        "email.parseBody": {
+          "label": "Parsuj treść wiadomości",
+          "description": "Parsuj i oczyść treść odpowiedzi e-mail"
+        },
+        "email.renderCommentBlocks": {
+          "label": "Renderuj bloki komentarzy",
+          "description": "Renderuj bloki komentarzy z treści wiadomości"
+        },
+        "human.task": {
+          "label": "Zadanie dla człowieka",
+          "description": "Wstrzymaj do ukończenia zadania przez człowieka"
         }
       }
     },
@@ -994,7 +1098,7 @@
       "emptyPrefix": "No vars yet. Use",
       "saveOutput": "Save output",
       "emptyConjunction": "or an",
-      "assignStep": "Assign",
+      "assignStep": "Przypisz",
       "emptySuffix": "step to populate"
     },
     "loop": {
@@ -1301,11 +1405,11 @@
       "ifCondition": "If Condition",
       "forEach": "For Each",
       "tryCatch": "Try/Catch",
-      "waitForEvent": "Wait for Event",
-      "waitForTime": "Wait for Time",
-      "humanTask": "Human Task",
-      "setState": "Set State",
-      "assign": "Assign"
+      "waitForEvent": "Czekaj na zdarzenie",
+      "waitForTime": "Czekaj na czas",
+      "humanTask": "Zadanie dla człowieka",
+      "setState": "Ustaw stan",
+      "assign": "Przypisz"
     },
     "stepCard": {
       "lastStatus": "Last status: {{status}} ({{timestamp}})",
@@ -1428,7 +1532,7 @@
         "workflowPlaceholder": "Choose a workflow",
         "name": "Schedule name",
         "namePlaceholder": "Month-end AP sync",
-        "triggerType": "Trigger type",
+        "triggerType": "Typ wyzwalacza",
         "enabled": "Enabled",
         "enabledHelp": "Schedule will run when valid.",
         "disabledHelp": "Schedule will stay paused until resumed.",

@@ -595,6 +595,71 @@
         "unknown": "Validation status unknown"
       }
     },
+    "form": {
+      "nameLabel": "Workflow name",
+      "versionLabel": "Version",
+      "descriptionLabel": "Description",
+      "latestPublishedVersion": "Latest published version: {{version}}",
+      "triggerTypeLabel": "Trigger type",
+      "triggerTypePlaceholder": "Select trigger type",
+      "triggerTypeHelp": "Choose whether this workflow starts manually or from an event. Reusable schedules are managed in the Workflow Control Panel.",
+      "manualTriggerNote": "This workflow has no trigger. It can still be run manually and scheduled from the Workflow Control Panel once it has a pinned payload schema and a published version.",
+      "eventCategoryLabel": "Event category",
+      "eventLabel": "Event",
+      "selectEventCategory": "Select event category",
+      "selectEvent": "Select event",
+      "selectCategoryFirst": "Select category first",
+      "inputDataLabel": "Workflow input data",
+      "inputDataEvent": "Your steps read data from the selected trigger.",
+      "inputDataTimePrefix": "This workflow receives a fixed synthetic clock payload. The contract is pinned to",
+      "inputDataManualPrefix": "No trigger uses",
+      "inputDataManualSuffix": "by default. Change it in Advanced schema settings if this workflow needs a different manual contract.",
+      "triggerMappingRequired": "Trigger mapping is required. Open Advanced schema settings to configure it.",
+      "schemaLocked": "Schema version locked",
+      "schemaAutoSelected": "Auto-selected from trigger",
+      "schemaSuffixClock": " to the fixed clock payload contract.",
+      "schemaSuffixPinned": " to keep this workflow stable if trigger schemas change.",
+      "chooseTriggerHint": "Choose a trigger to define available fields.",
+      "schemaLoadErrorPrefix": "We could not load schema information for",
+      "schemaLoadErrorSuffix": "Check the event catalog entry.",
+      "draftDifferent": "Draft contract differs from published",
+      "publishedUsesPrefix": "The published version uses",
+      "draftResolvesTo": "This draft currently resolves to",
+      "lockToPublished": "Lock to published contract",
+      "advancedSchemaSettings": "Advanced schema settings",
+      "inferredSchemaPrefix": "Current inferred schema:",
+      "noSchemaInferred": "No schema inferred yet.",
+      "unknownSchemaRef": "Unknown schema ref. Open Advanced schema settings and choose a valid schema version.",
+      "workflowStepsHeading": "Workflow Steps",
+      "workflowStepsListHint": "Drag steps to reorder or move between pipes.",
+      "workflowStepsGraphHint": "Pan/zoom the graph. Branches render as separate lanes.",
+      "workflowStepsViewAria": "Workflow steps view",
+      "warningsCount": "{{count}} warnings"
+    },
+    "stepPanel": {
+      "readOnly": "Read-only access: step editing is disabled.",
+      "selectPrompt": "Select a step to edit its configuration."
+    },
+    "stepConfig": {
+      "eventLabel": "Event",
+      "selectEvent": "Select event",
+      "correlationKey": "Correlation Key Expression",
+      "payloadFilters": "Payload Filters",
+      "addFilter": "Add filter",
+      "noFiltersConfigured": "No filters configured.",
+      "loadingEventSchema": "Loading event schema fields...",
+      "timeoutMs": "Timeout (ms)",
+      "assignOnResume": "Assign on resume",
+      "fieldLabel": "Field",
+      "fieldPathLabel": "Field path",
+      "dataContextToggle": "What data can I access here?"
+    },
+    "mappingExpr": {
+      "add": "Add",
+      "remove": "Remove",
+      "empty": "No mappings yet.",
+      "expressionLabel": "Expression"
+    },
     "validation": {
       "badge": {
         "invalid": "Invalid",
@@ -628,12 +693,17 @@
       "hidePalette": "Hide palette",
       "searchPlaceholder": "Search",
       "dragHint": "Drop on pipeline to add",
+      "chooseAction": "Choose an action after adding this step",
+      "returnsSummary": "Returns: {{list}}{{suffix}}",
       "categories": {
         "Control": "Control",
         "Core": "Core",
         "Transform": "Transform",
         "AI": "AI",
-        "Apps": "Apps"
+        "Apps": "Apps",
+        "Action": "Action",
+        "Email": "Email",
+        "Nodes": "Nodes"
       },
       "controlBlocks": {
         "control.if": {
@@ -655,6 +725,40 @@
         "control.return": {
           "label": "Return",
           "description": "Stop execution"
+        }
+      },
+      "nodes": {
+        "state.set": {
+          "label": "Set State",
+          "description": "Update the workflow state"
+        },
+        "event.wait": {
+          "label": "Wait for Event",
+          "description": "Wait for an external event"
+        },
+        "time.wait": {
+          "label": "Wait for Time",
+          "description": "Wait for a duration or until a date/time"
+        },
+        "transform.assign": {
+          "label": "Assign",
+          "description": "Assign values into payload or vars"
+        },
+        "action.call": {
+          "label": "Call Action",
+          "description": "Invoke a registered action"
+        },
+        "email.parseBody": {
+          "label": "Parse Email Body",
+          "description": "Parse and sanitize email reply body"
+        },
+        "email.renderCommentBlocks": {
+          "label": "Render Comment Blocks",
+          "description": "Render comment blocks from email content"
+        },
+        "human.task": {
+          "label": "Human Task",
+          "description": "Pause for human task completion"
         }
       }
     },

@@ -65,7 +65,7 @@
     "table": {
       "runId": "Run ID",
       "workflow": "Workflow",
-      "version": "Version",
+      "version": "Versione",
       "tenant": "Tenant",
       "triggerPayload": "Trigger payload",
       "status": "Stato",
@@ -516,7 +516,7 @@
       "columns": {
         "runId": "Run ID",
         "workflow": "Workflow",
-        "version": "Version",
+        "version": "Versione",
         "status": "Stato",
         "retries": "Retries",
         "failedSteps": "Failed Steps",
@@ -595,6 +595,71 @@
         "unknown": "Validation status unknown"
       }
     },
+    "form": {
+      "nameLabel": "Nome del workflow",
+      "versionLabel": "Versione",
+      "descriptionLabel": "Descrizione",
+      "latestPublishedVersion": "Ultima versione pubblicata: {{version}}",
+      "triggerTypeLabel": "Tipo di trigger",
+      "triggerTypePlaceholder": "Seleziona tipo di trigger",
+      "triggerTypeHelp": "Scegli se questo workflow si avvia manualmente o da un evento. Le pianificazioni riutilizzabili si gestiscono nel pannello di controllo.",
+      "manualTriggerNote": "Questo workflow non ha trigger. Può comunque essere eseguito manualmente e pianificato dal pannello di controllo una volta che ha uno schema del payload bloccato e una versione pubblicata.",
+      "eventCategoryLabel": "Categoria evento",
+      "eventLabel": "Evento",
+      "selectEventCategory": "Seleziona categoria evento",
+      "selectEvent": "Select event",
+      "selectCategoryFirst": "Seleziona prima una categoria",
+      "inputDataLabel": "Dati di input del workflow",
+      "inputDataEvent": "I passaggi leggono i dati dal trigger selezionato.",
+      "inputDataTimePrefix": "Questo workflow riceve un payload fisso di orologio sintetico. Il contratto è bloccato su",
+      "inputDataManualPrefix": "Nessun trigger usa",
+      "inputDataManualSuffix": "per impostazione predefinita. Modificalo nelle impostazioni avanzate dello schema se questo workflow necessita di un contratto manuale diverso.",
+      "triggerMappingRequired": "È richiesta una mappatura del trigger. Apri le impostazioni avanzate dello schema per configurarla.",
+      "schemaLocked": "Versione schema bloccata",
+      "schemaAutoSelected": "Selezionato automaticamente dal trigger",
+      "schemaSuffixClock": " al contratto del payload dell’orologio fisso.",
+      "schemaSuffixPinned": " per mantenere stabile questo workflow se gli schemi del trigger cambiano.",
+      "chooseTriggerHint": "Scegli un trigger per definire i campi disponibili.",
+      "schemaLoadErrorPrefix": "Impossibile caricare le informazioni dello schema per",
+      "schemaLoadErrorSuffix": "Controlla la voce nel catalogo degli eventi.",
+      "draftDifferent": "Il contratto della bozza differisce da quello pubblicato",
+      "publishedUsesPrefix": "La versione pubblicata usa",
+      "draftResolvesTo": "Questa bozza risolve attualmente in",
+      "lockToPublished": "Blocca sul contratto pubblicato",
+      "advancedSchemaSettings": "Impostazioni avanzate dello schema",
+      "inferredSchemaPrefix": "Schema dedotto attuale:",
+      "noSchemaInferred": "Nessuno schema ancora dedotto.",
+      "unknownSchemaRef": "Riferimento schema sconosciuto. Apri le impostazioni avanzate dello schema e scegli una versione valida.",
+      "workflowStepsHeading": "Passaggi del workflow",
+      "workflowStepsListHint": "Trascina i passaggi per riordinarli o spostarli tra le pipeline.",
+      "workflowStepsGraphHint": "Scorri/ingrandisci il grafo. I rami vengono visualizzati in corsie separate.",
+      "workflowStepsViewAria": "Vista dei passaggi del workflow",
+      "warningsCount": "{{count}} avvisi"
+    },
+    "stepPanel": {
+      "readOnly": "Accesso in sola lettura: la modifica dei passaggi è disabilitata.",
+      "selectPrompt": "Seleziona un passaggio per modificarne la configurazione."
+    },
+    "stepConfig": {
+      "eventLabel": "Evento",
+      "selectEvent": "Select event",
+      "correlationKey": "Espressione chiave di correlazione",
+      "payloadFilters": "Filtri del payload",
+      "addFilter": "Aggiungi filtro",
+      "noFiltersConfigured": "Nessun filtro configurato.",
+      "loadingEventSchema": "Caricamento campi dello schema evento...",
+      "timeoutMs": "Timeout (ms)",
+      "assignOnResume": "Assegna alla ripresa",
+      "fieldLabel": "Campo",
+      "fieldPathLabel": "Percorso campo",
+      "dataContextToggle": "A quali dati posso accedere qui?"
+    },
+    "mappingExpr": {
+      "add": "Aggiungi",
+      "remove": "Rimuovi",
+      "empty": "Nessuna mappatura.",
+      "expressionLabel": "Espressione"
+    },
     "validation": {
       "badge": {
         "invalid": "Non valido",
@@ -628,12 +693,17 @@
       "hidePalette": "Hide palette",
       "searchPlaceholder": "Cerca",
       "dragHint": "Drop on pipeline to add",
+      "chooseAction": "Scegli un’azione dopo aver aggiunto questo passaggio",
+      "returnsSummary": "Ritorna: {{list}}{{suffix}}",
       "categories": {
         "Control": "Control",
         "Core": "Core",
         "Transform": "Transform",
         "AI": "AI",
-        "Apps": "Apps"
+        "Apps": "Apps",
+        "Action": "Azione",
+        "Email": "Email",
+        "Nodes": "Nodi"
       },
       "controlBlocks": {
         "control.if": {
@@ -655,6 +725,40 @@
         "control.return": {
           "label": "Ritorna",
           "description": "Stop execution"
+        }
+      },
+      "nodes": {
+        "state.set": {
+          "label": "Imposta stato",
+          "description": "Aggiorna lo stato del workflow"
+        },
+        "event.wait": {
+          "label": "Attendi evento",
+          "description": "Attendi un evento esterno"
+        },
+        "time.wait": {
+          "label": "Attendi tempo",
+          "description": "Attendi una durata o fino a una data/ora"
+        },
+        "transform.assign": {
+          "label": "Assegna",
+          "description": "Assegna valori al payload o alle variabili"
+        },
+        "action.call": {
+          "label": "Chiama azione",
+          "description": "Invoca un’azione registrata"
+        },
+        "email.parseBody": {
+          "label": "Analizza corpo email",
+          "description": "Analizza e sanifica il corpo della risposta email"
+        },
+        "email.renderCommentBlocks": {
+          "label": "Rendi i blocchi di commento",
+          "description": "Rendi i blocchi di commento dal contenuto email"
+        },
+        "human.task": {
+          "label": "Attività umana",
+          "description": "Metti in pausa fino al completamento dell’attività umana"
         }
       }
     },
@@ -994,7 +1098,7 @@
       "emptyPrefix": "No vars yet. Use",
       "saveOutput": "Save output",
       "emptyConjunction": "or an",
-      "assignStep": "Assign",
+      "assignStep": "Assegna",
       "emptySuffix": "step to populate"
     },
     "loop": {
@@ -1301,11 +1405,11 @@
       "ifCondition": "If Condition",
       "forEach": "For Each",
       "tryCatch": "Try/Catch",
-      "waitForEvent": "Wait for Event",
-      "waitForTime": "Wait for Time",
-      "humanTask": "Human Task",
-      "setState": "Set State",
-      "assign": "Assign"
+      "waitForEvent": "Attendi evento",
+      "waitForTime": "Attendi tempo",
+      "humanTask": "Attività umana",
+      "setState": "Imposta stato",
+      "assign": "Assegna"
     },
     "stepCard": {
       "lastStatus": "Last status: {{status}} ({{timestamp}})",
@@ -1428,7 +1532,7 @@
         "workflowPlaceholder": "Choose a workflow",
         "name": "Schedule name",
         "namePlaceholder": "Month-end AP sync",
-        "triggerType": "Trigger type",
+        "triggerType": "Tipo di trigger",
         "enabled": "Enabled",
         "enabledHelp": "Schedule will run when valid.",
         "disabledHelp": "Schedule will stay paused until resumed.",

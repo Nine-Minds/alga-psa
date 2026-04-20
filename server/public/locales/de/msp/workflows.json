@@ -595,6 +595,71 @@
         "unknown": "Validierungsstatus unbekannt"
       }
     },
+    "form": {
+      "nameLabel": "Workflow-Name",
+      "versionLabel": "Version",
+      "descriptionLabel": "Beschreibung",
+      "latestPublishedVersion": "Zuletzt veröffentlichte Version: {{version}}",
+      "triggerTypeLabel": "Auslösertyp",
+      "triggerTypePlaceholder": "Auslösertyp auswählen",
+      "triggerTypeHelp": "Wählen Sie, ob dieser Workflow manuell oder durch ein Ereignis startet. Wiederverwendbare Zeitpläne werden im Workflow-Steuerbereich verwaltet.",
+      "manualTriggerNote": "Dieser Workflow hat keinen Auslöser. Er kann trotzdem manuell ausgeführt und aus dem Workflow-Steuerbereich geplant werden, sobald ein angepinntes Nutzdatenschema und eine veröffentlichte Version vorhanden sind.",
+      "eventCategoryLabel": "Ereigniskategorie",
+      "eventLabel": "Ereignis",
+      "selectEventCategory": "Ereigniskategorie auswählen",
+      "selectEvent": "Select event",
+      "selectCategoryFirst": "Wählen Sie zuerst eine Kategorie",
+      "inputDataLabel": "Workflow-Eingabedaten",
+      "inputDataEvent": "Ihre Schritte lesen Daten aus dem ausgewählten Auslöser.",
+      "inputDataTimePrefix": "Dieser Workflow erhält eine feste synthetische Taktgeber-Nutzdaten. Der Vertrag ist angepinnt an",
+      "inputDataManualPrefix": "Kein Auslöser verwendet",
+      "inputDataManualSuffix": "standardmäßig. Ändern Sie ihn in den erweiterten Schema-Einstellungen, wenn dieser Workflow einen anderen manuellen Vertrag benötigt.",
+      "triggerMappingRequired": "Eine Auslöserzuordnung ist erforderlich. Öffnen Sie die erweiterten Schema-Einstellungen zur Konfiguration.",
+      "schemaLocked": "Schemaversion gesperrt",
+      "schemaAutoSelected": "Automatisch aus dem Auslöser ausgewählt",
+      "schemaSuffixClock": " am festen Taktgeber-Vertrag.",
+      "schemaSuffixPinned": ", damit dieser Workflow stabil bleibt, wenn sich Auslöser-Schemata ändern.",
+      "chooseTriggerHint": "Wählen Sie einen Auslöser, um verfügbare Felder zu definieren.",
+      "schemaLoadErrorPrefix": "Schema-Informationen konnten nicht geladen werden für",
+      "schemaLoadErrorSuffix": "Überprüfen Sie den Ereigniskatalog-Eintrag.",
+      "draftDifferent": "Entwurfsvertrag weicht von veröffentlichtem Vertrag ab",
+      "publishedUsesPrefix": "Die veröffentlichte Version verwendet",
+      "draftResolvesTo": "Dieser Entwurf verweist derzeit auf",
+      "lockToPublished": "Auf veröffentlichten Vertrag sperren",
+      "advancedSchemaSettings": "Erweiterte Schema-Einstellungen",
+      "inferredSchemaPrefix": "Aktuell abgeleitetes Schema:",
+      "noSchemaInferred": "Noch kein Schema abgeleitet.",
+      "unknownSchemaRef": "Unbekannte Schemareferenz. Öffnen Sie die erweiterten Schema-Einstellungen und wählen Sie eine gültige Version.",
+      "workflowStepsHeading": "Workflow-Schritte",
+      "workflowStepsListHint": "Ziehen Sie Schritte, um sie umzusortieren oder zwischen Pipes zu verschieben.",
+      "workflowStepsGraphHint": "Schwenken/zoomen Sie den Graphen. Verzweigungen werden als separate Spuren dargestellt.",
+      "workflowStepsViewAria": "Workflow-Schritte-Ansicht",
+      "warningsCount": "{{count}} Warnungen"
+    },
+    "stepPanel": {
+      "readOnly": "Schreibgeschützter Zugriff: Schrittbearbeitung ist deaktiviert.",
+      "selectPrompt": "Wählen Sie einen Schritt, um dessen Konfiguration zu bearbeiten."
+    },
+    "stepConfig": {
+      "eventLabel": "Ereignis",
+      "selectEvent": "Select event",
+      "correlationKey": "Korrelationsschlüssel-Ausdruck",
+      "payloadFilters": "Nutzdaten-Filter",
+      "addFilter": "Filter hinzufügen",
+      "noFiltersConfigured": "Keine Filter konfiguriert.",
+      "loadingEventSchema": "Ereignis-Schemafelder werden geladen...",
+      "timeoutMs": "Zeitüberschreitung (ms)",
+      "assignOnResume": "Bei Fortsetzung zuweisen",
+      "fieldLabel": "Feld",
+      "fieldPathLabel": "Feldpfad",
+      "dataContextToggle": "Auf welche Daten kann ich hier zugreifen?"
+    },
+    "mappingExpr": {
+      "add": "Hinzufügen",
+      "remove": "Entfernen",
+      "empty": "Noch keine Zuordnungen.",
+      "expressionLabel": "Ausdruck"
+    },
     "validation": {
       "badge": {
         "invalid": "Ungültig",
@@ -628,12 +693,17 @@
       "hidePalette": "Palette ausblenden",
       "searchPlaceholder": "Suchen",
       "dragHint": "Auf Pipeline ablegen, um hinzuzufügen",
+      "chooseAction": "Wählen Sie eine Aktion, nachdem Sie diesen Schritt hinzugefügt haben",
+      "returnsSummary": "Gibt zurück: {{list}}{{suffix}}",
       "categories": {
         "Control": "Steuerung",
         "Core": "Kern",
         "Transform": "Transformieren",
         "AI": "KI",
-        "Apps": "Apps"
+        "Apps": "Apps",
+        "Action": "Aktion",
+        "Email": "E-Mail",
+        "Nodes": "Knoten"
       },
       "controlBlocks": {
         "control.if": {
@@ -655,6 +725,40 @@
         "control.return": {
           "label": "Zurückgeben",
           "description": "Ausführung beenden"
+        }
+      },
+      "nodes": {
+        "state.set": {
+          "label": "Status setzen",
+          "description": "Workflow-Status aktualisieren"
+        },
+        "event.wait": {
+          "label": "Auf Ereignis warten",
+          "description": "Auf ein externes Ereignis warten"
+        },
+        "time.wait": {
+          "label": "Auf Zeit warten",
+          "description": "Auf eine Dauer oder bis zu einem Datum/Uhrzeit warten"
+        },
+        "transform.assign": {
+          "label": "Zuweisen",
+          "description": "Werte in Nutzdaten oder Variablen zuweisen"
+        },
+        "action.call": {
+          "label": "Aktion aufrufen",
+          "description": "Eine registrierte Aktion aufrufen"
+        },
+        "email.parseBody": {
+          "label": "E-Mail-Inhalt analysieren",
+          "description": "E-Mail-Antwort-Inhalt analysieren und bereinigen"
+        },
+        "email.renderCommentBlocks": {
+          "label": "Kommentarblöcke rendern",
+          "description": "Kommentarblöcke aus E-Mail-Inhalt rendern"
+        },
+        "human.task": {
+          "label": "Menschliche Aufgabe",
+          "description": "Pausieren bis zur Fertigstellung einer menschlichen Aufgabe"
         }
       }
     },
@@ -1301,10 +1405,10 @@
       "ifCondition": "If Condition",
       "forEach": "Für jedes",
       "tryCatch": "Versuchen/Abfangen",
-      "waitForEvent": "Wait for Event",
-      "waitForTime": "Wait for Time",
-      "humanTask": "Human Task",
-      "setState": "Set State",
+      "waitForEvent": "Auf Ereignis warten",
+      "waitForTime": "Auf Zeit warten",
+      "humanTask": "Menschliche Aufgabe",
+      "setState": "Status setzen",
       "assign": "Zuweisen"
     },
     "stepCard": {
@@ -1428,7 +1532,7 @@
         "workflowPlaceholder": "Choose a workflow",
         "name": "Schedule name",
         "namePlaceholder": "Month-end AP sync",
-        "triggerType": "Trigger type",
+        "triggerType": "Auslösertyp",
         "enabled": "Enabled",
         "enabledHelp": "Schedule will run when valid.",
         "disabledHelp": "Schedule will stay paused until resumed.",

@@ -65,7 +65,7 @@
     "table": {
       "runId": "Run ID",
       "workflow": "Workflow",
-      "version": "Version",
+      "version": "Versión",
       "tenant": "Inquilino",
       "triggerPayload": "Trigger payload",
       "status": "Estado",
@@ -516,7 +516,7 @@
       "columns": {
         "runId": "Run ID",
         "workflow": "Workflow",
-        "version": "Version",
+        "version": "Versión",
         "status": "Estado",
         "retries": "Retries",
         "failedSteps": "Failed Steps",
@@ -595,6 +595,71 @@
         "unknown": "Estado de validación desconocido"
       }
     },
+    "form": {
+      "nameLabel": "Nombre del flujo de trabajo",
+      "versionLabel": "Versión",
+      "descriptionLabel": "Descripción",
+      "latestPublishedVersion": "Última versión publicada: {{version}}",
+      "triggerTypeLabel": "Tipo de disparador",
+      "triggerTypePlaceholder": "Seleccionar tipo de disparador",
+      "triggerTypeHelp": "Elija si este flujo de trabajo se inicia manualmente o desde un evento. Las programaciones reutilizables se gestionan en el panel de control.",
+      "manualTriggerNote": "Este flujo de trabajo no tiene disparador. Aun así se puede ejecutar manualmente y programar desde el panel de control una vez tenga un esquema de carga útil anclado y una versión publicada.",
+      "eventCategoryLabel": "Categoría del evento",
+      "eventLabel": "Evento",
+      "selectEventCategory": "Seleccionar categoría de evento",
+      "selectEvent": "Select event",
+      "selectCategoryFirst": "Seleccione primero una categoría",
+      "inputDataLabel": "Datos de entrada del flujo de trabajo",
+      "inputDataEvent": "Sus pasos leen los datos desde el disparador seleccionado.",
+      "inputDataTimePrefix": "Este flujo de trabajo recibe una carga útil de reloj sintético fija. El contrato está anclado a",
+      "inputDataManualPrefix": "Ningún disparador usa",
+      "inputDataManualSuffix": "de forma predeterminada. Cámbielo en los ajustes avanzados del esquema si este flujo de trabajo requiere un contrato manual distinto.",
+      "triggerMappingRequired": "Se requiere un mapeo del disparador. Abra los ajustes avanzados del esquema para configurarlo.",
+      "schemaLocked": "Versión del esquema bloqueada",
+      "schemaAutoSelected": "Seleccionado automáticamente desde el disparador",
+      "schemaSuffixClock": " al contrato fijo de carga útil del reloj.",
+      "schemaSuffixPinned": " para mantener este flujo de trabajo estable si los esquemas del disparador cambian.",
+      "chooseTriggerHint": "Elija un disparador para definir los campos disponibles.",
+      "schemaLoadErrorPrefix": "No se pudo cargar la información del esquema para",
+      "schemaLoadErrorSuffix": "Verifique la entrada del catálogo de eventos.",
+      "draftDifferent": "El contrato del borrador difiere del publicado",
+      "publishedUsesPrefix": "La versión publicada usa",
+      "draftResolvesTo": "Este borrador se resuelve actualmente en",
+      "lockToPublished": "Bloquear al contrato publicado",
+      "advancedSchemaSettings": "Ajustes avanzados del esquema",
+      "inferredSchemaPrefix": "Esquema inferido actual:",
+      "noSchemaInferred": "Aún no se ha inferido ningún esquema.",
+      "unknownSchemaRef": "Referencia de esquema desconocida. Abra los ajustes avanzados del esquema y elija una versión válida.",
+      "workflowStepsHeading": "Pasos del flujo de trabajo",
+      "workflowStepsListHint": "Arrastre los pasos para reordenarlos o moverlos entre los canales.",
+      "workflowStepsGraphHint": "Desplácese/acerque el gráfico. Las ramas se muestran en carriles separados.",
+      "workflowStepsViewAria": "Vista de los pasos del flujo de trabajo",
+      "warningsCount": "{{count}} advertencias"
+    },
+    "stepPanel": {
+      "readOnly": "Acceso de solo lectura: la edición de pasos está deshabilitada.",
+      "selectPrompt": "Seleccione un paso para editar su configuración."
+    },
+    "stepConfig": {
+      "eventLabel": "Evento",
+      "selectEvent": "Select event",
+      "correlationKey": "Expresión de clave de correlación",
+      "payloadFilters": "Filtros de carga útil",
+      "addFilter": "Añadir filtro",
+      "noFiltersConfigured": "No hay filtros configurados.",
+      "loadingEventSchema": "Cargando campos del esquema del evento...",
+      "timeoutMs": "Tiempo de espera (ms)",
+      "assignOnResume": "Asignar al reanudar",
+      "fieldLabel": "Campo",
+      "fieldPathLabel": "Ruta del campo",
+      "dataContextToggle": "¿A qué datos puedo acceder aquí?"
+    },
+    "mappingExpr": {
+      "add": "Añadir",
+      "remove": "Eliminar",
+      "empty": "Aún no hay mapeos.",
+      "expressionLabel": "Expresión"
+    },
     "validation": {
       "badge": {
         "invalid": "No válido",
@@ -628,12 +693,17 @@
       "hidePalette": "Ocultar paleta",
       "searchPlaceholder": "Buscar",
       "dragHint": "Suelte en el canal para añadir",
+      "chooseAction": "Elija una acción tras añadir este paso",
+      "returnsSummary": "Devuelve: {{list}}{{suffix}}",
       "categories": {
         "Control": "Control",
         "Core": "Núcleo",
         "Transform": "Transformar",
         "AI": "IA",
-        "Apps": "Aplicaciones"
+        "Apps": "Aplicaciones",
+        "Action": "Acción",
+        "Email": "Correo",
+        "Nodes": "Nodos"
       },
       "controlBlocks": {
         "control.if": {
@@ -655,6 +725,40 @@
         "control.return": {
           "label": "Retornar",
           "description": "Detener ejecución"
+        }
+      },
+      "nodes": {
+        "state.set": {
+          "label": "Establecer estado",
+          "description": "Actualizar el estado del flujo de trabajo"
+        },
+        "event.wait": {
+          "label": "Esperar un evento",
+          "description": "Esperar un evento externo"
+        },
+        "time.wait": {
+          "label": "Esperar un tiempo",
+          "description": "Esperar una duración o hasta una fecha/hora"
+        },
+        "transform.assign": {
+          "label": "Asignar",
+          "description": "Asignar valores a la carga útil o a las variables"
+        },
+        "action.call": {
+          "label": "Llamar acción",
+          "description": "Invocar una acción registrada"
+        },
+        "email.parseBody": {
+          "label": "Analizar cuerpo del correo",
+          "description": "Analizar y sanear el cuerpo de la respuesta de correo"
+        },
+        "email.renderCommentBlocks": {
+          "label": "Renderizar bloques de comentario",
+          "description": "Renderizar bloques de comentario desde el contenido del correo"
+        },
+        "human.task": {
+          "label": "Tarea humana",
+          "description": "Pausar para la finalización de una tarea humana"
         }
       }
     },
@@ -1301,10 +1405,10 @@
       "ifCondition": "If Condition",
       "forEach": "Para cada",
       "tryCatch": "Intentar/Capturar",
-      "waitForEvent": "Wait for Event",
-      "waitForTime": "Wait for Time",
-      "humanTask": "Human Task",
-      "setState": "Set State",
+      "waitForEvent": "Esperar un evento",
+      "waitForTime": "Esperar un tiempo",
+      "humanTask": "Tarea humana",
+      "setState": "Establecer estado",
       "assign": "Asignar"
     },
     "stepCard": {
@@ -1428,7 +1532,7 @@
         "workflowPlaceholder": "Choose a workflow",
         "name": "Schedule name",
         "namePlaceholder": "Month-end AP sync",
-        "triggerType": "Trigger type",
+        "triggerType": "Tipo de disparador",
         "enabled": "Enabled",
         "enabledHelp": "Schedule will run when valid.",
         "disabledHelp": "Schedule will stay paused until resumed.",

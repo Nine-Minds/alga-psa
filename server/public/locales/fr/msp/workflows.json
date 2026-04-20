@@ -595,6 +595,71 @@
         "unknown": "Statut de validation inconnu"
       }
     },
+    "form": {
+      "nameLabel": "Nom du workflow",
+      "versionLabel": "Version",
+      "descriptionLabel": "Description",
+      "latestPublishedVersion": "Dernière version publiée : {{version}}",
+      "triggerTypeLabel": "Type de déclencheur",
+      "triggerTypePlaceholder": "Sélectionner le type de déclencheur",
+      "triggerTypeHelp": "Choisissez si ce workflow démarre manuellement ou depuis un événement. Les planifications réutilisables se gèrent dans le panneau de contrôle.",
+      "manualTriggerNote": "Ce workflow n’a pas de déclencheur. Il peut être exécuté manuellement et planifié depuis le panneau de contrôle dès qu’il a un schéma de charge utile épinglé et une version publiée.",
+      "eventCategoryLabel": "Catégorie d’événement",
+      "eventLabel": "Événement",
+      "selectEventCategory": "Sélectionner une catégorie",
+      "selectEvent": "Select event",
+      "selectCategoryFirst": "Sélectionnez d’abord une catégorie",
+      "inputDataLabel": "Données d’entrée du workflow",
+      "inputDataEvent": "Vos étapes lisent les données depuis le déclencheur sélectionné.",
+      "inputDataTimePrefix": "Ce workflow reçoit une charge utile d’horloge synthétique fixe. Le contrat est épinglé à",
+      "inputDataManualPrefix": "Aucun déclencheur utilise",
+      "inputDataManualSuffix": "par défaut. Modifiez-le dans les paramètres de schéma avancés si ce workflow a besoin d’un contrat manuel différent.",
+      "triggerMappingRequired": "Un mappage de déclencheur est requis. Ouvrez les paramètres de schéma avancés pour le configurer.",
+      "schemaLocked": "Version de schéma verrouillée",
+      "schemaAutoSelected": "Sélectionné automatiquement depuis le déclencheur",
+      "schemaSuffixClock": " au contrat de charge utile d’horloge fixe.",
+      "schemaSuffixPinned": " pour garder ce workflow stable si les schémas de déclencheur changent.",
+      "chooseTriggerHint": "Choisissez un déclencheur pour définir les champs disponibles.",
+      "schemaLoadErrorPrefix": "Impossible de charger les informations de schéma pour",
+      "schemaLoadErrorSuffix": "Vérifiez l’entrée du catalogue d’événements.",
+      "draftDifferent": "Le contrat du brouillon diffère du contrat publié",
+      "publishedUsesPrefix": "La version publiée utilise",
+      "draftResolvesTo": "Ce brouillon se résout actuellement en",
+      "lockToPublished": "Verrouiller sur le contrat publié",
+      "advancedSchemaSettings": "Paramètres de schéma avancés",
+      "inferredSchemaPrefix": "Schéma inféré actuel :",
+      "noSchemaInferred": "Aucun schéma inféré pour l’instant.",
+      "unknownSchemaRef": "Référence de schéma inconnue. Ouvrez les paramètres de schéma avancés et choisissez une version valide.",
+      "workflowStepsHeading": "Étapes du workflow",
+      "workflowStepsListHint": "Faites glisser les étapes pour les réordonner ou les déplacer entre les pipelines.",
+      "workflowStepsGraphHint": "Déplacez/zoomez dans le graphe. Les branches s’affichent dans des voies séparées.",
+      "workflowStepsViewAria": "Vue des étapes du workflow",
+      "warningsCount": "{{count}} avertissements"
+    },
+    "stepPanel": {
+      "readOnly": "Accès en lecture seule : l’édition des étapes est désactivée.",
+      "selectPrompt": "Sélectionnez une étape pour modifier sa configuration."
+    },
+    "stepConfig": {
+      "eventLabel": "Événement",
+      "selectEvent": "Select event",
+      "correlationKey": "Expression de clé de corrélation",
+      "payloadFilters": "Filtres de charge utile",
+      "addFilter": "Ajouter un filtre",
+      "noFiltersConfigured": "Aucun filtre configuré.",
+      "loadingEventSchema": "Chargement des champs de schéma d’événement...",
+      "timeoutMs": "Délai d’attente (ms)",
+      "assignOnResume": "Assigner à la reprise",
+      "fieldLabel": "Champ",
+      "fieldPathLabel": "Chemin du champ",
+      "dataContextToggle": "À quelles données puis-je accéder ici ?"
+    },
+    "mappingExpr": {
+      "add": "Ajouter",
+      "remove": "Supprimer",
+      "empty": "Aucun mappage pour l’instant.",
+      "expressionLabel": "Expression"
+    },
     "validation": {
       "badge": {
         "invalid": "Invalide",
@@ -628,12 +693,17 @@
       "hidePalette": "Masquer la palette",
       "searchPlaceholder": "Recherche",
       "dragHint": "Déposez sur le pipeline pour ajouter",
+      "chooseAction": "Choisissez une action après avoir ajouté cette étape",
+      "returnsSummary": "Retourne : {{list}}{{suffix}}",
       "categories": {
         "Control": "Contrôle",
         "Core": "Cœur",
         "Transform": "Transformer",
         "AI": "IA",
-        "Apps": "Applications"
+        "Apps": "Applications",
+        "Action": "Action",
+        "Email": "E-mail",
+        "Nodes": "Nœuds"
       },
       "controlBlocks": {
         "control.if": {
@@ -655,6 +725,40 @@
         "control.return": {
           "label": "Retour",
           "description": "Arrêter l’exécution"
+        }
+      },
+      "nodes": {
+        "state.set": {
+          "label": "Définir l’état",
+          "description": "Mettre à jour l’état du workflow"
+        },
+        "event.wait": {
+          "label": "Attendre un événement",
+          "description": "Attendre un événement externe"
+        },
+        "time.wait": {
+          "label": "Attendre un délai",
+          "description": "Attendre une durée ou jusqu’à une date/heure"
+        },
+        "transform.assign": {
+          "label": "Assigner",
+          "description": "Assigner des valeurs à la charge utile ou aux variables"
+        },
+        "action.call": {
+          "label": "Appeler une action",
+          "description": "Invoquer une action enregistrée"
+        },
+        "email.parseBody": {
+          "label": "Analyser le corps de l’e-mail",
+          "description": "Analyser et nettoyer le corps de la réponse par e-mail"
+        },
+        "email.renderCommentBlocks": {
+          "label": "Restituer les blocs de commentaire",
+          "description": "Restituer les blocs de commentaire depuis le contenu de l’e-mail"
+        },
+        "human.task": {
+          "label": "Tâche humaine",
+          "description": "Mettre en pause pour l’achèvement d’une tâche humaine"
         }
       }
     },
@@ -1301,10 +1405,10 @@
       "ifCondition": "If Condition",
       "forEach": "Pour chaque",
       "tryCatch": "Tenter/Capturer",
-      "waitForEvent": "Wait for Event",
-      "waitForTime": "Wait for Time",
-      "humanTask": "Human Task",
-      "setState": "Set State",
+      "waitForEvent": "Attendre un événement",
+      "waitForTime": "Attendre un délai",
+      "humanTask": "Tâche humaine",
+      "setState": "Définir l’état",
       "assign": "Assigner"
     },
     "stepCard": {
@@ -1428,7 +1532,7 @@
         "workflowPlaceholder": "Choose a workflow",
         "name": "Schedule name",
         "namePlaceholder": "Month-end AP sync",
-        "triggerType": "Trigger type",
+        "triggerType": "Type de déclencheur",
         "enabled": "Enabled",
         "enabledHelp": "Schedule will run when valid.",
         "disabledHelp": "Schedule will stay paused until resumed.",

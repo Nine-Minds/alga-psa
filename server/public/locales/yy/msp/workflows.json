@@ -595,6 +595,71 @@
         "unknown": "55555"
       }
     },
+    "form": {
+      "nameLabel": "55555",
+      "versionLabel": "55555",
+      "descriptionLabel": "55555",
+      "latestPublishedVersion": "55555 {{version}} 55555",
+      "triggerTypeLabel": "55555",
+      "triggerTypePlaceholder": "55555",
+      "triggerTypeHelp": "55555",
+      "manualTriggerNote": "55555",
+      "eventCategoryLabel": "55555",
+      "eventLabel": "55555",
+      "selectEventCategory": "55555",
+      "selectEvent": "55555",
+      "selectCategoryFirst": "55555",
+      "inputDataLabel": "55555",
+      "inputDataEvent": "55555",
+      "inputDataTimePrefix": "55555",
+      "inputDataManualPrefix": "55555",
+      "inputDataManualSuffix": "55555",
+      "triggerMappingRequired": "55555",
+      "schemaLocked": "55555",
+      "schemaAutoSelected": "55555",
+      "schemaSuffixClock": "55555",
+      "schemaSuffixPinned": "55555",
+      "chooseTriggerHint": "55555",
+      "schemaLoadErrorPrefix": "55555",
+      "schemaLoadErrorSuffix": "55555",
+      "draftDifferent": "55555",
+      "publishedUsesPrefix": "55555",
+      "draftResolvesTo": "55555",
+      "lockToPublished": "55555",
+      "advancedSchemaSettings": "55555",
+      "inferredSchemaPrefix": "55555",
+      "noSchemaInferred": "55555",
+      "unknownSchemaRef": "55555",
+      "workflowStepsHeading": "55555",
+      "workflowStepsListHint": "55555",
+      "workflowStepsGraphHint": "55555",
+      "workflowStepsViewAria": "55555",
+      "warningsCount": "55555 {{count}} 55555"
+    },
+    "stepPanel": {
+      "readOnly": "55555",
+      "selectPrompt": "55555"
+    },
+    "stepConfig": {
+      "eventLabel": "55555",
+      "selectEvent": "55555",
+      "correlationKey": "55555",
+      "payloadFilters": "55555",
+      "addFilter": "55555",
+      "noFiltersConfigured": "55555",
+      "loadingEventSchema": "55555",
+      "timeoutMs": "55555",
+      "assignOnResume": "55555",
+      "fieldLabel": "55555",
+      "fieldPathLabel": "55555",
+      "dataContextToggle": "55555"
+    },
+    "mappingExpr": {
+      "add": "55555",
+      "remove": "55555",
+      "empty": "55555",
+      "expressionLabel": "55555"
+    },
     "validation": {
       "badge": {
         "invalid": "55555",
@@ -628,12 +693,17 @@
       "hidePalette": "55555",
       "searchPlaceholder": "55555",
       "dragHint": "55555",
+      "chooseAction": "55555",
+      "returnsSummary": "55555 {{list}} 55555 {{suffix}} 55555",
       "categories": {
         "Control": "55555",
         "Core": "55555",
         "Transform": "55555",
         "AI": "55555",
-        "Apps": "55555"
+        "Apps": "55555",
+        "Action": "55555",
+        "Email": "55555",
+        "Nodes": "55555"
       },
       "controlBlocks": {
         "control.if": {
@@ -653,6 +723,40 @@
           "description": "55555"
         },
         "control.return": {
+          "label": "55555",
+          "description": "55555"
+        }
+      },
+      "nodes": {
+        "state.set": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "event.wait": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "time.wait": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "transform.assign": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "action.call": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "email.parseBody": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "email.renderCommentBlocks": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "human.task": {
           "label": "55555",
           "description": "55555"
         }

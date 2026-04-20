@@ -3150,20 +3150,30 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           ? extractSchemaFields(action.outputSchema, action.outputSchema).map(f => f.name)
           : [];
 
+        const rawLabel = node.ui?.label || node.id;
+        const rawDescription = node.ui?.description || node.id;
+        const translatedLabel = t(`designer.palette.nodes.${node.id}.label`, { defaultValue: rawLabel });
+        const translatedDescription = t(`designer.palette.nodes.${node.id}.description`, { defaultValue: rawDescription });
         return {
           id: node.id,
-          label: node.ui?.label || node.id,
-          description: node.ui?.description || node.id,
+          label: translatedLabel,
+          description: translatedDescription,
           category: node.ui?.category || 'Nodes',
           type: node.id,
           sortOrder: 0,
           outputSummary: outputFields.length > 0
-            ? `Returns: ${outputFields.slice(0, 3).join(', ')}${outputFields.length > 3 ? '...' : ''}`
+            ? t('designer.palette.returnsSummary', {
+              defaultValue: 'Returns: {{list}}{{suffix}}',
+              list: outputFields.slice(0, 3).join(', '),
+              suffix: outputFields.length > 3 ? '...' : '',
+            })
             : undefined,
           searchIndex: buildPaletteSearchIndex([
             node.id,
             node.ui?.label,
             node.ui?.description,
+            rawLabel,
+            translatedLabel,
             ...outputFields
           ])
         };
@@ -3202,7 +3212,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           sortOrder: index,
           outputSummary: actionLabels.length > 0
             ? `${actionLabels.slice(0, 3).join(', ')}${actionLabels.length > 3 ? '...' : ''}`
-            : 'Choose an action after adding this step',
+            : t('designer.palette.chooseAction', { defaultValue: 'Choose an action after adding this step' }),
           searchIndex: buildPaletteSearchIndex([
             record.groupKey,
             record.label,
@@ -3585,10 +3595,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   />
                 </div>
               ) : (
-                <div className="text-sm text-gray-500">Read-only access: step editing is disabled.</div>
+                <div className="text-sm text-gray-500">
+                  {t('designer.stepPanel.readOnly', { defaultValue: 'Read-only access: step editing is disabled.' })}
+                </div>
               )
             ) : (
-              <div className="text-sm text-gray-500">Select a step to edit its configuration.</div>
+              <div className="text-sm text-gray-500">
+                {t('designer.stepPanel.selectPrompt', { defaultValue: 'Select a step to edit its configuration.' })}
+              </div>
             )}
 
             {currentValidationErrors.length > 0 && activeDefinition && (
@@ -3708,13 +3722,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   <div className="grid grid-cols-2 gap-4">
                     <Input
                       id="workflow-designer-name"
-                      label="Workflow name"
+                      label={t('designer.form.nameLabel', { defaultValue: 'Workflow name' })}
                       value={activeDefinition?.name ?? ''}
                       onChange={(event) => handleDefinitionChange({ name: event.target.value })}
                     />
                     <Input
                       id="workflow-designer-version"
-                      label="Version"
+                      label={t('designer.form.versionLabel', { defaultValue: 'Version' })}
                       type="number"
                       value={activeDefinition?.version ?? 1}
                       onChange={(event) => handleDefinitionChange({ version: Number(event.target.value) })}
@@ -3723,12 +3737,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       id="workflow-designer-published-version"
                       className="col-span-2 text-xs text-gray-500"
                     >
-                      Latest published version: {activeWorkflowRecord?.published_version ?? '—'}
+                      {t('designer.form.latestPublishedVersion', {
+                        defaultValue: 'Latest published version: {{version}}',
+                        version: activeWorkflowRecord?.published_version ?? '—',
+                      })}
                     </div>
                   </div>
                   <TextArea
                     id="workflow-designer-description"
-                    label="Description"
+                    label={t('designer.form.descriptionLabel', { defaultValue: 'Description' })}
                     value={activeDefinition?.description ?? ''}
                     onChange={(event) => handleDefinitionChange({ description: event.target.value })}
                     rows={2}
@@ -3757,26 +3774,30 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                         <div className="space-y-4">
                           <div>
                             <label htmlFor="workflow-designer-trigger-type" className="block text-sm font-medium text-gray-700 mb-1">
-                              Trigger type
+                              {t('designer.form.triggerTypeLabel', { defaultValue: 'Trigger type' })}
                             </label>
                             <SearchableSelect
                               id="workflow-designer-trigger-type"
                               value={currentTriggerSelection}
                               onChange={(value) => handleTriggerTypeSelectionChange((value || 'manual') as TriggerTypeSelection)}
-                              placeholder="Select trigger type"
+                              placeholder={t('designer.form.triggerTypePlaceholder', { defaultValue: 'Select trigger type' })}
                               dropdownMode="overlay"
                               options={workflowTriggerModeOptions}
                               disabled={!canManage}
                             />
                             <div className="mt-1 text-xs text-gray-500">
-                              Choose whether this workflow starts manually or from an event. Reusable schedules are managed in the Workflow Control Panel.
+                              {t('designer.form.triggerTypeHelp', {
+                                defaultValue: 'Choose whether this workflow starts manually or from an event. Reusable schedules are managed in the Workflow Control Panel.',
+                              })}
                             </div>
                           </div>
 
                           <div className="space-y-3">
                             {currentTriggerSelection === 'manual' && (
                               <div className="rounded border border-dashed border-gray-300 bg-gray-50 px-3 py-3 text-xs text-gray-600">
-                                This workflow has no trigger. It can still be run manually and scheduled from the Workflow Control Panel once it has a pinned payload schema and a published version.
+                                {t('designer.form.manualTriggerNote', {
+                                  defaultValue: 'This workflow has no trigger. It can still be run manually and scheduled from the Workflow Control Panel once it has a pinned payload schema and a published version.',
+                                })}
                               </div>
                             )}
 
@@ -3784,7 +3805,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               <div className="space-y-2">
                                 <div>
                                   <label htmlFor="workflow-designer-trigger-event-category" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Event category
+                                    {t('designer.form.eventCategoryLabel', { defaultValue: 'Event category' })}
                                   </label>
                                   {eventCatalogStatus === 'loading' ? (
                                     <Skeleton className="h-10 w-full" />
@@ -3813,7 +3834,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                         handleDefinitionChange({ trigger: undefined });
                                       }}
                                       options={eventCategoryOptions}
-                                      placeholder="Select event category"
+                                      placeholder={t('designer.form.selectEventCategory', { defaultValue: 'Select event category' })}
                                       disabled={!canManage}
                                     />
                                   )}
@@ -3821,7 +3842,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                                 <div>
                                   <label htmlFor="workflow-designer-trigger-event" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Event
+                                    {t('designer.form.eventLabel', { defaultValue: 'Event' })}
                                   </label>
                                   {eventCatalogStatus === 'loading' ? (
                                     <Skeleton className="h-10 w-full" />
@@ -3882,7 +3903,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                             : null
                                         );
                                       }}
-                                      placeholder={selectedTriggerEventCategory ? 'Select event' : 'Select category first'}
+                                      placeholder={selectedTriggerEventCategory
+                                        ? t('designer.form.selectEvent', { defaultValue: 'Select event' })
+                                        : t('designer.form.selectCategoryFirst', { defaultValue: 'Select category first' })}
                                       dropdownMode="overlay"
                                       options={eventOptions}
                                       disabled={eventPickerDisabled}
@@ -4181,24 +4204,34 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                   <div id="workflow-designer-contract-section" className="mt-4">
                     <div>
-                      <Label>Workflow input data</Label>
+                      <Label>{t('designer.form.inputDataLabel', { defaultValue: 'Workflow input data' })}</Label>
                       <div className="text-xs text-gray-500">
                         {activeDefinition?.trigger?.type === 'event' ? (
-                          'Your steps read data from the selected trigger.'
+                          t('designer.form.inputDataEvent', { defaultValue: 'Your steps read data from the selected trigger.' })
                         ) : isTimeTrigger(activeDefinition?.trigger) ? (
                           <>
-                            This workflow receives a fixed synthetic clock payload. The contract is pinned to{' '}
+                            {t('designer.form.inputDataTimePrefix', {
+                              defaultValue: 'This workflow receives a fixed synthetic clock payload. The contract is pinned to',
+                            })}{' '}
                             <span className="font-mono">{WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF}</span>.
                           </>
                         ) : (
                           <>
-                            No trigger uses <span className="font-mono">{EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF}</span> by default. Change it in Advanced schema settings if this workflow needs a different manual contract.
+                            {t('designer.form.inputDataManualPrefix', { defaultValue: 'No trigger uses' })}{' '}
+                            <span className="font-mono">{EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF}</span>{' '}
+                            {t('designer.form.inputDataManualSuffix', {
+                              defaultValue: 'by default. Change it in Advanced schema settings if this workflow needs a different manual contract.',
+                            })}
                           </>
                         )}
                       </div>
                       {activeDefinition?.trigger?.type === 'event' && triggerPayloadMappingInfo.mappingRequired && !contractSettingsExpanded && (
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-warning-foreground">
-                          <span>Trigger mapping is required. Open Advanced schema settings to configure it.</span>
+                          <span>
+                            {t('designer.form.triggerMappingRequired', {
+                              defaultValue: 'Trigger mapping is required. Open Advanced schema settings to configure it.',
+                            })}
+                          </span>
                           {showUseEventSchemaSuggestion && triggerSourceSchemaRef && !triggerPayloadMappingInfo.mappingProvided && (
                             <Button
                               id="workflow-designer-contract-use-event-schema"
@@ -4208,7 +4241,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               className="h-auto px-2 py-1 text-xs text-warning-foreground hover:opacity-80"
                               onClick={handleUseEventSchemaForWorkflowInput}
                             >
-                              Use event schema
+                              {t('designer.eventSchemaDialog.confirm', { defaultValue: 'Use event schema' })}
                             </Button>
                           )}
                         </div>
@@ -4217,13 +4250,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                     <div className="mt-2 text-xs text-gray-700">
                       <span className="font-semibold text-gray-800">
-                        {payloadSchemaModeDraft === 'pinned' ? 'Schema version locked' : 'Auto-selected from trigger'}
+                        {payloadSchemaModeDraft === 'pinned'
+                          ? t('designer.form.schemaLocked', { defaultValue: 'Schema version locked' })
+                          : t('designer.form.schemaAutoSelected', { defaultValue: 'Auto-selected from trigger' })}
                       </span>
                       <span className="text-gray-600">
                         {isTimeTrigger(activeDefinition?.trigger)
-                          ? ' to the fixed clock payload contract.'
+                          ? t('designer.form.schemaSuffixClock', { defaultValue: ' to the fixed clock payload contract.' })
                           : payloadSchemaModeDraft === 'pinned'
-                          ? ' to keep this workflow stable if trigger schemas change.'
+                          ? t('designer.form.schemaSuffixPinned', { defaultValue: ' to keep this workflow stable if trigger schemas change.' })
                           : '.'}
                       </span>
 
@@ -4235,13 +4270,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                       {payloadSchemaModeDraft === 'inferred' && !effectivePayloadSchemaRef && inferredSchemaStatus !== 'loading' && (
                         <div className="mt-2 text-xs text-gray-500">
-                          Choose a trigger to define available fields.
+                          {t('designer.form.chooseTriggerHint', { defaultValue: 'Choose a trigger to define available fields.' })}
                         </div>
                       )}
 
                       {inferredSchemaStatus === 'error' && activeDefinition?.trigger?.type === 'event' && (
                         <div className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                          We could not load schema information for <span className="font-mono">{activeDefinition.trigger.eventName}</span>. Check the event catalog entry.
+                          {t('designer.form.schemaLoadErrorPrefix', { defaultValue: 'We could not load schema information for' })}{' '}
+                          <span className="font-mono">{activeDefinition.trigger.eventName}</span>.{' '}
+                          {t('designer.form.schemaLoadErrorSuffix', { defaultValue: 'Check the event catalog entry.' })}
                         </div>
                       )}
 
@@ -4250,9 +4287,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                         effectivePayloadSchemaRef &&
                         activeWorkflowRecord.payload_schema_ref !== effectivePayloadSchemaRef && (
                         <div className="mt-2 rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
-                          <div className="font-semibold">Draft contract differs from published</div>
+                          <div className="font-semibold">
+                            {t('designer.form.draftDifferent', { defaultValue: 'Draft contract differs from published' })}
+                          </div>
                           <div className="mt-1 opacity-90">
-                            The published version uses <span className="font-mono">{activeWorkflowRecord.payload_schema_ref}</span>. This draft currently resolves to{' '}
+                            {t('designer.form.publishedUsesPrefix', { defaultValue: 'The published version uses' })}{' '}
+                            <span className="font-mono">{activeWorkflowRecord.payload_schema_ref}</span>.{' '}
+                            {t('designer.form.draftResolvesTo', { defaultValue: 'This draft currently resolves to' })}{' '}
                             <span className="font-mono">{effectivePayloadSchemaRef}</span>.
                           </div>
                           {canManage && (
@@ -4273,7 +4314,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                   }
                                 }}
                               >
-                                Lock to published contract
+                                {t('designer.form.lockToPublished', { defaultValue: 'Lock to published contract' })}
                               </Button>
                             </div>
                           )}
@@ -4291,7 +4332,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
                           onClick={() => setContractSettingsExpanded(true)}
                         >
-                          Advanced schema settings
+                          {t('designer.form.advancedSchemaSettings', { defaultValue: 'Advanced schema settings' })}
                         </Button>
                       </div>
                     )}
@@ -4438,11 +4479,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           <div className="mt-3 text-xs text-gray-600">
                             {effectivePayloadSchemaRef ? (
                               <>
-                                Current inferred schema:
+                                {t('designer.form.inferredSchemaPrefix', { defaultValue: 'Current inferred schema:' })}
                                 <span className="ml-1 font-mono break-all">{effectivePayloadSchemaRef}</span>
                               </>
                             ) : (
-                              'No schema inferred yet.'
+                              t('designer.form.noSchemaInferred', { defaultValue: 'No schema inferred yet.' })
                             )}
                           </div>
                         )}
@@ -4454,7 +4495,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       !schemaRefs.includes(effectivePayloadSchemaRef) && (
                       <div className="mt-2 flex items-center justify-between gap-3 text-xs text-destructive">
                         <div>
-                          Unknown schema ref. Open Advanced schema settings and choose a valid schema version.
+                          {t('designer.form.unknownSchemaRef', {
+                            defaultValue: 'Unknown schema ref. Open Advanced schema settings and choose a valid schema version.',
+                          })}
                         </div>
                         {canManage && (
                           <Button
@@ -4737,22 +4780,29 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Workflow Steps</h2>
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        {t('designer.form.workflowStepsHeading', { defaultValue: 'Workflow Steps' })}
+                      </h2>
                       <p className="text-sm text-gray-500">
                         {stepsViewMode === 'list'
-                          ? 'Drag steps to reorder or move between pipes.'
-                          : 'Pan/zoom the graph. Branches render as separate lanes.'}
+                          ? t('designer.form.workflowStepsListHint', { defaultValue: 'Drag steps to reorder or move between pipes.' })
+                          : t('designer.form.workflowStepsGraphHint', { defaultValue: 'Pan/zoom the graph. Branches render as separate lanes.' })}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <ViewSwitcher
-                        aria-label="Workflow steps view"
+                        aria-label={t('designer.form.workflowStepsViewAria', { defaultValue: 'Workflow steps view' })}
                         currentView={stepsViewMode}
                         onChange={(v) => setStepsViewMode(v as 'list' | 'graph')}
                         options={workflowCanvasViewOptions}
                       />
                       {publishWarnings.length > 0 && (
-                        <Badge variant="warning">{publishWarnings.length} warnings</Badge>
+                        <Badge variant="warning">
+                          {t('designer.form.warningsCount', {
+                            defaultValue: '{{count}} warnings',
+                            count: publishWarnings.length,
+                          })}
+                        </Badge>
                       )}
                     </div>
                   </div>
@@ -5822,6 +5872,7 @@ export const StepConfigPanel: React.FC<{
   editable = true,
   onChange
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const workflowOnErrorOptions = useWorkflowOnErrorOptions();
   const workflowWaitModeOptions = useWorkflowWaitModeOptions();
   const workflowWaitTimingOptions = useWorkflowWaitTimingOptions();
@@ -6392,7 +6443,7 @@ export const StepConfigPanel: React.FC<{
         <div className="space-y-3">
           <SearchableSelect
             id={`event-wait-event-${step.id}`}
-            label="Event"
+            label={t('designer.stepConfig.eventLabel', { defaultValue: 'Event' })}
             value={selectedWaitEventName}
             onChange={(value) => {
               const eventName = value.trim();
@@ -6402,7 +6453,7 @@ export const StepConfigPanel: React.FC<{
                 filters: []
               });
             }}
-            placeholder="Select event"
+            placeholder={t('designer.stepConfig.selectEvent', { defaultValue: 'Select event' })}
             dropdownMode="overlay"
             options={eventCatalogOptions.map((option) => ({
               value: option.event_type,
@@ -6413,7 +6464,7 @@ export const StepConfigPanel: React.FC<{
 
           <ExpressionField
             idPrefix={`event-wait-correlation-${step.id}`}
-            label="Correlation Key Expression"
+            label={t('designer.stepConfig.correlationKey', { defaultValue: 'Correlation Key Expression' })}
             value={ensureExpr((eventWaitConfig.correlationKey as Expr | undefined) ?? { $expr: '' })}
             onChange={(expr) => updateWaitNodeConfig({ ...eventWaitConfig, correlationKey: expr })}
             fieldOptions={enhancedFieldOptions}
@@ -6423,7 +6474,7 @@ export const StepConfigPanel: React.FC<{
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Payload Filters</Label>
+              <Label>{t('designer.stepConfig.payloadFilters', { defaultValue: 'Payload Filters' })}</Label>
               <Button
                 id={`event-wait-filter-add-${step.id}`}
                 variant="outline"
@@ -6431,14 +6482,18 @@ export const StepConfigPanel: React.FC<{
                 onClick={addEventFilterClause}
                 disabled={!editable}
               >
-                Add filter
+                {t('designer.stepConfig.addFilter', { defaultValue: 'Add filter' })}
               </Button>
             </div>
             {eventWaitPayloadSchemaStatus === 'loading' && (
-              <div className="text-xs text-gray-500">Loading event schema fields...</div>
+              <div className="text-xs text-gray-500">
+                {t('designer.stepConfig.loadingEventSchema', { defaultValue: 'Loading event schema fields...' })}
+              </div>
             )}
             {eventFilters.length === 0 && (
-              <div className="text-xs text-gray-400">No filters configured.</div>
+              <div className="text-xs text-gray-400">
+                {t('designer.stepConfig.noFiltersConfigured', { defaultValue: 'No filters configured.' })}
+              </div>
             )}
             {eventFilters.map((filter, index) => {
               const fieldMeta = eventFilterFields.find((field) => field.path === filter.path);
@@ -6459,7 +6514,7 @@ export const StepConfigPanel: React.FC<{
                       {eventFilterFieldOptions.length > 0 ? (
                         <CustomSelect
                           id={`event-wait-filter-path-${step.id}-${index}`}
-                          label={index === 0 ? 'Field' : undefined}
+                          label={index === 0 ? t('designer.stepConfig.fieldLabel', { defaultValue: 'Field' }) : undefined}
                           options={eventFilterFieldOptions}
                           value={filter.path}
                           onValueChange={(nextPath) => updateEventFilterClause(index, { path: nextPath })}
@@ -6468,7 +6523,7 @@ export const StepConfigPanel: React.FC<{
                       ) : (
                         <Input
                           id={`event-wait-filter-path-${step.id}-${index}`}
-                          label={index === 0 ? 'Field path' : undefined}
+                          label={index === 0 ? t('designer.stepConfig.fieldPathLabel', { defaultValue: 'Field path' }) : undefined}
                           value={filter.path}
                           disabled={!editable}
                           onChange={(event) => updateEventFilterClause(index, { path: event.target.value })}
@@ -6588,7 +6643,7 @@ export const StepConfigPanel: React.FC<{
 
           <Input
             id={`event-wait-timeout-${step.id}`}
-            label="Timeout (ms)"
+            label={t('designer.stepConfig.timeoutMs', { defaultValue: 'Timeout (ms)' })}
             type="number"
             value={typeof eventWaitConfig.timeoutMs === 'number' ? eventWaitConfig.timeoutMs : ''}
             disabled={!editable}
@@ -6603,7 +6658,7 @@ export const StepConfigPanel: React.FC<{
 
           <MappingExprEditor
             idPrefix={`event-wait-assign-${step.id}`}
-            label="Assign on resume"
+            label={t('designer.stepConfig.assignOnResume', { defaultValue: 'Assign on resume' })}
             value={(eventWaitConfig.assign as Record<string, Expr>) ?? {}}
             onChange={(assign) => updateWaitNodeConfig({ ...eventWaitConfig, assign })}
             fieldOptions={enhancedFieldOptions}
@@ -6722,7 +6777,7 @@ export const StepConfigPanel: React.FC<{
 
             <MappingExprEditor
               idPrefix={`time-wait-assign-${step.id}`}
-              label="Assign on resume"
+              label={t('designer.stepConfig.assignOnResume', { defaultValue: 'Assign on resume' })}
               value={(timeWaitConfig.assign as Record<string, Expr>) ?? {}}
               onChange={(assign) => updateWaitNodeConfig({ ...timeWaitConfig, assign })}
               fieldOptions={enhancedFieldOptions}
@@ -6823,7 +6878,7 @@ export const StepConfigPanel: React.FC<{
         >
           {showDataContext ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
           <HelpCircle className="w-3.5 h-3.5" />
-          What data can I access here?
+          {t('designer.stepConfig.dataContextToggle', { defaultValue: 'What data can I access here?' })}
         </button>
 
         {showDataContext && (
@@ -7214,6 +7269,7 @@ const MappingExprEditor: React.FC<{
   context?: ExpressionContext;
   disabled?: boolean;
 }> = ({ idPrefix, label, value, onChange, fieldOptions, context, disabled = false }) => {
+  const { t } = useTranslation('msp/workflows');
   const entries = Object.entries(value);
 
   const handleUpdate = (key: string, expr: Expr) => {
@@ -7245,10 +7301,14 @@ const MappingExprEditor: React.FC<{
       <div className="flex items-center justify-between">
         <Label>{label}</Label>
         <Button id={`${idPrefix}-add`} variant="outline" size="sm" onClick={handleAdd} disabled={disabled}>
-          Add
+          {t('designer.mappingExpr.add', { defaultValue: 'Add' })}
         </Button>
       </div>
-      {entries.length === 0 && <div className="text-xs text-gray-400">No mappings yet.</div>}
+      {entries.length === 0 && (
+        <div className="text-xs text-gray-400">
+          {t('designer.mappingExpr.empty', { defaultValue: 'No mappings yet.' })}
+        </div>
+      )}
       <div className="space-y-3">
         {entries.map(([key, expr], index) => (
           <Card key={key} className="p-3 space-y-2">
@@ -7266,12 +7326,12 @@ const MappingExprEditor: React.FC<{
                 onClick={() => handleRemove(key)}
                 disabled={disabled}
               >
-                Remove
+                {t('designer.mappingExpr.remove', { defaultValue: 'Remove' })}
               </Button>
             </div>
             <ExpressionField
               idPrefix={`${idPrefix}-expr-${index}`}
-              label="Expression"
+              label={t('designer.mappingExpr.expressionLabel', { defaultValue: 'Expression' })}
               value={expr}
               onChange={(nextExpr) => handleUpdate(key, nextExpr)}
               fieldOptions={fieldOptions}

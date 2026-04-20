@@ -65,7 +65,7 @@
     "table": {
       "runId": "Run ID",
       "workflow": "Workflow",
-      "version": "Version",
+      "version": "Versie",
       "tenant": "Tenant",
       "triggerPayload": "Trigger payload",
       "status": "Status",
@@ -516,7 +516,7 @@
       "columns": {
         "runId": "Run ID",
         "workflow": "Workflow",
-        "version": "Version",
+        "version": "Versie",
         "status": "Status",
         "retries": "Retries",
         "failedSteps": "Failed Steps",
@@ -595,6 +595,71 @@
         "unknown": "Validation status unknown"
       }
     },
+    "form": {
+      "nameLabel": "Workflownaam",
+      "versionLabel": "Versie",
+      "descriptionLabel": "Beschrijving",
+      "latestPublishedVersion": "Laatst gepubliceerde versie: {{version}}",
+      "triggerTypeLabel": "Triggertype",
+      "triggerTypePlaceholder": "Triggertype selecteren",
+      "triggerTypeHelp": "Kies of deze workflow handmatig of vanuit een gebeurtenis start. Herbruikbare planningen worden beheerd in het Workflow-beheer.",
+      "manualTriggerNote": "Deze workflow heeft geen trigger. Hij kan nog steeds handmatig worden uitgevoerd en vanuit het Workflow-beheer worden gepland zodra er een vastgepind payload-schema en een gepubliceerde versie zijn.",
+      "eventCategoryLabel": "Gebeurteniscategorie",
+      "eventLabel": "Gebeurtenis",
+      "selectEventCategory": "Gebeurteniscategorie selecteren",
+      "selectEvent": "Select event",
+      "selectCategoryFirst": "Selecteer eerst een categorie",
+      "inputDataLabel": "Invoergegevens van de workflow",
+      "inputDataEvent": "Uw stappen lezen gegevens van de geselecteerde trigger.",
+      "inputDataTimePrefix": "Deze workflow ontvangt een vaste synthetische klok-payload. Het contract is vastgezet op",
+      "inputDataManualPrefix": "Geen trigger gebruikt",
+      "inputDataManualSuffix": "standaard. Wijzig dit in geavanceerde schema-instellingen als deze workflow een ander handmatig contract nodig heeft.",
+      "triggerMappingRequired": "Een triggerkoppeling is vereist. Open geavanceerde schema-instellingen om deze te configureren.",
+      "schemaLocked": "Schemaversie vergrendeld",
+      "schemaAutoSelected": "Automatisch geselecteerd vanuit de trigger",
+      "schemaSuffixClock": " naar het vaste klok-payloadcontract.",
+      "schemaSuffixPinned": " om deze workflow stabiel te houden als triggerschema’s wijzigen.",
+      "chooseTriggerHint": "Kies een trigger om de beschikbare velden te definiëren.",
+      "schemaLoadErrorPrefix": "Schema-informatie kon niet worden geladen voor",
+      "schemaLoadErrorSuffix": "Controleer het vermelding in de gebeurteniscatalogus.",
+      "draftDifferent": "Conceptcontract wijkt af van gepubliceerd contract",
+      "publishedUsesPrefix": "De gepubliceerde versie gebruikt",
+      "draftResolvesTo": "Dit concept verwijst momenteel naar",
+      "lockToPublished": "Vastzetten op gepubliceerd contract",
+      "advancedSchemaSettings": "Geavanceerde schema-instellingen",
+      "inferredSchemaPrefix": "Huidig afgeleid schema:",
+      "noSchemaInferred": "Nog geen schema afgeleid.",
+      "unknownSchemaRef": "Onbekende schemaverwijzing. Open geavanceerde schema-instellingen en kies een geldige versie.",
+      "workflowStepsHeading": "Workflowstappen",
+      "workflowStepsListHint": "Sleep stappen om ze te herschikken of tussen pipes te verplaatsen.",
+      "workflowStepsGraphHint": "Verschuif/zoom de grafiek. Vertakkingen worden als aparte banen weergegeven.",
+      "workflowStepsViewAria": "Weergave van workflowstappen",
+      "warningsCount": "{{count}} waarschuwingen"
+    },
+    "stepPanel": {
+      "readOnly": "Alleen-lezentoegang: het bewerken van stappen is uitgeschakeld.",
+      "selectPrompt": "Selecteer een stap om de configuratie ervan te bewerken."
+    },
+    "stepConfig": {
+      "eventLabel": "Gebeurtenis",
+      "selectEvent": "Select event",
+      "correlationKey": "Expressie voor correlatiesleutel",
+      "payloadFilters": "Payload-filters",
+      "addFilter": "Filter toevoegen",
+      "noFiltersConfigured": "Geen filters geconfigureerd.",
+      "loadingEventSchema": "Gebeurtenisschemavelden laden...",
+      "timeoutMs": "Time-out (ms)",
+      "assignOnResume": "Toewijzen bij hervatten",
+      "fieldLabel": "Veld",
+      "fieldPathLabel": "Veldpad",
+      "dataContextToggle": "Welke gegevens kan ik hier benaderen?"
+    },
+    "mappingExpr": {
+      "add": "Toevoegen",
+      "remove": "Verwijderen",
+      "empty": "Nog geen koppelingen.",
+      "expressionLabel": "Expressie"
+    },
     "validation": {
       "badge": {
         "invalid": "Ongeldig",
@@ -628,12 +693,17 @@
       "hidePalette": "Hide palette",
       "searchPlaceholder": "Zoeken",
       "dragHint": "Drop on pipeline to add",
+      "chooseAction": "Kies een actie nadat u deze stap hebt toegevoegd",
+      "returnsSummary": "Retourneert: {{list}}{{suffix}}",
       "categories": {
         "Control": "Control",
         "Core": "Core",
         "Transform": "Transform",
         "AI": "AI",
-        "Apps": "Apps"
+        "Apps": "Apps",
+        "Action": "Actie",
+        "Email": "E-mail",
+        "Nodes": "Knooppunten"
       },
       "controlBlocks": {
         "control.if": {
@@ -655,6 +725,40 @@
         "control.return": {
           "label": "Terugkeren",
           "description": "Stop execution"
+        }
+      },
+      "nodes": {
+        "state.set": {
+          "label": "Status instellen",
+          "description": "De workflowstatus bijwerken"
+        },
+        "event.wait": {
+          "label": "Wachten op gebeurtenis",
+          "description": "Wachten op een externe gebeurtenis"
+        },
+        "time.wait": {
+          "label": "Wachten op tijd",
+          "description": "Wachten op een duur of tot een datum/tijd"
+        },
+        "transform.assign": {
+          "label": "Toewijzen",
+          "description": "Waarden toewijzen aan payload of variabelen"
+        },
+        "action.call": {
+          "label": "Actie aanroepen",
+          "description": "Een geregistreerde actie aanroepen"
+        },
+        "email.parseBody": {
+          "label": "E-mailinhoud parseren",
+          "description": "E-mailantwoord parseren en opschonen"
+        },
+        "email.renderCommentBlocks": {
+          "label": "Reactieblokken weergeven",
+          "description": "Reactieblokken weergeven vanuit e-mailinhoud"
+        },
+        "human.task": {
+          "label": "Handmatige taak",
+          "description": "Pauzeren tot voltooiing van een handmatige taak"
         }
       }
     },
@@ -994,7 +1098,7 @@
       "emptyPrefix": "No vars yet. Use",
       "saveOutput": "Save output",
       "emptyConjunction": "or an",
-      "assignStep": "Assign",
+      "assignStep": "Toewijzen",
       "emptySuffix": "step to populate"
     },
     "loop": {
@@ -1301,11 +1405,11 @@
       "ifCondition": "If Condition",
       "forEach": "For Each",
       "tryCatch": "Try/Catch",
-      "waitForEvent": "Wait for Event",
-      "waitForTime": "Wait for Time",
-      "humanTask": "Human Task",
-      "setState": "Set State",
-      "assign": "Assign"
+      "waitForEvent": "Wachten op gebeurtenis",
+      "waitForTime": "Wachten op tijd",
+      "humanTask": "Handmatige taak",
+      "setState": "Status instellen",
+      "assign": "Toewijzen"
     },
     "stepCard": {
       "lastStatus": "Last status: {{status}} ({{timestamp}})",
@@ -1428,7 +1532,7 @@
         "workflowPlaceholder": "Choose a workflow",
         "name": "Schedule name",
         "namePlaceholder": "Month-end AP sync",
-        "triggerType": "Trigger type",
+        "triggerType": "Triggertype",
         "enabled": "Enabled",
         "enabledHelp": "Schedule will run when valid.",
         "disabledHelp": "Schedule will stay paused until resumed.",
