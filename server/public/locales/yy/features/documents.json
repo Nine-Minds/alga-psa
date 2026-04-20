@@ -47,7 +47,25 @@
     "downloadFailed": "55555",
     "bulkDeleteFailed": "55555",
     "bulkDeleteSuccess_one": "55555 {{count}} 55555",
-    "bulkDeleteSuccess_other": "55555 {{count}} 55555"
+    "bulkDeleteSuccess_other": "55555 {{count}} 55555",
+    "passwordRequired": "55555",
+    "shareLinkCreateFailed": "55555",
+    "shareLinkCreated": "55555",
+    "linkCopied": "55555",
+    "shareLinkRevokeFailed": "55555",
+    "shareLinkRevoked": "55555",
+    "shareLinksLoadFailed": "55555",
+    "folderPathRequired": "55555",
+    "folderAlreadyExists": "55555",
+    "defaultsSaveFailed": "55555",
+    "defaultsRemoved": "55555{{entity}}55555",
+    "defaultsSaved": "55555{{entity}}55555",
+    "suggestedDefaultsAllLoaded": "55555",
+    "suggestedDefaultsLoaded_one": "55555{{count}}55555",
+    "suggestedDefaultsLoaded_other": "55555{{count}}55555",
+    "suggestedDefaultsLoadFailed": "55555",
+    "entityTypesAllConfigured": "55555",
+    "defaultFoldersLoadFailed": "55555"
   },
   "validation": {
     "nameRequired": "55555"

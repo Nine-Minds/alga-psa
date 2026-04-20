@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   createShareLink,
   getShareLinksForDocument,
@@ -56,6 +57,7 @@ export default function ShareLinkDialog({
   documentId,
   documentName,
 }: ShareLinkDialogProps) {
+  const { t } = useTranslation('features/documents');
   const [existingLinks, setExistingLinks] = useState<IDocumentShareLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -78,7 +80,7 @@ export default function ShareLinkDialog({
         setExistingLinks(result);
       }
     } catch (error) {
-      handleError(error, 'Failed to load share links');
+      handleError(error, t('messages.shareLinksLoadFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +104,7 @@ export default function ShareLinkDialog({
 
   const handleCreate = async () => {
     if (shareType === 'password' && !password) {
-      toast.error('Password is required');
+      toast.error(t('messages.passwordRequired'));
       return;
     }
 
@@ -118,11 +120,11 @@ export default function ShareLinkDialog({
 
       const result = await createShareLink(input);
       if ('code' in result) {
-        toast.error('Failed to create share link');
+        toast.error(t('messages.shareLinkCreateFailed'));
         return;
       }
 
-      toast.success('Share link created');
+      toast.success(t('messages.shareLinkCreated'));
       resetForm();
       await loadLinks();
 
@@ -130,9 +132,9 @@ export default function ShareLinkDialog({
       const shareLink = result as IDocumentShareLink;
       const url = getShareUrl(shareLink.token);
       await navigator.clipboard.writeText(url);
-      toast.success('Link copied to clipboard');
+      toast.success(t('messages.linkCopied'));
     } catch (error) {
-      handleError(error, 'Failed to create share link');
+      handleError(error, t('messages.shareLinkCreateFailed'));
     } finally {
       setIsCreating(false);
     }
@@ -142,15 +144,15 @@ export default function ShareLinkDialog({
     try {
       const result = await revokeShareLink(shareId);
       if (typeof result === 'object' && 'code' in result) {
-        toast.error('Failed to revoke share link');
+        toast.error(t('messages.shareLinkRevokeFailed'));
         return;
       }
       if (result) {
-        toast.success('Share link revoked');
+        toast.success(t('messages.shareLinkRevoked'));
         await loadLinks();
       }
     } catch (error) {
-      handleError(error, 'Failed to revoke share link');
+      handleError(error, t('messages.shareLinkRevokeFailed'));
     }
   };
 
@@ -159,7 +161,7 @@ export default function ShareLinkDialog({
     await navigator.clipboard.writeText(url);
     setCopiedId(shareId);
     setTimeout(() => setCopiedId(null), 2000);
-    toast.success('Link copied to clipboard');
+    toast.success(t('messages.linkCopied'));
   };
 
   const getShareTypeIcon = (type: ShareType) => {

@@ -47,7 +47,25 @@
     "downloadFailed": "Dokument konnte nicht heruntergeladen werden",
     "bulkDeleteFailed": "Einige Dokumente konnten nicht gelöscht werden",
     "bulkDeleteSuccess_one": "{{count}} Dokument wurde erfolgreich gelöscht",
-    "bulkDeleteSuccess_other": "{{count}} Dokumente wurden erfolgreich gelöscht"
+    "bulkDeleteSuccess_other": "{{count}} Dokumente wurden erfolgreich gelöscht",
+    "passwordRequired": "Passwort ist erforderlich",
+    "shareLinkCreateFailed": "Freigabelink konnte nicht erstellt werden",
+    "shareLinkCreated": "Freigabelink erstellt",
+    "linkCopied": "Link in Zwischenablage kopiert",
+    "shareLinkRevokeFailed": "Freigabelink konnte nicht widerrufen werden",
+    "shareLinkRevoked": "Freigabelink widerrufen",
+    "shareLinksLoadFailed": "Freigabelinks konnten nicht geladen werden",
+    "folderPathRequired": "Ordnerpfad ist erforderlich",
+    "folderAlreadyExists": "Ordner existiert bereits",
+    "defaultsSaveFailed": "Speichern fehlgeschlagen",
+    "defaultsRemoved": "Standardordner für {{entity}} entfernt",
+    "defaultsSaved": "Standardordner für {{entity}} gespeichert",
+    "suggestedDefaultsAllLoaded": "Alle vorgeschlagenen Standards sind bereits geladen",
+    "suggestedDefaultsLoaded_one": "Standards für {{count}} Entitätstyp geladen",
+    "suggestedDefaultsLoaded_other": "Standards für {{count}} Entitätstypen geladen",
+    "suggestedDefaultsLoadFailed": "Vorgeschlagene Standards konnten nicht geladen werden",
+    "entityTypesAllConfigured": "Alle Entitätstypen haben bereits Standardordner konfiguriert",
+    "defaultFoldersLoadFailed": "Standardordner konnten nicht geladen werden"
   },
   "validation": {
     "nameRequired": "Dokumentname ist erforderlich"

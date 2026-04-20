@@ -47,7 +47,25 @@
     "downloadFailed": "Nie udało się pobrać dokumentu",
     "bulkDeleteFailed": "Nie udało się usunąć części dokumentów",
     "bulkDeleteSuccess_one": "{{count}} dokument usunięty pomyślnie",
-    "bulkDeleteSuccess_other": "{{count}} dokumentów usuniętych pomyślnie"
+    "bulkDeleteSuccess_other": "{{count}} dokumentów usuniętych pomyślnie",
+    "passwordRequired": "Hasło jest wymagane",
+    "shareLinkCreateFailed": "Nie udało się utworzyć linku udostępniania",
+    "shareLinkCreated": "Utworzono link udostępniania",
+    "linkCopied": "Link skopiowany do schowka",
+    "shareLinkRevokeFailed": "Nie udało się unieważnić linku udostępniania",
+    "shareLinkRevoked": "Link udostępniania unieważniony",
+    "shareLinksLoadFailed": "Nie udało się załadować linków udostępniania",
+    "folderPathRequired": "Ścieżka folderu jest wymagana",
+    "folderAlreadyExists": "Folder już istnieje",
+    "defaultsSaveFailed": "Zapisywanie nie powiodło się",
+    "defaultsRemoved": "Foldery domyślne dla {{entity}} usunięte",
+    "defaultsSaved": "Foldery domyślne dla {{entity}} zapisane",
+    "suggestedDefaultsAllLoaded": "Wszystkie sugerowane wartości domyślne są już załadowane",
+    "suggestedDefaultsLoaded_one": "Wczytano wartości domyślne dla {{count}} typu encji",
+    "suggestedDefaultsLoaded_other": "Wczytano wartości domyślne dla {{count}} typów encji",
+    "suggestedDefaultsLoadFailed": "Nie udało się załadować sugerowanych wartości domyślnych",
+    "entityTypesAllConfigured": "Wszystkie typy encji mają już skonfigurowane foldery domyślne",
+    "defaultFoldersLoadFailed": "Nie udało się załadować folderów domyślnych"
   },
   "validation": {
     "nameRequired": "Nazwa dokumentu jest wymagana"

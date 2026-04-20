@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getDefaultFolders,
   saveDefaultFolders,
@@ -59,6 +60,7 @@ interface EntitySection {
 }
 
 export default function DocumentTemplatesSettings() {
+  const { t } = useTranslation('features/documents');
   const [sections, setSections] = useState<EntitySection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingSuggested, setIsLoadingSuggested] = useState(false);
@@ -96,7 +98,7 @@ export default function DocumentTemplatesSettings() {
         isSaving: false,
       })));
     } catch (error) {
-      handleError(error, 'Failed to load default folders');
+      handleError(error, t('messages.defaultFoldersLoadFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -145,7 +147,7 @@ export default function DocumentTemplatesSettings() {
   const handleAddFolder = (entityType: string) => {
     const name = (newFolderInputs[entityType] || '').trim();
     if (!name) {
-      toast.error('Folder path is required');
+      toast.error(t('messages.folderPathRequired'));
       return;
     }
 
@@ -154,7 +156,7 @@ export default function DocumentTemplatesSettings() {
     if (!section) return;
 
     if (section.folders.some(f => f.folderPath === path)) {
-      toast.error('Folder already exists');
+      toast.error(t('messages.folderAlreadyExists'));
       return;
     }
 
@@ -188,7 +190,7 @@ export default function DocumentTemplatesSettings() {
           return;
         }
         setSections(prev => prev.filter(s => s.entityType !== entityType));
-        toast.success(`Default folders for ${ENTITY_TYPE_LABELS[entityType] || entityType} removed`);
+        toast.success(t('messages.defaultsRemoved', { entity: ENTITY_TYPE_LABELS[entityType] || entityType }));
       } else {
         const result = await saveDefaultFolders(entityType, items);
         if (isActionPermissionError(result)) {
@@ -196,10 +198,10 @@ export default function DocumentTemplatesSettings() {
           return;
         }
         updateSection(entityType, { isDirty: false });
-        toast.success(`Default folders for ${ENTITY_TYPE_LABELS[entityType] || entityType} saved`);
+        toast.success(t('messages.defaultsSaved', { entity: ENTITY_TYPE_LABELS[entityType] || entityType }));
       }
     } catch (error) {
-      handleError(error, 'Failed to save');
+      handleError(error, t('messages.defaultsSaveFailed'));
     } finally {
       updateSection(entityType, { isSaving: false });
     }
@@ -214,13 +216,13 @@ export default function DocumentTemplatesSettings() {
         return;
       }
       if (result === 0) {
-        toast.success('All suggested defaults are already loaded');
+        toast.success(t('messages.suggestedDefaultsAllLoaded'));
       } else {
-        toast.success(`Loaded defaults for ${result} entity type${result !== 1 ? 's' : ''}`);
+        toast.success(t('messages.suggestedDefaultsLoaded', { count: result }));
         await loadDefaults();
       }
     } catch (error) {
-      handleError(error, 'Failed to load suggested defaults');
+      handleError(error, t('messages.suggestedDefaultsLoadFailed'));
     } finally {
       setIsLoadingSuggested(false);
     }
@@ -232,7 +234,7 @@ export default function DocumentTemplatesSettings() {
     const available = allTypes.filter(t => !usedTypes.has(t));
 
     if (available.length === 0) {
-      toast.error('All entity types already have default folders configured');
+      toast.error(t('messages.entityTypesAllConfigured'));
       return;
     }
 

@@ -47,7 +47,25 @@
     "downloadFailed": "No se pudo descargar el documento",
     "bulkDeleteFailed": "No se pudieron eliminar algunos documentos",
     "bulkDeleteSuccess_one": "Se eliminó correctamente {{count}} documento",
-    "bulkDeleteSuccess_other": "Se eliminaron correctamente {{count}} documentos"
+    "bulkDeleteSuccess_other": "Se eliminaron correctamente {{count}} documentos",
+    "passwordRequired": "La contraseña es obligatoria",
+    "shareLinkCreateFailed": "Error al crear el enlace de compartir",
+    "shareLinkCreated": "Enlace de compartir creado",
+    "linkCopied": "Enlace copiado al portapapeles",
+    "shareLinkRevokeFailed": "Error al revocar el enlace de compartir",
+    "shareLinkRevoked": "Enlace de compartir revocado",
+    "shareLinksLoadFailed": "Error al cargar los enlaces de compartir",
+    "folderPathRequired": "La ruta de la carpeta es obligatoria",
+    "folderAlreadyExists": "La carpeta ya existe",
+    "defaultsSaveFailed": "Error al guardar",
+    "defaultsRemoved": "Carpetas predeterminadas para {{entity}} eliminadas",
+    "defaultsSaved": "Carpetas predeterminadas para {{entity}} guardadas",
+    "suggestedDefaultsAllLoaded": "Todas las sugerencias predeterminadas ya están cargadas",
+    "suggestedDefaultsLoaded_one": "Valores predeterminados cargados para {{count}} tipo de entidad",
+    "suggestedDefaultsLoaded_other": "Valores predeterminados cargados para {{count}} tipos de entidad",
+    "suggestedDefaultsLoadFailed": "Error al cargar los valores predeterminados sugeridos",
+    "entityTypesAllConfigured": "Todos los tipos de entidad ya tienen carpetas predeterminadas configuradas",
+    "defaultFoldersLoadFailed": "Error al cargar las carpetas predeterminadas"
   },
   "validation": {
     "nameRequired": "El nombre del documento es obligatorio"

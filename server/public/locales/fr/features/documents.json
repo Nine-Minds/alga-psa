@@ -47,7 +47,25 @@
     "downloadFailed": "Impossible de télécharger le document",
     "bulkDeleteFailed": "Impossible de supprimer certains documents",
     "bulkDeleteSuccess_one": "{{count}} document a été supprimé avec succès",
-    "bulkDeleteSuccess_other": "{{count}} documents ont été supprimés avec succès"
+    "bulkDeleteSuccess_other": "{{count}} documents ont été supprimés avec succès",
+    "passwordRequired": "Le mot de passe est requis",
+    "shareLinkCreateFailed": "Échec de la création du lien de partage",
+    "shareLinkCreated": "Lien de partage créé",
+    "linkCopied": "Lien copié dans le presse-papiers",
+    "shareLinkRevokeFailed": "Échec de la révocation du lien de partage",
+    "shareLinkRevoked": "Lien de partage révoqué",
+    "shareLinksLoadFailed": "Échec du chargement des liens de partage",
+    "folderPathRequired": "Le chemin du dossier est requis",
+    "folderAlreadyExists": "Le dossier existe déjà",
+    "defaultsSaveFailed": "Échec de l'enregistrement",
+    "defaultsRemoved": "Dossiers par défaut pour {{entity}} supprimés",
+    "defaultsSaved": "Dossiers par défaut pour {{entity}} enregistrés",
+    "suggestedDefaultsAllLoaded": "Toutes les valeurs par défaut suggérées sont déjà chargées",
+    "suggestedDefaultsLoaded_one": "Valeurs par défaut chargées pour {{count}} type d'entité",
+    "suggestedDefaultsLoaded_other": "Valeurs par défaut chargées pour {{count}} types d'entités",
+    "suggestedDefaultsLoadFailed": "Échec du chargement des valeurs par défaut suggérées",
+    "entityTypesAllConfigured": "Tous les types d'entités ont déjà des dossiers par défaut configurés",
+    "defaultFoldersLoadFailed": "Échec du chargement des dossiers par défaut"
   },
   "validation": {
     "nameRequired": "Le nom du document est obligatoire"
