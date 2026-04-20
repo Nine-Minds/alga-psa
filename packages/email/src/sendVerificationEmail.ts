@@ -3,6 +3,7 @@
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { TenantEmailService } from './TenantEmailService';
 import { DatabaseTemplateProcessor } from './templateProcessors';
+import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
 
 interface SendVerificationEmailParams {
   email: string;
@@ -11,11 +12,11 @@ interface SendVerificationEmailParams {
   tenant: string;
 }
 
-export async function sendVerificationEmail({ 
-  email, 
-  token, 
+export async function sendVerificationEmail({
+  email,
+  token,
   registrationId,
-  tenant 
+  tenant
 }: SendVerificationEmailParams): Promise<boolean> {
   try {
     return await runWithTenant(tenant, async () => {
@@ -35,6 +36,10 @@ export async function sendVerificationEmail({
         throw new Error('Client information not found');
       }
 
+      // Resolve recipient locale so the template is rendered in the user's language
+      const recipientInfo = (await getUserInfoForEmail(tenant, email)) || { email };
+      const recipientLocale = await resolveEmailLocale(tenant, recipientInfo);
+
       // Prepare template data
       const templateData = {
         email,
@@ -52,7 +57,8 @@ export async function sendVerificationEmail({
         tenantId: tenant,
         to: email,
         templateProcessor,
-        templateData
+        templateData,
+        locale: recipientLocale
       });
 
       return result.success;

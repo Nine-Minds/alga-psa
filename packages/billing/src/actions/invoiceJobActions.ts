@@ -9,6 +9,7 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { SystemEmailProviderFactory } from '@alga-psa/email';
 import { EmailMessage, EmailAddress } from '@alga-psa/types';
 import { formatCurrency, dateValueToDate, isValidEmail } from '@alga-psa/core';
+import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import type { IContact } from '@alga-psa/types';
 import Handlebars from 'handlebars';
 import fs from 'fs/promises';
@@ -295,16 +296,43 @@ interface InvoiceEmailTemplate {
   text_content: string;
 }
 
-async function getInvoiceEmailTemplate(knex: any, tenant: string): Promise<InvoiceEmailTemplate> {
+async function getInvoiceEmailTemplate(
+  knex: any,
+  tenant: string,
+  locale: string = 'en'
+): Promise<InvoiceEmailTemplate> {
+  // Try tenant template in requested locale
   let template = await knex('tenant_email_templates')
     .where({
       tenant,
       name: 'invoice-email',
-      language_code: 'en',
+      language_code: locale,
     })
     .first();
 
+  // Fall back to tenant English template
+  if (!template && locale !== 'en') {
+    template = await knex('tenant_email_templates')
+      .where({
+        tenant,
+        name: 'invoice-email',
+        language_code: 'en',
+      })
+      .first();
+  }
+
+  // Fall back to system template in requested locale
   if (!template) {
+    template = await knex('system_email_templates')
+      .where({
+        name: 'invoice-email',
+        language_code: locale,
+      })
+      .first();
+  }
+
+  // Fall back to system English template
+  if (!template && locale !== 'en') {
     template = await knex('system_email_templates')
       .where({
         name: 'invoice-email',
@@ -454,7 +482,13 @@ export const sendInvoiceEmailAction = withAuth(async (
           })
         : 'N/A';
 
-      const emailTemplate = await getInvoiceEmailTemplate(knex, tenant);
+      const recipientLocale = await resolveEmailLocale(tenant, {
+        email: recipientEmail,
+        userType: 'client',
+        clientId: client.client_id,
+      });
+
+      const emailTemplate = await getInvoiceEmailTemplate(knex, tenant, recipientLocale);
       const templateContext = {
         invoice: {
           number: invoice.invoice_number,
