@@ -531,6 +531,38 @@
       "loadFailed": "Failed to load dead-letter runs"
     }
   },
+  "audit": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "header": {
+      "title": "Workflow Audit"
+    },
+    "actions": {
+      "exportCsv": "Export CSV",
+      "loadMore": "Load more"
+    },
+    "table": {
+      "columns": {
+        "timestamp": "Timestamp",
+        "operation": "Operation",
+        "user": "User",
+        "details": "Details"
+      }
+    },
+    "states": {
+      "selectWorkflow": "Select a workflow to view audit history.",
+      "empty": "No audit entries yet."
+    },
+    "values": {
+      "system": "system"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load audit logs",
+      "exportReady": "Audit export ready",
+      "exportFailed": "Failed to export audit logs"
+    }
+  },
   "schedules": {
     "common": {
       "emptyValue": "—",

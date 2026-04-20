@@ -442,3 +442,23 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   - Vitest passed: 30/30 tests across schedules + recurrence
   - translation validation passed with 0 missing/extra keys
   - ESLint reported only pre-existing warnings in `WorkflowScheduleDialog.tsx` (`no-explicit-any`) and the existing warning backlog in `Schedules.test.tsx`
+
+### F019 complete — WorkflowDefinitionAudit strings extracted
+- Updated `ee/server/src/components/workflow-designer/WorkflowDefinitionAudit.tsx` to use `useTranslation('msp/workflows')` for:
+  - empty/select-workflow state
+  - audit card heading
+  - export/load-more actions
+  - table column headers
+  - system/empty-value fallbacks
+  - empty table state
+  - load/export toast fallbacks
+- Added `audit.*` keys to `server/public/locales/{en,fr,es,de,nl,it,pl,xx,yy}/msp/workflows.json` as English stubs pending WF-F translation work.
+- Deliberately left the timestamp formatter itself for `F022`, which is the plan item dedicated to locale-aware date formatting in the audit/run surfaces.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowDefinitionAudit.tsx
+  node scripts/validate-translations.cjs
+  ```
+- Results:
+  - ESLint clean
+  - translation validation passed with 0 missing/extra keys
