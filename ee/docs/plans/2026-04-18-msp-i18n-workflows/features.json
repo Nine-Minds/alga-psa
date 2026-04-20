@@ -176,31 +176,31 @@
   {
     "id": "F030",
     "description": "Extract all user-visible strings in WorkflowAiSchemaSection.tsx (section title, add-field button, required toggle label, primitive-type select label).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-D"]
   },
   {
     "id": "F031",
     "description": "Extract all user-visible strings in WorkflowComposeTextDocumentEditor.tsx and WorkflowComposeTextSection.tsx (toolbar buttons, placeholder, help text).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-D"]
   },
   {
     "id": "F032",
     "description": "Extract all user-visible strings in WorkflowStepNameField.tsx, WorkflowStepSaveOutputSection.tsx, and WorkflowWaitEditors (duration input labels, until-date labels, advanced expression toggle).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-D"]
   },
   {
     "id": "F033",
     "description": "Extract all user-visible strings in workflowReferenceSelector.tsx beyond the enum section labels (search placeholder, breadcrumbs, empty states, pin/unpin button labels).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-D"]
   },
   {
     "id": "F034",
     "description": "Extract all user-visible strings in pipeline/PipelineComponents.tsx (node headers, pipeline toolbar, empty state).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-D"]
   },
   {

@@ -751,6 +751,79 @@
       }
     }
   },
+  "stepNameField": {
+    "label": "Step name"
+  },
+  "stepSaveOutput": {
+    "toggleLabel": "Save output",
+    "placeholder": "e.g., ticketDefaults",
+    "copyPathTitle": "Copy full path",
+    "accessibleAs": "Accessible as:"
+  },
+  "aiSchemaSection": {
+    "heading": "AI response format",
+    "headingDescription": "Choose what the AI response should include for later steps.",
+    "modeSimple": "Simple",
+    "modeAdvanced": "Advanced",
+    "addField": "Add field",
+    "addNested": "Add nested field",
+    "remove": "Remove",
+    "nameLabel": "Name",
+    "answerType": "Answer type",
+    "arrayItems": "Array items",
+    "required": "Required",
+    "descriptionLabel": "Description",
+    "objectItemFields": "Object item fields",
+    "nestedFields": "Nested fields",
+    "jsonSchemaLabel": "JSON Schema",
+    "advancedHelperText": "Advanced mode supports object-rooted schemas plus nested objects, arrays, descriptions, constraints, and additionalProperties.",
+    "validationHeading": "Schema validation",
+    "advancedFallback": "This saved schema uses advanced JSON Schema features, so it is shown in Advanced mode.",
+    "simpleModeUnsupported": "This schema cannot be represented in simple mode.",
+    "errors": {
+      "jsonRequired": "AI output schema JSON is required."
+    }
+  },
+  "composeText": {
+    "heading": "Compose text outputs",
+    "headingDescription": "Create one or more markdown outputs with stable downstream reference keys.",
+    "addOutput": "Add output",
+    "untitled": "Untitled output",
+    "outputFallback": "output {{index}}",
+    "moveUpAria": "Move {{label}} up",
+    "moveDownAria": "Move {{label}} down",
+    "deleteAria": "Delete {{label}}",
+    "outputLabel": "Output label",
+    "stableKeyLabel": "Stable key",
+    "keyHintSafe": "Downstream-safe key",
+    "keyHintInvalid": "Use lowercase letters, numbers, and underscores only.",
+    "regenerate": "Regenerate",
+    "validationHeading": "Validation",
+    "downstreamPathLabel": "Downstream reference path",
+    "pathFallback": "Save output to see a reference path.",
+    "copied": "Copied",
+    "copyPath": "Copy path",
+    "contentHeading": "Compose content",
+    "contentDescription": "Use markdown-safe formatting and inline workflow reference chips.",
+    "insertReference": "Insert reference",
+    "insertReferenceHeading": "Insert workflow reference",
+    "errors": {
+      "noCodeBlock": "References cannot be inserted inside code blocks. Move the cursor to another block and try again."
+    }
+  },
+  "referenceSelector": {
+    "placeholders": {
+      "scope": "Select source scope...",
+      "step": "Select step...",
+      "field": "Select field..."
+    }
+  },
+  "pipeline": {
+    "start": "Start",
+    "insertStepHere": "Insert step here",
+    "emptyDisabled": "No steps yet.",
+    "emptySelectPrompt": "Select a step from the panel to get started."
+  },
   "expressionEditor": {
     "ariaLabel": "Expression editor",
     "autocompleteAria": "Expression autocomplete suggestions",

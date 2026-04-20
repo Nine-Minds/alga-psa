@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useWorkflowReferenceSectionOptions } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import type { JsonSchema } from './expression-editor';
 import type { DataTreeContext } from './mapping/SourceDataTree';
@@ -395,6 +396,7 @@ export const ReferenceScopeSelector: React.FC<{
   onStepChange,
   onFieldChange,
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const allScopeOptions = useWorkflowReferenceSectionOptions();
   const scopeOptions = useMemo<SelectOption[]>(() => {
     return allScopeOptions.filter((option) => {
@@ -453,7 +455,7 @@ export const ReferenceScopeSelector: React.FC<{
         id={`${idPrefix}-reference-scope`}
         options={scopeOptions}
         value={selectedScope || undefined}
-        placeholder="Select source scope..."
+        placeholder={t('referenceSelector.placeholders.scope', { defaultValue: 'Select source scope...' })}
         onValueChange={(value) => onScopeChange(value as ReferenceSourceScope | '')}
         disabled={disabled}
         className={selectClassName}
@@ -463,7 +465,7 @@ export const ReferenceScopeSelector: React.FC<{
           id={`${idPrefix}-reference-step`}
           options={stepOptions}
           value={selectedStep || undefined}
-          placeholder="Select step..."
+          placeholder={t('referenceSelector.placeholders.step', { defaultValue: 'Select step...' })}
           onValueChange={onStepChange}
           disabled={disabled}
           className={selectClassName}
@@ -474,7 +476,7 @@ export const ReferenceScopeSelector: React.FC<{
           id={`${idPrefix}-reference-field`}
           options={fieldOptions}
           value={selectedField ?? undefined}
-          placeholder="Select field..."
+          placeholder={t('referenceSelector.placeholders.field', { defaultValue: 'Select field...' })}
           onValueChange={onFieldChange}
           disabled={disabled}
           className={selectClassName}
@@ -485,7 +487,7 @@ export const ReferenceScopeSelector: React.FC<{
           id={`${idPrefix}-reference-field`}
           options={fieldOptions}
           value={selectedField ?? undefined}
-          placeholder="Select field..."
+          placeholder={t('referenceSelector.placeholders.field', { defaultValue: 'Select field...' })}
           onValueChange={onFieldChange}
           disabled={disabled}
           className={selectClassName}
