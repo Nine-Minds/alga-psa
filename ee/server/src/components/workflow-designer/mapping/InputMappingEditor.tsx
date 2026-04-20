@@ -1019,6 +1019,7 @@ const LiteralValueEditor: React.FC<{
   });
   const [listError, setListError] = useState<string | null>(null);
   const [listText, setListText] = useState(() => formatPrimitiveList(value));
+  const [isEditingPrimitiveList, setIsEditingPrimitiveList] = useState(false);
 
   useEffect(() => {
     if (!supportsStructuredEditor) {
@@ -1034,11 +1035,11 @@ const LiteralValueEditor: React.FC<{
   }, [value, fieldType]);
 
   useEffect(() => {
-    if (hasStructuredPrimitiveArrayEditor) {
+    if (hasStructuredPrimitiveArrayEditor && !isEditingPrimitiveList) {
       setListText(formatPrimitiveList(value));
       setListError(null);
     }
-  }, [value, hasStructuredPrimitiveArrayEditor]);
+  }, [value, hasStructuredPrimitiveArrayEditor, isEditingPrimitiveList]);
 
   const nullableOptions: SelectOption[] = [
     { value: 'value', label: t('inputMappingEditor.nullable.useValue', { defaultValue: 'Use value' }) },
@@ -1338,6 +1339,8 @@ const LiteralValueEditor: React.FC<{
           <TextArea
             id={`${idPrefix}-literal-list`}
             value={listText}
+            onFocus={() => setIsEditingPrimitiveList(true)}
+            onBlur={() => setIsEditingPrimitiveList(false)}
             onChange={(e) => {
               const nextText = e.target.value;
               setListText(nextText);
