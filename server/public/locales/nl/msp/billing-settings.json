@@ -1096,5 +1096,24 @@
       "load": "Kan nummeringsinstellingen niet laden.",
       "save": "Kan instellingen niet bijwerken."
     }
+  },
+  "payment": {
+    "messages": {
+      "loadConfigFailed": "Kan betalingsconfiguratie niet laden",
+      "keysRequired": "Voer zowel de geheime sleutel als de publiceerbare sleutel in",
+      "invalidSecretKey": "Geheime sleutel moet beginnen met sk_",
+      "invalidPublishableKey": "Publiceerbare sleutel moet beginnen met pk_",
+      "connectSuccess": "Stripe verbonden en webhooks automatisch geconfigureerd!",
+      "connectPartialSuccess": "Stripe verbonden! Opmerking: automatische webhook-configuratie mislukt — u moet webhooks mogelijk handmatig configureren in het Stripe-dashboard.",
+      "connectFailed": "Kan Stripe niet verbinden",
+      "disconnected": "Stripe losgekoppeld",
+      "disconnectFailed": "Kan Stripe niet loskoppelen",
+      "connectionSuccess": "Verbinding gelukt!",
+      "connectionTestFailed": "Verbindingstest mislukt",
+      "settingsSaved": "Instellingen succesvol opgeslagen",
+      "saveSettingsFailed": "Kan instellingen niet opslaan",
+      "webhookConfigured": "Webhook succesvol geconfigureerd!",
+      "webhookConfigureFailed": "Kan webhook niet configureren"
+    }
   }
 }
