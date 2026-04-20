@@ -32,7 +32,7 @@
     "active": "Actief",
     "expired": "Verlopen",
     "expiringSoon": "Verloopt binnenkort ({{days}} dagen)",
-    "open": "Open",
+    "open": "Openen",
     "inReview": "In beoordeling",
     "resolved": "Opgelost",
     "never": "Nooit",
@@ -92,9 +92,9 @@
     "totalAmount": "Totaalbedrag",
     "months": {
       "jan": "Jan",
-      "feb": "Feb",
+      "feb": "feb",
       "mar": "Mrt",
-      "apr": "Apr",
+      "apr": "apr",
       "may": "Mei",
       "jun": "Jun"
     }
@@ -129,7 +129,7 @@
     "validationResult": "Validatie voltooid: {{balanceCount}} saldoafwijkingen en {{trackingCount}} traceringsproblemen gevonden.",
     "tabs": {
       "all": "Alle",
-      "open": "Open",
+      "open": "Openen",
       "inReview": "In beoordeling",
       "resolved": "Opgelost"
     }

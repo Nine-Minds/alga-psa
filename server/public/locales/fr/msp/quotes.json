@@ -134,22 +134,22 @@
       "convertToInvoice": "Convertir en facture",
       "createNewRevision": "Créer une nouvelle révision",
       "sendQuote": "Envoyer un devis",
-      "saving": "Saving…",
-      "saveTemplate": "Save template",
-      "saveQuote": "Save quote",
-      "requestApproval": "Request approval",
-      "sendToClient": "Send to client",
-      "approve": "Approve",
-      "revise": "Revise",
-      "requestChanges": "Request changes",
-      "resend": "Resend",
-      "sendReminder": "Send reminder",
+      "saving": "Enregistrement…",
+      "saveTemplate": "Enregistrer le modèle",
+      "saveQuote": "Enregistrer le devis",
+      "requestApproval": "Demander l'approbation",
+      "sendToClient": "Envoyer au client",
+      "approve": "Approuver",
+      "revise": "Réviser",
+      "requestChanges": "Demander des modifications",
+      "resend": "Renvoyer",
+      "sendReminder": "Envoyer un rappel",
       "pdf": "PDF",
-      "duplicate": "Duplicate",
-      "back": "Back",
-      "moreActions": "More actions",
-      "cancel": "Cancel",
-      "previewPdf": "Preview PDF"
+      "duplicate": "Dupliquer",
+      "back": "Retour",
+      "moreActions": "Plus d'actions",
+      "cancel": "Annuler",
+      "previewPdf": "Aperçu PDF"
     },
     "headings": {
       "editQuote": "Modifier le devis",
@@ -248,97 +248,97 @@
       "titleRequired": "Le titre est requis sauf si vous créez à partir d'un modèle"
     },
     "header": {
-      "editTemplate": "Edit Quote Template",
-      "newTemplate": "New Quote Template",
-      "editQuote": "Edit Quote",
-      "newQuote": "New Quote",
+      "editTemplate": "Modifier le modèle de devis",
+      "newTemplate": "Nouveau modèle de devis",
+      "editQuote": "Modifier le devis",
+      "newQuote": "Nouveau devis",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Quote total"
+      "quoteTotalLabel": "Total du devis"
     },
     "breadcrumb": {
-      "billing": "Billing",
-      "quoteTemplates": "Quote Templates",
-      "quotes": "Quotes",
-      "newQuote": "New quote"
+      "billing": "Facturation",
+      "quoteTemplates": "Modèles de devis",
+      "quotes": "Devis",
+      "newQuote": "Nouveau devis"
     },
     "subtitle": {
-      "template": "Template · {{description}}",
-      "forClient": "For {{clientName}}",
-      "expires": "Expires {{date}}"
+      "template": "Modèle · {{description}}",
+      "forClient": "Pour {{clientName}}",
+      "expires": "Expire le {{date}}"
     },
     "banners": {
-      "acceptedTitle": "Quote Accepted",
-      "acceptedBy": "Accepted by: {{name}}",
-      "acceptedOn": "Accepted on: {{date}}",
-      "rejectedTitle": "Quote Rejected",
-      "rejectedOn": "Rejected on: {{date}}",
-      "rejectedReason": "Reason: {{reason}}",
-      "convertedTitle": "Quote Converted",
-      "convertedDescription": "This quote has been converted to a contract and/or invoice."
+      "acceptedTitle": "Devis accepté",
+      "acceptedBy": "Accepté par : {{name}}",
+      "acceptedOn": "Accepté le : {{date}}",
+      "rejectedTitle": "Devis rejeté",
+      "rejectedOn": "Rejeté le : {{date}}",
+      "rejectedReason": "Motif : {{reason}}",
+      "convertedTitle": "Devis converti",
+      "convertedDescription": "Ce devis a été converti en contrat et/ou facture."
     },
-    "noticeTitle": "Quote",
+    "noticeTitle": "Devis",
     "essentials": {
-      "title": "Essentials",
-      "subtitle": "Shown to the client on the quote document.",
-      "titleField": "Title",
-      "descriptionField": "Description / Scope",
-      "descriptionHelp": "A short paragraph that appears just under the title on the PDF.",
+      "title": "Essentiels",
+      "subtitle": "Affiché au client sur le document du devis.",
+      "titleField": "Titre",
+      "descriptionField": "Description / Portée",
+      "descriptionHelp": "Un court paragraphe qui apparaît juste sous le titre du PDF.",
       "client": "Client",
-      "clientPlaceholder": "Select client",
+      "clientPlaceholder": "Sélectionner un client",
       "contact": "Contact",
-      "contactPlaceholder": "Select contact",
-      "currency": "Currency",
-      "currencyPlaceholder": "Select currency",
-      "quoteDate": "Quote date",
-      "validUntil": "Valid until",
-      "validUntilHelp": "Quote auto-expires on this date."
+      "contactPlaceholder": "Sélectionner un contact",
+      "currency": "Devise",
+      "currencyPlaceholder": "Sélectionner une devise",
+      "quoteDate": "Date du devis",
+      "validUntil": "Valable jusqu'au",
+      "validUntilHelp": "Le devis expire automatiquement à cette date."
     },
     "lineItems": {
-      "title": "Line items",
-      "subtitleEmpty": "No items yet.",
-      "subtitleCount": "{{count}} items · {{mix}}",
-      "mixBoth": "recurring and one-time",
-      "mixRecurring": "recurring",
-      "mixOneTime": "one-time",
-      "addLocation": "+ Add location",
-      "fromTemplate": "+ From template"
+      "title": "Lignes",
+      "subtitleEmpty": "Aucun élément pour le moment.",
+      "subtitleCount": "{{count}} éléments · {{mix}}",
+      "mixBoth": "récurrent et ponctuel",
+      "mixRecurring": "récurrent",
+      "mixOneTime": "ponctuel",
+      "addLocation": "+ Ajouter un emplacement",
+      "fromTemplate": "+ À partir du modèle"
     },
     "clientFacing": {
-      "title": "Client-facing text",
-      "subtitle": "Appears on the PDF, below the totals.",
-      "notes": "Notes to client (Optional)",
-      "terms": "Terms & conditions (Optional)"
+      "title": "Texte visible par le client",
+      "subtitle": "Apparaît sur le PDF, sous les totaux.",
+      "notes": "Notes au client (facultatif)",
+      "terms": "Conditions générales (facultatif)"
     },
     "moreDetails": {
-      "title": "More details",
-      "subtitle": "PO number, opportunity, PDF layout",
-      "poNumber": "PO number",
-      "opportunity": "Opportunity",
-      "opportunityPlaceholder": "Opportunity ID (optional)",
-      "pdfLayout": "PDF layout",
-      "pdfLayoutPlaceholder": "Use default layout",
-      "pdfLayoutHelp": "Choose which layout the client will see. Leave default to use tenant default."
+      "title": "Plus de détails",
+      "subtitle": "Numéro de BC, opportunité, mise en page PDF",
+      "poNumber": "Numéro de BC",
+      "opportunity": "Opportunité",
+      "opportunityPlaceholder": "ID d'opportunité (facultatif)",
+      "pdfLayout": "Mise en page PDF",
+      "pdfLayoutPlaceholder": "Utiliser la mise en page par défaut",
+      "pdfLayoutHelp": "Choisissez la mise en page vue par le client. Laissez vide pour utiliser la valeur par défaut du locataire."
     },
     "footer": {
-      "savedAgo": "Changes saved · {{ago}}",
-      "saving": "Saving…",
-      "unsaved": "Unsaved changes"
+      "savedAgo": "Modifications enregistrées · {{ago}}",
+      "saving": "Enregistrement…",
+      "unsaved": "Modifications non enregistrées"
     },
     "sidebar": {
-      "quoteTotal": "Quote total",
-      "recurringPerMonth": "{{amount}} recurring / month",
-      "subtotal": "Subtotal",
-      "discounts": "Discounts",
-      "tax": "Tax",
-      "statusLabel": "Status",
-      "approvalLabel": "Approval",
-      "approvalMessage": "Quotes need sales lead approval before sending.",
-      "documentLayoutLabel": "Document layout",
-      "defaultLayout": "Tenant default",
+      "quoteTotal": "Total du devis",
+      "recurringPerMonth": "{{amount}} récurrent / mois",
+      "subtotal": "Sous-total",
+      "discounts": "Remises",
+      "tax": "Taxe",
+      "statusLabel": "Statut",
+      "approvalLabel": "Approbation",
+      "approvalMessage": "Les devis nécessitent l'approbation du responsable des ventes avant envoi.",
+      "documentLayoutLabel": "Mise en page du document",
+      "defaultLayout": "Valeur par défaut du locataire",
       "standardLayout": "Standard",
-      "customLayout": "Custom",
-      "tenantDefault": "Tenant default",
-      "changeLayout": "Change"
+      "customLayout": "Personnalisé",
+      "tenantDefault": "Valeur par défaut du locataire",
+      "changeLayout": "Modifier"
     }
   },
   "quoteDetail": {
@@ -432,6 +432,11 @@
     },
     "table": {
       "description": "Description"
+    },
+    "locations": {
+      "groupHeading": "Emplacement",
+      "unassigned": "Éléments sans emplacement",
+      "subtotal": "Sous-total par emplacement"
     }
   },
   "quoteLineItems": {
@@ -506,7 +511,18 @@
       "unavailable": "Majoration indisponible",
       "unavailableTooltip": "La majoration ne peut pas être calculée, car le coût est suivi dans {{costCurrency}} et ce devis se trouve dans {{quoteCurrency}}."
     },
-    "empty": "Aucun élément de campagne pour l'instant. Utilisez la recherche dans le catalogue ci-dessus pour ajouter votre premier article."
+    "empty": "Aucun élément de campagne pour l'instant. Utilisez la recherche dans le catalogue ci-dessus pour ajouter votre premier article.",
+    "searchPlaceholder": "Rechercher ou saisir un nom personnalisé…",
+    "locations": {
+      "groupHeading": "Emplacement {{index}}",
+      "pickerPlaceholder": "Sélectionner un emplacement",
+      "unassigned": "Les éléments sans emplacement sont listés ici jusqu'à ce qu'un soit choisi.",
+      "removeGroup": "Supprimer l'emplacement",
+      "subtotal": "Sous-total par emplacement",
+      "addLocationButton": "+ Ajouter un emplacement",
+      "needMoreLocations": "Ce client n'a qu'un seul emplacement actif. Ajoutez un deuxième emplacement dans les paramètres du client pour activer les devis multi-sites.",
+      "emptyGroup": "Aucun élément pour cet emplacement pour le moment."
+    }
   },
   "quoteRecipients": {
     "trigger": {

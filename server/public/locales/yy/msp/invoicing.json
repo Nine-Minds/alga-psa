@@ -982,5 +982,538 @@
       "loading": "55555",
       "notAvailable": "55555"
     }
+  },
+  "designer": {
+    "toolbar": {
+      "undo": "55555",
+      "redo": "55555",
+      "snap": "55555",
+      "guides": "55555",
+      "rulers": "55555",
+      "zoom": "55555",
+      "metrics": {
+        "drags": "55555 {{count}} 55555",
+        "success": "55555 {{count}} 55555",
+        "invalid": "55555 {{count}} 55555"
+      }
+    },
+    "palette": {
+      "tabs": {
+        "blocks": "55555",
+        "presets": "55555",
+        "fields": "55555",
+        "outline": "55555"
+      },
+      "search": {
+        "blocks": "55555",
+        "presets": "55555",
+        "fields": "55555"
+      },
+      "dragHint": "55555",
+      "addAriaLabel": "55555 {{label}} 55555",
+      "noBlocksMatch": "55555",
+      "presets": {
+        "sectionTitle": "55555",
+        "sectionDescription": "55555"
+      },
+      "noPresetsMatch": "55555",
+      "fields": {
+        "insertHint": "55555",
+        "categories": {
+          "client": "55555",
+          "contact": "55555",
+          "line-item": "55555",
+          "quote": "55555",
+          "quote-totals": "55555",
+          "invoice": "55555",
+          "customer": "55555",
+          "tenant": "55555"
+        }
+      },
+      "noFieldsMatch": "55555",
+      "categories": {
+        "structure": "55555",
+        "content": "55555",
+        "media": "55555",
+        "dynamic": "55555"
+      }
+    },
+    "inspector": {
+      "layoutControls": "55555",
+      "sizingMode": "55555",
+      "flexItem": "55555",
+      "displayFormat": "55555",
+      "attachments": "55555",
+      "media": "55555",
+      "title": "55555",
+      "layerName": "55555",
+      "typeLabel": "55555",
+      "fieldTypeLabel": "55555",
+      "noBindingKey": "55555",
+      "layoutPreset": "55555",
+      "clear": "55555",
+      "fitSectionToContents": "55555",
+      "sectionNoChildContent": "55555",
+      "apply": "55555",
+      "emptyHelp": "55555"
+    },
+    "shell": {
+      "selectedLabel": "55555",
+      "selectedNone": "55555",
+      "clickBlockHint": "55555",
+      "orUse": "55555",
+      "plusInLeftPanelHint": "55555"
+    },
+    "pageSetup": {
+      "title": "55555",
+      "description": "55555",
+      "paperPreset": "55555",
+      "marginMm": "55555"
+    },
+    "breadcrumbs": {
+      "emptyHelp": "55555",
+      "hierarchy": "55555"
+    },
+    "workspace": {
+      "preview": {
+        "source": {
+          "sample": "55555",
+          "existing": "55555"
+        },
+        "sampleScenario": "55555",
+        "selectScenarioPlaceholder": "55555",
+        "searchInvoices": "55555",
+        "searchInvoicesHint": "55555",
+        "noInvoicesFound": "55555",
+        "selectInvoice": "55555",
+        "loadingDetails": "55555",
+        "selectInvoiceHint": "55555",
+        "shape": "55555",
+        "render": "55555",
+        "rerun": "55555",
+        "emptyState": "55555",
+        "loadingPreview": "55555",
+        "templateError": "55555",
+        "renderError": "55555"
+      },
+      "tabs": {
+        "design": "55555",
+        "transforms": "55555",
+        "preview": "55555"
+      }
+    },
+    "blocks": {
+      "document": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "page": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "section": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "column": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "text": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "totals": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "table": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "dynamic-table": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "field": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "label": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "subtotal": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "tax": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "discount": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "custom-total": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "image": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "logo": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "qr": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "signature": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "action-button": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "attachment-list": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "divider": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "spacer": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "container": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "presets": {
+      "header-logo-address": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "line-items-table": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "totals-stack": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "two-column-summary": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "notes-totals-row": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "two-equal-columns-grid": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "three-info-columns": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "recurring-onetime-tables": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "header-with-qr": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "modern-invoice-complete": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "schema": {
+      "panels": {
+        "layout": {
+          "title": "55555",
+          "fields": {
+            "gap": {
+              "label": "55555"
+            },
+            "padding": {
+              "label": "55555"
+            },
+            "flexDirection": {
+              "label": "55555",
+              "options": {
+                "column": "55555",
+                "row": "55555"
+              }
+            },
+            "alignItems": {
+              "label": "55555",
+              "options": {
+                "stretch": "55555",
+                "flex-start": "55555",
+                "center": "55555",
+                "flex-end": "55555"
+              }
+            },
+            "justifyContent": {
+              "label": "55555",
+              "options": {
+                "flex-start": "55555",
+                "center": "55555",
+                "flex-end": "55555",
+                "space-between": "55555",
+                "space-around": "55555",
+                "space-evenly": "55555"
+              }
+            },
+            "gridAutoFlow": {
+              "label": "55555",
+              "options": {
+                "row": "55555",
+                "column": "55555",
+                "dense": "55555",
+                "row dense": "55555",
+                "column dense": "55555"
+              }
+            },
+            "gridTemplateColumns": {
+              "label": "55555"
+            },
+            "gridTemplateRows": {
+              "label": "55555"
+            },
+            "display": {
+              "options": {
+                "flex": "55555",
+                "grid": "55555"
+              }
+            }
+          }
+        },
+        "sizing-css": {
+          "title": "55555",
+          "fields": {
+            "height": {
+              "label": "55555"
+            },
+            "minWidth": {
+              "label": "55555"
+            },
+            "minHeight": {
+              "label": "55555"
+            },
+            "maxWidth": {
+              "label": "55555"
+            },
+            "maxHeight": {
+              "label": "55555"
+            }
+          }
+        },
+        "appearance": {
+          "title": "55555",
+          "fields": {
+            "color": {
+              "label": "55555"
+            },
+            "border": {
+              "label": "55555"
+            },
+            "borderRadius": {
+              "label": "55555"
+            },
+            "margin": {
+              "label": "55555"
+            }
+          }
+        },
+        "section-border": {
+          "title": "55555",
+          "fields": {
+            "sectionBorderStyle": {
+              "options": {
+                "light": "55555",
+                "strong": "55555",
+                "none": "55555"
+              }
+            }
+          }
+        },
+        "field-binding": {
+          "title": "55555",
+          "fields": {
+            "format": {
+              "options": {
+                "text": "55555",
+                "number": "55555",
+                "currency": "55555",
+                "date": "55555"
+              }
+            },
+            "fieldBorderStyle": {
+              "options": {
+                "underline": "55555",
+                "box": "55555",
+                "none": "55555"
+              }
+            }
+          }
+        },
+        "field-layout": {
+          "title": "55555"
+        },
+        "text-content": {
+          "title": "55555"
+        },
+        "label-style": {
+          "title": "55555",
+          "fields": {
+            "fontWeight": {
+              "options": {
+                "semibold": "55555",
+                "bold": "55555",
+                "medium": "55555",
+                "normal": "55555"
+              }
+            }
+          }
+        },
+        "totals-row": {
+          "title": "55555"
+        },
+        "action-button": {
+          "title": "55555",
+          "fields": {
+            "actionType": {
+              "options": {
+                "url": "55555",
+                "mailto": "55555"
+              }
+            }
+          }
+        },
+        "signature": {
+          "title": "55555"
+        },
+        "table": {
+          "title": "55555"
+        },
+        "table-header-style": {
+          "title": "55555",
+          "fields": {
+            "headerColor": {
+              "label": "55555"
+            },
+            "att-1": {
+              "label": "55555"
+            }
+          }
+        }
+      }
+    },
+    "fields": {
+      "invoice_number": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "invoice_invoiceNumber": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "invoice_issueDate": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "invoice_dueDate": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "invoice_poNumber": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "invoice_subtotal": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "invoice_tax": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "invoice_discount": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "invoice_total": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "invoice_currencyCode": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "invoice_recurringServicePeriodStart": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "invoice_recurringServicePeriodEnd": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "invoice_recurringServicePeriodLabel": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "customer_name": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "customer_address": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "client_name": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "client_address": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "contact_name": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "contact_address": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "tenant_name": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "tenant_address": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "tenantClient_name": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "tenantClient_address": {
+        "label": "55555",
+        "description": "55555"
+      }
+    }
   }
 }

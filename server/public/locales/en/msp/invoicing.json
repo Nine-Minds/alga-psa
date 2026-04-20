@@ -231,7 +231,8 @@
     "automatedItems": {
       "title": "Automated Line Items",
       "service": "Service",
-      "total": "Total"
+      "total": "Total",
+      "unknownService": "Unknown Service"
     },
     "lineItems": {
       "manual": "Manual Line Items",
@@ -269,12 +270,6 @@
     "errorFallback": {
       "title": "Something went wrong",
       "retry": "Try again"
-    },
-    "automatedItems": {
-      "title": "Automated Line Items",
-      "service": "Service",
-      "total": "Total",
-      "unknownService": "Unknown Service"
     }
   },
   "draftsTab": {
@@ -986,6 +981,539 @@
       "empty": "No data available",
       "loading": "Loading...",
       "notAvailable": "—"
+    }
+  },
+  "designer": {
+    "toolbar": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "snap": "Snap",
+      "guides": "Guides",
+      "rulers": "Rulers",
+      "zoom": "Zoom",
+      "metrics": {
+        "drags": "Drags: {{count}}",
+        "success": "Success: {{count}}",
+        "invalid": "Invalid: {{count}}"
+      }
+    },
+    "palette": {
+      "tabs": {
+        "blocks": "BLOCKS",
+        "presets": "PRESETS",
+        "fields": "FIELDS",
+        "outline": "OUTLINE"
+      },
+      "search": {
+        "blocks": "Search blocks...",
+        "presets": "Search presets...",
+        "fields": "Search fields..."
+      },
+      "dragHint": "Drag or tap `+` to insert.",
+      "addAriaLabel": "Add {{label}}",
+      "noBlocksMatch": "No blocks match this search.",
+      "presets": {
+        "sectionTitle": "Macro Templates",
+        "sectionDescription": "Preset bundles for common invoice sections."
+      },
+      "noPresetsMatch": "No presets match this search.",
+      "fields": {
+        "insertHint": "Click a field to insert into the focused text input.",
+        "categories": {
+          "client": "Client",
+          "contact": "Contact",
+          "line-item": "Line Item",
+          "quote": "Quote",
+          "quote-totals": "Quote Totals",
+          "invoice": "Invoice",
+          "customer": "Customer",
+          "tenant": "Tenant"
+        }
+      },
+      "noFieldsMatch": "No fields match this search.",
+      "categories": {
+        "structure": "Structure",
+        "content": "Content",
+        "media": "Media",
+        "dynamic": "Dynamic"
+      }
+    },
+    "inspector": {
+      "layoutControls": "Layout Controls",
+      "sizingMode": "Sizing Mode",
+      "flexItem": "Flex Item",
+      "displayFormat": "Display Format",
+      "attachments": "Attachments",
+      "media": "Media",
+      "title": "Inspector",
+      "layerName": "Layer Name",
+      "typeLabel": "Type",
+      "fieldTypeLabel": "Field Type",
+      "noBindingKey": "No binding key set",
+      "layoutPreset": "Layout Preset",
+      "clear": "Clear",
+      "fitSectionToContents": "Fit Section to Contents",
+      "sectionNoChildContent": "Section has no child content to fit.",
+      "apply": "Apply",
+      "emptyHelp": "Select a component to edit its properties."
+    },
+    "shell": {
+      "selectedLabel": "Selected:",
+      "selectedNone": "None",
+      "clickBlockHint": "Click a block on canvas",
+      "orUse": "or use",
+      "plusInLeftPanelHint": "+ in the left panel"
+    },
+    "pageSetup": {
+      "title": "Page Setup",
+      "description": "Choose a paper preset and page margin without selecting the hidden page node.",
+      "paperPreset": "Paper Preset",
+      "marginMm": "Margin (mm)"
+    },
+    "breadcrumbs": {
+      "emptyHelp": "Select a component on the canvas to view its hierarchy.",
+      "hierarchy": "Hierarchy"
+    },
+    "workspace": {
+      "preview": {
+        "source": {
+          "sample": "Sample",
+          "existing": "Existing"
+        },
+        "sampleScenario": "Sample Scenario",
+        "selectScenarioPlaceholder": "Select scenario...",
+        "searchInvoices": "Search invoices...",
+        "searchInvoicesHint": "Search by number or client...",
+        "noInvoicesFound": "No invoices found.",
+        "selectInvoice": "Select Invoice",
+        "loadingDetails": "Loading invoice details...",
+        "selectInvoiceHint": "Select an invoice to preview data-bound output.",
+        "shape": "Shape",
+        "render": "Render",
+        "rerun": "Re-run",
+        "emptyState": "Select sample or existing invoice data to generate an authoritative preview.",
+        "loadingPreview": "Shaping and rendering preview...",
+        "templateError": "Preview template could not be generated from the current workspace.",
+        "renderError": "Preview rendering failed."
+      },
+      "tabs": {
+        "design": "Design",
+        "transforms": "Transforms",
+        "preview": "Preview"
+      }
+    },
+    "blocks": {
+      "document": {
+        "label": "Document",
+        "description": "Invoice document root."
+      },
+      "page": {
+        "label": "Page",
+        "description": "A single invoice page."
+      },
+      "section": {
+        "label": "Section",
+        "description": "Logical grouping with shared layout rules."
+      },
+      "column": {
+        "label": "Column",
+        "description": "Legacy column container."
+      },
+      "text": {
+        "label": "Text Block",
+        "description": "Static or data-bound text content."
+      },
+      "totals": {
+        "label": "Totals",
+        "description": "Subtotal/Tax/Grand total summary."
+      },
+      "table": {
+        "label": "Line Items Table",
+        "description": "Repeating rows for invoice line items."
+      },
+      "dynamic-table": {
+        "label": "Dynamic Table",
+        "description": "Advanced data table with column bindings."
+      },
+      "field": {
+        "label": "Data Field",
+        "description": "Displays a bound value (invoice number, dates, totals)."
+      },
+      "label": {
+        "label": "Field Label",
+        "description": "Static label paired with data fields."
+      },
+      "subtotal": {
+        "label": "Subtotal Row",
+        "description": "Displays pre-tax subtotal."
+      },
+      "tax": {
+        "label": "Tax Row",
+        "description": "Displays calculated tax amount."
+      },
+      "discount": {
+        "label": "Discount Row",
+        "description": "Displays discount amount."
+      },
+      "custom-total": {
+        "label": "Custom Total Row",
+        "description": "Configurable computed row (fees, credits, etc.)."
+      },
+      "image": {
+        "label": "Image",
+        "description": "Inline image element."
+      },
+      "logo": {
+        "label": "Logo",
+        "description": "Tenant branding asset."
+      },
+      "qr": {
+        "label": "QR Code",
+        "description": "Auto-generated QR for payment links."
+      },
+      "signature": {
+        "label": "Signature Block",
+        "description": "Signer name and signature line or image."
+      },
+      "action-button": {
+        "label": "Action Button",
+        "description": "Call-to-action button (e.g., Pay Now)."
+      },
+      "attachment-list": {
+        "label": "Attachment List",
+        "description": "Displays supporting documents or links."
+      },
+      "divider": {
+        "label": "Divider",
+        "description": "Horizontal line separator."
+      },
+      "spacer": {
+        "label": "Spacer",
+        "description": "Empty space for layout adjustment."
+      },
+      "container": {
+        "label": "Box Container",
+        "description": "Styled container for grouping content (borders, backgrounds)."
+      }
+    },
+    "presets": {
+      "header-logo-address": {
+        "label": "Header: Logo + Address",
+        "description": "Two-column header with locked logo ratio and address stack."
+      },
+      "line-items-table": {
+        "label": "Line Items Table",
+        "description": "Full-width items table with repeating rows."
+      },
+      "totals-stack": {
+        "label": "Totals Stack",
+        "description": "Totals summary with note block."
+      },
+      "two-column-summary": {
+        "label": "Two-Column Summary",
+        "description": "Equal columns for summary and contact info."
+      },
+      "notes-totals-row": {
+        "label": "Notes + Totals Row",
+        "description": "Wide notes column beside a narrow totals column using CSS grid."
+      },
+      "two-equal-columns-grid": {
+        "label": "Two Equal Columns",
+        "description": "Balanced two-column body section using CSS grid."
+      },
+      "three-info-columns": {
+        "label": "Three Info Columns",
+        "description": "Three-column info-card row using CSS grid."
+      },
+      "recurring-onetime-tables": {
+        "label": "Recurring + One-time Tables",
+        "description": "Quote-ready stacked dynamic tables for recurring and one-time items."
+      },
+      "header-with-qr": {
+        "label": "Split Header with QR",
+        "description": "Logo + address stack with QR code payment block."
+      },
+      "modern-invoice-complete": {
+        "label": "Modern Invoice Template",
+        "description": "Complete layout with Header, Billing Info, Items Table, and Footer."
+      }
+    },
+    "schema": {
+      "panels": {
+        "layout": {
+          "title": "Layout",
+          "fields": {
+            "gap": {
+              "label": "Gap"
+            },
+            "padding": {
+              "label": "Padding"
+            },
+            "flexDirection": {
+              "label": "Direction",
+              "options": {
+                "column": "Vertical",
+                "row": "Horizontal"
+              }
+            },
+            "alignItems": {
+              "label": "Align Items",
+              "options": {
+                "stretch": "Stretch",
+                "flex-start": "Start",
+                "center": "Center",
+                "flex-end": "End"
+              }
+            },
+            "justifyContent": {
+              "label": "Justify Content",
+              "options": {
+                "flex-start": "Start",
+                "center": "Center",
+                "flex-end": "End",
+                "space-between": "Space Between",
+                "space-around": "Space Around",
+                "space-evenly": "Space Evenly"
+              }
+            },
+            "gridAutoFlow": {
+              "label": "Auto Flow",
+              "options": {
+                "row": "row",
+                "column": "column",
+                "dense": "dense",
+                "row dense": "row dense",
+                "column dense": "column dense"
+              }
+            },
+            "gridTemplateColumns": {
+              "label": "Template Columns"
+            },
+            "gridTemplateRows": {
+              "label": "Template Rows"
+            },
+            "display": {
+              "options": {
+                "flex": "Stack (Flex)",
+                "grid": "Grid"
+              }
+            }
+          }
+        },
+        "sizing-css": {
+          "title": "Sizing (CSS)",
+          "fields": {
+            "height": {
+              "label": "height"
+            },
+            "minWidth": {
+              "label": "min-width"
+            },
+            "minHeight": {
+              "label": "min-height"
+            },
+            "maxWidth": {
+              "label": "max-width"
+            },
+            "maxHeight": {
+              "label": "max-height"
+            }
+          }
+        },
+        "appearance": {
+          "title": "Appearance",
+          "fields": {
+            "color": {
+              "label": "Text color"
+            },
+            "border": {
+              "label": "Border"
+            },
+            "borderRadius": {
+              "label": "Radius"
+            },
+            "margin": {
+              "label": "Margin"
+            }
+          }
+        },
+        "section-border": {
+          "title": "Section Border",
+          "fields": {
+            "sectionBorderStyle": {
+              "options": {
+                "light": "Light",
+                "strong": "Strong",
+                "none": "None"
+              }
+            }
+          }
+        },
+        "field-binding": {
+          "title": "Field Binding",
+          "fields": {
+            "format": {
+              "options": {
+                "text": "Text",
+                "number": "Number",
+                "currency": "Currency",
+                "date": "Date"
+              }
+            },
+            "fieldBorderStyle": {
+              "options": {
+                "underline": "Underline",
+                "box": "Box",
+                "none": "None"
+              }
+            }
+          }
+        },
+        "field-layout": {
+          "title": "Field Layout"
+        },
+        "text-content": {
+          "title": "Text Content"
+        },
+        "label-style": {
+          "title": "Label Text",
+          "fields": {
+            "fontWeight": {
+              "options": {
+                "semibold": "Semibold",
+                "bold": "Bold",
+                "medium": "Medium",
+                "normal": "Normal"
+              }
+            }
+          }
+        },
+        "totals-row": {
+          "title": "Totals Row"
+        },
+        "action-button": {
+          "title": "Button",
+          "fields": {
+            "actionType": {
+              "options": {
+                "url": "URL",
+                "mailto": "Email"
+              }
+            }
+          }
+        },
+        "signature": {
+          "title": "Signature Block"
+        },
+        "table": {
+          "title": "Table"
+        },
+        "table-header-style": {
+          "title": "Header Style",
+          "fields": {
+            "headerColor": {
+              "label": "Text color"
+            },
+            "att-1": {
+              "label": "Contract.pdf"
+            }
+          }
+        }
+      }
+    },
+    "fields": {
+      "invoice_number": {
+        "label": "Invoice Number",
+        "description": "The invoice number shown to the customer."
+      },
+      "invoice_invoiceNumber": {
+        "label": "Invoice Number",
+        "description": "The invoice number shown to the customer."
+      },
+      "invoice_issueDate": {
+        "label": "Issue Date",
+        "description": "The date the invoice was issued."
+      },
+      "invoice_dueDate": {
+        "label": "Due Date",
+        "description": "The date payment is due."
+      },
+      "invoice_poNumber": {
+        "label": "PO Number",
+        "description": "The purchase order reference for this invoice."
+      },
+      "invoice_subtotal": {
+        "label": "Subtotal",
+        "description": "The invoice subtotal before tax and discounts."
+      },
+      "invoice_tax": {
+        "label": "Tax",
+        "description": "The tax amount for the invoice."
+      },
+      "invoice_discount": {
+        "label": "Discount",
+        "description": "The invoice discount amount."
+      },
+      "invoice_total": {
+        "label": "Total",
+        "description": "The total amount due on the invoice."
+      },
+      "invoice_currencyCode": {
+        "label": "Currency Code",
+        "description": "The ISO currency code for this invoice."
+      },
+      "invoice_recurringServicePeriodStart": {
+        "label": "Recurring Service Period Start",
+        "description": "The canonical recurring invoice service period start date when available."
+      },
+      "invoice_recurringServicePeriodEnd": {
+        "label": "Recurring Service Period End",
+        "description": "The canonical recurring invoice service period end date when available."
+      },
+      "invoice_recurringServicePeriodLabel": {
+        "label": "Recurring Service Period",
+        "description": "A formatted canonical recurring invoice service period label when available."
+      },
+      "customer_name": {
+        "label": "Customer Name",
+        "description": "The customer name shown on the invoice."
+      },
+      "customer_address": {
+        "label": "Customer Address",
+        "description": "The customer billing address."
+      },
+      "client_name": {
+        "label": "Client Name",
+        "description": "The client name shown in quote-style templates."
+      },
+      "client_address": {
+        "label": "Client Address",
+        "description": "The client address."
+      },
+      "contact_name": {
+        "label": "Contact Name",
+        "description": "The contact name shown in quote-style templates."
+      },
+      "contact_address": {
+        "label": "Contact Address",
+        "description": "The contact address."
+      },
+      "tenant_name": {
+        "label": "Tenant Name",
+        "description": "Your company name."
+      },
+      "tenant_address": {
+        "label": "Tenant Address",
+        "description": "Your company address."
+      },
+      "tenantClient_name": {
+        "label": "Tenant Name",
+        "description": "Your company name."
+      },
+      "tenantClient_address": {
+        "label": "Tenant Address",
+        "description": "Your company address."
+      }
     }
   }
 }

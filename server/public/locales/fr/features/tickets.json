@@ -46,7 +46,7 @@
     "titlePlaceholder": "Titre du ticket",
     "descriptionPlaceholder": "Décrivez votre problème...",
     "priorityPlaceholder": "Sélectionner la priorité",
-    "noBoardsAvailable": "No ticket boards are available for your account. Contact your administrator.",
+    "noBoardsAvailable": "Aucun tableau de tickets n'est disponible pour votre compte. Contactez votre administrateur.",
     "submit": "Créer un ticket",
     "submitting": "Création en cours...",
     "errors": {
@@ -131,7 +131,7 @@
     "responseSource": "Source de réponse",
     "ticketOrigin": "Origine du ticket",
     "isClosed": "Est fermé",
-    "tags": "Tags",
+    "tags": "Étiquettes",
     "sla": "SLA",
     "updated": "Mis à jour",
     "openInNewTab": "Ouvrir dans un nouvel onglet",
@@ -535,7 +535,7 @@
       "five": "Faible urgence (5)"
     },
     "matrixRows": {
-      "one": "High Impact (1)",
+      "one": "Fort impact (1)",
       "two": "Impact moyen-élevé (2)",
       "three": "Impact moyen (3)",
       "four": "Impact moyen-faible (4)",

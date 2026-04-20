@@ -11,7 +11,6 @@
   "viewContractLineDetails": "View Contract Line Details",
   "viewAllInvoices": "View All Invoices",
   "failedToLoad": "Failed to load invoices. Please try again.",
-  "invoices": "Invoices",
   "payments": "Payments",
   "contractLines": "Service Contract Lines",
   "usage": "Usage Metrics",
@@ -119,7 +118,24 @@
     "pendingQuotes": "Pending Quotes",
     "awaitingResponse": "{{count}} quote(s) awaiting your response",
     "noPending": "No pending quotes",
-    "viewAll": "View All Quotes"
+    "viewAll": "View All Quotes",
+    "locations": {
+      "primaryLocationHeading": "Quote location",
+      "changeButton": "Change",
+      "cancelChange": "Cancel",
+      "notSet": "No location selected",
+      "groupHeading": "Location",
+      "pickerPlaceholder": "Select a location",
+      "addLocationButton": "+ Add location",
+      "removeGroup": "Remove location",
+      "needMoreLocations": "This client only has one active location. Add a second location in Client settings to enable multi-site quoting.",
+      "emptyGroup": "No items yet for this location.",
+      "subtotal": "Location subtotal",
+      "unassigned": "Items without a location"
+    },
+    "lineItems": {
+      "searchPlaceholder": "Search or type custom item name..."
+    }
   },
   "enums": {
     "billingFrequency": {
@@ -178,6 +194,138 @@
       "pending": "Invoices awaiting approval or additional processing",
       "prepayment": "Advance payment or deposit invoices",
       "partially_applied": "Invoices with partial payments applied"
+    }
+  },
+  "invoices": {
+    "locations": {
+      "groupHeading": "Location",
+      "subtotal": "Location subtotal",
+      "unassigned": "Items without a location",
+      "pickerPlaceholder": "Select a location",
+      "addLocationButton": "+ Add location",
+      "removeGroup": "Remove location",
+      "emptyGroup": "No items yet for this location.",
+      "needMoreLocations": "This client only has one active location. Add a second location in Client settings to enable multi-site invoicing.",
+      "notSet": "No location selected"
+    }
+  },
+  "quoteForm": {
+    "noticeTitle": "Quote",
+    "readOnlyNotice": "This quote is read-only. To make changes, create a new revision.",
+    "breadcrumb": {
+      "billing": "Billing",
+      "quotes": "Quotes",
+      "quoteTemplates": "Quote Templates",
+      "newQuote": "New quote"
+    },
+    "header": {
+      "editQuote": "Edit Quote",
+      "newQuote": "New Quote",
+      "editTemplate": "Edit Quote Template",
+      "newTemplate": "New Quote Template",
+      "quoteTotalLabel": "Quote total",
+      "version": "v{{version}}"
+    },
+    "subtitle": {
+      "forClient": "For {{clientName}}",
+      "expires": "Expires {{date}}",
+      "template": "Template · {{description}}"
+    },
+    "actions": {
+      "pdf": "PDF",
+      "duplicate": "Duplicate",
+      "back": "Back",
+      "cancel": "Cancel",
+      "previewPdf": "Preview PDF",
+      "moreActions": "More actions",
+      "saving": "Saving…",
+      "saveQuote": "Save quote",
+      "saveTemplate": "Save template",
+      "sendToClient": "Send to client",
+      "requestApproval": "Request approval",
+      "requestChanges": "Request changes",
+      "approve": "Approve",
+      "revise": "Revise",
+      "createNewRevision": "Create new revision",
+      "convertToContract": "Convert to contract",
+      "convertToInvoice": "Convert to invoice",
+      "convertToBoth": "Convert to both",
+      "resend": "Resend",
+      "sendReminder": "Send reminder",
+      "cancelQuote": "Cancel quote"
+    },
+    "banners": {
+      "acceptedTitle": "Quote Accepted",
+      "acceptedBy": "Accepted by: {{name}}",
+      "acceptedOn": "Accepted on: {{date}}",
+      "rejectedTitle": "Quote Rejected",
+      "rejectedOn": "Rejected on: {{date}}",
+      "rejectedReason": "Reason: {{reason}}",
+      "convertedTitle": "Quote Converted",
+      "convertedDescription": "This quote has been converted to a contract and/or invoice."
+    },
+    "essentials": {
+      "title": "Essentials",
+      "subtitle": "Shown to the client on the quote document.",
+      "titleField": "Title",
+      "descriptionField": "Description / Scope",
+      "descriptionHelp": "A short paragraph that appears just under the title on the PDF.",
+      "client": "Client",
+      "clientPlaceholder": "Select client",
+      "contact": "Contact",
+      "contactPlaceholder": "Select contact",
+      "currency": "Currency",
+      "currencyPlaceholder": "Select currency",
+      "quoteDate": "Quote date",
+      "validUntil": "Valid until",
+      "validUntilHelp": "Quote auto-expires on this date."
+    },
+    "lineItems": {
+      "title": "Line items",
+      "subtitleEmpty": "No items yet.",
+      "subtitleCount": "{{count}} items · {{mix}}",
+      "mixBoth": "recurring and one-time",
+      "mixRecurring": "recurring",
+      "mixOneTime": "one-time",
+      "addLocation": "+ Add location",
+      "fromTemplate": "+ From template"
+    },
+    "clientFacing": {
+      "title": "Client-facing text",
+      "subtitle": "Appears on the PDF, below the totals.",
+      "notes": "Notes to client (Optional)",
+      "terms": "Terms & conditions (Optional)"
+    },
+    "moreDetails": {
+      "title": "More details",
+      "subtitle": "PO number, opportunity, PDF layout",
+      "poNumber": "PO number",
+      "opportunity": "Opportunity",
+      "opportunityPlaceholder": "Opportunity ID (optional)",
+      "pdfLayout": "PDF layout",
+      "pdfLayoutPlaceholder": "Use default layout",
+      "pdfLayoutHelp": "Choose which layout the client will see. Leave default to use tenant default."
+    },
+    "footer": {
+      "savedAgo": "Changes saved · {{ago}}",
+      "saving": "Saving…",
+      "unsaved": "Unsaved changes"
+    },
+    "sidebar": {
+      "quoteTotal": "Quote total",
+      "recurringPerMonth": "{{amount}} recurring / month",
+      "subtotal": "Subtotal",
+      "discounts": "Discounts",
+      "tax": "Tax",
+      "statusLabel": "Status",
+      "approvalLabel": "Approval",
+      "approvalMessage": "Quotes need sales lead approval before sending.",
+      "documentLayoutLabel": "Document layout",
+      "defaultLayout": "Tenant default",
+      "standardLayout": "Standard",
+      "customLayout": "Custom",
+      "tenantDefault": "Tenant default",
+      "changeLayout": "Change"
     }
   }
 }

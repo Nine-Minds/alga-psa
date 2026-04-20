@@ -442,7 +442,7 @@
       "add": "Servicecategorie toevoegen",
       "importFromStandard": "Importeren uit standaardcategorieën",
       "create": "Creëren",
-      "update": "Update"
+      "update": "Bijwerken"
     },
     "delete": {
       "message": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
@@ -985,7 +985,7 @@
       "remove": "Verwijderen",
       "reset": "Opnieuw instellen",
       "save": "Redden",
-      "update": "Update"
+      "update": "Bijwerken"
     },
     "columns": {
       "actions": "Acties",

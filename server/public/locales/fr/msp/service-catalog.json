@@ -19,7 +19,7 @@
       "startDate": "Date de début",
       "endDate": "Date de fin",
       "actions": "Actes",
-      "notAvailable": "N/A",
+      "notAvailable": "S/O",
       "region": "Région",
       "taxPercentage": "Pourcentage d'impôt",
       "composite": "Composite"
@@ -147,7 +147,7 @@
       }
     },
     "taxRateOption": {
-      "fallback": "N/A",
+      "fallback": "S/O",
       "label": "{{description}} - {{percentage}}%"
     },
     "actions": {

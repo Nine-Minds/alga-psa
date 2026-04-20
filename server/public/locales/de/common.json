@@ -48,7 +48,7 @@
     "success": "Erfolg",
     "error": "Fehler",
     "warning": "Warnung",
-    "info": "Information",
+    "info": "Informationen",
     "pending": "Ausstehend",
     "active": "Aktiv",
     "inactive": "Inaktiv",
@@ -761,7 +761,7 @@
     "card": {
       "requesterName": "Anfragender",
       "companyName": "Unternehmen",
-      "service": "Service",
+      "service": "Dienst",
       "requestedDateTime": "Angefragtes Datum & Uhrzeit",
       "duration": "Dauer",
       "preferredTechnician": "Bevorzugter Techniker",
@@ -811,7 +811,6 @@
       "scheduleEntryCreated": "Termineintrag erfolgreich erstellt"
     }
   },
-  "notifications": {},
   "sessionManagement": {
     "title": "Aktive Sitzungen",
     "description": "Verwalten Sie Ihre aktiven Anmeldesitzungen auf allen Geräten (maximal 5 Sitzungen)",

@@ -55,7 +55,7 @@
       "noUserFound": "Kein Benutzer gefunden"
     },
     "units": {
-      "hoursShort": "h",
+      "hoursShort": "Std.",
       "minutesShort": "m",
       "hoursAbbrev": "Std.",
       "dayOne": "Tag",
@@ -99,7 +99,7 @@
   },
   "timeEntryForm": {
     "labels": {
-      "service": "Service",
+      "service": "Dienst",
       "date": "Datum",
       "startTime": "Startzeit",
       "endTime": "Endzeit",
@@ -204,7 +204,7 @@
       "billable": "Abrechnungsfähig",
       "nonBillable": "Nicht abrechenbar",
       "workItem": "Arbeitselement",
-      "service": "Service",
+      "service": "Dienst",
       "duration": "Dauer",
       "notes": "Notizen",
       "entryChangeSuggestion": "Vorschlag zur Eintragsänderung",

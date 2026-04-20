@@ -183,7 +183,7 @@
       "body": "La diagnostica creerà una sottoscrizione temporanea a Microsoft Graph per poi eliminarla. Se l'eliminazione non riesce, potrebbe rendersi necessaria la rimozione manuale della sottoscrizione in Microsoft 365."
     },
     "labels": {
-      "provider": "Provider:",
+      "provider": "Fornitore:",
       "mailbox": "Casella di posta:",
       "overall": "Generale:",
       "resource": "Risorsa: {{resource}}",
@@ -228,7 +228,7 @@
       "inactive": "Inattivo"
     },
     "fields": {
-      "board": "Board:",
+      "board": "Bacheca:",
       "status": "Stato:",
       "priority": "Priorità:",
       "enteredBy": "Inserito da:"

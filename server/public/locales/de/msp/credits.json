@@ -36,7 +36,7 @@
     "inReview": "In Prüfung",
     "resolved": "Gelöst",
     "never": "Nie",
-    "na": "N/A"
+    "na": "n. z."
   },
   "actions": {
     "view": "Anzeigen",
@@ -91,12 +91,12 @@
     "numberOfDiscrepancies": "Anzahl der Abweichungen",
     "totalAmount": "Gesamtbetrag",
     "months": {
-      "jan": "Jan",
-      "feb": "Feb",
+      "jan": "Jan.",
+      "feb": "Feb.",
       "mar": "Mär",
-      "apr": "Apr",
+      "apr": "Apr.",
       "may": "Mai",
-      "jun": "Jun"
+      "jun": "Jun."
     }
   },
   "stats": {

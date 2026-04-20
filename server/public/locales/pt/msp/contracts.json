@@ -540,7 +540,20 @@
       "unitPlaceholder": "unit",
       "unitRate": "Unit Rate"
     },
-    "title": "Contract Lines"
+    "title": "Contract Lines",
+    "location": {
+      "addLocation": "+ Add location",
+      "fallback": "Location",
+      "label": "Location",
+      "lineCountPlural": "{{count}} lines",
+      "lineCountSingle": "{{count}} line",
+      "none": "No location assigned",
+      "pendingEmptyHint": "No contract lines yet for this location. Add a line, then assign it to this location via its Edit panel.",
+      "placeholder": "Select a location",
+      "removePendingGroup": "Remove empty location group",
+      "unassigned": "No location assigned",
+      "unnamed": "Location"
+    }
   },
   "contractLineEdit": {
     "actions": {

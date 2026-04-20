@@ -125,11 +125,11 @@
       "loadingStatuses": "Ładowanie statusów...",
       "notRequired": "Niewymagane",
       "noticePeriodDays": "Okres wypowiedzenia (dni)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "np. 30",
       "noticePrefix": "Wypowiedzenie:",
       "renewalHandling": "Obsługa odnowień",
       "renewalTermMonths": "Okres odnowienia (miesiące)",
-      "renewalTermPlaceholder": "e.g., 12",
+      "renewalTermPlaceholder": "np. 12",
       "renewalTicketBoard": "Tablica zgłoszeń odnowień",
       "renewalTicketStatus": "Status zgłoszenia odnowienia",
       "required": "Wymagane",
@@ -287,7 +287,7 @@
       "startDate": "Data rozpoczęcia"
     },
     "po": {
-      "prefix": "PO",
+      "prefix": "Zamówienie",
       "requiredForContract": "Zamówienie zakupu jest wymagane dla tej umowy."
     },
     "status": {
@@ -353,12 +353,12 @@
       "endDateHint": "Pozostaw puste dla umów ciągłych, które nie mają ustalonej daty zakończenia.",
       "endDateLabel": "Data zakończenia (opcjonalnie)",
       "noticePeriodLabel": "Okres wypowiedzenia (dni)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "np. 30",
       "renewalModePlaceholder": "Wybierz tryb odnowienia",
       "renewalSettingsDescription": "Skonfiguruj zachowanie odnowień dla tego przypisania umowy klienta.",
       "renewalSettingsTitle": "Ustawienia odnowień",
       "renewalTermLabel": "Okres odnowienia (miesiące)",
-      "renewalTermPlaceholder": "e.g., 12",
+      "renewalTermPlaceholder": "np. 12",
       "selectClientFirst": "Najpierw wybierz klienta",
       "startDateLabel": "Data rozpoczęcia *",
       "useTenantDefaultsDescription": "Zastosuj ustawienia trybu odnowienia i okresu wypowiedzenia z poziomu organizacji.",
@@ -811,7 +811,7 @@
         "customRate": "Stawka niestandardowa",
         "customRatePlaceholder": "0.00",
         "duration": "Czas trwania",
-        "durationPlaceholder": "e.g., 6",
+        "durationPlaceholder": "np. 6",
         "effectiveDate": "Data wejścia w życie",
         "endDate": "Data zakończenia",
         "hasEndDate": "Ma datę zakończenia",
@@ -932,7 +932,7 @@
       "client": "Klient",
       "contractName": "Nazwa umowy",
       "endDate": "Data zakończenia",
-      "poIndicator": "PO",
+      "poIndicator": "Zamówienie",
       "sourceTemplate": "Szablon źródłowy",
       "startDate": "Data rozpoczęcia",
       "status": "Status"
@@ -1235,8 +1235,8 @@
   },
   "bucketOverlay": {
     "includedLabel": "Wliczone {{units}}",
-    "includedPlaceholderHours": "e.g., 40",
-    "includedPlaceholderUnits": "e.g., 1000",
+    "includedPlaceholderHours": "np. 40",
+    "includedPlaceholderUnits": "np. 1000",
     "includedTooltip": "Liczba {{units}} wliczonych w każdy okres rozliczeniowy przed naliczeniem nadwyżek.",
     "overageRateLabel": "Stawka za nadwyżkę",
     "overageRateTooltip": "Opłata naliczana za każdą jednostkę {{unit}} ponad kwotę wliczoną.",
@@ -1404,9 +1404,9 @@
       },
       "modePlaceholder": "Wybierz tryb odnowienia",
       "noticePeriodLabel": "Okres wypowiedzenia (dni)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "np. 30",
       "termLabel": "Okres odnowienia (miesiące)",
-      "termPlaceholder": "e.g., 12",
+      "termPlaceholder": "np. 12",
       "useTenantDefaultsDescription": "Zastosuj ustawienia odnowień z poziomu organizacji, chyba że zostaną jawnie nadpisane.",
       "useTenantDefaultsLabel": "Użyj domyślnych ustawień odnowień tenanta"
     },
@@ -1609,7 +1609,7 @@
       "notSelected": "Nie wybrano",
       "notSpecified": "Nie określono",
       "ongoing": "Ciągła",
-      "notApplicable": "N/A"
+      "notApplicable": "Nie dotyczy"
     },
     "renewalMode": {
       "none": "Brak odnowienia",

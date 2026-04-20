@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface DesignerToolbarProps {
   snapToGrid: boolean;
@@ -37,18 +38,19 @@ export const DesignerToolbar: React.FC<DesignerToolbarProps> = ({
   onRedo,
   onGridSizeChange,
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   return (
     <div className="flex items-center justify-between border-b border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-4 py-2">
       <div className="flex items-center gap-3">
         <Button id="designer-toolbar-undo" variant="outline" size="sm" onClick={onUndo}>
-          Undo
+          {t('designer.toolbar.undo', { defaultValue: 'Undo' })}
         </Button>
         <Button id="designer-toolbar-redo" variant="outline" size="sm" onClick={onRedo}>
-          Redo
+          {t('designer.toolbar.redo', { defaultValue: 'Redo' })}
         </Button>
         <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
           <Switch id="snap-toggle" checked={snapToGrid} onCheckedChange={onToggleSnap} />
-          <label htmlFor="snap-toggle">Snap</label>
+          <label htmlFor="snap-toggle">{t('designer.toolbar.snap', { defaultValue: 'Snap' })}</label>
           <input
             type="number"
             min={2}
@@ -60,16 +62,16 @@ export const DesignerToolbar: React.FC<DesignerToolbarProps> = ({
         </div>
         <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
           <Switch id="guides-toggle" checked={showGuides} onCheckedChange={onToggleGuides} />
-          <label htmlFor="guides-toggle">Guides</label>
+          <label htmlFor="guides-toggle">{t('designer.toolbar.guides', { defaultValue: 'Guides' })}</label>
         </div>
         <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
           <Switch id="rulers-toggle" checked={showRulers} onCheckedChange={onToggleRulers} />
-          <label htmlFor="rulers-toggle">Rulers</label>
+          <label htmlFor="rulers-toggle">{t('designer.toolbar.rulers', { defaultValue: 'Rulers' })}</label>
         </div>
       </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 text-sm text-slate-600 min-w-[160px]">
-          <span>Zoom</span>
+          <span>{t('designer.toolbar.zoom', { defaultValue: 'Zoom' })}</span>
           <input
             type="range"
             min={50}
@@ -82,9 +84,9 @@ export const DesignerToolbar: React.FC<DesignerToolbarProps> = ({
           <span>{Math.round(canvasScale * 100)}%</span>
         </div>
         <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-col">
-          <span>Drags: {metrics.totalDrags}</span>
-          <span>Success: {metrics.completedDrops}</span>
-          <span>Invalid: {metrics.failedDrops}</span>
+          <span>{t('designer.toolbar.metrics.drags', { defaultValue: 'Drags: {{count}}', count: metrics.totalDrags })}</span>
+          <span>{t('designer.toolbar.metrics.success', { defaultValue: 'Success: {{count}}', count: metrics.completedDrops })}</span>
+          <span>{t('designer.toolbar.metrics.invalid', { defaultValue: 'Invalid: {{count}}', count: metrics.failedDrops })}</span>
         </div>
       </div>
     </div>

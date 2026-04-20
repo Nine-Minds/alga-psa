@@ -48,7 +48,7 @@
     "success": "Succès",
     "error": "Erreur",
     "warning": "Avertissement",
-    "info": "Information",
+    "info": "Informations",
     "pending": "En attente",
     "active": "Actif",
     "inactive": "Inactif",
@@ -691,7 +691,6 @@
       "supportMessage": "Pour toute question, contactez votre technicien."
     }
   },
-  "notifications": {},
   "availability": {
     "settings": {
       "title": "Paramètres de disponibilité",

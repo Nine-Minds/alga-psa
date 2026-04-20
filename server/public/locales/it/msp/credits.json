@@ -92,9 +92,9 @@
     "totalAmount": "Importo totale",
     "months": {
       "jan": "Gen",
-      "feb": "Feb",
+      "feb": "feb",
       "mar": "Mar",
-      "apr": "Apr",
+      "apr": "apr",
       "may": "Mag",
       "jun": "Giu"
     }

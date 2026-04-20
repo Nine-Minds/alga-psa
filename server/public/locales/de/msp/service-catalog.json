@@ -19,7 +19,7 @@
       "startDate": "Startdatum",
       "endDate": "Enddatum",
       "actions": "Aktionen",
-      "notAvailable": "N/A",
+      "notAvailable": "n. z.",
       "region": "Region",
       "taxPercentage": "Steuerprozentsatz",
       "composite": "Zusammengesetzt"
@@ -147,7 +147,7 @@
       }
     },
     "taxRateOption": {
-      "fallback": "N/A",
+      "fallback": "n. z.",
       "label": "{{description}} – {{percentage}} %"
     },
     "actions": {
@@ -161,7 +161,7 @@
       "rate": "Tarif",
       "product": "Produkt",
       "itemName": "Artikelname",
-      "service": "Service",
+      "service": "Dienst",
       "unknown": "Unbekannt"
     },
     "actions": {
@@ -239,7 +239,7 @@
       "save": "Konfiguration speichern"
     },
     "title": "Dienstkonfiguration",
-    "serviceLabel": "Service",
+    "serviceLabel": "Dienst",
     "effectiveModeLabel": "Effektiver Modus",
     "defaultSourceLabel": "Standardquelle",
     "modes": {
@@ -343,7 +343,7 @@
       "actions": "Aktionen",
       "minQuantity": "Mindestmenge",
       "maxQuantity": "Maximale Menge",
-      "rate": "Rate ({{unit}})",
+      "rate": "Satz ({{unit}})",
       "unlimited": "Unbegrenzt"
     },
     "actions": {

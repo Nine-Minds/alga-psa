@@ -21,14 +21,7 @@ import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { cn } from '../lib/utils';
 import Pagination from './Pagination';
 import { Alert, AlertDescription } from './Alert';
-
-// Default pagination options for list/table views
-const DEFAULT_LIST_ITEMS_PER_PAGE_OPTIONS = [
-  { value: '10', label: '10 per page' },
-  { value: '25', label: '25 per page' },
-  { value: '50', label: '50 per page' },
-  { value: '100', label: '100 per page' }
-];
+import { useTranslation } from '../lib/i18n/client';
 
 // Helper function to get nested property value
 const getNestedValue = (obj: unknown, path: string | string[]): unknown => {
@@ -184,6 +177,13 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     onItemsPerPageChange,
     itemsPerPageOptions,
   } = props;
+  const { t } = useTranslation('common');
+  const defaultItemsPerPageOptions = useMemo(() => [
+    { value: '10', label: t('pagination.itemsPerPageOption', { count: 10, defaultValue: '10 per page' }) },
+    { value: '25', label: t('pagination.itemsPerPageOption', { count: 25, defaultValue: '25 per page' }) },
+    { value: '50', label: t('pagination.itemsPerPageOption', { count: 50, defaultValue: '50 per page' }) },
+    { value: '100', label: t('pagination.itemsPerPageOption', { count: 100, defaultValue: '100 per page' }) },
+  ], [t]);
   const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 
   // Reference to the table container for measuring available width
@@ -679,7 +679,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                 }
               }}
               onItemsPerPageChange={onItemsPerPageChange}
-              itemsPerPageOptions={itemsPerPageOptions || DEFAULT_LIST_ITEMS_PER_PAGE_OPTIONS}
+              itemsPerPageOptions={itemsPerPageOptions || defaultItemsPerPageOptions}
               variant={onItemsPerPageChange ? "clients" : "compact"}
             />
           </div>

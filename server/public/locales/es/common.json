@@ -390,7 +390,7 @@
         "pdf": "PDF",
         "image": "Imágenes",
         "text": "Documentos",
-        "video": "Video",
+        "video": "Vídeo",
         "other": "Otros"
       },
       "sortOptions": {
@@ -515,7 +515,6 @@
     "downloadAsMarkdown": "Descargar como Markdown",
     "move": "Mover"
   },
-  "notifications": {},
   "surveys": {
     "common": {
       "loading": "Cargando..."
@@ -827,8 +826,8 @@
     },
     "loginMethods": {
       "password": "Contraseña",
-      "googleOAuth": "Google OAuth",
-      "microsoftOAuth": "Microsoft OAuth",
+      "googleOAuth": "OAuth de Google",
+      "microsoftOAuth": "OAuth de Microsoft",
       "keycloak": "Keycloak"
     },
     "userTypes": {

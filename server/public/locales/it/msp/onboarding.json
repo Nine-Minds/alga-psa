@@ -406,7 +406,7 @@
         "placeholder": "Smith"
       },
       "email": {
-        "label": "Email",
+        "label": "E-mail",
         "placeholder": "jane@client.com"
       },
       "role": {
@@ -606,7 +606,7 @@
       "tip": "Le board non condividono gli stati. Cambia board qui per rivedere o modificare il set di stati di ciascuna board.",
       "fields": {
         "board": {
-          "label": "Board",
+          "label": "Bacheca",
           "placeholder": "Seleziona board"
         }
       },

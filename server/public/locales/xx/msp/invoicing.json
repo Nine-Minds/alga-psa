@@ -982,5 +982,538 @@
       "loading": "11111",
       "notAvailable": "11111"
     }
+  },
+  "designer": {
+    "toolbar": {
+      "undo": "11111",
+      "redo": "11111",
+      "snap": "11111",
+      "guides": "11111",
+      "rulers": "11111",
+      "zoom": "11111",
+      "metrics": {
+        "drags": "11111 {{count}} 11111",
+        "success": "11111 {{count}} 11111",
+        "invalid": "11111 {{count}} 11111"
+      }
+    },
+    "palette": {
+      "tabs": {
+        "blocks": "11111",
+        "presets": "11111",
+        "fields": "11111",
+        "outline": "11111"
+      },
+      "search": {
+        "blocks": "11111",
+        "presets": "11111",
+        "fields": "11111"
+      },
+      "dragHint": "11111",
+      "addAriaLabel": "11111 {{label}} 11111",
+      "noBlocksMatch": "11111",
+      "presets": {
+        "sectionTitle": "11111",
+        "sectionDescription": "11111"
+      },
+      "noPresetsMatch": "11111",
+      "fields": {
+        "insertHint": "11111",
+        "categories": {
+          "client": "11111",
+          "contact": "11111",
+          "line-item": "11111",
+          "quote": "11111",
+          "quote-totals": "11111",
+          "invoice": "11111",
+          "customer": "11111",
+          "tenant": "11111"
+        }
+      },
+      "noFieldsMatch": "11111",
+      "categories": {
+        "structure": "11111",
+        "content": "11111",
+        "media": "11111",
+        "dynamic": "11111"
+      }
+    },
+    "inspector": {
+      "layoutControls": "11111",
+      "sizingMode": "11111",
+      "flexItem": "11111",
+      "displayFormat": "11111",
+      "attachments": "11111",
+      "media": "11111",
+      "title": "11111",
+      "layerName": "11111",
+      "typeLabel": "11111",
+      "fieldTypeLabel": "11111",
+      "noBindingKey": "11111",
+      "layoutPreset": "11111",
+      "clear": "11111",
+      "fitSectionToContents": "11111",
+      "sectionNoChildContent": "11111",
+      "apply": "11111",
+      "emptyHelp": "11111"
+    },
+    "shell": {
+      "selectedLabel": "11111",
+      "selectedNone": "11111",
+      "clickBlockHint": "11111",
+      "orUse": "11111",
+      "plusInLeftPanelHint": "11111"
+    },
+    "pageSetup": {
+      "title": "11111",
+      "description": "11111",
+      "paperPreset": "11111",
+      "marginMm": "11111"
+    },
+    "breadcrumbs": {
+      "emptyHelp": "11111",
+      "hierarchy": "11111"
+    },
+    "workspace": {
+      "preview": {
+        "source": {
+          "sample": "11111",
+          "existing": "11111"
+        },
+        "sampleScenario": "11111",
+        "selectScenarioPlaceholder": "11111",
+        "searchInvoices": "11111",
+        "searchInvoicesHint": "11111",
+        "noInvoicesFound": "11111",
+        "selectInvoice": "11111",
+        "loadingDetails": "11111",
+        "selectInvoiceHint": "11111",
+        "shape": "11111",
+        "render": "11111",
+        "rerun": "11111",
+        "emptyState": "11111",
+        "loadingPreview": "11111",
+        "templateError": "11111",
+        "renderError": "11111"
+      },
+      "tabs": {
+        "design": "11111",
+        "transforms": "11111",
+        "preview": "11111"
+      }
+    },
+    "blocks": {
+      "document": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "page": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "section": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "column": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "text": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "totals": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "table": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "dynamic-table": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "field": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "label": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "subtotal": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "tax": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "discount": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "custom-total": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "image": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "logo": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "qr": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "signature": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "action-button": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "attachment-list": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "divider": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "spacer": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "container": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "presets": {
+      "header-logo-address": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "line-items-table": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "totals-stack": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "two-column-summary": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "notes-totals-row": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "two-equal-columns-grid": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "three-info-columns": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "recurring-onetime-tables": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "header-with-qr": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "modern-invoice-complete": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "schema": {
+      "panels": {
+        "layout": {
+          "title": "11111",
+          "fields": {
+            "gap": {
+              "label": "11111"
+            },
+            "padding": {
+              "label": "11111"
+            },
+            "flexDirection": {
+              "label": "11111",
+              "options": {
+                "column": "11111",
+                "row": "11111"
+              }
+            },
+            "alignItems": {
+              "label": "11111",
+              "options": {
+                "stretch": "11111",
+                "flex-start": "11111",
+                "center": "11111",
+                "flex-end": "11111"
+              }
+            },
+            "justifyContent": {
+              "label": "11111",
+              "options": {
+                "flex-start": "11111",
+                "center": "11111",
+                "flex-end": "11111",
+                "space-between": "11111",
+                "space-around": "11111",
+                "space-evenly": "11111"
+              }
+            },
+            "gridAutoFlow": {
+              "label": "11111",
+              "options": {
+                "row": "11111",
+                "column": "11111",
+                "dense": "11111",
+                "row dense": "11111",
+                "column dense": "11111"
+              }
+            },
+            "gridTemplateColumns": {
+              "label": "11111"
+            },
+            "gridTemplateRows": {
+              "label": "11111"
+            },
+            "display": {
+              "options": {
+                "flex": "11111",
+                "grid": "11111"
+              }
+            }
+          }
+        },
+        "sizing-css": {
+          "title": "11111",
+          "fields": {
+            "height": {
+              "label": "11111"
+            },
+            "minWidth": {
+              "label": "11111"
+            },
+            "minHeight": {
+              "label": "11111"
+            },
+            "maxWidth": {
+              "label": "11111"
+            },
+            "maxHeight": {
+              "label": "11111"
+            }
+          }
+        },
+        "appearance": {
+          "title": "11111",
+          "fields": {
+            "color": {
+              "label": "11111"
+            },
+            "border": {
+              "label": "11111"
+            },
+            "borderRadius": {
+              "label": "11111"
+            },
+            "margin": {
+              "label": "11111"
+            }
+          }
+        },
+        "section-border": {
+          "title": "11111",
+          "fields": {
+            "sectionBorderStyle": {
+              "options": {
+                "light": "11111",
+                "strong": "11111",
+                "none": "11111"
+              }
+            }
+          }
+        },
+        "field-binding": {
+          "title": "11111",
+          "fields": {
+            "format": {
+              "options": {
+                "text": "11111",
+                "number": "11111",
+                "currency": "11111",
+                "date": "11111"
+              }
+            },
+            "fieldBorderStyle": {
+              "options": {
+                "underline": "11111",
+                "box": "11111",
+                "none": "11111"
+              }
+            }
+          }
+        },
+        "field-layout": {
+          "title": "11111"
+        },
+        "text-content": {
+          "title": "11111"
+        },
+        "label-style": {
+          "title": "11111",
+          "fields": {
+            "fontWeight": {
+              "options": {
+                "semibold": "11111",
+                "bold": "11111",
+                "medium": "11111",
+                "normal": "11111"
+              }
+            }
+          }
+        },
+        "totals-row": {
+          "title": "11111"
+        },
+        "action-button": {
+          "title": "11111",
+          "fields": {
+            "actionType": {
+              "options": {
+                "url": "11111",
+                "mailto": "11111"
+              }
+            }
+          }
+        },
+        "signature": {
+          "title": "11111"
+        },
+        "table": {
+          "title": "11111"
+        },
+        "table-header-style": {
+          "title": "11111",
+          "fields": {
+            "headerColor": {
+              "label": "11111"
+            },
+            "att-1": {
+              "label": "11111"
+            }
+          }
+        }
+      }
+    },
+    "fields": {
+      "invoice_number": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "invoice_invoiceNumber": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "invoice_issueDate": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "invoice_dueDate": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "invoice_poNumber": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "invoice_subtotal": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "invoice_tax": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "invoice_discount": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "invoice_total": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "invoice_currencyCode": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "invoice_recurringServicePeriodStart": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "invoice_recurringServicePeriodEnd": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "invoice_recurringServicePeriodLabel": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "customer_name": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "customer_address": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "client_name": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "client_address": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "contact_name": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "contact_address": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "tenant_name": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "tenant_address": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "tenantClient_name": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "tenantClient_address": {
+        "label": "11111",
+        "description": "11111"
+      }
+    }
   }
 }

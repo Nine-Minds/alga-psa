@@ -15,7 +15,7 @@
       "newLayout": "Nieuwe lay-out",
       "newQuote": "Nieuwe offerte",
       "newTemplate": "Nieuwe sjabloon",
-      "open": "Open",
+      "open": "Openen",
       "requestChanges": "Wijzigingen aanvragen",
       "resend": "Opnieuw verzenden",
       "revise": "Herzien",
@@ -120,7 +120,7 @@
       "delete": "Verwijderen",
       "downloadPdf": "PDF downloaden",
       "duplicate": "Duplicaat",
-      "open": "Open",
+      "open": "Openen",
       "resend": "Opnieuw verzenden",
       "sendReminder": "Herinnering verzenden",
       "sendToClient": "Verzenden naar klant"
@@ -134,22 +134,22 @@
       "convertToInvoice": "Converteren naar factuur",
       "createNewRevision": "Nieuwe revisie maken",
       "sendQuote": "Offerte verzenden",
-      "saving": "Saving…",
-      "saveTemplate": "Save template",
-      "saveQuote": "Save quote",
-      "requestApproval": "Request approval",
-      "sendToClient": "Send to client",
-      "approve": "Approve",
-      "revise": "Revise",
-      "requestChanges": "Request changes",
-      "resend": "Resend",
-      "sendReminder": "Send reminder",
+      "saving": "Opslaan…",
+      "saveTemplate": "Sjabloon opslaan",
+      "saveQuote": "Offerte opslaan",
+      "requestApproval": "Goedkeuring aanvragen",
+      "sendToClient": "Naar klant verzenden",
+      "approve": "Goedkeuren",
+      "revise": "Reviseren",
+      "requestChanges": "Wijzigingen aanvragen",
+      "resend": "Opnieuw verzenden",
+      "sendReminder": "Herinnering verzenden",
       "pdf": "PDF",
-      "duplicate": "Duplicate",
-      "back": "Back",
-      "moreActions": "More actions",
-      "cancel": "Cancel",
-      "previewPdf": "Preview PDF"
+      "duplicate": "Dupliceren",
+      "back": "Terug",
+      "moreActions": "Meer acties",
+      "cancel": "Annuleren",
+      "previewPdf": "Pdf-voorvertoning"
     },
     "headings": {
       "editQuote": "Offerte bewerken",
@@ -248,97 +248,97 @@
       "titleRequired": "Titel is vereist, tenzij u op basis van een sjabloon maakt"
     },
     "header": {
-      "editTemplate": "Edit Quote Template",
-      "newTemplate": "New Quote Template",
-      "editQuote": "Edit Quote",
-      "newQuote": "New Quote",
+      "editTemplate": "Offertesjabloon bewerken",
+      "newTemplate": "Nieuw offertesjabloon",
+      "editQuote": "Offerte bewerken",
+      "newQuote": "Nieuwe offerte",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Quote total"
+      "quoteTotalLabel": "Offertetotaal"
     },
     "breadcrumb": {
-      "billing": "Billing",
-      "quoteTemplates": "Quote Templates",
-      "quotes": "Quotes",
-      "newQuote": "New quote"
+      "billing": "Facturering",
+      "quoteTemplates": "Offertesjablonen",
+      "quotes": "Offertes",
+      "newQuote": "Nieuwe offerte"
     },
     "subtitle": {
-      "template": "Template · {{description}}",
-      "forClient": "For {{clientName}}",
-      "expires": "Expires {{date}}"
+      "template": "Sjabloon · {{description}}",
+      "forClient": "Voor {{clientName}}",
+      "expires": "Verloopt op {{date}}"
     },
     "banners": {
-      "acceptedTitle": "Quote Accepted",
-      "acceptedBy": "Accepted by: {{name}}",
-      "acceptedOn": "Accepted on: {{date}}",
-      "rejectedTitle": "Quote Rejected",
-      "rejectedOn": "Rejected on: {{date}}",
-      "rejectedReason": "Reason: {{reason}}",
-      "convertedTitle": "Quote Converted",
-      "convertedDescription": "This quote has been converted to a contract and/or invoice."
+      "acceptedTitle": "Offerte geaccepteerd",
+      "acceptedBy": "Geaccepteerd door: {{name}}",
+      "acceptedOn": "Geaccepteerd op: {{date}}",
+      "rejectedTitle": "Offerte afgewezen",
+      "rejectedOn": "Afgewezen op: {{date}}",
+      "rejectedReason": "Reden: {{reason}}",
+      "convertedTitle": "Offerte geconverteerd",
+      "convertedDescription": "Deze offerte is omgezet naar een contract en/of factuur."
     },
-    "noticeTitle": "Quote",
+    "noticeTitle": "Offerte",
     "essentials": {
-      "title": "Essentials",
-      "subtitle": "Shown to the client on the quote document.",
-      "titleField": "Title",
-      "descriptionField": "Description / Scope",
-      "descriptionHelp": "A short paragraph that appears just under the title on the PDF.",
-      "client": "Client",
-      "clientPlaceholder": "Select client",
+      "title": "Basis",
+      "subtitle": "Getoond aan de klant op het offertedocument.",
+      "titleField": "Titel",
+      "descriptionField": "Beschrijving / Scope",
+      "descriptionHelp": "Een korte alinea die direct onder de titel in de pdf verschijnt.",
+      "client": "Klant",
+      "clientPlaceholder": "Klant selecteren",
       "contact": "Contact",
-      "contactPlaceholder": "Select contact",
-      "currency": "Currency",
-      "currencyPlaceholder": "Select currency",
-      "quoteDate": "Quote date",
-      "validUntil": "Valid until",
-      "validUntilHelp": "Quote auto-expires on this date."
+      "contactPlaceholder": "Contact selecteren",
+      "currency": "Valuta",
+      "currencyPlaceholder": "Valuta selecteren",
+      "quoteDate": "Offertedatum",
+      "validUntil": "Geldig tot",
+      "validUntilHelp": "Offerte verloopt automatisch op deze datum."
     },
     "lineItems": {
-      "title": "Line items",
-      "subtitleEmpty": "No items yet.",
+      "title": "Regels",
+      "subtitleEmpty": "Nog geen items.",
       "subtitleCount": "{{count}} items · {{mix}}",
-      "mixBoth": "recurring and one-time",
-      "mixRecurring": "recurring",
-      "mixOneTime": "one-time",
-      "addLocation": "+ Add location",
-      "fromTemplate": "+ From template"
+      "mixBoth": "terugkerend en eenmalig",
+      "mixRecurring": "terugkerend",
+      "mixOneTime": "eenmalig",
+      "addLocation": "+ Locatie toevoegen",
+      "fromTemplate": "+ Uit sjabloon"
     },
     "clientFacing": {
-      "title": "Client-facing text",
-      "subtitle": "Appears on the PDF, below the totals.",
-      "notes": "Notes to client (Optional)",
-      "terms": "Terms & conditions (Optional)"
+      "title": "Klantgerichte tekst",
+      "subtitle": "Verschijnt op de pdf, onder de totalen.",
+      "notes": "Notities aan klant (optioneel)",
+      "terms": "Voorwaarden (optioneel)"
     },
     "moreDetails": {
-      "title": "More details",
-      "subtitle": "PO number, opportunity, PDF layout",
-      "poNumber": "PO number",
-      "opportunity": "Opportunity",
-      "opportunityPlaceholder": "Opportunity ID (optional)",
-      "pdfLayout": "PDF layout",
-      "pdfLayoutPlaceholder": "Use default layout",
-      "pdfLayoutHelp": "Choose which layout the client will see. Leave default to use tenant default."
+      "title": "Meer details",
+      "subtitle": "PO-nummer, opportunity, pdf-lay-out",
+      "poNumber": "PO-nummer",
+      "opportunity": "Kans",
+      "opportunityPlaceholder": "Opportunity-ID (optioneel)",
+      "pdfLayout": "Pdf-lay-out",
+      "pdfLayoutPlaceholder": "Standaard lay-out gebruiken",
+      "pdfLayoutHelp": "Kies welke lay-out de klant ziet. Laat standaard staan om tenant-standaard te gebruiken."
     },
     "footer": {
-      "savedAgo": "Changes saved · {{ago}}",
-      "saving": "Saving…",
-      "unsaved": "Unsaved changes"
+      "savedAgo": "Wijzigingen opgeslagen · {{ago}}",
+      "saving": "Opslaan…",
+      "unsaved": "Niet-opgeslagen wijzigingen"
     },
     "sidebar": {
-      "quoteTotal": "Quote total",
-      "recurringPerMonth": "{{amount}} recurring / month",
-      "subtotal": "Subtotal",
-      "discounts": "Discounts",
-      "tax": "Tax",
+      "quoteTotal": "Offertetotaal",
+      "recurringPerMonth": "{{amount}} terugkerend / maand",
+      "subtotal": "Subtotaal",
+      "discounts": "Kortingen",
+      "tax": "Btw",
       "statusLabel": "Status",
-      "approvalLabel": "Approval",
-      "approvalMessage": "Quotes need sales lead approval before sending.",
-      "documentLayoutLabel": "Document layout",
-      "defaultLayout": "Tenant default",
-      "standardLayout": "Standard",
-      "customLayout": "Custom",
-      "tenantDefault": "Tenant default",
-      "changeLayout": "Change"
+      "approvalLabel": "Goedkeuring",
+      "approvalMessage": "Offertes vereisen goedkeuring door de salesmanager vóór verzending.",
+      "documentLayoutLabel": "Documentlay-out",
+      "defaultLayout": "Tenant-standaard",
+      "standardLayout": "Standaard",
+      "customLayout": "Aangepast",
+      "tenantDefault": "Tenant-standaard",
+      "changeLayout": "Wijzigen"
     }
   },
   "quoteDetail": {
@@ -432,6 +432,11 @@
     },
     "table": {
       "description": "Beschrijving"
+    },
+    "locations": {
+      "groupHeading": "Locatie",
+      "unassigned": "Items zonder locatie",
+      "subtotal": "Subtotaal locatie"
     }
   },
   "quoteLineItems": {
@@ -506,7 +511,18 @@
       "unavailable": "Toeslag niet beschikbaar",
       "unavailableTooltip": "De toeslag kan niet worden berekend omdat de kosten worden bijgehouden in {{costCurrency}} en deze offerte in {{quoteCurrency}}."
     },
-    "empty": "Nog geen regelitems. Gebruik de cataloguszoekopdracht hierboven om uw eerste item toe te voegen."
+    "empty": "Nog geen regelitems. Gebruik de cataloguszoekopdracht hierboven om uw eerste item toe te voegen.",
+    "searchPlaceholder": "Zoeken of aangepaste naam typen…",
+    "locations": {
+      "groupHeading": "Locatie {{index}}",
+      "pickerPlaceholder": "Een locatie kiezen",
+      "unassigned": "Items zonder locatie staan hier tot er een is gekozen.",
+      "removeGroup": "Locatie verwijderen",
+      "subtotal": "Subtotaal locatie",
+      "addLocationButton": "+ Locatie toevoegen",
+      "needMoreLocations": "Deze klant heeft maar één actieve locatie. Voeg in klantinstellingen een tweede locatie toe voor offertes met meerdere locaties.",
+      "emptyGroup": "Nog geen items voor deze locatie."
+    }
   },
   "quoteRecipients": {
     "trigger": {

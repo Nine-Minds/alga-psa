@@ -308,7 +308,7 @@
         "enableProvider": "Habilitar este proveedor"
       },
       "oauth": {
-        "sectionTitle": "Google OAuth",
+        "sectionTitle": "OAuth de Google",
         "sectionDescription": "Utiliza la aplicación de Google propiedad del inquilino configurada en Configuración → Integraciones → Proveedores.",
         "setupLabel": "Consola de Google Cloud",
         "notConfigured": "La integración de Google no está configurada para este inquilino.",

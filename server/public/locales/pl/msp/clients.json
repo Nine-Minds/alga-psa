@@ -335,7 +335,7 @@
       "creditCard": "Karta kredytowa"
     },
     "paymentTermsLabel": "Warunki płatności",
-    "standardTemplateLabel": "(Standard)",
+    "standardTemplateLabel": "(Standardowy)",
     "taxRegionsLoadError": "Nie udało się wczytać regionów podatkowych.",
     "usingDefaultTemplate": "Korzystanie z szablonu domyślnego: {{name}}"
   },

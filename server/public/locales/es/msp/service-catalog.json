@@ -19,7 +19,7 @@
       "startDate": "Fecha de inicio",
       "endDate": "Fecha de finalización",
       "actions": "Comportamiento",
-      "notAvailable": "N/A",
+      "notAvailable": "N/D",
       "region": "Región",
       "taxPercentage": "Porcentaje de impuestos",
       "composite": "compuesto"
@@ -147,7 +147,7 @@
       }
     },
     "taxRateOption": {
-      "fallback": "N/A",
+      "fallback": "N/D",
       "label": "{{description}} - {{percentage}}%"
     },
     "actions": {

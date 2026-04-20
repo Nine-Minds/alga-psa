@@ -12,7 +12,7 @@
     "hoursShort": "h",
     "days": "jours",
     "percent": "%",
-    "dash": "\u2014"
+    "dash": "—"
   },
   "reportsPage": {
     "cards": {
@@ -104,7 +104,7 @@
       "overage": "Dépassement",
       "revenueYtd": "Chiffre d'affaires (CDA)",
       "costYtd": "Coût (CDA)",
-      "profit": "Profit",
+      "profit": "Bénéfice",
       "margin": "Marge"
     },
     "statusValues": {

@@ -17,7 +17,7 @@
     "billing": "Fatturazione",
     "secrets": "Segreti",
     "importExport": "Importa/Esporta",
-    "email": "Email",
+    "email": "E-mail",
     "integrations": "Integrazioni",
     "extensions": "Estensioni"
   },
@@ -153,7 +153,7 @@
       "fields": {
         "firstName": "Nome",
         "lastName": "Cognome",
-        "email": "Email",
+        "email": "E-mail",
         "client": "Cliente",
         "clientOptional": "(opzionale)",
         "primaryRole": "Ruolo principale",
@@ -183,7 +183,7 @@
     "table": {
       "firstName": "Nome",
       "lastName": "Cognome",
-      "email": "Email",
+      "email": "E-mail",
       "client": "Cliente",
       "role": "Ruolo",
       "lastLogin": "Ultimo accesso",
@@ -239,7 +239,7 @@
         "placeholder": "Inserisca il cognome"
       },
       "email": {
-        "label": "Email",
+        "label": "E-mail",
         "placeholder": "Inserisca l'email"
       },
       "reportsTo": {
@@ -781,7 +781,7 @@
       "signIn": {
         "title": "Accedi",
         "description": "Inserisca le Sue credenziali per accedere al Suo account.",
-        "email": "Email",
+        "email": "E-mail",
         "emailPlaceholder": "Inserisca la Sua email",
         "password": "Password",
         "passwordPlaceholder": "Inserisca la Sua password",
@@ -1116,7 +1116,7 @@
       },
       "table": {
         "user": "Utente",
-        "email": "Email",
+        "email": "E-mail",
         "roles": "Ruoli",
         "actions": "Azioni"
       },
@@ -1197,7 +1197,7 @@
         "label": "Cognome *"
       },
       "email": {
-        "label": "Email *"
+        "label": "E-mail *"
       },
       "phoneNumber": {
         "label": "Numero di telefono"
@@ -1212,7 +1212,7 @@
     "notifications": {
       "title": "Preferenze di notifica",
       "viewSwitcher": {
-        "email": "Email",
+        "email": "E-mail",
         "internal": "Interne"
       }
     },

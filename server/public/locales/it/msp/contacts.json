@@ -57,7 +57,7 @@
     "table": {
       "name": "Nome",
       "created": "Creato",
-      "email": "Email",
+      "email": "E-mail",
       "phoneNumber": "Numero di telefono",
       "client": "Cliente",
       "tags": "Tag",
@@ -90,7 +90,7 @@
     "fields": {
       "fullName": "Nome completo",
       "client": "Cliente",
-      "email": "Email",
+      "email": "E-mail",
       "role": "Ruolo",
       "inboundTicketDestinationOverride": "Sovrascrittura destinazione ticket in ingresso",
       "useClientDestination": "Usa destinazione cliente",
@@ -151,7 +151,7 @@
     "description": "Finestra di importazione CSV per mappatura, anteprima, convalida e risultati",
     "fields": {
       "name": "Nome *",
-      "email": "Email *",
+      "email": "E-mail *",
       "defaultPhoneNumber": "Numero di telefono predefinito",
       "client": "Cliente",
       "tags": "Tag",
@@ -189,7 +189,7 @@
     "table": {
       "status": "Stato",
       "name": "Nome",
-      "email": "Email",
+      "email": "E-mail",
       "message": "Messaggio",
       "exists": "Esiste",
       "issues": "Problemi"
@@ -388,7 +388,7 @@
     },
     "fields": {
       "fullName": "Nome completo *",
-      "email": "Email *",
+      "email": "E-mail *",
       "clientOptional": "Cliente (facoltativo)",
       "role": "Ruolo",
       "rolePlaceholder": "es. Manager, Developer, ecc.",
@@ -454,7 +454,7 @@
     },
     "fields": {
       "fullName": "Nome completo",
-      "email": "Email",
+      "email": "E-mail",
       "role": "Ruolo",
       "rolePlaceholder": "es. Manager, Developer, ecc.",
       "phoneNumbers": "Numeri di telefono:",
@@ -495,7 +495,7 @@
     },
     "fields": {
       "fullName": "Nome completo",
-      "email": "Email",
+      "email": "E-mail",
       "phone": "Telefono:",
       "defaultPhone": "Predefinito",
       "client": "Cliente:",
@@ -533,7 +533,7 @@
     "description": "Elenco contatti specifico del cliente incorporato con filtri e azioni di riga",
     "table": {
       "name": "Nome",
-      "email": "Email",
+      "email": "E-mail",
       "phoneNumber": "Numero di telefono",
       "actions": "Azioni"
     },

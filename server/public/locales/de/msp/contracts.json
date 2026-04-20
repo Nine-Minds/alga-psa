@@ -125,11 +125,11 @@
       "loadingStatuses": "Status werden geladen...",
       "notRequired": "Nicht erforderlich",
       "noticePeriodDays": "Kündigungsfrist (Tage)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "z. B. 30",
       "noticePrefix": "Kündigung:",
       "renewalHandling": "Verlängerungsverarbeitung",
       "renewalTermMonths": "Verlängerungszeitraum (Monate)",
-      "renewalTermPlaceholder": "e.g., 12",
+      "renewalTermPlaceholder": "z. B. 12",
       "renewalTicketBoard": "Verlängerungsticket-Board",
       "renewalTicketStatus": "Verlängerungsticket-Status",
       "required": "Erforderlich",
@@ -353,12 +353,12 @@
       "endDateHint": "Leer lassen für laufende Verträge ohne festes Enddatum.",
       "endDateLabel": "Enddatum (optional)",
       "noticePeriodLabel": "Kündigungsfrist (Tage)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "z. B. 30",
       "renewalModePlaceholder": "Verlängerungsmodus auswählen",
       "renewalSettingsDescription": "Konfigurieren Sie das Verlängerungsverhalten für diese Kundenvertragszuweisung.",
       "renewalSettingsTitle": "Verlängerungseinstellungen",
       "renewalTermLabel": "Verlängerungszeitraum (Monate)",
-      "renewalTermPlaceholder": "e.g., 12",
+      "renewalTermPlaceholder": "z. B. 12",
       "selectClientFirst": "Wählen Sie zuerst einen Kunden aus",
       "startDateLabel": "Startdatum *",
       "useTenantDefaultsDescription": "Einstellungen für Verlängerungsmodus und Kündigungsfrist auf Organisationsebene anwenden.",
@@ -487,7 +487,7 @@
       "frequency": "Frequenz",
       "name": "Name",
       "rate": "Tarif",
-      "services": "Services",
+      "services": "Dienste",
       "type": "Typ"
     },
     "configuration": {
@@ -547,7 +547,7 @@
       "quantityShort": "Menge: {{quantity}}",
       "quantityTaxAllocation": "Menge (für Steuerzuweisung)",
       "rateTaxAllocation": "Tarif (für Steuerzuweisung)",
-      "title": "Services ({{count}})",
+      "title": "Dienste ({{count}})",
       "typeLabel": "{{type}}-Service",
       "unitOfMeasure": "Maßeinheit",
       "unitPlaceholder": "Einheit",
@@ -727,7 +727,7 @@
     "roundUpToNearestLabel": "Aufrunden auf (Minuten)",
     "selectItemPlaceholder": "Element auswählen",
     "selectServicePlaceholder": "Service auswählen",
-    "serviceLabel": "Service {{index}}",
+    "serviceLabel": "Dienst {{index}}",
     "servicesAndProductsLabel": "Services & Produkte",
     "title": "Benutzerdefinierte Vertragslinie erstellen",
     "unitOfMeasureLabel": "Maßeinheit",
@@ -811,7 +811,7 @@
         "customRate": "Benutzerdefinierter Tarif",
         "customRatePlaceholder": "0.00",
         "duration": "Dauer",
-        "durationPlaceholder": "e.g., 6",
+        "durationPlaceholder": "z. B. 6",
         "effectiveDate": "Gültigkeitsdatum",
         "endDate": "Enddatum",
         "hasEndDate": "Hat Enddatum",
@@ -1088,7 +1088,7 @@
       "roundUpLabel": "Aufrunden:",
       "serviceCountPlural": "{{count}} Services",
       "serviceCountSingle": "{{count}} Service",
-      "serviceFallback": "Service",
+      "serviceFallback": "Dienst",
       "title": "Vorlagenzusammensetzung",
       "unitLabel": "Einheit:",
       "usageBasedPlans": "Nutzungsbasierte Pläne"
@@ -1117,7 +1117,7 @@
       "usageNotesPlaceholder": "Fügen Sie Hinweise hinzu, damit andere verstehen, wie diese Vorlage zu verwenden ist."
     },
     "loadingTemplate": "Vorlage wird geladen...",
-    "servicesLabel": "Services",
+    "servicesLabel": "Dienste",
     "templateBadge": "Vorlage",
     "templateNotFound": "Vertragsvorlage nicht gefunden",
     "templateSnapshotTitle": "Vorlagen-Snapshot",
@@ -1221,7 +1221,7 @@
     "catalog": {
       "badges": {
         "product": "Produkt",
-        "service": "Service"
+        "service": "Dienst"
       },
       "custom": {
         "addAsCustomItem": "„{{name}}“ als benutzerdefiniertes Element hinzufügen",
@@ -1235,8 +1235,8 @@
   },
   "bucketOverlay": {
     "includedLabel": "Enthaltene {{units}}",
-    "includedPlaceholderHours": "e.g., 40",
-    "includedPlaceholderUnits": "e.g., 1000",
+    "includedPlaceholderHours": "z. B. 40",
+    "includedPlaceholderUnits": "z. B. 1000",
     "includedTooltip": "Menge an {{units}}, die in jeder Abrechnungsperiode enthalten ist, bevor Überschreitungen anfallen.",
     "overageRateLabel": "Überschreitungstarif",
     "overageRateTooltip": "Gebühr für jede {{unit}} über der enthaltenen Menge hinaus.",
@@ -1404,9 +1404,9 @@
       },
       "modePlaceholder": "Verlängerungsmodus auswählen",
       "noticePeriodLabel": "Kündigungsfrist (Tage)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "z. B. 30",
       "termLabel": "Verlängerungszeitraum (Monate)",
-      "termPlaceholder": "e.g., 12",
+      "termPlaceholder": "z. B. 12",
       "useTenantDefaultsDescription": "Verlängerungseinstellungen auf Organisationsebene anwenden, sofern nicht ausdrücklich überschrieben.",
       "useTenantDefaultsLabel": "Mandanten-Verlängerungsstandards verwenden"
     },
@@ -1467,8 +1467,8 @@
         "cadenceOwner": "Rhythmus-Eigentümer:",
         "invoiceWindow": "Rechnungsfenster:",
         "recurringRate": "Wiederkehrender Tarif:",
-        "service": "Service:",
-        "services": "Services:"
+        "service": "Dienst:",
+        "services": "Dienste:"
       },
       "title": "Wiederkehrende Vorschau vor dem Speichern"
     },
@@ -1478,10 +1478,10 @@
     },
     "services": {
       "addService": "Service hinzufügen",
-      "label": "Services",
+      "label": "Dienste",
       "quantityLabel": "Menge",
       "selectServicePlaceholder": "Service auswählen",
-      "serviceItemLabel": "Service {{index}}"
+      "serviceItemLabel": "Dienst {{index}}"
     }
   },
   "wizardProducts": {
@@ -1523,7 +1523,7 @@
       "hourlyRatePlaceholder": "0.00",
       "hourlyServices": "Stunden-Services",
       "selectServicePlaceholder": "Service auswählen",
-      "serviceItem": "Service {{index}}",
+      "serviceItem": "Dienst {{index}}",
       "setBucketOfHours": "Stundenkontingent festlegen"
     },
     "minimumBillableTime": {
@@ -1540,7 +1540,7 @@
       "labels": {
         "minimumTime": "Minimale Zeit:",
         "roundUp": "Aufrunden:",
-        "services": "Services:"
+        "services": "Dienste:"
       },
       "title": "Zusammenfassung der Stunden-Services",
       "values": {
@@ -1567,8 +1567,8 @@
       "ratePerUnitPlaceholder": "0.00",
       "ratePerUnitValue": "{{rate}}/{{unit}}",
       "selectServicePlaceholder": "Service auswählen",
-      "serviceItem": "Service {{index}}",
-      "services": "Services",
+      "serviceItem": "Dienst {{index}}",
+      "services": "Dienste",
       "setBucketAllocation": "Kontingentzuweisung festlegen",
       "unitOfMeasure": "Maßeinheit",
       "unitOfMeasureHint": "Wählen Sie die Einheit aus, nach der dieser Service abgerechnet wird.",
@@ -1576,7 +1576,7 @@
     },
     "summary": {
       "labels": {
-        "services": "Services:"
+        "services": "Dienste:"
       },
       "title": "Nutzungsbasierte Zusammenfassung"
     },
@@ -1609,7 +1609,7 @@
       "notSelected": "Nicht ausgewählt",
       "notSpecified": "Nicht angegeben",
       "ongoing": "Laufend",
-      "notApplicable": "N/A"
+      "notApplicable": "n. z."
     },
     "renewalMode": {
       "none": "Keine Verlängerung",
@@ -1681,7 +1681,7 @@
       },
       "materialized": {
         "heading": "Illustrative zukünftige materialisierte Perioden",
-        "serviceLabel": "Service:",
+        "serviceLabel": "Dienst:",
         "invoiceWindowLabel": "Rechnungsfenster:",
         "summary": {
           "contract": "Wenn Sie diese wiederkehrende Linie speichern, würden zukünftige Perioden in einer jubiläumsartigen Vorschau mit Anker am 8. vor der Rechnungserstellung materialisiert.",
@@ -1816,8 +1816,8 @@
     "fields": {
       "billingTiming": "Abrechnungszeitpunkt",
       "adjustPartialPeriods": "Für Teilperioden anpassen",
-      "services": "Services",
-      "serviceNumber": "Service {{index}}",
+      "services": "Dienste",
+      "serviceNumber": "Dienst {{index}}",
       "quantityOptional": "Menge (optional)"
     },
     "placeholders": {
@@ -1832,7 +1832,7 @@
       "unknownService": "Unbekannter Service",
       "cadenceOwnerLabel": "Rhythmus-Eigentümer:",
       "billingTimingLabel": "Abrechnungszeitpunkt:",
-      "serviceLabel": "Service:",
+      "serviceLabel": "Dienst:",
       "invoiceWindowLabel": "Rechnungsfenster:"
     },
     "actions": {
@@ -1876,8 +1876,8 @@
       "defaultIntervalPlaceholder": "15"
     },
     "fields": {
-      "services": "Services",
-      "serviceNumber": "Service {{index}}",
+      "services": "Dienste",
+      "serviceNumber": "Dienst {{index}}",
       "setBucketOfHours": "Stundenkontingent festlegen"
     },
     "placeholders": {
@@ -1898,8 +1898,8 @@
       "description": "Diese Services werden basierend auf dem tatsächlichen Verbrauch oder den Nutzungsmetriken abgerechnet. Jede verbrauchte Einheit wird mit dem Einheitstarif des Services multipliziert, um den Rechnungsbetrag zu berechnen."
     },
     "fields": {
-      "services": "Services",
-      "serviceNumber": "Service {{index}}",
+      "services": "Dienste",
+      "serviceNumber": "Dienst {{index}}",
       "unitOfMeasureOptional": "Maßeinheit (optional)",
       "setBucketAllocation": "Kontingentzuweisung festlegen"
     },
@@ -1962,7 +1962,7 @@
         "arrears": "Nachträglich"
       },
       "partialPeriodLabel": "Teilperiodenanpassung:",
-      "serviceLabel": "Service:",
+      "serviceLabel": "Dienst:",
       "invoiceWindowLabel": "Rechnungsfenster:"
     },
     "hourly": {

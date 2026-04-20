@@ -11,7 +11,7 @@
     "loading": "Laden...",
     "new": "Neu",
     "next": "Weiter",
-    "notAvailable": "N/A",
+    "notAvailable": "n. z.",
     "openMenu": "Menü öffnen",
     "processing": "Verarbeitung...",
     "refresh": "Aktualisieren",
@@ -401,7 +401,7 @@
     },
     "filters": {
       "client": "Kunde",
-      "service": "Service",
+      "service": "Dienst",
       "clientPlaceholder": "Nach Kunde filtern",
       "servicePlaceholder": "Nach Dienst filtern",
       "allClients": "Alle Kunden",
@@ -409,7 +409,7 @@
     },
     "table": {
       "client": "Kunde",
-      "service": "Service",
+      "service": "Dienst",
       "quantity": "Menge",
       "usageDate": "Nutzungsdatum",
       "contractLine": "Vertragslinie",
@@ -426,7 +426,7 @@
       "editTitle": "Nutzungsdatensatz bearbeiten",
       "fields": {
         "client": "Kunde",
-        "service": "Service",
+        "service": "Dienst",
         "quantity": "Menge",
         "usageDate": "Nutzungsdatum",
         "comments": "Kommentare (optional)",
@@ -479,7 +479,7 @@
       "markedForRemoval": "Zur Entfernung markiert"
     },
     "fields": {
-      "service": "Service",
+      "service": "Dienst",
       "quantity": "Menge",
       "discountType": "Rabattart",
       "percentage": "Prozentsatz",
@@ -532,7 +532,7 @@
     },
     "badges": {
       "product": "Produkt",
-      "service": "Service"
+      "service": "Dienst"
     },
     "actions": {
       "editQuantity": "Menge bearbeiten",
@@ -553,7 +553,7 @@
       "title": "Fügen Sie Services zur Vertragszeile hinzu",
       "serviceType": "Diensttyp: {{value}}",
       "method": "Methode: {{value}}",
-      "rate": "Rate: {{value}}",
+      "rate": "Satz: {{value}}",
       "catalogPrice": "{{currency}}-Preis: {{value}}",
       "catalogPriceMissing": "{{currency}}-Preis: fehlt",
       "customRate": "Benutzerdefinierte {{currency}}-Rate",
@@ -740,7 +740,7 @@
     }
   },
   "templateRendererCore": {
-    "notAvailable": "N/A",
+    "notAvailable": "n. z.",
     "unknownValue": "Unbekannter Wert",
     "noDataForList": "Keine Daten für Liste: {{name}}",
     "uncategorized": "Nicht kategorisiert"

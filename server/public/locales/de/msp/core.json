@@ -135,7 +135,7 @@
           "description": "Neues Gerät zu Ihrem Arbeitsbereich hinzufügen"
         },
         "service": {
-          "label": "Service",
+          "label": "Dienst",
           "description": "Neuen abrechenbaren Service hinzufügen"
         },
         "product": {

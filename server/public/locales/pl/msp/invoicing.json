@@ -164,7 +164,7 @@
         "description": "Wybrana suma faktury kończy się o {{amount}}.",
         "batchDescription": "Jedna lub więcej faktur przekracza kwotę zatwierdzoną w Zamówieniu zakupu. Co chcesz zrobić?",
         "batchItem": "{{clientName}}: koniec przez {{amount}}",
-        "poNumber": "PO {{number}}",
+        "poNumber": "Zamówienie {{number}}",
         "allowOverages": "Zezwalaj na nadwyżki (generuj wszystkie faktury)",
         "skipInvoices": "Pomiń faktury, które przekroczą ich PO",
         "continue": "Kontynuuj",
@@ -627,7 +627,7 @@
       "actions": "Działania"
     },
     "types": {
-      "standard": "Standard",
+      "standard": "Standardowy",
       "custom": "Zwyczaj"
     },
     "actions": {
@@ -942,7 +942,7 @@
   },
   "purchaseOrder": {
     "labels": {
-      "short": "PO",
+      "short": "Zamówienie",
       "number": "Numer zamówienia",
       "authorized": "Autoryzowany PO",
       "consumed": "PO wykorzystane (sfinalizowane)",
@@ -980,7 +980,540 @@
     "states": {
       "empty": "Brak danych",
       "loading": "Ładowanie...",
-      "notAvailable": null
+      "notAvailable": "—"
+    }
+  },
+  "designer": {
+    "toolbar": {
+      "undo": "Cofnij",
+      "redo": "Ponów",
+      "snap": "Przyciąganie",
+      "guides": "Prowadnice",
+      "rulers": "Linijki",
+      "zoom": "Powiększenie",
+      "metrics": {
+        "drags": "Przeciągnięć: {{count}}",
+        "success": "Udanych: {{count}}",
+        "invalid": "Błędnych: {{count}}"
+      }
+    },
+    "palette": {
+      "tabs": {
+        "blocks": "BLOKI",
+        "presets": "PRESETY",
+        "fields": "POLA",
+        "outline": "STRUKTURA"
+      },
+      "search": {
+        "blocks": "Szukaj bloków…",
+        "presets": "Szukaj presetów…",
+        "fields": "Szukaj pól…"
+      },
+      "dragHint": "Przeciągnij lub dotknij „+\" aby wstawić.",
+      "addAriaLabel": "Dodaj {{label}}",
+      "noBlocksMatch": "Brak pasujących bloków.",
+      "presets": {
+        "sectionTitle": "Szablony makr",
+        "sectionDescription": "Pakiety predefiniowane dla popularnych sekcji faktury."
+      },
+      "noPresetsMatch": "Brak pasujących presetów.",
+      "fields": {
+        "insertHint": "Kliknij pole, aby wstawić je do aktywnego pola tekstowego.",
+        "categories": {
+          "client": "Klient",
+          "contact": "Kontakt",
+          "line-item": "Pozycja",
+          "quote": "Oferta",
+          "quote-totals": "Sumy oferty",
+          "invoice": "Faktura",
+          "customer": "Klient",
+          "tenant": "Najemca"
+        }
+      },
+      "noFieldsMatch": "Brak pasujących pól.",
+      "categories": {
+        "structure": "Struktura",
+        "content": "Zawartość",
+        "media": "Multimedia",
+        "dynamic": "Dynamiczne"
+      }
+    },
+    "inspector": {
+      "layoutControls": "Kontrolki układu",
+      "sizingMode": "Tryb rozmiaru",
+      "flexItem": "Element flex",
+      "displayFormat": "Format wyświetlania",
+      "attachments": "Załączniki",
+      "media": "Multimedia",
+      "title": "Inspektor",
+      "layerName": "Nazwa warstwy",
+      "typeLabel": "Typ",
+      "fieldTypeLabel": "Typ pola",
+      "noBindingKey": "Brak klucza powiązania",
+      "layoutPreset": "Preset układu",
+      "clear": "Wyczyść",
+      "fitSectionToContents": "Dopasuj sekcję do zawartości",
+      "sectionNoChildContent": "Sekcja nie ma zawartości do dopasowania.",
+      "apply": "Zastosuj",
+      "emptyHelp": "Wybierz komponent, aby edytować jego właściwości."
+    },
+    "shell": {
+      "selectedLabel": "Wybrano:",
+      "selectedNone": "Brak",
+      "clickBlockHint": "Kliknij blok na kanwie",
+      "orUse": "lub użyj",
+      "plusInLeftPanelHint": "+ w lewym panelu"
+    },
+    "pageSetup": {
+      "title": "Ustawienia strony",
+      "description": "Wybierz preset papieru i margines bez wybierania ukrytego węzła strony.",
+      "paperPreset": "Preset papieru",
+      "marginMm": "Margines (mm)"
+    },
+    "breadcrumbs": {
+      "emptyHelp": "Wybierz komponent na kanwie, aby zobaczyć hierarchię.",
+      "hierarchy": "Hierarchia"
+    },
+    "workspace": {
+      "preview": {
+        "source": {
+          "sample": "Przykład",
+          "existing": "Istniejące"
+        },
+        "sampleScenario": "Scenariusz przykładowy",
+        "selectScenarioPlaceholder": "Wybierz scenariusz…",
+        "searchInvoices": "Szukaj faktur…",
+        "searchInvoicesHint": "Szukaj po numerze lub kliencie…",
+        "noInvoicesFound": "Brak faktur.",
+        "selectInvoice": "Wybierz fakturę",
+        "loadingDetails": "Ładowanie szczegółów faktury…",
+        "selectInvoiceHint": "Wybierz fakturę, aby zobaczyć podgląd z danymi.",
+        "shape": "Kształt",
+        "render": "Renderuj",
+        "rerun": "Uruchom ponownie",
+        "emptyState": "Wybierz dane przykładowe lub istniejące, aby wygenerować wiarygodny podgląd.",
+        "loadingPreview": "Kształtowanie i renderowanie podglądu…",
+        "templateError": "Nie można wygenerować szablonu podglądu z bieżącego obszaru roboczego.",
+        "renderError": "Renderowanie podglądu nie powiodło się."
+      },
+      "tabs": {
+        "design": "Projektowanie",
+        "transforms": "Transformacje",
+        "preview": "Podgląd"
+      }
+    },
+    "blocks": {
+      "document": {
+        "label": "Dokument",
+        "description": "Korzeń dokumentu faktury."
+      },
+      "page": {
+        "label": "Strona",
+        "description": "Pojedyncza strona faktury."
+      },
+      "section": {
+        "label": "Sekcja",
+        "description": "Logiczne zgrupowanie z wspólnymi regułami układu."
+      },
+      "column": {
+        "label": "Kolumna",
+        "description": "Starszy kontener kolumny."
+      },
+      "text": {
+        "label": "Blok tekstu",
+        "description": "Statyczna lub powiązana z danymi treść tekstowa."
+      },
+      "totals": {
+        "label": "Sumy",
+        "description": "Podsumowanie: suma częściowa/podatek/suma całkowita."
+      },
+      "table": {
+        "label": "Tabela pozycji",
+        "description": "Powtarzające się wiersze pozycji faktury."
+      },
+      "dynamic-table": {
+        "label": "Tabela dynamiczna",
+        "description": "Zaawansowana tabela danych z powiązaniami kolumn."
+      },
+      "field": {
+        "label": "Pole danych",
+        "description": "Wyświetla powiązaną wartość (numer faktury, daty, sumy)."
+      },
+      "label": {
+        "label": "Etykieta pola",
+        "description": "Statyczna etykieta powiązana z polami danych."
+      },
+      "subtotal": {
+        "label": "Wiersz sumy częściowej",
+        "description": "Wyświetla sumę częściową przed opodatkowaniem."
+      },
+      "tax": {
+        "label": "Wiersz podatku",
+        "description": "Wyświetla obliczoną kwotę podatku."
+      },
+      "discount": {
+        "label": "Wiersz rabatu",
+        "description": "Wyświetla kwotę rabatu."
+      },
+      "custom-total": {
+        "label": "Niestandardowy wiersz sumy",
+        "description": "Konfigurowalny wiersz obliczany (opłaty, kredyty itd.)."
+      },
+      "image": {
+        "label": "Obraz",
+        "description": "Element obrazu w linii."
+      },
+      "logo": {
+        "label": "Logo",
+        "description": "Zasób brandingowy najemcy."
+      },
+      "qr": {
+        "label": "Kod QR",
+        "description": "Automatycznie generowany QR do linków płatności."
+      },
+      "signature": {
+        "label": "Blok podpisu",
+        "description": "Imię podpisującego i linia lub obraz podpisu."
+      },
+      "action-button": {
+        "label": "Przycisk akcji",
+        "description": "Przycisk wezwania do działania (np. Zapłać teraz)."
+      },
+      "attachment-list": {
+        "label": "Lista załączników",
+        "description": "Wyświetla dokumenty lub linki wspierające."
+      },
+      "divider": {
+        "label": "Separator",
+        "description": "Poziomy separator liniowy."
+      },
+      "spacer": {
+        "label": "Odstęp",
+        "description": "Puste miejsce do regulacji układu."
+      },
+      "container": {
+        "label": "Kontener",
+        "description": "Stylizowany kontener do grupowania treści (ramki, tła)."
+      }
+    },
+    "presets": {
+      "header-logo-address": {
+        "label": "Nagłówek: logo + adres",
+        "description": "Dwukolumnowy nagłówek z zablokowanymi proporcjami logo i stosem adresów."
+      },
+      "line-items-table": {
+        "label": "Tabela pozycji",
+        "description": "Tabela pozycji pełnej szerokości z powtarzającymi się wierszami."
+      },
+      "totals-stack": {
+        "label": "Stos sum",
+        "description": "Podsumowanie sum z blokiem notatek."
+      },
+      "two-column-summary": {
+        "label": "Podsumowanie w dwóch kolumnach",
+        "description": "Równe kolumny na podsumowanie i informacje kontaktowe."
+      },
+      "notes-totals-row": {
+        "label": "Notatki + Wiersz sum",
+        "description": "Szeroka kolumna notatek obok wąskiej kolumny sum z użyciem CSS grid."
+      },
+      "two-equal-columns-grid": {
+        "label": "Dwie równe kolumny",
+        "description": "Zrównoważona sekcja dwukolumnowa z CSS grid."
+      },
+      "three-info-columns": {
+        "label": "Trzy kolumny informacji",
+        "description": "Trójkolumnowy rząd kart informacyjnych z CSS grid."
+      },
+      "recurring-onetime-tables": {
+        "label": "Tabele cykliczne + jednorazowe",
+        "description": "Gotowe do oferty zestawione tabele dynamiczne dla pozycji cyklicznych i jednorazowych."
+      },
+      "header-with-qr": {
+        "label": "Podzielony nagłówek z QR",
+        "description": "Stos logo + adres z blokiem płatności QR."
+      },
+      "modern-invoice-complete": {
+        "label": "Nowoczesny szablon faktury",
+        "description": "Pełny układ z nagłówkiem, informacjami rozliczeniowymi, tabelą pozycji i stopką."
+      }
+    },
+    "schema": {
+      "panels": {
+        "layout": {
+          "title": "Układ",
+          "fields": {
+            "gap": {
+              "label": "Odstęp"
+            },
+            "padding": {
+              "label": "Dopełnienie"
+            },
+            "flexDirection": {
+              "label": "Kierunek",
+              "options": {
+                "column": "Pionowo",
+                "row": "Poziomo"
+              }
+            },
+            "alignItems": {
+              "label": "Wyrównaj elementy",
+              "options": {
+                "stretch": "Rozciągnij",
+                "flex-start": "Początek",
+                "center": "Środek",
+                "flex-end": "Koniec"
+              }
+            },
+            "justifyContent": {
+              "label": "Wyrównaj treść",
+              "options": {
+                "flex-start": "Początek",
+                "center": "Środek",
+                "flex-end": "Koniec",
+                "space-between": "Rozmieść między",
+                "space-around": "Rozmieść wokół",
+                "space-evenly": "Rozmieść równomiernie"
+              }
+            },
+            "gridAutoFlow": {
+              "label": "Auto-przepływ",
+              "options": {
+                "row": "wiersz",
+                "column": "kolumna",
+                "dense": "gęsty",
+                "row dense": "gęsty wiersz",
+                "column dense": "gęsta kolumna"
+              }
+            },
+            "gridTemplateColumns": {
+              "label": "Kolumny szablonu"
+            },
+            "gridTemplateRows": {
+              "label": "Wiersze szablonu"
+            },
+            "display": {
+              "options": {
+                "flex": "Stos (Flex)",
+                "grid": "Siatka"
+              }
+            }
+          }
+        },
+        "sizing-css": {
+          "title": "Wymiary (CSS)",
+          "fields": {
+            "height": {
+              "label": "wysokość"
+            },
+            "minWidth": {
+              "label": "min. szerokość"
+            },
+            "minHeight": {
+              "label": "min. wysokość"
+            },
+            "maxWidth": {
+              "label": "maks. szerokość"
+            },
+            "maxHeight": {
+              "label": "maks. wysokość"
+            }
+          }
+        },
+        "appearance": {
+          "title": "Wygląd",
+          "fields": {
+            "color": {
+              "label": "Kolor tekstu"
+            },
+            "border": {
+              "label": "Obramowanie"
+            },
+            "borderRadius": {
+              "label": "Promień"
+            },
+            "margin": {
+              "label": "Margines"
+            }
+          }
+        },
+        "section-border": {
+          "title": "Obramowanie sekcji",
+          "fields": {
+            "sectionBorderStyle": {
+              "options": {
+                "light": "Lekki",
+                "strong": "Mocny",
+                "none": "Brak"
+              }
+            }
+          }
+        },
+        "field-binding": {
+          "title": "Powiązanie pola",
+          "fields": {
+            "format": {
+              "options": {
+                "text": "Tekst",
+                "number": "Liczba",
+                "currency": "Waluta",
+                "date": "Data"
+              }
+            },
+            "fieldBorderStyle": {
+              "options": {
+                "underline": "Podkreślenie",
+                "box": "Ramka",
+                "none": "Brak"
+              }
+            }
+          }
+        },
+        "field-layout": {
+          "title": "Układ pola"
+        },
+        "text-content": {
+          "title": "Treść tekstu"
+        },
+        "label-style": {
+          "title": "Tekst etykiety",
+          "fields": {
+            "fontWeight": {
+              "options": {
+                "semibold": "Półgruby",
+                "bold": "Pogrubiony",
+                "medium": "Średni",
+                "normal": "Zwykły"
+              }
+            }
+          }
+        },
+        "totals-row": {
+          "title": "Wiersz sum"
+        },
+        "action-button": {
+          "title": "Przycisk",
+          "fields": {
+            "actionType": {
+              "options": {
+                "url": "URL",
+                "mailto": "E-mail"
+              }
+            }
+          }
+        },
+        "signature": {
+          "title": "Blok podpisu"
+        },
+        "table": {
+          "title": "Tabela"
+        },
+        "table-header-style": {
+          "title": "Styl nagłówka",
+          "fields": {
+            "headerColor": {
+              "label": "Kolor tekstu"
+            },
+            "att-1": {
+              "label": "Umowa.pdf"
+            }
+          }
+        }
+      }
+    },
+    "fields": {
+      "invoice_number": {
+        "label": "Numer faktury",
+        "description": "Numer faktury widoczny dla klienta."
+      },
+      "invoice_invoiceNumber": {
+        "label": "Numer faktury",
+        "description": "Numer faktury widoczny dla klienta."
+      },
+      "invoice_issueDate": {
+        "label": "Data wystawienia",
+        "description": "Data wystawienia faktury."
+      },
+      "invoice_dueDate": {
+        "label": "Termin płatności",
+        "description": "Termin zapłaty."
+      },
+      "invoice_poNumber": {
+        "label": "Numer zamówienia",
+        "description": "Numer referencyjny zamówienia zakupu."
+      },
+      "invoice_subtotal": {
+        "label": "Suma częściowa",
+        "description": "Suma częściowa przed podatkiem i rabatem."
+      },
+      "invoice_tax": {
+        "label": "Podatek",
+        "description": "Kwota podatku faktury."
+      },
+      "invoice_discount": {
+        "label": "Rabat",
+        "description": "Kwota rabatu."
+      },
+      "invoice_total": {
+        "label": "Razem",
+        "description": "Łączna kwota do zapłaty."
+      },
+      "invoice_currencyCode": {
+        "label": "Kod waluty",
+        "description": "Kod ISO waluty faktury."
+      },
+      "invoice_recurringServicePeriodStart": {
+        "label": "Początek cyklicznego okresu usługi",
+        "description": "Kanoniczna data rozpoczęcia cyklicznego okresu usługi faktury, jeśli dostępna."
+      },
+      "invoice_recurringServicePeriodEnd": {
+        "label": "Koniec cyklicznego okresu usługi",
+        "description": "Kanoniczna data zakończenia cyklicznego okresu usługi faktury, jeśli dostępna."
+      },
+      "invoice_recurringServicePeriodLabel": {
+        "label": "Cykliczny okres usługi",
+        "description": "Sformatowana kanoniczna etykieta okresu usługi cyklicznej faktury, jeśli dostępna."
+      },
+      "customer_name": {
+        "label": "Nazwa klienta",
+        "description": "Nazwa klienta na fakturze."
+      },
+      "customer_address": {
+        "label": "Adres klienta",
+        "description": "Adres rozliczeniowy klienta."
+      },
+      "client_name": {
+        "label": "Nazwa klienta",
+        "description": "Nazwa klienta widoczna w szablonach typu oferta."
+      },
+      "client_address": {
+        "label": "Adres klienta",
+        "description": "Adres klienta."
+      },
+      "contact_name": {
+        "label": "Nazwa kontaktu",
+        "description": "Nazwa kontaktu widoczna w szablonach typu oferta."
+      },
+      "contact_address": {
+        "label": "Adres kontaktu",
+        "description": "Adres kontaktu."
+      },
+      "tenant_name": {
+        "label": "Nazwa dzierżawcy",
+        "description": "Nazwa Twojej firmy."
+      },
+      "tenant_address": {
+        "label": "Adres dzierżawcy",
+        "description": "Adres Twojej firmy."
+      },
+      "tenantClient_name": {
+        "label": "Nazwa dzierżawcy",
+        "description": "Nazwa Twojej firmy."
+      },
+      "tenantClient_address": {
+        "label": "Adres dzierżawcy",
+        "description": "Adres Twojej firmy."
+      }
     }
   }
 }

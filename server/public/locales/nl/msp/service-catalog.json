@@ -417,7 +417,7 @@
         "label": "Factureringsperiode",
         "placeholder": "Selecteer factureringsperiode",
         "help": "De periode waarover de bucketuren worden verdeeld",
-        "mismatchPrefix": "Mismatch:",
+        "mismatchPrefix": "Verschil:",
         "mismatch": "De factureringsperiode van de urenbundel ({{billingPeriod}}) moet overeenkomen met de factureringsfrequentie van de contractregel ({{contractLineBillingFrequency}})."
       },
       "overageRate": {

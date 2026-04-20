@@ -134,22 +134,22 @@
       "convertToInvoice": "Convertir a factura",
       "createNewRevision": "Crear nueva revisión",
       "sendQuote": "Enviar cotización",
-      "saving": "Saving…",
-      "saveTemplate": "Save template",
-      "saveQuote": "Save quote",
-      "requestApproval": "Request approval",
-      "sendToClient": "Send to client",
-      "approve": "Approve",
-      "revise": "Revise",
-      "requestChanges": "Request changes",
-      "resend": "Resend",
-      "sendReminder": "Send reminder",
+      "saving": "Guardando…",
+      "saveTemplate": "Guardar plantilla",
+      "saveQuote": "Guardar cotización",
+      "requestApproval": "Solicitar aprobación",
+      "sendToClient": "Enviar al cliente",
+      "approve": "Aprobar",
+      "revise": "Revisar",
+      "requestChanges": "Solicitar cambios",
+      "resend": "Reenviar",
+      "sendReminder": "Enviar recordatorio",
       "pdf": "PDF",
-      "duplicate": "Duplicate",
-      "back": "Back",
-      "moreActions": "More actions",
-      "cancel": "Cancel",
-      "previewPdf": "Preview PDF"
+      "duplicate": "Duplicar",
+      "back": "Atrás",
+      "moreActions": "Más acciones",
+      "cancel": "Cancelar",
+      "previewPdf": "Vista previa del PDF"
     },
     "headings": {
       "editQuote": "Editar cotización",
@@ -248,97 +248,97 @@
       "titleRequired": "El título es obligatorio a menos que se cree a partir de una plantilla."
     },
     "header": {
-      "editTemplate": "Edit Quote Template",
-      "newTemplate": "New Quote Template",
-      "editQuote": "Edit Quote",
-      "newQuote": "New Quote",
+      "editTemplate": "Editar plantilla de cotización",
+      "newTemplate": "Nueva plantilla de cotización",
+      "editQuote": "Editar cotización",
+      "newQuote": "Nueva cotización",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Quote total"
+      "quoteTotalLabel": "Total de la cotización"
     },
     "breadcrumb": {
-      "billing": "Billing",
-      "quoteTemplates": "Quote Templates",
-      "quotes": "Quotes",
-      "newQuote": "New quote"
+      "billing": "Facturación",
+      "quoteTemplates": "Plantillas de cotización",
+      "quotes": "Cotizaciones",
+      "newQuote": "Nueva cotización"
     },
     "subtitle": {
-      "template": "Template · {{description}}",
-      "forClient": "For {{clientName}}",
-      "expires": "Expires {{date}}"
+      "template": "Plantilla · {{description}}",
+      "forClient": "Para {{clientName}}",
+      "expires": "Caduca el {{date}}"
     },
     "banners": {
-      "acceptedTitle": "Quote Accepted",
-      "acceptedBy": "Accepted by: {{name}}",
-      "acceptedOn": "Accepted on: {{date}}",
-      "rejectedTitle": "Quote Rejected",
-      "rejectedOn": "Rejected on: {{date}}",
-      "rejectedReason": "Reason: {{reason}}",
-      "convertedTitle": "Quote Converted",
-      "convertedDescription": "This quote has been converted to a contract and/or invoice."
+      "acceptedTitle": "Cotización aceptada",
+      "acceptedBy": "Aceptado por: {{name}}",
+      "acceptedOn": "Aceptado el: {{date}}",
+      "rejectedTitle": "Cotización rechazada",
+      "rejectedOn": "Rechazado el: {{date}}",
+      "rejectedReason": "Motivo: {{reason}}",
+      "convertedTitle": "Cotización convertida",
+      "convertedDescription": "Esta cotización se ha convertido en un contrato y/o factura."
     },
-    "noticeTitle": "Quote",
+    "noticeTitle": "Cotización",
     "essentials": {
-      "title": "Essentials",
-      "subtitle": "Shown to the client on the quote document.",
-      "titleField": "Title",
-      "descriptionField": "Description / Scope",
-      "descriptionHelp": "A short paragraph that appears just under the title on the PDF.",
-      "client": "Client",
-      "clientPlaceholder": "Select client",
-      "contact": "Contact",
-      "contactPlaceholder": "Select contact",
-      "currency": "Currency",
-      "currencyPlaceholder": "Select currency",
-      "quoteDate": "Quote date",
-      "validUntil": "Valid until",
-      "validUntilHelp": "Quote auto-expires on this date."
+      "title": "Esenciales",
+      "subtitle": "Se muestra al cliente en el documento de la cotización.",
+      "titleField": "Título",
+      "descriptionField": "Descripción / Alcance",
+      "descriptionHelp": "Un breve párrafo que aparece justo debajo del título en el PDF.",
+      "client": "Cliente",
+      "clientPlaceholder": "Seleccionar cliente",
+      "contact": "Contacto",
+      "contactPlaceholder": "Seleccionar contacto",
+      "currency": "Moneda",
+      "currencyPlaceholder": "Seleccionar moneda",
+      "quoteDate": "Fecha de la cotización",
+      "validUntil": "Válido hasta",
+      "validUntilHelp": "La cotización caduca automáticamente en esta fecha."
     },
     "lineItems": {
-      "title": "Line items",
-      "subtitleEmpty": "No items yet.",
-      "subtitleCount": "{{count}} items · {{mix}}",
-      "mixBoth": "recurring and one-time",
-      "mixRecurring": "recurring",
-      "mixOneTime": "one-time",
-      "addLocation": "+ Add location",
-      "fromTemplate": "+ From template"
+      "title": "Líneas",
+      "subtitleEmpty": "Aún no hay elementos.",
+      "subtitleCount": "{{count}} elementos · {{mix}}",
+      "mixBoth": "recurrente y único",
+      "mixRecurring": "recurrente",
+      "mixOneTime": "único",
+      "addLocation": "+ Añadir ubicación",
+      "fromTemplate": "+ Desde plantilla"
     },
     "clientFacing": {
-      "title": "Client-facing text",
-      "subtitle": "Appears on the PDF, below the totals.",
-      "notes": "Notes to client (Optional)",
-      "terms": "Terms & conditions (Optional)"
+      "title": "Texto visible al cliente",
+      "subtitle": "Aparece en el PDF, debajo de los totales.",
+      "notes": "Notas al cliente (opcional)",
+      "terms": "Términos y condiciones (opcional)"
     },
     "moreDetails": {
-      "title": "More details",
-      "subtitle": "PO number, opportunity, PDF layout",
-      "poNumber": "PO number",
-      "opportunity": "Opportunity",
-      "opportunityPlaceholder": "Opportunity ID (optional)",
-      "pdfLayout": "PDF layout",
-      "pdfLayoutPlaceholder": "Use default layout",
-      "pdfLayoutHelp": "Choose which layout the client will see. Leave default to use tenant default."
+      "title": "Más detalles",
+      "subtitle": "Número de OC, oportunidad, diseño del PDF",
+      "poNumber": "Número de OC",
+      "opportunity": "Oportunidad",
+      "opportunityPlaceholder": "ID de oportunidad (opcional)",
+      "pdfLayout": "Diseño del PDF",
+      "pdfLayoutPlaceholder": "Usar diseño predeterminado",
+      "pdfLayoutHelp": "Elija qué diseño verá el cliente. Déjelo por defecto para usar el predeterminado del tenant."
     },
     "footer": {
-      "savedAgo": "Changes saved · {{ago}}",
-      "saving": "Saving…",
-      "unsaved": "Unsaved changes"
+      "savedAgo": "Cambios guardados · {{ago}}",
+      "saving": "Guardando…",
+      "unsaved": "Cambios sin guardar"
     },
     "sidebar": {
-      "quoteTotal": "Quote total",
-      "recurringPerMonth": "{{amount}} recurring / month",
+      "quoteTotal": "Total de la cotización",
+      "recurringPerMonth": "{{amount}} recurrente / mes",
       "subtotal": "Subtotal",
-      "discounts": "Discounts",
-      "tax": "Tax",
-      "statusLabel": "Status",
-      "approvalLabel": "Approval",
-      "approvalMessage": "Quotes need sales lead approval before sending.",
-      "documentLayoutLabel": "Document layout",
-      "defaultLayout": "Tenant default",
-      "standardLayout": "Standard",
-      "customLayout": "Custom",
-      "tenantDefault": "Tenant default",
-      "changeLayout": "Change"
+      "discounts": "Descuentos",
+      "tax": "Impuesto",
+      "statusLabel": "Estado",
+      "approvalLabel": "Aprobación",
+      "approvalMessage": "Las cotizaciones requieren la aprobación del responsable de ventas antes de enviarse.",
+      "documentLayoutLabel": "Diseño del documento",
+      "defaultLayout": "Predeterminado del tenant",
+      "standardLayout": "Estándar",
+      "customLayout": "Personalizado",
+      "tenantDefault": "Predeterminado del tenant",
+      "changeLayout": "Cambiar"
     }
   },
   "quoteDetail": {
@@ -432,6 +432,11 @@
     },
     "table": {
       "description": "Descripción"
+    },
+    "locations": {
+      "groupHeading": "Ubicación",
+      "unassigned": "Elementos sin ubicación",
+      "subtotal": "Subtotal de ubicación"
     }
   },
   "quoteLineItems": {
@@ -506,7 +511,18 @@
       "unavailable": "Margen no disponible",
       "unavailableTooltip": "El margen no se puede calcular porque el costo se rastrea en {{costCurrency}} y esta cotización está en {{quoteCurrency}}."
     },
-    "empty": "Aún no hay líneas de pedido. Utilice la búsqueda de catálogo de arriba para agregar su primer artículo."
+    "empty": "Aún no hay líneas de pedido. Utilice la búsqueda de catálogo de arriba para agregar su primer artículo.",
+    "searchPlaceholder": "Busque o escriba un nombre personalizado…",
+    "locations": {
+      "groupHeading": "Ubicación {{index}}",
+      "pickerPlaceholder": "Seleccionar una ubicación",
+      "unassigned": "Los elementos sin ubicación se muestran aquí hasta que se elija una.",
+      "removeGroup": "Eliminar ubicación",
+      "subtotal": "Subtotal de ubicación",
+      "addLocationButton": "+ Añadir ubicación",
+      "needMoreLocations": "Este cliente solo tiene una ubicación activa. Añada una segunda ubicación en la configuración del cliente para habilitar cotizaciones multi-sede.",
+      "emptyGroup": "Aún no hay elementos para esta ubicación."
+    }
   },
   "quoteRecipients": {
     "trigger": {

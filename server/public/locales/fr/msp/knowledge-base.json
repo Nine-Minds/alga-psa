@@ -72,7 +72,7 @@
       "edit": "Modifier",
       "submitForReview": "Soumettre pour examen",
       "publish": "Publier",
-      "archive": "Archive"
+      "archive": "Archiver"
     },
     "pagination": {
       "itemsPerPage": {
@@ -103,7 +103,7 @@
     "actions": {
       "submitForReview": "Soumettre pour examen",
       "publish": "Publier",
-      "archive": "Archive",
+      "archive": "Archiver",
       "saveMetadata": "Enregistrer les métadonnées",
       "saving": "Économie..."
     },
@@ -194,7 +194,7 @@
       "submitForReview": "Soumettre pour examen",
       "publish": "Publier",
       "approveAndPublish": "Approuver et publier",
-      "archive": "Archive",
+      "archive": "Archiver",
       "republish": "Republier"
     },
     "flow": {

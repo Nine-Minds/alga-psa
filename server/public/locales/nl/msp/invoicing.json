@@ -164,7 +164,7 @@
         "description": "Het geselecteerde factuurtotaal is voorbij door {{amount}}.",
         "batchDescription": "Eén of meer facturen zouden het geautoriseerde bedrag van een Inkooporder overschrijden. Wat wil je doen?",
         "batchItem": "{{clientName}}: voorbij door {{amount}}",
-        "poNumber": "PO {{number}}",
+        "poNumber": "Inkooporder {{number}}",
         "allowOverages": "Overschrijdingen toestaan ​​(genereer alle facturen)",
         "skipInvoices": "Sla facturen over die hun inkooporder zouden overschrijden",
         "continue": "Doorgaan",
@@ -551,7 +551,7 @@
       "september": "september",
       "october": "oktober",
       "november": "November",
-      "december": "December"
+      "december": "december"
     }
   },
   "invoicePreview": {
@@ -942,7 +942,7 @@
   },
   "purchaseOrder": {
     "labels": {
-      "short": "PO",
+      "short": "Inkooporder",
       "number": "PO-nummer",
       "authorized": "PO geautoriseerd",
       "consumed": "Verbruikte inkooporder (afgerond)",
@@ -980,7 +980,540 @@
     "states": {
       "empty": "Geen gegevens beschikbaar",
       "loading": "Laden...",
-      "notAvailable": null
+      "notAvailable": "—"
+    }
+  },
+  "designer": {
+    "toolbar": {
+      "undo": "Ongedaan maken",
+      "redo": "Opnieuw",
+      "snap": "Vastklikken",
+      "guides": "Hulplijnen",
+      "rulers": "Linialen",
+      "zoom": "Zoom",
+      "metrics": {
+        "drags": "Slepen: {{count}}",
+        "success": "Gelukt: {{count}}",
+        "invalid": "Ongeldig: {{count}}"
+      }
+    },
+    "palette": {
+      "tabs": {
+        "blocks": "BLOKKEN",
+        "presets": "VOORINSTELLINGEN",
+        "fields": "VELDEN",
+        "outline": "OVERZICHT"
+      },
+      "search": {
+        "blocks": "Blokken zoeken…",
+        "presets": "Presets zoeken…",
+        "fields": "Velden zoeken…"
+      },
+      "dragHint": "Sleep of tik op „+\" om in te voegen.",
+      "addAriaLabel": "{{label}} toevoegen",
+      "noBlocksMatch": "Geen blokken gevonden.",
+      "presets": {
+        "sectionTitle": "Macrosjablonen",
+        "sectionDescription": "Voorgedefinieerde bundels voor veelvoorkomende factuursecties."
+      },
+      "noPresetsMatch": "Geen presets gevonden.",
+      "fields": {
+        "insertHint": "Klik op een veld om het in het actieve tekstveld in te voegen.",
+        "categories": {
+          "client": "Klant",
+          "contact": "Contact",
+          "line-item": "Regel",
+          "quote": "Offerte",
+          "quote-totals": "Offertetotalen",
+          "invoice": "Factuur",
+          "customer": "Klant",
+          "tenant": "Tenant"
+        }
+      },
+      "noFieldsMatch": "Geen velden gevonden.",
+      "categories": {
+        "structure": "Structuur",
+        "content": "Inhoud",
+        "media": "Media",
+        "dynamic": "Dynamisch"
+      }
+    },
+    "inspector": {
+      "layoutControls": "Lay-outinstellingen",
+      "sizingMode": "Groottemodus",
+      "flexItem": "Flex-item",
+      "displayFormat": "Weergaveformaat",
+      "attachments": "Bijlagen",
+      "media": "Media",
+      "title": "Inspecteur",
+      "layerName": "Laagnaam",
+      "typeLabel": "Type",
+      "fieldTypeLabel": "Veldtype",
+      "noBindingKey": "Geen bindingssleutel",
+      "layoutPreset": "Lay-outpreset",
+      "clear": "Wissen",
+      "fitSectionToContents": "Sectie op inhoud aanpassen",
+      "sectionNoChildContent": "Sectie heeft geen inhoud om op aan te passen.",
+      "apply": "Toepassen",
+      "emptyHelp": "Selecteer een component om de eigenschappen te bewerken."
+    },
+    "shell": {
+      "selectedLabel": "Geselecteerd:",
+      "selectedNone": "Geen",
+      "clickBlockHint": "Klik op een blok in het canvas",
+      "orUse": "of gebruik",
+      "plusInLeftPanelHint": "+ in het linkerpaneel"
+    },
+    "pageSetup": {
+      "title": "Pagina-instelling",
+      "description": "Kies een papierpreset en paginamarge zonder het verborgen pagina-knooppunt te selecteren.",
+      "paperPreset": "Papierpreset",
+      "marginMm": "Marge (mm)"
+    },
+    "breadcrumbs": {
+      "emptyHelp": "Selecteer een component in het canvas om de hiërarchie te zien.",
+      "hierarchy": "Hiërarchie"
+    },
+    "workspace": {
+      "preview": {
+        "source": {
+          "sample": "Voorbeeld",
+          "existing": "Bestaand"
+        },
+        "sampleScenario": "Voorbeeldscenario",
+        "selectScenarioPlaceholder": "Scenario kiezen…",
+        "searchInvoices": "Facturen zoeken…",
+        "searchInvoicesHint": "Zoek op nummer of klant…",
+        "noInvoicesFound": "Geen facturen gevonden.",
+        "selectInvoice": "Factuur kiezen",
+        "loadingDetails": "Factuurdetails worden geladen…",
+        "selectInvoiceHint": "Kies een factuur voor een gegevensgebonden voorvertoning.",
+        "shape": "Vormen",
+        "render": "Renderen",
+        "rerun": "Opnieuw uitvoeren",
+        "emptyState": "Kies voorbeeld- of bestaande factuurgegevens om een definitieve voorvertoning te genereren.",
+        "loadingPreview": "Voorvertoning wordt opgebouwd en gerenderd…",
+        "templateError": "Voorvertoningssjabloon kon niet uit de huidige werkruimte worden gegenereerd.",
+        "renderError": "Renderen van voorvertoning mislukt."
+      },
+      "tabs": {
+        "design": "Ontwerp",
+        "transforms": "Transformaties",
+        "preview": "Voorvertoning"
+      }
+    },
+    "blocks": {
+      "document": {
+        "label": "Document",
+        "description": "Wortel van factuurdocument."
+      },
+      "page": {
+        "label": "Pagina",
+        "description": "Eén factuurpagina."
+      },
+      "section": {
+        "label": "Sectie",
+        "description": "Logische groepering met gedeelde lay-outregels."
+      },
+      "column": {
+        "label": "Kolom",
+        "description": "Oude kolom-container."
+      },
+      "text": {
+        "label": "Tekstblok",
+        "description": "Statische of gegevensgebonden tekstinhoud."
+      },
+      "totals": {
+        "label": "Totalen",
+        "description": "Samenvatting subtotaal/btw/totaal."
+      },
+      "table": {
+        "label": "Regeltabel",
+        "description": "Herhalende rijen voor factuurregels."
+      },
+      "dynamic-table": {
+        "label": "Dynamische tabel",
+        "description": "Geavanceerde gegevenstabel met kolombindingen."
+      },
+      "field": {
+        "label": "Gegevensveld",
+        "description": "Toont een gebonden waarde (factuurnummer, data, totalen)."
+      },
+      "label": {
+        "label": "Veldlabel",
+        "description": "Statisch label gekoppeld aan gegevensvelden."
+      },
+      "subtotal": {
+        "label": "Subtotaalrij",
+        "description": "Toont het subtotaal vóór belasting."
+      },
+      "tax": {
+        "label": "Btw-rij",
+        "description": "Toont het berekende btw-bedrag."
+      },
+      "discount": {
+        "label": "Kortingsrij",
+        "description": "Toont het kortingsbedrag."
+      },
+      "custom-total": {
+        "label": "Aangepaste totaalrij",
+        "description": "Configureerbare berekende rij (kosten, credits, enz.)."
+      },
+      "image": {
+        "label": "Afbeelding",
+        "description": "Inline afbeeldingselement."
+      },
+      "logo": {
+        "label": "Logo",
+        "description": "Huisstijlbron van tenant."
+      },
+      "qr": {
+        "label": "QR-code",
+        "description": "Automatisch gegenereerde QR voor betalingslinks."
+      },
+      "signature": {
+        "label": "Handtekeningblok",
+        "description": "Naam ondertekenaar en handtekeninglijn of afbeelding."
+      },
+      "action-button": {
+        "label": "Actieknop",
+        "description": "Call-to-action-knop (bijv. Nu betalen)."
+      },
+      "attachment-list": {
+        "label": "Bijlagenlijst",
+        "description": "Toont ondersteunende documenten of links."
+      },
+      "divider": {
+        "label": "Scheiding",
+        "description": "Horizontale lijnscheider."
+      },
+      "spacer": {
+        "label": "Tussenruimte",
+        "description": "Lege ruimte voor lay-outaanpassing."
+      },
+      "container": {
+        "label": "Box-container",
+        "description": "Gestileerde container voor het groeperen van inhoud (randen, achtergronden)."
+      }
+    },
+    "presets": {
+      "header-logo-address": {
+        "label": "Kop: Logo + Adres",
+        "description": "Tweekolommige kop met vaste logoverhouding en adresstack."
+      },
+      "line-items-table": {
+        "label": "Regeltabel",
+        "description": "Volledig brede itemtabel met herhalende rijen."
+      },
+      "totals-stack": {
+        "label": "Totalen-stapel",
+        "description": "Totalenoverzicht met notitieblok."
+      },
+      "two-column-summary": {
+        "label": "Samenvatting in twee kolommen",
+        "description": "Gelijke kolommen voor samenvatting en contactinfo."
+      },
+      "notes-totals-row": {
+        "label": "Notities + Totalenrij",
+        "description": "Brede notitiekolom naast een smalle totalenkolom met CSS grid."
+      },
+      "two-equal-columns-grid": {
+        "label": "Twee gelijke kolommen",
+        "description": "Gebalanceerd tweekolomse body-sectie met CSS grid."
+      },
+      "three-info-columns": {
+        "label": "Drie informatiekolommen",
+        "description": "Driekolommige info-card-rij met CSS grid."
+      },
+      "recurring-onetime-tables": {
+        "label": "Tabellen voor terugkerend + eenmalig",
+        "description": "Gestapelde dynamische offertetabellen voor terugkerende en eenmalige items."
+      },
+      "header-with-qr": {
+        "label": "Gesplitste kop met QR",
+        "description": "Logo + adresstack met QR-betalingsblok."
+      },
+      "modern-invoice-complete": {
+        "label": "Modern factuursjabloon",
+        "description": "Volledige lay-out met kop, factureringsinfo, regelstabel en voettekst."
+      }
+    },
+    "schema": {
+      "panels": {
+        "layout": {
+          "title": "Lay-out",
+          "fields": {
+            "gap": {
+              "label": "Tussenruimte"
+            },
+            "padding": {
+              "label": "Opvulling"
+            },
+            "flexDirection": {
+              "label": "Richting",
+              "options": {
+                "column": "Verticaal",
+                "row": "Horizontaal"
+              }
+            },
+            "alignItems": {
+              "label": "Items uitlijnen",
+              "options": {
+                "stretch": "Uitrekken",
+                "flex-start": "Start",
+                "center": "Midden",
+                "flex-end": "Einde"
+              }
+            },
+            "justifyContent": {
+              "label": "Inhoud uitlijnen",
+              "options": {
+                "flex-start": "Start",
+                "center": "Midden",
+                "flex-end": "Einde",
+                "space-between": "Ruimte tussen",
+                "space-around": "Ruimte rondom",
+                "space-evenly": "Gelijkmatig verdelen"
+              }
+            },
+            "gridAutoFlow": {
+              "label": "Automatische flow",
+              "options": {
+                "row": "rij",
+                "column": "kolom",
+                "dense": "dicht",
+                "row dense": "rij dicht",
+                "column dense": "kolom dicht"
+              }
+            },
+            "gridTemplateColumns": {
+              "label": "Sjabloonkolommen"
+            },
+            "gridTemplateRows": {
+              "label": "Sjabloonrijen"
+            },
+            "display": {
+              "options": {
+                "flex": "Stapel (Flex)",
+                "grid": "Raster"
+              }
+            }
+          }
+        },
+        "sizing-css": {
+          "title": "Grootte (CSS)",
+          "fields": {
+            "height": {
+              "label": "hoogte"
+            },
+            "minWidth": {
+              "label": "min. breedte"
+            },
+            "minHeight": {
+              "label": "min. hoogte"
+            },
+            "maxWidth": {
+              "label": "max. breedte"
+            },
+            "maxHeight": {
+              "label": "max. hoogte"
+            }
+          }
+        },
+        "appearance": {
+          "title": "Weergave",
+          "fields": {
+            "color": {
+              "label": "Tekstkleur"
+            },
+            "border": {
+              "label": "Rand"
+            },
+            "borderRadius": {
+              "label": "Straal"
+            },
+            "margin": {
+              "label": "Marge"
+            }
+          }
+        },
+        "section-border": {
+          "title": "Sectierand",
+          "fields": {
+            "sectionBorderStyle": {
+              "options": {
+                "light": "Licht",
+                "strong": "Sterk",
+                "none": "Geen"
+              }
+            }
+          }
+        },
+        "field-binding": {
+          "title": "Veldbinding",
+          "fields": {
+            "format": {
+              "options": {
+                "text": "Tekst",
+                "number": "Getal",
+                "currency": "Valuta",
+                "date": "Datum"
+              }
+            },
+            "fieldBorderStyle": {
+              "options": {
+                "underline": "Onderstrepen",
+                "box": "Vak",
+                "none": "Geen"
+              }
+            }
+          }
+        },
+        "field-layout": {
+          "title": "Veldlay-out"
+        },
+        "text-content": {
+          "title": "Tekstinhoud"
+        },
+        "label-style": {
+          "title": "Labeltekst",
+          "fields": {
+            "fontWeight": {
+              "options": {
+                "semibold": "Halfvet",
+                "bold": "Vet",
+                "medium": "Gemiddeld",
+                "normal": "Normaal"
+              }
+            }
+          }
+        },
+        "totals-row": {
+          "title": "Totalenrij"
+        },
+        "action-button": {
+          "title": "Knop",
+          "fields": {
+            "actionType": {
+              "options": {
+                "url": "URL",
+                "mailto": "E-mail"
+              }
+            }
+          }
+        },
+        "signature": {
+          "title": "Handtekeningblok"
+        },
+        "table": {
+          "title": "Tabel"
+        },
+        "table-header-style": {
+          "title": "Kopstijl",
+          "fields": {
+            "headerColor": {
+              "label": "Tekstkleur"
+            },
+            "att-1": {
+              "label": "Contract.pdf"
+            }
+          }
+        }
+      }
+    },
+    "fields": {
+      "invoice_number": {
+        "label": "Factuurnummer",
+        "description": "Factuurnummer getoond aan de klant."
+      },
+      "invoice_invoiceNumber": {
+        "label": "Factuurnummer",
+        "description": "Factuurnummer getoond aan de klant."
+      },
+      "invoice_issueDate": {
+        "label": "Factuurdatum",
+        "description": "Datum waarop de factuur is uitgegeven."
+      },
+      "invoice_dueDate": {
+        "label": "Vervaldatum",
+        "description": "Vervaldatum van de betaling."
+      },
+      "invoice_poNumber": {
+        "label": "PO-nummer",
+        "description": "PO-referentie voor deze factuur."
+      },
+      "invoice_subtotal": {
+        "label": "Subtotaal",
+        "description": "Subtotaal vóór btw en kortingen."
+      },
+      "invoice_tax": {
+        "label": "Btw",
+        "description": "Btw-bedrag voor de factuur."
+      },
+      "invoice_discount": {
+        "label": "Korting",
+        "description": "Kortingsbedrag van de factuur."
+      },
+      "invoice_total": {
+        "label": "Totaal",
+        "description": "Totaalbedrag te betalen."
+      },
+      "invoice_currencyCode": {
+        "label": "Valutacode",
+        "description": "ISO-valutacode voor deze factuur."
+      },
+      "invoice_recurringServicePeriodStart": {
+        "label": "Start terugkerende serviceperiode",
+        "description": "De canonieke startdatum van de terugkerende factuurserviceperiode indien beschikbaar."
+      },
+      "invoice_recurringServicePeriodEnd": {
+        "label": "Einde terugkerende serviceperiode",
+        "description": "De canonieke einddatum van de terugkerende factuurserviceperiode indien beschikbaar."
+      },
+      "invoice_recurringServicePeriodLabel": {
+        "label": "Terugkerende serviceperiode",
+        "description": "Een opgemaakt canoniek label voor de periodieke factuurserviceperiode indien beschikbaar."
+      },
+      "customer_name": {
+        "label": "Klantnaam",
+        "description": "Klantnaam getoond op de factuur."
+      },
+      "customer_address": {
+        "label": "Klantadres",
+        "description": "Factuuradres van de klant."
+      },
+      "client_name": {
+        "label": "Klantnaam",
+        "description": "De klantnaam die in offertesjablonen wordt getoond."
+      },
+      "client_address": {
+        "label": "Klantadres",
+        "description": "Het klantadres."
+      },
+      "contact_name": {
+        "label": "Contactnaam",
+        "description": "De contactnaam die in offertesjablonen wordt getoond."
+      },
+      "contact_address": {
+        "label": "Contactadres",
+        "description": "Het contactadres."
+      },
+      "tenant_name": {
+        "label": "Tenantnaam",
+        "description": "De naam van uw bedrijf."
+      },
+      "tenant_address": {
+        "label": "Tenant-adres",
+        "description": "Het adres van uw bedrijf."
+      },
+      "tenantClient_name": {
+        "label": "Tenantnaam",
+        "description": "De naam van uw bedrijf."
+      },
+      "tenantClient_address": {
+        "label": "Tenant-adres",
+        "description": "Het adres van uw bedrijf."
+      }
     }
   }
 }

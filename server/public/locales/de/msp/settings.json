@@ -1085,7 +1085,7 @@
       "permissions": "Berechtigungen",
       "userRoles": "Benutzerrollen",
       "policies": "Richtlinien",
-      "apiKeys": "API Keys"
+      "apiKeys": "API-Schlüssel"
     },
     "loading": {
       "roles": "Rollenkonfiguration wird geladen...",
@@ -1182,7 +1182,7 @@
       "profile": "Profil",
       "security": "Sicherheit",
       "sso": "Single Sign-On",
-      "apiKeys": "API Keys",
+      "apiKeys": "API-Schlüssel",
       "notifications": "Benachrichtigungen",
       "calendar": "Kalender"
     },

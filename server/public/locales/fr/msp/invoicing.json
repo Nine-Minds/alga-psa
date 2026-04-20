@@ -164,7 +164,7 @@
         "description": "Le total de la facture sélectionnée est dépassé de {{amount}}.",
         "batchDescription": "Une ou plusieurs factures dépasseraient le montant autorisé du bon de commande. Qu'est-ce que vous voulez faire?",
         "batchItem": "{{clientName}} : remplacé par {{amount}}",
-        "poNumber": "PO {{number}}",
+        "poNumber": "BC {{number}}",
         "allowOverages": "Autoriser les excédents (générer toutes les factures)",
         "skipInvoices": "Évitez les factures qui dépasseraient leur bon de commande",
         "continue": "Continuer",
@@ -462,7 +462,7 @@
       "defer": "reporter",
       "regenerate": "régénérer",
       "invoice_linkage_repair": "réparation du lien de facture",
-      "archive": "archive"
+      "archive": "archiver"
     },
     "table": {
       "columns": {
@@ -942,7 +942,7 @@
   },
   "purchaseOrder": {
     "labels": {
-      "short": "PO",
+      "short": "BC",
       "number": "Numéro de bon de commande",
       "authorized": "Bon de commande autorisé",
       "consumed": "PO consommé (finalisé)",
@@ -980,7 +980,540 @@
     "states": {
       "empty": "Aucune donnée disponible",
       "loading": "Chargement...",
-      "notAvailable": null
+      "notAvailable": "—"
+    }
+  },
+  "designer": {
+    "toolbar": {
+      "undo": "Annuler",
+      "redo": "Rétablir",
+      "snap": "Aimanter",
+      "guides": "Guides",
+      "rulers": "Règles",
+      "zoom": "Zoom",
+      "metrics": {
+        "drags": "Glisser : {{count}}",
+        "success": "Succès : {{count}}",
+        "invalid": "Invalide : {{count}}"
+      }
+    },
+    "palette": {
+      "tabs": {
+        "blocks": "BLOCS",
+        "presets": "PRÉRÉGLAGES",
+        "fields": "CHAMPS",
+        "outline": "PLAN"
+      },
+      "search": {
+        "blocks": "Rechercher des blocs…",
+        "presets": "Rechercher des préréglages…",
+        "fields": "Rechercher des champs…"
+      },
+      "dragHint": "Glisser ou toucher « + » pour insérer.",
+      "addAriaLabel": "Ajouter {{label}}",
+      "noBlocksMatch": "Aucun bloc trouvé.",
+      "presets": {
+        "sectionTitle": "Modèles macro",
+        "sectionDescription": "Lots préréglés pour les sections de facture courantes."
+      },
+      "noPresetsMatch": "Aucun préréglage trouvé.",
+      "fields": {
+        "insertHint": "Cliquez sur un champ pour l'insérer dans le champ de texte actif.",
+        "categories": {
+          "client": "Client",
+          "contact": "Contact",
+          "line-item": "Ligne",
+          "quote": "Devis",
+          "quote-totals": "Totaux de devis",
+          "invoice": "Facture",
+          "customer": "Client",
+          "tenant": "Locataire"
+        }
+      },
+      "noFieldsMatch": "Aucun champ trouvé.",
+      "categories": {
+        "structure": "Structure",
+        "content": "Contenu",
+        "media": "Médias",
+        "dynamic": "Dynamique"
+      }
+    },
+    "inspector": {
+      "layoutControls": "Contrôles de mise en page",
+      "sizingMode": "Mode de taille",
+      "flexItem": "Élément flex",
+      "displayFormat": "Format d'affichage",
+      "attachments": "Pièces jointes",
+      "media": "Médias",
+      "title": "Inspecteur",
+      "layerName": "Nom du calque",
+      "typeLabel": "Type",
+      "fieldTypeLabel": "Type de champ",
+      "noBindingKey": "Aucune clé de liaison",
+      "layoutPreset": "Préréglage de mise en page",
+      "clear": "Effacer",
+      "fitSectionToContents": "Ajuster la section au contenu",
+      "sectionNoChildContent": "La section n'a pas de contenu à ajuster.",
+      "apply": "Appliquer",
+      "emptyHelp": "Sélectionnez un composant pour modifier ses propriétés."
+    },
+    "shell": {
+      "selectedLabel": "Sélectionné :",
+      "selectedNone": "Aucun",
+      "clickBlockHint": "Cliquez sur un bloc du canevas",
+      "orUse": "ou utilisez",
+      "plusInLeftPanelHint": "+ dans le panneau gauche"
+    },
+    "pageSetup": {
+      "title": "Mise en page",
+      "description": "Choisissez le préréglage de papier et la marge sans sélectionner le nœud de page masqué.",
+      "paperPreset": "Préréglage papier",
+      "marginMm": "Marge (mm)"
+    },
+    "breadcrumbs": {
+      "emptyHelp": "Sélectionnez un composant du canevas pour voir sa hiérarchie.",
+      "hierarchy": "Hiérarchie"
+    },
+    "workspace": {
+      "preview": {
+        "source": {
+          "sample": "Exemple",
+          "existing": "Existant"
+        },
+        "sampleScenario": "Scénario d'exemple",
+        "selectScenarioPlaceholder": "Sélectionner un scénario…",
+        "searchInvoices": "Rechercher des factures…",
+        "searchInvoicesHint": "Rechercher par numéro ou client…",
+        "noInvoicesFound": "Aucune facture trouvée.",
+        "selectInvoice": "Sélectionner une facture",
+        "loadingDetails": "Chargement des détails de la facture…",
+        "selectInvoiceHint": "Sélectionnez une facture pour prévisualiser la sortie liée aux données.",
+        "shape": "Forme",
+        "render": "Rendu",
+        "rerun": "Relancer",
+        "emptyState": "Sélectionnez un exemple ou des données de facture existantes pour générer un aperçu autoritaire.",
+        "loadingPreview": "Génération et rendu de l'aperçu…",
+        "templateError": "Impossible de générer le modèle d'aperçu à partir de l'espace actuel.",
+        "renderError": "Échec du rendu de l'aperçu."
+      },
+      "tabs": {
+        "design": "Conception",
+        "transforms": "Transformations",
+        "preview": "Aperçu"
+      }
+    },
+    "blocks": {
+      "document": {
+        "label": "Document",
+        "description": "Racine du document de facture."
+      },
+      "page": {
+        "label": "Page",
+        "description": "Une page de facture."
+      },
+      "section": {
+        "label": "Section",
+        "description": "Regroupement logique avec des règles de mise en page partagées."
+      },
+      "column": {
+        "label": "Colonne",
+        "description": "Conteneur de colonne hérité."
+      },
+      "text": {
+        "label": "Bloc de texte",
+        "description": "Contenu de texte statique ou lié aux données."
+      },
+      "totals": {
+        "label": "Totaux",
+        "description": "Résumé sous-total/taxe/total."
+      },
+      "table": {
+        "label": "Tableau des lignes",
+        "description": "Lignes répétées pour les éléments de facture."
+      },
+      "dynamic-table": {
+        "label": "Tableau dynamique",
+        "description": "Tableau de données avancé avec liaisons de colonnes."
+      },
+      "field": {
+        "label": "Champ de données",
+        "description": "Affiche une valeur liée (numéro de facture, dates, totaux)."
+      },
+      "label": {
+        "label": "Libellé de champ",
+        "description": "Libellé statique associé aux champs de données."
+      },
+      "subtotal": {
+        "label": "Ligne sous-total",
+        "description": "Affiche le sous-total avant taxes."
+      },
+      "tax": {
+        "label": "Ligne taxe",
+        "description": "Affiche le montant de taxe calculé."
+      },
+      "discount": {
+        "label": "Ligne remise",
+        "description": "Affiche le montant de la remise."
+      },
+      "custom-total": {
+        "label": "Ligne totaux personnalisée",
+        "description": "Ligne calculée configurable (frais, crédits, etc.)."
+      },
+      "image": {
+        "label": "Image",
+        "description": "Élément d'image en ligne."
+      },
+      "logo": {
+        "label": "Logo",
+        "description": "Actif de marque du locataire."
+      },
+      "qr": {
+        "label": "Code QR",
+        "description": "QR généré automatiquement pour les liens de paiement."
+      },
+      "signature": {
+        "label": "Bloc de signature",
+        "description": "Nom du signataire et ligne ou image de signature."
+      },
+      "action-button": {
+        "label": "Bouton d'action",
+        "description": "Bouton d'appel à l'action (ex. Payer maintenant)."
+      },
+      "attachment-list": {
+        "label": "Liste des pièces jointes",
+        "description": "Affiche les documents ou liens joints."
+      },
+      "divider": {
+        "label": "Séparateur",
+        "description": "Séparateur horizontal."
+      },
+      "spacer": {
+        "label": "Espaceur",
+        "description": "Espace vide pour ajuster la mise en page."
+      },
+      "container": {
+        "label": "Conteneur",
+        "description": "Conteneur stylisé pour regrouper le contenu (bordures, arrière-plans)."
+      }
+    },
+    "presets": {
+      "header-logo-address": {
+        "label": "En-tête : Logo + Adresse",
+        "description": "En-tête à deux colonnes avec proportion de logo verrouillée et empilement d'adresse."
+      },
+      "line-items-table": {
+        "label": "Tableau des lignes",
+        "description": "Tableau des lignes pleine largeur avec lignes répétées."
+      },
+      "totals-stack": {
+        "label": "Pile de totaux",
+        "description": "Résumé des totaux avec bloc de notes."
+      },
+      "two-column-summary": {
+        "label": "Résumé à deux colonnes",
+        "description": "Colonnes égales pour le résumé et les infos de contact."
+      },
+      "notes-totals-row": {
+        "label": "Notes + Ligne de totaux",
+        "description": "Large colonne de notes à côté d'une étroite colonne de totaux avec CSS grid."
+      },
+      "two-equal-columns-grid": {
+        "label": "Deux colonnes égales",
+        "description": "Section à deux colonnes équilibrée utilisant CSS grid."
+      },
+      "three-info-columns": {
+        "label": "Trois colonnes d'information",
+        "description": "Ligne de cartes d'info à trois colonnes avec CSS grid."
+      },
+      "recurring-onetime-tables": {
+        "label": "Tableaux récurrents + uniques",
+        "description": "Tableaux dynamiques empilés prêts pour devis pour éléments récurrents et uniques."
+      },
+      "header-with-qr": {
+        "label": "En-tête divisé avec QR",
+        "description": "Empilement logo + adresse avec bloc de paiement par QR code."
+      },
+      "modern-invoice-complete": {
+        "label": "Modèle de facture moderne",
+        "description": "Mise en page complète avec en-tête, infos de facturation, tableau des lignes et pied de page."
+      }
+    },
+    "schema": {
+      "panels": {
+        "layout": {
+          "title": "Mise en page",
+          "fields": {
+            "gap": {
+              "label": "Écart"
+            },
+            "padding": {
+              "label": "Remplissage"
+            },
+            "flexDirection": {
+              "label": "Direction",
+              "options": {
+                "column": "Vertical",
+                "row": "Horizontal"
+              }
+            },
+            "alignItems": {
+              "label": "Aligner les éléments",
+              "options": {
+                "stretch": "Étirer",
+                "flex-start": "Début",
+                "center": "Centre",
+                "flex-end": "Fin"
+              }
+            },
+            "justifyContent": {
+              "label": "Justifier le contenu",
+              "options": {
+                "flex-start": "Début",
+                "center": "Centre",
+                "flex-end": "Fin",
+                "space-between": "Espacement",
+                "space-around": "Autour",
+                "space-evenly": "Uniforme"
+              }
+            },
+            "gridAutoFlow": {
+              "label": "Flux auto",
+              "options": {
+                "row": "ligne",
+                "column": "colonne",
+                "dense": "dense",
+                "row dense": "ligne dense",
+                "column dense": "colonne dense"
+              }
+            },
+            "gridTemplateColumns": {
+              "label": "Colonnes du modèle"
+            },
+            "gridTemplateRows": {
+              "label": "Lignes du modèle"
+            },
+            "display": {
+              "options": {
+                "flex": "Empiler (Flex)",
+                "grid": "Grille"
+              }
+            }
+          }
+        },
+        "sizing-css": {
+          "title": "Dimensionnement (CSS)",
+          "fields": {
+            "height": {
+              "label": "hauteur"
+            },
+            "minWidth": {
+              "label": "largeur min."
+            },
+            "minHeight": {
+              "label": "hauteur min."
+            },
+            "maxWidth": {
+              "label": "largeur max."
+            },
+            "maxHeight": {
+              "label": "hauteur max."
+            }
+          }
+        },
+        "appearance": {
+          "title": "Apparence",
+          "fields": {
+            "color": {
+              "label": "Couleur du texte"
+            },
+            "border": {
+              "label": "Bordure"
+            },
+            "borderRadius": {
+              "label": "Rayon"
+            },
+            "margin": {
+              "label": "Marge"
+            }
+          }
+        },
+        "section-border": {
+          "title": "Bordure de section",
+          "fields": {
+            "sectionBorderStyle": {
+              "options": {
+                "light": "Léger",
+                "strong": "Fort",
+                "none": "Aucun"
+              }
+            }
+          }
+        },
+        "field-binding": {
+          "title": "Liaison de champ",
+          "fields": {
+            "format": {
+              "options": {
+                "text": "Texte",
+                "number": "Nombre",
+                "currency": "Devise",
+                "date": "Date"
+              }
+            },
+            "fieldBorderStyle": {
+              "options": {
+                "underline": "Souligné",
+                "box": "Encadré",
+                "none": "Aucun"
+              }
+            }
+          }
+        },
+        "field-layout": {
+          "title": "Disposition du champ"
+        },
+        "text-content": {
+          "title": "Contenu texte"
+        },
+        "label-style": {
+          "title": "Texte du libellé",
+          "fields": {
+            "fontWeight": {
+              "options": {
+                "semibold": "Demi-gras",
+                "bold": "Gras",
+                "medium": "Moyen",
+                "normal": "Normal"
+              }
+            }
+          }
+        },
+        "totals-row": {
+          "title": "Ligne de totaux"
+        },
+        "action-button": {
+          "title": "Bouton",
+          "fields": {
+            "actionType": {
+              "options": {
+                "url": "URL",
+                "mailto": "E-mail"
+              }
+            }
+          }
+        },
+        "signature": {
+          "title": "Bloc de signature"
+        },
+        "table": {
+          "title": "Tableau"
+        },
+        "table-header-style": {
+          "title": "Style d'en-tête",
+          "fields": {
+            "headerColor": {
+              "label": "Couleur du texte"
+            },
+            "att-1": {
+              "label": "Contrat.pdf"
+            }
+          }
+        }
+      }
+    },
+    "fields": {
+      "invoice_number": {
+        "label": "Numéro de facture",
+        "description": "Numéro de facture affiché au client."
+      },
+      "invoice_invoiceNumber": {
+        "label": "Numéro de facture",
+        "description": "Numéro de facture affiché au client."
+      },
+      "invoice_issueDate": {
+        "label": "Date d'émission",
+        "description": "Date d'émission de la facture."
+      },
+      "invoice_dueDate": {
+        "label": "Date d'échéance",
+        "description": "Date d'échéance du paiement."
+      },
+      "invoice_poNumber": {
+        "label": "Numéro de BC",
+        "description": "Référence du bon de commande."
+      },
+      "invoice_subtotal": {
+        "label": "Sous-total",
+        "description": "Sous-total de la facture avant taxes et remises."
+      },
+      "invoice_tax": {
+        "label": "Taxe",
+        "description": "Montant de la taxe de la facture."
+      },
+      "invoice_discount": {
+        "label": "Remise",
+        "description": "Montant de la remise."
+      },
+      "invoice_total": {
+        "label": "Total",
+        "description": "Montant total dû."
+      },
+      "invoice_currencyCode": {
+        "label": "Code de devise",
+        "description": "Code ISO de devise pour cette facture."
+      },
+      "invoice_recurringServicePeriodStart": {
+        "label": "Début de la période de service récurrente",
+        "description": "La date de début canonique de la période de service de facture récurrente lorsqu'elle est disponible."
+      },
+      "invoice_recurringServicePeriodEnd": {
+        "label": "Fin de la période de service récurrente",
+        "description": "La date de fin canonique de la période de service de facture récurrente lorsqu'elle est disponible."
+      },
+      "invoice_recurringServicePeriodLabel": {
+        "label": "Période de service récurrente",
+        "description": "Un libellé canonique formaté de la période de service de facture récurrente lorsqu'il est disponible."
+      },
+      "customer_name": {
+        "label": "Nom du client",
+        "description": "Nom du client affiché sur la facture."
+      },
+      "customer_address": {
+        "label": "Adresse du client",
+        "description": "Adresse de facturation du client."
+      },
+      "client_name": {
+        "label": "Nom du client",
+        "description": "Le nom du client affiché dans les modèles de type devis."
+      },
+      "client_address": {
+        "label": "Adresse client",
+        "description": "L'adresse du client."
+      },
+      "contact_name": {
+        "label": "Nom du contact",
+        "description": "Le nom du contact affiché dans les modèles de type devis."
+      },
+      "contact_address": {
+        "label": "Adresse du contact",
+        "description": "L'adresse du contact."
+      },
+      "tenant_name": {
+        "label": "Nom du locataire",
+        "description": "Le nom de votre entreprise."
+      },
+      "tenant_address": {
+        "label": "Adresse du locataire",
+        "description": "L'adresse de votre entreprise."
+      },
+      "tenantClient_name": {
+        "label": "Nom du locataire",
+        "description": "Le nom de votre entreprise."
+      },
+      "tenantClient_address": {
+        "label": "Adresse du locataire",
+        "description": "L'adresse de votre entreprise."
+      }
     }
   }
 }

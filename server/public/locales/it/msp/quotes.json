@@ -5,7 +5,7 @@
       "back": "Indietro",
       "cancel": "Cancellare",
       "close": "Vicino",
-      "clone": "Clone",
+      "clone": "Clona",
       "convert": "Convertire",
       "delete": "Eliminare",
       "downloadPdf": "Scarica PDF",
@@ -134,22 +134,22 @@
       "convertToInvoice": "Converti in fattura",
       "createNewRevision": "Crea nuova revisione",
       "sendQuote": "Invia preventivo",
-      "saving": "Saving…",
-      "saveTemplate": "Save template",
-      "saveQuote": "Save quote",
-      "requestApproval": "Request approval",
-      "sendToClient": "Send to client",
-      "approve": "Approve",
-      "revise": "Revise",
-      "requestChanges": "Request changes",
-      "resend": "Resend",
-      "sendReminder": "Send reminder",
+      "saving": "Salvataggio…",
+      "saveTemplate": "Salva modello",
+      "saveQuote": "Salva preventivo",
+      "requestApproval": "Richiedi approvazione",
+      "sendToClient": "Invia al cliente",
+      "approve": "Approva",
+      "revise": "Rivedi",
+      "requestChanges": "Richiedi modifiche",
+      "resend": "Reinvia",
+      "sendReminder": "Invia promemoria",
       "pdf": "PDF",
-      "duplicate": "Duplicate",
-      "back": "Back",
-      "moreActions": "More actions",
-      "cancel": "Cancel",
-      "previewPdf": "Preview PDF"
+      "duplicate": "Duplica",
+      "back": "Indietro",
+      "moreActions": "Altre azioni",
+      "cancel": "Annulla",
+      "previewPdf": "Anteprima PDF"
     },
     "headings": {
       "editQuote": "Modifica preventivo",
@@ -248,97 +248,97 @@
       "titleRequired": "Il titolo è obbligatorio a meno che non si crei da un modello"
     },
     "header": {
-      "editTemplate": "Edit Quote Template",
-      "newTemplate": "New Quote Template",
-      "editQuote": "Edit Quote",
-      "newQuote": "New Quote",
+      "editTemplate": "Modifica modello preventivo",
+      "newTemplate": "Nuovo modello preventivo",
+      "editQuote": "Modifica preventivo",
+      "newQuote": "Nuovo preventivo",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Quote total"
+      "quoteTotalLabel": "Totale preventivo"
     },
     "breadcrumb": {
-      "billing": "Billing",
-      "quoteTemplates": "Quote Templates",
-      "quotes": "Quotes",
-      "newQuote": "New quote"
+      "billing": "Fatturazione",
+      "quoteTemplates": "Modelli di preventivo",
+      "quotes": "Preventivi",
+      "newQuote": "Nuovo preventivo"
     },
     "subtitle": {
-      "template": "Template · {{description}}",
-      "forClient": "For {{clientName}}",
-      "expires": "Expires {{date}}"
+      "template": "Modello · {{description}}",
+      "forClient": "Per {{clientName}}",
+      "expires": "Scade il {{date}}"
     },
     "banners": {
-      "acceptedTitle": "Quote Accepted",
-      "acceptedBy": "Accepted by: {{name}}",
-      "acceptedOn": "Accepted on: {{date}}",
-      "rejectedTitle": "Quote Rejected",
-      "rejectedOn": "Rejected on: {{date}}",
-      "rejectedReason": "Reason: {{reason}}",
-      "convertedTitle": "Quote Converted",
-      "convertedDescription": "This quote has been converted to a contract and/or invoice."
+      "acceptedTitle": "Preventivo accettato",
+      "acceptedBy": "Accettato da: {{name}}",
+      "acceptedOn": "Accettato il: {{date}}",
+      "rejectedTitle": "Preventivo rifiutato",
+      "rejectedOn": "Rifiutato il: {{date}}",
+      "rejectedReason": "Motivo: {{reason}}",
+      "convertedTitle": "Preventivo convertito",
+      "convertedDescription": "Questo preventivo è stato convertito in contratto e/o fattura."
     },
-    "noticeTitle": "Quote",
+    "noticeTitle": "Preventivo",
     "essentials": {
-      "title": "Essentials",
-      "subtitle": "Shown to the client on the quote document.",
-      "titleField": "Title",
-      "descriptionField": "Description / Scope",
-      "descriptionHelp": "A short paragraph that appears just under the title on the PDF.",
-      "client": "Client",
-      "clientPlaceholder": "Select client",
-      "contact": "Contact",
-      "contactPlaceholder": "Select contact",
-      "currency": "Currency",
-      "currencyPlaceholder": "Select currency",
-      "quoteDate": "Quote date",
-      "validUntil": "Valid until",
-      "validUntilHelp": "Quote auto-expires on this date."
+      "title": "Essenziali",
+      "subtitle": "Mostrato al cliente nel documento del preventivo.",
+      "titleField": "Titolo",
+      "descriptionField": "Descrizione / Ambito",
+      "descriptionHelp": "Un breve paragrafo che appare proprio sotto il titolo nel PDF.",
+      "client": "Cliente",
+      "clientPlaceholder": "Seleziona cliente",
+      "contact": "Contatto",
+      "contactPlaceholder": "Seleziona contatto",
+      "currency": "Valuta",
+      "currencyPlaceholder": "Seleziona valuta",
+      "quoteDate": "Data preventivo",
+      "validUntil": "Valido fino al",
+      "validUntilHelp": "Il preventivo scade automaticamente in questa data."
     },
     "lineItems": {
-      "title": "Line items",
-      "subtitleEmpty": "No items yet.",
-      "subtitleCount": "{{count}} items · {{mix}}",
-      "mixBoth": "recurring and one-time",
-      "mixRecurring": "recurring",
-      "mixOneTime": "one-time",
-      "addLocation": "+ Add location",
-      "fromTemplate": "+ From template"
+      "title": "Voci",
+      "subtitleEmpty": "Ancora nessun elemento.",
+      "subtitleCount": "{{count}} voci · {{mix}}",
+      "mixBoth": "ricorrente e una tantum",
+      "mixRecurring": "ricorrente",
+      "mixOneTime": "una tantum",
+      "addLocation": "+ Aggiungi sede",
+      "fromTemplate": "+ Da modello"
     },
     "clientFacing": {
-      "title": "Client-facing text",
-      "subtitle": "Appears on the PDF, below the totals.",
-      "notes": "Notes to client (Optional)",
-      "terms": "Terms & conditions (Optional)"
+      "title": "Testo visibile al cliente",
+      "subtitle": "Appare nel PDF, sotto i totali.",
+      "notes": "Note per il cliente (opzionale)",
+      "terms": "Termini e condizioni (opzionale)"
     },
     "moreDetails": {
-      "title": "More details",
-      "subtitle": "PO number, opportunity, PDF layout",
-      "poNumber": "PO number",
-      "opportunity": "Opportunity",
-      "opportunityPlaceholder": "Opportunity ID (optional)",
-      "pdfLayout": "PDF layout",
-      "pdfLayoutPlaceholder": "Use default layout",
-      "pdfLayoutHelp": "Choose which layout the client will see. Leave default to use tenant default."
+      "title": "Altri dettagli",
+      "subtitle": "Numero OdA, opportunità, layout PDF",
+      "poNumber": "Numero OdA",
+      "opportunity": "Opportunità",
+      "opportunityPlaceholder": "ID opportunità (opzionale)",
+      "pdfLayout": "Layout PDF",
+      "pdfLayoutPlaceholder": "Usa layout predefinito",
+      "pdfLayoutHelp": "Scegli quale layout vedrà il cliente. Lascia il predefinito per usare quello del tenant."
     },
     "footer": {
-      "savedAgo": "Changes saved · {{ago}}",
-      "saving": "Saving…",
-      "unsaved": "Unsaved changes"
+      "savedAgo": "Modifiche salvate · {{ago}}",
+      "saving": "Salvataggio…",
+      "unsaved": "Modifiche non salvate"
     },
     "sidebar": {
-      "quoteTotal": "Quote total",
-      "recurringPerMonth": "{{amount}} recurring / month",
-      "subtotal": "Subtotal",
-      "discounts": "Discounts",
-      "tax": "Tax",
-      "statusLabel": "Status",
-      "approvalLabel": "Approval",
-      "approvalMessage": "Quotes need sales lead approval before sending.",
-      "documentLayoutLabel": "Document layout",
-      "defaultLayout": "Tenant default",
+      "quoteTotal": "Totale preventivo",
+      "recurringPerMonth": "{{amount}} ricorrente / mese",
+      "subtotal": "Subtotale",
+      "discounts": "Sconti",
+      "tax": "Imposta",
+      "statusLabel": "Stato",
+      "approvalLabel": "Approvazione",
+      "approvalMessage": "I preventivi richiedono l'approvazione del responsabile vendite prima dell'invio.",
+      "documentLayoutLabel": "Layout del documento",
+      "defaultLayout": "Predefinito tenant",
       "standardLayout": "Standard",
-      "customLayout": "Custom",
-      "tenantDefault": "Tenant default",
-      "changeLayout": "Change"
+      "customLayout": "Personalizzato",
+      "tenantDefault": "Predefinito tenant",
+      "changeLayout": "Modifica"
     }
   },
   "quoteDetail": {
@@ -432,6 +432,11 @@
     },
     "table": {
       "description": "Descrizione"
+    },
+    "locations": {
+      "groupHeading": "Sede",
+      "unassigned": "Voci senza sede",
+      "subtotal": "Subtotale sede"
     }
   },
   "quoteLineItems": {
@@ -506,7 +511,18 @@
       "unavailable": "Markup non disponibile",
       "unavailableTooltip": "Impossibile calcolare il ricarico perché il costo è monitorato in {{costCurrency}} e questo preventivo è in {{quoteCurrency}}."
     },
-    "empty": "Nessun elemento pubblicitario ancora. Utilizza la ricerca nel catalogo qui sopra per aggiungere il tuo primo articolo."
+    "empty": "Nessun elemento pubblicitario ancora. Utilizza la ricerca nel catalogo qui sopra per aggiungere il tuo primo articolo.",
+    "searchPlaceholder": "Cerca o digita il nome di una voce personalizzata…",
+    "locations": {
+      "groupHeading": "Sede {{index}}",
+      "pickerPlaceholder": "Seleziona una sede",
+      "unassigned": "Le voci senza sede vengono elencate qui finché non ne viene scelta una.",
+      "removeGroup": "Rimuovi sede",
+      "subtotal": "Subtotale sede",
+      "addLocationButton": "+ Aggiungi sede",
+      "needMoreLocations": "Questo cliente ha una sola sede attiva. Aggiungi una seconda sede nelle impostazioni cliente per abilitare i preventivi multi-sede.",
+      "emptyGroup": "Ancora nessuna voce per questa sede."
+    }
   },
   "quoteRecipients": {
     "trigger": {
@@ -704,7 +720,7 @@
       "templateGenerationFailed": "Impossibile generare il modello di anteprima dall'area di lavoro corrente."
     },
     "pipeline": {
-      "render": "Render",
+      "render": "Rendering",
       "shape": "Forma"
     },
     "tabs": {

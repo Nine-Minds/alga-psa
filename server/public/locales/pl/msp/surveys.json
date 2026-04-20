@@ -263,7 +263,7 @@
         "client": "Klient",
         "contact": "Kontakt",
         "technician": "Technik",
-        "ticket": "Ticket",
+        "ticket": "Zgłoszenie",
         "rating": "Ocena",
         "comment": "Komentarz"
       },
@@ -311,7 +311,7 @@
         "technician": "Technik",
         "rating": "Ocena",
         "comment": "Komentarz",
-        "ticket": "Ticket"
+        "ticket": "Zgłoszenie"
       },
       "fallbacks": {
         "unknownClient": "Nieznany klient",
@@ -339,7 +339,7 @@
       "emptyDescription": "To dobry znak. Tak trzymać.",
       "fallbacks": {
         "unknownClient": "Nieznany klient",
-        "ticket": "Ticket {{ticket}}",
+        "ticket": "Zgłoszenie {{ticket}}",
         "noComment": "Nie pozostawiono komentarza.",
         "assignedTo": "Przypisano do: {{name}}"
       }

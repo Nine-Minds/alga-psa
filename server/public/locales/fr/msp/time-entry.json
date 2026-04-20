@@ -151,7 +151,7 @@
     "meta": {
       "assignedTo": "Attribué à: {{value}}",
       "dueDate": "Date d'échéance: {{value}}",
-      "contact": "Contact: {{value}}",
+      "contact": "Contact : {{value}}",
       "scheduledEnd": "Fin prévue: {{value}}"
     },
     "assignment": {
@@ -313,7 +313,7 @@
     "summary": {
       "entryOne": "entrée",
       "entryOther": "entrées",
-      "total": "Total: {{value}}",
+      "total": "Total : {{value}}",
       "billable": "Facturable: {{value}}"
     },
     "empty": {

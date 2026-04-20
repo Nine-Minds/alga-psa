@@ -982,5 +982,538 @@
       "loading": "Carregando...",
       "notAvailable": "-"
     }
+  },
+  "designer": {
+    "toolbar": {
+      "undo": "Desfazer",
+      "redo": "Refazer",
+      "snap": "Encaixar",
+      "guides": "Guias",
+      "rulers": "Réguas",
+      "zoom": "Zoom",
+      "metrics": {
+        "drags": "Arrastes: {{count}}",
+        "success": "Sucesso: {{count}}",
+        "invalid": "Inválidos: {{count}}"
+      }
+    },
+    "palette": {
+      "tabs": {
+        "blocks": "BLOCOS",
+        "presets": "PREDEFINIÇÕES",
+        "fields": "CAMPOS",
+        "outline": "ESTRUTURA"
+      },
+      "search": {
+        "blocks": "Pesquisar blocos…",
+        "presets": "Pesquisar predefinições…",
+        "fields": "Pesquisar campos…"
+      },
+      "dragHint": "Arraste ou toque em «+» para inserir.",
+      "addAriaLabel": "Adicionar {{label}}",
+      "noBlocksMatch": "Nenhum bloco encontrado.",
+      "presets": {
+        "sectionTitle": "Modelos de macro",
+        "sectionDescription": "Pacotes predefinidos para secções comuns de fatura."
+      },
+      "noPresetsMatch": "Nenhuma predefinição encontrada.",
+      "fields": {
+        "insertHint": "Clique num campo para o inserir no campo de texto ativo.",
+        "categories": {
+          "client": "Cliente",
+          "contact": "Contacto",
+          "line-item": "Linha",
+          "quote": "Orçamento",
+          "quote-totals": "Totais do orçamento",
+          "invoice": "Fatura",
+          "customer": "Cliente",
+          "tenant": "Inquilino"
+        }
+      },
+      "noFieldsMatch": "Nenhum campo encontrado.",
+      "categories": {
+        "structure": "Estrutura",
+        "content": "Conteúdo",
+        "media": "Multimédia",
+        "dynamic": "Dinâmico"
+      }
+    },
+    "inspector": {
+      "layoutControls": "Controlos de esquema",
+      "sizingMode": "Modo de dimensão",
+      "flexItem": "Item flex",
+      "displayFormat": "Formato de apresentação",
+      "attachments": "Anexos",
+      "media": "Multimédia",
+      "title": "Inspetor",
+      "layerName": "Nome da camada",
+      "typeLabel": "Tipo",
+      "fieldTypeLabel": "Tipo de campo",
+      "noBindingKey": "Sem chave de ligação",
+      "layoutPreset": "Predefinição de esquema",
+      "clear": "Limpar",
+      "fitSectionToContents": "Ajustar secção ao conteúdo",
+      "sectionNoChildContent": "A secção não tem conteúdo para ajustar.",
+      "apply": "Aplicar",
+      "emptyHelp": "Selecione um componente para editar as propriedades."
+    },
+    "shell": {
+      "selectedLabel": "Selecionado:",
+      "selectedNone": "Nenhum",
+      "clickBlockHint": "Clique num bloco da tela",
+      "orUse": "ou use",
+      "plusInLeftPanelHint": "+ no painel esquerdo"
+    },
+    "pageSetup": {
+      "title": "Configuração da página",
+      "description": "Escolha predefinição de papel e margem sem selecionar o nó de página oculto.",
+      "paperPreset": "Predefinição de papel",
+      "marginMm": "Margem (mm)"
+    },
+    "breadcrumbs": {
+      "emptyHelp": "Selecione um componente da tela para ver a hierarquia.",
+      "hierarchy": "Hierarquia"
+    },
+    "workspace": {
+      "preview": {
+        "source": {
+          "sample": "Amostra",
+          "existing": "Existente"
+        },
+        "sampleScenario": "Cenário de amostra",
+        "selectScenarioPlaceholder": "Selecionar cenário…",
+        "searchInvoices": "Pesquisar faturas…",
+        "searchInvoicesHint": "Pesquisar por número ou cliente…",
+        "noInvoicesFound": "Sem faturas.",
+        "selectInvoice": "Selecionar fatura",
+        "loadingDetails": "A carregar detalhes da fatura…",
+        "selectInvoiceHint": "Selecione uma fatura para pré-visualizar com dados.",
+        "shape": "Forma",
+        "render": "Renderizar",
+        "rerun": "Executar de novo",
+        "emptyState": "Selecione dados de amostra ou existentes para gerar uma pré-visualização autoritativa.",
+        "loadingPreview": "A formar e renderizar a pré-visualização…",
+        "templateError": "Não foi possível gerar o modelo de pré-visualização a partir do espaço de trabalho atual.",
+        "renderError": "Falha na renderização da pré-visualização."
+      },
+      "tabs": {
+        "design": "Conceção",
+        "transforms": "Transformações",
+        "preview": "Pré-visualização"
+      }
+    },
+    "blocks": {
+      "document": {
+        "label": "Documento",
+        "description": "Raiz do documento de fatura."
+      },
+      "page": {
+        "label": "Página",
+        "description": "Uma página de fatura."
+      },
+      "section": {
+        "label": "Secção",
+        "description": "Agrupamento lógico com regras de esquema partilhadas."
+      },
+      "column": {
+        "label": "Coluna",
+        "description": "Contentor de coluna legado."
+      },
+      "text": {
+        "label": "Bloco de texto",
+        "description": "Conteúdo de texto estático ou ligado a dados."
+      },
+      "totals": {
+        "label": "Totais",
+        "description": "Resumo subtotal/imposto/total."
+      },
+      "table": {
+        "label": "Tabela de linhas",
+        "description": "Linhas repetidas para as linhas da fatura."
+      },
+      "dynamic-table": {
+        "label": "Tabela dinâmica",
+        "description": "Tabela de dados avançada com ligações de colunas."
+      },
+      "field": {
+        "label": "Campo de dados",
+        "description": "Mostra um valor ligado (número de fatura, datas, totais)."
+      },
+      "label": {
+        "label": "Etiqueta de campo",
+        "description": "Etiqueta estática emparelhada com campos de dados."
+      },
+      "subtotal": {
+        "label": "Linha de subtotal",
+        "description": "Mostra o subtotal antes de impostos."
+      },
+      "tax": {
+        "label": "Linha de imposto",
+        "description": "Mostra o montante de imposto calculado."
+      },
+      "discount": {
+        "label": "Linha de desconto",
+        "description": "Mostra o montante de desconto."
+      },
+      "custom-total": {
+        "label": "Linha de total personalizada",
+        "description": "Linha calculada configurável (taxas, créditos, etc.)."
+      },
+      "image": {
+        "label": "Imagem",
+        "description": "Elemento de imagem inline."
+      },
+      "logo": {
+        "label": "Logotipo",
+        "description": "Recurso de marca do inquilino."
+      },
+      "qr": {
+        "label": "Código QR",
+        "description": "QR gerado automaticamente para ligações de pagamento."
+      },
+      "signature": {
+        "label": "Bloco de assinatura",
+        "description": "Nome do signatário e linha ou imagem de assinatura."
+      },
+      "action-button": {
+        "label": "Botão de ação",
+        "description": "Botão de chamada à ação (p.ex., Pagar agora)."
+      },
+      "attachment-list": {
+        "label": "Lista de anexos",
+        "description": "Mostra documentos ou ligações de suporte."
+      },
+      "divider": {
+        "label": "Separador",
+        "description": "Separador de linha horizontal."
+      },
+      "spacer": {
+        "label": "Espaçador",
+        "description": "Espaço vazio para ajuste de esquema."
+      },
+      "container": {
+        "label": "Contentor",
+        "description": "Contentor estilizado para agrupar conteúdo (bordas, fundos)."
+      }
+    },
+    "presets": {
+      "header-logo-address": {
+        "label": "Cabeçalho: Logotipo + Morada",
+        "description": "Two-column header with locked logo ratio and address stack."
+      },
+      "line-items-table": {
+        "label": "Tabela de linhas",
+        "description": "Full-width items table with repeating rows."
+      },
+      "totals-stack": {
+        "label": "Pilha de totais",
+        "description": "Totals summary with note block."
+      },
+      "two-column-summary": {
+        "label": "Resumo em duas colunas",
+        "description": "Equal columns for summary and contact info."
+      },
+      "notes-totals-row": {
+        "label": "Notes + Totals Row",
+        "description": "Wide notes column beside a narrow totals column using CSS grid."
+      },
+      "two-equal-columns-grid": {
+        "label": "Two Equal Columns",
+        "description": "Balanced two-column body section using CSS grid."
+      },
+      "three-info-columns": {
+        "label": "Três colunas de informação",
+        "description": "Three-column info-card row using CSS grid."
+      },
+      "recurring-onetime-tables": {
+        "label": "Recurring + One-time Tables",
+        "description": "Quote-ready stacked dynamic tables for recurring and one-time items."
+      },
+      "header-with-qr": {
+        "label": "Split Header with QR",
+        "description": "Logo + address stack with QR code payment block."
+      },
+      "modern-invoice-complete": {
+        "label": "Modern Invoice Template",
+        "description": "Complete layout with Header, Billing Info, Items Table, and Footer."
+      }
+    },
+    "schema": {
+      "panels": {
+        "layout": {
+          "title": "Esquema",
+          "fields": {
+            "gap": {
+              "label": "Intervalo"
+            },
+            "padding": {
+              "label": "Preenchimento"
+            },
+            "flexDirection": {
+              "label": "Direção",
+              "options": {
+                "column": "Vertical",
+                "row": "Horizontal"
+              }
+            },
+            "alignItems": {
+              "label": "Alinhar itens",
+              "options": {
+                "stretch": "Esticar",
+                "flex-start": "Início",
+                "center": "Centro",
+                "flex-end": "Fim"
+              }
+            },
+            "justifyContent": {
+              "label": "Justificar conteúdo",
+              "options": {
+                "flex-start": "Início",
+                "center": "Centro",
+                "flex-end": "Fim",
+                "space-between": "Espaço entre",
+                "space-around": "Espaço à volta",
+                "space-evenly": "Distribuição uniforme"
+              }
+            },
+            "gridAutoFlow": {
+              "label": "Fluxo automático",
+              "options": {
+                "row": "row",
+                "column": "column",
+                "dense": "dense",
+                "row dense": "row dense",
+                "column dense": "column dense"
+              }
+            },
+            "gridTemplateColumns": {
+              "label": "Colunas do modelo"
+            },
+            "gridTemplateRows": {
+              "label": "Linhas do modelo"
+            },
+            "display": {
+              "options": {
+                "flex": "Pilha (Flex)",
+                "grid": "Grelha"
+              }
+            }
+          }
+        },
+        "sizing-css": {
+          "title": "Sizing (CSS)",
+          "fields": {
+            "height": {
+              "label": "altura"
+            },
+            "minWidth": {
+              "label": "largura mín."
+            },
+            "minHeight": {
+              "label": "altura mín."
+            },
+            "maxWidth": {
+              "label": "largura máx."
+            },
+            "maxHeight": {
+              "label": "altura máx."
+            }
+          }
+        },
+        "appearance": {
+          "title": "Aparência",
+          "fields": {
+            "color": {
+              "label": "Cor do texto"
+            },
+            "border": {
+              "label": "Bordo"
+            },
+            "borderRadius": {
+              "label": "Raio"
+            },
+            "margin": {
+              "label": "Margem"
+            }
+          }
+        },
+        "section-border": {
+          "title": "Bordo de secção",
+          "fields": {
+            "sectionBorderStyle": {
+              "options": {
+                "light": "Leve",
+                "strong": "Forte",
+                "none": "Nenhum"
+              }
+            }
+          }
+        },
+        "field-binding": {
+          "title": "Ligação de campo",
+          "fields": {
+            "format": {
+              "options": {
+                "text": "Texto",
+                "number": "Número",
+                "currency": "Moeda",
+                "date": "Data"
+              }
+            },
+            "fieldBorderStyle": {
+              "options": {
+                "underline": "Sublinhado",
+                "box": "Caixa",
+                "none": "Nenhum"
+              }
+            }
+          }
+        },
+        "field-layout": {
+          "title": "Esquema de campo"
+        },
+        "text-content": {
+          "title": "Conteúdo de texto"
+        },
+        "label-style": {
+          "title": "Label Text",
+          "fields": {
+            "fontWeight": {
+              "options": {
+                "semibold": "Semi-negrito",
+                "bold": "Negrito",
+                "medium": "Médio",
+                "normal": "Normal"
+              }
+            }
+          }
+        },
+        "totals-row": {
+          "title": "Linha de totais"
+        },
+        "action-button": {
+          "title": "Botão",
+          "fields": {
+            "actionType": {
+              "options": {
+                "url": "URL",
+                "mailto": "Email"
+              }
+            }
+          }
+        },
+        "signature": {
+          "title": "Bloco de assinatura"
+        },
+        "table": {
+          "title": "Tabela"
+        },
+        "table-header-style": {
+          "title": "Header Style",
+          "fields": {
+            "headerColor": {
+              "label": "Cor do texto"
+            },
+            "att-1": {
+              "label": "Contract.pdf"
+            }
+          }
+        }
+      }
+    },
+    "fields": {
+      "invoice_number": {
+        "label": "Número da fatura",
+        "description": "Número da fatura mostrado ao cliente."
+      },
+      "invoice_invoiceNumber": {
+        "label": "Número da fatura",
+        "description": "Número da fatura mostrado ao cliente."
+      },
+      "invoice_issueDate": {
+        "label": "Data de emissão",
+        "description": "Data de emissão da fatura."
+      },
+      "invoice_dueDate": {
+        "label": "Data de vencimento",
+        "description": "Data de vencimento do pagamento."
+      },
+      "invoice_poNumber": {
+        "label": "Número de OC",
+        "description": "Referência de ordem de compra."
+      },
+      "invoice_subtotal": {
+        "label": "Subtotal",
+        "description": "Subtotal antes de impostos e descontos."
+      },
+      "invoice_tax": {
+        "label": "Imposto",
+        "description": "Montante do imposto."
+      },
+      "invoice_discount": {
+        "label": "Desconto",
+        "description": "Montante de desconto."
+      },
+      "invoice_total": {
+        "label": "Total",
+        "description": "Montante total a pagar."
+      },
+      "invoice_currencyCode": {
+        "label": "Código de moeda",
+        "description": "Código ISO da moeda."
+      },
+      "invoice_recurringServicePeriodStart": {
+        "label": "Recurring Service Period Start",
+        "description": "The canonical recurring invoice service period start date when available."
+      },
+      "invoice_recurringServicePeriodEnd": {
+        "label": "Recurring Service Period End",
+        "description": "The canonical recurring invoice service period end date when available."
+      },
+      "invoice_recurringServicePeriodLabel": {
+        "label": "Recurring Service Period",
+        "description": "A formatted canonical recurring invoice service period label when available."
+      },
+      "customer_name": {
+        "label": "Nome do cliente",
+        "description": "Nome do cliente mostrado na fatura."
+      },
+      "customer_address": {
+        "label": "Morada do cliente",
+        "description": "Morada de faturação do cliente."
+      },
+      "client_name": {
+        "label": "Client Name",
+        "description": "The client name shown in quote-style templates."
+      },
+      "client_address": {
+        "label": "Client Address",
+        "description": "The client address."
+      },
+      "contact_name": {
+        "label": "Contact Name",
+        "description": "The contact name shown in quote-style templates."
+      },
+      "contact_address": {
+        "label": "Contact Address",
+        "description": "The contact address."
+      },
+      "tenant_name": {
+        "label": "Tenant Name",
+        "description": "Your company name."
+      },
+      "tenant_address": {
+        "label": "Tenant Address",
+        "description": "Your company address."
+      },
+      "tenantClient_name": {
+        "label": "Tenant Name",
+        "description": "Your company name."
+      },
+      "tenantClient_address": {
+        "label": "Tenant Address",
+        "description": "Your company address."
+      }
+    }
   }
 }
