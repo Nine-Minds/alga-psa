@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Add msp/workflows to ROUTE_NAMESPACES for /msp/workflows, /msp/workflows/runs, /msp/workflow-editor, /msp/workflow-control in packages/core/src/lib/i18n/config.ts; confirm prefix matching covers dynamic segments.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Namespace + route config"]
   },
   {

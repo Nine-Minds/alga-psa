@@ -126,3 +126,18 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
 - Initial scaffold currently includes `page`, `nav`, `sections`, `empty`, and `actions` roots so downstream component work can add keys incrementally without first creating the namespace.
 - Non-English production locales currently copy English as temporary stubs, matching the PRD. `xx` and `yy` were also created as temporary structural stubs so `validate-translations.cjs` passes from the first commit; F041 will regenerate them from English later.
 - Validation run: `node scripts/validate-translations.cjs` — passed with 0 missing/extra keys across production locales and structural match for pseudo-locales.
+
+### F002 complete — route namespace loading wired
+- Added `msp/workflows` namespace loading to `packages/core/src/lib/i18n/config.ts` for:
+  - `/msp/workflows`
+  - `/msp/workflows/runs`
+  - `/msp/workflow-editor`
+  - `/msp/workflow-control`
+- Verified longest-prefix behavior with:
+  ```bash
+  node --import tsx/esm -e "import { ROUTE_NAMESPACES, getNamespacesForRoute } from './packages/core/src/lib/i18n/config.ts'; ..."
+  ```
+- Confirmed dynamic workflow routes now resolve to `['common', 'msp/core', 'msp/workflows']`, including:
+  - `/msp/workflows/runs/run-123`
+  - `/msp/workflow-editor/abc`
+  - `/msp/workflow-editor/new`
