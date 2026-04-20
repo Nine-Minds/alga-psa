@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -88,11 +88,17 @@ const DEFAULT_FILTERS: EventFilters = {
   to: ''
 };
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+const useFormatDateTime = () => {
+  const { formatDate } = useFormatters();
+  return useCallback(
+    (value?: string | null) => {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return formatDate(date, { dateStyle: 'medium', timeStyle: 'short' });
+    },
+    [formatDate]
+  );
 };
 
 const payloadPreview = (payload?: Record<string, unknown> | null) => {
@@ -109,6 +115,7 @@ interface WorkflowEventListProps {
 
 const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmin = false }) => {
   const { t } = useTranslation('msp/workflows');
+  const formatDateTime = useFormatDateTime();
   const formatWorkflowEventStatus = useFormatWorkflowEventStatus();
   const workflowEventStatusOptions = useWorkflowEventStatusOptions();
   const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);

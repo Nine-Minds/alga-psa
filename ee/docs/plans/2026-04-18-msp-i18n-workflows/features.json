@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Migrate hardcoded toLocaleDateString/toLocaleString calls in WorkflowRunList/WorkflowRunDetails/WorkflowEventList/WorkflowDefinitionAudit to useFormatters().formatDate (reading locale from i18n context).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-B", "Goals"]
   },
   {

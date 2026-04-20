@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -8,7 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -168,10 +168,25 @@ const statusBadgeClasses: Record<string, string> = {
 
 const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
   const { t } = useTranslation('msp/workflows');
+  const { formatDate } = useFormatters();
   const formatWorkflowRunStatus = useFormatWorkflowRunStatus();
   const formatWorkflowLogLevel = useFormatWorkflowLogLevel();
   const formatWorkflowRunTrigger = useFormatWorkflowRunTrigger();
   const formatWorkflowScheduleStatus = useFormatWorkflowScheduleStatus();
+  const formatDateTime = useCallback(
+    (value: Date | string) => {
+      const date = value instanceof Date ? value : new Date(value);
+      return formatDate(date, { dateStyle: 'medium', timeStyle: 'short' });
+    },
+    [formatDate]
+  );
+  const formatTimeOnly = useCallback(
+    (value: Date | string) => {
+      const date = value instanceof Date ? value : new Date(value);
+      return formatDate(date, { timeStyle: 'medium' });
+    },
+    [formatDate]
+  );
   const [run, setRun] = useState<WorkflowRunRecord | null>(null);
   const [scheduleState, setScheduleState] = useState<WorkflowScheduleStateSummary | null>(null);
   const [definition, setDefinition] = useState<WorkflowDefinition | null>(null);
@@ -622,7 +637,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
     const record = stepStatusMap.get(step.id);
     const statusInfo = getStepStatusStyle(record);
     const timestampLabel = statusInfo.timestamp
-      ? new Date(statusInfo.timestamp).toLocaleString()
+      ? formatDateTime(statusInfo.timestamp)
       : t('runStudio.status.pending', { defaultValue: 'Pending' });
     const title = t('runStudio.stepCard.lastStatus', {
       defaultValue: 'Last status: {{status}} ({{timestamp}})',
@@ -884,7 +899,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
               <span>
                 {t('runStudio.header.updated', {
                   defaultValue: 'Updated {{time}}',
-                  time: lastUpdatedAt.toLocaleTimeString(),
+                  time: formatTimeOnly(lastUpdatedAt),
                 })}
               </span>
             ) : null}
@@ -1013,7 +1028,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                 <div className="text-[11px] uppercase text-gray-400">
                   {t('runStudio.details.fields.started', { defaultValue: 'Started' })}
                 </div>
-                <div>{run?.started_at ? new Date(run.started_at).toLocaleString() : '-'}</div>
+                <div>{run?.started_at ? formatDateTime(run.started_at) : '-'}</div>
               </div>
               <div>
                 <div className="text-[11px] uppercase text-gray-400">
@@ -1056,7 +1071,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                   <div className="text-[11px] uppercase text-gray-400">
                     {t('runStudio.details.fields.scheduledFor', { defaultValue: 'Scheduled For' })}
                   </div>
-                  <div>{new Date(String(triggerMetadata.scheduledFor)).toLocaleString()}</div>
+                  <div>{formatDateTime(String(triggerMetadata.scheduledFor))}</div>
                 </div>
               )}
               {run?.trigger_type === 'recurring' && typeof triggerMetadata?.cron === 'string' && (
@@ -1243,11 +1258,11 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                     <div className="text-[11px] text-gray-500">
                       {t('runStudio.timeline.createdLine', {
                         defaultValue: 'Created: {{createdAt}}',
-                        createdAt: new Date(entry.createdAt).toLocaleString(),
+                        createdAt: formatDateTime(entry.createdAt),
                       })}
                       {entry.resolvedAt ? t('runStudio.timeline.resolvedSegment', {
                         defaultValue: ' · Resolved: {{resolvedAt}}',
-                        resolvedAt: new Date(entry.resolvedAt).toLocaleString(),
+                        resolvedAt: formatDateTime(entry.resolvedAt),
                       }) : ''}
                     </div>
                   </div>
@@ -1302,7 +1317,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
             {filteredLogs.map((log) => (
               <div key={log.log_id} className="border-b border-gray-100 px-3 py-2 text-xs text-gray-700">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-gray-500">{new Date(log.created_at).toLocaleTimeString()}</span>
+                  <span className="font-mono text-gray-500">{formatTimeOnly(log.created_at)}</span>
                   <span className={`text-[10px] uppercase tracking-wide border px-2 py-0.5 rounded ${logLevelStyles[(log.level || '').toUpperCase()] ?? 'text-gray-400 border-gray-200'}`}>
                     {log.level}
                   </span>

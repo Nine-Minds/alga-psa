@@ -10,7 +10,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Input } from '@alga-psa/ui/components/Input';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
@@ -200,11 +200,17 @@ const maskSensitiveValues = (value: unknown): unknown => {
   return value;
 };
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+const useFormatDateTime = () => {
+  const { formatDate } = useFormatters();
+  return useCallback(
+    (value?: string | null) => {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return formatDate(date, { dateStyle: 'medium', timeStyle: 'short' });
+    },
+    [formatDate]
+  );
 };
 
 const formatDurationMs = (value?: number | null) => {
@@ -308,6 +314,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
   const formatWorkflowLogLevel = useFormatWorkflowLogLevel();
   const formatWorkflowRunTrigger = useFormatWorkflowRunTrigger();
   const formatWorkflowScheduleStatus = useFormatWorkflowScheduleStatus();
+  const formatDateTime = useFormatDateTime();
   const workflowStepStatusOptions = useWorkflowStepStatusOptions();
   const workflowLogLevelOptions = useWorkflowLogLevelOptions();
   const [run, setRun] = useState<WorkflowRunRecord | null>(null);

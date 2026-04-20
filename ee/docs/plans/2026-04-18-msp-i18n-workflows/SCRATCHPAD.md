@@ -523,6 +523,28 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   - ESLint reports 0 errors; remaining warnings are the pre-existing `any`/non-null-assertion/`exhaustive-deps`/`no-empty`/`no-unused-vars` backlog, unchanged by this extraction.
   - Vitest: 2/2 existing trigger-presentation unit tests still pass (they exercise the pure helpers, not the hooks).
   - translation validation passed with 0 missing/extra keys.
+
+### F022 complete — date formatting switched to useFormatters().formatDate
+- Replaced module-level `formatDateTime(value)` helpers in the 5 run/audit/event/DLQ surfaces with component-scoped hooks backed by `useFormatters().formatDate`. Each hook keeps the same `'—'`-on-empty + original-string-on-NaN fallback contract as before:
+  - `WorkflowRunList.tsx`
+  - `WorkflowRunDetails.tsx`
+  - `WorkflowEventList.tsx`
+  - `WorkflowDefinitionAudit.tsx`
+  - `WorkflowDeadLetterQueue.tsx`
+- In `RunStudioShell.tsx`, consolidated all seven inline `new Date(...).toLocaleString()` / `toLocaleTimeString()` call sites onto two component-scoped formatters (`formatDateTime` and `formatTimeOnly`) built from `useFormatters().formatDate`:
+  - step-card `title` timestamp, header "Updated {{time}}" badge, run-details `started_at`, scheduled-for metadata, timeline created/resolved lines, and the log timestamp column.
+- All replacements pass `{ dateStyle: 'medium', timeStyle: 'short' }` for full datetimes and `{ timeStyle: 'medium' }` for time-only, so the locale context drives ordering / 12h-vs-24h / weekday spelling consistently instead of the browser default.
+- Note: `ee/packages/workflows/src/components/automation-hub/Schedules.tsx` was already migrated to `useFormatters().formatDate` as part of F018.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowRunList.tsx ee/server/src/components/workflow-designer/WorkflowRunDetails.tsx ee/server/src/components/workflow-designer/WorkflowDefinitionAudit.tsx ee/server/src/components/workflow-designer/WorkflowEventList.tsx ee/server/src/components/workflow-designer/WorkflowDeadLetterQueue.tsx ee/server/src/components/workflow-run-studio/RunStudioShell.tsx
+  grep -rn "toLocaleDateString\|toLocaleString\|toLocaleTimeString" ee/server/src/components/workflow-designer ee/server/src/components/workflow-run-studio --include='*.tsx' --include='*.ts'
+  node scripts/validate-translations.cjs
+  ```
+- Results:
+  - ESLint reports 0 errors across all 6 files; remaining warnings are the pre-existing `any`/`no-empty`/non-null-assertion/`exhaustive-deps` backlog.
+  - `grep` for locale-sensitive Date method calls returns zero matches across the workflow-designer and workflow-run-studio directories.
+  - translation validation passed with 0 missing/extra keys.
 - Checks run:
   ```bash
   npx eslint ee/server/src/components/workflow-graph/WorkflowGraph.tsx

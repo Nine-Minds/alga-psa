@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { toast } from 'react-hot-toast';
 import {
@@ -24,11 +24,17 @@ type WorkflowAuditLogResponse = {
   nextCursor: number | null;
 };
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+const useFormatDateTime = () => {
+  const { formatDate } = useFormatters();
+  return useCallback(
+    (value?: string | null) => {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return formatDate(date, { dateStyle: 'medium', timeStyle: 'short' });
+    },
+    [formatDate]
+  );
 };
 
 const truncateJsonPreview = (value: unknown, maxChars: number) => {
@@ -47,6 +53,7 @@ interface WorkflowDefinitionAuditProps {
 
 const WorkflowDefinitionAudit: React.FC<WorkflowDefinitionAuditProps> = ({ workflowId, workflowName, isActive }) => {
   const { t } = useTranslation('msp/workflows');
+  const formatDateTime = useFormatDateTime();
   const [logs, setLogs] = useState<WorkflowAuditLogRecord[]>([]);
   const [cursor, setCursor] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);

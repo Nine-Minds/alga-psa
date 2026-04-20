@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { toast } from 'react-hot-toast';
@@ -39,11 +39,17 @@ const STATUS_STYLES: Record<string, string> = {
   CANCELED: 'bg-muted text-muted-foreground'
 };
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+const useFormatDateTime = () => {
+  const { formatDate } = useFormatters();
+  return useCallback(
+    (value?: string | null) => {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return formatDate(date, { dateStyle: 'medium', timeStyle: 'short' });
+    },
+    [formatDate]
+  );
 };
 
 interface WorkflowDeadLetterQueueProps {
@@ -53,6 +59,7 @@ interface WorkflowDeadLetterQueueProps {
 
 const WorkflowDeadLetterQueue: React.FC<WorkflowDeadLetterQueueProps> = ({ isActive, canAdmin = false }) => {
   const { t } = useTranslation('msp/workflows');
+  const formatDateTime = useFormatDateTime();
   const formatWorkflowRunStatus = useFormatWorkflowRunStatus();
   const [runs, setRuns] = useState<DeadLetterRun[]>([]);
   const [nextCursor, setNextCursor] = useState<number | null>(null);

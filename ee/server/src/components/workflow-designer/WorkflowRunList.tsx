@@ -6,7 +6,7 @@ import { RefreshCw } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -108,11 +108,17 @@ const DEFAULT_FILTERS: WorkflowRunFilters = {
   sort: 'started_at:desc'
 };
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+const useFormatDateTime = () => {
+  const { formatDate } = useFormatters();
+  return useCallback(
+    (value?: string | null) => {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return formatDate(date, { dateStyle: 'medium', timeStyle: 'short' });
+    },
+    [formatDate]
+  );
 };
 
 const formatDuration = (start?: string | null, end?: string | null) => {
@@ -176,6 +182,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
   const formatWorkflowRunStatus = useFormatWorkflowRunStatus();
   const formatWorkflowRunTrigger = useFormatWorkflowRunTrigger();
   const formatWorkflowScheduleStatus = useFormatWorkflowScheduleStatus();
+  const formatDateTime = useFormatDateTime();
   const workflowRunStatusOptions = useWorkflowRunStatusOptions();
   const workflowRunSortOptions = useWorkflowRunSortOptions();
   const [filters, setFilters] = useState<WorkflowRunFilters>(DEFAULT_FILTERS);
