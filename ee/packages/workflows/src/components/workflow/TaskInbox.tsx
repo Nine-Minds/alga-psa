@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TaskInboxProps {
   className?: string;
@@ -20,6 +21,7 @@ interface TaskInboxProps {
  * managing workflow tasks.
  */
 export function TaskInbox({ className = '' }: TaskInboxProps) {
+  const { t } = useTranslation('msp/workflows');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('pending');
   
@@ -58,7 +60,7 @@ export function TaskInbox({ className = '' }: TaskInboxProps) {
   return (
     <div className={className}>
       <Card className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Task Inbox</h1>
+        <h1 className="text-2xl font-bold mb-6">{t('taskInbox.title', { defaultValue: 'Task Inbox' })}</h1>
         
         {selectedTaskId ? (
           <div>
@@ -68,7 +70,7 @@ export function TaskInbox({ className = '' }: TaskInboxProps) {
               className="mb-4"
               onClick={() => setSelectedTaskId(null)}
             >
-              ← Back to Task List
+              {t('taskInbox.backToList', { defaultValue: '← Back to Task List' })}
             </Button>
             
             <TaskDetailsComponent
@@ -80,10 +82,18 @@ export function TaskInbox({ className = '' }: TaskInboxProps) {
           <div>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
               <TabsList>
-                <TabsTrigger value="pending">Pending</TabsTrigger>
-                <TabsTrigger value="claimed">Claimed</TabsTrigger>
-                <TabsTrigger value="completed">Completed</TabsTrigger>
-                <TabsTrigger value="all">All Tasks</TabsTrigger>
+                <TabsTrigger value="pending">
+                  {t('taskInbox.tabs.pending', { defaultValue: 'Pending' })}
+                </TabsTrigger>
+                <TabsTrigger value="claimed">
+                  {t('taskInbox.tabs.claimed', { defaultValue: 'Claimed' })}
+                </TabsTrigger>
+                <TabsTrigger value="completed">
+                  {t('taskInbox.tabs.completed', { defaultValue: 'Completed' })}
+                </TabsTrigger>
+                <TabsTrigger value="all">
+                  {t('taskInbox.tabs.all', { defaultValue: 'All Tasks' })}
+                </TabsTrigger>
               </TabsList>
             </Tabs>
             

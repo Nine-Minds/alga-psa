@@ -751,6 +751,112 @@
       }
     }
   },
+  "taskInbox": {
+    "title": "Task Inbox",
+    "backToList": "← Back to Task List",
+    "tabs": {
+      "pending": "Pending",
+      "claimed": "Claimed",
+      "completed": "Completed",
+      "all": "All Tasks"
+    }
+  },
+  "taskList": {
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "pageLabel": "Page {{current}} of {{total}}"
+    },
+    "errors": {
+      "loadFailed": "Failed to load tasks. Please try again.",
+      "claimFailed": "Failed to claim task: {{error}}",
+      "unclaimFailed": "Failed to unclaim task: {{error}}",
+      "unknown": "Unknown error"
+    },
+    "actions": {
+      "claim": "Claim",
+      "unclaim": "Unclaim"
+    },
+    "noDueDate": "No due date",
+    "overdueSuffix": "(Overdue)",
+    "empty": "No tasks found",
+    "duePrefix": "Due:"
+  },
+  "taskDetails": {
+    "notAvailable": "N/A",
+    "notFound": "Task not found",
+    "retry": "Retry",
+    "youPronoun": "You",
+    "noForm": "No form available for this task.",
+    "contextData": "Context Data",
+    "responseData": "Response Data",
+    "fields": {
+      "status": "Status",
+      "priority": "Priority",
+      "created": "Created",
+      "dueDate": "Due Date",
+      "claimedBy": "Claimed By",
+      "completedBy": "Completed By"
+    },
+    "tabs": {
+      "details": "Details",
+      "form": "Form",
+      "history": "History"
+    },
+    "actions": {
+      "claim": "Claim Task",
+      "unclaim": "Unclaim Task"
+    },
+    "errors": {
+      "loadFailed": "Failed to load task details. Please try again.",
+      "claimFailed": "Failed to claim task: {{error}}",
+      "unclaimFailed": "Failed to unclaim task: {{error}}",
+      "unknown": "Unknown error"
+    }
+  },
+  "taskHistory": {
+    "empty": "No history available for this task.",
+    "byPrefix": "By:",
+    "system": "System",
+    "detailsLabel": "Details",
+    "actions": {
+      "created": "Created",
+      "claimed": "Claimed",
+      "unclaimed": "Unclaimed",
+      "completed": "Completed",
+      "canceled": "Canceled",
+      "expired": "Expired"
+    },
+    "errors": {
+      "loadFailed": "Failed to load task history. Please try again."
+    }
+  },
+  "taskForm": {
+    "actions": {
+      "complete": "Complete Task",
+      "cancel": "Cancel"
+    }
+  },
+  "dynamicForm": {
+    "actions": {
+      "submit": "Submit",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "generic": "An error occurred"
+    }
+  },
+  "embeddedTaskInbox": {
+    "title": "My Tasks",
+    "viewAll": "View All",
+    "backToTasks": "← Back to Tasks"
+  },
+  "actionButton": {
+    "processing": "Processing...",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "confirmTitle": "Confirm Action"
+  },
   "stepNameField": {
     "label": "Step name"
   },

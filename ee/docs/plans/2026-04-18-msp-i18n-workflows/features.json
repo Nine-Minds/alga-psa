@@ -206,31 +206,31 @@
   {
     "id": "F035",
     "description": "Extract all user-visible strings in TaskInbox.tsx (list, filters, counts, empty state).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-E"]
   },
   {
     "id": "F036",
     "description": "Extract all user-visible strings in TaskList.tsx, TaskDetails.tsx, TaskHistory.tsx (task rows, detail fields, status timeline, comment entries).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-E"]
   },
   {
     "id": "F037",
     "description": "Extract all user-visible strings in TaskForm.tsx and DynamicForm.tsx (field labels where not driven by schema, validation messages, submit/cancel buttons).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-E"]
   },
   {
     "id": "F038",
     "description": "Extract all user-visible strings in EmbeddedTaskInbox.tsx (wrapper header, empty state, link to full inbox).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-E"]
   },
   {
     "id": "F039",
     "description": "Extract all user-visible strings in ActionButton.tsx and ActionButtonGroup.tsx (button labels where provided as string props, fallback copy).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-E"]
   },
   {

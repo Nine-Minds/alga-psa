@@ -707,3 +707,20 @@ Batched six related surfaces in one commit since each has relatively few chrome 
   node scripts/validate-translations.cjs
   ```
 - Results: ESLint 0 errors (17 warnings, all pre-existing `no-unused-vars`/`no-non-null-assertion` backlog); translation validation passed with 0 missing/extra keys.
+
+### F035–F039 complete — task inbox components localized
+- **F035 `TaskInbox.tsx`** — `Task Inbox` title, `← Back to Task List` button, and the four tabs (`Pending`, `Claimed`, `Completed`, `All Tasks`) all route through `taskInbox.*`.
+- **F036 `TaskList.tsx`** — Added `useTranslation` to both the exported `TaskList` and the inner `Pagination` helper. Localized pagination controls (`Previous`, `Next`, `Page {{current}} of {{total}}`), load/claim/unclaim error fallbacks + the shared `Unknown error`, `Claim`/`Unclaim` row actions, the empty state (`No tasks found`), the `No due date` placeholder + `(Overdue)` suffix + `Due:` label. Switched the per-row due-date rendering to `useFormatters().formatDate(...)` so the month/day order follows the user's locale.
+- **F036 `TaskDetails.tsx`** — Localized every field label (`Status`, `Priority`, `Created`, `Due Date`, `Claimed By`, `Completed By`), the tabs (`Details`, `Form`, `History`), the context/response-data panel headings, the `N/A` fallback, `Task not found`, the `Retry` error-recovery button, the claim/unclaim buttons (`Claim Task` / `Unclaim Task`), the `Claimed By`/`Completed By` `You` pronoun, and the `No form available for this task.` empty-form message. Error strings for load/claim/unclaim now interpolate the underlying `err.message` via `{{error}}`.
+- **F036 `TaskHistory.tsx`** — Localized the `No history available for this task.` empty state, the `By:`/`System`/`Details` inline labels, the six `getActionLabel` cases (`Created`/`Claimed`/`Unclaimed`/`Completed`/`Canceled`/`Expired`), the load-failure toast, and the timestamp renderer via `useFormatters().formatDate`.
+- **F037 `TaskForm.tsx`** — `Complete Task` and `Cancel` default-action labels now translate. Other task-action labels remain caller-provided.
+- **F037 `DynamicForm.tsx`** — Default `Submit` and `Cancel` action labels, plus the generic `An error occurred` handler-fallback, now translate. RJSF vendor-generated field labels/error messages stay schema-driven per PRD.
+- **F038 `EmbeddedTaskInbox.tsx`** — `My Tasks` header, `View All` link, and `← Back to Tasks` button now translate.
+- **F039 `ActionButton.tsx`** — `Processing...` button state, `Confirm Action` dialog title, and the dialog `Cancel`/`Confirm` footer buttons all translate. `ActionButtonGroup.tsx` has no hardcoded strings — it renders caller-provided action labels.
+- Added new keys to `server/public/locales/en/msp/workflows.json` (8 new top-level blocks: `taskInbox`, `taskList`, `taskDetails`, `taskHistory`, `taskForm`, `dynamicForm`, `embeddedTaskInbox`, `actionButton` — ~60 keys total), synced the same stub structure into `fr/es/de/nl/it/pl/xx/yy`.
+- Checks run:
+  ```bash
+  npx eslint ee/packages/workflows/src/components/workflow/TaskInbox.tsx ee/packages/workflows/src/components/workflow/TaskList.tsx ee/packages/workflows/src/components/workflow/TaskDetails.tsx ee/packages/workflows/src/components/workflow/TaskHistory.tsx ee/packages/workflows/src/components/workflow/TaskForm.tsx ee/packages/workflows/src/components/workflow/DynamicForm.tsx ee/packages/workflows/src/components/workflow/EmbeddedTaskInbox.tsx ee/packages/workflows/src/components/workflow/ActionButton.tsx
+  node scripts/validate-translations.cjs
+  ```
+- Results: ESLint 0 errors (remaining warnings are pre-existing `no-unused-vars`, `exhaustive-deps`, and unused-prop backlog); translation validation passed with 0 missing/extra keys.

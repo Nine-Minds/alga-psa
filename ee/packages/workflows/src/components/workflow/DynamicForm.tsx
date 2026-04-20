@@ -11,6 +11,7 @@ import { Action, actionHandlerRegistry, ActionHandlerContext } from '@alga-psa/w
 import { ActionButtonGroup } from './ActionButtonGroup';
 import { applyConditionalLogic } from '@alga-psa/workflows/forms/conditionalLogic';
 import { processTemplateVariables } from '@alga-psa/workflows/lib/templateVariables';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Create a themed form with Shadcn theme
 const ThemedForm = withTheme({});
@@ -42,6 +43,7 @@ export function DynamicForm({
   isSubmitting = false,
   isInDrawer = false
 }: DynamicFormProps) {
+  const { t } = useTranslation('msp/workflows');
 console.log('[DynamicForm] Received contextData:', contextData);
   console.log('[DynamicForm] Received schema:', schema);
   const [internalFormData, setInternalFormData] = useState(formData);
@@ -57,7 +59,7 @@ console.log('[DynamicForm] Received contextData:', contextData);
     formActions = [
       {
         id: 'submit',
-        label: 'Submit',
+        label: t('dynamicForm.actions.submit', { defaultValue: 'Submit' }),
         primary: true,
         variant: 'default' as const,
         disabled: false,
@@ -65,12 +67,12 @@ console.log('[DynamicForm] Received contextData:', contextData);
         order: 0
       }
     ];
-    
+
     // Only add a cancel button if not in a drawer and onAction is provided
     if (onAction && !isInDrawer) {
       formActions.push({
         id: 'cancel',
-        label: 'Cancel',
+        label: t('dynamicForm.actions.cancel', { defaultValue: 'Cancel' }),
         primary: false,
         variant: 'secondary' as const,
         disabled: false,
@@ -165,7 +167,7 @@ console.log('[DynamicForm] Received contextData:', contextData);
         console.warn(`No handler found for action: ${actionId}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : t('dynamicForm.errors.generic', { defaultValue: 'An error occurred' }));
       console.error('Error handling action:', err);
     }
   };
