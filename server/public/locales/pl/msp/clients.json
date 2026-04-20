@@ -129,7 +129,9 @@
       "bucketUsageRecord": "rekord użycia łyżki",
       "bucketUsageRecords": "zapisy użycia łyżek"
     },
-    "deleteSelectedPrompt": "Czy na pewno chcesz usunąć {{count}} wybrane {{clientsLabel}}? Tej akcji nie można cofnąć."
+    "deleteSelectedPrompt": "Czy na pewno chcesz usunąć {{count}} wybrane {{clientsLabel}}? Tej akcji nie można cofnąć.",
+    "singleInactiveWithContactsSuccess_one": "{{name}} i {{count}} kontakt zostały pomyślnie dezaktywowane.",
+    "singleInactiveWithContactsSuccess_other": "{{name}} i {{count}} kontaktów zostało pomyślnie dezaktywowanych."
   },
   "clientDetails": {
     "title": "Dane Klienta",
@@ -208,7 +210,12 @@
     "status": {
       "label": "Status",
       "helper": "Ustaw status klienta jako aktywny lub nieaktywny"
-    }
+    },
+    "entraSyncStarted": "Rozpoczęto synchronizację Entra. Identyfikator uruchomienia: {{runId}}",
+    "inboundDomainAdded": "Dodano przychodzącą domenę e-mail",
+    "inboundDomainAddFailed": "Nie udało się dodać domeny",
+    "inboundDomainRemoved": "Usunięto przychodzącą domenę e-mail",
+    "inboundDomainRemoveFailed": "Nie udało się usunąć domeny"
   },
   "quickAddClient": {
     "title": "Dodaj nowego klienta",

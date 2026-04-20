@@ -129,7 +129,9 @@
       "bucketUsageRecord": "55555",
       "bucketUsageRecords": "55555"
     },
-    "deleteSelectedPrompt": "55555 {{count}} 55555 {{clientsLabel}} 55555"
+    "deleteSelectedPrompt": "55555 {{count}} 55555 {{clientsLabel}} 55555",
+    "singleInactiveWithContactsSuccess_one": "{{name}}55555{{count}}55555",
+    "singleInactiveWithContactsSuccess_other": "{{name}}55555{{count}}55555"
   },
   "clientDetails": {
     "title": "55555",
@@ -208,7 +210,12 @@
     "status": {
       "label": "55555",
       "helper": "55555"
-    }
+    },
+    "entraSyncStarted": "55555{{runId}}",
+    "inboundDomainAdded": "55555",
+    "inboundDomainAddFailed": "55555",
+    "inboundDomainRemoved": "55555",
+    "inboundDomainRemoveFailed": "55555"
   },
   "quickAddClient": {
     "title": "55555",

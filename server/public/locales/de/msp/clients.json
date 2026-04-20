@@ -129,7 +129,9 @@
       "bucketUsageRecord": "Bucket-Nutzungsdatensatz",
       "bucketUsageRecords": "Bucket-Nutzungsdatensätze"
     },
-    "deleteSelectedPrompt": "Sind Sie sicher, dass Sie {{count}} ausgewählte {{clientsLabel}} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+    "deleteSelectedPrompt": "Sind Sie sicher, dass Sie {{count}} ausgewählte {{clientsLabel}} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "singleInactiveWithContactsSuccess_one": "{{name}} und {{count}} Kontakt wurden erfolgreich deaktiviert.",
+    "singleInactiveWithContactsSuccess_other": "{{name}} und {{count}} Kontakte wurden erfolgreich deaktiviert."
   },
   "clientDetails": {
     "title": "Kundendaten",
@@ -208,7 +210,12 @@
     "status": {
       "label": "Status",
       "helper": "Legen Sie den Clientstatus als aktiv oder inaktiv fest"
-    }
+    },
+    "entraSyncStarted": "Entra-Synchronisierung gestartet. Lauf-ID: {{runId}}",
+    "inboundDomainAdded": "Eingehende E-Mail-Domäne hinzugefügt",
+    "inboundDomainAddFailed": "Domäne konnte nicht hinzugefügt werden",
+    "inboundDomainRemoved": "Eingehende E-Mail-Domäne entfernt",
+    "inboundDomainRemoveFailed": "Domäne konnte nicht entfernt werden"
   },
   "quickAddClient": {
     "title": "Neuen Kunden hinzufügen",

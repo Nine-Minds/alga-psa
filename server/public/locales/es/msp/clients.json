@@ -129,7 +129,9 @@
       "bucketUsageRecord": "registro de uso de bucket",
       "bucketUsageRecords": "registros de uso de bucket"
     },
-    "deleteSelectedPrompt": "¿Está seguro de que desea eliminar {{count}} seleccionado {{clientsLabel}}? Esta acción no se puede deshacer."
+    "deleteSelectedPrompt": "¿Está seguro de que desea eliminar {{count}} seleccionado {{clientsLabel}}? Esta acción no se puede deshacer.",
+    "singleInactiveWithContactsSuccess_one": "{{name}} y {{count}} contacto han sido desactivados correctamente.",
+    "singleInactiveWithContactsSuccess_other": "{{name}} y {{count}} contactos han sido desactivados correctamente."
   },
   "clientDetails": {
     "title": "Detalles del cliente",
@@ -208,7 +210,12 @@
     "status": {
       "label": "Estado",
       "helper": "Establecer el estado del cliente como activo o inactivo"
-    }
+    },
+    "entraSyncStarted": "Sincronización de Entra iniciada. ID de ejecución: {{runId}}",
+    "inboundDomainAdded": "Dominio de correo entrante añadido",
+    "inboundDomainAddFailed": "Error al añadir el dominio",
+    "inboundDomainRemoved": "Dominio de correo entrante eliminado",
+    "inboundDomainRemoveFailed": "Error al eliminar el dominio"
   },
   "quickAddClient": {
     "title": "Agregar nuevo cliente",

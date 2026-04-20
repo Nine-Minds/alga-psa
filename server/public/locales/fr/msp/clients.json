@@ -129,7 +129,9 @@
       "bucketUsageRecord": "enregistrement d'utilisation du compartiment",
       "bucketUsageRecords": "enregistrements d'utilisation du compartiment"
     },
-    "deleteSelectedPrompt": "Êtes-vous sûr de vouloir supprimer {{count}} sélectionné {{clientsLabel}} ? Cette action ne peut pas être annulée."
+    "deleteSelectedPrompt": "Êtes-vous sûr de vouloir supprimer {{count}} sélectionné {{clientsLabel}} ? Cette action ne peut pas être annulée.",
+    "singleInactiveWithContactsSuccess_one": "{{name}} et {{count}} contact ont été désactivés avec succès.",
+    "singleInactiveWithContactsSuccess_other": "{{name}} et {{count}} contacts ont été désactivés avec succès."
   },
   "clientDetails": {
     "title": "Détails du client",
@@ -208,7 +210,12 @@
     "status": {
       "label": "Statut",
       "helper": "Définir le statut du client comme actif ou inactif"
-    }
+    },
+    "entraSyncStarted": "Synchronisation Entra démarrée. ID d'exécution : {{runId}}",
+    "inboundDomainAdded": "Domaine de courrier entrant ajouté",
+    "inboundDomainAddFailed": "Échec de l'ajout du domaine",
+    "inboundDomainRemoved": "Domaine de courrier entrant supprimé",
+    "inboundDomainRemoveFailed": "Échec de la suppression du domaine"
   },
   "quickAddClient": {
     "title": "Ajouter un nouveau client",
