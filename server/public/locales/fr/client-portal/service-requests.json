@@ -1,0 +1,58 @@
+{
+  "catalog": {
+    "title": "Demander des services",
+    "description": "Parcourez les services publiés et soumettez des demandes structurées.",
+    "myRequests": "Mes demandes",
+    "empty": "Aucun service de demande n'est actuellement disponible.",
+    "fallbackCategory": "Service",
+    "noDescription": "Aucune description fournie"
+  },
+  "detail": {
+    "version": "Version {{version}}",
+    "submitted": "Demande soumise",
+    "requestIdLabel": "ID de la demande : ",
+    "ticketIdLabel": "ID du ticket : ",
+    "unableToSubmit": "Impossible de soumettre la demande",
+    "formTitle": "Formulaire de demande",
+    "noFields": "Aucun champ configuré.",
+    "selectOption": "Sélectionner une option",
+    "datePlaceholder": "Sélectionner une date",
+    "optionLabel": "Option {{index}}",
+    "submit": "Soumettre la demande",
+    "initialValuesTitle": "Valeurs initiales",
+    "noInitialValues": "Aucune valeur par défaut statique configurée."
+  },
+  "myRequests": {
+    "title": "Mes demandes",
+    "browseServices": "Parcourir les services",
+    "empty": "Vous n'avez encore soumis aucune demande de service.",
+    "columns": {
+      "request": "Demande",
+      "submitted": "Soumise",
+      "status": "Statut",
+      "details": "Détails"
+    },
+    "view": "Voir",
+    "unknownDate": "Inconnue",
+    "statuses": {
+      "pending": "En attente",
+      "succeeded": "Réussie",
+      "failed": "Échouée"
+    }
+  },
+  "submissionDetail": {
+    "backToMyRequests": "Retour à Mes demandes",
+    "requestIdLabel": "ID de la demande :",
+    "statusSection": "Statut",
+    "submittedAt": "Soumise : {{date}}",
+    "executionStatus": "Statut d'exécution : {{status}}",
+    "ticketLabel": "Ticket :",
+    "workflowLabel": "Workflow : {{id}}",
+    "submittedAnswersTitle": "Réponses soumises",
+    "noResponse": "Aucune réponse",
+    "attachmentsTitle": "Pièces jointes",
+    "noAttachments": "Aucune pièce jointe incluse.",
+    "fileIdLabel": "ID du fichier : {{id}}",
+    "fileTypeLabel": "Type : {{mime}}"
+  }
+}

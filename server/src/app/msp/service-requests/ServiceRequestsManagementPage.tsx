@@ -9,6 +9,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { Archive, Copy, MoreVertical, Plus, Sparkles, Undo2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   archiveServiceRequestDefinitionAction,
   createBlankServiceRequestDefinitionAction,
@@ -41,21 +42,25 @@ interface ServiceRequestTemplateRow {
   providerDisplayName: string;
 }
 
-function lifecycleLabel(row: ServiceRequestDefinitionRow): string {
+function lifecycleLabel(
+  row: ServiceRequestDefinitionRow,
+  t: (key: string) => string
+): string {
   if (row.lifecycle_state === 'published') {
-    return 'Published';
+    return t('management.lifecycleLabels.published');
   }
   if (row.lifecycle_state === 'archived') {
-    return 'Archived';
+    return t('management.lifecycleLabels.archived');
   }
   if (row.published_at) {
-    return 'Draft Changes';
+    return t('management.lifecycleLabels.draftChanges');
   }
-  return 'Draft';
+  return t('management.lifecycleLabels.draft');
 }
 
 export default function ServiceRequestsManagementPage() {
   const router = useRouter();
+  const { t } = useTranslation('msp/service-requests');
   const [definitions, setDefinitions] = useState<ServiceRequestDefinitionRow[]>([]);
   const [templates, setTemplates] = useState<ServiceRequestTemplateRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,7 +99,7 @@ export default function ServiceRequestsManagementPage() {
         await reload();
       } catch (error) {
         console.error('Failed to load service request definitions', error);
-        toast.error('Failed to load service requests');
+        toast.error(t('messages.error.loadFailed'));
       } finally {
         setLoading(false);
       }
@@ -105,7 +110,7 @@ export default function ServiceRequestsManagementPage() {
   const columns = useMemo<ColumnDefinition<ServiceRequestDefinitionRow>[]>(
     () => [
       {
-        title: 'Name',
+        title: t('management.columns.name'),
         dataIndex: 'name',
         render: (value, row) => (
           <Link
@@ -117,22 +122,22 @@ export default function ServiceRequestsManagementPage() {
         ),
       },
       {
-        title: 'Description',
+        title: t('management.columns.description'),
         dataIndex: 'description',
         render: (value) => (value as string | null) ?? '-',
       },
       {
-        title: 'State',
+        title: t('management.columns.state'),
         dataIndex: 'lifecycle_state',
-        render: (_value, row) => lifecycleLabel(row),
+        render: (_value, row) => lifecycleLabel(row, t),
       },
       {
-        title: 'Updated',
+        title: t('management.columns.updated'),
         dataIndex: 'updated_at',
         render: (value) => new Date(value as string).toLocaleString(),
       },
       {
-        title: 'Actions',
+        title: t('management.columns.actions'),
         dataIndex: 'definition_id',
         render: (_value, row) => (
           <DropdownMenu>
@@ -141,7 +146,7 @@ export default function ServiceRequestsManagementPage() {
                 id={`service-request-actions-${row.definition_id}`}
                 variant="ghost"
                 size="sm"
-                aria-label={`Actions for ${row.name}`}
+                aria-label={t('management.actionsFor', { name: row.name })}
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
@@ -153,16 +158,16 @@ export default function ServiceRequestsManagementPage() {
                     try {
                       await duplicateServiceRequestDefinitionAction(row.definition_id);
                       await reload();
-                      toast.success('Definition duplicated');
+                      toast.success(t('messages.success.definitionDuplicated'));
                     } catch (error) {
                       console.error('Failed to duplicate definition', error);
-                      toast.error('Failed to duplicate definition');
+                      toast.error(t('messages.error.duplicateFailed'));
                     }
                   })
                 }
               >
                 <Copy className="mr-2 h-4 w-4" />
-                Duplicate
+                {t('management.actions.duplicate')}
               </DropdownMenuItem>
               {row.lifecycle_state === 'archived' ? (
                 <DropdownMenuItem
@@ -171,16 +176,16 @@ export default function ServiceRequestsManagementPage() {
                       try {
                         await unarchiveServiceRequestDefinitionAction(row.definition_id);
                         await reload();
-                        toast.success('Definition unarchived');
+                        toast.success(t('messages.success.definitionUnarchived'));
                       } catch (error) {
                         console.error('Failed to unarchive definition', error);
-                        toast.error('Failed to unarchive definition');
+                        toast.error(t('messages.error.unarchiveFailed'));
                       }
                     })
                   }
                 >
                   <Undo2 className="mr-2 h-4 w-4" />
-                  Unarchive
+                  {t('management.actions.unarchive')}
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem
@@ -189,16 +194,16 @@ export default function ServiceRequestsManagementPage() {
                       try {
                         await archiveServiceRequestDefinitionAction(row.definition_id);
                         await reload();
-                        toast.success('Definition archived');
+                        toast.success(t('messages.success.definitionArchived'));
                       } catch (error) {
                         console.error('Failed to archive definition', error);
-                        toast.error('Failed to archive definition');
+                        toast.error(t('messages.error.archiveFailed'));
                       }
                     })
                   }
                 >
                   <Archive className="mr-2 h-4 w-4" />
-                  Archive
+                  {t('management.actions.archive')}
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -206,16 +211,16 @@ export default function ServiceRequestsManagementPage() {
         ),
       },
     ],
-    [startTransition]
+    [startTransition, t]
   );
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Service Requests</h1>
+          <h1 className="text-2xl font-semibold">{t('management.title')}</h1>
           <p className="text-sm text-[rgb(var(--color-text-600))]">
-            Manage draft, published, and archived service request definitions.
+            {t('management.description')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -224,7 +229,11 @@ export default function ServiceRequestsManagementPage() {
             checked={showArchived}
             onCheckedChange={(checked) => setShowArchived(checked === true)}
             disabled={loading || archivedCount === 0}
-            label={`Show archived${archivedCount > 0 ? ` (${archivedCount})` : ''}`}
+            label={
+              archivedCount > 0
+                ? t('management.showArchivedWithCount', { count: archivedCount })
+                : t('management.showArchived')
+            }
           />
           <Button
             id="service-request-create-blank"
@@ -233,17 +242,17 @@ export default function ServiceRequestsManagementPage() {
                 try {
                   await createBlankServiceRequestDefinitionAction();
                   await reload();
-                  toast.success('Draft created');
+                  toast.success(t('messages.success.draftCreated'));
                 } catch (error) {
                   console.error('Failed to create draft definition', error);
-                  toast.error('Failed to create draft');
+                  toast.error(t('messages.error.createDraftFailed'));
                 }
               })
             }
             disabled={isPending}
           >
             <Plus className="mr-2 h-4 w-4" />
-            Create Blank
+            {t('management.createBlank')}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -253,7 +262,7 @@ export default function ServiceRequestsManagementPage() {
                 disabled={!hasTemplates || isPending}
               >
                 <Sparkles className="mr-2 h-4 w-4" />
-                Start from Example
+                {t('management.startFromExample')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -267,11 +276,15 @@ export default function ServiceRequestsManagementPage() {
                           template.providerKey,
                           template.templateId
                         );
-                        toast.success(`Draft created from example: ${template.templateName}`);
+                        toast.success(
+                          t('messages.success.draftCreatedFromExample', {
+                            name: template.templateName,
+                          })
+                        );
                         router.push(`/msp/service-requests/${created.definition_id}`);
                       } catch (error) {
                         console.error('Failed to create draft from template', error);
-                        toast.error('Failed to create from example');
+                        toast.error(t('messages.error.createFromExampleFailed'));
                       }
                     })
                   }
@@ -293,7 +306,7 @@ export default function ServiceRequestsManagementPage() {
         pageSize={25}
         onPageChange={() => {}}
       />
-      {loading && <div className="text-sm text-[rgb(var(--color-text-600))]">Loading service requests…</div>}
+      {loading && <div className="text-sm text-[rgb(var(--color-text-600))]">{t('management.loading')}</div>}
     </div>
   );
 }

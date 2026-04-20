@@ -1,0 +1,58 @@
+{
+  "catalog": {
+    "title": "Services anfragen",
+    "description": "Veröffentlichte Services durchsuchen und strukturierte Anfragen einreichen.",
+    "myRequests": "Meine Anfragen",
+    "empty": "Derzeit sind keine anfragbaren Services verfügbar.",
+    "fallbackCategory": "Service",
+    "noDescription": "Keine Beschreibung angegeben"
+  },
+  "detail": {
+    "version": "Version {{version}}",
+    "submitted": "Anfrage eingereicht",
+    "requestIdLabel": "Anfrage-ID: ",
+    "ticketIdLabel": "Ticket-ID: ",
+    "unableToSubmit": "Anfrage kann nicht eingereicht werden",
+    "formTitle": "Anfrageformular",
+    "noFields": "Keine Felder konfiguriert.",
+    "selectOption": "Option auswählen",
+    "datePlaceholder": "Datum auswählen",
+    "optionLabel": "Option {{index}}",
+    "submit": "Anfrage einreichen",
+    "initialValuesTitle": "Anfangswerte",
+    "noInitialValues": "Keine statischen Standardwerte konfiguriert."
+  },
+  "myRequests": {
+    "title": "Meine Anfragen",
+    "browseServices": "Services durchsuchen",
+    "empty": "Sie haben noch keine Serviceanfragen eingereicht.",
+    "columns": {
+      "request": "Anfrage",
+      "submitted": "Eingereicht",
+      "status": "Status",
+      "details": "Details"
+    },
+    "view": "Anzeigen",
+    "unknownDate": "Unbekannt",
+    "statuses": {
+      "pending": "Ausstehend",
+      "succeeded": "Erfolgreich",
+      "failed": "Fehlgeschlagen"
+    }
+  },
+  "submissionDetail": {
+    "backToMyRequests": "Zurück zu Meine Anfragen",
+    "requestIdLabel": "Anfrage-ID:",
+    "statusSection": "Status",
+    "submittedAt": "Eingereicht: {{date}}",
+    "executionStatus": "Ausführungsstatus: {{status}}",
+    "ticketLabel": "Ticket:",
+    "workflowLabel": "Workflow: {{id}}",
+    "submittedAnswersTitle": "Eingereichte Antworten",
+    "noResponse": "Keine Antwort",
+    "attachmentsTitle": "Anhänge",
+    "noAttachments": "Keine Anhänge enthalten.",
+    "fileIdLabel": "Datei-ID: {{id}}",
+    "fileTypeLabel": "Typ: {{mime}}"
+  }
+}

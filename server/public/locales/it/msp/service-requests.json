@@ -1,0 +1,270 @@
+{
+  "management": {
+    "title": "Richieste di servizio",
+    "description": "Gestisci le definizioni delle richieste di servizio in stato di bozza, pubblicate e archiviate.",
+    "showArchived": "Mostra archiviate",
+    "showArchivedWithCount": "Mostra archiviate ({{count}})",
+    "createBlank": "Crea vuota",
+    "startFromExample": "Parti da un esempio",
+    "loading": "Caricamento delle richieste di servizio…",
+    "columns": {
+      "name": "Nome",
+      "description": "Descrizione",
+      "state": "Stato",
+      "updated": "Aggiornata",
+      "actions": "Azioni"
+    },
+    "actionsFor": "Azioni per {{name}}",
+    "actions": {
+      "duplicate": "Duplica",
+      "archive": "Archivia",
+      "unarchive": "Ripristina"
+    },
+    "lifecycleLabels": {
+      "published": "Pubblicato",
+      "archived": "Archiviato",
+      "draftChanges": "Modifiche in bozza",
+      "draft": "Bozza"
+    },
+    "templateOption": "{{templateName}} ({{providerDisplayName}})"
+  },
+  "editor": {
+    "backNav": "Torna alle richieste di servizio",
+    "loading": "Caricamento dell'editor delle definizioni…",
+    "notFound": "Definizione della richiesta di servizio non trovata.",
+    "currentState": "Stato attuale: {{state}}",
+    "saveDraft": "Salva bozza",
+    "createDraft": "Crea bozza",
+    "publish": "Pubblica",
+    "publishing": "Pubblicazione…",
+    "basics": {
+      "title": "Informazioni di base",
+      "name": "Nome",
+      "icon": "Icona",
+      "iconSelected": "Selezionata: {{label}}",
+      "noIconSelected": "Nessuna icona selezionata",
+      "description": "Descrizione",
+      "category": "Categoria",
+      "sortOrder": "Ordine di visualizzazione",
+      "save": "Salva informazioni di base",
+      "uncategorized": "Senza categoria"
+    },
+    "preview": {
+      "title": "Anteprima",
+      "badge": "Anteprima dal vivo",
+      "cardSubheading": "Scheda del catalogo",
+      "formSubheading": "Modulo di richiesta"
+    },
+    "linkage": {
+      "title": "Collegamento",
+      "linkedService": "Servizio collegato",
+      "searchPlaceholder": "Cerca nel catalogo servizi",
+      "search": "Cerca",
+      "clear": "Cancella",
+      "select": "Seleziona",
+      "noDescription": "Nessuna descrizione",
+      "unset": "-"
+    },
+    "form": {
+      "title": "Modulo",
+      "authorFields": "Campi dell'autore",
+      "fieldType": "Tipo di campo",
+      "addField": "Aggiungi campo",
+      "noFields": "Nessun campo configurato.",
+      "preview": "Anteprima del modulo renderizzato",
+      "label": "Etichetta",
+      "helpText": "Testo di aiuto",
+      "required": "Obbligatorio",
+      "defaultValue": "Valore predefinito",
+      "options": "Opzioni (una per riga: valore:etichetta)",
+      "moveUp": "Sposta su",
+      "moveDown": "Sposta giù",
+      "remove": "Rimuovi",
+      "selectOption": "Seleziona un'opzione",
+      "checkboxDefaults": {
+        "none": "Nessun valore predefinito",
+        "checked": "Selezionato",
+        "unchecked": "Deselezionato"
+      },
+      "types": {
+        "short-text": "short-text",
+        "long-text": "long-text",
+        "select": "select",
+        "checkbox": "checkbox",
+        "date": "date",
+        "file-upload": "file-upload"
+      }
+    },
+    "execution": {
+      "title": "Esecuzione",
+      "executionProvider": "Provider di esecuzione",
+      "formBehaviorProvider": "Provider del comportamento del modulo",
+      "visibilityProvider": "Provider di visibilità",
+      "providerDisplay": "{{displayName}} ({{executionMode}})",
+      "ticketRouting": {
+        "title": "Configurazione dell'instradamento dei ticket",
+        "board": "Board",
+        "boardPlaceholder": "Seleziona Board",
+        "status": "Stato",
+        "statusPlaceholder": "Seleziona stato",
+        "assignedUser": "Utente assegnato",
+        "assignedUserPlaceholder": "Non assegnato",
+        "category": "Categoria",
+        "categoryPlaceholder": "Seleziona categoria",
+        "priority": "Priorità",
+        "priorityPlaceholder": "Seleziona priorità",
+        "impact": "Impatto",
+        "impactPlaceholder": "Seleziona impatto",
+        "urgency": "Urgenza",
+        "urgencyPlaceholder": "Seleziona urgenza",
+        "priorityCalculated": "Priorità (calcolata)",
+        "selectImpactAndUrgency": "Seleziona impatto e urgenza",
+        "priorityFormula": "{{label}} (Impatto {{impact}} x Urgenza {{urgency}})",
+        "titleFieldKey": "Chiave del campo titolo",
+        "descriptionPrefix": "Prefisso della descrizione",
+        "save": "Salva instradamento dei ticket"
+      },
+      "workflow": {
+        "title": "Configurazione del workflow",
+        "workflowId": "ID workflow",
+        "workflowIdPlaceholder": "workflow-id",
+        "inputMapping": "Mappatura degli input del workflow (oggetto JSON)",
+        "inputMappingExample": "Esempio: {\"requestedBy\":\"payload.request_title\",\"ticketReference\":\"ticketId\"}",
+        "save": "Salva impostazioni del workflow"
+      },
+      "advanced": {
+        "title": "Comportamento avanzato del modulo",
+        "config": "Configurazione del comportamento del modulo (oggetto JSON)",
+        "save": "Salva configurazione del comportamento del modulo"
+      },
+      "visibility": {
+        "title": "Configurazione della visibilità",
+        "config": "Configurazione della visibilità (oggetto JSON)",
+        "save": "Salva configurazione della visibilità"
+      },
+      "fields": {
+        "executionProvider": "Provider di esecuzione",
+        "executionConfig": "Configurazione dell'esecuzione",
+        "formBehaviorProvider": "Provider del comportamento del modulo",
+        "visibilityProvider": "Provider di visibilità"
+      },
+      "itilImpact": {
+        "1": "1 - Alto (Funzione aziendale critica compromessa)",
+        "2": "2 - Medio-Alto (Funzione importante compromessa)",
+        "3": "3 - Medio (Funzione minore compromessa)",
+        "4": "4 - Medio-Basso (Impatto minimo)",
+        "5": "5 - Basso (Nessun impatto sul business)"
+      },
+      "itilUrgency": {
+        "1": "1 - Alta (Il lavoro non può proseguire)",
+        "2": "2 - Medio-Alta (Lavoro gravemente compromesso)",
+        "3": "3 - Media (Il lavoro prosegue con limitazioni)",
+        "4": "4 - Medio-Bassa (Lieve disagio)",
+        "5": "5 - Bassa (Il lavoro prosegue normalmente)"
+      }
+    },
+    "publishSection": {
+      "title": "Pubblicazione",
+      "currentDraftState": "Stato attuale della bozza",
+      "lastPublishedVersion": "Ultima versione pubblicata",
+      "versionPrefix": "v{{number}}",
+      "neverPublished": "Mai pubblicata",
+      "publishedAt": "Pubblicata il",
+      "draftUpdatedAt": "Bozza aggiornata il",
+      "validationTitle": "Validazione della pubblicazione",
+      "validationPassed": "Validazione della pubblicazione superata.",
+      "errors": {
+        "nameRequired": "Il nome è obbligatorio",
+        "linkedServiceMissing": "Il servizio collegato non esiste più",
+        "executionBoardRequired": "Esecuzione: La bacheca di instradamento ticket è obbligatoria",
+        "executionStatusRequired": "Esecuzione: Lo stato di instradamento ticket è obbligatorio",
+        "executionPriorityRequired": "Esecuzione: La priorità di instradamento ticket è obbligatoria",
+        "executionItilImpactUrgencyMismatch": "Esecuzione: L'instradamento ticket richiede sia l'impatto sia l'urgenza ITIL quando la priorità non è impostata",
+        "unknownExecutionProvider": "Fornitore di esecuzione sconosciuto: {{key}}",
+        "unknownFormBehaviorProvider": "Fornitore di comportamento del modulo sconosciuto: {{key}}",
+        "unknownVisibilityProvider": "Fornitore di visibilità sconosciuto: {{key}}"
+      }
+    },
+    "submissions": {
+      "title": "Invii",
+      "empty": "Nessun invio per questa definizione.",
+      "viewDetail": "Visualizza dettaglio",
+      "detailTitle": "Dettaglio dell'invio",
+      "submissionId": "ID invio",
+      "requesterUser": "Utente richiedente",
+      "client": "Cliente",
+      "contact": "Contatto",
+      "ticketReference": "Riferimento ticket",
+      "workflowReference": "Riferimento workflow",
+      "executionError": "Errore di esecuzione",
+      "submittedAtStatus": "{{date}} · {{status}}",
+      "loadingTicket": "Caricamento…",
+      "ticketLoadError": "Impossibile caricare i dettagli del ticket."
+    }
+  },
+  "icons": {
+    "file-text": "Richiesta generica",
+    "user-plus": "Nuovo utente",
+    "user-minus": "Offboarding",
+    "shield-check": "Sicurezza",
+    "key-round": "Accesso",
+    "laptop": "Laptop",
+    "monitor": "Postazione di lavoro",
+    "printer": "Stampante",
+    "hard-drive": "Archiviazione",
+    "server": "Server",
+    "network": "Rete",
+    "wifi": "Wi-Fi",
+    "app-window": "Software",
+    "mail": "E-mail",
+    "phone": "Telefono",
+    "folder-open": "File condivisi",
+    "badge-help": "Aiuto",
+    "clear": "Rimuovi icona"
+  },
+  "messages": {
+    "success": {
+      "definitionDuplicated": "Definizione duplicata",
+      "definitionArchived": "Definizione archiviata",
+      "definitionUnarchived": "Definizione ripristinata",
+      "draftCreated": "Bozza creata",
+      "draftCreatedFromExample": "Bozza creata dall'esempio: {{name}}",
+      "draftSaved": "Bozza salvata",
+      "definitionPublished": "Definizione pubblicata",
+      "basicsUpdated": "Informazioni di base aggiornate",
+      "linkedServiceCleared": "Servizio collegato rimosso",
+      "linkedService": "Collegato {{name}}",
+      "fieldAdded": "Campo aggiunto",
+      "fieldRemoved": "Campo rimosso",
+      "executionProviderUpdated": "Provider di esecuzione aggiornato",
+      "formBehaviorProviderUpdated": "Provider del comportamento del modulo aggiornato",
+      "visibilityProviderUpdated": "Provider di visibilità aggiornato",
+      "ticketRoutingUpdated": "Configurazione dell'instradamento dei ticket aggiornata",
+      "workflowConfigurationUpdated": "Configurazione del workflow aggiornata",
+      "formBehaviorConfigUpdated": "Configurazione del comportamento del modulo aggiornata",
+      "visibilityConfigUpdated": "Configurazione della visibilità aggiornata"
+    },
+    "error": {
+      "loadFailed": "Impossibile caricare le richieste di servizio",
+      "duplicateFailed": "Impossibile duplicare la definizione",
+      "archiveFailed": "Impossibile archiviare la definizione",
+      "unarchiveFailed": "Impossibile ripristinare la definizione",
+      "createDraftFailed": "Impossibile creare la bozza",
+      "createFromExampleFailed": "Impossibile creare dall'esempio",
+      "saveDraftFailed": "Impossibile salvare la bozza",
+      "publishFailed": "Impossibile pubblicare la definizione",
+      "publishBlockedByValidation": "Pubblicazione non ancora possibile: correggi i {{count}} problema/i di validazione elencati nella sezione \"Validazione di pubblicazione\" qui sotto.",
+      "basicsUpdateFailed": "Impossibile aggiornare le informazioni di base",
+      "addFieldFailed": "Impossibile aggiungere il campo del modulo",
+      "executionProviderUpdateFailed": "Impossibile aggiornare il provider di esecuzione",
+      "formBehaviorProviderUpdateFailed": "Impossibile aggiornare il provider del comportamento del modulo",
+      "visibilityProviderUpdateFailed": "Impossibile aggiornare il provider di visibilità",
+      "workflowMappingNotObject": "La mappatura degli input del workflow deve essere un oggetto JSON",
+      "workflowConfigurationInvalid": "JSON di configurazione del workflow non valido",
+      "formBehaviorNotObject": "La configurazione del comportamento del modulo deve essere un oggetto JSON",
+      "formBehaviorInvalid": "JSON del comportamento del modulo non valido",
+      "visibilityNotObject": "La configurazione della visibilità deve essere un oggetto JSON",
+      "visibilityInvalid": "JSON della visibilità non valido"
+    }
+  }
+}

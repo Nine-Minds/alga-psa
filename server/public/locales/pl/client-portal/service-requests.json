@@ -1,0 +1,58 @@
+{
+  "catalog": {
+    "title": "Zgłoszenia usług",
+    "description": "Przeglądaj opublikowane usługi i przesyłaj ustrukturyzowane zgłoszenia.",
+    "myRequests": "Moje zgłoszenia",
+    "empty": "Obecnie nie są dostępne żadne usługi zgłoszeń.",
+    "fallbackCategory": "Usługa",
+    "noDescription": "Nie podano opisu"
+  },
+  "detail": {
+    "version": "Wersja {{version}}",
+    "submitted": "Zgłoszenie przesłane",
+    "requestIdLabel": "ID zgłoszenia: ",
+    "ticketIdLabel": "ID zgłoszenia (ticket): ",
+    "unableToSubmit": "Nie można przesłać zgłoszenia",
+    "formTitle": "Formularz zgłoszenia",
+    "noFields": "Nie skonfigurowano żadnych pól.",
+    "selectOption": "Wybierz opcję",
+    "datePlaceholder": "Wybierz datę",
+    "optionLabel": "Opcja {{index}}",
+    "submit": "Prześlij zgłoszenie",
+    "initialValuesTitle": "Wartości początkowe",
+    "noInitialValues": "Nie skonfigurowano statycznych wartości domyślnych."
+  },
+  "myRequests": {
+    "title": "Moje zgłoszenia",
+    "browseServices": "Przeglądaj usługi",
+    "empty": "Nie przesłano jeszcze żadnych zgłoszeń serwisowych.",
+    "columns": {
+      "request": "Zgłoszenie",
+      "submitted": "Przesłano",
+      "status": "Status",
+      "details": "Szczegóły"
+    },
+    "view": "Zobacz",
+    "unknownDate": "Nieznana",
+    "statuses": {
+      "pending": "Oczekuje",
+      "succeeded": "Zakończone",
+      "failed": "Nieudane"
+    }
+  },
+  "submissionDetail": {
+    "backToMyRequests": "Powrót do Moich zgłoszeń",
+    "requestIdLabel": "ID zgłoszenia:",
+    "statusSection": "Status",
+    "submittedAt": "Przesłano: {{date}}",
+    "executionStatus": "Status wykonania: {{status}}",
+    "ticketLabel": "Zgłoszenie (ticket):",
+    "workflowLabel": "Workflow: {{id}}",
+    "submittedAnswersTitle": "Przesłane odpowiedzi",
+    "noResponse": "Brak odpowiedzi",
+    "attachmentsTitle": "Załączniki",
+    "noAttachments": "Brak załączników.",
+    "fileIdLabel": "ID pliku: {{id}}",
+    "fileTypeLabel": "Typ: {{mime}}"
+  }
+}
