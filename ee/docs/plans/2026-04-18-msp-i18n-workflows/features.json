@@ -152,7 +152,7 @@
   {
     "id": "F026",
     "description": "Extract all user-visible strings in ActionSchemaReference.tsx and GroupedActionConfigSection.tsx (section headers, help text, empty states).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-D"]
   },
   {

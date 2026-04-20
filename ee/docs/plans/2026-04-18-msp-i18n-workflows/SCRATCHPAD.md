@@ -606,6 +606,24 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   - ESLint reports 0 errors across the three files; warnings are pre-existing.
   - Vitest: 2/2 palette tests pass.
   - translation validation passed with 0 missing/extra keys.
+
+### F026 complete — ActionSchemaReference + GroupedActionConfigSection localized
+- `ActionSchemaReference.tsx`:
+  - Both inner components (`SchemaFieldRow`, `SchemaReferenceSection`) and the public `ActionSchemaReference` now call `useTranslation('msp/workflows')`.
+  - Localized: constraint tooltip lines (`Values`, `Min`, `Max`, `Min length`, `Max length`, `Pattern`, `Format`, `Examples`, `Default`) emitted as interpolated `{{value}}`/`{{list}}` strings, nullable suffix `| null`, per-field copy title `Copy {{path}}`, and the default "No fields" empty message.
+  - Localized top-level section: select-an-action empty state, view/hide schema details toggle, input/output schema section titles, both section empty messages (`No input parameters`/`No output fields`), "Output available at …" success banner prefix, raw-JSON show/hide toggle, export-schema button + tooltip, and the `// Input Schema` / `// Output Schema` inline comments inside the raw schema viewer.
+  - `SchemaReferenceSection` now accepts an optional `emptyMessage` and falls back to the localized `schemaReference.noFields` when not provided, so the component contract stays backward-compatible for future callers.
+  - "Copy all paths" toolbar: title, `Copy all paths` label, `Copied!` success, and the `onCopyPath` toast string `{{count}} paths copied`.
+- `GroupedActionConfigSection.tsx`:
+  - Localized `Group` header, the inline action `CustomSelect` label + placeholder (`Select a {{group}} action`), and the action-required error card (`Action required` title + parameterized message).
+  - Renamed the module-level `TILE_KIND_LABELS` to `TILE_KIND_LABEL_DEFAULTS` and now resolves the badge label through `t(\`groupedAction.tileKind.${record.tileKind}\`, …)` so translations can override `Core` / `Transform` / `App` / `AI` per locale.
+- Added `schemaReference.*` (31 keys) and `groupedAction.*` (9 keys) to `server/public/locales/en/msp/workflows.json`, synced the same stub structure into `fr/es/de/nl/it/pl/xx/yy`.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/ActionSchemaReference.tsx ee/server/src/components/workflow-designer/GroupedActionConfigSection.tsx
+  node scripts/validate-translations.cjs
+  ```
+- Results: ESLint clean (0 errors, 0 warnings); translation validation passed with 0 missing/extra keys.
 - Checks run:
   ```bash
   npx eslint ee/server/src/components/workflow-graph/WorkflowGraph.tsx

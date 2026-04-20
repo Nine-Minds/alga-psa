@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import {
   extractSchemaFields,
@@ -28,6 +29,7 @@ const SchemaFieldRow: React.FC<{
   depth?: number;
   onCopyPath?: (path: string) => void;
 }> = ({ field, pathPrefix, depth = 0, onCopyPath }) => {
+  const { t } = useTranslation('msp/workflows');
   const [expanded, setExpanded] = useState(depth < 2);
   const [copied, setCopied] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -55,18 +57,62 @@ const SchemaFieldRow: React.FC<{
   const constraintLines: string[] = [];
   if (field.constraints) {
     if (field.constraints.enum) {
-      constraintLines.push(`Values: ${field.constraints.enum.slice(0, 5).map(v => JSON.stringify(v)).join(', ')}${field.constraints.enum.length > 5 ? '...' : ''}`);
+      const preview = field.constraints.enum.slice(0, 5).map(v => JSON.stringify(v)).join(', ');
+      const suffix = field.constraints.enum.length > 5 ? '...' : '';
+      constraintLines.push(t('schemaReference.constraints.values', {
+        defaultValue: 'Values: {{list}}{{suffix}}',
+        list: preview,
+        suffix,
+      }));
     }
-    if (field.constraints.minimum !== undefined) constraintLines.push(`Min: ${field.constraints.minimum}`);
-    if (field.constraints.maximum !== undefined) constraintLines.push(`Max: ${field.constraints.maximum}`);
-    if (field.constraints.minLength !== undefined) constraintLines.push(`Min length: ${field.constraints.minLength}`);
-    if (field.constraints.maxLength !== undefined) constraintLines.push(`Max length: ${field.constraints.maxLength}`);
-    if (field.constraints.pattern) constraintLines.push(`Pattern: ${field.constraints.pattern}`);
-    if (field.constraints.format) constraintLines.push(`Format: ${field.constraints.format}`);
-    if (field.constraints.examples) constraintLines.push(`Examples: ${field.constraints.examples.slice(0, 3).map(v => JSON.stringify(v)).join(', ')}`);
+    if (field.constraints.minimum !== undefined) {
+      constraintLines.push(t('schemaReference.constraints.min', {
+        defaultValue: 'Min: {{value}}',
+        value: field.constraints.minimum,
+      }));
+    }
+    if (field.constraints.maximum !== undefined) {
+      constraintLines.push(t('schemaReference.constraints.max', {
+        defaultValue: 'Max: {{value}}',
+        value: field.constraints.maximum,
+      }));
+    }
+    if (field.constraints.minLength !== undefined) {
+      constraintLines.push(t('schemaReference.constraints.minLength', {
+        defaultValue: 'Min length: {{value}}',
+        value: field.constraints.minLength,
+      }));
+    }
+    if (field.constraints.maxLength !== undefined) {
+      constraintLines.push(t('schemaReference.constraints.maxLength', {
+        defaultValue: 'Max length: {{value}}',
+        value: field.constraints.maxLength,
+      }));
+    }
+    if (field.constraints.pattern) {
+      constraintLines.push(t('schemaReference.constraints.pattern', {
+        defaultValue: 'Pattern: {{value}}',
+        value: field.constraints.pattern,
+      }));
+    }
+    if (field.constraints.format) {
+      constraintLines.push(t('schemaReference.constraints.format', {
+        defaultValue: 'Format: {{value}}',
+        value: field.constraints.format,
+      }));
+    }
+    if (field.constraints.examples) {
+      constraintLines.push(t('schemaReference.constraints.examples', {
+        defaultValue: 'Examples: {{list}}',
+        list: field.constraints.examples.slice(0, 3).map(v => JSON.stringify(v)).join(', '),
+      }));
+    }
   }
   if (field.defaultValue !== undefined) {
-    constraintLines.push(`Default: ${JSON.stringify(field.defaultValue)}`);
+    constraintLines.push(t('schemaReference.constraints.default', {
+      defaultValue: 'Default: {{value}}',
+      value: JSON.stringify(field.defaultValue),
+    }));
   }
 
   return (
@@ -107,13 +153,20 @@ const SchemaFieldRow: React.FC<{
             </div>
           )}
         </span>
-        {field.nullable && <span className="text-gray-400">| null</span>}
+        {field.nullable && (
+          <span className="text-gray-400">
+            {t('schemaReference.nullableSuffix', { defaultValue: '| null' })}
+          </span>
+        )}
 
         <button
           type="button"
           onClick={handleCopy}
           className="ml-auto opacity-0 group-hover:opacity-100 p-0.5 hover:bg-gray-200 rounded transition-opacity"
-          title={`Copy ${fullPath}`}
+          title={t('schemaReference.copyPathTitle', {
+            defaultValue: 'Copy {{path}}',
+            path: fullPath,
+          })}
         >
           {copied ? (
             <Check className="w-3 h-3 text-green-600" />
@@ -155,9 +208,11 @@ const SchemaReferenceSection: React.FC<{
   emptyMessage?: string;
   onCopyPath?: (path: string) => void;
   headerExtra?: React.ReactNode;
-}> = ({ title, icon, fields, pathPrefix, defaultExpanded = false, emptyMessage = 'No fields', onCopyPath, headerExtra }) => {
+}> = ({ title, icon, fields, pathPrefix, defaultExpanded = false, emptyMessage, onCopyPath, headerExtra }) => {
+  const { t } = useTranslation('msp/workflows');
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [copiedAll, setCopiedAll] = useState(false);
+  const resolvedEmptyMessage = emptyMessage ?? t('schemaReference.noFields', { defaultValue: 'No fields' });
 
   const getAllPaths = (fieldList: SchemaField[], prefix: string): string[] => {
     const paths: string[] = [];
@@ -177,7 +232,10 @@ const SchemaReferenceSection: React.FC<{
     navigator.clipboard.writeText(allPaths.join('\n'));
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 2000);
-    onCopyPath?.(`${allPaths.length} paths copied`);
+    onCopyPath?.(t('schemaReference.pathsCopied', {
+      defaultValue: '{{count}} paths copied',
+      count: allPaths.length,
+    }));
   };
 
   return (
@@ -203,7 +261,7 @@ const SchemaReferenceSection: React.FC<{
       {expanded && (
         <div className="px-2 py-2 bg-white dark:bg-[rgb(var(--color-card))] max-h-64 overflow-y-auto">
           {fields.length === 0 ? (
-            <div className="text-xs text-gray-400 text-center py-2">{emptyMessage}</div>
+            <div className="text-xs text-gray-400 text-center py-2">{resolvedEmptyMessage}</div>
           ) : (
             <>
               <div className="flex justify-end mb-1">
@@ -211,17 +269,19 @@ const SchemaReferenceSection: React.FC<{
                   type="button"
                   onClick={handleCopyAllPaths}
                   className="text-[10px] text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                  title="Copy all field paths"
+                  title={t('schemaReference.copyAllPathsTitle', { defaultValue: 'Copy all field paths' })}
                 >
                   {copiedAll ? (
                     <>
                       <Check className="w-3 h-3 text-green-600" />
-                      <span className="text-green-600">Copied!</span>
+                      <span className="text-green-600">
+                        {t('schemaReference.copied', { defaultValue: 'Copied!' })}
+                      </span>
                     </>
                   ) : (
                     <>
                       <Copy className="w-3 h-3" />
-                      <span>Copy all paths</span>
+                      <span>{t('schemaReference.copyAllPaths', { defaultValue: 'Copy all paths' })}</span>
                     </>
                   )}
                 </button>
@@ -248,6 +308,7 @@ export const ActionSchemaReference: React.FC<{
   outputSchemaOverride?: JsonSchema | null;
   onCopyPath?: (path: string) => void;
 }> = ({ action, saveAs, outputSchemaOverride, onCopyPath }) => {
+  const { t } = useTranslation('msp/workflows');
   const [showSchemaDetails, setShowSchemaDetails] = useState(false);
   const [showRawSchema, setShowRawSchema] = useState(false);
 
@@ -260,7 +321,7 @@ export const ActionSchemaReference: React.FC<{
   if (!action) {
     return (
       <div className="text-xs text-gray-400 p-3 border border-dashed border-gray-200 rounded-md text-center">
-        Select an action to see its input/output schema
+        {t('schemaReference.selectAction', { defaultValue: 'Select an action to see its input/output schema' })}
       </div>
     );
   }
@@ -286,29 +347,31 @@ export const ActionSchemaReference: React.FC<{
           className="text-[11px] text-gray-500 hover:text-gray-700 flex items-center gap-1"
         >
           {showSchemaDetails ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-          {showSchemaDetails ? 'Hide schema details' : 'View schema details'}
+          {showSchemaDetails
+            ? t('schemaReference.hideDetails', { defaultValue: 'Hide schema details' })
+            : t('schemaReference.viewDetails', { defaultValue: 'View schema details' })}
         </button>
       </div>
 
       {showSchemaDetails && (
         <>
           <SchemaReferenceSection
-            title="Input Schema"
+            title={t('schemaReference.inputSchemaTitle', { defaultValue: 'Input Schema' })}
             icon={<Code className="w-3.5 h-3.5 text-gray-500" />}
             fields={inputFields}
             pathPrefix="input"
             defaultExpanded={false}
-            emptyMessage="No input parameters"
+            emptyMessage={t('schemaReference.noInputParameters', { defaultValue: 'No input parameters' })}
             onCopyPath={onCopyPath}
           />
 
           <SchemaReferenceSection
-            title="Output Schema"
+            title={t('schemaReference.outputSchemaTitle', { defaultValue: 'Output Schema' })}
             icon={<FileJson className="w-3.5 h-3.5 text-gray-500" />}
             fields={outputFields}
             pathPrefix={saveAs ? `vars.${saveAs}` : 'output'}
             defaultExpanded={false}
-            emptyMessage="No output fields"
+            emptyMessage={t('schemaReference.noOutputFields', { defaultValue: 'No output fields' })}
             onCopyPath={onCopyPath}
             headerExtra={
               saveAs ? (
@@ -323,7 +386,8 @@ export const ActionSchemaReference: React.FC<{
             <div className="text-xs bg-success/10 border border-success/30 rounded-md p-2 flex items-center gap-2">
               <Check className="w-3.5 h-3.5 text-success" />
               <span className="text-success">
-                Output available at <code className="bg-success/15 px-1 rounded">${`{vars.${saveAs}}`}</code>
+                {t('schemaReference.outputAvailablePrefix', { defaultValue: 'Output available at' })}{' '}
+                <code className="bg-success/15 px-1 rounded">${`{vars.${saveAs}}`}</code>
               </span>
             </div>
           )}
@@ -335,7 +399,9 @@ export const ActionSchemaReference: React.FC<{
               className="text-[10px] text-gray-500 hover:text-gray-700 flex items-center gap-1"
             >
               {showRawSchema ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-              {showRawSchema ? 'Hide' : 'Show'} raw JSON Schema
+              {showRawSchema
+                ? t('schemaReference.hideRawJson', { defaultValue: 'Hide raw JSON Schema' })
+                : t('schemaReference.showRawJson', { defaultValue: 'Show raw JSON Schema' })}
             </button>
 
             <button
@@ -356,18 +422,18 @@ export const ActionSchemaReference: React.FC<{
                 URL.revokeObjectURL(url);
               }}
               className="text-[10px] text-blue-500 hover:text-blue-700 flex items-center gap-1"
-              title="Download schema as JSON file"
+              title={t('schemaReference.exportSchemaTitle', { defaultValue: 'Download schema as JSON file' })}
             >
               <FileJson className="w-3 h-3" />
-              Export schema
+              {t('schemaReference.exportSchema', { defaultValue: 'Export schema' })}
             </button>
           </div>
 
           {showRawSchema && (
             <div className="text-[10px] font-mono bg-gray-900 text-gray-100 p-2 rounded-md overflow-x-auto">
-              <div className="text-gray-400 mb-1">{'// Input Schema'}</div>
+              <div className="text-gray-400 mb-1">{t('schemaReference.rawInputComment', { defaultValue: '// Input Schema' })}</div>
               <pre>{JSON.stringify(action.inputSchema, null, 2)}</pre>
-              <div className="text-gray-400 mt-2 mb-1">{'// Output Schema'}</div>
+              <div className="text-gray-400 mt-2 mb-1">{t('schemaReference.rawOutputComment', { defaultValue: '// Output Schema' })}</div>
               <pre>{JSON.stringify(resolvedOutputSchema, null, 2)}</pre>
             </div>
           )}

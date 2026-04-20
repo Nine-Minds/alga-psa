@@ -699,6 +699,55 @@
       "systemEventMissingSchema": "This system event is missing a valid schema and cannot be selected until fixed."
     }
   },
+  "schemaReference": {
+    "selectAction": "Select an action to see its input/output schema",
+    "viewDetails": "View schema details",
+    "hideDetails": "Hide schema details",
+    "inputSchemaTitle": "Input Schema",
+    "outputSchemaTitle": "Output Schema",
+    "noInputParameters": "No input parameters",
+    "noOutputFields": "No output fields",
+    "noFields": "No fields",
+    "outputAvailablePrefix": "Output available at",
+    "showRawJson": "Show raw JSON Schema",
+    "hideRawJson": "Hide raw JSON Schema",
+    "exportSchema": "Export schema",
+    "exportSchemaTitle": "Download schema as JSON file",
+    "rawInputComment": "// Input Schema",
+    "rawOutputComment": "// Output Schema",
+    "copyPathTitle": "Copy {{path}}",
+    "copyAllPaths": "Copy all paths",
+    "copyAllPathsTitle": "Copy all field paths",
+    "copied": "Copied!",
+    "pathsCopied": "{{count}} paths copied",
+    "nullableSuffix": "| null",
+    "constraints": {
+      "values": "Values: {{list}}{{suffix}}",
+      "min": "Min: {{value}}",
+      "max": "Max: {{value}}",
+      "minLength": "Min length: {{value}}",
+      "maxLength": "Max length: {{value}}",
+      "pattern": "Pattern: {{value}}",
+      "format": "Format: {{value}}",
+      "examples": "Examples: {{list}}",
+      "default": "Default: {{value}}"
+    }
+  },
+  "groupedAction": {
+    "groupHeading": "Group",
+    "actionLabel": "Action",
+    "actionPlaceholder": "Select a {{group}} action",
+    "required": {
+      "title": "Action required",
+      "message": "Select a {{group}} action before configuring inputs or publishing this workflow."
+    },
+    "tileKind": {
+      "core-object": "Core",
+      "transform": "Transform",
+      "app": "App",
+      "ai": "AI"
+    }
+  },
   "trigger": {
     "manual": "Manual",
     "event": "Event",
