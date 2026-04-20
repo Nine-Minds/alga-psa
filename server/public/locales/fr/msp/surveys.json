@@ -65,7 +65,7 @@
       "ratingTypes": {
         "stars": "Étoiles",
         "numbers": "Nombres",
-        "emojis": "Emojis"
+        "emojis": "Émojis"
       },
       "defaults": {
         "promptText": "Question de l'enquête",

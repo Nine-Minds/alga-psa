@@ -200,7 +200,7 @@
     "fields": {
       "serviceName": {
         "label": "Servicenaam *",
-        "placeholder": "Managed IT Services"
+        "placeholder": "Managed IT-services"
       },
       "serviceDescription": {
         "label": "Servicebeschrijving",
@@ -654,7 +654,7 @@
       },
       "types": {
         "closed": "Gesloten",
-        "open": "Open"
+        "open": "Openen"
       },
       "current": {
         "title": "Huidige statussen",
@@ -794,7 +794,7 @@
           "title": "Netwerk",
           "connectivity": "• Connectiviteit",
           "vpn": "• VPN",
-          "wifi": "• Wi-Fi",
+          "wifi": "• Wifi",
           "internetAccess": "• Internettoegang",
           "lanWan": "• LAN/WAN",
           "firewall": "• Firewall"

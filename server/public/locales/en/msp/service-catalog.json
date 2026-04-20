@@ -1,0 +1,449 @@
+{
+  "taxRates": {
+    "title": "Tax Rates",
+    "loading": "Loading tax rates",
+    "errors": {
+      "fetchRates": "Failed to fetch tax rates",
+      "loadRegions": "Failed to load tax regions.",
+      "add": "Failed to add tax rate",
+      "update": "Failed to update tax rate",
+      "validateDeletion": "Failed to validate deletion. Please try again.",
+      "confirmDeletion": "Failed to confirm tax rate deletion."
+    },
+    "deleteEntity": {
+      "fallback": "this tax rate",
+      "withRegion": "{{regionName}} tax rate"
+    },
+    "validation": {
+      "requiredFieldsTitle": "Please fill in the required fields:",
+      "region": "Tax Region",
+      "percentage": "Tax percentage",
+      "startDate": "Start date"
+    },
+    "table": {
+      "region": "Region",
+      "taxPercentage": "Tax Percentage",
+      "description": "Description",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "actions": "Actions",
+      "notAvailable": "N/A",
+      "composite": "Composite"
+    },
+    "actions": {
+      "openMenu": "Open menu",
+      "advancedSettings": "Advanced Settings",
+      "edit": "Edit",
+      "delete": "Delete",
+      "addNew": "Add New Tax Rate",
+      "add": "Add Tax Rate",
+      "update": "Update Tax Rate"
+    },
+    "dialog": {
+      "addTitle": "Add New Tax Rate",
+      "editTitle": "Edit Tax Rate",
+      "description": "Enter the details for the tax rate.",
+      "fields": {
+        "region": "Tax Region *",
+        "percentage": "Tax Percentage *",
+        "description": "Description",
+        "startDate": "Start Date *",
+        "endDate": "End Date (Optional)"
+      },
+      "placeholders": {
+        "loadingRegions": "Loading regions...",
+        "selectRegion": "Select Tax Region",
+        "percentage": "Enter percentage"
+      }
+    }
+  },
+  "taxRateDetail": {
+    "actions": {
+      "back": "Back to Tax Rates"
+    },
+    "subtitle": "{{regionCode}} - {{percentage}}%",
+    "tabs": {
+      "details": "Details",
+      "components": "Components",
+      "brackets": "Brackets",
+      "holidays": "Holidays"
+    },
+    "fields": {
+      "regionCode": "Region Code",
+      "taxPercentage": "Tax Percentage",
+      "description": "Description",
+      "taxType": "Tax Type",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "isComposite": "Is Composite",
+      "isActive": "Is Active"
+    },
+    "values": {
+      "dash": "-",
+      "noEndDate": "No end date",
+      "yes": "Yes",
+      "no": "No",
+      "active": "Active",
+      "inactive": "Inactive",
+      "composite": "Composite"
+    },
+    "precedence": {
+      "title": "Tax Calculation Precedence",
+      "clientExempt": "Client tax exempt flag is checked first (if exempt, no tax applied)",
+      "serviceSpecific": "Service-specific tax rate is used if assigned",
+      "clientDefault": "Client default tax rate is used as fallback",
+      "regionLookup": "Tax region lookup determines applicable rate based on location"
+    },
+    "components": {
+      "simpleRateMessage": "This is a simple tax rate, not a composite rate. Tax components are only used for composite taxes.",
+      "enableCompositeMessage": "To use tax components, mark this rate as composite when editing it."
+    },
+    "brackets": {
+      "intro": "Progressive tax brackets apply different rates to different portions of an amount.",
+      "precedence": "When brackets are defined, they take precedence over the flat percentage rate."
+    }
+  },
+  "serviceForm": {
+    "errors": {
+      "loadServiceTypes": "Failed to fetch service types",
+      "loadTaxData": "Failed to load tax data.",
+      "selectServiceType": "Please select a service type",
+      "serviceTypeNotFound": "Selected service type not found",
+      "create": "Failed to create service"
+    },
+    "fields": {
+      "serviceName": {
+        "placeholder": "Service Name"
+      },
+      "serviceType": {
+        "label": "Service Type",
+        "placeholder": "Select Service Type"
+      },
+      "billingMethod": {
+        "label": "Billing Method",
+        "placeholder": "Select Billing Method"
+      },
+      "defaultRate": {
+        "placeholder": "Default Rate"
+      },
+      "unitOfMeasure": {
+        "placeholder": "Unit of Measure"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Service Description"
+      },
+      "taxRate": {
+        "label": "Tax Rate",
+        "placeholderLoading": "Loading tax data...",
+        "placeholder": "Select Tax Rate (Optional)"
+      }
+    },
+    "options": {
+      "billingMethod": {
+        "fixed": "Fixed Price",
+        "hourly": "Hourly",
+        "usage": "Usage Based"
+      }
+    },
+    "taxRateOption": {
+      "fallback": "N/A",
+      "label": "{{description}} - {{percentage}}%"
+    },
+    "actions": {
+      "submit": "Add Service"
+    }
+  },
+  "serviceSelection": {
+    "title": "Add Services & Products to Plan",
+    "searchPlaceholder": "Search services/products...",
+    "errors": {
+      "load": "Failed to load services",
+      "add": "Failed to add services to plan"
+    },
+    "states": {
+      "loading": "Loading services...",
+      "empty": "No services found"
+    },
+    "table": {
+      "itemName": "Item Name",
+      "type": "Type",
+      "unit": "Unit",
+      "rate": "Rate",
+      "product": "Product",
+      "service": "Service",
+      "unknown": "Unknown"
+    },
+    "selection": {
+      "countOne": "{{count}} service selected",
+      "countOther": "{{count}} services selected"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "addSelected": "Add Selected Services",
+      "adding": "Adding..."
+    },
+    "quickAdd": {
+      "label": "Quick Add:",
+      "allType": "All {{type}}"
+    }
+  },
+  "configType": {
+    "placeholder": "Select configuration type",
+    "options": {
+      "Fixed": {
+        "label": "Fixed Price",
+        "description": "A fixed-price service with consistent billing regardless of usage. Ideal for predictable services."
+      },
+      "Hourly": {
+        "label": "Hourly Rate",
+        "description": "Time-based billing with configurable rates. Best for variable workloads billed by time spent."
+      },
+      "Usage": {
+        "label": "Usage-Based",
+        "description": "Usage-based billing with tiered pricing options. Perfect for services measured by consumption."
+      },
+      "Bucket": {
+        "label": "Bucket Hours",
+        "description": "Pre-purchased hours that can be used over time. Good for clients who need flexibility with a budget cap."
+      }
+    },
+    "warningDialog": {
+      "title": "Change Configuration Type?",
+      "description": "Changing the configuration type will reset any type-specific settings. This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Change Type"
+    }
+  },
+  "serviceConfig": {
+    "title": "Service Configuration",
+    "serviceLabel": "Service",
+    "effectiveModeLabel": "Effective mode",
+    "defaultSourceLabel": "Default source",
+    "modes": {
+      "Fixed": "Fixed Price",
+      "Hourly": "Hourly Rate",
+      "Usage": "Usage-Based",
+      "Bucket": "Bucket Hours"
+    },
+    "defaultSources": {
+      "catalog default": "catalog default",
+      "contract override": "contract override",
+      "none": "none"
+    },
+    "fields": {
+      "configurationType": "Configuration Type",
+      "quantity": {
+        "label": "Quantity",
+        "placeholder": "Enter quantity",
+        "help": "Number of units of this service",
+        "errorNegative": "Quantity cannot be negative"
+      },
+      "customRate": {
+        "label": "Custom Rate",
+        "placeholder": "Enter rate",
+        "placeholderDefault": "Default: {{rate}}",
+        "helpCustom": "Custom rate for this service",
+        "helpUseDefault": "Leave blank to use default rate ({{rate}})",
+        "errorNegative": "Rate cannot be negative"
+      }
+    },
+    "bucketOverlay": {
+      "recommendHours": "Recommend bucket of hours",
+      "recommendUsage": "Recommend bucket of consumption"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "save": "Save Configuration",
+      "saving": "Saving..."
+    }
+  },
+  "fixedConfig": {
+    "title": "Fixed Price Configuration",
+    "fields": {
+      "adjustForPartialPeriods": "Adjust for Partial Periods",
+      "billingCycleAlignment": {
+        "label": "Billing Cycle Alignment",
+        "placeholder": "Select alignment",
+        "help": "Controls how partial-period coverage is calculated when the recurring fee needs to scale to less than a full service period."
+      }
+    },
+    "options": {
+      "start": "Start of Billing Cycle",
+      "end": "End of Billing Cycle",
+      "prorated": "Proportional Coverage"
+    }
+  },
+  "hourlyConfig": {
+    "title": "Hourly Rate Configuration",
+    "fields": {
+      "minimumBillableTime": {
+        "label": "Minimum Billable Time (minutes)",
+        "placeholder": "15",
+        "help": "Minimum time to bill (e.g., 15 minutes)",
+        "errorNegative": "Minimum billable time cannot be negative"
+      },
+      "roundUpToNearest": {
+        "label": "Round Up To Nearest (minutes)",
+        "placeholder": "15",
+        "help": "Round time entries up to nearest increment",
+        "errorNegative": "Round up value cannot be negative"
+      },
+      "newUserType": {
+        "label": "User Type",
+        "placeholder": "Select user type"
+      },
+      "newUserTypeRate": {
+        "label": "Rate",
+        "placeholder": "Enter rate",
+        "errorNegative": "User type rate cannot be negative"
+      }
+    },
+    "userTypeRates": {
+      "title": "User Type Rates",
+      "headers": {
+        "userType": "User Type",
+        "rate": "Rate"
+      },
+      "options": {
+        "technician": "Technician",
+        "engineer": "Engineer",
+        "consultant": "Consultant",
+        "project_manager": "Project Manager",
+        "admin": "Administrator"
+      },
+      "actions": {
+        "addRate": "Add Rate"
+      }
+    }
+  },
+  "usageConfig": {
+    "title": "Usage-Based Configuration",
+    "defaults": {
+      "unitOfMeasure": "Unit"
+    },
+    "fields": {
+      "unitOfMeasure": {
+        "label": "Unit of Measure",
+        "placeholder": "Enter unit of measure",
+        "help": "The unit used to measure usage (e.g., GB, User, Device)",
+        "errorRequired": "Unit of measure is required"
+      },
+      "minimumUsage": {
+        "label": "Minimum Usage Threshold",
+        "placeholder": "0",
+        "help": "Minimum billable usage per period (0 for no minimum)",
+        "errorNegative": "Minimum usage cannot be negative"
+      },
+      "enableTieredPricing": "Enable Tiered Pricing"
+    },
+    "tiers": {
+      "title": "Pricing Tiers",
+      "addTier": "Add Tier",
+      "empty": "No tiers configured. Add a tier to define volume-based pricing.",
+      "from": "From ({{unit}})",
+      "to": "To ({{unit}})",
+      "ratePer": "Rate per {{unit}}",
+      "unlimited": "Unlimited",
+      "help": "Configure volume-based pricing tiers. Each tier applies its rate to usage that falls within its range.",
+      "errors": {
+        "onlyLastUnlimited": "Only the last tier can have an unlimited upper bound",
+        "overlap": "Tiers cannot overlap",
+        "upperGreaterThanLower": "Tier upper bound must be greater than lower bound",
+        "rateNegative": "Tier rates cannot be negative"
+      }
+    }
+  },
+  "bucketConfig": {
+    "title": "Bucket Hours Configuration",
+    "fields": {
+      "totalMinutes": {
+        "label": "Total Minutes",
+        "placeholder": "Enter total hours",
+        "help": "The total number of minutes included in this bucket contract line",
+        "errorPositive": "Total minutes must be greater than zero"
+      },
+      "billingPeriod": {
+        "label": "Billing Period",
+        "placeholder": "Select billing period",
+        "help": "The period over which the bucket hours are allocated",
+        "mismatchPrefix": "Mismatch:",
+        "mismatch": "Bucket billing period ({{billingPeriod}}) should match contract line billing frequency ({{contractLineBillingFrequency}})"
+      },
+      "overageRate": {
+        "label": "Overage Rate",
+        "placeholder": "Enter overage rate",
+        "help": "The hourly rate charged for hours used beyond the bucket limit",
+        "errorNegative": "Overage rate cannot be negative"
+      },
+      "allowRollover": "Allow unused hours to roll over to next period"
+    }
+  },
+  "rateTiers": {
+    "title": "Rate Tiers & Quantity Discounts",
+    "description": "Configure different rates based on quantity ranges. Higher quantities can have discounted rates.",
+    "loading": "Loading rate tiers...",
+    "table": {
+      "minQuantity": "Min Quantity",
+      "maxQuantity": "Max Quantity",
+      "rate": "Rate ({{unit}})",
+      "actions": "Actions",
+      "unlimited": "Unlimited"
+    },
+    "formattedRate": "{{rate}} per {{unit}}",
+    "errors": {
+      "load": "Failed to load rate tiers",
+      "save": "Failed to save rate tiers",
+      "lastTier": "Cannot remove the last tier",
+      "minPositive": "Minimum quantity must be greater than 0",
+      "maxGreaterThanMin": "Maximum quantity must be greater than minimum quantity",
+      "rateNegative": "Rate cannot be negative",
+      "overlap": "Tier ranges cannot overlap"
+    },
+    "actions": {
+      "addTier": "Add Tier",
+      "save": "Save Rate Tiers",
+      "saving": "Saving..."
+    }
+  },
+  "serviceTaxSettings": {
+    "title": "Tax Settings",
+    "fields": {
+      "taxRate": {
+        "label": "Tax Rate",
+        "placeholderLoading": "Loading rates...",
+        "placeholder": "Select Tax Rate",
+        "help": "Select 'Non-Taxable' if this service should not be taxed."
+      }
+    },
+    "options": {
+      "nonTaxable": "Non-Taxable"
+    },
+    "optionLabel": "{{taxType}} ({{countryCode}}) - {{percentage}}%",
+    "errors": {
+      "loadTaxRates": "Failed to load tax rates.",
+      "save": "Failed to save tax settings"
+    },
+    "actions": {
+      "save": "Save Tax Settings",
+      "saving": "Saving..."
+    }
+  },
+  "serviceDetail": {
+    "loading": "Loading service configuration...",
+    "errors": {
+      "notFound": "Service not found",
+      "load": "Failed to load service configuration"
+    },
+    "title": "Service Configuration: {{serviceName}}",
+    "description": "Configure service details, pricing, and tax settings",
+    "sections": {
+      "unitOfMeasure": "Unit of Measure",
+      "baseRate": "Base Rate"
+    },
+    "baseRate": {
+      "summary": "{{rate}} per {{unit}}",
+      "help": "The base rate can be overridden with quantity-based tiers below."
+    }
+  }
+}

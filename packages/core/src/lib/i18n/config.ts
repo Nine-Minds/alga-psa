@@ -18,7 +18,7 @@ export const LOCALE_CONFIG = {
    * Array of supported locales
    * Add new languages here to enable them throughout the application
    */
-  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'xx', 'yy'] as const,
+  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'] as const,
 
   /**
    * Human-readable names for each locale
@@ -32,6 +32,7 @@ export const LOCALE_CONFIG = {
     nl: 'Nederlands',
     it: 'Italiano',
     pl: 'Polski',
+    pt: 'Português',
     xx: 'Pseudo (xx)',
     yy: 'Pseudo (yy)',
   } as const,
@@ -139,7 +140,10 @@ export const ROUTE_NAMESPACES = {
   '/msp/jobs': ['common', 'msp/core', 'msp/jobs'],
   '/msp/tickets': ['common', 'msp/core', 'features/tickets'],
   '/msp/projects': ['common', 'msp/core', 'features/projects'],
-  '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts'],
+  '/msp/billing/credits': ['common', 'msp/core', 'features/billing', 'msp/credits'],
+  '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing'],
+  '/msp/quote-approvals': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
+  '/msp/quote-document-templates': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/clients': ['common', 'msp/core', 'msp/clients'],
   '/msp/contacts': ['common', 'msp/core', 'msp/contacts'],
   '/msp/assets': ['common', 'msp/core', 'msp/assets'],
@@ -150,7 +154,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/time-management': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/service-requests': ['common', 'msp/core', 'features/tickets'],
   '/msp/settings/extensions': ['common', 'msp/core', 'msp/settings', 'msp/extensions'],
-  '/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets', 'msp/billing-settings'],
+  '/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets', 'msp/billing-settings', 'msp/service-catalog', 'features/billing'],
   '/msp/profile': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
   '/msp/security-settings': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
   '/msp/platform-updates': ['common', 'msp/core', 'msp/profile'],

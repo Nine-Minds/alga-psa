@@ -24,7 +24,7 @@
       "active": "Activo",
       "inactive": "Inactivo",
       "loading": "Cargando...",
-      "na": "N/A",
+      "na": "N/D",
       "none": "Ninguno"
     },
     "no": "No",
@@ -305,7 +305,7 @@
       "virtualized": "Virtualizado",
       "primaryIp": "IP principal",
       "hypervisor": "Hipervisor",
-      "os": "OS",
+      "os": "SO",
       "model": "Modelo",
       "imei": "IMEI",
       "phoneNumber": "Número de teléfono",
@@ -447,7 +447,7 @@
       "maintenance": "Mantenimiento"
     },
     "deviceTypes": {
-      "switch": "Switch",
+      "switch": "Conmutador",
       "router": "Enrutador",
       "firewall": "Cortafuegos",
       "access_point": "Punto de acceso",
@@ -544,7 +544,7 @@
       "maintenance": "Mantenimiento"
     },
     "networkDeviceTypes": {
-      "switch": "Switch",
+      "switch": "Conmutador",
       "router": "Enrutador",
       "firewall": "Cortafuegos",
       "access_point": "Punto de acceso",
@@ -804,7 +804,7 @@
       "printer": "Impresora"
     },
     "networkDeviceTypes": {
-      "switch": "Switch",
+      "switch": "Conmutador",
       "router": "Enrutador",
       "firewall": "Cortafuegos",
       "accessPoint": "Punto de acceso",
@@ -896,7 +896,7 @@
       "uptime": "tiempo de actividad",
       "lastSync": "Última sincronización RMM",
       "network": "Red",
-      "networkValue": "LAN IP: {{lan}} | WAN IP: {{wan}}"
+      "networkValue": "IP LAN: {{lan}} | IP WAN: {{wan}}"
     },
     "values": {
       "never": "Nunca"

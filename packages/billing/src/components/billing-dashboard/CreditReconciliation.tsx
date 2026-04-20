@@ -9,6 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrency } from '@alga-psa/core';
 import { formatDateOnly } from '@alga-psa/core';
 import { parseISO } from 'date-fns';
@@ -44,50 +45,65 @@ type ExtendedReconciliationReport = ICreditReconciliationReport & {
 };
 
 // Define a function to create columns for the reconciliation reports table
-const createColumns = (router: any): ColumnDefinition<ExtendedReconciliationReport>[] => [
+const createColumns = (
+  router: any,
+  t: ReturnType<typeof useTranslation>['t'],
+): ColumnDefinition<ExtendedReconciliationReport>[] => [
   {
-    title: 'Client',
+    title: t('columns.client', { defaultValue: 'Client' }),
     dataIndex: 'client_name',
-    render: (value: string | undefined) => value || 'N/A'
+    render: (value: string | undefined) => value || t('status.na', { defaultValue: 'N/A' })
   },
   {
-    title: 'Discrepancy',
+    title: t('columns.discrepancy', { defaultValue: 'Discrepancy' }),
     dataIndex: 'difference',
     render: (value: number) => formatCurrency(value)
   },
   {
-    title: 'Detected',
+    title: t('columns.detected', { defaultValue: 'Detected' }),
     dataIndex: 'detection_date',
     render: (value: string) => formatDateOnly(parseISO(value))
   },
   {
-    title: 'Status',
+    title: t('columns.status', { defaultValue: 'Status' }),
     dataIndex: 'status',
     render: (value: ReconciliationStatus) => {
       switch (value) {
         case 'open':
-          return <span className="px-2 py-1 rounded-full bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-900))] text-xs font-medium">Open</span>;
+          return (
+            <span className="px-2 py-1 rounded-full bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-900))] text-xs font-medium">
+              {t('status.open', { defaultValue: 'Open' })}
+            </span>
+          );
         case 'in_review':
-          return <span className="px-2 py-1 rounded-full bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-900))] text-xs font-medium">In Review</span>;
+          return (
+            <span className="px-2 py-1 rounded-full bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-900))] text-xs font-medium">
+              {t('status.inReview', { defaultValue: 'In Review' })}
+            </span>
+          );
         case 'resolved':
-          return <span className="px-2 py-1 rounded-full bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-900))] text-xs font-medium">Resolved</span>;
+          return (
+            <span className="px-2 py-1 rounded-full bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-900))] text-xs font-medium">
+              {t('status.resolved', { defaultValue: 'Resolved' })}
+            </span>
+          );
         default:
           return value;
       }
     }
   },
   {
-    title: 'Expected Balance',
+    title: t('columns.expectedBalance', { defaultValue: 'Expected Balance' }),
     dataIndex: 'expected_balance',
     render: (value: number) => formatCurrency(value)
   },
   {
-    title: 'Actual Balance',
+    title: t('columns.actualBalance', { defaultValue: 'Actual Balance' }),
     dataIndex: 'actual_balance',
     render: (value: number) => formatCurrency(value)
   },
   {
-    title: 'Actions',
+    title: t('columns.actions', { defaultValue: 'Actions' }),
     dataIndex: 'report_id',
     width: '10%',
     render: (value: string, record) => {
@@ -101,7 +117,7 @@ const createColumns = (router: any): ColumnDefinition<ExtendedReconciliationRepo
             id={`view-report-${value}`}
             onClick={() => router.push(`/billing-dashboard/reconciliation/${value}`)}
           >
-            View
+            {t('actions.view', { defaultValue: 'View' })}
           </Button>
           {!isResolved && (
             <Button
@@ -111,7 +127,7 @@ const createColumns = (router: any): ColumnDefinition<ExtendedReconciliationRepo
               className="text-[rgb(var(--color-primary-600))] hover:bg-[rgb(var(--color-primary-50))]"
               onClick={() => router.push(`/billing-dashboard/reconciliation/${value}?action=resolve`)}
             >
-              Resolve
+              {t('actions.resolve', { defaultValue: 'Resolve' })}
             </Button>
           )}
         </div>
@@ -158,6 +174,7 @@ const CreditReconciliation: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
+  const { t } = useTranslation('msp/credits');
   const subtabParam = searchParams?.get('subtab');
 
   // Update URL when tab changes
@@ -178,23 +195,23 @@ const CreditReconciliation: React.FC = () => {
   };
 
   // Create columns with router access
-  const columns = createColumns(router);
+  const columns = createColumns(router, t);
 
   // Generate status distribution data for pie chart
   const statusDistributionData = [
-    { name: 'Open', value: stats.openCount },
-    { name: 'In Review', value: stats.inReviewCount },
-    { name: 'Resolved', value: stats.resolvedCount }
+    { name: t('status.open', { defaultValue: 'Open' }), value: stats.openCount },
+    { name: t('status.inReview', { defaultValue: 'In Review' }), value: stats.inReviewCount },
+    { name: t('status.resolved', { defaultValue: 'Resolved' }), value: stats.resolvedCount }
   ];
 
   // Placeholder for discrepancy trend data - in production, this would come from an analytics endpoint
   const discrepancyTrendData = [
-    { month: 'Jan', count: 5, amount: 2500 },
-    { month: 'Feb', count: 3, amount: 1200 },
-    { month: 'Mar', count: 7, amount: 3500 },
-    { month: 'Apr', count: 2, amount: 800 },
-    { month: 'May', count: 4, amount: 2000 },
-    { month: 'Jun', count: 6, amount: 3000 },
+    { month: t('charts.months.jan', { defaultValue: 'Jan' }), count: 5, amount: 2500 },
+    { month: t('charts.months.feb', { defaultValue: 'Feb' }), count: 3, amount: 1200 },
+    { month: t('charts.months.mar', { defaultValue: 'Mar' }), count: 7, amount: 3500 },
+    { month: t('charts.months.apr', { defaultValue: 'Apr' }), count: 2, amount: 800 },
+    { month: t('charts.months.may', { defaultValue: 'May' }), count: 4, amount: 2000 },
+    { month: t('charts.months.jun', { defaultValue: 'Jun' }), count: 6, amount: 3000 },
   ];
 
   useEffect(() => {
@@ -260,7 +277,11 @@ const CreditReconciliation: React.FC = () => {
       // In a real implementation, we would refresh the data after validation
       // For now, just show a success message
       toast.success(
-        `Validation completed: Found ${result.balanceDiscrepancyCount} balance discrepancies and ${result.missingTrackingCount + result.inconsistentTrackingCount} tracking issues.`,
+        t('reconciliation.validationResult', {
+          balanceCount: result.balanceDiscrepancyCount,
+          trackingCount: result.missingTrackingCount + result.inconsistentTrackingCount,
+          defaultValue: 'Validation completed: Found {{balanceCount}} balance discrepancies and {{trackingCount}} tracking issues.',
+        }),
       );
 
       setRunningValidation(false);
@@ -305,7 +326,9 @@ const CreditReconciliation: React.FC = () => {
     <div className="space-y-6">
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">Credit Reconciliation Dashboard</h2>
+          <h2 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">
+            {t('reconciliation.title', { defaultValue: 'Credit Reconciliation Dashboard' })}
+          </h2>
           <div className="flex space-x-2">
             <div className="flex items-center space-x-2">
               <select
@@ -314,7 +337,7 @@ const CreditReconciliation: React.FC = () => {
                 onChange={handleClientChange}
                 className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-card"
               >
-                <option value="">Select Client</option>
+                <option value="">{t('reconciliation.selectClient', { defaultValue: 'Select Client' })}</option>
                 {clients.map(client => (
                   <option key={client.id} value={client.id}>{client.name}</option>
                 ))}
@@ -324,7 +347,9 @@ const CreditReconciliation: React.FC = () => {
                 onClick={handleRunValidation}
                 disabled={!selectedClient || runningValidation}
               >
-                {runningValidation ? 'Running...' : 'Run Reconciliation'}
+                {runningValidation
+                  ? t('actions.running', { defaultValue: 'Running...' })
+                  : t('actions.runReconciliation', { defaultValue: 'Run Reconciliation' })}
               </Button>
             </div>
           </div>
@@ -336,7 +361,7 @@ const CreditReconciliation: React.FC = () => {
             <div className="flex flex-wrap gap-4 items-center">
               <div>
                 <label htmlFor="status-filter" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                  Status
+                  {t('reconciliation.status', { defaultValue: 'Status' })}
                 </label>
                 <select
                   id="status-filter"
@@ -344,16 +369,16 @@ const CreditReconciliation: React.FC = () => {
                   onChange={(e) => setSelectedStatus(e.target.value as ReconciliationStatus | '')}
                   className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-card"
                 >
-                  <option value="">All Statuses</option>
-                  <option value="open">Open</option>
-                  <option value="in_review">In Review</option>
-                  <option value="resolved">Resolved</option>
+                  <option value="">{t('reconciliation.allStatuses', { defaultValue: 'All Statuses' })}</option>
+                  <option value="open">{t('status.open', { defaultValue: 'Open' })}</option>
+                  <option value="in_review">{t('status.inReview', { defaultValue: 'In Review' })}</option>
+                  <option value="resolved">{t('status.resolved', { defaultValue: 'Resolved' })}</option>
                 </select>
               </div>
               
               <div>
                 <label htmlFor="date-from" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                  From Date
+                  {t('reconciliation.fromDate', { defaultValue: 'From Date' })}
                 </label>
                 <input
                   id="date-from"
@@ -366,7 +391,7 @@ const CreditReconciliation: React.FC = () => {
               
               <div>
                 <label htmlFor="date-to" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                  To Date
+                  {t('reconciliation.toDate', { defaultValue: 'To Date' })}
                 </label>
                 <input
                   id="date-to"
@@ -388,7 +413,7 @@ const CreditReconciliation: React.FC = () => {
                   }}
                   className="mt-6"
                 >
-                  Reset
+                  {t('actions.reset', { defaultValue: 'Reset' })}
                 </Button>
               </div>
             </div>
@@ -402,7 +427,9 @@ const CreditReconciliation: React.FC = () => {
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-sm text-[rgb(var(--color-text-500))]">Total Discrepancies</p>
+                <p className="text-sm text-[rgb(var(--color-text-500))]">
+                  {t('stats.totalDiscrepancies', { defaultValue: 'Total Discrepancies' })}
+                </p>
                 <p className="text-2xl font-bold text-[rgb(var(--color-text-900))]">{stats.totalDiscrepancies}</p>
               </div>
               <div className="bg-[rgb(var(--color-primary-100))] p-3 rounded-full">
@@ -418,7 +445,9 @@ const CreditReconciliation: React.FC = () => {
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-sm text-[rgb(var(--color-text-500))]">Total Discrepancy Amount</p>
+                <p className="text-sm text-[rgb(var(--color-text-500))]">
+                  {t('stats.totalDiscrepancyAmount', { defaultValue: 'Total Discrepancy Amount' })}
+                </p>
                 <p className="text-2xl font-bold text-[rgb(var(--color-text-900))]">{formatCurrency(stats.totalAmount)}</p>
               </div>
               <div className="bg-[rgb(var(--color-secondary-100))] p-3 rounded-full">
@@ -434,7 +463,9 @@ const CreditReconciliation: React.FC = () => {
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-sm text-[rgb(var(--color-text-500))]">Open Issues</p>
+                <p className="text-sm text-[rgb(var(--color-text-500))]">
+                  {t('stats.openIssues', { defaultValue: 'Open Issues' })}
+                </p>
                 <p className="text-2xl font-bold text-[rgb(var(--color-text-900))]">{stats.openCount}</p>
               </div>
               <div className="bg-[rgb(var(--color-accent-100))] p-3 rounded-full">
@@ -451,8 +482,12 @@ const CreditReconciliation: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Status Distribution</CardTitle>
-            <CardDescription>Overview of reconciliation report statuses</CardDescription>
+            <CardTitle>{t('charts.statusDistribution', { defaultValue: 'Status Distribution' })}</CardTitle>
+            <CardDescription>
+              {t('charts.statusDistributionDescription', {
+                defaultValue: 'Overview of reconciliation report statuses',
+              })}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64">
@@ -484,8 +519,12 @@ const CreditReconciliation: React.FC = () => {
         
         <Card>
           <CardHeader>
-            <CardTitle>Discrepancy Trends</CardTitle>
-            <CardDescription>Monthly trends in credit discrepancies</CardDescription>
+            <CardTitle>{t('charts.discrepancyTrends', { defaultValue: 'Discrepancy Trends' })}</CardTitle>
+            <CardDescription>
+              {t('charts.discrepancyTrendsDescription', {
+                defaultValue: 'Monthly trends in credit discrepancies',
+              })}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64">
@@ -505,8 +544,18 @@ const CreditReconciliation: React.FC = () => {
                   <YAxis yAxisId="right" orientation="right" stroke="rgb(var(--color-secondary-400))" />
                   <Tooltip formatter={(value) => typeof value === 'number' && value % 1 === 0 ? value : formatCurrency(value as number)} />
                   <Legend />
-                  <Bar yAxisId="left" dataKey="count" fill="rgb(var(--color-primary-400))" name="Number of Discrepancies" />
-                  <Bar yAxisId="right" dataKey="amount" fill="rgb(var(--color-secondary-400))" name="Total Amount" />
+                  <Bar
+                    yAxisId="left"
+                    dataKey="count"
+                    fill="rgb(var(--color-primary-400))"
+                    name={t('charts.numberOfDiscrepancies', { defaultValue: 'Number of Discrepancies' })}
+                  />
+                  <Bar
+                    yAxisId="right"
+                    dataKey="amount"
+                    fill="rgb(var(--color-secondary-400))"
+                    name={t('charts.totalAmount', { defaultValue: 'Total Amount' })}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -517,9 +566,11 @@ const CreditReconciliation: React.FC = () => {
       {/* Reconciliation Reports Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Reconciliation Reports</CardTitle>
+          <CardTitle>{t('reconciliation.reconciliationReports', { defaultValue: 'Reconciliation Reports' })}</CardTitle>
           <CardDescription>
-            View and manage credit balance discrepancies
+            {t('reconciliation.reconciliationReportsDescription', {
+              defaultValue: 'View and manage credit balance discrepancies',
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -527,7 +578,7 @@ const CreditReconciliation: React.FC = () => {
             tabs={[
               {
                 id: 'all',
-                label: `All (${reports.length})`,
+                label: `${t('reconciliation.tabs.all', { defaultValue: 'All' })} (${reports.length})`,
                 content: (
                   <DataTable
                     id="credit-reconciliation-table"
@@ -543,7 +594,7 @@ const CreditReconciliation: React.FC = () => {
               },
               {
                 id: 'open',
-                label: `Open (${openReports.length})`,
+                label: `${t('reconciliation.tabs.open', { defaultValue: 'Open' })} (${openReports.length})`,
                 content: (
                   <DataTable
                     id="credit-reconciliation-open-table"
@@ -559,7 +610,7 @@ const CreditReconciliation: React.FC = () => {
               },
               {
                 id: 'in-review',
-                label: `In Review (${inReviewReports.length})`,
+                label: `${t('reconciliation.tabs.inReview', { defaultValue: 'In Review' })} (${inReviewReports.length})`,
                 content: (
                   <DataTable
                     id="credit-reconciliation-review-table"
@@ -575,7 +626,7 @@ const CreditReconciliation: React.FC = () => {
               },
               {
                 id: 'resolved',
-                label: `Resolved (${resolvedReports.length})`,
+                label: `${t('reconciliation.tabs.resolved', { defaultValue: 'Resolved' })} (${resolvedReports.length})`,
                 content: (
                   <DataTable
                     id="credit-reconciliation-resolved-table"

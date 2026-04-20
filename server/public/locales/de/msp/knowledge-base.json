@@ -3,7 +3,7 @@
     "title": "Wissensdatenbank",
     "subtitle": "Erstellen und verwalten Sie Wissensdatenbankartikel",
     "actions": {
-      "import": "Import",
+      "import": "Importieren",
       "newArticle": "Neuer Artikel"
     },
     "tabs": {

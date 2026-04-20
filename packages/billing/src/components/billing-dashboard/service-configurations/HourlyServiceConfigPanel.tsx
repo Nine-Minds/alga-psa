@@ -4,11 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Card } from '@alga-psa/ui/components/Card';
-import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { IContractLineServiceHourlyConfig, IUserTypeRate } from '@alga-psa/types';
 import { Trash2 } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface HourlyServiceConfigPanelProps {
   configuration: Partial<IContractLineServiceHourlyConfig>;
@@ -27,6 +27,7 @@ export function HourlyServiceConfigPanel({
   className = '',
   disabled = false
 }: HourlyServiceConfigPanelProps) {
+  const { t } = useTranslation('msp/service-catalog');
   const [minimumBillableTime, setMinimumBillableTime] = useState(configuration.minimum_billable_time || 15);
   const [roundUpToNearest, setRoundUpToNearest] = useState(configuration.round_up_to_nearest || 15);
   const [newUserType, setNewUserType] = useState('');
@@ -58,22 +59,29 @@ export function HourlyServiceConfigPanel({
     } = {};
 
     if (minimumBillableTime < 0) {
-      errors.minimumBillableTime = 'Minimum billable time cannot be negative';
+      errors.minimumBillableTime = t('hourlyConfig.fields.minimumBillableTime.errorNegative', {
+        defaultValue: 'Minimum billable time cannot be negative',
+      });
     }
 
     if (roundUpToNearest < 0) {
-      errors.roundUpToNearest = 'Round up value cannot be negative';
+      errors.roundUpToNearest = t('hourlyConfig.fields.roundUpToNearest.errorNegative', {
+        defaultValue: 'Round up value cannot be negative',
+      });
     }
 
     if (newUserTypeRate !== undefined && newUserTypeRate < 0) {
-      errors.newUserTypeRate = 'User type rate cannot be negative';
+      errors.newUserTypeRate = t('hourlyConfig.fields.newUserTypeRate.errorNegative', {
+        defaultValue: 'User type rate cannot be negative',
+      });
     }
 
     setValidationErrors(errors);
   }, [
     minimumBillableTime,
     roundUpToNearest,
-    newUserTypeRate
+    newUserTypeRate,
+    t
   ]);
 
   const handleMinimumBillableTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,27 +124,60 @@ export function HourlyServiceConfigPanel({
   };
 
   const userTypeOptions = [
-    { value: 'technician', label: 'Technician' },
-    { value: 'engineer', label: 'Engineer' },
-    { value: 'consultant', label: 'Consultant' },
-    { value: 'project_manager', label: 'Project Manager' },
-    { value: 'admin', label: 'Administrator' }
+    {
+      value: 'technician',
+      label: t('hourlyConfig.userTypeRates.options.technician', {
+        defaultValue: 'Technician',
+      }),
+    },
+    {
+      value: 'engineer',
+      label: t('hourlyConfig.userTypeRates.options.engineer', {
+        defaultValue: 'Engineer',
+      }),
+    },
+    {
+      value: 'consultant',
+      label: t('hourlyConfig.userTypeRates.options.consultant', {
+        defaultValue: 'Consultant',
+      }),
+    },
+    {
+      value: 'project_manager',
+      label: t('hourlyConfig.userTypeRates.options.project_manager', {
+        defaultValue: 'Project Manager',
+      }),
+    },
+    {
+      value: 'admin',
+      label: t('hourlyConfig.userTypeRates.options.admin', {
+        defaultValue: 'Administrator',
+      }),
+    }
   ];
 
   return (
     <Card className={`p-4 ${className}`}>
       <div className="space-y-4">
-        <h3 className="text-md font-medium">Hourly Rate Configuration</h3>
+        <h3 className="text-md font-medium">
+          {t('hourlyConfig.title', { defaultValue: 'Hourly Rate Configuration' })}
+        </h3>
         <div className="grid gap-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="minimum-billable-time">Minimum Billable Time (minutes)</Label>
+              <Label htmlFor="minimum-billable-time">
+                {t('hourlyConfig.fields.minimumBillableTime.label', {
+                  defaultValue: 'Minimum Billable Time (minutes)',
+                })}
+              </Label>
               <Input
                 id="minimum-billable-time"
                 type="number"
                 value={minimumBillableTime.toString()}
                 onChange={handleMinimumBillableTimeChange}
-                placeholder="15"
+                placeholder={t('hourlyConfig.fields.minimumBillableTime.placeholder', {
+                  defaultValue: '15',
+                })}
                 disabled={disabled}
                 min={0}
                 step={1}
@@ -146,18 +187,26 @@ export function HourlyServiceConfigPanel({
                 <p className="text-sm text-red-500 mt-1">{validationErrors.minimumBillableTime}</p>
               ) : (
                 <p className="text-sm text-muted-foreground mt-1">
-                  Minimum time to bill (e.g., 15 minutes)
+                  {t('hourlyConfig.fields.minimumBillableTime.help', {
+                    defaultValue: 'Minimum time to bill (e.g., 15 minutes)',
+                  })}
                 </p>
               )}
             </div>
             <div>
-              <Label htmlFor="round-up-to-nearest">Round Up To Nearest (minutes)</Label>
+              <Label htmlFor="round-up-to-nearest">
+                {t('hourlyConfig.fields.roundUpToNearest.label', {
+                  defaultValue: 'Round Up To Nearest (minutes)',
+                })}
+              </Label>
               <Input
                 id="round-up-to-nearest"
                 type="number"
                 value={roundUpToNearest.toString()}
                 onChange={handleRoundUpToNearestChange}
-                placeholder="15"
+                placeholder={t('hourlyConfig.fields.roundUpToNearest.placeholder', {
+                  defaultValue: '15',
+                })}
                 disabled={disabled}
                 min={0}
                 step={1}
@@ -167,7 +216,9 @@ export function HourlyServiceConfigPanel({
                 <p className="text-sm text-red-500 mt-1">{validationErrors.roundUpToNearest}</p>
               ) : (
                 <p className="text-sm text-muted-foreground mt-1">
-                  Round time entries up to nearest increment
+                  {t('hourlyConfig.fields.roundUpToNearest.help', {
+                    defaultValue: 'Round time entries up to nearest increment',
+                  })}
                 </p>
               )}
             </div>
@@ -176,13 +227,25 @@ export function HourlyServiceConfigPanel({
           {/* User Type Rates Section */}
           {onUserTypeRatesChange && (
             <div className="border p-3 rounded-md bg-muted">
-              <h4 className="font-medium mb-2">User Type Rates</h4>
+              <h4 className="font-medium mb-2">
+                {t('hourlyConfig.userTypeRates.title', {
+                  defaultValue: 'User Type Rates',
+                })}
+              </h4>
               
               {userTypeRates.length > 0 && (
                 <div className="mb-3">
                   <div className="grid grid-cols-3 gap-2 font-medium text-sm mb-1">
-                    <div>User Type</div>
-                    <div>Rate</div>
+                    <div>
+                      {t('hourlyConfig.userTypeRates.headers.userType', {
+                        defaultValue: 'User Type',
+                      })}
+                    </div>
+                    <div>
+                      {t('hourlyConfig.userTypeRates.headers.rate', {
+                        defaultValue: 'Rate',
+                      })}
+                    </div>
                     <div></div>
                   </div>
                   {userTypeRates.map((item, index) => (
@@ -207,24 +270,36 @@ export function HourlyServiceConfigPanel({
               
               <div className="grid grid-cols-3 gap-2 items-end">
                 <div>
-                  <Label htmlFor="new-user-type">User Type</Label>
+                  <Label htmlFor="new-user-type">
+                    {t('hourlyConfig.fields.newUserType.label', {
+                      defaultValue: 'User Type',
+                    })}
+                  </Label>
                   <CustomSelect
                     id="new-user-type"
                     options={userTypeOptions}
                     onValueChange={setNewUserType}
                     value={newUserType}
-                    placeholder="Select user type"
+                    placeholder={t('hourlyConfig.fields.newUserType.placeholder', {
+                      defaultValue: 'Select user type',
+                    })}
                     disabled={disabled}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="new-user-type-rate">Rate</Label>
+                  <Label htmlFor="new-user-type-rate">
+                    {t('hourlyConfig.fields.newUserTypeRate.label', {
+                      defaultValue: 'Rate',
+                    })}
+                  </Label>
                   <Input
                     id="new-user-type-rate"
                     type="number"
                     value={(newUserTypeRate !== undefined ? newUserTypeRate / 100 : '').toString()} // Display in dollars
                     onChange={handleNewUserTypeRateChange}
-                    placeholder="Enter rate"
+                    placeholder={t('hourlyConfig.fields.newUserTypeRate.placeholder', {
+                      defaultValue: 'Enter rate',
+                    })}
                     disabled={disabled}
                     min={0}
                     step={0.01}
@@ -240,7 +315,9 @@ export function HourlyServiceConfigPanel({
                   id="add-user-type-rate"
                   disabled={disabled || !newUserType || newUserTypeRate === undefined || newUserTypeRate < 0}
                 >
-                  Add Rate
+                  {t('hourlyConfig.userTypeRates.actions.addRate', {
+                    defaultValue: 'Add Rate',
+                  })}
                 </Button>
               </div>
             </div>

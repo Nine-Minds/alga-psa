@@ -19,7 +19,7 @@
       "saving": "Opslaan...",
       "search": "Zoekopdracht",
       "select": "Selecteer",
-      "update": "Update",
+      "update": "Bijwerken",
       "uploadCsv": "CSV uploaden",
       "view": "Weergave"
     },
@@ -327,7 +327,7 @@
     "deliveryMethods": {
       "both": "Beide",
       "email": "E-mail",
-      "mail": "Mail"
+      "mail": "E-mail"
     },
     "paymentMethods": {
       "bankTransfer": "Bankoverschrijving",
@@ -441,7 +441,7 @@
       "9": "september",
       "10": "oktober",
       "11": "November",
-      "12": "December"
+      "12": "december"
     },
     "weekdays": {
       "1": "Maandag",

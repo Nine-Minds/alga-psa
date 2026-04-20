@@ -46,7 +46,7 @@
     "titlePlaceholder": "Tytuł zgłoszenia",
     "descriptionPlaceholder": "Opisz problem...",
     "priorityPlaceholder": "Wybierz priorytet",
-    "noBoardsAvailable": "No ticket boards are available for your account. Contact your administrator.",
+    "noBoardsAvailable": "Brak dostępnych tablic zgłoszeń dla Twojego konta. Skontaktuj się z administratorem.",
     "submit": "Utwórz zgłoszenie",
     "submitting": "Tworzenie...",
     "errors": {

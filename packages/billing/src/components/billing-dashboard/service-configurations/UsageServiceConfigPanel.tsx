@@ -10,6 +10,7 @@ import { Trash2, Plus } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import { IContractLineServiceUsageConfig, IContractLineServiceRateTier } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface UsageServiceConfigPanelProps {
   configuration: Partial<IContractLineServiceUsageConfig>;
@@ -35,7 +36,11 @@ export function UsageServiceConfigPanel({
   className = '',
   disabled = false
 }: UsageServiceConfigPanelProps) {
-  const [unitOfMeasure, setUnitOfMeasure] = useState(configuration.unit_of_measure || 'Unit');
+  const { t } = useTranslation('msp/service-catalog');
+  const defaultUnitOfMeasure = t('usageConfig.defaults.unitOfMeasure', {
+    defaultValue: 'Unit',
+  });
+  const [unitOfMeasure, setUnitOfMeasure] = useState(configuration.unit_of_measure || defaultUnitOfMeasure);
   const [enableTieredPricing, setEnableTieredPricing] = useState(configuration.enable_tiered_pricing || false);
   const [minimumUsage, setMinimumUsage] = useState<number>(configuration.minimum_usage || 0);
   const [tiers, setTiers] = useState<TierData[]>(
@@ -54,7 +59,7 @@ export function UsageServiceConfigPanel({
 
   // Update local state when props change
   useEffect(() => {
-    setUnitOfMeasure(configuration.unit_of_measure || 'Unit');
+    setUnitOfMeasure(configuration.unit_of_measure || defaultUnitOfMeasure);
     setEnableTieredPricing(configuration.enable_tiered_pricing || false);
     setMinimumUsage(configuration.minimum_usage || 0);
     
@@ -68,7 +73,7 @@ export function UsageServiceConfigPanel({
         }))
       );
     }
-  }, [configuration, rateTiers]);
+  }, [configuration, rateTiers, defaultUnitOfMeasure]);
 
   // Validate inputs when they change
   useEffect(() => {
@@ -79,11 +84,15 @@ export function UsageServiceConfigPanel({
     } = {};
 
     if (!unitOfMeasure) {
-      errors.unitOfMeasure = 'Unit of measure is required';
+      errors.unitOfMeasure = t('usageConfig.fields.unitOfMeasure.errorRequired', {
+        defaultValue: 'Unit of measure is required',
+      });
     }
 
     if (minimumUsage < 0) {
-      errors.minimumUsage = 'Minimum usage cannot be negative';
+      errors.minimumUsage = t('usageConfig.fields.minimumUsage.errorNegative', {
+        defaultValue: 'Minimum usage cannot be negative',
+      });
     }
 
     // Validate tiers if enabled
@@ -95,29 +104,37 @@ export function UsageServiceConfigPanel({
         const nextTier = sortedTiers[i + 1];
         
         if (currentTier.max_quantity === null) {
-          errors.tiers = 'Only the last tier can have an unlimited upper bound';
+          errors.tiers = t('usageConfig.tiers.errors.onlyLastUnlimited', {
+            defaultValue: 'Only the last tier can have an unlimited upper bound',
+          });
           break;
         }
         
         if (currentTier.max_quantity >= nextTier.min_quantity) {
-          errors.tiers = 'Tiers cannot overlap';
+          errors.tiers = t('usageConfig.tiers.errors.overlap', {
+            defaultValue: 'Tiers cannot overlap',
+          });
           break;
         }
         
         if (currentTier.max_quantity < currentTier.min_quantity) {
-          errors.tiers = 'Tier upper bound must be greater than lower bound';
+          errors.tiers = t('usageConfig.tiers.errors.upperGreaterThanLower', {
+            defaultValue: 'Tier upper bound must be greater than lower bound',
+          });
           break;
         }
       }
       
       // Check if any tier has negative rate
       if (tiers.some(tier => tier.rate < 0)) {
-        errors.tiers = errors.tiers || 'Tier rates cannot be negative';
+        errors.tiers = errors.tiers || t('usageConfig.tiers.errors.rateNegative', {
+          defaultValue: 'Tier rates cannot be negative',
+        });
       }
     }
 
     setValidationErrors(errors);
-  }, [unitOfMeasure, minimumUsage, tiers, enableTieredPricing]);
+  }, [unitOfMeasure, minimumUsage, tiers, enableTieredPricing, t]);
 
   const handleUnitOfMeasureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -227,48 +244,64 @@ export function UsageServiceConfigPanel({
   return (
     <Card className={`p-4 ${className}`}>
       <div className="space-y-4">
-        <h3 className="text-md font-medium">Usage-Based Configuration</h3>
+        <h3 className="text-md font-medium">
+          {t('usageConfig.title', { defaultValue: 'Usage-Based Configuration' })}
+        </h3>
         <div className="grid gap-4">
           <div>
-            <Label htmlFor="usage-unit-of-measure">Unit of Measure</Label>
+            <Label htmlFor="usage-unit-of-measure">
+              {t('usageConfig.fields.unitOfMeasure.label', { defaultValue: 'Unit of Measure' })}
+            </Label>
             <Input
               id="usage-unit-of-measure"
               type="text"
               value={unitOfMeasure}
               onChange={handleUnitOfMeasureChange}
-              placeholder="Enter unit of measure"
+              placeholder={t('usageConfig.fields.unitOfMeasure.placeholder', {
+                defaultValue: 'Enter unit of measure',
+              })}
               disabled={disabled}
               className={validationErrors.unitOfMeasure ? 'border-red-500' : ''}
             />
-            {validationErrors.unitOfMeasure ? (
+              {validationErrors.unitOfMeasure ? (
               <p className="text-sm text-red-500 mt-1">{validationErrors.unitOfMeasure}</p>
             ) : (
               <p className="text-sm text-muted-foreground mt-1">
-                The unit used to measure usage (e.g., GB, User, Device)
+                {t('usageConfig.fields.unitOfMeasure.help', {
+                  defaultValue: 'The unit used to measure usage (e.g., GB, User, Device)',
+                })}
               </p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="minimum-usage">Minimum Usage Threshold</Label>
+            <Label htmlFor="minimum-usage">
+              {t('usageConfig.fields.minimumUsage.label', {
+                defaultValue: 'Minimum Usage Threshold',
+              })}
+            </Label>
             <Input
               id="minimum-usage"
               type="number"
               value={minimumUsage.toString()}
               onChange={handleMinimumUsageChange}
-              placeholder="0"
+              placeholder={t('usageConfig.fields.minimumUsage.placeholder', {
+                defaultValue: '0',
+              })}
               disabled={disabled}
               min={0}
               step={1}
               className={validationErrors.minimumUsage ? 'border-red-500' : ''}
             />
-            {validationErrors.minimumUsage ? (
-              <p className="text-sm text-red-500 mt-1">{validationErrors.minimumUsage}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground mt-1">
-                Minimum billable usage per period (0 for no minimum)
-              </p>
-            )}
+              {validationErrors.minimumUsage ? (
+                <p className="text-sm text-red-500 mt-1">{validationErrors.minimumUsage}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {t('usageConfig.fields.minimumUsage.help', {
+                    defaultValue: 'Minimum billable usage per period (0 for no minimum)',
+                  })}
+                </p>
+              )}
           </div>
 
           <div className="flex items-center space-x-2 pt-2">
@@ -279,14 +312,18 @@ export function UsageServiceConfigPanel({
               disabled={disabled}
             />
             <Label htmlFor="enable-tiered-pricing" className="cursor-pointer">
-              Enable Tiered Pricing
+              {t('usageConfig.fields.enableTieredPricing', {
+                defaultValue: 'Enable Tiered Pricing',
+              })}
             </Label>
           </div>
 
           {enableTieredPricing && onRateTiersChange && (
             <div className="pl-6 border-l-2 border-[rgb(var(--color-border-200))]">
               <div className="mb-2 flex justify-between items-center">
-                <h4 className="font-medium">Pricing Tiers</h4>
+                <h4 className="font-medium">
+                  {t('usageConfig.tiers.title', { defaultValue: 'Pricing Tiers' })}
+                </h4>
                 <Button
                   id="add-tier-button"
                   type="button"
@@ -296,7 +333,7 @@ export function UsageServiceConfigPanel({
                   disabled={disabled}
                   className="flex items-center gap-1"
                 >
-                  <Plus className="h-4 w-4" /> Add Tier
+                  <Plus className="h-4 w-4" /> {t('usageConfig.tiers.addTier', { defaultValue: 'Add Tier' })}
                 </Button>
               </div>
               
@@ -309,14 +346,21 @@ export function UsageServiceConfigPanel({
               
               {tiers.length === 0 ? (
                 <p className="text-sm text-muted-foreground mb-2">
-                  No tiers configured. Add a tier to define volume-based pricing.
+                  {t('usageConfig.tiers.empty', {
+                    defaultValue: 'No tiers configured. Add a tier to define volume-based pricing.',
+                  })}
                 </p>
               ) : (
                 <div className="space-y-3">
                   {tiers.map((tier, index) => (
                     <div key={tier.id} className="grid grid-cols-12 gap-2 items-end border p-2 rounded-md bg-muted">
                       <div className="col-span-3">
-                        <Label htmlFor={`tier-${tier.id}-from`} className="text-xs">From ({unitOfMeasure})</Label>
+                        <Label htmlFor={`tier-${tier.id}-from`} className="text-xs">
+                          {t('usageConfig.tiers.from', {
+                            unit: unitOfMeasure,
+                            defaultValue: 'From ({{unit}})',
+                          })}
+                        </Label>
                         <Input
                           id={`tier-${tier.id}-from`}
                           type="number"
@@ -328,7 +372,12 @@ export function UsageServiceConfigPanel({
                         />
                       </div>
                       <div className="col-span-3">
-                        <Label htmlFor={`tier-${tier.id}-to`} className="text-xs">To ({unitOfMeasure})</Label>
+                        <Label htmlFor={`tier-${tier.id}-to`} className="text-xs">
+                          {t('usageConfig.tiers.to', {
+                            unit: unitOfMeasure,
+                            defaultValue: 'To ({{unit}})',
+                          })}
+                        </Label>
                         <Input
                           id={`tier-${tier.id}-to`}
                           type="number"
@@ -338,14 +387,21 @@ export function UsageServiceConfigPanel({
                             'max_quantity',
                             e.target.value === '' ? null : Number(e.target.value)
                           )}
-                          placeholder={index === tiers.length - 1 ? "Unlimited" : ""}
+                          placeholder={index === tiers.length - 1
+                            ? t('usageConfig.tiers.unlimited', { defaultValue: 'Unlimited' })
+                            : ''}
                           disabled={disabled}
                           min={tier.min_quantity + 1}
                           step={1}
                         />
                       </div>
                       <div className="col-span-4">
-                        <Label htmlFor={`tier-${tier.id}-rate`} className="text-xs">Rate per {unitOfMeasure}</Label>
+                        <Label htmlFor={`tier-${tier.id}-rate`} className="text-xs">
+                          {t('usageConfig.tiers.ratePer', {
+                            unit: unitOfMeasure,
+                            defaultValue: 'Rate per {{unit}}',
+                          })}
+                        </Label>
                         <Input
                           id={`tier-${tier.id}-rate`}
                           type="number"
@@ -375,7 +431,10 @@ export function UsageServiceConfigPanel({
               )}
               
               <p className="text-sm text-muted-foreground mt-3">
-                Configure volume-based pricing tiers. Each tier applies its rate to usage that falls within its range.
+                {t('usageConfig.tiers.help', {
+                  defaultValue:
+                    'Configure volume-based pricing tiers. Each tier applies its rate to usage that falls within its range.',
+                })}
               </p>
             </div>
           )}

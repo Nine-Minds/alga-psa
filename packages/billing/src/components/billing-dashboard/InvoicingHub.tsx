@@ -7,6 +7,7 @@ import type { IService } from '@alga-psa/types';
 import GenerateTab from './invoicing/GenerateTab';
 import DraftsTab from './invoicing/DraftsTab';
 import FinalizedTab from './invoicing/FinalizedTab';
+import { useTranslation } from 'react-i18next';
 
 interface InvoicingHubProps {
   initialServices: IService[];
@@ -17,6 +18,7 @@ type InvoicingSubTab = 'generate' | 'drafts' | 'finalized';
 const INVOICING_SUBTABS: readonly InvoicingSubTab[] = ['generate', 'drafts', 'finalized'];
 
 const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
+  const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -47,14 +49,16 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Invoicing</h2>
+        <h2 className="text-2xl font-bold">
+          {t('hub.title', { defaultValue: 'Invoicing' })}
+        </h2>
       </div>
 
       <CustomTabs
         tabs={[
           {
             id: 'generate',
-            label: 'Generate',
+            label: t('hub.tabs.generate', { defaultValue: 'Generate' }),
             content: (
               <GenerateTab
                 initialServices={initialServices}
@@ -65,7 +69,7 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
           },
           {
             id: 'drafts',
-            label: 'Drafts',
+            label: t('hub.tabs.drafts', { defaultValue: 'Drafts' }),
             content: (
               <DraftsTab
                 onRefreshNeeded={handleRefreshData}
@@ -75,7 +79,7 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
           },
           {
             id: 'finalized',
-            label: 'Finalized',
+            label: t('hub.tabs.finalized', { defaultValue: 'Finalized' }),
             content: (
               <FinalizedTab
                 onRefreshNeeded={handleRefreshData}

@@ -46,7 +46,7 @@
     "titlePlaceholder": "Título del ticket",
     "descriptionPlaceholder": "Describe tu problema...",
     "priorityPlaceholder": "Seleccionar prioridad",
-    "noBoardsAvailable": "No ticket boards are available for your account. Contact your administrator.",
+    "noBoardsAvailable": "No hay tableros de tickets disponibles para su cuenta. Contacte con su administrador.",
     "submit": "Crear ticket",
     "submitting": "Creando...",
     "errors": {
@@ -634,7 +634,7 @@
     "contactInfo": "Información de contacto",
     "noContactSelected": "Ningún contacto seleccionado",
     "selectOrChangeContact": "Seleccionar o cambiar contacto",
-    "notAvailable": "N/A",
+    "notAvailable": "N/D",
     "noLocationSpecified": "Sin ubicación especificada",
     "noSpecificLocation": "Sin ubicación específica",
     "defaultSuffix": "(Predeterminado)",

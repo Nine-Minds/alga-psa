@@ -586,7 +586,7 @@
         "rateType": {
           "monthly": "Mensuel",
           "perHour": "Par heure",
-          "usage": "Usage",
+          "usage": "Utilisation",
           "rate": "Taux"
         }
       },
@@ -658,7 +658,7 @@
       "search": "Recherche",
       "edit": "Modifier",
       "restore": "Restaurer",
-      "archive": "Archive",
+      "archive": "Archiver",
       "delete": "Supprimer"
     },
     "filters": {
@@ -738,7 +738,7 @@
         "rateType": {
           "monthly": "Mensuel",
           "perHour": "Par heure",
-          "usage": "Usage",
+          "usage": "Utilisation",
           "rate": "Taux"
         }
       },
@@ -1005,7 +1005,7 @@
       "fixed": "Fixé",
       "fixedFee": "Frais fixes",
       "hourly": "Horaire",
-      "usage": "Usage",
+      "usage": "Utilisation",
       "usageBased": "Basé sur l'utilisation"
     },
     "licenseTerm": {

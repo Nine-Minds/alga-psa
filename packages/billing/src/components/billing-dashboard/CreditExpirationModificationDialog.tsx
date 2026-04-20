@@ -5,11 +5,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter } from '@alga-ps
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
-import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ICreditTracking } from '@alga-psa/types';
 import { formatCurrency } from '@alga-psa/core';
-import { toPlainDate, toISODate, formatDateOnly } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core';
 import { Temporal } from '@js-temporal/polyfill';
 
 interface CreditExpirationModificationDialogProps {
@@ -25,6 +25,7 @@ const CreditExpirationModificationDialog: React.FC<CreditExpirationModificationD
   credit,
   onSave
 }) => {
+  const { t } = useTranslation('msp/credits');
   const [expirationDate, setExpirationDate] = useState<string>('');
   const [removeExpiration, setRemoveExpiration] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -63,7 +64,7 @@ const CreditExpirationModificationDialog: React.FC<CreditExpirationModificationD
         const today = Temporal.Now.plainDateISO();
         
         if (Temporal.PlainDate.compare(selectedDate, today) < 0) {
-          setError('Expiration date cannot be in the past');
+          setError(t('expirationDialog.pastDateError', { defaultValue: 'Expiration date cannot be in the past' }));
           setIsSubmitting(false);
           return;
         }
@@ -72,7 +73,10 @@ const CreditExpirationModificationDialog: React.FC<CreditExpirationModificationD
       await onSave(credit.credit_id, newExpirationDate);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred while updating the expiration date');
+      console.error('Error updating credit expiration:', err);
+      setError(t('expirationDialog.updateError', {
+        defaultValue: 'An error occurred while updating the expiration date',
+      }));
     } finally {
       setIsSubmitting(false);
     }
@@ -84,32 +88,40 @@ const CreditExpirationModificationDialog: React.FC<CreditExpirationModificationD
     <Dialog
       isOpen={isOpen} 
       onClose={onClose} 
-      title="Modify Credit Expiration">
+      title={t('expirationDialog.title', { defaultValue: 'Modify Credit Expiration' })}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogDescription>
-          Update the expiration date for this credit.
+          {t('expirationDialog.description', { defaultValue: 'Update the expiration date for this credit.' })}
         </DialogDescription>
         
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="font-medium">Credit Amount:</span>
+              <span className="font-medium">
+                {t('expirationDialog.creditAmount', { defaultValue: 'Credit Amount:' })}
+              </span>
               <span>{formatCurrency(credit.amount)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="font-medium">Remaining Amount:</span>
+              <span className="font-medium">
+                {t('expirationDialog.remainingAmount', { defaultValue: 'Remaining Amount:' })}
+              </span>
               <span>{formatCurrency(credit.remaining_amount)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="font-medium">Created:</span>
+              <span className="font-medium">
+                {t('expirationDialog.created', { defaultValue: 'Created:' })}
+              </span>
               <span>{new Date(credit.created_at).toLocaleDateString()}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="font-medium">Current Expiration:</span>
+              <span className="font-medium">
+                {t('expirationDialog.currentExpiration', { defaultValue: 'Current Expiration:' })}
+              </span>
               <span>
                 {credit.expiration_date 
                   ? new Date(credit.expiration_date).toLocaleDateString()
-                  : 'No expiration'}
+                  : t('expirationDialog.noExpiration', { defaultValue: 'No expiration' })}
               </span>
             </div>
           </div>
@@ -122,13 +134,15 @@ const CreditExpirationModificationDialog: React.FC<CreditExpirationModificationD
                 onCheckedChange={setRemoveExpiration}
               />
               <Label htmlFor="remove-expiration-switch" className="switch-label">
-                Remove expiration date
+                {t('expirationDialog.removeExpiration', { defaultValue: 'Remove expiration date' })}
               </Label>
             </div>
             
             {!removeExpiration && (
               <div className="space-y-1">
-                <Label htmlFor="expiration-date">New Expiration Date</Label>
+                <Label htmlFor="expiration-date">
+                  {t('expirationDialog.newExpirationDate', { defaultValue: 'New Expiration Date' })}
+                </Label>
                 <Input
                   id="expiration-date"
                   type="date"
@@ -154,14 +168,16 @@ const CreditExpirationModificationDialog: React.FC<CreditExpirationModificationD
               onClick={onClose}
               disabled={isSubmitting}
             >
-              Cancel
+              {t('actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               id="save-button"
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Saving...' : 'Save Changes'}
+              {isSubmitting
+                ? t('actions.saving', { defaultValue: 'Saving...' })
+                : t('actions.saveChanges', { defaultValue: 'Save Changes' })}
             </Button>
           </DialogFooter>
         </form>

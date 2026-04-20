@@ -27,7 +27,7 @@
       "active": "Activo",
       "inactive": "Inactivo",
       "loading": "Cargando...",
-      "na": "N/A",
+      "na": "N/D",
       "none": "Ninguno"
     },
     "no": "No",
@@ -738,7 +738,7 @@
     "createDrawerTitle": "Crear nueva tasa impositiva",
     "loadingTaxDetails": "Cargando detalles de impuestos...",
     "loadTaxRegionsError": "No se pudieron cargar las regiones fiscales.",
-    "na": "N/A",
+    "na": "N/D",
     "noDefaultAssigned": "No se ha asignado ningún tipo impositivo predeterminado.",
     "noDescription": "Sin descripción",
     "saving": "Guardando...",

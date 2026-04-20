@@ -281,7 +281,7 @@
       "status": "Status",
       "created": "Utworzono",
       "updated": "Zaktualizowano",
-      "tenant": "Tenant"
+      "tenant": "Dzierżawca"
     },
     "typeDetails": {
       "workstation": "Szczegóły stacji roboczej",
@@ -305,7 +305,7 @@
       "virtualized": "Zwirtualizowany",
       "primaryIp": "Podstawowy adres IP",
       "hypervisor": "Hiperwizor",
-      "os": "OS",
+      "os": "System operacyjny",
       "model": "Model",
       "imei": "IMEI",
       "phoneNumber": "Numer telefonu",

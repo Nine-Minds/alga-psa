@@ -253,7 +253,7 @@ export function calculateDraftQuoteTotals(items: DraftQuoteItem[]): DraftQuoteTo
 }
 
 export function formatDraftQuoteMoney(minorUnits: number, currencyCode: string): string {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency: currencyCode,
   }).format((minorUnits || 0) / 100);

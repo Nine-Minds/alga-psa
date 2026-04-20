@@ -9,16 +9,19 @@ import {
   repairMissingRecurringServicePeriods,
   type PreviewRecurringServicePeriodRegenerationInput,
   type RepairRecurringServicePeriodMaterializationResult,
-  type RecurringServicePeriodScheduleSummary,
   type RecurringServicePeriodManagementView,
+  type RecurringServicePeriodScheduleSummary,
 } from '@alga-psa/billing/actions/recurringServicePeriodActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ManagementViewResult = RecurringServicePeriodManagementView | ActionPermissionError;
 type RegenerationPreviewResult =
   | Awaited<ReturnType<typeof previewRecurringServicePeriodRegeneration>>
   | null;
 type RepairResult = RepairRecurringServicePeriodMaterializationResult | null;
+type ManagementRow = RecurringServicePeriodManagementView['rows'][number];
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 function isPermissionError(value: unknown): value is ActionPermissionError {
   return Boolean(
@@ -28,14 +31,99 @@ function isPermissionError(value: unknown): value is ActionPermissionError {
   );
 }
 
-function formatRange(start: string, end: string) {
-  return `${start} to ${end}`;
+function formatRange(start: string, end: string, t: TranslateFn) {
+  return t('recurringServicePeriods.values.range', {
+    start,
+    end,
+    defaultValue: '{{start}} to {{end}}',
+  });
 }
 
-function allowedGovernanceActions(view: RecurringServicePeriodManagementView['rows'][number]) {
+function allowedGovernanceActions(view: ManagementRow) {
   return view.governance
     .filter((requirement) => requirement.allowed)
-    .map((requirement) => requirement.action.replaceAll('_', ' '));
+    .map((requirement) => requirement.action);
+}
+
+function translateCadenceOwner(
+  cadenceOwner: RecurringServicePeriodScheduleSummary['cadenceOwner'],
+  t: TranslateFn,
+) {
+  return cadenceOwner === 'contract'
+    ? t('recurringServicePeriods.values.contractAnniversary', {
+      defaultValue: 'Contract anniversary',
+    })
+    : t('recurringServicePeriods.values.clientSchedule', {
+      defaultValue: 'Client schedule',
+    });
+}
+
+function translateDuePosition(
+  duePosition: RecurringServicePeriodScheduleSummary['duePosition'],
+  t: TranslateFn,
+) {
+  return duePosition === 'advance'
+    ? t('recurringServicePeriods.values.advance', { defaultValue: 'Advance' })
+    : t('recurringServicePeriods.values.arrears', { defaultValue: 'Arrears' });
+}
+
+function translateDisplayStateLabel(row: ManagementRow, t: TranslateFn) {
+  return t(`recurringServicePeriods.displayStates.${row.record.lifecycleState}.label`, {
+    defaultValue: row.displayState.label,
+  });
+}
+
+function translateDisplayStateDetail(row: ManagementRow, t: TranslateFn) {
+  if (row.record.lifecycleState === 'billed') {
+    const invoiceChargeDetailId = row.record.invoiceLinkage?.invoiceChargeDetailId;
+
+    return invoiceChargeDetailId
+      ? t('recurringServicePeriods.displayStates.billed.detailLinked', {
+        invoiceChargeDetailId,
+        defaultValue: `Linked to invoice detail ${invoiceChargeDetailId}.`,
+      })
+      : t('recurringServicePeriods.displayStates.billed.detailUnlinked', {
+        defaultValue: 'Linked to billed history.',
+      });
+  }
+
+  return t(`recurringServicePeriods.displayStates.${row.record.lifecycleState}.detail`, {
+    defaultValue: row.displayState.detail,
+  });
+}
+
+function translateReasonCode(
+  reasonCode: string | null | undefined,
+  fallbackLabel: string | null | undefined,
+  t: TranslateFn,
+) {
+  if (!reasonCode) {
+    return t('recurringServicePeriods.values.generatedFromSourceCadence', {
+      defaultValue: fallbackLabel ?? 'Generated from source cadence',
+    });
+  }
+
+  return t(`recurringServicePeriods.provenanceReasons.${reasonCode}`, {
+    defaultValue: fallbackLabel ?? reasonCode.replaceAll('_', ' '),
+  });
+}
+
+function translateGovernanceAction(action: string, t: TranslateFn) {
+  return t(`recurringServicePeriods.governanceActions.${action}`, {
+    defaultValue: action.replaceAll('_', ' '),
+  });
+}
+
+function translateConflictKind(kind: string, t: TranslateFn) {
+  return t(`recurringServicePeriods.conflicts.kinds.${kind}`, {
+    defaultValue: kind.replaceAll('_', ' '),
+  });
+}
+
+function translateConflictReason(kind: string, reason: string, t: TranslateFn) {
+  return t(`recurringServicePeriods.conflicts.reasons.${kind}`, {
+    defaultValue: reason,
+  });
 }
 
 interface RecurringServicePeriodsTabProps {
@@ -45,6 +133,7 @@ interface RecurringServicePeriodsTabProps {
 const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
   initialScheduleKey,
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   const [scheduleOptions, setScheduleOptions] = useState<RecurringServicePeriodScheduleSummary[]>([]);
   const [selectedScheduleKey, setSelectedScheduleKey] = useState<string>('');
   const [scheduleKeyInput, setScheduleKeyInput] = useState(initialScheduleKey ?? '');
@@ -63,7 +152,9 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
   ) => {
     const normalized = targetScheduleKey.trim();
     if (!normalized) {
-      setError('Enter a schedule key to inspect recurring service periods.');
+      setError(t('recurringServicePeriods.errors.enterScheduleKey', {
+        defaultValue: 'Enter a schedule key to inspect recurring service periods.',
+      }));
       setView(null);
       return;
     }
@@ -88,7 +179,13 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
       setSelectedScheduleKey(result.scheduleKey);
     } catch (loadError) {
       setView(null);
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load recurring service periods.');
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : t('recurringServicePeriods.errors.loadFailed', {
+            defaultValue: 'Failed to load recurring service periods.',
+          }),
+      );
     } finally {
       setLoading(false);
     }
@@ -132,11 +229,19 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
   }, [view]);
 
   const formatScheduleOptionLabel = (option: RecurringServicePeriodScheduleSummary) => {
-    const cadenceLabel = option.cadenceOwner === 'contract' ? 'Contract anniversary' : 'Client schedule';
-    const timingLabel = option.duePosition === 'advance' ? 'Advance' : 'Arrears';
+    const cadenceLabel = translateCadenceOwner(option.cadenceOwner, t);
+    const timingLabel = translateDuePosition(option.duePosition, t);
     const entityLabel = option.contractLineName ?? option.contractName ?? option.obligationId;
 
-    return `${option.clientName ?? 'Unknown client'} · ${entityLabel} · ${cadenceLabel} · ${timingLabel}`;
+    return t('recurringServicePeriods.values.scheduleOptionLabel', {
+      client: option.clientName ?? t('recurringServicePeriods.values.unknownClient', {
+        defaultValue: 'Unknown client',
+      }),
+      entity: entityLabel,
+      cadence: cadenceLabel,
+      timing: timingLabel,
+      defaultValue: '{{client}} · {{entity}} · {{cadence}} · {{timing}}',
+    });
   };
 
   const handlePreviewRegeneration = async () => {
@@ -150,7 +255,9 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
     try {
       const parsed = JSON.parse(candidateRecordsJson);
       if (!Array.isArray(parsed)) {
-        throw new Error('Candidate records JSON must be an array.');
+        throw new Error(t('recurringServicePeriods.errors.candidateRecordsArray', {
+          defaultValue: 'Candidate records JSON must be an array.',
+        }));
       }
 
       const input: PreviewRecurringServicePeriodRegenerationInput = {
@@ -171,7 +278,9 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
       setError(
         previewError instanceof Error
           ? previewError.message
-          : 'Failed to preview recurring service-period regeneration.',
+          : t('recurringServicePeriods.errors.previewFailed', {
+            defaultValue: 'Failed to preview recurring service-period regeneration.',
+          }),
       );
     } finally {
       setPreviewLoading(false);
@@ -199,7 +308,9 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
       setError(
         repairError instanceof Error
           ? repairError.message
-          : 'Failed to repair recurring service-period materialization.',
+          : t('recurringServicePeriods.errors.repairFailed', {
+            defaultValue: 'Failed to repair recurring service-period materialization.',
+          }),
       );
     } finally {
       setRepairLoading(false);
@@ -209,16 +320,23 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
   return (
     <div className="space-y-6" data-testid="recurring-service-periods-tab">
       <div className="space-y-2">
-        <h2 className="text-2xl font-semibold">Recurring Service Periods</h2>
+        <h2 className="text-2xl font-semibold">
+          {t('recurringServicePeriods.title', {
+            defaultValue: 'Recurring Service Periods',
+          })}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Review recurring invoice coverage windows for a client contract line, troubleshoot why work is or is not
-          due, and inspect billed history linked to invoice detail rows.
+          {t('recurringServicePeriods.description', {
+            defaultValue: 'Review recurring invoice coverage windows for a client contract line, troubleshoot why work is or is not due, and inspect billed history linked to invoice detail rows.',
+          })}
         </p>
       </div>
 
       <div className="rounded-lg border p-4 space-y-3">
         <label className="block text-sm font-medium">
-          Choose a Schedule
+          {t('recurringServicePeriods.fields.scheduleSelect', {
+            defaultValue: 'Choose a Schedule',
+          })}
           <CustomSelect
             value={selectedScheduleKey}
             onValueChange={(value: string) => {
@@ -226,7 +344,12 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
               setScheduleKeyInput(value);
             }}
             options={[
-              { value: '', label: 'Select a recent recurring schedule' },
+              {
+                value: '',
+                label: t('recurringServicePeriods.fields.scheduleSelectPlaceholder', {
+                  defaultValue: 'Select a recent recurring schedule',
+                }),
+              },
               ...scheduleOptions.map((option) => ({
                 value: option.scheduleKey,
                 label: formatScheduleOptionLabel(option),
@@ -237,12 +360,16 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
         </label>
         <div className="flex flex-col gap-2 md:flex-row md:items-end">
           <label className="flex-1 text-sm font-medium">
-            Schedule Key
+            {t('recurringServicePeriods.fields.scheduleKey', {
+              defaultValue: 'Schedule Key',
+            })}
             <input
               className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
               value={scheduleKeyInput}
               onChange={(event) => setScheduleKeyInput(event.target.value)}
-              placeholder="Paste a schedule key (optional if selected above)"
+              placeholder={t('recurringServicePeriods.fields.scheduleKeyPlaceholder', {
+                defaultValue: 'Paste a schedule key (optional if selected above)',
+              })}
             />
           </label>
           <button
@@ -255,7 +382,13 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
             }}
             disabled={loading}
           >
-            {loading ? 'Loading…' : 'Open Schedule'}
+            {loading
+              ? t('recurringServicePeriods.actions.loadingSchedule', {
+                defaultValue: 'Loading…',
+              })
+              : t('recurringServicePeriods.actions.openSchedule', {
+                defaultValue: 'Open Schedule',
+              })}
           </button>
         </div>
         {error ? (
@@ -268,23 +401,56 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
       {view ? (
         <>
           <div className="rounded-lg border p-4 space-y-2">
-            <div className="text-sm text-muted-foreground">Recurring Obligation</div>
+            <div className="text-sm text-muted-foreground">
+              {t('recurringServicePeriods.labels.recurringObligation', {
+                defaultValue: 'Recurring Obligation',
+              })}
+            </div>
             <div className="text-lg font-semibold">{contextLabel}</div>
             <div className="grid gap-2 text-sm md:grid-cols-3">
               <div>
-                <span className="font-medium">Client:</span> {view.clientName ?? 'Not linked'}
+                <span className="font-medium">
+                  {t('recurringServicePeriods.fields.client', { defaultValue: 'Client' })}:
+                </span>{' '}
+                {view.clientName ?? t('recurringServicePeriods.values.notLinked', {
+                  defaultValue: 'Not linked',
+                })}
               </div>
               <div>
-                <span className="font-medium">Cadence source:</span> {view.cadenceOwner === 'contract' ? 'Contract anniversary' : 'Client schedule'}
+                <span className="font-medium">
+                  {t('recurringServicePeriods.fields.cadenceSource', {
+                    defaultValue: 'Cadence source',
+                  })}
+                  :
+                </span>{' '}
+                {translateCadenceOwner(view.cadenceOwner, t)}
               </div>
               <div>
-                <span className="font-medium">Billing timing:</span> {view.duePosition === 'advance' ? 'Advance' : 'Arrears'}
+                <span className="font-medium">
+                  {t('recurringServicePeriods.fields.billingTiming', {
+                    defaultValue: 'Billing timing',
+                  })}
+                  :
+                </span>{' '}
+                {translateDuePosition(view.duePosition, t)}
               </div>
               <div>
-                <span className="font-medium">Charge family:</span> {view.chargeFamily}
+                <span className="font-medium">
+                  {t('recurringServicePeriods.fields.chargeFamily', {
+                    defaultValue: 'Charge family',
+                  })}
+                  :
+                </span>{' '}
+                {view.chargeFamily}
               </div>
               <div className="md:col-span-3 break-all">
-                <span className="font-medium">Schedule key:</span> {view.scheduleKey}
+                <span className="font-medium">
+                  {t('recurringServicePeriods.fields.scheduleKeyLabel', {
+                    defaultValue: 'Schedule key',
+                  })}
+                  :
+                </span>{' '}
+                {view.scheduleKey}
               </div>
             </div>
           </div>
@@ -294,11 +460,19 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
               className="rounded-lg border border-success/30 bg-success/5 p-4 space-y-2"
               data-testid="repair-result"
             >
-              <div className="text-sm font-medium">Repair completed</div>
+              <div className="text-sm font-medium">
+                {t('recurringServicePeriods.labels.repairCompleted', {
+                  defaultValue: 'Repair completed',
+                })}
+              </div>
               <div className="text-sm text-muted-foreground">
-                Backfilled {repairResult.backfilledRows} rows, realigned {repairResult.realignedRows}, skipped{' '}
-                {repairResult.skippedHistoricalCandidates} historical candidates, and left{' '}
-                {repairResult.activeRows} active rows on this schedule.
+                {t('recurringServicePeriods.repairPanel.result', {
+                  backfilled: repairResult.backfilledRows,
+                  realigned: repairResult.realignedRows,
+                  skipped: repairResult.skippedHistoricalCandidates,
+                  active: repairResult.activeRows,
+                  defaultValue: 'Backfilled {{backfilled}} rows, realigned {{realigned}}, skipped {{skipped}} historical candidates, and left {{active}} active rows on this schedule.',
+                })}
               </div>
             </div>
           ) : null}
@@ -309,11 +483,15 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
               data-testid="recurring-service-period-repair-state"
             >
               <div>
-                <h3 className="text-lg font-semibold">Missing persisted service periods</h3>
+                <h3 className="text-lg font-semibold">
+                  {t('recurringServicePeriods.repairPanel.title', {
+                    defaultValue: 'Missing persisted service periods',
+                  })}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  This recurring schedule exists in live billing metadata but has no persisted service-period rows.
-                  Repair will materialize future rows only, preserve billed history boundaries, and stamp the new
-                  records with backfill provenance.
+                  {t('recurringServicePeriods.repairPanel.description', {
+                    defaultValue: 'This recurring schedule exists in live billing metadata but has no persisted service-period rows. Repair will materialize future rows only, preserve billed history boundaries, and stamp the new records with backfill provenance.',
+                  })}
                 </p>
               </div>
               <button
@@ -326,26 +504,48 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
                 }}
                 disabled={repairLoading}
               >
-                {repairLoading ? 'Repairing…' : 'Repair Missing Service Periods'}
+                {repairLoading
+                  ? t('recurringServicePeriods.actions.repairing', {
+                    defaultValue: 'Repairing…',
+                  })
+                  : t('recurringServicePeriods.actions.repairMissing', {
+                    defaultValue: 'Repair Missing Service Periods',
+                  })}
               </button>
             </div>
           ) : (
             <>
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="rounded-lg border p-4">
-                  <div className="text-sm text-muted-foreground">Generated</div>
+                  <div className="text-sm text-muted-foreground">
+                    {t('recurringServicePeriods.labels.generated', {
+                      defaultValue: 'Generated',
+                    })}
+                  </div>
                   <div className="text-2xl font-semibold">{view.summary.generatedRows}</div>
                 </div>
                 <div className="rounded-lg border p-4">
-                  <div className="text-sm text-muted-foreground">Edited</div>
+                  <div className="text-sm text-muted-foreground">
+                    {t('recurringServicePeriods.labels.edited', {
+                      defaultValue: 'Edited',
+                    })}
+                  </div>
                   <div className="text-2xl font-semibold">{view.summary.editedRows}</div>
                 </div>
                 <div className="rounded-lg border p-4">
-                  <div className="text-sm text-muted-foreground">Billed</div>
+                  <div className="text-sm text-muted-foreground">
+                    {t('recurringServicePeriods.labels.billed', {
+                      defaultValue: 'Billed',
+                    })}
+                  </div>
                   <div className="text-2xl font-semibold">{view.summary.billedRows}</div>
                 </div>
                 <div className="rounded-lg border p-4">
-                  <div className="text-sm text-muted-foreground">Exceptions</div>
+                  <div className="text-sm text-muted-foreground">
+                    {t('recurringServicePeriods.labels.exceptions', {
+                      defaultValue: 'Exceptions',
+                    })}
+                  </div>
                   <div className="text-2xl font-semibold">{view.summary.exceptionRows}</div>
                 </div>
               </div>
@@ -354,25 +554,61 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
                 <table className="w-full text-sm" data-testid="recurring-service-periods-table">
                   <thead className="bg-muted/40 text-left">
                     <tr>
-                      <th className="px-4 py-3 font-medium">State</th>
-                      <th className="px-4 py-3 font-medium">Service Period</th>
-                      <th className="px-4 py-3 font-medium">Invoice Window</th>
-                      <th className="px-4 py-3 font-medium">Revision</th>
-                      <th className="px-4 py-3 font-medium">Reason</th>
-                      <th className="px-4 py-3 font-medium">Allowed Actions</th>
+                      <th className="px-4 py-3 font-medium">
+                        {t('recurringServicePeriods.table.columns.state', {
+                          defaultValue: 'State',
+                        })}
+                      </th>
+                      <th className="px-4 py-3 font-medium">
+                        {t('recurringServicePeriods.table.columns.servicePeriod', {
+                          defaultValue: 'Service Period',
+                        })}
+                      </th>
+                      <th className="px-4 py-3 font-medium">
+                        {t('recurringServicePeriods.table.columns.invoiceWindow', {
+                          defaultValue: 'Invoice Window',
+                        })}
+                      </th>
+                      <th className="px-4 py-3 font-medium">
+                        {t('recurringServicePeriods.table.columns.revision', {
+                          defaultValue: 'Revision',
+                        })}
+                      </th>
+                      <th className="px-4 py-3 font-medium">
+                        {t('recurringServicePeriods.table.columns.reason', {
+                          defaultValue: 'Reason',
+                        })}
+                      </th>
+                      <th className="px-4 py-3 font-medium">
+                        {t('recurringServicePeriods.table.columns.allowedActions', {
+                          defaultValue: 'Allowed Actions',
+                        })}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {view.rows.map((row) => (
                       <tr key={row.record.recordId} className="border-t align-top">
                         <td className="px-4 py-3">
-                          <div className="font-medium">{row.displayState.label}</div>
-                          <div className="text-xs text-muted-foreground">{row.displayState.detail}</div>
+                          <div className="font-medium">{translateDisplayStateLabel(row, t)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {translateDisplayStateDetail(row, t)}
+                          </div>
                         </td>
-                        <td className="px-4 py-3">{formatRange(row.record.servicePeriod.start, row.record.servicePeriod.end)}</td>
-                        <td className="px-4 py-3">{formatRange(row.record.invoiceWindow.start, row.record.invoiceWindow.end)}</td>
+                        <td className="px-4 py-3">
+                          {formatRange(row.record.servicePeriod.start, row.record.servicePeriod.end, t)}
+                        </td>
+                        <td className="px-4 py-3">
+                          {formatRange(row.record.invoiceWindow.start, row.record.invoiceWindow.end, t)}
+                        </td>
                         <td className="px-4 py-3">r{row.record.revision}</td>
-                        <td className="px-4 py-3">{row.displayState.reasonLabel ?? 'Generated from source cadence'}</td>
+                        <td className="px-4 py-3">
+                          {translateReasonCode(
+                            row.record.provenance.reasonCode,
+                            row.displayState.reasonLabel,
+                            t,
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-1">
                             {allowedGovernanceActions(row).map((action) => (
@@ -380,7 +616,7 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
                                 key={`${row.record.recordId}:${action}`}
                                 className="rounded-full border px-2 py-0.5 text-xs"
                               >
-                                {action}
+                                {translateGovernanceAction(action, t)}
                               </span>
                             ))}
                           </div>
@@ -393,14 +629,21 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
 
               <div className="rounded-lg border p-4 space-y-3">
                 <div>
-                  <h3 className="text-lg font-semibold">Regeneration Preview</h3>
+                  <h3 className="text-lg font-semibold">
+                    {t('recurringServicePeriods.regenerationPreview.title', {
+                      defaultValue: 'Regeneration Preview',
+                    })}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    Paste candidate records JSON to preview how preserved edited or billed rows would conflict with
-                    regenerated future candidates for this schedule.
+                    {t('recurringServicePeriods.regenerationPreview.description', {
+                      defaultValue: 'Paste candidate records JSON to preview how preserved edited or billed rows would conflict with regenerated future candidates for this schedule.',
+                    })}
                   </p>
                 </div>
                 <label className="block text-sm font-medium">
-                  Candidate Records JSON
+                  {t('recurringServicePeriods.labels.candidateRecordsJson', {
+                    defaultValue: 'Candidate Records JSON',
+                  })}
                   <textarea
                     className="mt-1 min-h-40 w-full rounded-md border px-3 py-2 font-mono text-xs"
                     value={candidateRecordsJson}
@@ -417,13 +660,22 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
                   }}
                   disabled={previewLoading}
                 >
-                  {previewLoading ? 'Previewing…' : 'Preview Regeneration'}
+                  {previewLoading
+                    ? t('recurringServicePeriods.actions.previewing', {
+                      defaultValue: 'Previewing…',
+                    })
+                    : t('recurringServicePeriods.actions.previewRegeneration', {
+                      defaultValue: 'Preview Regeneration',
+                    })}
                 </button>
 
                 {regenerationPreview && !isPermissionError(regenerationPreview) ? (
                   <div className="space-y-2" data-testid="regeneration-preview">
                     <div className="text-sm">
-                      Conflicts: <span className="font-semibold">{regenerationPreview.conflicts.length}</span>
+                      {t('recurringServicePeriods.labels.conflicts', {
+                        defaultValue: 'Conflicts',
+                      })}
+                      : <span className="font-semibold">{regenerationPreview.conflicts.length}</span>
                     </div>
                     {regenerationPreview.conflicts.length > 0 ? (
                       <ul className="space-y-2 text-sm">
@@ -433,15 +685,19 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
                             className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2"
                           >
                             <div className="font-medium">
-                              {conflict.kind.replaceAll('_', ' ')}: {conflict.recordId}
+                              {translateConflictKind(conflict.kind, t)}: {conflict.recordId}
                             </div>
-                            <div className="text-muted-foreground">{conflict.reason}</div>
+                            <div className="text-muted-foreground">
+                              {translateConflictReason(conflict.kind, conflict.reason, t)}
+                            </div>
                           </li>
                         ))}
                       </ul>
                     ) : (
                       <div className="rounded-md border border-success/30 bg-success/5 px-3 py-2 text-sm">
-                        No regeneration conflicts were detected for the supplied candidates.
+                        {t('recurringServicePeriods.values.noConflicts', {
+                          defaultValue: 'No regeneration conflicts were detected for the supplied candidates.',
+                        })}
                       </div>
                     )}
                   </div>

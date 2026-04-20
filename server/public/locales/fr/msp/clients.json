@@ -27,7 +27,7 @@
       "active": "Actif",
       "inactive": "Inactif",
       "loading": "Chargement...",
-      "na": "N/A",
+      "na": "S/O",
       "none": "Aucun"
     },
     "no": "Non",
@@ -327,7 +327,7 @@
     "deliveryMethods": {
       "both": "Les deux",
       "email": "E-mail",
-      "mail": "Mail"
+      "mail": "Courrier"
     },
     "paymentMethods": {
       "bankTransfer": "Virement bancaire",
@@ -724,7 +724,7 @@
     "createNewRate": "Créer un nouveau taux de taxe",
     "selectAssign": "Sélectionnez le taux de taxe à attribuer",
     "selectChange": "Sélectionnez un nouveau taux par défaut",
-    "description": "Description:",
+    "description": "Description :",
     "region": "Région:",
     "taxPercentage": "Pourcentage d'impôt :",
     "noDefaultRate": "Aucun taux de taxe par défaut attribué.",
@@ -738,7 +738,7 @@
     "createDrawerTitle": "Créer un nouveau taux de taxe",
     "loadingTaxDetails": "Chargement des détails fiscaux...",
     "loadTaxRegionsError": "Échec du chargement des régions fiscales.",
-    "na": "N/A",
+    "na": "S/O",
     "noDefaultAssigned": "Aucun taux de taxe par défaut attribué.",
     "noDescription": "Aucune description",
     "saving": "Enregistrement...",

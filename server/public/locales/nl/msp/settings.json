@@ -16,7 +16,7 @@
     "timeEntry": "Tijdregistratie",
     "billing": "Facturatie",
     "secrets": "Geheimen",
-    "importExport": "Import/Export",
+    "importExport": "Importeren/Exporteren",
     "email": "E-mail",
     "integrations": "Integraties",
     "extensions": "Extensies"
@@ -417,7 +417,7 @@
       },
       "statusLabels": {
         "closed": "Gesloten",
-        "open": "Open",
+        "open": "Openen",
         "closedHelp": "Tickets met deze status worden als gesloten gemarkeerd",
         "openHelp": "Tickets met deze status blijven open",
         "defaultHelp": "Standaardstatus voor nieuwe tickets vanuit het klantenportaal"
@@ -744,7 +744,7 @@
       "openTickets": "Open tickets",
       "activeProjects": "Actieve projecten",
       "invoices": "Facturen",
-      "urgent": "{{count}} urgent",
+      "urgent": "{{count}} dringend",
       "nearDeadline": "{{count}} bijna op deadline",
       "dueThisMonth": "Verschuldigd deze maand",
       "recentActivity": "Recente activiteit",
@@ -1081,7 +1081,7 @@
     "tabs": {
       "roles": "Rollen",
       "sessions": "Sessies",
-      "sso": "Single Sign-On",
+      "sso": "Single sign-on",
       "permissions": "Machtigingen",
       "userRoles": "Gebruikersrollen",
       "policies": "Beleidsregels",
@@ -1181,7 +1181,7 @@
     "tabs": {
       "profile": "Profiel",
       "security": "Beveiliging",
-      "sso": "Single Sign-On",
+      "sso": "Single sign-on",
       "apiKeys": "API-sleutels",
       "notifications": "Meldingen",
       "calendar": "Agenda"

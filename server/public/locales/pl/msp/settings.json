@@ -1081,7 +1081,7 @@
     "tabs": {
       "roles": "Role",
       "sessions": "Sesje",
-      "sso": "Single Sign-On",
+      "sso": "Pojedyncze logowanie",
       "permissions": "Uprawnienia",
       "userRoles": "Role użytkowników",
       "policies": "Zasady",
@@ -1181,7 +1181,7 @@
     "tabs": {
       "profile": "Profil",
       "security": "Bezpieczeństwo",
-      "sso": "Single Sign-On",
+      "sso": "Pojedyncze logowanie",
       "apiKeys": "Klucze API",
       "notifications": "Powiadomienia",
       "calendar": "Kalendarz"

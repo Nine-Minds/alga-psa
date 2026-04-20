@@ -1,0 +1,199 @@
+{
+  "profile": {
+    "pageTitle": "Your Profile",
+    "tabs": {
+      "profile": "Profile",
+      "security": "Security",
+      "sso": "Single Sign-On",
+      "apiKeys": "API Keys",
+      "notifications": "Notifications",
+      "calendar": "Calendar"
+    },
+    "basicInfo": {
+      "title": "Basic Information"
+    },
+    "fields": {
+      "firstName": {
+        "label": "First Name *"
+      },
+      "lastName": {
+        "label": "Last Name *"
+      },
+      "email": {
+        "label": "Email *"
+      },
+      "phoneNumber": {
+        "label": "Phone Number"
+      },
+      "timeZone": {
+        "label": "Time Zone"
+      }
+    },
+    "actions": {
+      "saveChanges": "Save Changes"
+    },
+    "notifications": {
+      "title": "Notification Preferences",
+      "viewSwitcher": {
+        "email": "Email",
+        "internal": "Internal"
+      }
+    },
+    "loading": "Loading profile...",
+    "messages": {
+      "success": {
+        "profileUpdated": "Profile updated successfully"
+      },
+      "error": {
+        "userNotFound": "User not found",
+        "fillRequiredFields": "Please fill in all required fields",
+        "loadFailed": "Failed to load profile",
+        "saveFailed": "Failed to save profile",
+        "errorPrefix": "Error: {{error}}"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "First name is required",
+      "lastNameRequired": "Last name is required"
+    },
+    "changePassword": {
+      "title": "Change Password",
+      "current": "Current Password",
+      "new": "New Password",
+      "confirm": "Confirm New Password",
+      "validationFailed": "Password does not meet all requirements",
+      "requirements": "Password must be at least 8 characters",
+      "submit": "Change Password",
+      "success": "Password changed successfully",
+      "error": "Failed to change password",
+      "passwordMismatch": "New passwords do not match",
+      "unknownError": "An error occurred while changing password"
+    },
+    "loadingStates": {
+      "sso": {
+        "title": "Single Sign-On",
+        "description": "Loading SSO settings..."
+      },
+      "calendar": {
+        "title": "Calendar",
+        "description": "Loading calendar settings..."
+      }
+    }
+  },
+  "security": {
+    "title": "Security Settings",
+    "tabs": {
+      "roles": "Roles",
+      "sessions": "Sessions",
+      "sso": "Single Sign-On",
+      "permissions": "Permissions",
+      "userRoles": "User Roles",
+      "policies": "Policies",
+      "apiKeys": "API Keys"
+    },
+    "loading": {
+      "roles": "Loading role configuration...",
+      "permissions": "Loading permissions configuration...",
+      "userRoles": "Loading user role configuration...",
+      "policies": "Loading policy configuration...",
+      "apiKeys": "Loading API key configuration...",
+      "sso": "Loading SSO management tools...",
+      "sessions": "Loading active sessions..."
+    },
+    "userRoles": {
+      "title": "Assign Roles to Users",
+      "description": {
+        "msp": "Manage user role assignments for MSP users",
+        "client": "Manage user role assignments for Client Portal users"
+      },
+      "viewSwitcher": {
+        "msp": "MSP",
+        "clientPortal": "Client Portal"
+      },
+      "showInactive": "Show Inactive Users",
+      "fields": {
+        "selectUser": "Select User",
+        "selectRole": "Select Role"
+      },
+      "actions": {
+        "assignRole": "Assign Role"
+      },
+      "table": {
+        "user": "User",
+        "email": "Email",
+        "roles": "Roles",
+        "actions": "Actions"
+      },
+      "unnamedUser": "Unnamed User",
+      "noRolesAssigned": "No roles assigned",
+      "removeRole": "Remove {{role}}",
+      "emptyState": {
+        "noUsers": "No {{type}} users found",
+        "inactiveHidden": "(inactive users hidden)"
+      },
+      "inactiveTag": "(Inactive)"
+    },
+    "sessions": {
+      "title": "All User Sessions",
+      "subtitle": "{{sessionCount}} active session across {{userCount}} user",
+      "subtitle_plural": "{{sessionCount}} active sessions across {{userCount}} users",
+      "filters": {
+        "search": "Search",
+        "searchPlaceholder": "Search by name, email, device, or IP...",
+        "user": "User",
+        "allUsers": "All Users",
+        "loginMethod": "Login Method",
+        "allMethods": "All Methods",
+        "userType": "User Type",
+        "allTypes": "All Types",
+        "from": "From",
+        "to": "To",
+        "selectDate": "Select date",
+        "reset": "Reset"
+      },
+      "loginMethods": {
+        "password": "Password",
+        "google": "Google OAuth",
+        "microsoft": "Microsoft OAuth",
+        "keycloak": "Keycloak"
+      },
+      "userTypes": {
+        "internal": "Internal",
+        "client": "Client"
+      },
+      "session": {
+        "yourSession": "Your Session",
+        "unknownDevice": "Unknown Device",
+        "lastActive": "Last active {{time}}",
+        "logout": "Logout",
+        "revoke": "Revoke",
+        "revoking": "Revoking..."
+      },
+      "oauthWarning": "Revoking this session will not revoke {{provider}} OAuth access. Revoke access from your {{provider}} account settings.",
+      "confirmLogout": "Are you sure you want to logout from this device?",
+      "messages": {
+        "loadFailed": "Failed to load sessions",
+        "loggingOut": "Logging out...",
+        "revoked": "Session revoked successfully",
+        "revokeFailed": "Failed to revoke session"
+      },
+      "emptyState": {
+        "loading": "Loading sessions...",
+        "noMatch": "No sessions match your search",
+        "noSessions": "No active sessions found"
+      }
+    }
+  },
+  "platformUpdates": {
+    "detail": {
+      "back": "Back",
+      "labels": {
+        "info": "Info",
+        "warning": "Warning",
+        "destructive": "Critical",
+        "success": "Success",
+        "default": "Notice"
+      }
+    }
+  }
+}

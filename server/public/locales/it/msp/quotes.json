@@ -1,0 +1,757 @@
+{
+  "common": {
+    "actions": {
+      "approve": "Approvare",
+      "back": "Indietro",
+      "cancel": "Cancellare",
+      "close": "Vicino",
+      "clone": "Clona",
+      "convert": "Convertire",
+      "delete": "Eliminare",
+      "downloadPdf": "Scarica PDF",
+      "duplicate": "Duplicato",
+      "edit": "Modificare",
+      "editAsCopy": "Modifica come copia",
+      "newLayout": "Nuovo layout",
+      "newQuote": "Nuovo preventivo",
+      "newTemplate": "Nuovo modello",
+      "open": "Aprire",
+      "requestChanges": "Richiedi modifiche",
+      "resend": "Invia nuovamente",
+      "revise": "Rivedere",
+      "save": "Salva",
+      "saveQuote": "Salva preventivo",
+      "saveTemplate": "Salva modello",
+      "send": "Inviare",
+      "sendReminder": "Invia promemoria",
+      "sendToClient": "Invia al cliente",
+      "setAsDefault": "Imposta come predefinito",
+      "submitForApproval": "Invia per l'approvazione"
+    },
+    "badges": {
+      "standard": "Standard"
+    },
+    "columns": {
+      "actions": "Azioni",
+      "amount": "Quantità",
+      "client": "Cliente",
+      "created": "Creato",
+      "currency": "Valuta",
+      "date": "Data",
+      "default": "Predefinito",
+      "items": "Elementi",
+      "name": "Nome",
+      "quoteDate": "Data preventivo",
+      "quoteNumber": "N. preventivo",
+      "source": "Fonte",
+      "status": "Stato",
+      "title": "Titolo",
+      "total": "Totale",
+      "validUntil": "Valido fino al"
+    },
+    "labels": {
+      "client": "Cliente",
+      "contact": "Contatto",
+      "currency": "Valuta",
+      "description": "Descrizione/ambito",
+      "discounts": "Sconti",
+      "lineItems": "Elementi pubblicitari",
+      "poNumber": "Numero dell'ordine d'acquisto",
+      "quoteDate": "Data preventivo",
+      "quoteLayout": "Layout preventivo",
+      "subtotal": "Totale parziale",
+      "tax": "Tassare",
+      "termsAndConditions": "Termini e condizioni",
+      "title": "Titolo",
+      "total": "Totale",
+      "validUntil": "Valido fino al"
+    },
+    "states": {
+      "generating": "Generazione...",
+      "loading": "Caricamento...",
+      "saving": "Risparmio...",
+      "sending": "Invio..."
+    }
+  },
+  "quotesTab": {
+    "title": "Preventivi",
+    "actions": {
+      "quoteActions": "Azioni preventivo"
+    },
+    "tabs": {
+      "active": "Attivo ({{count}})",
+      "approval": "Coda di approvazione",
+      "closed": "Chiuso ({{count}})",
+      "sent": "Inviato ({{count}})"
+    },
+    "filters": {
+      "allClients": "Tutti i clienti",
+      "client": "Cliente"
+    },
+    "empty": {
+      "byCategory": "Nessun preventivo in questa categoria.",
+      "title": "Nessun preventivo trovato",
+      "description": "Crea un preventivo per iniziare."
+    },
+    "dialogs": {
+      "delete": {
+        "title": "Elimina preventivo",
+        "description": "Questa azione non può essere annullata."
+      },
+      "send": {
+        "additionalEmails": "Destinatari aggiuntivi",
+        "additionalEmailsPlaceholder": "email@example.com, another@example.com",
+        "additionalRecipients": "Destinatari aggiuntivi (separati da virgole)",
+        "description": "Il PDF del preventivo verrà inviato via email ai contatti di fatturazione del cliente e il suo stato cambierà in \"Inviato\".",
+        "message": "Messaggio",
+        "messageOptional": "Messaggio (facoltativo)",
+        "messagePlaceholder": "Aggiungi una nota personale per il destinatario...",
+        "title": "Invia preventivo"
+      }
+    },
+    "errors": {
+      "delete": "Impossibile eliminare il preventivo.",
+      "duplicate": "Impossibile duplicare il preventivo.",
+      "load": "Impossibile caricare le virgolette",
+      "send": "Impossibile inviare il preventivo."
+    },
+    "loading": "Caricamento preventivi...",
+    "rowActions": {
+      "delete": "Eliminare",
+      "downloadPdf": "Scarica PDF",
+      "duplicate": "Duplicato",
+      "open": "Aprire",
+      "resend": "Invia nuovamente",
+      "sendReminder": "Invia promemoria",
+      "sendToClient": "Invia al cliente"
+    }
+  },
+  "quoteForm": {
+    "actions": {
+      "cancelQuote": "Annulla preventivo",
+      "convertToBoth": "Converti in entrambi",
+      "convertToContract": "Converti in contratto",
+      "convertToInvoice": "Converti in fattura",
+      "createNewRevision": "Crea nuova revisione",
+      "sendQuote": "Invia preventivo",
+      "saving": "Salvataggio…",
+      "saveTemplate": "Salva modello",
+      "saveQuote": "Salva preventivo",
+      "requestApproval": "Richiedi approvazione",
+      "sendToClient": "Invia al cliente",
+      "approve": "Approva",
+      "revise": "Rivedi",
+      "requestChanges": "Richiedi modifiche",
+      "resend": "Reinvia",
+      "sendReminder": "Invia promemoria",
+      "pdf": "PDF",
+      "duplicate": "Duplica",
+      "back": "Indietro",
+      "moreActions": "Altre azioni",
+      "cancel": "Annulla",
+      "previewPdf": "Anteprima PDF"
+    },
+    "headings": {
+      "editQuote": "Modifica preventivo",
+      "editTemplate": "Modifica modello di preventivo",
+      "newQuote": "Nuovo preventivo",
+      "newTemplate": "Nuovo modello di preventivo",
+      "quote": "Preventivo",
+      "quoteWithNumber": "Preventivo {{quoteNumber}}",
+      "quoteWithNumberAndVersion": "Preventivo {{quoteNumber}} v{{version}}",
+      "templateQuoteFallback": "Preventivo modello"
+    },
+    "fields": {
+      "additionalEmails": "Indirizzi email aggiuntivi (separati da virgole)",
+      "clientNotes": "Note al cliente",
+      "createFromTemplate": "Crea da modello",
+      "messageOptional": "Messaggio (facoltativo)",
+      "quoteLayoutHelp": "Scegli quale layout utilizzare per il PDF di questo preventivo. Lascia vuoto per utilizzare l'impostazione predefinita.",
+      "recipients": "Destinatari"
+    },
+    "placeholders": {
+      "additionalEmails": "email@example.com, another@example.com",
+      "message": "Aggiungi una nota personale per il cliente...",
+      "selectClient": "Seleziona cliente",
+      "selectContact": "Seleziona contatto",
+      "selectCurrency": "Seleziona valuta",
+      "startFromScratch": "Inizia da zero",
+      "useDefaultLayout": "Utilizza il layout predefinito"
+    },
+    "alerts": {
+      "accepted": "Preventivo accettato",
+      "converted": "Preventivo convertito",
+      "convertedDescription": "Questo preventivo è stato convertito in un contratto e/o fattura.",
+      "quote": "Preventivo",
+      "rejected": "Preventivo rifiutato"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Approva questo preventivo in modo che possa essere inviato al cliente.",
+        "approveTitle": "Approva preventivo",
+        "approveComment": "Commento (facoltativo)",
+        "approveCommentPlaceholder": "Aggiungi una nota facoltativa...",
+        "changesDescription": "Restituisci questo preventivo alla bozza con le modifiche richieste.",
+        "changesTitle": "Richiedi modifiche",
+        "changesComment": "Modifiche richieste",
+        "changesCommentPlaceholder": "Descrivi le modifiche necessarie...",
+        "processing": "Elaborazione..."
+      },
+      "conversion": {
+        "title": "Anteprima di conversione",
+        "description": "Controlla cosa creerà questa conversione del preventivo prima di confermare."
+      },
+      "send": {
+        "description": "Il preventivo verrà inviato via email ai contatti di fatturazione del cliente e il suo stato cambierà in \"Inviato\".",
+        "title": "Invia preventivo al cliente",
+        "additionalEmails": "Destinatari aggiuntivi",
+        "message": "Messaggio"
+      }
+    },
+    "errorActions": {
+      "approveQuote": "approvare il preventivo",
+      "cancelQuote": "annullare il preventivo",
+      "requestChanges": "richiedere modifiche",
+      "resendQuote": "inviare nuovamente il preventivo",
+      "sendQuote": "inviare preventivo",
+      "sendReminder": "inviare promemoria",
+      "submitForApproval": "sottoporre all'approvazione"
+    },
+    "errors": {
+      "convert": "Impossibile convertire il preventivo",
+      "createRevision": "Impossibile creare la revisione",
+      "downloadPdf": "Impossibile scaricare il PDF",
+      "duplicate": "Impossibile duplicare il preventivo",
+      "load": "Impossibile caricare il modulo di preventivo",
+      "loadConversionPreview": "Impossibile caricare l'anteprima della conversione",
+      "notFound": "Citazione non trovata",
+      "save": "Impossibile salvare il preventivo",
+      "saveFailed": "Salvataggio del preventivo non riuscito",
+      "workflowAction": "Impossibile {{action}}"
+    },
+    "loading": "Caricamento modulo preventivo...",
+    "notices": {
+      "approved": "Preventivo approvato ed è pronto per essere inviato.",
+      "cancelled": "Citazione annullata.",
+      "createdDraftContract": "Bozza di contratto creata {{name}}.",
+      "createdDraftContractAndInvoice": "Bozza di contratto {{contractName}} creata e bozza di fattura {{invoiceName}} creata.",
+      "createdDraftInvoice": "Bozza di fattura creata {{name}}.",
+      "reminderSent": "Promemoria preventivo inviato.",
+      "requestedChanges": "Preventivo restituito alla bozza con le modifiche richieste.",
+      "resent": "Citazione risentita.",
+      "sent": "Preventivo inviato al cliente.",
+      "submittedForApproval": "Preventivo inviato per l'approvazione interna."
+    },
+    "readOnlyNotice": "Questo preventivo è di sola lettura. Per apportare modifiche, crea una nuova revisione.",
+    "validation": {
+      "clientRequired": "Il cliente è obbligatorio",
+      "titleRequired": "Il titolo è obbligatorio a meno che non si crei da un modello"
+    },
+    "header": {
+      "editTemplate": "Modifica modello preventivo",
+      "newTemplate": "Nuovo modello preventivo",
+      "editQuote": "Modifica preventivo",
+      "newQuote": "Nuovo preventivo",
+      "version": "v{{version}}",
+      "quoteTotalLabel": "Totale preventivo"
+    },
+    "breadcrumb": {
+      "billing": "Fatturazione",
+      "quoteTemplates": "Modelli di preventivo",
+      "quotes": "Preventivi",
+      "newQuote": "Nuovo preventivo"
+    },
+    "subtitle": {
+      "template": "Modello · {{description}}",
+      "forClient": "Per {{clientName}}",
+      "expires": "Scade il {{date}}"
+    },
+    "banners": {
+      "acceptedTitle": "Preventivo accettato",
+      "acceptedBy": "Accettato da: {{name}}",
+      "acceptedOn": "Accettato il: {{date}}",
+      "rejectedTitle": "Preventivo rifiutato",
+      "rejectedOn": "Rifiutato il: {{date}}",
+      "rejectedReason": "Motivo: {{reason}}",
+      "convertedTitle": "Preventivo convertito",
+      "convertedDescription": "Questo preventivo è stato convertito in contratto e/o fattura."
+    },
+    "noticeTitle": "Preventivo",
+    "essentials": {
+      "title": "Essenziali",
+      "subtitle": "Mostrato al cliente nel documento del preventivo.",
+      "titleField": "Titolo",
+      "descriptionField": "Descrizione / Ambito",
+      "descriptionHelp": "Un breve paragrafo che appare proprio sotto il titolo nel PDF.",
+      "client": "Cliente",
+      "clientPlaceholder": "Seleziona cliente",
+      "contact": "Contatto",
+      "contactPlaceholder": "Seleziona contatto",
+      "currency": "Valuta",
+      "currencyPlaceholder": "Seleziona valuta",
+      "quoteDate": "Data preventivo",
+      "validUntil": "Valido fino al",
+      "validUntilHelp": "Il preventivo scade automaticamente in questa data."
+    },
+    "lineItems": {
+      "title": "Voci",
+      "subtitleEmpty": "Ancora nessun elemento.",
+      "subtitleCount": "{{count}} voci · {{mix}}",
+      "mixBoth": "ricorrente e una tantum",
+      "mixRecurring": "ricorrente",
+      "mixOneTime": "una tantum",
+      "addLocation": "+ Aggiungi sede",
+      "fromTemplate": "+ Da modello"
+    },
+    "clientFacing": {
+      "title": "Testo visibile al cliente",
+      "subtitle": "Appare nel PDF, sotto i totali.",
+      "notes": "Note per il cliente (opzionale)",
+      "terms": "Termini e condizioni (opzionale)"
+    },
+    "moreDetails": {
+      "title": "Altri dettagli",
+      "subtitle": "Numero OdA, opportunità, layout PDF",
+      "poNumber": "Numero OdA",
+      "opportunity": "Opportunità",
+      "opportunityPlaceholder": "ID opportunità (opzionale)",
+      "pdfLayout": "Layout PDF",
+      "pdfLayoutPlaceholder": "Usa layout predefinito",
+      "pdfLayoutHelp": "Scegli quale layout vedrà il cliente. Lascia il predefinito per usare quello del tenant."
+    },
+    "footer": {
+      "savedAgo": "Modifiche salvate · {{ago}}",
+      "saving": "Salvataggio…",
+      "unsaved": "Modifiche non salvate"
+    },
+    "sidebar": {
+      "quoteTotal": "Totale preventivo",
+      "recurringPerMonth": "{{amount}} ricorrente / mese",
+      "subtotal": "Subtotale",
+      "discounts": "Sconti",
+      "tax": "Imposta",
+      "statusLabel": "Stato",
+      "approvalLabel": "Approvazione",
+      "approvalMessage": "I preventivi richiedono l'approvazione del responsabile vendite prima dell'invio.",
+      "documentLayoutLabel": "Layout del documento",
+      "defaultLayout": "Predefinito tenant",
+      "standardLayout": "Standard",
+      "customLayout": "Personalizzato",
+      "tenantDefault": "Predefinito tenant",
+      "changeLayout": "Modifica"
+    }
+  },
+  "quoteDetail": {
+    "title": "Dettaglio preventivo",
+    "actions": {
+      "backToQuotes": "Torna ai preventivi",
+      "openConvertedContract": "Apri contratto convertito",
+      "openConvertedInvoice": "Apri fattura convertita",
+      "preview": "Anteprima",
+      "saveAsTemplate": "Salva come modello"
+    },
+    "sections": {
+      "activityLog": "Registro delle attività",
+      "clientNotes": "Note del cliente",
+      "internalNotes": "Note interne",
+      "lineItems": "Elementi pubblicitari",
+      "quoteLayout": "Layout preventivo",
+      "scopeOfWork": "Ambito di lavoro",
+      "termsAndConditions": "Termini e condizioni",
+      "versionHistory": "Cronologia delle versioni"
+    },
+    "alerts": {
+      "clientConfigurationSubmitted": "Configurazione client inviata",
+      "clientConfigurationSubmittedDescription": "Esamina gli elementi pubblicitari facoltativi riportati di seguito prima di convertire questo preventivo. Gli elementi selezionati vengono contrassegnati come inclusi e gli elementi rifiutati vengono evidenziati per il follow-up.",
+      "update": "Aggiornamento preventivo"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Approva questo preventivo in modo che possa essere inviato al cliente. Puoi aggiungere un commento facoltativo.",
+        "changesDescription": "Restituisci questo preventivo alla bozza con le modifiche richieste. Si prega di descrivere cosa deve essere rivisto."
+      },
+      "send": {
+        "message": "Messaggio facoltativo da includere nell'e-mail"
+      }
+    },
+    "status": {
+      "accepted": "Preventivo accettato",
+      "acceptedBy": "Accettato da:",
+      "acceptedOn": "Accettato il:",
+      "reason": "Motivo:",
+      "rejected": "Preventivo rifiutato",
+      "rejectedOn": "Rifiutato il:"
+    },
+    "empty": {
+      "activity": "Nessuna attività di preventivo ancora registrata.",
+      "lineItems": "Non ci sono ancora elementi pubblicitari in questo preventivo.",
+      "revisions": "Nessuna revisione precedente per questo preventivo."
+    },
+    "clientSelections": {
+      "declinedOptionalItem": "Il cliente ha rifiutato questo elemento facoltativo",
+      "selectedOptionalItem": "Il cliente ha selezionato questo elemento facoltativo"
+    },
+    "errors": {
+      "approve": "Impossibile approvare il preventivo",
+      "assignTemplate": "Impossibile assegnare il modello",
+      "cancel": "Impossibile annullare il preventivo",
+      "convert": "Impossibile convertire il preventivo",
+      "delete": "Impossibile eliminare il preventivo",
+      "deleteUnavailable": "Impossibile eliminare il preventivo",
+      "downloadPdf": "Impossibile generare il PDF del preventivo",
+      "duplicate": "Impossibile duplicare il preventivo",
+      "load": "Impossibile caricare i dettagli del preventivo",
+      "loadConversionPreview": "Impossibile caricare l'anteprima della conversione",
+      "notFound": "Citazione non trovata",
+      "preview": "Impossibile generare l'anteprima del preventivo",
+      "requestChanges": "Impossibile richiedere modifiche al preventivo",
+      "resend": "Impossibile inviare nuovamente il preventivo",
+      "revise": "Impossibile creare la revisione del preventivo",
+      "saveAsTemplate": "Impossibile salvare il preventivo come modello",
+      "send": "Impossibile inviare il preventivo",
+      "sendReminder": "Impossibile inviare il promemoria del preventivo",
+      "submitForApproval": "Impossibile inviare il preventivo per l'approvazione"
+    },
+    "labels": {
+      "phase": "Fase: {{phase}}",
+      "templateQuote": "Preventivo modello"
+    },
+    "loading": "Caricamento dettagli preventivo...",
+    "notices": {
+      "approved": "Preventivo approvato ed è pronto per essere inviato.",
+      "reminderSent": "Promemoria preventivo inviato ai destinatari della fatturazione configurati.",
+      "requestedChanges": "Preventivo restituito alla bozza con le modifiche richieste.",
+      "resent": "Preventivo rinviato ai destinatari della fatturazione configurati.",
+      "sent": "Preventivo inviato al cliente.",
+      "submittedForApproval": "Preventivo inviato per l'approvazione interna.",
+      "templateAssigned": "Modello di documento assegnato.",
+      "templateCleared": "Modello di documento deselezionato (utilizzando l'impostazione predefinita)."
+    },
+    "preview": {
+      "loading": "Caricamento anteprima..."
+    },
+    "table": {
+      "description": "Descrizione"
+    },
+    "locations": {
+      "groupHeading": "Sede",
+      "unassigned": "Voci senza sede",
+      "subtotal": "Subtotale sede"
+    }
+  },
+  "quoteLineItems": {
+    "title": "Elementi pubblicitari",
+    "actions": {
+      "addDiscount": "Aggiungi sconto",
+      "collapse": "Crollo",
+      "expand": "Espandere",
+      "hideDiscount": "Nascondi sconto",
+      "remove": "Rimuovere"
+    },
+    "billingMethods": {
+      "fixed": "Fisso",
+      "hourly": "Ogni ora",
+      "perUnit": "Per unità",
+      "usage": "Basato sull'utilizzo"
+    },
+    "columns": {
+      "actions": "Azioni",
+      "billing": "Fatturazione",
+      "flags": "Bandiere",
+      "item": "Articolo",
+      "move": "Mossa",
+      "quantity": "Qtà",
+      "total": "Totale",
+      "unitPrice": "Prezzo unitario"
+    },
+    "labels": {
+      "customItem": "Articolo personalizzato",
+      "itemCountOne": "1 articolo",
+      "itemCountOther": "{{count}} elementi",
+      "noPriceInCurrency": "Nessun prezzo in {{currencyCode}}",
+      "optional": "Opzionale",
+      "phaseSection": "Fase/Sezione",
+      "recurring": "Ricorrente",
+      "service": "servizio",
+      "setPrice": "Imposta il prezzo",
+      "ungroupedItems": "Elementi non raggruppati"
+    },
+    "placeholders": {
+      "phaseSection": "per esempio. Scoperta, implementazione, in corso",
+      "selectItem": "Seleziona elemento",
+      "selectService": "Seleziona il servizio",
+      "servicePicker": "Cerca o digita il nome dell'elemento personalizzato..."
+    },
+    "discounts": {
+      "badge": "Sconto",
+      "description": {
+        "fixed": "Sconto",
+        "percentage": "Sconto ({{value}}%)"
+      },
+      "fixed": "Sconto fisso",
+      "fullQuoteSubtotal": "Si applica al totale parziale del preventivo completo",
+      "fullQuote": "Preventivo completo",
+      "item": "Articolo specifico",
+      "percentage": "Sconto percentuale",
+      "service": "Servizio specifico",
+      "targets": {
+        "fullQuote": "sul preventivo completo",
+        "namedItem": "su \"{{name}}\"",
+        "namedService": "su {{name}}",
+        "specificItem": "su un articolo specifico",
+        "specificService": "sul servizio specifico"
+      },
+      "types": {
+        "fixed": "Fisso",
+        "percentage": "Percentuale"
+      }
+    },
+    "markup": {
+      "badge": "{{sign}}{{value}}% di ricarico",
+      "unavailable": "Markup non disponibile",
+      "unavailableTooltip": "Impossibile calcolare il ricarico perché il costo è monitorato in {{costCurrency}} e questo preventivo è in {{quoteCurrency}}."
+    },
+    "empty": "Nessun elemento pubblicitario ancora. Utilizza la ricerca nel catalogo qui sopra per aggiungere il tuo primo articolo.",
+    "searchPlaceholder": "Cerca o digita il nome di una voce personalizzata…",
+    "locations": {
+      "groupHeading": "Sede {{index}}",
+      "pickerPlaceholder": "Seleziona una sede",
+      "unassigned": "Le voci senza sede vengono elencate qui finché non ne viene scelta una.",
+      "removeGroup": "Rimuovi sede",
+      "subtotal": "Subtotale sede",
+      "addLocationButton": "+ Aggiungi sede",
+      "needMoreLocations": "Questo cliente ha una sola sede attiva. Aggiungi una seconda sede nelle impostazioni cliente per abilitare i preventivi multi-sede.",
+      "emptyGroup": "Ancora nessuna voce per questa sede."
+    }
+  },
+  "quoteRecipients": {
+    "trigger": {
+      "add": "Aggiungi utente interno o contatto cliente...",
+      "noClient": "Seleziona prima un cliente",
+      "noneAvailable": "Nessun utente o contatto disponibile"
+    },
+    "searchPlaceholder": "Cerca per nome o email...",
+    "empty": {
+      "noMatches": "Nessuna corrispondenza",
+      "noneAvailable": "Nessun destinatario disponibile"
+    },
+    "kind": {
+      "contact": "Contatto",
+      "internal": "Interno"
+    },
+    "removeAriaLabel": "Rimuovi {{email}}"
+  },
+  "quoteConversion": {
+    "title": "Converti preventivo",
+    "description": "Convertire il preventivo accettato \"{{title}}\" in contratti e/o fatture.",
+    "loading": "Caricamento dell'anteprima della conversione...",
+    "mode": {
+      "contract": {
+        "label": "Solo contratto",
+        "description": "Crea una bozza di contratto con linee di servizio ricorrenti. Gli articoli una tantum non saranno inclusi."
+      },
+      "invoice": {
+        "label": "Solo fattura",
+        "description": "Crea una bozza di fattura con addebiti una tantum. Gli elementi ricorrenti non saranno inclusi."
+      },
+      "both": {
+        "label": "Contratto + Fattura",
+        "description": "Crea sia una bozza di contratto (per articoli ricorrenti) che una bozza di fattura (per articoli una tantum)."
+      }
+    },
+    "sections": {
+      "contractItems": "Articoli contrattuali",
+      "conversionMode": "Modalità di conversione",
+      "excludedItems": "Articoli esclusi",
+      "excludedFromConversion": "Escluso dalla Conversione",
+      "invoiceItems": "Elementi della fattura",
+      "itemMappingPreview": "Anteprima della mappatura degli articoli",
+      "quoteTotal": "Totale preventivo",
+      "statusAfterConversion": "Stato dopo la conversione",
+      "willBecomeContractLines": "Diventeranno linee contrattuali",
+      "willBecomeInvoiceCharges": "Diventeranno addebiti in fattura"
+    },
+    "empty": {
+      "contractItems": "Nessun elemento ricorrente verrà convertito in un contratto.",
+      "invoiceItems": "Nessun elemento una tantum verrà convertito in una fattura."
+    },
+    "summary": {
+      "converted": "Convertito",
+      "discount": "Sconto",
+      "fixed": "fisso",
+      "notConverted": "Non convertito"
+    },
+    "partial": {
+      "alreadyConverted": "Questo preventivo è già stato convertito parzialmente.",
+      "contractCreated": "È stato creato un contratto.",
+      "invoiceCreated": "È stata creata una fattura.",
+      "remainingItems": "Puoi convertire gli elementi rimanenti.",
+      "title": "Conversione parziale",
+      "description": "Alcuni record per questo preventivo esistono già."
+    },
+    "actions": {
+      "contract": "Crea bozza di contratto",
+      "convertQuote": "Converti preventivo",
+      "invoice": "Crea bozza di fattura",
+      "both": "Crea entrambi i record",
+      "converting": "Conversione..."
+    },
+    "errors": {
+      "convert": "Impossibile convertire il preventivo",
+      "load": "Impossibile caricare l'anteprima della conversione",
+      "title": "Errore"
+    }
+  },
+  "quoteApproval": {
+    "title": "Approvazioni preventivi",
+    "description": "Esamina i preventivi in ​​attesa dell'approvazione del manager prima che possano essere inviati ai clienti.",
+    "actions": {
+      "backToQuotes": "Torna ai preventivi"
+    },
+    "settings": {
+      "label": "Approvazione richiesta prima dell'invio",
+      "enabled": "Le bozze dei preventivi devono essere approvate prima dell'invio.",
+      "disabled": "Le bozze dei preventivi possono essere inviate senza approvazione."
+    },
+    "filters": {
+      "status": "Stato",
+      "approved": "Approvato",
+      "pendingApproval": "In attesa di approvazione"
+    },
+    "empty": {
+      "approved": "Non ci sono preventivi nella coda approvata in questo momento.",
+      "pendingApproval": "Al momento non ci sono preventivi nella coda di approvazione in sospeso.",
+      "title": "Nessun preventivo trovato"
+    },
+    "errors": {
+      "load": "Impossibile caricare le approvazioni dei preventivi",
+      "settings": "Impossibile aggiornare le impostazioni di approvazione del preventivo"
+    },
+    "loading": "Caricamento coda di approvazione..."
+  },
+  "quoteTemplates": {
+    "title": "Modelli",
+    "description": "I modelli di preventivo ti consentono di salvare set riutilizzabili di voci, termini e note. Seleziona un modello quando crei un nuovo preventivo per iniziare con i dati precompilati.",
+    "empty": {
+      "inline": "Nessun modello di preventivo ancora. Crea un modello facendo clic su \"Salva come modello\" dalla visualizzazione dei dettagli di qualsiasi preventivo.",
+      "title": "Nessun modello di preventivo ancora",
+      "description": "Utilizza Salva come modello da un preventivo per creare il tuo primo modello riutilizzabile."
+    },
+    "actions": {
+      "createQuoteFromTemplate": "Crea preventivo da modello",
+      "delete": "Eliminare",
+      "editTemplate": "Modifica modello",
+      "templateActions": "Azioni del modello"
+    },
+    "dialogs": {
+      "delete": {
+        "message": "Sei sicuro di voler eliminare questo modello di preventivo? Questa azione non può essere annullata.",
+        "title": "Elimina modello"
+      }
+    },
+    "errors": {
+      "delete": "Impossibile eliminare il modello.",
+      "load": "Impossibile caricare i modelli"
+    },
+    "loading": "Caricamento modelli..."
+  },
+  "quotePreview": {
+    "title": "Anteprima preventivo",
+    "empty": {
+      "selectQuote": "Seleziona un preventivo per visualizzarne l'anteprima",
+      "unavailable": "Impossibile visualizzare l'anteprima. Potrebbero mancare dei dati."
+    },
+    "placeholders": {
+      "selectLayout": "Seleziona il layout del preventivo..."
+    },
+    "actions": {
+      "openQuote": "Apri preventivo"
+    },
+    "errors": {
+      "downloadPdf": "Impossibile scaricare il PDF. Per favore riprova.",
+      "load": "Impossibile caricare l'anteprima"
+    },
+    "loading": "Caricamento anteprima..."
+  },
+  "templateEditor": {
+    "actions": {
+      "backToLayouts": "Torna ai layout",
+      "rerun": "Rieseguire",
+      "saveLayout": "Salva layout"
+    },
+    "codeReadonly": "La visualizzazione codice viene generata dall'area di lavoro visiva ed è di sola lettura.",
+    "defaults": {
+      "copyOf": "Copia di {{name}}",
+      "standardTemplate": "Modello standard"
+    },
+    "title": "Editor del layout del preventivo",
+    "description": "Progetta il layout del preventivo utilizzando l'editor visivo, quindi visualizza l'anteprima con dati di esempio.",
+    "errors": {
+      "exportAst": "Impossibile esportare il modello AST dall'area di lavoro visiva: {{message}}",
+      "load": "Impossibile caricare l'editor del modello di preventivo",
+      "nameRequired": "Il nome del modello è obbligatorio.",
+      "notFound": "Modello di documento di preventivo non trovato.",
+      "previewPipeline": "La pipeline di anteprima non è riuscita.",
+      "saveFailed": "Impossibile salvare il modello di preventivo",
+      "unknownAstExport": "Errore di esportazione AST sconosciuto"
+    },
+    "fields": {
+      "layoutDetails": "Dettagli della disposizione",
+      "templateName": "Nome del modello",
+      "version": "Versione"
+    },
+    "footer": {
+      "created": "Creato:",
+      "lastUpdated": "Ultimo aggiornamento:"
+    },
+    "headings": {
+      "editLayout": "Modifica layout preventivo",
+      "newLayout": "Nuovo layout del preventivo"
+    },
+    "placeholders": {
+      "templateName": "Modello di preventivo"
+    },
+    "preview": {
+      "renderFailed": "Rendering dell'anteprima non riuscito.",
+      "rendering": "Anteprima di modellazione e rendering...",
+      "sampleScenario": "Scenario campione",
+      "selectScenario": "Seleziona scenario...",
+      "selectScenarioPrompt": "Seleziona uno scenario di esempio per generare un'anteprima autorevole.",
+      "templateGenerationFailed": "Impossibile generare il modello di anteprima dall'area di lavoro corrente."
+    },
+    "pipeline": {
+      "render": "Rendering",
+      "shape": "Forma"
+    },
+    "tabs": {
+      "code": "Codice",
+      "design": "Progetto",
+      "preview": "Anteprima",
+      "transforms": "Si trasforma",
+      "visual": "Visivo"
+    }
+  },
+  "templatesPage": {
+    "title": "Layout preventivo",
+    "description": "Progetta i layout utilizzati per il rendering dei PDF e delle anteprime dei preventivi.",
+    "actions": {
+      "openMenu": "Apri il menu"
+    },
+    "cards": {
+      "availableLayouts": "Layout disponibili"
+    },
+    "dialogs": {
+      "deleteConfirm": "Sei sicuro di voler eliminare \"{{name}}\"?"
+    },
+    "errors": {
+      "clone": "Impossibile clonare il modello",
+      "delete": "Impossibile eliminare il modello",
+      "editCopy": "Impossibile creare una copia modificabile",
+      "load": "Impossibile caricare i modelli di documento di preventivo",
+      "setDefault": "Impossibile impostare il modello predefinito"
+    },
+    "labels": {
+      "custom": "Costume"
+    }
+  }
+}

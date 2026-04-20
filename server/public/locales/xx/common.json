@@ -883,7 +883,7 @@
       "revoke": "11111",
       "revoking": "11111",
       "loggingOut": "11111",
-      "logoutFromOther": "11111 {{count}} 11111 {{count, plural, one {} other {s}} 11111"
+      "logoutFromOther": "11111 {{count}} 11111"
     },
     "confirmations": {
       "logoutCurrent": "11111",

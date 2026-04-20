@@ -46,7 +46,7 @@
     "titlePlaceholder": "Titel van ticket",
     "descriptionPlaceholder": "Beschrijf je probleem...",
     "priorityPlaceholder": "Selecteer prioriteit",
-    "noBoardsAvailable": "No ticket boards are available for your account. Contact your administrator.",
+    "noBoardsAvailable": "Er zijn geen ticket-boards beschikbaar voor uw account. Neem contact op met uw beheerder.",
     "submit": "Ticket aanmaken",
     "submitting": "Bezig met aanmaken...",
     "errors": {
@@ -59,7 +59,7 @@
     "boardPlaceholder": "Board selecteren"
   },
   "status": {
-    "open": "Open",
+    "open": "Openen",
     "inProgress": "In behandeling",
     "resolved": "Opgelost",
     "closed": "Gesloten",
@@ -131,7 +131,7 @@
     "responseSource": "Antwoordbron",
     "ticketOrigin": "Ticket Herkomst",
     "isClosed": "is gesloten",
-    "tags": "Tags",
+    "tags": "Labels",
     "sla": "SLA",
     "updated": "Bijgewerkt",
     "openInNewTab": "Openen in nieuw tabblad",
@@ -820,7 +820,7 @@
       "closedAt": "Gesloten op",
       "responseState": "Reactiestatus",
       "ticketOrigin": "Ticketbron",
-      "tags": "Tags"
+      "tags": "Labels"
     }
   },
   "materials": {

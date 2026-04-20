@@ -125,11 +125,11 @@
       "loadingStatuses": "Statussen laden...",
       "notRequired": "Niet vereist",
       "noticePeriodDays": "Opzegtermijn (dagen)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "bijv. 30",
       "noticePrefix": "Opzegging:",
       "renewalHandling": "Verlengingsafhandeling",
       "renewalTermMonths": "Verlengingstermijn (maanden)",
-      "renewalTermPlaceholder": "e.g., 12",
+      "renewalTermPlaceholder": "bijv. 12",
       "renewalTicketBoard": "Verlengingsticketbord",
       "renewalTicketStatus": "Verlengingsticketstatus",
       "required": "Verplicht",
@@ -287,7 +287,7 @@
       "startDate": "Startdatum"
     },
     "po": {
-      "prefix": "PO",
+      "prefix": "Inkooporder",
       "requiredForContract": "Inkooporder vereist voor dit contract."
     },
     "status": {
@@ -318,8 +318,8 @@
       "noContractLinesDescription": "Voeg contractregels toe om te definiëren wat in dit contract is inbegrepen",
       "noContractLinesYet": "Nog geen contractregels",
       "noServicesConfigured": "Geen services geconfigureerd",
-      "serviceCountOne": "{{count}} service",
-      "serviceCountOther": "{{count}} services"
+      "serviceCountOne": "{{count}} dienst",
+      "serviceCountOther": "{{count}} diensten"
     },
     "stats": {
       "contractLines": "Contractregels",
@@ -353,12 +353,12 @@
       "endDateHint": "Laat leeg voor lopende contracten die geen vaste einddatum hebben.",
       "endDateLabel": "Einddatum (optioneel)",
       "noticePeriodLabel": "Opzegtermijn (dagen)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "bijv. 30",
       "renewalModePlaceholder": "Selecteer verlengingsmodus",
       "renewalSettingsDescription": "Configureer het verlengingsgedrag voor deze klantcontracttoewijzing.",
       "renewalSettingsTitle": "Verlengingsinstellingen",
       "renewalTermLabel": "Verlengingstermijn (maanden)",
-      "renewalTermPlaceholder": "e.g., 12",
+      "renewalTermPlaceholder": "bijv. 12",
       "selectClientFirst": "Selecteer eerst een klant",
       "startDateLabel": "Startdatum *",
       "useTenantDefaultsDescription": "Pas de verlengingsmodus en opzegtermijninstellingen op organisatieniveau toe.",
@@ -409,8 +409,8 @@
       "searchPlaceholder": "Contractregelpresets zoeken...",
       "selectedPlural": "{{count}} contractregelpresets geselecteerd",
       "selectedSingle": "{{count}} contractregelpreset geselecteerd",
-      "serviceCountPlural": "{{count}} services",
-      "serviceCountSingle": "{{count}} service",
+      "serviceCountPlural": "{{count}} diensten",
+      "serviceCountSingle": "{{count}} dienst",
       "typePlaceholder": "Selecteer type"
     },
     "title": {
@@ -538,8 +538,8 @@
       "unassigned": "Geen locatie toegewezen",
       "unnamed": "Locatie"
     },
-    "serviceCountPlural": "{{count}} services",
-    "serviceCountSingle": "{{count}} service",
+    "serviceCountPlural": "{{count}} diensten",
+    "serviceCountSingle": "{{count}} dienst",
     "services": {
       "empty": "Geen services geconfigureerd voor deze contractregel.",
       "hourlyRate": "Uurtarief",
@@ -647,8 +647,8 @@
       "selectedPlural": "{{count}} presets geselecteerd",
       "selectedSingle": "{{count}} preset geselecteerd"
     },
-    "serviceCountPlural": "{{count}} services",
-    "serviceCountSingle": "{{count}} service",
+    "serviceCountPlural": "{{count}} diensten",
+    "serviceCountSingle": "{{count}} dienst",
     "services": {
       "configuration": "Servicesconfiguratie",
       "empty": "Geen services geconfigureerd voor deze preset",
@@ -811,7 +811,7 @@
         "customRate": "Aangepast tarief",
         "customRatePlaceholder": "0.00",
         "duration": "Duur",
-        "durationPlaceholder": "e.g., 6",
+        "durationPlaceholder": "bijv. 6",
         "effectiveDate": "Ingangsdatum",
         "endDate": "Einddatum",
         "hasEndDate": "Heeft einddatum",
@@ -932,7 +932,7 @@
       "client": "Klant",
       "contractName": "Contractnaam",
       "endDate": "Einddatum",
-      "poIndicator": "PO",
+      "poIndicator": "Inkooporder",
       "sourceTemplate": "Bronsjabloon",
       "startDate": "Startdatum",
       "status": "Status"
@@ -996,12 +996,12 @@
         "nonRenewing": "Niet-verlengend",
         "pending": "In behandeling",
         "renewing": "Verlengend",
-        "snoozed": "Snoozed"
+        "snoozed": "Uitgesteld"
       },
       "title": "Aankomende verlengingen",
       "type": {
         "evergreen": "Evergreen",
-        "fixedTerm": "Fixed-term"
+        "fixedTerm": "Bepaalde tijd"
       },
       "window": {
         "all": "Alle",
@@ -1086,8 +1086,8 @@
       "notSet": "Niet ingesteld",
       "quantityLabel": "Hoeveelheid:",
       "roundUpLabel": "Naar boven afronden:",
-      "serviceCountPlural": "{{count}} services",
-      "serviceCountSingle": "{{count}} service",
+      "serviceCountPlural": "{{count}} diensten",
+      "serviceCountSingle": "{{count}} dienst",
       "serviceFallback": "Service",
       "title": "Sjabloonsamenstelling",
       "unitLabel": "Eenheid:",
@@ -1110,7 +1110,7 @@
       "recommendedCadenceLabel": "Aanbevolen cadans",
       "recommendedCadencePlaceholder": "Selecteer een cadans",
       "tagsHint": "Tags helpen teams om snel relevante sjablonen te vinden.",
-      "tagsLabel": "Tags",
+      "tagsLabel": "Labels",
       "tagsPlaceholder": "Gescheiden door komma's (bijv. onboarding, finance)",
       "title": "Sjabloonrichtlijnen",
       "usageNotesLabel": "Verbruiksnotities",
@@ -1235,8 +1235,8 @@
   },
   "bucketOverlay": {
     "includedLabel": "Inbegrepen {{units}}",
-    "includedPlaceholderHours": "e.g., 40",
-    "includedPlaceholderUnits": "e.g., 1000",
+    "includedPlaceholderHours": "bijv. 40",
+    "includedPlaceholderUnits": "bijv. 1000",
     "includedTooltip": "Aantal {{units}} inbegrepen per factureerperiode voordat overschrijdingen gelden.",
     "overageRateLabel": "Overschrijdingstarief",
     "overageRateTooltip": "Tarief dat wordt toegepast voor elke {{unit}} boven het inbegrepen aantal.",
@@ -1404,9 +1404,9 @@
       },
       "modePlaceholder": "Selecteer verlengingsmodus",
       "noticePeriodLabel": "Opzegtermijn (dagen)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "bijv. 30",
       "termLabel": "Verlengingstermijn (maanden)",
-      "termPlaceholder": "e.g., 12",
+      "termPlaceholder": "bijv. 12",
       "useTenantDefaultsDescription": "Pas verlengingsinstellingen op organisatieniveau toe tenzij expliciet overschreven.",
       "useTenantDefaultsLabel": "Standaardverlengingswaarden tenant gebruiken"
     },
@@ -1609,7 +1609,7 @@
       "notSelected": "Niet geselecteerd",
       "notSpecified": "Niet gespecificeerd",
       "ongoing": "Lopend",
-      "notApplicable": "N/A"
+      "notApplicable": "N.v.t."
     },
     "renewalMode": {
       "none": "Geen verlenging",
@@ -1653,8 +1653,8 @@
     },
     "fixed": {
       "badgeCount": {
-        "one": "{{count}} service",
-        "other": "{{count}} services"
+        "one": "{{count}} dienst",
+        "other": "{{count}} diensten"
       },
       "monthlyBaseRate": "Maandelijks basistarief:",
       "partialPeriodAdjustment": "Aanpassing gedeeltelijke periode:"
@@ -1694,12 +1694,12 @@
         "one": "{{count}} product",
         "other": "{{count}} producten"
       },
-      "overrideRate": "- override {{rate}}/{{currencyCode}}"
+      "overrideRate": "– overschrijven {{rate}}/{{currencyCode}}"
     },
     "hourly": {
       "badgeCount": {
-        "one": "{{count}} service",
-        "other": "{{count}} services"
+        "one": "{{count}} dienst",
+        "other": "{{count}} diensten"
       },
       "servicesAndRates": "Services en tarieven",
       "serviceRateRow": "{{serviceName}} - {{rate}}/uur",
@@ -1709,8 +1709,8 @@
     },
     "usage": {
       "badgeCount": {
-        "one": "{{count}} service",
-        "other": "{{count}} services"
+        "one": "{{count}} dienst",
+        "other": "{{count}} diensten"
       },
       "serviceRateRow": "{{serviceName}} - {{rate}}/{{unit}}"
     },

@@ -7,7 +7,8 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { IContractLineServiceBucketConfig } from '@alga-psa/types';
-import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useBillingFrequencyOptions, useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 interface BucketServiceConfigPanelProps {
   configuration: Partial<IContractLineServiceBucketConfig>;
@@ -24,6 +25,9 @@ export function BucketServiceConfigPanel({
   disabled = false,
   contractLineBillingFrequency
 }: BucketServiceConfigPanelProps) {
+  const { t } = useTranslation('msp/service-catalog');
+  const billingFrequencyOptions = useBillingFrequencyOptions();
+  const formatBillingFrequency = useFormatBillingFrequency();
   const [totalMinutes, setTotalMinutes] = useState<number>(configuration.total_minutes || 0);
   const [billingPeriod, setBillingPeriod] = useState<string>(configuration.billing_period || 'monthly');
   const [overageRate, setOverageRate] = useState<number>(configuration.overage_rate || 0);
@@ -49,15 +53,19 @@ export function BucketServiceConfigPanel({
     } = {};
 
     if (totalMinutes <= 0) {
-      errors.totalMinutes = 'Total minutes must be greater than zero';
+      errors.totalMinutes = t('bucketConfig.fields.totalMinutes.errorPositive', {
+        defaultValue: 'Total minutes must be greater than zero',
+      });
     }
 
     if (overageRate < 0) {
-      errors.overageRate = 'Overage rate cannot be negative';
+      errors.overageRate = t('bucketConfig.fields.overageRate.errorNegative', {
+        defaultValue: 'Overage rate cannot be negative',
+      });
     }
 
     setValidationErrors(errors);
-  }, [totalMinutes, overageRate]);
+  }, [totalMinutes, overageRate, t]);
 
   const handleTotalMinutesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value);
@@ -84,71 +92,101 @@ export function BucketServiceConfigPanel({
   return (
     <Card className={`p-4 ${className}`}>
       <div className="space-y-4">
-        <h3 className="text-md font-medium">Bucket Hours Configuration</h3>
+        <h3 className="text-md font-medium">
+          {t('bucketConfig.title', { defaultValue: 'Bucket Hours Configuration' })}
+        </h3>
         
         <div className="grid gap-4">
           <div>
-            <Label htmlFor="bucket-total-minutes">Total Minutes</Label>
+            <Label htmlFor="bucket-total-minutes">
+              {t('bucketConfig.fields.totalMinutes.label', { defaultValue: 'Total Minutes' })}
+            </Label>
             <Input
               id="bucket-total-minutes"
               type="number"
               value={totalMinutes.toString()}
               onChange={handleTotalMinutesChange}
-              placeholder="Enter total hours"
+              placeholder={t('bucketConfig.fields.totalMinutes.placeholder', {
+                defaultValue: 'Enter total hours',
+              })}
               disabled={disabled}
               min={1}
               step={1}
               className={validationErrors.totalMinutes ? 'border-red-500' : ''}
             />
-            {validationErrors.totalMinutes ? (
-              <p className="text-sm text-red-500 mt-1">{validationErrors.totalMinutes}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground mt-1">
-                The total number of minutes included in this bucket contract line
+              {validationErrors.totalMinutes ? (
+                <p className="text-sm text-red-500 mt-1">{validationErrors.totalMinutes}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground mt-1">
+                {t('bucketConfig.fields.totalMinutes.help', {
+                  defaultValue: 'The total number of minutes included in this bucket contract line',
+                })}
               </p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="bucket-billing-period">Billing Period</Label>
+            <Label htmlFor="bucket-billing-period">
+              {t('bucketConfig.fields.billingPeriod.label', { defaultValue: 'Billing Period' })}
+            </Label>
             <CustomSelect
               id="bucket-billing-period"
-              options={BILLING_FREQUENCY_OPTIONS}
+              options={billingFrequencyOptions}
               onValueChange={handleBillingPeriodChange}
               value={billingPeriod}
-              placeholder="Select billing period"
+              placeholder={t('bucketConfig.fields.billingPeriod.placeholder', {
+                defaultValue: 'Select billing period',
+              })}
               className="w-full"
               disabled={disabled}
             />
             {contractLineBillingFrequency && billingPeriod !== contractLineBillingFrequency ? (
               <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
-                <span className="font-semibold">⚠️ Mismatch:</span> Bucket billing period ({billingPeriod}) should match contract line billing frequency ({contractLineBillingFrequency})
+                <span className="font-semibold">
+                  {t('bucketConfig.fields.billingPeriod.mismatchPrefix', {
+                    defaultValue: 'Mismatch:',
+                  })}
+                </span>
+                {t('bucketConfig.fields.billingPeriod.mismatch', {
+                  billingPeriod: formatBillingFrequency(billingPeriod),
+                  contractLineBillingFrequency: formatBillingFrequency(contractLineBillingFrequency),
+                  defaultValue:
+                    'Bucket billing period ({{billingPeriod}}) should match contract line billing frequency ({{contractLineBillingFrequency}})',
+                })}
               </p>
             ) : (
               <p className="text-sm text-muted-foreground mt-1">
-                The period over which the bucket hours are allocated
+                {t('bucketConfig.fields.billingPeriod.help', {
+                  defaultValue: 'The period over which the bucket hours are allocated',
+                })}
               </p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="bucket-overage-rate">Overage Rate</Label>
+            <Label htmlFor="bucket-overage-rate">
+              {t('bucketConfig.fields.overageRate.label', { defaultValue: 'Overage Rate' })}
+            </Label>
             <Input
               id="bucket-overage-rate"
               type="number"
               value={(overageRate / 100).toString()} // Display in dollars
               onChange={handleOverageRateChange}
-              placeholder="Enter overage rate"
+              placeholder={t('bucketConfig.fields.overageRate.placeholder', {
+                defaultValue: 'Enter overage rate',
+              })}
               disabled={disabled}
               min={0}
               step={0.01}
               className={validationErrors.overageRate ? 'border-red-500' : ''}
             />
-            {validationErrors.overageRate ? (
-              <p className="text-sm text-red-500 mt-1">{validationErrors.overageRate}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground mt-1">
-                The hourly rate charged for hours used beyond the bucket limit
+              {validationErrors.overageRate ? (
+                <p className="text-sm text-red-500 mt-1">{validationErrors.overageRate}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground mt-1">
+                {t('bucketConfig.fields.overageRate.help', {
+                  defaultValue: 'The hourly rate charged for hours used beyond the bucket limit',
+                })}
               </p>
             )}
           </div>
@@ -159,9 +197,11 @@ export function BucketServiceConfigPanel({
               checked={allowRollover}
               onCheckedChange={handleAllowRolloverChange}
               disabled={disabled}
-            />
-            <Label htmlFor="bucket-allow-rollover" className="cursor-pointer">
-              Allow unused hours to roll over to next period
+          />
+          <Label htmlFor="bucket-allow-rollover" className="cursor-pointer">
+              {t('bucketConfig.fields.allowRollover', {
+                defaultValue: 'Allow unused hours to roll over to next period',
+              })}
             </Label>
           </div>
         </div>

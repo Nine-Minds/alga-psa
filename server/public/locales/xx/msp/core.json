@@ -21,11 +21,15 @@
       "sections": {
         "contracts": "11111",
         "invoicing": "11111",
+        "quotes": "11111",
         "pricing": "11111",
         "trackingReports": "11111"
       },
       "contractTemplates": "11111",
       "clientContracts": "11111",
+      "quotes": "11111",
+      "quoteBusinessTemplates": "11111",
+      "quoteLayouts": "11111",
       "contractLinePresets": "11111",
       "invoicing": "11111",
       "invoiceLayouts": "11111",

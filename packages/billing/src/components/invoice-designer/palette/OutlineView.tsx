@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useInvoiceDesignerStore, DesignerNode } from '../state/designerStore';
 import clsx from 'clsx';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getNodeName } from '../utils/nodeProps';
 
 export const OutlineView: React.FC = () => {
+  const { t } = useTranslation('msp/invoicing');
   const nodesById = useInvoiceDesignerStore((state) => state.nodesById);
   const rootId = useInvoiceDesignerStore((state) => state.rootId);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
@@ -87,7 +89,7 @@ export const OutlineView: React.FC = () => {
             {hasChildren && (isExpanded ? '▼' : '▶')}
           </span>
           <span className="truncate flex-1">
-             {getNodeName(node) || node.type}
+             {getNodeName(node) || t(`designer.blocks.${node.type}.label`, { defaultValue: node.type })}
           </span>
         </div>
         {hasChildren && isExpanded && (

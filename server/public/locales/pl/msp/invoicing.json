@@ -1,0 +1,1519 @@
+{
+  "automaticInvoices": {
+    "ready": {
+      "title": "Gotowy do wystawienia faktury",
+      "description": "Przeglądaj powtarzające się terminy prac i generuj wersje robocze faktur za wybrane okresy.",
+      "selectAllExplanation": "Wybierz grupy nadrzędne lub pojedyncze wiersze, aby kontrolować generowanie faktur.",
+      "filterPlaceholder": "Filtruj wiersze gotowe do wystawienia faktury",
+      "dateRange": "Okno faktury",
+      "search": "Szukaj",
+      "groupedPreviewUnavailable": "Podgląd obsługuje zaznaczenia grupowe; bezpośrednie „Generuj z podglądu” pozostaje tylko pojedynczym wyborem.",
+      "selectionHintCombined": "1 faktura, jeśli wybrano opcję nadrzędną",
+      "selectionHintSeparate": "Wybierz elementy indywidualnie",
+      "needsApproval": {
+        "title": "Wymaga zatwierdzenia",
+        "description": "Te okresy cykliczne zawierają czas rozliczeniowy, który nie został jeszcze zatwierdzony. Całe okno faktury jest zablokowane do czasu zakończenia zatwierdzeń.",
+        "labels": {
+          "servicePeriod": "Okres świadczenia usług",
+          "invoiceWindow": "Okno faktury"
+        },
+        "unapprovedEntries": "Niezatwierdzony wpis {{count}}",
+        "unapprovedEntries_one": "Niezatwierdzony wpis {{count}}",
+        "unapprovedEntries_other": "Niezatwierdzone wpisy {{count}}",
+        "actions": {
+          "reviewApprovals": "Przejrzyj zatwierdzenia"
+        }
+      },
+      "columns": {
+        "group": "Grupa",
+        "servicePeriod": "Okres usługi",
+        "invoiceWindow": "Okno faktury",
+        "included": "Dołączony"
+      }
+    },
+    "groups": {
+      "item": "Pozycja {{count}}",
+      "item_one": "Pozycja {{count}}",
+      "item_other": "Elementy {{count}}",
+      "contract": "Kontrakt {{count}}",
+      "contract_one": "Kontrakt {{count}}",
+      "contract_other": "Kontrakty {{count}}",
+      "line": "Linia {{count}}",
+      "line_one": "Linia {{count}}",
+      "line_other": "Linie {{count}}",
+      "obligationCount": "Obowiązek {{count}}",
+      "obligationCount_one": "Obowiązek {{count}}",
+      "obligationCount_other": "Obowiązki {{count}}",
+      "includedCount": "Uwzględniono element {{count}}",
+      "includedCount_one": "Uwzględniono element {{count}}",
+      "includedCount_other": "Uwzględniono elementy {{count}}",
+      "attributionMetadataMissing": "Brak metadanych przypisania przypisania (obowiązek {{count}})",
+      "attributionMetadataMissing_one": "Brak metadanych przypisania przypisania (obowiązek {{count}})",
+      "attributionMetadataMissing_other": "Brak metadanych przypisania przypisania (obowiązki {{count}})",
+      "actions": {
+        "expand": "Zwiększać",
+        "collapse": "Zawalić się"
+      },
+      "canCombine": "Możliwość połączenia w 1 fakturę",
+      "separate": "Należy wystawić osobną fakturę",
+      "blocked": "Zawiera zablokowane elementy",
+      "notReady": "Brak gotowości do wystawienia faktury"
+    },
+    "incompatibilityReasons": {
+      "invoiceWindowDiffers": "Okno faktury jest inne",
+      "clientDiffers": "Klient jest inny",
+      "poScopeDiffers": "Zakres PO jest inny",
+      "currencyDiffers": "Waluta jest inna",
+      "taxTreatmentDiffers": "Traktowanie podatkowe jest różne",
+      "exportShapeDiffers": "Kształt eksportu jest inny"
+    },
+    "executionRows": {
+      "labels": {
+        "cadence": "Rytm",
+        "billingTiming": "Termin rozliczeń",
+        "servicePeriod": "Okres świadczenia usług"
+      },
+      "pendingAmount": "Oczekująca kwota",
+      "attributionWarning": "Brak metadanych przypisania przypisania",
+      "blockedUntilApproval": "Zablokowany do czasu zatwierdzenia: wpis niezatwierdzony {{count}}.",
+      "blockedUntilApproval_one": "Zablokowany do czasu zatwierdzenia: wpis niezatwierdzony {{count}}.",
+      "blockedUntilApproval_other": "Zablokowane do czasu zatwierdzenia: niezatwierdzone wpisy {{count}}.",
+      "assignmentContext": {
+        "unresolvedTimeEntry": "Nierozwiązany wpis czasu",
+        "unresolvedUsageRecord": "Nierozwiązany zapis użytkowania",
+        "assignedContractLine": "Przypisana linia kontraktu",
+        "assignedWorkItem": "Przypisany element pracy",
+        "unresolvedWork": "Nierozwiązana praca"
+      }
+    },
+    "actions": {
+      "previewSelected": "Wybrano podgląd",
+      "generateSelected": "Generuj faktury za wybrane okresy ({{count}})",
+      "generateSelected_one": "Generuj faktury za wybrane okresy ({{count}})",
+      "generateSelected_other": "Generuj faktury za wybrane okresy ({{count}})",
+      "reverseInvoice": "Odwrotna faktura",
+      "deleteInvoice": "Usuń fakturę",
+      "closePreview": "Zamknij podgląd",
+      "generateInvoice": "Wygeneruj fakturę"
+    },
+    "dialogs": {
+      "reverse": {
+        "title": "Odwrotna faktura cykliczna",
+        "warning": "Wycofanie tej faktury spowoduje usunięcie wygenerowanej wersji roboczej i powiązanych z nią opcji cyklicznych.",
+        "warningTitle": "Ostrzeżenie: Odwrócona faktura cykliczna",
+        "description": "Zamierzasz wycofać fakturę cykliczną za:",
+        "impactTitle": "To działanie:",
+        "cannotUndo": "Tej akcji nie można cofnąć!",
+        "confirm": "Tak, faktura odwrotna",
+        "reversing": "Cofanie...",
+        "error": "Nie udało się cofnąć faktury cyklicznej",
+        "labels": {
+          "client": "Klient",
+          "cadenceSource": "Źródło kadencji",
+          "servicePeriod": "Okres świadczenia usług"
+        },
+        "effects": {
+          "deleteDraft": "Usuń wygenerowaną wersję roboczą faktury cyklicznej",
+          "reissueCredits": "Wystaw ponownie wszelkie uznania zastosowane do tej faktury",
+          "unmarkRecords": "Odznacz połączone wpisy czasu i zapisy użytkowania jako zafakturowane",
+          "retireBridge": "Wycofaj rekord pomostu kadencji połączonego klienta i otwórz ponownie połączone okresy świadczenia usług cyklicznych",
+          "reopenPeriods": "Otwórz ponownie połączone cykliczne okresy świadczenia usług bez wymagania metadanych mostu cyklu klienta"
+        }
+      },
+      "delete": {
+        "title": "Trwale usunąć fakturę cykliczną?",
+        "message": "Tej akcji nie można cofnąć. Spowoduje to trwałe usunięcie faktury cyklicznej dla:\nKlient: {{client}}\nŹródło kadencji: {{cadenceSource}}\nSOkres świadczenia usługi: {{servicePeriod}}\n{{bridgeEffect}}",
+        "bridgeDeleted": "Połączony rekord mostka kadencji klienta również zostanie usunięty.",
+        "bridgeReopened": "Połączone okresy świadczenia usług cyklicznych zostaną ponownie otwarte bez konieczności stosowania metadanych mostu cyklu klienta.",
+        "confirm": "Tak, usuń trwale",
+        "deleting": "Usuwanie...",
+        "error": "Nie udało się usunąć faktury cyklicznej"
+      },
+      "preview": {
+        "title": "Podgląd faktury",
+        "description": "To jest podgląd tego, jak faktura będzie wyglądać po sfinalizowaniu.",
+        "summary_one": "Wybrano fakturę {{count}}",
+        "summary_other": "Wybrano faktury {{count}}",
+        "summaryCombined": "Ten wybór spowoduje wygenerowanie jednej połączonej faktury.",
+        "summarySeparate": "Ten wybór spowoduje wygenerowanie oddzielnych faktur {{count}}.",
+        "invoiceTitle": "Faktura {{index}}",
+        "sections": {
+          "clientDetails": "Dane klienta",
+          "invoiceDetails": "Szczegóły faktury",
+          "lineItems": "Pozycje"
+        },
+        "fields": {
+          "date": "Data"
+        },
+        "columns": {
+          "description": "Opis",
+          "quantity": "Ilość",
+          "rate": "Stawka",
+          "amount": "Kwota"
+        },
+        "totals": {
+          "subtotal": "Suma częściowa",
+          "tax": "Podatek",
+          "total": "Razem"
+        },
+        "generating": "Generowanie...",
+        "generateError": "Nie udało się wygenerować faktury z podglądu"
+      },
+      "poOverage": {
+        "title": "Przekroczenie limitu zamówienia zakupu",
+        "description": "Wybrana suma faktury kończy się o {{amount}}.",
+        "batchDescription": "Jedna lub więcej faktur przekracza kwotę zatwierdzoną w Zamówieniu zakupu. Co chcesz zrobić?",
+        "batchItem": "{{clientName}}: koniec przez {{amount}}",
+        "poNumber": "Zamówienie {{number}}",
+        "allowOverages": "Zezwalaj na nadwyżki (generuj wszystkie faktury)",
+        "skipInvoices": "Pomiń faktury, które przekroczą ich PO",
+        "continue": "Kontynuuj",
+        "singleDescription": "Ta faktura przekraczałaby kwotę zatwierdzoną w Zamówieniu zakupu przez {{amount}}.",
+        "proceedAnyway": "Kontynuować mimo to?",
+        "proceedConfirm": "Kontynuuj mimo to",
+        "skippedError": "Pominięte ze względu na nadmiar zamówienia ({{poLabel}}): przekroczone przez {{amount}}."
+      }
+    },
+    "history": {
+      "title": "Powtarzająca się historia faktur",
+      "filterPlaceholder": "Filtruj klientów...",
+      "columns": {
+        "client": "Klient",
+        "assignmentScope": "Zakres przypisania",
+        "cadenceSource": "Źródło rytmu",
+        "servicePeriod": "Okres usługi",
+        "invoiceWindow": "Okno faktury",
+        "invoice": "Faktura",
+        "actions": "Działania"
+      },
+      "badges": {
+        "contractAnniversary": "Rocznica umowy",
+        "clientSchedule": "Harmonogram klienta",
+        "unknownCadenceSource": "Nieznane źródło rytmu ({{source}})",
+        "multiContractInvoice": "Faktura wieloumowa",
+        "servicePeriodBacked": "Gwarancja okresu serwisowego"
+      }
+    },
+    "materializationGap": {
+      "title": "Wymagana naprawa okresowa",
+      "description": "W tych oknach kadencji klienta brakuje utrwalonych, powtarzających się okresów usług, dlatego nie można w nich pracować w trybie gotowości do fakturowania do czasu naprawy harmonogramu kanonicznego.",
+      "labels": {
+        "servicePeriod": "Okres świadczenia usług",
+        "invoiceWindow": "Okno faktury",
+        "scheduleKey": "Klucz harmonogramu"
+      },
+      "reviewLink": "Przejrzyj okresy świadczenia usług",
+      "helpText": "Napraw kanoniczne rekordy okresu serwisowego zamiast generować wiersz faktury dotyczącej zgodności."
+    },
+    "errors": {
+      "title": "Wystąpiły błędy podczas finalizowania faktur:",
+      "loadReady": "Nie udało się wczytać okresów rozliczeniowych. Spróbuj ponownie.",
+      "loadHistory": "Nie udało się wczytać historii faktur cyklicznych. Spróbuj ponownie."
+    },
+    "loading": {
+      "billingData": "Ładowanie danych rozliczeniowych"
+    }
+  },
+  "manualInvoices": {
+    "title": "Wygeneruj fakturę ręczną",
+    "detailsTitle": "Szczegóły faktury",
+    "detailsDescription": "Ręczne zmiany domyślnie pozostają bez okresu, podczas gdy powtarzające się wiersze oparte na szczegółach zachowują swoje kanoniczne okresy świadczenia usługi.",
+    "description": "Utwórz fakturę ręczną i opcjonalnie uwzględnij automatyczne pozycje powtarzające się.",
+    "fields": {
+      "client": "Klient",
+      "invoiceNumber": "Numer faktury",
+      "invoiceNumberOptional": "Numer faktury (opcjonalnie)"
+    },
+    "placeholders": {
+      "selectClient": "Wybierz klienta",
+      "invoiceNumberOptional": "Pozostaw puste, aby wygenerować automatycznie"
+    },
+    "automatedItems": {
+      "title": "Automatyczne elementy zamówienia",
+      "service": "Usługa",
+      "total": "Razem",
+      "unknownService": "Nieznana usługa"
+    },
+    "lineItems": {
+      "manual": "Ręczne elementy zamówienia",
+      "all": "Pozycje"
+    },
+    "actions": {
+      "addCharge": "Dodaj opłatę",
+      "addDiscount": "Dodaj rabat",
+      "generate": "Wygeneruj fakturę",
+      "saveChanges": "Zapisz zmiany",
+      "processing": "Przetwarzanie..."
+    },
+    "labels": {
+      "total": "Razem"
+    },
+    "prepayment": {
+      "label": "To jest faktura z przedpłatą (tworzy kredyt)",
+      "description": "Zaznacz tę opcję tylko wtedy, gdy faktura ręczna powinna generować kredyt na przyszły wniosek finansowy, a nie przedstawiać powtarzalne pokrycie okresu świadczenia usługi."
+    },
+    "creditExpiration": {
+      "label": "Data wygaśnięcia kredytu",
+      "helpText": "Pozostaw puste, aby nie wygasać lub użyć domyślnego okresu wygaśnięcia"
+    },
+    "errors": {
+      "selectClient": "Proszę wybrać klienta",
+      "invoiceNumberUnique": "Ten numer faktury jest już używany.",
+      "noTaxRateConfigured": "Dla regionu nie skonfigurowano stawki podatku.",
+      "serviceNotFound": "Nie znaleziono wybranej usługi.",
+      "cannotModify": "Faktura nie może być modyfikowana (opłacona/anulowana).",
+      "loadItems": "Błąd podczas ładowania pozycji faktury",
+      "refresh": "Wystąpił błąd podczas odświeżania danych faktury.",
+      "updateFailed": "Błąd podczas aktualizowania faktury",
+      "generateFailed": "Błąd podczas generowania faktury"
+    },
+    "errorFallback": {
+      "title": "Coś poszło nie tak",
+      "retry": "Spróbuj ponownie"
+    }
+  },
+  "draftsTab": {
+    "title": "Projekty faktur",
+    "searchPlaceholder": "Wyszukaj faktury...",
+    "bulkActions_one": "Działania ({{count}})",
+    "bulkActions_other": "Działania ({{count}})",
+    "columns": {
+      "invoiceNumber": "Numer faktury",
+      "client": "Klient",
+      "amount": "Kwota",
+      "invoiceDate": "Data faktury",
+      "dueDate": "Termin",
+      "status": "Status",
+      "actions": "Działania"
+    },
+    "actions": {
+      "finalize": "Sfinalizować",
+      "finalizeSelected": "Sfinalizuj wybrane",
+      "downloadPdf": "Pobierz PDF",
+      "reverseDraft": "Odwrotny projekt",
+      "reverseSelected": "Wybrano odwrotność",
+      "generateInvoices": "Generuj faktury"
+    },
+    "status": {
+      "draft": "Projekt"
+    },
+    "empty": {
+      "title": "Brak projektów faktur",
+      "description": "Wersje robocze faktur pojawią się tutaj po utworzeniu faktur, które nie zostały sfinalizowane."
+    },
+    "loading": "Ładowanie wersji roboczych faktur...",
+    "errors": {
+      "loadFailed": "Nie udało się wczytać wersji roboczych faktur. Spróbuj ponownie.",
+      "finalizeFailed": "Nie udało się sfinalizować faktury. Spróbuj ponownie.",
+      "bulkFinalizeFailed": "Nie udało się sfinalizować wybranych faktur. Spróbuj ponownie.",
+      "pdfFailed": "Nie udało się wygenerować pliku PDF. Spróbuj ponownie.",
+      "reverseFailed": "Nie udało się wycofać wersji roboczej faktury. Spróbuj ponownie."
+    },
+    "reverseDialog": {
+      "title": "Odwrotna wersja faktury",
+      "title_other": "Odwrotne wystawianie faktur",
+      "message_one": "Wycofanie tej wersji roboczej faktury spowoduje jej usunięcie i zwolnienie wszelkich powiązanych zapisów czasu lub zapisów użytkowania. Tej akcji nie można cofnąć.",
+      "message_other": "Wycofanie wersji roboczych faktur {{count}} spowoduje ich usunięcie i zwolnienie wszelkich powiązanych wpisów czasu lub zapisów użytkowania. Tej akcji nie można cofnąć.",
+      "confirm": "Odwrotny projekt",
+      "cancel": "Anuluj"
+    }
+  },
+  "finalizedTab": {
+    "title": "Sfinalizowane faktury",
+    "searchPlaceholder": "Wyszukaj faktury...",
+    "bulkActions_one": "Działania ({{count}})",
+    "bulkActions_other": "Działania ({{count}})",
+    "columns": {
+      "invoiceNumber": "Numer faktury",
+      "client": "Klient",
+      "amount": "Kwota",
+      "finalizedDate": "Ostateczna data",
+      "status": "Status",
+      "actions": "Działania"
+    },
+    "actions": {
+      "downloadPdfs": "Pobierz pliki PDF",
+      "sendEmails": "Wysyłaj e-maile",
+      "unfinalizeSelected": "Cofnij finalizację wybranych",
+      "downloadPdf": "Pobierz PDF",
+      "sendEmail": "Wyślij e-mail",
+      "unfinalize": "Cofnij finalizację"
+    },
+    "status": {
+      "finalized": "Sfinalizowana"
+    },
+    "empty": {
+      "title": "Brak sfinalizowanych faktur",
+      "description": "Sfinalizuj wersje robocze faktur, aby zobaczyć je tutaj.",
+      "viewDrafts": "Zobacz wersje robocze"
+    },
+    "loading": "Ładowanie faktur...",
+    "errors": {
+      "loadFailed": "Nie udało się wczytać faktur. Spróbuj ponownie.",
+      "pdfFailed": "Nie udało się wygenerować pliku PDF. Spróbuj ponownie.",
+      "bulkPdfFailed": "Nie udało się wygenerować plików PDF. Spróbuj ponownie.",
+      "unfinalizeFailed": "Nie udało się cofnąć finalizacji faktury. Spróbuj ponownie.",
+      "bulkUnfinalizeFailed": "Nie udało się cofnąć finalizacji faktur. Spróbuj ponownie."
+    }
+  },
+  "recurringServicePeriods": {
+    "title": "Powtarzające się okresy świadczenia usług",
+    "description": "Przejrzyj okresy obowiązywania faktury okresowej dla pozycji umowy klienta, rozwiąż problemy, dlaczego prace są wymagane lub nie, i sprawdź historię rozliczeń powiązaną z wierszami szczegółów faktury.",
+    "fields": {
+      "scheduleSelect": "Wybierz harmonogram",
+      "scheduleSelectPlaceholder": "Wybierz najnowszy harmonogram cykliczny",
+      "scheduleKey": "Klucz harmonogramu",
+      "scheduleKeyPlaceholder": "Wklej klucz harmonogramu (opcjonalnie, jeśli wybrano powyżej)",
+      "client": "Klient",
+      "cadenceSource": "Źródło kadencji",
+      "billingTiming": "Termin rozliczeń",
+      "chargeFamily": "Rodzina opłat",
+      "scheduleKeyLabel": "Klucz harmonogramu"
+    },
+    "actions": {
+      "loadingSchedule": "Ładowanie…",
+      "openSchedule": "Otwórz harmonogram",
+      "repairMissing": "Napraw brakujące okresy serwisowe",
+      "repairing": "Naprawa…",
+      "previewRegeneration": "Podgląd regeneracji",
+      "previewing": "Podgląd…"
+    },
+    "errors": {
+      "enterScheduleKey": "Wprowadź klucz harmonogramu, aby sprawdzić powtarzające się okresy świadczenia usług.",
+      "loadFailed": "Nie udało się załadować powtarzających się okresów świadczenia usług.",
+      "candidateRecordsArray": "Rekordy kandydatów JSON musi być tablicą.",
+      "previewFailed": "Nie udało się wyświetlić podglądu cyklicznej regeneracji w okresie serwisowym.",
+      "repairFailed": "Nie udało się naprawić powtarzającej się materializacji okresu serwisowego."
+    },
+    "labels": {
+      "recurringObligation": "Obowiązek powtarzalny",
+      "generated": "Wygenerowano",
+      "edited": "Edytowano",
+      "billed": "Rozliczono",
+      "exceptions": "Wyjątki",
+      "repairCompleted": "Naprawa zakończona",
+      "candidateRecordsJson": "Dokumenty kandydatów w formacie JSON",
+      "conflicts": "Konflikty"
+    },
+    "values": {
+      "notLinked": "Niepołączone",
+      "contractAnniversary": "Rocznica umowy",
+      "clientSchedule": "Harmonogram klienta",
+      "advance": "Z góry",
+      "arrears": "Z dołu",
+      "unknownClient": "Nieznany klient",
+      "range": "{{start}} do {{end}}",
+      "scheduleOptionLabel": "{{client}} · {{entity}} · {{cadence}} · {{timing}}",
+      "generatedFromSourceCadence": "Wygenerowano na podstawie rytmu źródłowego",
+      "noConflicts": "Dla dostarczonych kandydatów nie wykryto żadnych konfliktów regeneracji."
+    },
+    "displayStates": {
+      "generated": {
+        "label": "Wygenerowano",
+        "detail": "Odpowiada bieżącym zasadom kadencji i oczekuje na rozliczenie lub sprawdzenie."
+      },
+      "edited": {
+        "label": "Edytowano",
+        "detail": "Późniejsza wersja zmieniła wygenerowany harmonogram i pozostaje aktywna."
+      },
+      "skipped": {
+        "label": "Pominięte",
+        "detail": "Ten przyszły okres jest celowo wyłączony z należytej selekcji do czasu ponownej edycji."
+      },
+      "locked": {
+        "label": "Zamknięty",
+        "detail": "Okres ten jest zamrożony w przypadku zwykłych zmian oczekujących na rozliczenie lub korektę."
+      },
+      "billed": {
+        "label": "Rozliczono",
+        "detailLinked": "Połączono ze szczegółami faktury {{invoiceChargeDetailId}}.",
+        "detailUnlinked": "Powiązane z historią rozliczeń."
+      },
+      "superseded": {
+        "label": "Zastąpiony",
+        "detail": "Nowsza wersja zastąpiła ten okres, a ten wiersz pozostaje w historii kontroli."
+      },
+      "archived": {
+        "label": "Zarchiwizowane",
+        "detail": "Ten wiersz historyczny jest zachowywany wyłącznie na potrzeby audytu i uzgodnienia."
+      }
+    },
+    "provenanceReasons": {
+      "boundary_adjustment": "Granica dostosowana",
+      "invoice_window_adjustment": "Dostosowano okno fakturowania",
+      "activity_window_adjustment": "Dostosowano okno aktywności",
+      "skip": "Pominięte przez personel zajmujący się rozliczeniami",
+      "defer": "Przesunięte na późniejsze okno fakturowania",
+      "source_rule_changed": "Zregenerowano po zmianie reguły źródłowej",
+      "billing_schedule_changed": "Zregenerowano po zmianie harmonogramu rozliczeń",
+      "cadence_owner_changed": "Regenerowany po zmianie właściciela kadencji",
+      "activity_window_changed": "Zregenerowano po zmianie okna aktywności",
+      "backfill_realignment": "Wyrównano podczas zasypywania",
+      "integrity_repair": "Naprawiony pod kątem integralności",
+      "invoice_linkage_repair": "Naprawiony po korekcie powiązania faktury",
+      "admin_correction": "Poprawione administracyjnie",
+      "initial_materialization": "Wygenerowano na podstawie rytmu źródłowego",
+      "backfill_materialization": "Wygenerowane podczas uzupełniania"
+    },
+    "governanceActions": {
+      "view": "pogląd",
+      "edit_boundaries": "edytować granice",
+      "skip": "pominąć",
+      "defer": "odraczać",
+      "regenerate": "zregenerować",
+      "invoice_linkage_repair": "naprawa powiązania faktur",
+      "archive": "archiwum"
+    },
+    "table": {
+      "columns": {
+        "state": "Państwo",
+        "servicePeriod": "Okres usługi",
+        "invoiceWindow": "Okno faktury",
+        "revision": "Rewizja",
+        "reason": "Powód",
+        "allowedActions": "Dozwolone działania"
+      }
+    },
+    "repairPanel": {
+      "title": "Brakujące utrwalone okresy świadczenia usług",
+      "description": "Ten harmonogram cykliczny istnieje w metadanych rozliczeń na bieżąco, ale nie zawiera utrwalonych wierszy dotyczących okresów świadczenia usługi. Naprawa spowoduje zmaterializowanie tylko przyszłych wierszy, zachowanie granic historii rozliczeń i opatrzenie nowych rekordów pochodzeniem uzupełnień.",
+      "result": "Uzupełniono wiersze {{backfilled}}, ponownie wyrównano {{realigned}}, pominięto historycznych kandydatów {{skipped}} i pozostawiono aktywne wiersze {{active}} w tym harmonogramie."
+    },
+    "regenerationPreview": {
+      "title": "Podgląd regeneracji",
+      "description": "Wklej rekordy kandydatów w formacie JSON, aby wyświetlić podgląd, w jaki sposób zachowane edytowane lub rozliczone wiersze będą kolidować z ponownie wygenerowanymi przyszłymi kandydatami dla tego harmonogramu."
+    },
+    "conflicts": {
+      "kinds": {
+        "missing_candidate": "brakujący kandydat",
+        "service_period_mismatch": "niedopasowanie okresu świadczenia usługi",
+        "invoice_window_mismatch": "niedopasowanie okna faktury",
+        "activity_window_mismatch": "niedopasowanie okna aktywności"
+      },
+      "reasons": {
+        "missing_candidate": "Nie ma już żadnego zregenerowanego kandydata na to zachowane miejsce na nadpisanie.",
+        "service_period_mismatch": "Zregenerowany kandydat nie odpowiada już zachowanej granicy okresu serwisowego zastąpienia.",
+        "invoice_window_mismatch": "Wygenerowany ponownie kandydat nie pasuje już do zachowanego okna faktury zastępującej.",
+        "activity_window_mismatch": "Zregenerowany kandydat nie pasuje już do zachowanego okna działania zastąpienia."
+      }
+    }
+  },
+  "billingCycles": {
+    "title": "Cykle rozliczeniowe",
+    "tooltip": "Skonfiguruj harmonogramy rozliczeń klientów i przeglądaj okna fakturowania tworzone dla usług cyklicznych z częstotliwością obsługi klienta.",
+    "description": "Harmonogramy rozliczeń klienta definiują okna fakturowania dla wierszy cyklicznych, które wystawiają faktury zgodnie z harmonogramem rozliczeń klienta. Linie z okazji rocznicy kontraktu mogą przebiegać według własnego rytmu i nie są tutaj wyświetlane.",
+    "searchPlaceholder": "Wyszukaj klientów...",
+    "dateRange": "Zakres dat cyklu rozliczeniowego",
+    "search": "Szukaj",
+    "loading": "Ładowanie cykli rozliczeniowych",
+    "errors": {
+      "loadFailed": "Nie udało się pobrać danych. Spróbuj ponownie później."
+    },
+    "columns": {
+      "client": "Klient",
+      "contract": "Kontrakt",
+      "currentBillingCycle": "Bieżący cykl rozliczeniowy",
+      "anchor": "Kotwica",
+      "actions": "Działania"
+    },
+    "actions": {
+      "viewClientBilling": "Wyświetl rozliczenia klienta"
+    },
+    "values": {
+      "noActiveAssignments": "Brak aktywnych przypisań",
+      "unknown": "Nieznany",
+      "assignmentId": "Przypisanie {{id}}",
+      "notSet": "Nie ustawiono",
+      "rolling": "Walcowanie",
+      "weekday": "Dzień powszedni {{day}}",
+      "starts": "Uruchamia {{date}}",
+      "day": "Dzień {{day}}",
+      "monthDay": "{{month}} {{day}}",
+      "dash": "—"
+    },
+    "cycles": {
+      "weekly": "Tygodnik",
+      "bi-weekly": "Dwutygodniowy",
+      "monthly": "Miesięczny",
+      "quarterly": "Kwartalnie",
+      "semi-annually": "Półrocznie",
+      "annually": "Rocznie"
+    },
+    "months": {
+      "january": "Styczeń",
+      "february": "Luty",
+      "march": "marzec",
+      "april": "Kwiecień",
+      "may": "Maj",
+      "june": "Czerwiec",
+      "july": "Lipiec",
+      "august": "Sierpień",
+      "september": "Wrzesień",
+      "october": "Październik",
+      "november": "Listopad",
+      "december": "Grudzień"
+    }
+  },
+  "invoicePreview": {
+    "title": "Podgląd faktury",
+    "templatePlaceholder": "Wybierz szablon faktury...",
+    "labels": {
+      "standard": "(Standard)"
+    },
+    "actions": {
+      "finalizeInvoice": "Sfinalizuj fakturę",
+      "editItems": "Edytuj elementy",
+      "downloadPdf": "Pobierz PDF",
+      "reverseDraft": "Odwrotny projekt",
+      "sendEmail": "Wyślij e-mail",
+      "unfinalize": "Cofnij finalizację",
+      "viewSourceQuote": "Wyświetl cytat źródłowy"
+    },
+    "loading": "Ładowanie podglądu...",
+    "empty": "Wybierz fakturę do podglądu",
+    "error": "Nie można wyświetlić podglądu",
+    "errorDescription": "Nie można wyświetlić podglądu. Może brakować danych.",
+    "errors": {
+      "loadFailed": "Nie udało się załadować podglądu: {{message}}",
+      "actionFailed": "Nie udało się wykonać {{action}}. Spróbuj ponownie.",
+      "actionLabels": {
+        "finalizeInvoice": "sfinalizować fakturę",
+        "downloadPdf": "pobierz PDF",
+        "reverseDraft": "projekt odwrotny",
+        "sendEmail": "wyślij e-mail",
+        "unfinalize": "anulować finalizację faktury"
+      }
+    }
+  },
+  "templateEditor": {
+    "actions": {
+      "back": "Powrót do układów faktur",
+      "cancel": "Anuluj",
+      "save": "Zapisz szablon",
+      "saving": "Zapisywanie..."
+    },
+    "titles": {
+      "create": "Utwórz nowy układ faktury",
+      "edit": "Edytuj układ: {{name}}"
+    },
+    "fields": {
+      "templateName": "Nazwa szablonu",
+      "templateAst": "Szablon AST (JSON)",
+      "created": "Utworzono",
+      "lastUpdated": "Ostatnia aktualizacja"
+    },
+    "tabs": {
+      "visual": "Wizualny",
+      "code": "Kod"
+    },
+    "alerts": {
+      "codeReadonly": "Widok kodu jest generowany z obszaru roboczego Visual i jest tylko do odczytu."
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować danych szablonu.",
+      "saveFailed": "Nie udało się zapisać szablonu.",
+      "unexpectedSave": "Wystąpił nieoczekiwany błąd podczas zapisywania.",
+      "templateNameRequired": "Nazwa szablonu jest wymagana",
+      "astExportFailed": "Nie udało się wyeksportować szablonu AST z wizualnego obszaru roboczego: {{message}}",
+      "unknownAstExport": "Nieznany błąd eksportu AST"
+    }
+  },
+  "templates": {
+    "title": "Układy faktur",
+    "columns": {
+      "templateName": "Nazwa szablonu",
+      "type": "Typ",
+      "default": "Domyślny",
+      "actions": "Działania"
+    },
+    "types": {
+      "standard": "Standardowy",
+      "custom": "Zwyczaj"
+    },
+    "actions": {
+      "edit": "Edytuj",
+      "editAsCopy": "Edytuj jako kopię",
+      "clone": "Klon",
+      "setDefault": "Ustaw jako domyślny",
+      "delete": "Usuń",
+      "openMenu": "Otwórz menu",
+      "create": "Utwórz nowy układ"
+    },
+    "loading": "Ładowanie układów faktur",
+    "values": {
+      "thisTemplate": "ten szablon",
+      "copySuffix": "(Kopia)",
+      "copyOfName": "Kopia {{name}}",
+      "standardSuffix": "(Standard)"
+    },
+    "errors": {
+      "cloneFailed": "Nie udało się sklonować szablonu.",
+      "cloneEditFailed": "Nie udało się utworzyć edytowalnej kopii.",
+      "setDefaultFailed": "Nie udało się ustawić szablonu jako domyślnego.",
+      "fetchFailed": "Nie udało się pobrać szablonów.",
+      "deleteValidationFailed": "Nie udało się potwierdzić usunięcia. Spróbuj ponownie.",
+      "deleteUnexpected": "Wystąpił nieoczekiwany błąd podczas usuwania szablonu."
+    }
+  },
+  "externalTax": {
+    "title": "Zewnętrzny import podatkowy",
+    "description": "Przeglądaj faktury oczekujące na zewnętrzne obliczenie podatku i importuj powstałe kwoty.",
+    "columns": {
+      "invoice": "Faktura",
+      "client": "Klient",
+      "amount": "Kwota",
+      "system": "System",
+      "created": "Utworzono",
+      "actions": "Działania"
+    },
+    "actions": {
+      "import": "Importuj",
+      "importing": "Importowanie...",
+      "refresh": "Odśwież",
+      "importAll": "Importuj wszystko",
+      "showHistory": "Pokaż historię",
+      "hideHistory": "Ukryj historię",
+      "importFromAdapter": "Podatek importowy od {{adapter}}"
+    },
+    "summary": {
+      "pending_one": "Faktura {{count}} oczekująca na import podatku",
+      "pending_other": "Faktury {{count}} oczekujące na import podatku",
+      "successful_one": "{{count}} powiódł się",
+      "successful_other": "{{count}} powiódł się",
+      "failed_one": "Niepowodzenie {{count}}",
+      "failed_other": "Niepowodzenie {{count}}"
+    },
+    "progress": {
+      "importing": "Import podatków...",
+      "importingCount": "Importowanie {{current}}/{{total}}..."
+    },
+    "empty": {
+      "allUpToDate": "Wszystkie faktury są aktualne",
+      "nonePending": "Brak faktur oczekujących na import podatku zewnętrznego.",
+      "history": "Brak historii importu."
+    },
+    "helpText": "Faktury pojawiają się tutaj, gdy są eksportowane z włączonym zewnętrznym delegowaniem podatku. Zaimportuj podatek, gdy Twój system księgowy obliczy kwoty podatku.",
+    "alerts": {
+      "pendingTitle": "Import oczekujący na podatek",
+      "pendingDescription": "Ta faktura została wyeksportowana do {{adapter}} bez kwot podatku. Zaimportuj obliczony podatek po przetworzeniu faktury.",
+      "importedTitle": "Podatek importowany z {{adapter}}",
+      "significantDifference": "Różnica przekracza 1%",
+      "significantDifferenceTitle": "Znacząca różnica podatkowa",
+      "significantDifferenceDescription": "Podatek zewnętrzny różni się od kalkulacji wewnętrznej o więcej niż 1%. Sprawdź opłaty, aby upewnić się, że są dokładne."
+    },
+    "reconciliation": {
+      "internal": "Wewnętrzne",
+      "external": "Zewnętrzny",
+      "difference": "Różnica",
+      "history": "Importuj historię"
+    },
+    "reconciliationView": {
+      "title": "Uzgodnienie podatkowe",
+      "description": "Porównaj wewnętrzne i zewnętrzne obliczenia podatkowe.",
+      "tooltips": {
+        "significantDifference": "Różnica przekracza 1%",
+        "amountsMatch": "Kwoty podatku mieszczą się w akceptowalnym zakresie"
+      },
+      "summary": {
+        "internal": "Wewnętrzny (Alga PSA)",
+        "external": "Zewnętrzne (księgowość)"
+      },
+      "alerts": {
+        "significantDifferenceTitle": "Wykryto znaczącą różnicę podatkową",
+        "significantDifferenceDescription": "Różnica pomiędzy wewnętrznymi i zewnętrznymi obliczeniami podatku przekracza 1%. Aby zidentyfikować rozbieżności, przejrzyj poniższy podział wiersz po wierszu."
+      },
+      "sections": {
+        "lineByLineBreakdown": "Podział linia po linii"
+      },
+      "columns": {
+        "description": "Opis",
+        "internalTax": "Podatek wewnętrzny",
+        "externalTax": "Podatek zewnętrzny",
+        "difference": "Różnica"
+      },
+      "labels": {
+        "total": "Razem",
+        "line": "Linia {{index}}"
+      },
+      "states": {
+        "loading": "Ładuję dane uzgodnieniowe...",
+        "noData": "Brak dostępnych danych uzgodnieniowych."
+      },
+      "helpText": "Różnice mogą wynikać z zaokrągleń, różnic w przepisach podatkowych lub różnic czasowych między systemami."
+    },
+    "states": {
+      "loadingHistory": "Ładowanie historii...",
+      "emptyHistory": "Nie znaleziono importu z wcześniejszym opodatkowaniem."
+    },
+    "tooltips": {
+      "externalRef": "Referencja zewnętrzna: {{reference}}"
+    },
+    "values": {
+      "unknownSystem": "Nieznany",
+      "externalSystem": "System zewnętrzny",
+      "notAvailable": "Nie dotyczy"
+    },
+    "toasts": {
+      "noPendingInvoices": "Brak faktur oczekujących na import podatkowy",
+      "batchImportedSuccess_one": "Pomyślnie zaimportowano podatek do faktury {{count}}",
+      "batchImportedSuccess_other": "Pomyślnie zaimportowano podatek dla faktur {{count}}",
+      "batchImportedPartial": "Zaimportowanie faktur {{successCount}}, {{failureCount}} nie powiodło się",
+      "batchImportedFailed_one": "Nie udało się zaimportować podatku dla faktury {{count}}",
+      "batchImportedFailed_other": "Nie udało się zaimportować podatku dla faktur {{count}}",
+      "taxImportedSuccessfully": "Podatek został pomyślnie zaimportowany",
+      "taxImportedFromAdapter": "Podatek został pomyślnie zaimportowany z {{adapter}}",
+      "taxImportFailed": "Nie udało się zaimportować podatku"
+    },
+    "errors": {
+      "loadPendingInvoices": "Nie udało się załadować oczekujących faktur",
+      "batchImportFailed": "Import zbiorczy nie powiódł się",
+      "importFailed": "Import nie powiódł się",
+      "importTaxFailed": "Nie udało się zaimportować podatku"
+    },
+    "adapterNames": {
+      "quickbooks": "Szybkie książki online",
+      "xero": "Xero",
+      "sage": "Szałwia"
+    }
+  },
+  "sendEmail": {
+    "title": "Wyślij e-mail z fakturą",
+    "loading": "Ładowanie informacji o odbiorcy...",
+    "summary": {
+      "invoices_one": "{{count}} Faktura",
+      "invoices_other": "{{count}} Faktury",
+      "readyToSend_one": "{{count}} gotowy do wysłania",
+      "readyToSend_other": "{{count}} gotowy do wysłania",
+      "missingEmail_one": "Brakujący e-mail {{count}}",
+      "missingEmail_other": "Brakujący e-mail {{count}}"
+    },
+    "recipients": {
+      "title": "Odbiorcy",
+      "billingContact": "Kontakt ds. rozliczeń",
+      "billingEmail": "E-mail rozliczeniowy",
+      "clientEmail": "E-mail klienta",
+      "noEmailFound": "Nie znaleziono adresu e-mail",
+      "notConfigured": "Dla tego klienta nie skonfigurowano żadnego adresu e-mail."
+    },
+    "fields": {
+      "due": "Termin",
+      "additionalMessage": "Dodatkowa wiadomość",
+      "additionalMessagePlaceholder": "Dodaj osobistą notatkę, którą chcesz dołączyć do wiadomości e-mail..."
+    },
+    "preview": "E-maile będą wysyłane z {{fromEmail}} w imieniu {{companyName}}. Do każdej faktury zostanie dołączony plik PDF.",
+    "values": {
+      "defaultFromEmail": "noreply@example.com",
+      "defaultCompanyName": "Twoja firma"
+    },
+    "actions": {
+      "cancel": "Anuluj",
+      "sendFallback": "Wyślij e-mail",
+      "send_one": "Wyślij e-mail {{count}}",
+      "send_other": "Wysyłaj e-maile {{count}}",
+      "sending_one": "Wysyłam fakturę {{count}}...",
+      "sending_other": "Wysyłanie faktur {{count}}..."
+    },
+    "toasts": {
+      "noValidRecipients": "Nie znaleziono prawidłowych odbiorców",
+      "sentSuccess_one": "Faktura {{count}} została wysłana pomyślnie",
+      "sentSuccess_other": "Faktury {{count}} zostały wysłane pomyślnie",
+      "sentFailure_one": "Nie udało się wysłać faktury {{count}}",
+      "sentFailure_other": "Nie udało się wysłać faktur {{count}}",
+      "sentPartial": "{{successCount}} wysłany, {{failureCount}} nie powiódł się"
+    },
+    "errors": {
+      "loadRecipients": "Nie udało się załadować informacji o odbiorcy",
+      "sendFailed": "Nie udało się wysłać e-maili"
+    }
+  },
+  "generateTab": {
+    "fields": {
+      "invoiceType": "Typ faktury"
+    },
+    "types": {
+      "automatic": "Automatyczne faktury",
+      "manual": "Faktura ręczna",
+      "prepayment": "Zaliczka"
+    },
+    "descriptions": {
+      "automatic": "Użyj okien fakturowania, aby sprawdzić należne powtarzające się okresy świadczenia usług przed wygenerowaniem powtarzającej się partii.",
+      "manual": "Używaj faktur ręcznych dla wierszy jednorazowych lub korygujących. Nie definiują powtarzających się okresów świadczenia usług.",
+      "prepayment": "Korzystaj z przedpłat i przepływów kredytowych w przypadku wartości finansowej, która powinna być oddzielona od powtarzającego się ubezpieczenia okresu świadczenia usługi."
+    },
+    "messages": {
+      "success": "Faktura została wygenerowana pomyślnie!",
+      "loadFailed": "Nie udało się wczytać danych"
+    }
+  },
+  "prepayment": {
+    "titles": {
+      "prepayment": "Wygeneruj fakturę zaliczkową",
+      "creditMemo": "Wygeneruj notę ​​kredytową"
+    },
+    "descriptions": {
+      "prepayment": "Faktury z przedpłatą tworzą kredyt klienta na przyszłą wartość. Nie tworzą powtarzających się okresów świadczenia usług; późniejsze faktury cykliczne zachowują własny zakres okresu świadczenia usługi.",
+      "creditMemo": "Noty kredytowe korygują salda finansowe bez ponownego definiowania powtarzającego się okresu świadczenia usługi na fakturze źródłowej."
+    },
+    "fields": {
+      "type": "Typ",
+      "client": "Klient",
+      "amount": "Kwota",
+      "description": "Opis"
+    },
+    "types": {
+      "prepaymentInvoice": "Faktura zaliczkowa",
+      "creditMemo": "Notatka kredytowa"
+    },
+    "placeholders": {
+      "amount": "Wpisz kwotę",
+      "prepaymentDescription": "Przedpłata na przyszłe usługi",
+      "creditMemoDescription": "Powód noty kredytowej"
+    },
+    "errors": {
+      "allFieldsRequired": "Proszę wypełnić wszystkie pola",
+      "validAmount": "Proszę wprowadzić prawidłową kwotę",
+      "creditMemosUnsupported": "Noty kredytowe nie są jeszcze obsługiwane",
+      "generateFailed": "Błąd podczas generowania faktury"
+    },
+    "actions": {
+      "generating": "Generowanie...",
+      "generatePrepayment": "Wygeneruj fakturę zaliczkową",
+      "generateCreditMemo": "Wygeneruj notę ​​kredytową"
+    }
+  },
+  "contractItems": {
+    "columns": {
+      "description": "Opis",
+      "quantity": "Ilość",
+      "rate": "Stawka",
+      "amount": "Kwota"
+    },
+    "labels": {
+      "contractSubtotal": "Suma częściowa kontraktu:",
+      "otherItemsSubtotal": "Suma częściowa innych pozycji:",
+      "otherItems": "Inne przedmioty",
+      "product": "Produkt"
+    }
+  },
+  "hub": {
+    "title": "Fakturowanie",
+    "tabs": {
+      "generate": "Spowodować",
+      "drafts": "Warcaby",
+      "finalized": "Sfinalizowana"
+    }
+  },
+  "templateManager": {
+    "title": "Menedżer szablonów faktur",
+    "sampleInvoices": "Przykładowe faktury",
+    "templatePreview": "Podgląd szablonu",
+    "invoiceNumber": "Faktura #{{number}}"
+  },
+  "taxBadge": {
+    "labels": {
+      "internal": "Podatek: wewnętrzny",
+      "external": "Podatek: zewnętrzny",
+      "pending": "Podatek: w oczekiwaniu"
+    },
+    "tooltips": {
+      "internal": "Podatek naliczany przez Alga PSA na podstawie skonfigurowanych stawek podatkowych",
+      "external": "Podatek naliczany przez zewnętrzny system księgowy",
+      "pending": "Podatek oczekujący na import z zewnętrznego systemu księgowego",
+      "externalAdapter": "Podatek obliczony przez {{adapter}}",
+      "externalAdapterImportedAt": "Podatek obliczony przez {{adapter}} na {{date}}",
+      "pendingAdapter": "Oczekiwanie na obliczenie podatku z {{adapter}}"
+    },
+    "adapterNames": {
+      "quickbooks": "Szybkie książki online",
+      "xero": "Xero",
+      "sage": "Szałwia"
+    }
+  },
+  "annotations": {
+    "title": "Adnotacje do faktury",
+    "labels": {
+      "internal": "Wewnętrzne",
+      "external": "Zewnętrzny"
+    },
+    "placeholder": "Dodaj nową adnotację",
+    "actions": {
+      "add": "Dodaj adnotację"
+    }
+  },
+  "purchaseOrder": {
+    "labels": {
+      "short": "Zamówienie",
+      "number": "Numer zamówienia",
+      "authorized": "Autoryzowany PO",
+      "consumed": "PO wykorzystane (sfinalizowane)",
+      "remaining": "PO Pozostało"
+    }
+  },
+  "common": {
+    "actions": {
+      "cancel": "Anuluj",
+      "close": "Zamknij",
+      "delete": "Usuń",
+      "edit": "Edytuj",
+      "loading": "Ładowanie...",
+      "openMenu": "Otwórz menu",
+      "refresh": "Odśwież",
+      "retry": "Spróbuj ponownie",
+      "save": "Zapisz",
+      "search": "Szukaj"
+    },
+    "labels": {
+      "actions": "Działania",
+      "amount": "Kwota",
+      "client": "Klient",
+      "created": "Utworzono",
+      "description": "Opis",
+      "difference": "Różnica",
+      "dueDate": "Termin",
+      "invoice": "Faktura",
+      "invoiceNumber": "Numer faktury",
+      "unknownClient": "Nieznany klient",
+      "status": "Status",
+      "system": "System",
+      "total": "Razem"
+    },
+    "states": {
+      "empty": "Brak danych",
+      "loading": "Ładowanie...",
+      "notAvailable": "—"
+    }
+  },
+  "designer": {
+    "toolbar": {
+      "undo": "Cofnij",
+      "redo": "Ponów",
+      "snap": "Przyciąganie",
+      "guides": "Prowadnice",
+      "rulers": "Linijki",
+      "zoom": "Powiększenie",
+      "metrics": {
+        "drags": "Przeciągnięć: {{count}}",
+        "success": "Udanych: {{count}}",
+        "invalid": "Błędnych: {{count}}"
+      }
+    },
+    "palette": {
+      "tabs": {
+        "blocks": "BLOKI",
+        "presets": "PRESETY",
+        "fields": "POLA",
+        "outline": "STRUKTURA"
+      },
+      "search": {
+        "blocks": "Szukaj bloków…",
+        "presets": "Szukaj presetów…",
+        "fields": "Szukaj pól…"
+      },
+      "dragHint": "Przeciągnij lub dotknij „+\" aby wstawić.",
+      "addAriaLabel": "Dodaj {{label}}",
+      "noBlocksMatch": "Brak pasujących bloków.",
+      "presets": {
+        "sectionTitle": "Szablony makr",
+        "sectionDescription": "Pakiety predefiniowane dla popularnych sekcji faktury."
+      },
+      "noPresetsMatch": "Brak pasujących presetów.",
+      "fields": {
+        "insertHint": "Kliknij pole, aby wstawić je do aktywnego pola tekstowego.",
+        "categories": {
+          "client": "Klient",
+          "contact": "Kontakt",
+          "line-item": "Pozycja",
+          "quote": "Oferta",
+          "quote-totals": "Sumy oferty",
+          "invoice": "Faktura",
+          "customer": "Klient",
+          "tenant": "Najemca"
+        }
+      },
+      "noFieldsMatch": "Brak pasujących pól.",
+      "categories": {
+        "structure": "Struktura",
+        "content": "Zawartość",
+        "media": "Multimedia",
+        "dynamic": "Dynamiczne"
+      }
+    },
+    "inspector": {
+      "layoutControls": "Kontrolki układu",
+      "sizingMode": "Tryb rozmiaru",
+      "flexItem": "Element flex",
+      "displayFormat": "Format wyświetlania",
+      "attachments": "Załączniki",
+      "media": "Multimedia",
+      "title": "Inspektor",
+      "layerName": "Nazwa warstwy",
+      "typeLabel": "Typ",
+      "fieldTypeLabel": "Typ pola",
+      "noBindingKey": "Brak klucza powiązania",
+      "layoutPreset": "Preset układu",
+      "clear": "Wyczyść",
+      "fitSectionToContents": "Dopasuj sekcję do zawartości",
+      "sectionNoChildContent": "Sekcja nie ma zawartości do dopasowania.",
+      "apply": "Zastosuj",
+      "emptyHelp": "Wybierz komponent, aby edytować jego właściwości."
+    },
+    "shell": {
+      "selectedLabel": "Wybrano:",
+      "selectedNone": "Brak",
+      "clickBlockHint": "Kliknij blok na kanwie",
+      "orUse": "lub użyj",
+      "plusInLeftPanelHint": "+ w lewym panelu"
+    },
+    "pageSetup": {
+      "title": "Ustawienia strony",
+      "description": "Wybierz preset papieru i margines bez wybierania ukrytego węzła strony.",
+      "paperPreset": "Preset papieru",
+      "marginMm": "Margines (mm)"
+    },
+    "breadcrumbs": {
+      "emptyHelp": "Wybierz komponent na kanwie, aby zobaczyć hierarchię.",
+      "hierarchy": "Hierarchia"
+    },
+    "workspace": {
+      "preview": {
+        "source": {
+          "sample": "Przykład",
+          "existing": "Istniejące"
+        },
+        "sampleScenario": "Scenariusz przykładowy",
+        "selectScenarioPlaceholder": "Wybierz scenariusz…",
+        "searchInvoices": "Szukaj faktur…",
+        "searchInvoicesHint": "Szukaj po numerze lub kliencie…",
+        "noInvoicesFound": "Brak faktur.",
+        "selectInvoice": "Wybierz fakturę",
+        "loadingDetails": "Ładowanie szczegółów faktury…",
+        "selectInvoiceHint": "Wybierz fakturę, aby zobaczyć podgląd z danymi.",
+        "shape": "Kształt",
+        "render": "Renderuj",
+        "rerun": "Uruchom ponownie",
+        "emptyState": "Wybierz dane przykładowe lub istniejące, aby wygenerować wiarygodny podgląd.",
+        "loadingPreview": "Kształtowanie i renderowanie podglądu…",
+        "templateError": "Nie można wygenerować szablonu podglądu z bieżącego obszaru roboczego.",
+        "renderError": "Renderowanie podglądu nie powiodło się."
+      },
+      "tabs": {
+        "design": "Projektowanie",
+        "transforms": "Transformacje",
+        "preview": "Podgląd"
+      }
+    },
+    "blocks": {
+      "document": {
+        "label": "Dokument",
+        "description": "Korzeń dokumentu faktury."
+      },
+      "page": {
+        "label": "Strona",
+        "description": "Pojedyncza strona faktury."
+      },
+      "section": {
+        "label": "Sekcja",
+        "description": "Logiczne zgrupowanie z wspólnymi regułami układu."
+      },
+      "column": {
+        "label": "Kolumna",
+        "description": "Starszy kontener kolumny."
+      },
+      "text": {
+        "label": "Blok tekstu",
+        "description": "Statyczna lub powiązana z danymi treść tekstowa."
+      },
+      "totals": {
+        "label": "Sumy",
+        "description": "Podsumowanie: suma częściowa/podatek/suma całkowita."
+      },
+      "table": {
+        "label": "Tabela pozycji",
+        "description": "Powtarzające się wiersze pozycji faktury."
+      },
+      "dynamic-table": {
+        "label": "Tabela dynamiczna",
+        "description": "Zaawansowana tabela danych z powiązaniami kolumn."
+      },
+      "field": {
+        "label": "Pole danych",
+        "description": "Wyświetla powiązaną wartość (numer faktury, daty, sumy)."
+      },
+      "label": {
+        "label": "Etykieta pola",
+        "description": "Statyczna etykieta powiązana z polami danych."
+      },
+      "subtotal": {
+        "label": "Wiersz sumy częściowej",
+        "description": "Wyświetla sumę częściową przed opodatkowaniem."
+      },
+      "tax": {
+        "label": "Wiersz podatku",
+        "description": "Wyświetla obliczoną kwotę podatku."
+      },
+      "discount": {
+        "label": "Wiersz rabatu",
+        "description": "Wyświetla kwotę rabatu."
+      },
+      "custom-total": {
+        "label": "Niestandardowy wiersz sumy",
+        "description": "Konfigurowalny wiersz obliczany (opłaty, kredyty itd.)."
+      },
+      "image": {
+        "label": "Obraz",
+        "description": "Element obrazu w linii."
+      },
+      "logo": {
+        "label": "Logo",
+        "description": "Zasób brandingowy najemcy."
+      },
+      "qr": {
+        "label": "Kod QR",
+        "description": "Automatycznie generowany QR do linków płatności."
+      },
+      "signature": {
+        "label": "Blok podpisu",
+        "description": "Imię podpisującego i linia lub obraz podpisu."
+      },
+      "action-button": {
+        "label": "Przycisk akcji",
+        "description": "Przycisk wezwania do działania (np. Zapłać teraz)."
+      },
+      "attachment-list": {
+        "label": "Lista załączników",
+        "description": "Wyświetla dokumenty lub linki wspierające."
+      },
+      "divider": {
+        "label": "Separator",
+        "description": "Poziomy separator liniowy."
+      },
+      "spacer": {
+        "label": "Odstęp",
+        "description": "Puste miejsce do regulacji układu."
+      },
+      "container": {
+        "label": "Kontener",
+        "description": "Stylizowany kontener do grupowania treści (ramki, tła)."
+      }
+    },
+    "presets": {
+      "header-logo-address": {
+        "label": "Nagłówek: logo + adres",
+        "description": "Dwukolumnowy nagłówek z zablokowanymi proporcjami logo i stosem adresów."
+      },
+      "line-items-table": {
+        "label": "Tabela pozycji",
+        "description": "Tabela pozycji pełnej szerokości z powtarzającymi się wierszami."
+      },
+      "totals-stack": {
+        "label": "Stos sum",
+        "description": "Podsumowanie sum z blokiem notatek."
+      },
+      "two-column-summary": {
+        "label": "Podsumowanie w dwóch kolumnach",
+        "description": "Równe kolumny na podsumowanie i informacje kontaktowe."
+      },
+      "notes-totals-row": {
+        "label": "Notatki + Wiersz sum",
+        "description": "Szeroka kolumna notatek obok wąskiej kolumny sum z użyciem CSS grid."
+      },
+      "two-equal-columns-grid": {
+        "label": "Dwie równe kolumny",
+        "description": "Zrównoważona sekcja dwukolumnowa z CSS grid."
+      },
+      "three-info-columns": {
+        "label": "Trzy kolumny informacji",
+        "description": "Trójkolumnowy rząd kart informacyjnych z CSS grid."
+      },
+      "recurring-onetime-tables": {
+        "label": "Tabele cykliczne + jednorazowe",
+        "description": "Gotowe do oferty zestawione tabele dynamiczne dla pozycji cyklicznych i jednorazowych."
+      },
+      "header-with-qr": {
+        "label": "Podzielony nagłówek z QR",
+        "description": "Stos logo + adres z blokiem płatności QR."
+      },
+      "modern-invoice-complete": {
+        "label": "Nowoczesny szablon faktury",
+        "description": "Pełny układ z nagłówkiem, informacjami rozliczeniowymi, tabelą pozycji i stopką."
+      }
+    },
+    "schema": {
+      "panels": {
+        "layout": {
+          "title": "Układ",
+          "fields": {
+            "gap": {
+              "label": "Odstęp"
+            },
+            "padding": {
+              "label": "Dopełnienie"
+            },
+            "flexDirection": {
+              "label": "Kierunek",
+              "options": {
+                "column": "Pionowo",
+                "row": "Poziomo"
+              }
+            },
+            "alignItems": {
+              "label": "Wyrównaj elementy",
+              "options": {
+                "stretch": "Rozciągnij",
+                "flex-start": "Początek",
+                "center": "Środek",
+                "flex-end": "Koniec"
+              }
+            },
+            "justifyContent": {
+              "label": "Wyrównaj treść",
+              "options": {
+                "flex-start": "Początek",
+                "center": "Środek",
+                "flex-end": "Koniec",
+                "space-between": "Rozmieść między",
+                "space-around": "Rozmieść wokół",
+                "space-evenly": "Rozmieść równomiernie"
+              }
+            },
+            "gridAutoFlow": {
+              "label": "Auto-przepływ",
+              "options": {
+                "row": "wiersz",
+                "column": "kolumna",
+                "dense": "gęsty",
+                "row dense": "gęsty wiersz",
+                "column dense": "gęsta kolumna"
+              }
+            },
+            "gridTemplateColumns": {
+              "label": "Kolumny szablonu"
+            },
+            "gridTemplateRows": {
+              "label": "Wiersze szablonu"
+            },
+            "display": {
+              "options": {
+                "flex": "Stos (Flex)",
+                "grid": "Siatka"
+              }
+            }
+          }
+        },
+        "sizing-css": {
+          "title": "Wymiary (CSS)",
+          "fields": {
+            "height": {
+              "label": "wysokość"
+            },
+            "minWidth": {
+              "label": "min. szerokość"
+            },
+            "minHeight": {
+              "label": "min. wysokość"
+            },
+            "maxWidth": {
+              "label": "maks. szerokość"
+            },
+            "maxHeight": {
+              "label": "maks. wysokość"
+            }
+          }
+        },
+        "appearance": {
+          "title": "Wygląd",
+          "fields": {
+            "color": {
+              "label": "Kolor tekstu"
+            },
+            "border": {
+              "label": "Obramowanie"
+            },
+            "borderRadius": {
+              "label": "Promień"
+            },
+            "margin": {
+              "label": "Margines"
+            }
+          }
+        },
+        "section-border": {
+          "title": "Obramowanie sekcji",
+          "fields": {
+            "sectionBorderStyle": {
+              "options": {
+                "light": "Lekki",
+                "strong": "Mocny",
+                "none": "Brak"
+              }
+            }
+          }
+        },
+        "field-binding": {
+          "title": "Powiązanie pola",
+          "fields": {
+            "format": {
+              "options": {
+                "text": "Tekst",
+                "number": "Liczba",
+                "currency": "Waluta",
+                "date": "Data"
+              }
+            },
+            "fieldBorderStyle": {
+              "options": {
+                "underline": "Podkreślenie",
+                "box": "Ramka",
+                "none": "Brak"
+              }
+            }
+          }
+        },
+        "field-layout": {
+          "title": "Układ pola"
+        },
+        "text-content": {
+          "title": "Treść tekstu"
+        },
+        "label-style": {
+          "title": "Tekst etykiety",
+          "fields": {
+            "fontWeight": {
+              "options": {
+                "semibold": "Półgruby",
+                "bold": "Pogrubiony",
+                "medium": "Średni",
+                "normal": "Zwykły"
+              }
+            }
+          }
+        },
+        "totals-row": {
+          "title": "Wiersz sum"
+        },
+        "action-button": {
+          "title": "Przycisk",
+          "fields": {
+            "actionType": {
+              "options": {
+                "url": "URL",
+                "mailto": "E-mail"
+              }
+            }
+          }
+        },
+        "signature": {
+          "title": "Blok podpisu"
+        },
+        "table": {
+          "title": "Tabela"
+        },
+        "table-header-style": {
+          "title": "Styl nagłówka",
+          "fields": {
+            "headerColor": {
+              "label": "Kolor tekstu"
+            },
+            "att-1": {
+              "label": "Umowa.pdf"
+            }
+          }
+        }
+      }
+    },
+    "fields": {
+      "invoice_number": {
+        "label": "Numer faktury",
+        "description": "Numer faktury widoczny dla klienta."
+      },
+      "invoice_invoiceNumber": {
+        "label": "Numer faktury",
+        "description": "Numer faktury widoczny dla klienta."
+      },
+      "invoice_issueDate": {
+        "label": "Data wystawienia",
+        "description": "Data wystawienia faktury."
+      },
+      "invoice_dueDate": {
+        "label": "Termin płatności",
+        "description": "Termin zapłaty."
+      },
+      "invoice_poNumber": {
+        "label": "Numer zamówienia",
+        "description": "Numer referencyjny zamówienia zakupu."
+      },
+      "invoice_subtotal": {
+        "label": "Suma częściowa",
+        "description": "Suma częściowa przed podatkiem i rabatem."
+      },
+      "invoice_tax": {
+        "label": "Podatek",
+        "description": "Kwota podatku faktury."
+      },
+      "invoice_discount": {
+        "label": "Rabat",
+        "description": "Kwota rabatu."
+      },
+      "invoice_total": {
+        "label": "Razem",
+        "description": "Łączna kwota do zapłaty."
+      },
+      "invoice_currencyCode": {
+        "label": "Kod waluty",
+        "description": "Kod ISO waluty faktury."
+      },
+      "invoice_recurringServicePeriodStart": {
+        "label": "Początek cyklicznego okresu usługi",
+        "description": "Kanoniczna data rozpoczęcia cyklicznego okresu usługi faktury, jeśli dostępna."
+      },
+      "invoice_recurringServicePeriodEnd": {
+        "label": "Koniec cyklicznego okresu usługi",
+        "description": "Kanoniczna data zakończenia cyklicznego okresu usługi faktury, jeśli dostępna."
+      },
+      "invoice_recurringServicePeriodLabel": {
+        "label": "Cykliczny okres usługi",
+        "description": "Sformatowana kanoniczna etykieta okresu usługi cyklicznej faktury, jeśli dostępna."
+      },
+      "customer_name": {
+        "label": "Nazwa klienta",
+        "description": "Nazwa klienta na fakturze."
+      },
+      "customer_address": {
+        "label": "Adres klienta",
+        "description": "Adres rozliczeniowy klienta."
+      },
+      "client_name": {
+        "label": "Nazwa klienta",
+        "description": "Nazwa klienta widoczna w szablonach typu oferta."
+      },
+      "client_address": {
+        "label": "Adres klienta",
+        "description": "Adres klienta."
+      },
+      "contact_name": {
+        "label": "Nazwa kontaktu",
+        "description": "Nazwa kontaktu widoczna w szablonach typu oferta."
+      },
+      "contact_address": {
+        "label": "Adres kontaktu",
+        "description": "Adres kontaktu."
+      },
+      "tenant_name": {
+        "label": "Nazwa dzierżawcy",
+        "description": "Nazwa Twojej firmy."
+      },
+      "tenant_address": {
+        "label": "Adres dzierżawcy",
+        "description": "Adres Twojej firmy."
+      },
+      "tenantClient_name": {
+        "label": "Nazwa dzierżawcy",
+        "description": "Nazwa Twojej firmy."
+      },
+      "tenantClient_address": {
+        "label": "Adres dzierżawcy",
+        "description": "Adres Twojej firmy."
+      }
+    }
+  }
+}

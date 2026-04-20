@@ -1,31 +1,31 @@
 {
   "page": {
-    "title": "R\u00e9partition des techniciens",
-    "filteredWorkItems": "Affichage des \u00e9l\u00e9ments de travail filtr\u00e9s"
+    "title": "Répartition des techniciens",
+    "filteredWorkItems": "Affichage des éléments de travail filtrés"
   },
   "workItems": {
-    "title": "\u00c9l\u00e9ments de travail",
-    "searchPlaceholder": "Rechercher des \u00e9l\u00e9ments de travail...",
+    "title": "Éléments de travail",
+    "searchPlaceholder": "Rechercher des éléments de travail...",
     "filterPlaceholder": "Filtrer par statut...",
     "status": {
-      "unscheduled": "Non planifi\u00e9s",
-      "scheduled": "Planifi\u00e9s"
+      "unscheduled": "Non planifiés",
+      "scheduled": "Planifiés"
     },
     "pagination": {
-      "previous": "Pr\u00e9c\u00e9dent",
+      "previous": "Précédent",
       "next": "Suivant",
       "pageInfo": "Page {{current}} sur {{total}}",
-      "showing": "Affichage de {{count}} sur {{total}} \u00e9l\u00e9ments"
+      "showing": "Affichage de {{count}} sur {{total}} éléments"
     }
   },
   "schedule": {
     "showInactive": "Afficher les utilisateurs inactifs",
-    "prev": "< Pr\u00e9c.",
+    "prev": "< Préc.",
     "next": "Suiv. >",
     "today": "Aujourd'hui",
     "viewDay": "Jour",
     "viewWeek": "Semaine",
-    "prevAria": "Pr\u00e9c\u00e9dent {{mode}}",
+    "prevAria": "Précédent {{mode}}",
     "nextAria": "Suivant {{mode}}",
     "viewWeekTooltip": "Voir la semaine",
     "viewWeekAria": "Voir la semaine de {{name}}",
@@ -33,13 +33,13 @@
     "compareAll": "Comparer tout",
     "clearAll": "Tout effacer",
     "compare": "Comparer",
-    "stopComparing": "Arr\u00eater la comparaison",
+    "stopComparing": "Arrêter la comparaison",
     "compareAria": "Comparer {{name}}",
     "compareAriaInactive": "Comparer {{name}} (inactif)"
   },
   "details": {
     "appointmentRequest": {
-      "title": "D\u00e9tails de la demande de rendez-vous"
+      "title": "Détails de la demande de rendez-vous"
     },
     "sections": {
       "approvalInformation": "Informations d'approbation"
@@ -52,33 +52,33 @@
       "company": "Entreprise",
       "requester": "Demandeur",
       "email": "E-mail",
-      "phone": "T\u00e9l\u00e9phone",
-      "requestedDate": "Date demand\u00e9e",
-      "requestedTime": "Heure demand\u00e9e",
-      "duration": "Dur\u00e9e",
-      "preferredTechnician": "Technicien pr\u00e9f\u00e9r\u00e9",
+      "phone": "Téléphone",
+      "requestedDate": "Date demandée",
+      "requestedTime": "Heure demandée",
+      "duration": "Durée",
+      "preferredTechnician": "Technicien préféré",
       "description": "Description",
       "declineReason": "Motif du refus",
-      "approvedBy": "Approuv\u00e9 par :",
-      "approvedAt": "Approuv\u00e9 le :"
+      "approvedBy": "Approuvé par :",
+      "approvedAt": "Approuvé le :"
     },
     "messages": {
       "notAvailable": "N/D",
-      "unsupportedWorkItemType": "Type d'\u00e9l\u00e9ment de travail non pris en charge"
+      "unsupportedWorkItemType": "Type d'élément de travail non pris en charge"
     },
     "toasts": {
-      "noUsersAvailable": "Aucun utilisateur n'est disponible dans le syst\u00e8me",
-      "noUserSession": "Aucune session utilisateur trouv\u00e9e",
-      "failedToLoadTicketData": "\u00c9chec du chargement des donn\u00e9es du ticket",
-      "failedToLoadProjectTaskData": "\u00c9chec du chargement des donn\u00e9es de la t\u00e2che de projet",
-      "failedToLoadAdHocEntryData": "\u00c9chec du chargement des donn\u00e9es de l'entr\u00e9e ad hoc",
-      "failedToLoadInteractionData": "\u00c9chec du chargement des donn\u00e9es de l'interaction",
-      "failedToLoadAppointmentRequestData": "\u00c9chec du chargement des donn\u00e9es de la demande de rendez-vous"
+      "noUsersAvailable": "Aucun utilisateur n'est disponible dans le système",
+      "noUserSession": "Aucune session utilisateur trouvée",
+      "failedToLoadTicketData": "Échec du chargement des données du ticket",
+      "failedToLoadProjectTaskData": "Échec du chargement des données de la tâche de projet",
+      "failedToLoadAdHocEntryData": "Échec du chargement des données de l'entrée ad hoc",
+      "failedToLoadInteractionData": "Échec du chargement des données de l'interaction",
+      "failedToLoadAppointmentRequestData": "Échec du chargement des données de la demande de rendez-vous"
     },
     "errors": {
-      "loadUsers": "Impossible de charger les utilisateurs. Veuillez essayer de rafra\u00eechir la page.",
+      "loadUsers": "Impossible de charger les utilisateurs. Veuillez essayer de rafraîchir la page.",
       "loadingContent": "Erreur lors du chargement du contenu",
-      "tryAgain": "Veuillez r\u00e9essayer"
+      "tryAgain": "Veuillez réessayer"
     },
     "units": {
       "minutes": "minutes"
@@ -87,61 +87,61 @@
   "dashboard": {
     "filters": {
       "allOpen": "Tous ouverts",
-      "allClosed": "Tous ferm\u00e9s"
+      "allClosed": "Tous fermés"
     },
     "messages": {
-      "accessDenied": "Acc\u00e8s refus\u00e9 : vous n'avez pas l'autorisation d'afficher le tableau de bord de r\u00e9partition des techniciens.",
+      "accessDenied": "Accès refusé : vous n'avez pas l'autorisation d'afficher le tableau de bord de répartition des techniciens.",
       "unknownError": "Une erreur inconnue s'est produite.",
       "permissionDeniedSchedule": "Vous n'avez pas l'autorisation de planifier pour ce technicien.",
-      "couldNotLoadWorkItemDetails": "Impossible de charger les d\u00e9tails de l'\u00e9l\u00e9ment de travail."
+      "couldNotLoadWorkItemDetails": "Impossible de charger les détails de l'élément de travail."
     },
     "errors": {
-      "searchWorkItems": "Impossible de rechercher les \u00e9l\u00e9ments de travail",
+      "searchWorkItems": "Impossible de rechercher les éléments de travail",
       "loadStatusFilterOptions": "Impossible de charger les options de filtre de statut.",
-      "refreshScheduleEntries": "Impossible d'actualiser les entr\u00e9es du planning",
-      "refreshData": "Impossible d'actualiser les donn\u00e9es",
+      "refreshScheduleEntries": "Impossible d'actualiser les entrées du planning",
+      "refreshData": "Impossible d'actualiser les données",
       "loadPermissions": "Impossible de charger les autorisations.",
-      "fetchScheduleEntries": "Impossible de r\u00e9cup\u00e9rer les entr\u00e9es du planning.",
-      "fetchData": "Impossible de r\u00e9cup\u00e9rer les donn\u00e9es.",
-      "updateSchedule": "Impossible de mettre \u00e0 jour le planning",
-      "createScheduleEntry": "Impossible de cr\u00e9er l'entr\u00e9e de planning",
-      "deleteScheduleEntry": "Impossible de supprimer l'entr\u00e9e de planning",
-      "updateTask": "Impossible de mettre \u00e0 jour la t\u00e2che",
-      "updateScheduleEntry": "Impossible de mettre \u00e0 jour l'entr\u00e9e de planning",
-      "saveScheduleEntry": "Impossible d'enregistrer l'entr\u00e9e de planning",
-      "openWorkItemDetails": "Impossible d'ouvrir les d\u00e9tails de l'\u00e9l\u00e9ment de travail."
+      "fetchScheduleEntries": "Impossible de récupérer les entrées du planning.",
+      "fetchData": "Impossible de récupérer les données.",
+      "updateSchedule": "Impossible de mettre à jour le planning",
+      "createScheduleEntry": "Impossible de créer l'entrée de planning",
+      "deleteScheduleEntry": "Impossible de supprimer l'entrée de planning",
+      "updateTask": "Impossible de mettre à jour la tâche",
+      "updateScheduleEntry": "Impossible de mettre à jour l'entrée de planning",
+      "saveScheduleEntry": "Impossible d'enregistrer l'entrée de planning",
+      "openWorkItemDetails": "Impossible d'ouvrir les détails de l'élément de travail."
     },
     "success": {
-      "taskUpdated": "T\u00e2che mise \u00e0 jour avec succ\u00e8s",
-      "scheduleEntryUpdated": "Entr\u00e9e de planning mise \u00e0 jour avec succ\u00e8s",
-      "scheduleEntryCreated": "Entr\u00e9e de planning cr\u00e9\u00e9e avec succ\u00e8s"
+      "taskUpdated": "Tâche mise à jour avec succès",
+      "scheduleEntryUpdated": "Entrée de planning mise à jour avec succès",
+      "scheduleEntryCreated": "Entrée de planning créée avec succès"
     }
   },
   "events": {
     "actions": {
-      "viewDetails": "Voir les d\u00e9tails",
+      "viewDetails": "Voir les détails",
       "delete": "Supprimer",
-      "deleteScheduleEntry": "Supprimer l'entr\u00e9e de planning"
+      "deleteScheduleEntry": "Supprimer l'entrée de planning"
     },
     "fallbacks": {
-      "busy": "Occup\u00e9",
+      "busy": "Occupé",
       "unknown": "Inconnu",
-      "unassigned": "Non assign\u00e9",
+      "unassigned": "Non assigné",
       "unknownAgent": "Agent inconnu",
       "untitled": "Sans titre",
-      "thisScheduleEntry": "cette entr\u00e9e de planning"
+      "thisScheduleEntry": "cette entrée de planning"
     },
     "tooltip": {
-      "privateEvent": "Occup\u00e9\nD\u00e9but : {{start}}\nFin : {{end}}",
-      "eventDetails": "{{title}}\nAssign\u00e9 \u00e0 : {{assigned}}\nD\u00e9but : {{start}}\nFin : {{end}}"
+      "privateEvent": "Occupé\nDébut : {{start}}\nFin : {{end}}",
+      "eventDetails": "{{title}}\nAssigné à : {{assigned}}\nDébut : {{start}}\nFin : {{end}}"
     },
     "errors": {
-      "validateDeletion": "Impossible de valider la suppression. Veuillez r\u00e9essayer."
+      "validateDeletion": "Impossible de valider la suppression. Veuillez réessayer."
     }
   },
   "badges": {
-    "needsDispatch": "N\u00e9cessite une affectation",
-    "needsDispatchFor": "N\u00e9cessite une affectation pour : {{agents}}"
+    "needsDispatch": "Nécessite une affectation",
+    "needsDispatchFor": "Nécessite une affectation pour : {{agents}}"
   },
   "time": {
     "suffixes": {

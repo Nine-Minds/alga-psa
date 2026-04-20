@@ -46,7 +46,7 @@
     "titlePlaceholder": "Titolo del ticket",
     "descriptionPlaceholder": "Descrivi il tuo problema...",
     "priorityPlaceholder": "Seleziona priorità",
-    "noBoardsAvailable": "No ticket boards are available for your account. Contact your administrator.",
+    "noBoardsAvailable": "Nessun board dei ticket disponibile per il tuo account. Contatta l'amministratore.",
     "submit": "Crea ticket",
     "submitting": "Creazione in corso...",
     "errors": {
@@ -866,7 +866,7 @@
     "title": "Elenco osservati",
     "contactTab": "Contatto",
     "internalTab": "Interno",
-    "emailTab": "Email",
+    "emailTab": "E-mail",
     "ticketClient": "Cliente del ticket",
     "allContacts": "Tutti i contatti",
     "loadingContacts": "Caricamento...",
@@ -893,7 +893,7 @@
     "tabs": {
       "contact": "Contatto",
       "internal": "Interno",
-      "email": "Email"
+      "email": "E-mail"
     },
     "scope": {
       "ticketClient": "Cliente del ticket",

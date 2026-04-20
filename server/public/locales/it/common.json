@@ -170,9 +170,9 @@
         "phoneLabel": "Telefono",
         "phoneHelper": "Numero di telefono per questa sede",
         "phoneValue": "Telefono: {{phone}}",
-        "emailLabel": "Email",
+        "emailLabel": "E-mail",
         "emailHelper": "Indirizzo email per questa sede",
-        "emailValue": "Email: {{email}}",
+        "emailValue": "E-mail: {{email}}",
         "billingTag": "Fatturazione",
         "shippingTag": "Spedizione",
         "notesLabel": "Note",
@@ -196,7 +196,7 @@
         "countryHelper": "Seleziona il paese (obbligatorio)",
         "phone": "Telefono",
         "phoneHelper": "Numero di telefono per questa sede",
-        "email": "Email",
+        "email": "E-mail",
         "emailHelper": "Indirizzo email per questa sede",
         "taxRegion": "Area fiscale",
         "taxRegionHelper": "Seleziona l'area fiscale applicabile",
@@ -515,7 +515,6 @@
     "downloadAsMarkdown": "Scarica come Markdown",
     "move": "Sposta"
   },
-  "notifications": {},
   "surveys": {
     "common": {
       "loading": "Caricamento..."

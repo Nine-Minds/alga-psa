@@ -2,7 +2,7 @@
 
 - Slug: `2026-04-09-msp-i18n-invoicing`
 - Date: `2026-04-09`
-- Status: Draft
+- Status: Draft (ready to start — verified unchanged on 2026-04-17; see SCRATCHPAD "Status Recheck (2026-04-17)" for corrected file paths and upstream deltas)
 - Parent plan: `/.ai/translation/MSP_i18n_plan.md`
 
 ## Summary

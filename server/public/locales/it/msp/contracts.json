@@ -125,11 +125,11 @@
       "loadingStatuses": "Caricamento stati...",
       "notRequired": "Non richiesto",
       "noticePeriodDays": "Periodo di preavviso (giorni)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "es. 30",
       "noticePrefix": "Preavviso:",
       "renewalHandling": "Gestione del rinnovo",
       "renewalTermMonths": "Termine di rinnovo (mesi)",
-      "renewalTermPlaceholder": "e.g., 12",
+      "renewalTermPlaceholder": "es. 12",
       "renewalTicketBoard": "Bacheca ticket di rinnovo",
       "renewalTicketStatus": "Stato del ticket di rinnovo",
       "required": "Obbligatorio",
@@ -353,12 +353,12 @@
       "endDateHint": "Lascia vuoto per contratti in corso che non hanno una data di fine fissa.",
       "endDateLabel": "Data di fine (opzionale)",
       "noticePeriodLabel": "Periodo di preavviso (giorni)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "es. 30",
       "renewalModePlaceholder": "Seleziona modalità di rinnovo",
       "renewalSettingsDescription": "Configura il comportamento di rinnovo per questa assegnazione di contratto cliente.",
       "renewalSettingsTitle": "Impostazioni di rinnovo",
       "renewalTermLabel": "Termine di rinnovo (mesi)",
-      "renewalTermPlaceholder": "e.g., 12",
+      "renewalTermPlaceholder": "es. 12",
       "selectClientFirst": "Seleziona prima un cliente",
       "startDateLabel": "Data di inizio *",
       "useTenantDefaultsDescription": "Applica le impostazioni di modalità di rinnovo e periodo di preavviso a livello organizzativo.",
@@ -811,7 +811,7 @@
         "customRate": "Tariffa personalizzata",
         "customRatePlaceholder": "0.00",
         "duration": "Durata",
-        "durationPlaceholder": "e.g., 6",
+        "durationPlaceholder": "es. 6",
         "effectiveDate": "Data di decorrenza",
         "endDate": "Data di fine",
         "hasEndDate": "Ha data di fine",
@@ -1235,8 +1235,8 @@
   },
   "bucketOverlay": {
     "includedLabel": "{{units}} incluse",
-    "includedPlaceholderHours": "e.g., 40",
-    "includedPlaceholderUnits": "e.g., 1000",
+    "includedPlaceholderHours": "es. 40",
+    "includedPlaceholderUnits": "es. 1000",
     "includedTooltip": "Quantità di {{units}} incluse in ogni periodo di fatturazione prima che si applichino gli eccessi.",
     "overageRateLabel": "Tariffa per eccesso",
     "overageRateTooltip": "Addebito applicato per ogni {{unit}} oltre l'importo incluso.",
@@ -1404,9 +1404,9 @@
       },
       "modePlaceholder": "Seleziona modalità di rinnovo",
       "noticePeriodLabel": "Periodo di preavviso (giorni)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "es. 30",
       "termLabel": "Termine di rinnovo (mesi)",
-      "termPlaceholder": "e.g., 12",
+      "termPlaceholder": "es. 12",
       "useTenantDefaultsDescription": "Applica le impostazioni di rinnovo a livello organizzativo salvo quando esplicitamente sovrascritte.",
       "useTenantDefaultsLabel": "Utilizza le impostazioni predefinite di rinnovo del tenant"
     },
@@ -1609,7 +1609,7 @@
       "notSelected": "Non selezionato",
       "notSpecified": "Non specificato",
       "ongoing": "In corso",
-      "notApplicable": "N/A"
+      "notApplicable": "N/D"
     },
     "renewalMode": {
       "none": "Nessun rinnovo",
@@ -1694,7 +1694,7 @@
         "one": "{{count}} prodotto",
         "other": "{{count}} prodotti"
       },
-      "overrideRate": "- override {{rate}}/{{currencyCode}}"
+      "overrideRate": "– sovrascrivi {{rate}}/{{currencyCode}}"
     },
     "hourly": {
       "badgeCount": {

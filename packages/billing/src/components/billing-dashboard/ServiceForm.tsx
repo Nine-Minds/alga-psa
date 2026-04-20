@@ -8,10 +8,11 @@ import { createService, getServiceTypesForSelection, getDefaultBillingSettings }
 import { getActiveTaxRegions, getTaxRates } from '@alga-psa/billing/actions/taxSettingsActions'; // Added getTaxRates
 import { ITaxRate, ITaxRegion } from '@alga-psa/types';
 import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
-import { toast } from 'react-hot-toast';
 import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export const ServiceForm: React.FC = () => {
+  const { t } = useTranslation('msp/service-catalog');
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [serviceName, setServiceName] = useState('')
   const [serviceTypeId, setServiceTypeId] = useState<string>('') // Store the selected service type ID
@@ -35,7 +36,7 @@ export const ServiceForm: React.FC = () => {
         setServiceTypes(types)
       } catch (error) {
         console.error('Error fetching service types:', error)
-        setError('Failed to fetch service types')
+        setError(t('serviceForm.errors.loadServiceTypes', { defaultValue: 'Failed to fetch service types' }))
       }
     }
     getDefaultBillingSettings()
@@ -53,9 +54,11 @@ export const ServiceForm: React.FC = () => {
         setTaxRates(rates);
         setTaxRegions(regions);
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Failed to load tax data.";
+        const errorMessage = err instanceof Error
+          ? err.message
+          : t('serviceForm.errors.loadTaxData', { defaultValue: 'Failed to load tax data.' });
         setErrorTaxData(errorMessage);
-        handleError(err, 'Failed to load tax data.');
+        handleError(err, t('serviceForm.errors.loadTaxData', { defaultValue: 'Failed to load tax data.' }));
       } finally {
         setIsLoadingTaxData(false);
       }
@@ -63,13 +66,13 @@ export const ServiceForm: React.FC = () => {
 
     fetchServiceTypes();
     fetchTaxData();
-  }, []);
+  }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!serviceTypeId) {
-      setError('Please select a service type')
+      setError(t('serviceForm.errors.selectServiceType', { defaultValue: 'Please select a service type' }))
       return
     }
 
@@ -78,7 +81,7 @@ export const ServiceForm: React.FC = () => {
       const selectedServiceType = serviceTypes.find(t => t.id === serviceTypeId)
 
       if (!selectedServiceType) {
-        setError('Selected service type not found')
+        setError(t('serviceForm.errors.serviceTypeNotFound', { defaultValue: 'Selected service type not found' }))
         return
       }
 
@@ -120,7 +123,11 @@ export const ServiceForm: React.FC = () => {
       setTaxRateId(null); // Clear tax rate ID
     } catch (error) {
       console.error('Error creating service:', error)
-      setError(error instanceof Error ? error.message : 'Failed to create service'); // Show specific error
+      setError(
+        error instanceof Error
+          ? error.message
+          : t('serviceForm.errors.create', { defaultValue: 'Failed to create service' }),
+      ); // Show specific error
     }
   }
 
@@ -131,13 +138,33 @@ export const ServiceForm: React.FC = () => {
   const taxRateOptions = taxRates.map(rate => {
     const regionName = rate.country_code ? regionMap.get(rate.country_code) : undefined;
     // Use region name if found, otherwise fallback to tax_type or country_code
-    const descriptionPart = regionName || rate.tax_type || rate.country_code || 'N/A';
+    const descriptionPart = regionName || rate.tax_type || rate.country_code || t('serviceForm.taxRateOption.fallback', { defaultValue: 'N/A' });
     const percentagePart = rate.tax_percentage.toFixed(2); // tax_percentage is number
     return {
       value: rate.tax_rate_id,
-      label: `${descriptionPart} - ${percentagePart}%`
+      label: t('serviceForm.taxRateOption.label', {
+        description: descriptionPart,
+        percentage: percentagePart,
+        defaultValue: '{{description}} - {{percentage}}%',
+      })
     };
   });
+
+  const billingMethodOptions = [
+    {
+      value: 'fixed',
+      label: t('serviceForm.options.billingMethod.fixed', { defaultValue: 'Fixed Price' }),
+    },
+    {
+      value: 'hourly',
+      label: t('serviceForm.options.billingMethod.hourly', { defaultValue: 'Hourly' }),
+    },
+    {
+      value: 'usage',
+      label: t('serviceForm.options.billingMethod.usage', { defaultValue: 'Usage Based' }),
+    },
+  ];
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <div className="text-red-500 mb-4">{error}</div>}
@@ -145,53 +172,53 @@ export const ServiceForm: React.FC = () => {
       <Input
         value={serviceName}
         onChange={(e) => setServiceName(e.target.value)}
-        placeholder="Service Name"
+        placeholder={t('serviceForm.fields.serviceName.placeholder', { defaultValue: 'Service Name' })}
         required
       />
 
       <CustomSelect
+        label={t('serviceForm.fields.serviceType.label', { defaultValue: 'Service Type' })}
         options={serviceTypes.map(type => ({ value: type.id, label: type.name }))}
         value={serviceTypeId}
         onValueChange={(value) => {
           setServiceTypeId(value)
         }}
-        placeholder="Select Service Type"
+        placeholder={t('serviceForm.fields.serviceType.placeholder', { defaultValue: 'Select Service Type' })}
       />
 
       <CustomSelect
-        options={[
-          { value: 'fixed', label: 'Fixed Price' },
-          { value: 'hourly', label: 'Hourly' },
-          { value: 'usage', label: 'Usage Based' }
-        ]}
+        label={t('serviceForm.fields.billingMethod.label', { defaultValue: 'Billing Method' })}
+        options={billingMethodOptions}
         value={billingMethod}
         onValueChange={(value) => setBillingMethod(value as 'fixed' | 'hourly' | 'usage')}
-        placeholder="Select Billing Method"
+        placeholder={t('serviceForm.fields.billingMethod.placeholder', { defaultValue: 'Select Billing Method' })}
       />
 
       <Input
         type="number"
         value={defaultRate}
         onChange={(e) => setDefaultRate(e.target.value)}
-        placeholder="Default Rate"
+        placeholder={t('serviceForm.fields.defaultRate.placeholder', { defaultValue: 'Default Rate' })}
         required
       />
 
       <UnitOfMeasureInput
         value={unitOfMeasure}
         onChange={(value) => setUnitOfMeasure(value)}
-        placeholder="Unit of Measure"
+        placeholder={t('serviceForm.fields.unitOfMeasure.placeholder', { defaultValue: 'Unit of Measure' })}
         className="w-full"
         required
       />
 
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">Description</label>
+        <label htmlFor="description" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+          {t('serviceForm.fields.description.label', { defaultValue: 'Description' })}
+        </label>
         <Input
           id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Service Description"
+          placeholder={t('serviceForm.fields.description.placeholder', { defaultValue: 'Service Description' })}
         />
       </div>
 
@@ -199,17 +226,23 @@ export const ServiceForm: React.FC = () => {
       <div className="space-y-2">
         {/* Replace region select with tax rate select */}
         <CustomSelect
-          label="Tax Rate"
+          label={t('serviceForm.fields.taxRate.label', { defaultValue: 'Tax Rate' })}
           id="service-tax-rate-field"
           value={taxRateId || ''}
           onValueChange={(value) => setTaxRateId(value || null)}
           options={taxRateOptions} // Use tax rate options
-          placeholder={isLoadingTaxData ? "Loading tax data..." : "Select Tax Rate (Optional)"}
+          placeholder={
+            isLoadingTaxData
+              ? t('serviceForm.fields.taxRate.placeholderLoading', { defaultValue: 'Loading tax data...' })
+              : t('serviceForm.fields.taxRate.placeholder', { defaultValue: 'Select Tax Rate (Optional)' })
+          }
           disabled={isLoadingTaxData}
         />
       </div>
 
-      <Button id='add-service-button' type="submit">Add Service</Button>
+      <Button id='add-service-button' type="submit">
+        {t('serviceForm.actions.submit', { defaultValue: 'Add Service' })}
+      </Button>
     </form>
   )
 }

@@ -2,7 +2,7 @@
 
 - Slug: `2026-04-09-msp-i18n-credits`
 - Date: `2026-04-09`
-- Status: Draft
+- Status: Implemented on branch `i18n/billing_credits` (22/22 features, 31/31 tests) — pending merge to `main`. See SCRATCHPAD "Status Recheck (2026-04-17)".
 - Parent plan: `/.ai/translation/MSP_i18n_plan.md`
 
 ## Summary
