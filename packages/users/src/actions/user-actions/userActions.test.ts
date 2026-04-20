@@ -7,6 +7,9 @@ const hasPermissionMock = vi.hoisted(() => vi.fn());
 const hashPasswordMock = vi.hoisted(() => vi.fn());
 const revalidatePathMock = vi.hoisted(() => vi.fn());
 const upsertMock = vi.hoisted(() => vi.fn());
+const userUpdateMock = vi.hoisted(() => vi.fn());
+const getUserWithRolesMock = vi.hoisted(() => vi.fn());
+const isInReportsToChainMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: (...args: any[]) => any) => {
@@ -30,6 +33,14 @@ vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: getAdminConnectionMock,
 }));
 
+vi.mock('@alga-psa/db/models/user', () => ({
+  default: {
+    update: userUpdateMock,
+    getUserWithRoles: getUserWithRolesMock,
+    isInReportsToChain: isInReportsToChainMock,
+  },
+}));
+
 vi.mock('@alga-psa/core/encryption', () => ({
   hashPassword: hashPasswordMock,
 }));
@@ -51,13 +62,14 @@ vi.mock('@alga-psa/db/models/userPreferences', () => ({
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: {
+    debug: vi.fn(),
     error: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
   },
 }));
 
-function createAdminDb(emailExists = false) {
+function createAdminDb(existingUserId?: string) {
   return ((table: string) => {
     if (table !== 'users') {
       throw new Error(`Unexpected admin table ${table}`);
@@ -65,7 +77,10 @@ function createAdminDb(emailExists = false) {
 
     return {
       where: (_criteria: Record<string, any>) => ({
-        first: async () => (emailExists ? { user_id: 'existing-user' } : null),
+        whereNot: (_column: string, _value: string) => ({
+          first: async () => (existingUserId ? { user_id: existingUserId } : null),
+        }),
+        first: async () => (existingUserId ? { user_id: existingUserId } : null),
       }),
     };
   }) as any;
@@ -123,19 +138,33 @@ describe('addUser', () => {
     hashPasswordMock.mockReset();
     revalidatePathMock.mockReset();
     upsertMock.mockReset();
+    userUpdateMock.mockReset();
+    getUserWithRolesMock.mockReset();
+    isInReportsToChainMock.mockReset();
 
     hasPermissionMock.mockResolvedValue(true);
     hashPasswordMock.mockResolvedValue('hashed-password');
     upsertMock.mockResolvedValue(undefined);
     revalidatePathMock.mockReturnValue(undefined);
+    userUpdateMock.mockResolvedValue(undefined);
+    getUserWithRolesMock.mockResolvedValue({
+      user_id: 'user-1',
+      email: 'updated@example.com',
+    });
+    isInReportsToChainMock.mockResolvedValue(false);
 
     withTransactionMock.mockImplementation(async (db: any, callback: (trx: any) => Promise<any>) => callback(db));
-    getAdminConnectionMock.mockResolvedValue(createAdminDb(false));
+    getAdminConnectionMock.mockResolvedValue(createAdminDb());
   });
 
   async function loadAddUser() {
     const mod = await import('./userActions');
     return mod.addUser as any;
+  }
+
+  async function loadUpdateUser() {
+    const mod = await import('./userActions');
+    return mod.updateUser as any;
   }
 
   const actingUser = { user_id: 'user-1', user_type: 'internal' } as any;
@@ -193,6 +222,44 @@ describe('addUser', () => {
       user: {
         email: 'solo@example.com',
       },
+    });
+  });
+
+  it('rejects updating an email when another tenant already uses it', async () => {
+    createTenantKnexMock.mockResolvedValue({ knex: {} });
+    getAdminConnectionMock.mockResolvedValue(createAdminDb('other-tenant-user'));
+
+    const updateUser = await loadUpdateUser();
+
+    await expect(
+      updateUser(actingUser, tenantContext, actingUser.user_id, {
+        email: 'duplicate@example.com',
+      })
+    ).rejects.toThrow('A user with this email address already exists');
+
+    expect(userUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it('normalizes updated email addresses to lowercase before saving', async () => {
+    createTenantKnexMock.mockResolvedValue({ knex: {} });
+
+    const updateUser = await loadUpdateUser();
+    const result = await updateUser(actingUser, tenantContext, actingUser.user_id, {
+      email: 'Updated@Example.com',
+      first_name: 'Updated',
+    });
+
+    expect(userUpdateMock).toHaveBeenCalledWith(
+      {},
+      actingUser.user_id,
+      expect.objectContaining({
+        email: 'updated@example.com',
+        first_name: 'Updated',
+      })
+    );
+    expect(result).toEqual({
+      user_id: 'user-1',
+      email: 'updated@example.com',
     });
   });
 });
