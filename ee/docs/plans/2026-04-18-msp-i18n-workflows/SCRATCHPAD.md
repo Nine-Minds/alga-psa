@@ -189,3 +189,18 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   node scripts/validate-translations.cjs
   ```
   Passed with 0 missing/extra keys.
+
+### F006 complete — WorkflowRunList uses enum hooks
+- Updated `ee/server/src/components/workflow-designer/WorkflowRunList.tsx` to consume:
+  - `useWorkflowRunStatusOptions()`
+  - `useWorkflowRunSortOptions()`
+- Removed the local `STATUS_OPTIONS` and `SORT_OPTIONS` inline English arrays.
+- Kept the filter sentinel local to the component per PRD guidance:
+  - `t('filters.allStatuses', { defaultValue: 'All statuses' })`
+- Added `filters.allStatuses` to `msp/workflows.json` across all locales as a temporary English stub.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowRunList.tsx
+  node scripts/validate-translations.cjs
+  ```
+- ESLint result: no errors; existing warnings remain in `WorkflowRunList.tsx` for pre-existing `any`/unused-variable sites unrelated to this enum migration.

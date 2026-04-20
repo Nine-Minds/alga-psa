@@ -16,6 +16,9 @@
     "title": "No workflows found",
     "description": "Workflows will appear here once they are created."
   },
+  "filters": {
+    "allStatuses": "All statuses"
+  },
   "actions": {
     "create": "Create workflow",
     "open": "Open",

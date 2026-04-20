@@ -6,6 +6,7 @@ import { RefreshCw } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -21,6 +22,10 @@ import {
   listWorkflowRunsAction,
   resumeWorkflowRunAction
 } from '@alga-psa/workflows/actions';
+import {
+  useWorkflowRunSortOptions,
+  useWorkflowRunStatusOptions,
+} from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 import WorkflowRunDetails from './WorkflowRunDetails';
 import {
   getWorkflowRunTriggerLabel,
@@ -81,22 +86,6 @@ type WorkflowRunFilters = {
   to: string;
   sort: string;
 };
-
-const STATUS_OPTIONS: SelectOption[] = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'RUNNING', label: 'Running' },
-  { value: 'WAITING', label: 'Waiting' },
-  { value: 'SUCCEEDED', label: 'Succeeded' },
-  { value: 'FAILED', label: 'Failed' },
-  { value: 'CANCELED', label: 'Canceled' }
-];
-
-const SORT_OPTIONS: SelectOption[] = [
-  { value: 'started_at:desc', label: 'Newest first' },
-  { value: 'started_at:asc', label: 'Oldest first' },
-  { value: 'updated_at:desc', label: 'Recently updated' },
-  { value: 'updated_at:asc', label: 'Least recently updated' }
-];
 
 const STATUS_STYLES: Record<string, string> = {
   RUNNING: 'bg-info/15 text-info-foreground',
@@ -188,6 +177,9 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
   canAdmin = false,
   canManage = false
 }) => {
+  const { t } = useTranslation('msp/workflows');
+  const workflowRunStatusOptions = useWorkflowRunStatusOptions();
+  const workflowRunSortOptions = useWorkflowRunSortOptions();
   const [filters, setFilters] = useState<WorkflowRunFilters>(DEFAULT_FILTERS);
   const [runs, setRuns] = useState<WorkflowRunListItem[]>([]);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
@@ -200,6 +192,16 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
   const handleRunDetailsClose = useCallback(() => setSelectedRunId(null), []);
   const [summary, setSummary] = useState<WorkflowRunSummaryResponse | null>(null);
   const limit = 25;
+  const statusOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: 'all',
+        label: t('filters.allStatuses', { defaultValue: 'All statuses' }),
+      },
+      ...workflowRunStatusOptions,
+    ],
+    [t, workflowRunStatusOptions]
+  );
 
   const workflowOptions = useMemo(() => buildWorkflowOptions(definitions), [definitions]);
   const workflowNameMap = useMemo(
@@ -572,7 +574,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
             <CustomSelect
               id="workflow-runs-status"
               label="Status"
-              options={STATUS_OPTIONS}
+              options={statusOptions}
               value={filters.status}
               onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
             />
@@ -613,7 +615,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
             <CustomSelect
               id="workflow-runs-sort"
               label="Sort"
-              options={SORT_OPTIONS}
+              options={workflowRunSortOptions}
               value={filters.sort}
               onValueChange={(value) => setFilters((prev) => ({ ...prev, sort: value }))}
             />

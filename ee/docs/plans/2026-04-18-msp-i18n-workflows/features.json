@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Replace inline status/sort option arrays in WorkflowRunList.tsx (lines 86-98) with useWorkflowRunStatusOptions + useWorkflowRunSortOptions hook calls; prepend the 'All statuses' filter row via t('filters.allStatuses').",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-B", "Enum migration — explicit scope"]
   },
   {
