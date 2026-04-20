@@ -1,0 +1,24 @@
+{
+  "page": {
+    "title": "Workflows"
+  },
+  "nav": {
+    "designer": "Designer",
+    "runs": "Runs",
+    "control": "Workflow control",
+    "tasks": "Tasks"
+  },
+  "sections": {
+    "definitions": "Workflow definitions",
+    "runStudio": "Run studio"
+  },
+  "empty": {
+    "title": "No workflows found",
+    "description": "Workflows will appear here once they are created."
+  },
+  "actions": {
+    "create": "Create workflow",
+    "open": "Open",
+    "close": "Close"
+  }
+}

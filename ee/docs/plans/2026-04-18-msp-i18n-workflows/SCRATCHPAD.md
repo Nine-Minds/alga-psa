@@ -118,3 +118,11 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
 - File-structure reference (update after WF-F): `.ai/translation/translation_files_structure.md`
 - Example hook style: `packages/billing/src/hooks/useBillingEnumOptions.ts`
 - Example batch SCRATCHPAD style: `ee/docs/plans/2026-04-09-msp-i18n-credits/SCRATCHPAD.md`
+
+## 2026-04-19 — Progress log
+
+### F001 complete — namespace scaffold created
+- Added `server/public/locales/{en,fr,es,de,nl,it,pl,xx,yy}/msp/workflows.json`.
+- Initial scaffold currently includes `page`, `nav`, `sections`, `empty`, and `actions` roots so downstream component work can add keys incrementally without first creating the namespace.
+- Non-English production locales currently copy English as temporary stubs, matching the PRD. `xx` and `yy` were also created as temporary structural stubs so `validate-translations.cjs` passes from the first commit; F041 will regenerate them from English later.
+- Validation run: `node scripts/validate-translations.cjs` — passed with 0 missing/extra keys across production locales and structural match for pseudo-locales.

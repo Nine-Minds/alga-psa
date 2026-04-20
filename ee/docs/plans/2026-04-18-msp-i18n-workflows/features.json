@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Create server/public/locales/en/msp/workflows.json with initial scaffold (page, nav, empty sections, actions) and matching files in fr/es/de/nl/it/pl (values copied from English as translation stubs).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Namespace + route config", "WF-A"]
   },
   {
