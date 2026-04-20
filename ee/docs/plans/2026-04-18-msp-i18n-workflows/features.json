@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Replace inline reference-section arrays in workflowReferenceSelector.tsx (lines 399-403) with useWorkflowReferenceSectionOptions hook call; each section still only shows when the underlying model array is non-empty.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-D", "Enum migration — explicit scope"]
   },
   {

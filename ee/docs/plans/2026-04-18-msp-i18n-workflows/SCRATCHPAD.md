@@ -255,3 +255,13 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   node scripts/validate-translations.cjs
   ```
 - Result: no ESLint errors or warnings from this file; translation validation remained green.
+
+### F011 complete — workflowReferenceSelector uses enum hook
+- Updated `ee/server/src/components/workflow-designer/workflowReferenceSelector.tsx` to consume `useWorkflowReferenceSectionOptions()`.
+- Preserved the existing visibility rule by filtering the hook output based on whether `payload`, `vars`, `meta`, `error`, or `forEach` actually has entries in the current model.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/workflowReferenceSelector.tsx
+  node scripts/validate-translations.cjs
+  ```
+- Result: no ESLint errors or warnings from this file; translation validation remained green.

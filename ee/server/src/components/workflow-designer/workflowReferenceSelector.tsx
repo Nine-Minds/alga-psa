@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { useWorkflowReferenceSectionOptions } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 
 import type { JsonSchema } from './expression-editor';
 import type { DataTreeContext } from './mapping/SourceDataTree';
@@ -394,15 +395,17 @@ export const ReferenceScopeSelector: React.FC<{
   onStepChange,
   onFieldChange,
 }) => {
+  const allScopeOptions = useWorkflowReferenceSectionOptions();
   const scopeOptions = useMemo<SelectOption[]>(() => {
-    const options: SelectOption[] = [];
-    if (model.payload.length > 0) options.push({ value: 'payload', label: 'Payload' });
-    if (model.vars.length > 0) options.push({ value: 'vars', label: 'Step results' });
-    if (model.meta.length > 0) options.push({ value: 'meta', label: 'Workflow details' });
-    if (model.error.length > 0) options.push({ value: 'error', label: 'Error' });
-    if (model.forEach.length > 0) options.push({ value: 'forEach', label: 'Loop context' });
-    return options;
-  }, [model]);
+    return allScopeOptions.filter((option) => {
+      if (option.value === 'payload') return model.payload.length > 0;
+      if (option.value === 'vars') return model.vars.length > 0;
+      if (option.value === 'meta') return model.meta.length > 0;
+      if (option.value === 'error') return model.error.length > 0;
+      if (option.value === 'forEach') return model.forEach.length > 0;
+      return false;
+    });
+  }, [allScopeOptions, model]);
 
   const selectedStepOption = selectedScope === 'vars'
     ? model.vars.find((step) => step.value === selectedStep) ?? null
