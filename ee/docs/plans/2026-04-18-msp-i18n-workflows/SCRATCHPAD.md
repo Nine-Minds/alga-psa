@@ -164,3 +164,19 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   npx tsx -e "import * as enums from './ee/packages/workflows/src/constants/workflowEnums.ts'; ..."
   ```
   Verified every label-default map contains an entry for every enum value.
+
+### F004 complete — localized enum hooks added
+- Added `ee/packages/workflows/src/hooks/useWorkflowEnumOptions.ts`.
+- Exported `useXOptions()` and `useFormatX()` hooks for all 13 workflow enums, all bound to `useTranslation('msp/workflows')`.
+- Each hook uses `defaultValue` from the corresponding `*_LABEL_DEFAULTS` record so:
+  - the workflow UI stays readable before the namespace finishes loading
+  - flag-off MSP users still see English instead of raw translation keys
+  - unknown server values fall back to the raw value string in formatter hooks
+- Updated `ee/packages/workflows/package.json` to expose:
+  - `@alga-psa/workflows/hooks/*`
+  - `@alga-psa/workflows/constants/*`
+- Sanity check:
+  ```bash
+  npx tsx -e "import { useWorkflowRunStatusOptions, useFormatWorkflowRunStatus } from './ee/packages/workflows/src/hooks/useWorkflowEnumOptions.ts'; ..."
+  ```
+  Confirmed the new hook module resolves and exports functions.

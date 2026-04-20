@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Create ee/packages/workflows/src/hooks/useWorkflowEnumOptions.ts exporting useXOptions() and useFormatX() hooks for all 13 enums, all reading from the msp/workflows namespace under enums.<enumName>.* keys, each with a defaultValue fallback from LABEL_DEFAULTS.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Enum migration — explicit scope", "WF-A"]
   },
   {
