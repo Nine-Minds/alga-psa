@@ -9,12 +9,12 @@
     "tasks": "Attività"
   },
   "sections": {
-    "definitions": "Workflow definitions",
-    "runStudio": "Run studio"
+    "definitions": "Definizioni di workflow",
+    "runStudio": "Studio di esecuzione"
   },
   "empty": {
-    "title": "No workflows found",
-    "description": "Workflows will appear here once they are created."
+    "title": "Nessun workflow trovato",
+    "description": "I workflow verranno visualizzati qui una volta creati."
   },
   "filters": {
     "allStatuses": "Tutti gli stati",
@@ -28,89 +28,89 @@
   },
   "runList": {
     "quickRanges": {
-      "last24h": "Last 24h",
-      "last7d": "Last 7d"
+      "last24h": "Ultime 24h",
+      "last7d": "Ultimi 7 giorni"
     },
     "summary": {
-      "total": "Total",
-      "activeWorkflows": "Active workflows",
-      "runCount": "{{count}} runs"
+      "total": "Totale",
+      "activeWorkflows": "Workflow attivi",
+      "runCount": "{{count}} esecuzioni"
     },
     "filters": {
       "all": "Tutti",
       "allWorkflows": "Tutti i workflow",
-      "searchLabel": "Run ID or correlation key",
-      "searchPlaceholder": "Search by run id or correlation key",
+      "searchLabel": "ID esecuzione o chiave di correlazione",
+      "searchPlaceholder": "Cerca per ID esecuzione o chiave di correlazione",
       "statusLabel": "Stato",
       "workflowLabel": "Workflow",
-      "versionLabel": "Workflow version",
-      "versionPlaceholder": "Any version",
-      "fromLabel": "From",
-      "toLabel": "To",
-      "sortLabel": "Sort"
+      "versionLabel": "Versione del workflow",
+      "versionPlaceholder": "Qualsiasi versione",
+      "fromLabel": "Da",
+      "toLabel": "A",
+      "sortLabel": "Ordina"
     },
     "actions": {
       "applyFilters": "Applica filtri",
       "reset": "Reimposta",
-      "viewLatestRun": "View latest run",
-      "runNow": "Run now",
+      "viewLatestRun": "Visualizza ultima esecuzione",
+      "runNow": "Esegui ora",
       "exportCsv": "Esporta CSV",
       "refresh": "Aggiorna",
-      "resumeSelected": "Resume selected ({{count}})",
-      "cancelSelected": "Cancel selected ({{count}})",
+      "resumeSelected": "Riprendi selezionati ({{count}})",
+      "cancelSelected": "Annulla selezionati ({{count}})",
       "clearSelection": "Cancella selezione",
       "details": "Dettagli",
       "loadMore": "Carica altri"
     },
     "table": {
-      "runId": "Run ID",
+      "runId": "ID esecuzione",
       "workflow": "Workflow",
       "version": "Versione",
       "tenant": "Tenant",
-      "triggerPayload": "Trigger payload",
+      "triggerPayload": "Payload del trigger",
       "status": "Stato",
-      "started": "Started",
-      "updated": "Updated",
+      "started": "Avviato",
+      "updated": "Aggiornato",
       "duration": "Durata",
       "emptyValue": "—",
       "trigger": {
         "manual": "Manuale",
-        "mapped": "Mapped",
-        "identity": "Identity"
+        "mapped": "Mappato",
+        "identity": "Identità"
       }
     },
     "states": {
-      "loading": "Loading workflow runs...",
-      "empty": "No workflow runs match the current filters."
+      "loading": "Caricamento esecuzioni del workflow...",
+      "empty": "Nessuna esecuzione di workflow corrisponde ai filtri attuali."
     },
     "bulk": {
-      "resumeTitle": "Resume Selected Runs",
-      "resumeMessage": "Resume {{count}} selected run(s)?",
-      "cancelTitle": "Cancel Selected Runs",
-      "cancelMessage": "Cancel {{count}} selected run(s)? This cannot be undone.",
+      "resumeTitle": "Riprendi esecuzioni selezionate",
+      "resumeMessage": "Riprendere {{count}} esecuzione/i selezionata/e?",
+      "cancelTitle": "Annulla esecuzioni selezionate",
+      "cancelMessage": "Annullare {{count}} esecuzione/i selezionata/e? L’operazione non è reversibile.",
       "reasonLabel": "Motivo",
-      "resumeReasonPlaceholder": "Provide a reason for resuming",
-      "cancelReasonPlaceholder": "Provide a reason for canceling",
-      "resumeConfirm": "Resume runs",
-      "cancelConfirm": "Cancel runs"
+      "resumeReasonPlaceholder": "Fornisca un motivo per la ripresa",
+      "cancelReasonPlaceholder": "Fornisca un motivo per l’annullamento",
+      "resumeConfirm": "Riprendi esecuzioni",
+      "cancelConfirm": "Annulla esecuzioni"
     },
     "toasts": {
-      "loadRunsFailed": "Failed to load workflow runs",
-      "selectWorkflowForLatestRun": "Select a workflow to view its latest run.",
-      "noRunsFoundForWorkflow": "No runs found for that workflow.",
-      "loadLatestRunFailed": "Failed to load latest run",
-      "selectWorkflowToRun": "Select a workflow to run.",
-      "exportReady": "Run export ready",
-      "exportFailed": "Failed to export runs",
-      "selectRunsForBulkAction": "Select runs to perform this action.",
-      "bulkReasonTooShort": "Reason must be at least 3 characters.",
-      "noEligibleRuns": "No selected runs are eligible for that action.",
-      "bulkResumeFailedCount": "Failed to resume {{count}} run(s).",
-      "bulkCancelFailedCount": "Failed to cancel {{count}} run(s).",
-      "bulkResumeSuccessCount": "Resumed {{count}} run(s).",
-      "bulkCancelSuccessCount": "Canceled {{count}} run(s).",
-      "bulkSkippedIneligibleCount": "Skipped {{count}} ineligible run(s).",
-      "bulkActionFailed": "Bulk action failed"
+      "loadRunsFailed": "Impossibile caricare le esecuzioni del workflow",
+      "selectWorkflowForLatestRun": "Selezioni un workflow per vederne l’ultima esecuzione.",
+      "noRunsFoundForWorkflow": "Nessuna esecuzione trovata per quel workflow.",
+      "loadLatestRunFailed": "Impossibile caricare l’ultima esecuzione",
+      "selectWorkflowToRun": "Selezioni un workflow da eseguire.",
+      "exportReady": "Esportazione esecuzione pronta",
+      "exportFailed": "Impossibile esportare le esecuzioni",
+      "selectRunsForBulkAction": "Selezioni le esecuzioni per eseguire questa azione.",
+      "bulkReasonTooShort": "Il motivo deve contenere almeno 3 caratteri.",
+      "noEligibleRuns": "Nessuna delle esecuzioni selezionate è idonea per quell’azione.",
+      "bulkResumeFailedCount": "Impossibile riprendere {{count}} esecuzione/i.",
+      "bulkCancelFailedCount": "Impossibile annullare {{count}} esecuzione/i.",
+      "bulkResumeSuccessCount": "Ripresa/e {{count}} esecuzione/i.",
+      "bulkCancelSuccessCount": "Annullata/e {{count}} esecuzione/i.",
+      "bulkSkippedIneligibleCount": "Saltata/e {{count}} esecuzione/i non idonea/e.",
+      "bulkActionFailed": "Azione multipla non riuscita"
     }
   },
   "runDetails": {
@@ -118,314 +118,314 @@
       "emptyValue": "—"
     },
     "header": {
-      "runIdLabel": "Run ID",
-      "workflowIdLabel": "Workflow ID:",
+      "runIdLabel": "ID esecuzione",
+      "workflowIdLabel": "ID workflow:",
       "triggerLabel": "Trigger:"
     },
     "actions": {
-      "resume": "Resume",
+      "resume": "Riprendi",
       "cancel": "Annulla",
-      "export": "Export",
+      "export": "Esporta",
       "retry": "Riprova",
-      "replay": "Replay",
-      "requeueEvent": "Requeue Event",
+      "replay": "Ripeti",
+      "requeueEvent": "Rimetti in coda evento",
       "close": "Chiudi",
-      "view": "View",
+      "view": "Visualizza",
       "apply": "Applica",
       "reset": "Reimposta",
       "exportCsv": "Esporta CSV",
       "loadMore": "Carica altri",
-      "exportAuditCsv": "Export Audit CSV"
+      "exportAuditCsv": "Esporta audit CSV"
     },
     "summary": {
       "statusLabel": "Stato",
-      "startedLabel": "Started",
-      "updatedLabel": "Updated",
+      "startedLabel": "Avviato",
+      "updatedLabel": "Aggiornato",
       "completedLabel": "Completato",
       "triggerLabel": "Trigger",
-      "scheduleStateLabel": "Schedule state",
-      "scheduledForLabel": "Scheduled for",
+      "scheduleStateLabel": "Stato pianificazione",
+      "scheduledForLabel": "Pianificato per",
       "cronLabel": "Cron",
-      "nodePathLabel": "Node path:",
-      "eventTypeLabel": "Event type:",
-      "triggerPayloadSchemaLabel": "Trigger payload schema:",
-      "mapped": "Mapped",
-      "identity": "Identity",
-      "runErrorFallback": "Run error",
-      "errorCategoryFallback": "Error"
+      "nodePathLabel": "Percorso del nodo:",
+      "eventTypeLabel": "Tipo di evento:",
+      "triggerPayloadSchemaLabel": "Schema del payload del trigger:",
+      "mapped": "Mappato",
+      "identity": "Identità",
+      "runErrorFallback": "Errore di esecuzione",
+      "errorCategoryFallback": "Errore"
     },
     "stepTimeline": {
-      "title": "Step Timeline",
-      "description": "Attempts, durations, and errors per step.",
-      "loading": "Loading...",
-      "stepStatusLabel": "Step status",
-      "nodeTypeLabel": "Node type",
-      "collapseNestedLabel": "Collapse nested blocks",
+      "title": "Cronologia del passaggio",
+      "description": "Tentativi, durate ed errori per passaggio.",
+      "loading": "Caricamento...",
+      "stepStatusLabel": "Stato del passaggio",
+      "nodeTypeLabel": "Tipo di nodo",
+      "collapseNestedLabel": "Comprimi blocchi annidati",
       "columns": {
-        "stepPath": "Step Path",
-        "type": "Type",
+        "stepPath": "Percorso del passaggio",
+        "type": "Tipo",
         "status": "Stato",
-        "attempt": "Attempt",
+        "attempt": "Tentativo",
         "duration": "Durata",
-        "nextRetry": "Next Retry",
-        "started": "Started",
-        "error": "Error"
+        "nextRetry": "Prossimo tentativo",
+        "started": "Avviato",
+        "error": "Errore"
       },
-      "empty": "No step history yet."
+      "empty": "Nessuna cronologia del passaggio."
     },
     "stepDetails": {
-      "title": "Step Details",
+      "title": "Dettagli passaggio",
       "statusLabel": "Stato",
-      "attemptLabel": "Attempt",
-      "startedLabel": "Started",
+      "attemptLabel": "Tentativo",
+      "startedLabel": "Avviato",
       "completedLabel": "Completato",
       "durationLabel": "Durata",
-      "nodeTypeLabel": "Node Type",
-      "definitionStepIdLabel": "Definition Step ID",
-      "nextRetryLabel": "Next Retry",
-      "errorTitle": "Error",
-      "stepErrorFallback": "Step error",
-      "errorCategoryFallback": "Error"
+      "nodeTypeLabel": "Tipo di nodo",
+      "definitionStepIdLabel": "ID passaggio di definizione",
+      "nextRetryLabel": "Prossimo tentativo",
+      "errorTitle": "Errore",
+      "stepErrorFallback": "Errore del passaggio",
+      "errorCategoryFallback": "Errore"
     },
     "waitHistory": {
-      "title": "Wait History",
-      "eventLine": "Event: {{event}} · Key: {{key}} · Filters: {{count}}",
-      "timeLine": "Mode: {{mode}} · Scheduled resume: {{scheduledResume}}",
-      "timeoutLine": "Timeout: {{timeout}} · Resolved: {{resolved}}"
+      "title": "Cronologia delle attese",
+      "eventLine": "Evento: {{event}} · Chiave: {{key}} · Filtri: {{count}}",
+      "timeLine": "Modalità: {{mode}} · Ripresa pianificata: {{scheduledResume}}",
+      "timeoutLine": "Timeout: {{timeout}} · Risolto: {{resolved}}"
     },
     "envelope": {
-      "title": "Envelope Data",
-      "description": "Payload, vars, meta, and error from the latest snapshot.",
-      "redactedNotice": "Redacted values shown as {{marker}}.",
-      "noSnapshot": "No snapshot available.",
+      "title": "Dati envelope",
+      "description": "Payload, variabili, metadati ed errore dall’ultimo snapshot.",
+      "redactedNotice": "I valori oscurati sono mostrati come {{marker}}.",
+      "noSnapshot": "Nessuno snapshot disponibile.",
       "tabs": {
         "payload": "Payload",
         "vars": "Vars",
         "meta": "Meta",
-        "error": "Error",
-        "raw": "Raw"
+        "error": "Errore",
+        "raw": "Grezzo"
       }
     },
     "invocations": {
-      "title": "Action Invocations",
-      "redactedNotice": "Redacted values shown as {{marker}}.",
-      "empty": "No action calls recorded for this step.",
-      "attemptLine": "Attempt {{count}}",
-      "durationLine": "Duration: {{duration}}",
-      "sizeLine": "Input size: {{inputSize}}{{inputSuffix}} · Output size: {{outputSize}}{{outputSuffix}}",
+      "title": "Invocazioni di azioni",
+      "redactedNotice": "I valori oscurati sono mostrati come {{marker}}.",
+      "empty": "Nessuna chiamata di azione registrata per questo passaggio.",
+      "attemptLine": "Tentativo {{count}}",
+      "durationLine": "Durata: {{duration}}",
+      "sizeLine": "Dimensione input: {{inputSize}}{{inputSuffix}} · Dimensione output: {{outputSize}}{{outputSuffix}}",
       "truncatedSuffix": " (truncated)",
       "inputLabel": "Input",
       "outputLabel": "Output"
     },
     "logs": {
-      "title": "Run Logs",
-      "description": "Operational log events for this run.",
+      "title": "Log di esecuzione",
+      "description": "Eventi di log operativi per questa esecuzione.",
       "searchLabel": "Cerca",
-      "searchPlaceholder": "Search log message",
-      "levelLabel": "Level",
-      "empty": "No log entries found.",
+      "searchPlaceholder": "Cerca messaggio di log",
+      "levelLabel": "Livello",
+      "empty": "Nessuna voce di log trovata.",
       "columns": {
         "timestamp": "Timestamp",
-        "level": "Level",
-        "message": "Message",
+        "level": "Livello",
+        "message": "Messaggio",
         "step": "Passaggio",
         "event": "Evento",
-        "correlation": "Correlation"
+        "correlation": "Correlazione"
       }
     },
     "audit": {
-      "title": "Audit Trail",
-      "description": "Administrative actions for this run.",
-      "empty": "No audit entries yet.",
-      "systemUser": "system",
+      "title": "Traccia di audit",
+      "description": "Azioni amministrative per questa esecuzione.",
+      "empty": "Nessuna voce di audit.",
+      "systemUser": "sistema",
       "columns": {
         "timestamp": "Timestamp",
-        "operation": "Operation",
-        "user": "User",
+        "operation": "Operazione",
+        "user": "Utente",
         "details": "Dettagli"
       }
     },
     "dialogs": {
       "reasonLabel": "Motivo",
-      "resumeTitle": "Resume Workflow Run",
-      "resumeMessage": "Resume this workflow run now?",
-      "resumeReasonPlaceholder": "Provide a reason for resuming",
-      "cancelTitle": "Cancel Workflow Run",
-      "cancelMessage": "Cancel this workflow run? This cannot be undone.",
-      "cancelReasonPlaceholder": "Provide a reason for canceling",
-      "cancelConfirm": "Cancel run",
-      "retryTitle": "Retry Workflow Run",
-      "retryMessage": "Retry this run from the last failed step?",
-      "retryReasonPlaceholder": "Provide a reason for retrying",
-      "retryConfirm": "Retry run",
-      "replayTitle": "Replay Workflow Run",
-      "replayMessage": "Replay this run with a new payload.",
-      "replayReasonPlaceholder": "Provide a reason for replaying",
+      "resumeTitle": "Riprendi esecuzione del workflow",
+      "resumeMessage": "Riprendere ora questa esecuzione del workflow?",
+      "resumeReasonPlaceholder": "Fornisca un motivo per la ripresa",
+      "cancelTitle": "Annulla esecuzione del workflow",
+      "cancelMessage": "Annullare questa esecuzione del workflow? L’operazione non è reversibile.",
+      "cancelReasonPlaceholder": "Fornisca un motivo per l’annullamento",
+      "cancelConfirm": "Annulla esecuzione",
+      "retryTitle": "Riprova esecuzione del workflow",
+      "retryMessage": "Riprovare questa esecuzione dall’ultimo passaggio fallito?",
+      "retryReasonPlaceholder": "Fornisca un motivo per il nuovo tentativo",
+      "retryConfirm": "Riprova esecuzione",
+      "replayTitle": "Ripeti esecuzione del workflow",
+      "replayMessage": "Ripeta questa esecuzione con un nuovo payload.",
+      "replayReasonPlaceholder": "Fornisca un motivo per la ripetizione",
       "payloadLabel": "Payload (JSON)",
-      "replayConfirm": "Replay run",
-      "requeueTitle": "Requeue Event Wait",
-      "requeueMessage": "Requeue the most recent event wait for this run?",
-      "requeueReasonPlaceholder": "Provide a reason for requeuing",
-      "requeueConfirm": "Requeue wait"
+      "replayConfirm": "Ripeti esecuzione",
+      "requeueTitle": "Rimetti in coda attesa evento",
+      "requeueMessage": "Rimettere in coda l’attesa evento più recente per questa esecuzione?",
+      "requeueReasonPlaceholder": "Fornisca un motivo per il reinserimento in coda",
+      "requeueConfirm": "Rimetti in coda attesa"
     },
     "toasts": {
-      "loadRunDetailsFailed": "Failed to load run details",
-      "loadLogsFailed": "Failed to load logs",
-      "loadAuditLogsFailed": "Failed to load audit logs",
-      "logExportReady": "Log export ready",
-      "exportLogsFailed": "Failed to export logs",
-      "reasonTooShort": "Reason must be at least 3 characters.",
-      "runResumed": "Run resumed",
-      "resumeRunFailed": "Failed to resume run",
-      "runCanceled": "Run canceled",
-      "cancelRunFailed": "Failed to cancel run",
-      "runExportReady": "Run export ready",
-      "exportRunFailed": "Failed to export run",
-      "runRetryStarted": "Run retry started",
-      "retryRunFailed": "Failed to retry run",
-      "replayPayloadInvalid": "Replay payload must be valid JSON.",
-      "runReplayStarted": "Run replay started",
-      "replayRunFailed": "Failed to replay run",
-      "eventWaitRequeued": "Event wait requeued",
-      "requeueEventWaitFailed": "Failed to requeue event wait",
-      "auditExportReady": "Audit export ready",
-      "exportAuditLogsFailed": "Failed to export audit logs"
+      "loadRunDetailsFailed": "Impossibile caricare i dettagli dell’esecuzione",
+      "loadLogsFailed": "Impossibile caricare i log",
+      "loadAuditLogsFailed": "Impossibile caricare i log di audit",
+      "logExportReady": "Esportazione log pronta",
+      "exportLogsFailed": "Impossibile esportare i log",
+      "reasonTooShort": "Il motivo deve contenere almeno 3 caratteri.",
+      "runResumed": "Esecuzione ripresa",
+      "resumeRunFailed": "Impossibile riprendere l’esecuzione",
+      "runCanceled": "Esecuzione annullata",
+      "cancelRunFailed": "Impossibile annullare l’esecuzione",
+      "runExportReady": "Esportazione esecuzione pronta",
+      "exportRunFailed": "Impossibile esportare l’esecuzione",
+      "runRetryStarted": "Nuovo tentativo di esecuzione avviato",
+      "retryRunFailed": "Impossibile riprovare l’esecuzione",
+      "replayPayloadInvalid": "Il payload di ripetizione deve essere JSON valido.",
+      "runReplayStarted": "Ripetizione dell’esecuzione avviata",
+      "replayRunFailed": "Impossibile ripetere l’esecuzione",
+      "eventWaitRequeued": "Attesa evento rimessa in coda",
+      "requeueEventWaitFailed": "Impossibile reinserire in coda l’attesa evento",
+      "auditExportReady": "Esportazione audit pronta",
+      "exportAuditLogsFailed": "Impossibile esportare i log di audit"
     }
   },
   "runDialog": {
-    "title": "Run Workflow",
+    "title": "Esegui workflow",
     "description": "Provide a synthetic payload to preview (and run) a workflow.",
-    "descriptionEvent": "Event: {{name}}.",
-    "draftWarning": "Draft version differs from published (v{{version}}).",
-    "concurrencyLimit": "Concurrency limit: {{count}} run(s) at a time.",
+    "descriptionEvent": "Evento: {{name}}.",
+    "draftWarning": "La versione in bozza è diversa da quella pubblicata (v{{version}}).",
+    "concurrencyLimit": "Limite di concorrenza: {{count}} esecuzione/i alla volta.",
     "common": {
       "emptyValue": "—"
     },
     "actions": {
       "addField": "Aggiungi campo",
       "addItem": "Aggiungi elemento",
-      "cloneLatestRun": "Clone latest run",
+      "cloneLatestRun": "Clona ultima esecuzione",
       "close": "Chiudi",
-      "copyPayload": "Copy payload",
-      "formBuilder": "Form Builder",
-      "hide": "Hide",
-      "jsonEditor": "JSON Editor",
-      "openEventCatalog": "Open event catalog",
-      "publishDraft": "Publish draft",
-      "publishLatest": "Publish latest",
+      "copyPayload": "Copia payload",
+      "formBuilder": "Generatore di moduli",
+      "hide": "Nascondi",
+      "jsonEditor": "Editor JSON",
+      "openEventCatalog": "Apri catalogo eventi",
+      "publishDraft": "Pubblica bozza",
+      "publishLatest": "Pubblica ultima",
       "remove": "Rimuovi",
       "reset": "Reimposta",
-      "resetToDefaults": "Reset to defaults",
-      "savePreset": "Save preset",
-      "show": "Show",
-      "startRun": "Start Run",
-      "starting": "Starting..."
+      "resetToDefaults": "Reimposta ai valori predefiniti",
+      "savePreset": "Salva preimpostazione",
+      "show": "Mostra",
+      "startRun": "Avvia esecuzione",
+      "starting": "Avvio..."
     },
     "eventCatalog": {
-      "title": "Event catalog",
-      "description": "Pick an event type to seed payload schemas.",
-      "searchLabel": "Search events",
-      "searchPlaceholder": "Search by name, type, or category",
-      "eventTypeLabel": "Event type",
-      "loadingEvents": "Loading events...",
-      "selectEventType": "Select event type",
+      "title": "Catalogo eventi",
+      "description": "Scelga un tipo di evento per inizializzare gli schemi del payload.",
+      "searchLabel": "Cerca eventi",
+      "searchPlaceholder": "Cerca per nome, tipo o categoria",
+      "eventTypeLabel": "Tipo di evento",
+      "loadingEvents": "Caricamento eventi...",
+      "selectEventType": "Selezioni il tipo di evento",
       "systemBadge": "Sistema",
       "tenantBadge": "Tenant",
-      "systemEvent": "System event",
-      "tenantEvent": "Tenant event",
-      "uncategorized": "Uncategorized"
+      "systemEvent": "Evento di sistema",
+      "tenantEvent": "Evento del tenant",
+      "uncategorized": "Non categorizzato"
     },
     "fields": {
       "workflowLabel": "Workflow",
-      "publishedVersionLabel": "Published version",
+      "publishedVersionLabel": "Versione pubblicata",
       "triggerLabel": "Trigger",
       "manualTrigger": "Manuale",
-      "workflowStatusLabel": "Workflow status",
-      "statusActive": "active",
-      "statusPaused": "paused"
+      "workflowStatusLabel": "Stato del workflow",
+      "statusActive": "attivo",
+      "statusPaused": "in pausa"
     },
     "form": {
-      "booleanTrue": "True",
-      "booleanFalse": "False",
-      "mapEntriesTitle": "Map entries",
-      "mapEntriesPrompt": "Enter field key/path",
-      "mapEntriesDescription": "For map-style objects, add keys and set each value.",
-      "mapEntriesEmpty": "No map entries added.",
-      "noSchema": "No schema available to render a form."
+      "booleanTrue": "Vero",
+      "booleanFalse": "Falso",
+      "mapEntriesTitle": "Voci della mappa",
+      "mapEntriesPrompt": "Inserisca chiave/percorso del campo",
+      "mapEntriesDescription": "Per gli oggetti in stile mappa, aggiunga chiavi e imposti ogni valore.",
+      "mapEntriesEmpty": "Nessuna voce della mappa aggiunta.",
+      "noSchema": "Nessuno schema disponibile per generare un modulo."
     },
     "noPublishedVersion": {
-      "title": "No published version",
-      "description": "You can preview the payload builder, but you must publish the workflow before starting a run."
+      "title": "Nessuna versione pubblicata",
+      "description": "Può visualizzare in anteprima il generatore di payload, ma deve pubblicare il workflow prima di avviare un’esecuzione."
     },
     "payload": {
-      "largePayloadWarning": "Payload size exceeds 256KB; runs may be slower.",
+      "largePayloadWarning": "Il payload supera 256KB; le esecuzioni potrebbero essere più lente.",
       "payloadJsonLabel": "Payload (JSON)",
       "payloadLabel": "payload",
-      "payloadSize": "Payload size: {{size}} KB"
+      "payloadSize": "Dimensione payload: {{size}} KB"
     },
     "presets": {
-      "presetNameLabel": "Preset name",
-      "presetNamePlaceholder": "e.g. Regression payload",
-      "savedPresets": "Saved presets"
+      "presetNameLabel": "Nome preimpostazione",
+      "presetNamePlaceholder": "es. Payload di regressione",
+      "savedPresets": "Preimpostazioni salvate"
     },
     "schema": {
-      "sourceLabel": "Schema source",
-      "workflowSchema": "Workflow schema",
-      "eventSchema": "Event schema",
-      "schemaRef": "Schema ref",
-      "schemaRefLabel": "Schema ref",
-      "selectSchema": "Select schema…",
-      "noSchemasFound": "No schemas found",
-      "unknownSchemaRef": "Unknown schema ref.",
-      "useEventSchema": "Use event schema",
-      "viewSchemaDiff": "View schema diff",
-      "hideSchemaDiff": "Hide schema diff",
-      "onlyInEvent": "Only in event schema",
-      "requiredOnlyInEvent": "Required only in event",
-      "onlyInWorkflow": "Only in workflow schema",
-      "requiredOnlyInWorkflow": "Required only in workflow",
-      "typeMismatches": "Type mismatches",
-      "typeMismatchLine": "{{field}}: event {{eventType}} vs workflow {{payloadType}}",
-      "selectedEventWarningPrefix": "Selected event ({{selectedEventType}}) may not match this workflow's trigger ({{triggerEventName}}). ",
-      "matchOptional": "Schema refs match; trigger mapping will be applied (optional).",
-      "matchIdentity": "Schema refs match; identity mapping will be used (no mapping required).",
-      "diffWillApply": "Schema refs differ ({{eventSchemaRef}} → {{payloadSchemaRef}}); trigger mapping will be applied.",
-      "diffRequiredMissing": "Schema refs differ ({{eventSchemaRef}} → {{payloadSchemaRef}}); trigger mapping is required but not configured.",
-      "triggerEventDiffers": "Trigger event schema differs from workflow payload schema. Switch to \"Event schema\" if you want to enter a trigger event payload.",
-      "eventUnavailable": "Event schema not available; using workflow schema instead.",
+      "sourceLabel": "Origine schema",
+      "workflowSchema": "Schema workflow",
+      "eventSchema": "Schema evento",
+      "schemaRef": "Riferimento schema",
+      "schemaRefLabel": "Riferimento schema",
+      "selectSchema": "Selezioni uno schema…",
+      "noSchemasFound": "Nessuno schema trovato",
+      "unknownSchemaRef": "Riferimento schema sconosciuto.",
+      "useEventSchema": "Usa lo schema dell’evento",
+      "viewSchemaDiff": "Visualizza diff dello schema",
+      "hideSchemaDiff": "Nascondi diff dello schema",
+      "onlyInEvent": "Solo nello schema evento",
+      "requiredOnlyInEvent": "Obbligatorio solo nell’evento",
+      "onlyInWorkflow": "Solo nello schema del workflow",
+      "requiredOnlyInWorkflow": "Obbligatorio solo nel workflow",
+      "typeMismatches": "Mancata corrispondenza di tipo",
+      "typeMismatchLine": "{{field}}: evento {{eventType}} vs workflow {{payloadType}}",
+      "selectedEventWarningPrefix": "L’evento selezionato ({{selectedEventType}}) potrebbe non corrispondere al trigger di questo workflow ({{triggerEventName}}). ",
+      "matchOptional": "I riferimenti dello schema corrispondono; la mappatura del trigger verrà applicata (opzionale).",
+      "matchIdentity": "I riferimenti dello schema corrispondono; verrà utilizzata la mappatura identità (nessuna mappatura richiesta).",
+      "diffWillApply": "I riferimenti dello schema sono diversi ({{eventSchemaRef}} → {{payloadSchemaRef}}); la mappatura del trigger verrà applicata.",
+      "diffRequiredMissing": "I riferimenti dello schema sono diversi ({{eventSchemaRef}} → {{payloadSchemaRef}}); la mappatura del trigger è obbligatoria ma non configurata.",
+      "triggerEventDiffers": "Lo schema dell’evento trigger è diverso dallo schema del payload del workflow. Passi a «Schema evento» se desidera inserire un payload dell’evento trigger.",
+      "eventUnavailable": "Schema evento non disponibile; verrà utilizzato lo schema del workflow.",
       "mapping": {
-        "identityOptional": "Identity mapping (no mapping required)",
-        "requiredMissing": "Trigger mapping is required but not configured",
-        "willApply": "Trigger mapping will be applied",
-        "willApplyOptional": "Trigger mapping will be applied (optional)"
+        "identityOptional": "Mappatura identità (nessuna mappatura richiesta)",
+        "requiredMissing": "La mappatura del trigger è obbligatoria ma non configurata",
+        "willApply": "La mappatura del trigger verrà applicata",
+        "willApplyOptional": "La mappatura del trigger verrà applicata (opzionale)"
       }
     },
-    "systemWorkflowWarning": "This is a system workflow. Running it may affect core automation.",
-    "systemWorkflowConfirm": "I understand and want to run it.",
+    "systemWorkflowWarning": "Questo è un workflow di sistema. La sua esecuzione potrebbe influire sull’automazione principale.",
+    "systemWorkflowConfirm": "Ho capito e voglio eseguirlo.",
     "templates": {
-      "exampleLabel": "Example {{count}}",
-      "eventTemplates": "Event templates",
-      "sampleTemplates": "Sample templates",
-      "emailTemplate": "Inbound Email",
-      "webhookTemplate": "Webhook Event"
+      "exampleLabel": "Esempio {{count}}",
+      "eventTemplates": "Modelli di evento",
+      "sampleTemplates": "Modelli di esempio",
+      "emailTemplate": "Email in entrata",
+      "webhookTemplate": "Evento webhook"
     },
     "toasts": {
-      "confirmSystemRun": "Confirm you want to run this system workflow.",
-      "eventMissingSchemaRef": "Selected event does not have a payload schema ref; cannot run with trigger mapping.",
-      "loadLatestRunFailed": "Failed to load latest run",
-      "mapEntryExists": "That key already exists.",
+      "confirmSystemRun": "Confermi di voler eseguire questo workflow di sistema.",
+      "eventMissingSchemaRef": "L’evento selezionato non ha un riferimento allo schema del payload; impossibile eseguire con la mappatura del trigger.",
+      "loadLatestRunFailed": "Impossibile caricare l’ultima esecuzione",
+      "mapEntryExists": "Quella chiave esiste già.",
       "noPriorPayload": "No prior run payload found.",
-      "payloadCopied": "Payload copied to clipboard.",
-      "presetSaved": "Preset saved.",
-      "providePresetName": "Provide a preset name.",
-      "startRunFailed": "Failed to start run",
-      "triggerMappingMissing": "Trigger mapping is required for this event schema but is not configured on the workflow."
+      "payloadCopied": "Payload copiato negli appunti.",
+      "presetSaved": "Preimpostazione salvata.",
+      "providePresetName": "Fornisca un nome per la preimpostazione.",
+      "startRunFailed": "Impossibile avviare l’esecuzione",
+      "triggerMappingMissing": "La mappatura del trigger è obbligatoria per questo schema evento, ma non è configurata sul workflow."
     },
     "validation": {
       "invalidJson": "JSON non valido",
-      "summaryTitle": "Payload still needs required event fields before this run can start",
-      "summaryDescription": "Fill the missing fields below, switch to Form Builder, or use a sample payload button.",
-      "moreErrors": "+{{count}} more…"
+      "summaryTitle": "Il payload necessita ancora dei campi evento obbligatori prima che questa esecuzione possa iniziare",
+      "summaryDescription": "Compili i campi mancanti qui sotto, passi al generatore di moduli o utilizzi un pulsante di payload di esempio.",
+      "moreErrors": "+{{count}} altri…"
     }
   },
   "eventList": {
@@ -433,71 +433,71 @@
       "emptyValue": "—"
     },
     "summary": {
-      "total": "Total",
-      "matched": "Matched",
-      "unmatched": "Unmatched",
+      "total": "Totale",
+      "matched": "Corrispondente",
+      "unmatched": "Non corrispondente",
       "errors": "Errori"
     },
     "filters": {
-      "eventNameLabel": "Event name",
+      "eventNameLabel": "Nome evento",
       "eventNamePlaceholder": "workflow.event",
-      "correlationKeyLabel": "Correlation key",
+      "correlationKeyLabel": "Chiave di correlazione",
       "correlationKeyPlaceholder": "corr-123",
       "statusLabel": "Stato",
-      "fromLabel": "From",
-      "toLabel": "To"
+      "fromLabel": "Da",
+      "toLabel": "A"
     },
     "actions": {
       "applyFilters": "Applica filtri",
       "reset": "Reimposta",
       "exportCsv": "Esporta CSV",
-      "exportJson": "Export JSON",
+      "exportJson": "Esporta JSON",
       "close": "Chiudi",
-      "viewRunDetails": "View run details"
+      "viewRunDetails": "Visualizza dettagli esecuzione"
     },
     "table": {
-      "schemaConflict": "catalog ≠ submission",
+      "schemaConflict": "catalogo ≠ invio",
       "columns": {
         "event": "Evento",
-        "correlation": "Correlation",
+        "correlation": "Correlazione",
         "schema": "Schema",
         "status": "Stato",
-        "matchedRun": "Matched Run",
+        "matchedRun": "Esecuzione corrispondente",
         "payload": "Payload",
         "created": "Creato"
       }
     },
     "states": {
-      "loading": "Loading events...",
-      "empty": "No workflow events found."
+      "loading": "Caricamento eventi...",
+      "empty": "Nessun evento di workflow trovato."
     },
     "detail": {
-      "title": "Event Detail",
-      "loading": "Loading event detail...",
-      "eventIdLabel": "Event ID",
+      "title": "Dettaglio evento",
+      "loading": "Caricamento dettaglio evento...",
+      "eventIdLabel": "ID evento",
       "statusLabel": "Stato",
-      "eventNameLabel": "Event name",
-      "correlationKeyLabel": "Correlation key",
-      "payloadSchemaRefLabel": "Payload schema ref",
-      "schemaConflict": "Schema ref conflict: catalog {{catalog}} vs submission {{submission}}",
+      "eventNameLabel": "Nome evento",
+      "correlationKeyLabel": "Chiave di correlazione",
+      "payloadSchemaRefLabel": "Riferimento schema del payload",
+      "schemaConflict": "Conflitto riferimento schema: catalogo {{catalog}} vs invio {{submission}}",
       "createdLabel": "Creato",
-      "processedLabel": "Processed",
-      "errorLine": "Error: {{message}}",
-      "waitLabel": "Wait",
-      "waitIdLine": "Wait ID: {{waitId}}",
-      "waitStatusLine": "Status: {{status}}",
+      "processedLabel": "Elaborato",
+      "errorLine": "Errore: {{message}}",
+      "waitLabel": "Attesa",
+      "waitIdLine": "ID attesa: {{waitId}}",
+      "waitStatusLine": "Stato: {{status}}",
       "waitTimeoutLine": "Timeout: {{value}}",
-      "waitResolvedLine": "Resolved: {{value}}",
-      "waitStepLine": "Step: {{value}}",
-      "matchedRunLabel": "Matched run",
-      "runStatusLine": "Status: {{status}}",
+      "waitResolvedLine": "Risolto: {{value}}",
+      "waitStepLine": "Passaggio: {{value}}",
+      "matchedRunLabel": "Esecuzione corrispondente",
+      "runStatusLine": "Stato: {{status}}",
       "payloadLabel": "Payload"
     },
     "toasts": {
-      "loadEventsFailed": "Failed to load workflow events",
-      "loadEventDetailFailed": "Failed to load event detail",
-      "exportReady": "Event export ready",
-      "exportFailed": "Failed to export events"
+      "loadEventsFailed": "Impossibile caricare gli eventi del workflow",
+      "loadEventDetailFailed": "Impossibile caricare il dettaglio dell’evento",
+      "exportReady": "Esportazione eventi pronta",
+      "exportFailed": "Impossibile esportare gli eventi"
     }
   },
   "deadLetter": {
@@ -505,7 +505,7 @@
       "emptyValue": "—"
     },
     "filters": {
-      "minimumRetriesLabel": "Minimum retries",
+      "minimumRetriesLabel": "Tentativi minimi",
       "minimumRetriesPlaceholder": "3"
     },
     "actions": {
@@ -514,21 +514,21 @@
     },
     "table": {
       "columns": {
-        "runId": "Run ID",
+        "runId": "ID esecuzione",
         "workflow": "Workflow",
         "version": "Versione",
         "status": "Stato",
-        "retries": "Retries",
-        "failedSteps": "Failed Steps",
-        "updated": "Updated"
+        "retries": "Tentativi",
+        "failedSteps": "Passaggi falliti",
+        "updated": "Aggiornato"
       }
     },
     "states": {
-      "empty": "No dead-letter runs found.",
-      "loading": "Loading dead-letter runs..."
+      "empty": "Nessuna esecuzione dead-letter trovata.",
+      "loading": "Caricamento esecuzioni dead-letter..."
     },
     "toasts": {
-      "loadFailed": "Failed to load dead-letter runs"
+      "loadFailed": "Impossibile caricare le esecuzioni dead-letter"
     }
   },
   "audit": {
@@ -536,7 +536,7 @@
       "emptyValue": "—"
     },
     "header": {
-      "title": "Workflow Audit"
+      "title": "Audit del workflow"
     },
     "actions": {
       "exportCsv": "Esporta CSV",
@@ -545,40 +545,40 @@
     "table": {
       "columns": {
         "timestamp": "Timestamp",
-        "operation": "Operation",
-        "user": "User",
+        "operation": "Operazione",
+        "user": "Utente",
         "details": "Dettagli"
       }
     },
     "states": {
-      "selectWorkflow": "Select a workflow to view audit history.",
-      "empty": "No audit entries yet."
+      "selectWorkflow": "Selezioni un workflow per vedere la cronologia di audit.",
+      "empty": "Nessuna voce di audit."
     },
     "values": {
-      "system": "system"
+      "system": "sistema"
     },
     "toasts": {
-      "loadFailed": "Failed to load audit logs",
-      "exportReady": "Audit export ready",
-      "exportFailed": "Failed to export audit logs"
+      "loadFailed": "Impossibile caricare i log di audit",
+      "exportReady": "Esportazione audit pronta",
+      "exportFailed": "Impossibile esportare i log di audit"
     }
   },
   "designer": {
     "page": {
-      "controlPanelTitle": "Workflow Control Panel",
-      "controlPanelDescription": "Manage schedules, runs, events, and the event catalog.",
-      "designerTitle": "Workflow Designer",
-      "designerDescription": "Build and maintain workflow automations.",
-      "editorTitle": "Workflow Editor",
-      "editorDescription": "Choose a workflow to edit or create a new workflow."
+      "controlPanelTitle": "Pannello di controllo dei workflow",
+      "controlPanelDescription": "Gestisca pianificazioni, esecuzioni, eventi e il catalogo degli eventi.",
+      "designerTitle": "Designer dei workflow",
+      "designerDescription": "Crei e mantenga le automazioni dei workflow.",
+      "editorTitle": "Editor dei workflow",
+      "editorDescription": "Scelga un workflow da modificare o crei un nuovo workflow."
     },
     "controlPanel": {
       "tabs": {
-        "schedules": "Schedules",
+        "schedules": "Pianificazioni",
         "runs": "Esecuzioni",
-        "events": "Events",
-        "eventCatalog": "Event Catalog",
-        "deadLetter": "Dead Letter"
+        "events": "Eventi",
+        "eventCatalog": "Catalogo eventi",
+        "deadLetter": "Dead letter"
       }
     },
     "toolbar": {
@@ -589,10 +589,10 @@
       "publish": "Pubblica",
       "publishing": "Pubblicazione...",
       "run": "Esegui",
-      "previewOnly": "Preview only until a version is published.",
+      "previewOnly": "Solo anteprima finché non viene pubblicata una versione.",
       "validation": {
-        "lastValidated": "Last validated: {{timestamp}}",
-        "unknown": "Validation status unknown"
+        "lastValidated": "Ultima validazione: {{timestamp}}",
+        "unknown": "Stato di validazione sconosciuto"
       }
     },
     "form": {
@@ -607,7 +607,7 @@
       "eventCategoryLabel": "Categoria evento",
       "eventLabel": "Evento",
       "selectEventCategory": "Seleziona categoria evento",
-      "selectEvent": "Select event",
+      "selectEvent": "Seleziona evento",
       "selectCategoryFirst": "Seleziona prima una categoria",
       "inputDataLabel": "Dati di input del workflow",
       "inputDataEvent": "I passaggi leggono i dati dal trigger selezionato.",
@@ -642,7 +642,7 @@
     },
     "stepConfig": {
       "eventLabel": "Evento",
-      "selectEvent": "Select event",
+      "selectEvent": "Seleziona evento",
       "correlationKey": "Espressione chiave di correlazione",
       "payloadFilters": "Filtri del payload",
       "addFilter": "Aggiungi filtro",
@@ -735,7 +735,7 @@
         "description": "Titolo dell’attività mostrato all’assegnatario"
       },
       "contextData": {
-        "label": "Context Data",
+        "label": "Dati di contesto",
         "description": "Dati aggiuntivi da includere con l’attività"
       }
     },
@@ -754,17 +754,17 @@
       }
     },
     "discardDialog": {
-      "title": "Discard unsaved changes?",
-      "message": "You have unsaved changes in this workflow. Discard them and continue?",
-      "confirm": "Discard changes",
-      "cancel": "Keep editing"
+      "title": "Annullare le modifiche non salvate?",
+      "message": "Sono presenti modifiche non salvate in questo workflow. Annullarle e continuare?",
+      "confirm": "Annulla modifiche",
+      "cancel": "Continua a modificare"
     },
     "eventSchemaDialog": {
-      "title": "Switch workflow input schema?",
-      "messageWithEvent": "The selected event {{eventName}} uses {{schemaRef}}. Do you want to switch this workflow to that event schema?",
-      "messageFallback": "Do you want to switch this workflow to the selected event schema?",
-      "confirm": "Use event schema",
-      "cancel": "Keep current schema"
+      "title": "Cambiare lo schema di input del workflow?",
+      "messageWithEvent": "L’evento selezionato {{eventName}} utilizza {{schemaRef}}. Vuole impostare questo workflow su quello schema evento?",
+      "messageFallback": "Vuole impostare questo workflow sullo schema dell’evento selezionato?",
+      "confirm": "Usa lo schema dell’evento",
+      "cancel": "Mantieni lo schema attuale"
     },
     "blockSection": {
       "then": "THEN",
@@ -774,18 +774,18 @@
       "body": "BODY"
     },
     "palette": {
-      "showPalette": "Show palette",
-      "hidePalette": "Hide palette",
+      "showPalette": "Mostra tavolozza",
+      "hidePalette": "Nascondi tavolozza",
       "searchPlaceholder": "Cerca",
-      "dragHint": "Drop on pipeline to add",
+      "dragHint": "Rilasci sulla pipeline per aggiungere",
       "chooseAction": "Scegli un’azione dopo aver aggiunto questo passaggio",
       "returnsSummary": "Ritorna: {{list}}{{suffix}}",
       "categories": {
-        "Control": "Control",
+        "Control": "Controllo",
         "Core": "Core",
-        "Transform": "Transform",
+        "Transform": "Trasforma",
         "AI": "AI",
-        "Apps": "Apps",
+        "Apps": "App",
         "Action": "Azione",
         "Email": "Email",
         "Nodes": "Nodi"
@@ -793,23 +793,23 @@
       "controlBlocks": {
         "control.if": {
           "label": "Se",
-          "description": "Conditional branching"
+          "description": "Ramificazione condizionale"
         },
         "control.forEach": {
-          "label": "For Each",
-          "description": "Iterate over items"
+          "label": "Per ciascuno",
+          "description": "Itera sugli elementi"
         },
         "control.tryCatch": {
           "label": "Try/Catch",
-          "description": "Handle errors"
+          "description": "Gestisci errori"
         },
         "control.callWorkflow": {
-          "label": "Call Workflow",
-          "description": "Invoke another workflow"
+          "label": "Chiama workflow",
+          "description": "Invoca un altro workflow"
         },
         "control.return": {
           "label": "Ritorna",
-          "description": "Stop execution"
+          "description": "Ferma l’esecuzione"
         }
       },
       "nodes": {
@@ -880,7 +880,7 @@
           "description": "Azioni CRM"
         },
         "transform": {
-          "label": "Transform",
+          "label": "Trasforma",
           "description": "Azioni di trasformazione"
         },
         "ai": {
@@ -890,7 +890,7 @@
       }
     },
     "stepCard": {
-      "selectAriaLabel": "Select {{label}} step",
+      "selectAriaLabel": "Seleziona passaggio {{label}}",
       "badges": {
         "if": "Se",
         "loop": "Ciclo",
@@ -898,87 +898,87 @@
         "block": "Blocco"
       },
       "mapping": {
-        "unmappedTitle": "{{count}} required fields are unmapped",
-        "unmappedBadge": "{{count}} required unmapped",
-        "allMappedTitle": "All {{count}} required fields are mapped",
-        "allMappedAria": "All required fields mapped"
+        "unmappedTitle": "{{count}} campi obbligatori non sono mappati",
+        "unmappedBadge": "{{count}} obbligatori non mappati",
+        "allMappedTitle": "Tutti i {{count}} campi obbligatori sono mappati",
+        "allMappedAria": "Tutti i campi obbligatori sono mappati"
       },
       "errorCount": "{{count}} {{noun}}",
-      "errorSingular": "error",
-      "errorPlural": "errors",
+      "errorSingular": "errore",
+      "errorPlural": "errori",
       "actions": {
         "duplicate": "Duplica passaggio",
-        "duplicateAriaLabel": "Duplicate {{label}} step",
+        "duplicateAriaLabel": "Duplica passaggio {{label}}",
         "delete": "Elimina passaggio"
       },
-      "forEachSummary": "Item: {{itemVar}} | Concurrency: {{concurrency}}"
+      "forEachSummary": "Elemento: {{itemVar}} | Concorrenza: {{concurrency}}"
     },
     "toasts": {
-      "loadRegistriesFailed": "Failed to load workflow registries",
-      "loadPermissionsFailed": "Failed to load permissions",
-      "loadWorkflowsFailed": "Failed to load workflows",
-      "loadEventCatalogFailed": "Failed to load event catalog",
-      "settingsUpdated": "Workflow settings updated",
-      "settingsUpdateFailed": "Failed to update workflow settings",
-      "created": "Workflow created",
-      "saved": "Workflow saved",
-      "saveFailed": "Failed to save workflow",
-      "saveBeforePublish": "Save the workflow before publishing",
-      "published": "Workflow published",
-      "publishFailed": "Failed to publish workflow",
-      "publishValidationErrors": "Publish failed - fix validation errors",
-      "systemEventMissingSchema": "This system event is missing a valid schema and cannot be selected until fixed."
+      "loadRegistriesFailed": "Impossibile caricare i registri dei workflow",
+      "loadPermissionsFailed": "Impossibile caricare i permessi",
+      "loadWorkflowsFailed": "Impossibile caricare i workflow",
+      "loadEventCatalogFailed": "Impossibile caricare il catalogo degli eventi",
+      "settingsUpdated": "Impostazioni del workflow aggiornate",
+      "settingsUpdateFailed": "Impossibile aggiornare le impostazioni del workflow",
+      "created": "Workflow creato",
+      "saved": "Workflow salvato",
+      "saveFailed": "Impossibile salvare il workflow",
+      "saveBeforePublish": "Salvi il workflow prima di pubblicarlo",
+      "published": "Workflow pubblicato",
+      "publishFailed": "Impossibile pubblicare il workflow",
+      "publishValidationErrors": "Pubblicazione non riuscita – correggere gli errori di validazione",
+      "systemEventMissingSchema": "A questo evento di sistema manca uno schema valido e non può essere selezionato finché non viene corretto."
     }
   },
   "actionInputFieldInfo": {
     "required": "Obbligatorio",
     "requiredTitle": "Obbligatorio",
-    "requiredMissingTitle": "Required field is missing a value",
-    "format": "Format: {{value}}",
-    "eachItem": "Each item: {{value}}",
-    "length": "Length: {{min}} - {{max}}",
-    "range": "Range: {{min}} - {{max}}",
-    "any": "any",
-    "defaultPrefix": "Default:",
-    "examplePrefix": "Example:"
+    "requiredMissingTitle": "Manca un valore in un campo obbligatorio",
+    "format": "Formato: {{value}}",
+    "eachItem": "Ogni elemento: {{value}}",
+    "length": "Lunghezza: {{min}} - {{max}}",
+    "range": "Intervallo: {{min}} - {{max}}",
+    "any": "qualsiasi",
+    "defaultPrefix": "Predefinito:",
+    "examplePrefix": "Esempio:"
   },
   "actionInputSection": {
     "heading": "Action inputs"
   },
   "actionInputFixedPicker": {
-    "loadingOptions": "Loading options...",
-    "ticketSearchPlaceholder": "Search tickets by number or title",
-    "ticketSelect": "Select ticket",
-    "ticketTypeAbove": "Type above to search tickets",
+    "loadingOptions": "Caricamento opzioni...",
+    "ticketSearchPlaceholder": "Cerca ticket per numero o titolo",
+    "ticketSelect": "Seleziona ticket",
+    "ticketTypeAbove": "Digiti sopra per cercare ticket",
     "placeholders": {
-      "board": "Select Board",
-      "client": "Select Client",
-      "contact": "Select Contact",
-      "user": "Select User",
-      "userOrTeam": "Select User or Team"
+      "board": "Seleziona board",
+      "client": "Seleziona cliente",
+      "contact": "Seleziona contatto",
+      "user": "Seleziona utente",
+      "userOrTeam": "Seleziona utente o team"
     },
     "errors": {
-      "loadTicket": "Failed to load ticket",
-      "searchTickets": "Failed to search tickets",
-      "loadOptions": "Failed to load options"
+      "loadTicket": "Impossibile caricare il ticket",
+      "searchTickets": "Impossibile cercare i ticket",
+      "loadOptions": "Impossibile caricare le opzioni"
     },
     "dependencyHints": {
       "contact": {
-        "client_id": "Choose a fixed Client first to load contact options."
+        "client_id": "Scelga prima un cliente fisso per caricare le opzioni di contatto."
       },
       "client-location": {
-        "client_id": "Choose a fixed Client first to load location options."
+        "client_id": "Scelga prima un cliente fisso per caricare le opzioni di sede."
       },
       "ticket-category": {
-        "board_id": "Choose a fixed Board first to load category options."
+        "board_id": "Scelga prima una board fissa per caricare le opzioni di categoria."
       },
       "ticket-status": {
-        "board_id": "Choose a fixed Board first to load status options.",
-        "ticket_id": "Choose a fixed Ticket first to load status options."
+        "board_id": "Scelga prima una board fissa per caricare le opzioni di stato.",
+        "ticket_id": "Scelga prima un ticket fisso per caricare le opzioni di stato."
       },
       "ticket-subcategory": {
-        "board_id": "Choose a fixed Board first to load subcategory options.",
-        "category_id": "Choose a fixed Category first to load subcategory options."
+        "board_id": "Scelga prima una board fissa per caricare le opzioni di sottocategoria.",
+        "category_id": "Scelga prima una categoria fissa per caricare le opzioni di sottocategoria."
       }
     }
   },
@@ -1026,7 +1026,7 @@
   },
   "taskInbox": {
     "title": "Casella attività",
-    "backToList": "← Back to Task List",
+    "backToList": "← Torna all’elenco attività",
     "tabs": {
       "pending": "In attesa",
       "claimed": "Assegnato",
@@ -1041,10 +1041,10 @@
       "pageLabel": "Page {{current}} of {{total}}"
     },
     "errors": {
-      "loadFailed": "Failed to load tasks. Please try again.",
-      "claimFailed": "Failed to claim task: {{error}}",
-      "unclaimFailed": "Failed to unclaim task: {{error}}",
-      "unknown": "Unknown error"
+      "loadFailed": "Impossibile caricare le attività. Riprovare.",
+      "claimFailed": "Impossibile assegnare l’attività: {{error}}",
+      "unclaimFailed": "Impossibile rilasciare l’attività: {{error}}",
+      "unknown": "Errore sconosciuto"
     },
     "actions": {
       "claim": "Assegna a me",
@@ -1052,24 +1052,24 @@
     },
     "noDueDate": "Nessuna scadenza",
     "overdueSuffix": "(Scaduto)",
-    "empty": "No tasks found",
+    "empty": "Nessuna attività trovata",
     "duePrefix": "Scade:"
   },
   "taskDetails": {
-    "notAvailable": "N/A",
-    "notFound": "Task not found",
+    "notAvailable": "N/D",
+    "notFound": "Attività non trovata",
     "retry": "Riprova",
     "youPronoun": "Lei",
-    "noForm": "No form available for this task.",
-    "contextData": "Context Data",
-    "responseData": "Response Data",
+    "noForm": "Nessun modulo disponibile per questa attività.",
+    "contextData": "Dati di contesto",
+    "responseData": "Dati di risposta",
     "fields": {
       "status": "Stato",
       "priority": "Priorità",
       "created": "Creato",
       "dueDate": "Scadenza",
-      "claimedBy": "Claimed By",
-      "completedBy": "Completed By"
+      "claimedBy": "Assegnata a",
+      "completedBy": "Completata da"
     },
     "tabs": {
       "details": "Dettagli",
@@ -1081,14 +1081,14 @@
       "unclaim": "Rilascia attività"
     },
     "errors": {
-      "loadFailed": "Failed to load task details. Please try again.",
-      "claimFailed": "Failed to claim task: {{error}}",
-      "unclaimFailed": "Failed to unclaim task: {{error}}",
-      "unknown": "Unknown error"
+      "loadFailed": "Impossibile caricare i dettagli dell’attività. Riprovare.",
+      "claimFailed": "Impossibile assegnare l’attività: {{error}}",
+      "unclaimFailed": "Impossibile rilasciare l’attività: {{error}}",
+      "unknown": "Errore sconosciuto"
     }
   },
   "taskHistory": {
-    "empty": "No history available for this task.",
+    "empty": "Nessuna cronologia disponibile per questa attività.",
     "byPrefix": "Da:",
     "system": "Sistema",
     "detailsLabel": "Dettagli",
@@ -1101,7 +1101,7 @@
       "expired": "Scaduto"
     },
     "errors": {
-      "loadFailed": "Failed to load task history. Please try again."
+      "loadFailed": "Impossibile caricare la cronologia dell’attività. Riprovare."
     }
   },
   "taskForm": {
@@ -1116,13 +1116,13 @@
       "cancel": "Annulla"
     },
     "errors": {
-      "generic": "An error occurred"
+      "generic": "Si è verificato un errore"
     }
   },
   "embeddedTaskInbox": {
     "title": "Le mie attività",
     "viewAll": "Vedi tutto",
-    "backToTasks": "← Back to Tasks"
+    "backToTasks": "← Torna alle attività"
   },
   "actionButton": {
     "processing": "Elaborazione...",
@@ -1131,106 +1131,106 @@
     "confirmTitle": "Conferma azione"
   },
   "stepNameField": {
-    "label": "Step name"
+    "label": "Nome del passaggio"
   },
   "stepSaveOutput": {
-    "toggleLabel": "Save output",
-    "placeholder": "e.g., ticketDefaults",
+    "toggleLabel": "Salva output",
+    "placeholder": "es. ticketDefaults",
     "copyPathTitle": "Copia percorso completo",
-    "accessibleAs": "Accessible as:"
+    "accessibleAs": "Accessibile come:"
   },
   "aiSchemaSection": {
-    "heading": "AI response format",
-    "headingDescription": "Choose what the AI response should include for later steps.",
-    "modeSimple": "Simple",
-    "modeAdvanced": "Advanced",
+    "heading": "Formato risposta AI",
+    "headingDescription": "Scelga cosa deve includere la risposta AI per i passaggi successivi.",
+    "modeSimple": "Semplice",
+    "modeAdvanced": "Avanzato",
     "addField": "Aggiungi campo",
     "addNested": "Aggiungi campo annidato",
     "remove": "Rimuovi",
     "nameLabel": "Nome",
-    "answerType": "Answer type",
-    "arrayItems": "Array items",
+    "answerType": "Tipo di risposta",
+    "arrayItems": "Elementi dell’array",
     "required": "Obbligatorio",
     "descriptionLabel": "Descrizione",
-    "objectItemFields": "Object item fields",
-    "nestedFields": "Nested fields",
+    "objectItemFields": "Campi dell’elemento oggetto",
+    "nestedFields": "Campi annidati",
     "jsonSchemaLabel": "JSON Schema",
-    "advancedHelperText": "Advanced mode supports object-rooted schemas plus nested objects, arrays, descriptions, constraints, and additionalProperties.",
-    "validationHeading": "Schema validation",
-    "advancedFallback": "This saved schema uses advanced JSON Schema features, so it is shown in Advanced mode.",
-    "simpleModeUnsupported": "This schema cannot be represented in simple mode.",
+    "advancedHelperText": "La modalità avanzata supporta schemi con radice oggetto oltre a oggetti annidati, array, descrizioni, vincoli e additionalProperties.",
+    "validationHeading": "Validazione dello schema",
+    "advancedFallback": "Questo schema salvato utilizza funzionalità avanzate di JSON Schema, pertanto viene mostrato in modalità avanzata.",
+    "simpleModeUnsupported": "Questo schema non può essere rappresentato in modalità semplice.",
     "errors": {
-      "jsonRequired": "AI output schema JSON is required."
+      "jsonRequired": "Il JSON dello schema di output AI è obbligatorio."
     }
   },
   "composeText": {
-    "heading": "Compose text outputs",
-    "headingDescription": "Create one or more markdown outputs with stable downstream reference keys.",
+    "heading": "Componi output testuali",
+    "headingDescription": "Crei uno o più output markdown con chiavi di riferimento stabili per i passaggi successivi.",
     "addOutput": "Aggiungi output",
-    "untitled": "Untitled output",
+    "untitled": "Output senza titolo",
     "outputFallback": "output {{index}}",
-    "moveUpAria": "Move {{label}} up",
-    "moveDownAria": "Move {{label}} down",
-    "deleteAria": "Delete {{label}}",
-    "outputLabel": "Output label",
-    "stableKeyLabel": "Stable key",
-    "keyHintSafe": "Downstream-safe key",
-    "keyHintInvalid": "Use lowercase letters, numbers, and underscores only.",
+    "moveUpAria": "Sposta {{label}} in alto",
+    "moveDownAria": "Sposta {{label}} in basso",
+    "deleteAria": "Elimina {{label}}",
+    "outputLabel": "Etichetta output",
+    "stableKeyLabel": "Chiave stabile",
+    "keyHintSafe": "Chiave sicura per i passaggi successivi",
+    "keyHintInvalid": "Utilizzi solo lettere minuscole, numeri e underscore.",
     "regenerate": "Rigenera",
     "validationHeading": "Validazione",
-    "downstreamPathLabel": "Downstream reference path",
-    "pathFallback": "Save output to see a reference path.",
+    "downstreamPathLabel": "Percorso di riferimento per i passaggi successivi",
+    "pathFallback": "Salvi l’output per vedere un percorso di riferimento.",
     "copied": "Copiato",
     "copyPath": "Copia percorso",
-    "contentHeading": "Compose content",
-    "contentDescription": "Use markdown-safe formatting and inline workflow reference chips.",
-    "insertReference": "Insert reference",
-    "insertReferenceHeading": "Insert workflow reference",
+    "contentHeading": "Componi contenuto",
+    "contentDescription": "Utilizzi una formattazione compatibile con markdown e chip di riferimento del workflow in linea.",
+    "insertReference": "Inserisci riferimento",
+    "insertReferenceHeading": "Inserisci riferimento al workflow",
     "errors": {
-      "noCodeBlock": "References cannot be inserted inside code blocks. Move the cursor to another block and try again."
+      "noCodeBlock": "Non è possibile inserire riferimenti all’interno dei blocchi di codice. Sposti il cursore in un altro blocco e riprovi."
     }
   },
   "referenceSelector": {
     "placeholders": {
-      "scope": "Select source scope...",
-      "step": "Select step...",
-      "field": "Select field..."
+      "scope": "Selezioni l’ambito sorgente...",
+      "step": "Selezioni un passaggio...",
+      "field": "Selezioni un campo..."
     }
   },
   "pipeline": {
     "start": "Inizio",
-    "insertStepHere": "Insert step here",
-    "emptyDisabled": "No steps yet.",
-    "emptySelectPrompt": "Select a step from the panel to get started."
+    "insertStepHere": "Inserisci passaggio qui",
+    "emptyDisabled": "Nessun passaggio.",
+    "emptySelectPrompt": "Selezioni un passaggio dal pannello per iniziare."
   },
   "expressionEditor": {
-    "ariaLabel": "Expression editor",
-    "autocompleteAria": "Expression autocomplete suggestions",
-    "textAreaPlaceholder": "Enter JSONata expression...",
+    "ariaLabel": "Editor di espressioni",
+    "autocompleteAria": "Suggerimenti di completamento automatico delle espressioni",
+    "textAreaPlaceholder": "Inserisca un’espressione JSONata...",
     "field": {
-      "placeholder": "Enter expression...",
-      "insertFieldPlaceholder": "Insert field"
+      "placeholder": "Inserisca un’espressione...",
+      "insertFieldPlaceholder": "Inserisci campo"
     }
   },
   "sourceDataTree": {
-    "searchPlaceholder": "Search fields...",
+    "searchPlaceholder": "Cerca campi...",
     "sections": {
       "payload": "Payload",
-      "vars": "Step Outputs (vars)",
-      "loopContext": "Loop Context",
-      "workflowMeta": "Workflow Meta",
-      "errorContext": "Error Context"
+      "vars": "Output dei passaggi (vars)",
+      "loopContext": "Contesto del ciclo",
+      "workflowMeta": "Meta del workflow",
+      "errorContext": "Contesto di errore"
     },
     "vars": {
-      "emptyPrefix": "No vars yet. Use",
-      "saveOutput": "Save output",
-      "emptyConjunction": "or an",
+      "emptyPrefix": "Nessuna variabile. Utilizzi",
+      "saveOutput": "Salva output",
+      "emptyConjunction": "o un",
       "assignStep": "Assegna",
-      "emptySuffix": "step to populate"
+      "emptySuffix": "passaggio per popolare"
     },
     "loop": {
-      "currentItem": "current item",
-      "loopIndex": "loop index"
+      "currentItem": "elemento corrente",
+      "loopIndex": "indice del ciclo"
     }
   },
   "validationBadge": {
@@ -1241,115 +1241,115 @@
       "incomplete": "Incompleto"
     },
     "tooltip": {
-      "valid": "All required inputs are mapped",
-      "incomplete": "Configure input mappings",
-      "mappingCount": "{{mapped}} of {{required}} required fields mapped"
+      "valid": "Tutti gli input obbligatori sono mappati",
+      "incomplete": "Configura mappature di input",
+      "mappingCount": "{{mapped}} di {{required}} campi obbligatori mappati"
     },
-    "openEditor": "Open Mapping Editor",
-    "errorsHeading": "Errors ({{count}})",
-    "warningsHeading": "Warnings ({{count}})",
-    "moreErrors": "+{{count}} more errors",
-    "moreWarnings": "+{{count}} more warnings"
+    "openEditor": "Apri editor delle mappature",
+    "errorsHeading": "Errori ({{count}})",
+    "warningsHeading": "Avvisi ({{count}})",
+    "moreErrors": "+{{count}} altri errori",
+    "moreWarnings": "+{{count}} altri avvisi"
   },
   "inputMappingEditor": {
-    "empty": "This action has no input fields.",
-    "browseSources": "Browse sources",
-    "objectFields": "Object fields",
-    "itemTitle": "Item {{index}}",
+    "empty": "Questa azione non ha campi di input.",
+    "browseSources": "Sfoglia sorgenti",
+    "objectFields": "Campi oggetto",
+    "itemTitle": "Elemento {{index}}",
     "reset": "Reimposta",
     "addItem": "Aggiungi elemento",
     "fill": "Compila",
     "clearValues": "Svuota i valori",
-    "applySuggestions": "Apply suggestions ({{count}})",
-    "applySuggestionTitle": "Apply suggestion: {{sourcePath}}",
-    "fuzzySuffix": "(fuzzy)",
-    "removeMapping": "Remove mapping (Delete/Backspace)",
+    "applySuggestions": "Applica suggerimenti ({{count}})",
+    "applySuggestionTitle": "Applica suggerimento: {{sourcePath}}",
+    "fuzzySuffix": "(approssimato)",
+    "removeMapping": "Rimuovi mappatura (Canc/Backspace)",
     "invalidJson": "JSON non valido",
-    "stringPlaceholder": "Enter value...",
+    "stringPlaceholder": "Inserisca un valore...",
     "aria": {
-      "listbox": "Action input fields",
-      "fieldList": "Action input fields list"
+      "listbox": "Campi di input dell’azione",
+      "fieldList": "Elenco dei campi di input dell’azione"
     },
     "summary": {
-      "filledCount": "{{filled}} of {{total}} fields filled",
-      "missingCount": "{{count}} required missing",
-      "missingTitle": "Required fields are missing values"
+      "filledCount": "{{filled}} di {{total}} campi compilati",
+      "missingCount": "{{count}} obbligatori mancanti",
+      "missingTitle": "Valori mancanti nei campi obbligatori"
     },
     "mode": {
-      "structured": "Structured",
-      "rawJson": "Raw JSON"
+      "structured": "Strutturato",
+      "rawJson": "JSON grezzo"
     },
     "nullable": {
-      "useValue": "Use value",
-      "setNull": "Set null"
+      "useValue": "Usa valore",
+      "setNull": "Imposta null"
     },
     "primitiveList": {
-      "placeholder": "Enter one value per line, or comma-separated",
-      "helperText": "Use newline, comma, or semicolon separators."
+      "placeholder": "Inserisca un valore per riga o separati da virgola",
+      "helperText": "Utilizzi come separatore ritorno a capo, virgola o punto e virgola."
     },
     "structuredGroup": {
-      "collapseAria": "Collapse {{title}}",
-      "expandAria": "Expand {{title}}"
+      "collapseAria": "Comprimi {{title}}",
+      "expandAria": "Espandi {{title}}"
     },
     "legacy": {
-      "title": "Legacy mapping no longer supported here",
-      "description": "This field uses a saved expression or secret. Replace it with a structured reference or a fixed value.",
-      "useReference": "Use reference",
-      "useFixedValue": "Use fixed value"
+      "title": "Mappatura legacy non più supportata qui",
+      "description": "Questo campo usa un’espressione salvata o un segreto. Lo sostituisca con un riferimento strutturato o un valore fisso.",
+      "useReference": "Usa riferimento",
+      "useFixedValue": "Usa valore fisso"
     },
     "fixedValueDialog": {
-      "title": "Edit {{fieldName}}",
-      "description": "Use the larger editor for longer fixed-value content.",
-      "openEditor": "Open editor",
+      "title": "Modifica {{fieldName}}",
+      "description": "Utilizzi l’editor più grande per contenuti a valore fisso più lunghi.",
+      "openEditor": "Apri editor",
       "apply": "Applica",
       "cancel": "Annulla"
     }
   },
   "schemaReference": {
-    "selectAction": "Select an action to see its input/output schema",
-    "viewDetails": "View schema details",
-    "hideDetails": "Hide schema details",
-    "inputSchemaTitle": "Input Schema",
-    "outputSchemaTitle": "Output Schema",
-    "noInputParameters": "No input parameters",
-    "noOutputFields": "No output fields",
-    "noFields": "No fields",
-    "outputAvailablePrefix": "Output available at",
-    "showRawJson": "Show raw JSON Schema",
-    "hideRawJson": "Hide raw JSON Schema",
+    "selectAction": "Selezioni un’azione per vederne lo schema di input/output",
+    "viewDetails": "Visualizza dettagli dello schema",
+    "hideDetails": "Nascondi dettagli dello schema",
+    "inputSchemaTitle": "Schema di input",
+    "outputSchemaTitle": "Schema di output",
+    "noInputParameters": "Nessun parametro di input",
+    "noOutputFields": "Nessun campo di output",
+    "noFields": "Nessun campo",
+    "outputAvailablePrefix": "Output disponibile in",
+    "showRawJson": "Mostra JSON Schema grezzo",
+    "hideRawJson": "Nascondi JSON Schema grezzo",
     "exportSchema": "Esporta schema",
-    "exportSchemaTitle": "Download schema as JSON file",
-    "rawInputComment": "// Input Schema",
-    "rawOutputComment": "// Output Schema",
-    "copyPathTitle": "Copy {{path}}",
+    "exportSchemaTitle": "Scarica schema come file JSON",
+    "rawInputComment": "// Schema di input",
+    "rawOutputComment": "// Schema di output",
+    "copyPathTitle": "Copia {{path}}",
     "copyAllPaths": "Copia tutti i percorsi",
-    "copyAllPathsTitle": "Copy all field paths",
+    "copyAllPathsTitle": "Copia tutti i percorsi dei campi",
     "copied": "Copiato!",
-    "pathsCopied": "{{count}} paths copied",
+    "pathsCopied": "{{count}} percorsi copiati",
     "nullableSuffix": "| null",
     "constraints": {
-      "values": "Values: {{list}}{{suffix}}",
+      "values": "Valori: {{list}}{{suffix}}",
       "min": "Min: {{value}}",
       "max": "Max: {{value}}",
-      "minLength": "Min length: {{value}}",
-      "maxLength": "Max length: {{value}}",
+      "minLength": "Lunghezza min: {{value}}",
+      "maxLength": "Lunghezza max: {{value}}",
       "pattern": "Pattern: {{value}}",
-      "format": "Format: {{value}}",
-      "examples": "Examples: {{list}}",
-      "default": "Default: {{value}}"
+      "format": "Formato: {{value}}",
+      "examples": "Esempi: {{list}}",
+      "default": "Predefinito: {{value}}"
     }
   },
   "groupedAction": {
     "groupHeading": "Gruppo",
     "actionLabel": "Azione",
-    "actionPlaceholder": "Select a {{group}} action",
+    "actionPlaceholder": "Selezioni un’azione {{group}}",
     "required": {
-      "title": "Action required",
-      "message": "Select a {{group}} action before configuring inputs or publishing this workflow."
+      "title": "Azione richiesta",
+      "message": "Selezioni un’azione {{group}} prima di configurare gli input o pubblicare questo workflow."
     },
     "tileKind": {
       "core-object": "Core",
-      "transform": "Transform",
+      "transform": "Trasforma",
       "app": "App",
       "ai": "AI"
     }
@@ -1357,7 +1357,7 @@
   "trigger": {
     "manual": "Manuale",
     "event": "Evento",
-    "eventWithType": "Event: {{eventType}}",
+    "eventWithType": "Evento: {{eventType}}",
     "oneTimeSchedule": "Pianificazione singola",
     "recurringSchedule": "Pianificazione ricorrente"
   },
@@ -1374,22 +1374,22 @@
       "label": "Inizio"
     },
     "states": {
-      "buildingGraph": "Building graph…"
+      "buildingGraph": "Costruzione del grafo…"
     },
     "errors": {
-      "buildFailed": "Failed to build workflow graph.",
-      "renderErrorTitle": "Graph render error",
-      "switchToList": "Switch to List view to continue editing."
+      "buildFailed": "Impossibile costruire il grafo del workflow.",
+      "renderErrorTitle": "Errore di rendering del grafo",
+      "switchToList": "Passi alla vista elenco per continuare la modifica."
     },
     "empty": {
-      "readonly": "Select a step from the panel to get started.",
-      "dropFirst": "Drop to add as the first step",
-      "dragPrompt": "Drag a step from the panel, or select one to get started."
+      "readonly": "Selezioni un passaggio dal pannello per iniziare.",
+      "dropFirst": "Rilasci per aggiungere come primo passaggio",
+      "dragPrompt": "Trascini un passaggio dal pannello o ne selezioni uno per iniziare."
     },
     "mapping": {
-      "unmappedTitle": "{{count}} required fields unmapped",
-      "unmappedBadge": "{{count}} req unmapped",
-      "allMapped": "All required fields mapped"
+      "unmappedTitle": "{{count}} campi obbligatori non mappati",
+      "unmappedBadge": "{{count}} obbl. non mappati",
+      "allMapped": "Tutti i campi obbligatori sono mappati"
     },
     "insert": {
       "title": "Drop a step here to insert"
@@ -1400,14 +1400,14 @@
   },
   "runStudio": {
     "header": {
-      "kicker": "Run Studio",
-      "fallbackTitle": "Workflow Run",
-      "version": "Version {{version}}",
-      "updated": "Updated {{time}}",
-      "backToWorkflows": "← Back to Workflows"
+      "kicker": "Studio di esecuzione",
+      "fallbackTitle": "Esecuzione del workflow",
+      "version": "Versione {{version}}",
+      "updated": "Aggiornato {{time}}",
+      "backToWorkflows": "← Torna ai workflow"
     },
     "actions": {
-      "replay": "Replay",
+      "replay": "Ripeti",
       "cancel": "Annulla"
     },
     "status": {
@@ -1419,108 +1419,108 @@
       "canceled": "Annullato"
     },
     "failure": {
-      "title": "Run failed",
-      "lastSuccessfulStep": "Last successful step: {{label}}"
+      "title": "Esecuzione fallita",
+      "lastSuccessfulStep": "Ultimo passaggio riuscito: {{label}}"
     },
     "pipeline": {
-      "title": "Execution Pipeline",
-      "emptyBranch": "No steps in this branch.",
+      "title": "Pipeline di esecuzione",
+      "emptyBranch": "Nessun passaggio in questo ramo.",
       "view": {
-        "graph": "Graph",
-        "list": "List"
+        "graph": "Grafo",
+        "list": "Elenco"
       },
       "states": {
-        "loadingDefinition": "Loading workflow definition…",
-        "loadingDefinitionPlain": "Loading workflow definition...",
-        "noSteps": "No steps to display."
+        "loadingDefinition": "Caricamento definizione del workflow…",
+        "loadingDefinitionPlain": "Caricamento definizione del workflow...",
+        "noSteps": "Nessun passaggio da visualizzare."
       }
     },
     "details": {
-      "title": "Run Details",
+      "title": "Dettagli esecuzione",
       "fields": {
-        "runId": "Run Id",
-        "started": "Started",
+        "runId": "ID esecuzione",
+        "started": "Avviato",
         "duration": "Durata",
         "tenant": "Tenant",
         "trigger": "Trigger",
-        "eventType": "Event Type",
-        "scheduleState": "Schedule State",
-        "scheduledFor": "Scheduled For",
+        "eventType": "Tipo di evento",
+        "scheduleState": "Stato pianificazione",
+        "scheduledFor": "Pianificato per",
         "cron": "Cron",
-        "waitingFor": "Waiting For",
-        "counts": "Counts"
+        "waitingFor": "In attesa di",
+        "counts": "Conteggi"
       },
       "values": {
-        "resumeEvent": "Resume event",
-        "counts": "{{steps}} steps · {{logs}} logs · {{waits}} waits"
+        "resumeEvent": "Evento di ripresa",
+        "counts": "{{steps}} passaggi · {{logs}} log · {{waits}} attese"
       }
     },
     "errors": {
-      "title": "Run Errors",
-      "runErrorPayload": "Run Error Payload",
-      "resumeEventPayload": "Resume Event Payload"
+      "title": "Errori di esecuzione",
+      "runErrorPayload": "Payload errore di esecuzione",
+      "resumeEventPayload": "Payload evento di ripresa"
     },
     "stepDetails": {
-      "title": "Step Details",
-      "empty": "Select a step in the pipeline to inspect inputs, outputs, and snapshots.",
+      "title": "Dettagli passaggio",
+      "empty": "Selezioni un passaggio nella pipeline per esaminare input, output e snapshot.",
       "fields": {
         "step": "Passaggio"
       },
       "panels": {
-        "configuration": "Step Configuration",
-        "inputResolved": "Input (Resolved)",
+        "configuration": "Configurazione passaggio",
+        "inputResolved": "Input (risolto)",
         "output": "Output",
-        "envelopeSnapshot": "Envelope Snapshot"
+        "envelopeSnapshot": "Snapshot envelope"
       }
     },
     "timeline": {
-      "title": "Execution Timeline",
-      "searchLabel": "Search timeline",
-      "searchPlaceholder": "Search step path, wait type, status",
-      "empty": "No timeline entries yet.",
-      "waitTitle": "Wait · {{waitType}}",
-      "attempt": "Attempt {{attempt}} · {{status}}",
-      "inProgress": "In progress",
-      "statusLine": "Status: {{status}}",
-      "eventSegment": " · Event: {{eventName}}",
-      "keySegment": " · Key: {{key}}",
-      "createdLine": "Created: {{createdAt}}",
-      "resolvedSegment": " · Resolved: {{resolvedAt}}",
+      "title": "Cronologia di esecuzione",
+      "searchLabel": "Cerca nella cronologia",
+      "searchPlaceholder": "Cerca percorso del passaggio, tipo di attesa, stato",
+      "empty": "Nessuna voce nella cronologia.",
+      "waitTitle": "Attesa · {{waitType}}",
+      "attempt": "Tentativo {{attempt}} · {{status}}",
+      "inProgress": "In corso",
+      "statusLine": "Stato: {{status}}",
+      "eventSegment": " · Evento: {{eventName}}",
+      "keySegment": " · Chiave: {{key}}",
+      "createdLine": "Creato: {{createdAt}}",
+      "resolvedSegment": " · Risolto: {{resolvedAt}}",
       "actions": {
-        "jump": "Jump"
+        "jump": "Vai a"
       }
     },
     "logs": {
-      "title": "Run Logs",
-      "searchLabel": "Search logs",
-      "searchPlaceholder": "Search message or step path",
-      "empty": "No logs yet.",
+      "title": "Log di esecuzione",
+      "searchLabel": "Cerca nei log",
+      "searchPlaceholder": "Cerca messaggio o percorso del passaggio",
+      "empty": "Nessun log.",
       "actions": {
         "clear": "Svuota"
       }
     },
     "dialog": {
       "title": {
-        "cancel": "Cancel Run",
-        "replay": "Replay Run"
+        "cancel": "Annulla esecuzione",
+        "replay": "Ripeti esecuzione"
       },
       "heading": {
-        "cancel": "Cancel Workflow Run",
-        "replay": "Replay Workflow Run"
+        "cancel": "Annulla esecuzione del workflow",
+        "replay": "Ripeti esecuzione del workflow"
       },
       "description": {
-        "cancel": "Canceling will stop any in-progress or waiting steps for this run.",
-        "replay": "Replaying will start a new run using the payload below."
+        "cancel": "L’annullamento fermerà i passaggi in corso o in attesa di questa esecuzione.",
+        "replay": "La ripetizione avvierà una nuova esecuzione utilizzando il payload sottostante."
       },
       "fields": {
         "reason": "Motivo",
-        "reasonPlaceholder": "e.g. Canceling to adjust inputs",
+        "reasonPlaceholder": "es. Annullamento per correggere gli input",
         "payloadJson": "Payload (JSON)"
       },
       "actions": {
         "close": "Chiudi",
-        "confirmCancel": "Confirm Cancel",
-        "startReplay": "Start Replay",
+        "confirmCancel": "Conferma annullamento",
+        "startReplay": "Avvia ripetizione",
         "working": "In corso..."
       },
       "errors": {
@@ -1528,9 +1528,9 @@
       }
     },
     "stepLabels": {
-      "action": "Action: {{actionId}}",
-      "ifCondition": "If Condition",
-      "forEach": "For Each",
+      "action": "Azione: {{actionId}}",
+      "ifCondition": "Condizione if",
+      "forEach": "Per ciascuno",
       "tryCatch": "Try/Catch",
       "waitForEvent": "Attendi evento",
       "waitForTime": "Attendi tempo",
@@ -1539,9 +1539,9 @@
       "assign": "Assegna"
     },
     "stepCard": {
-      "lastStatus": "Last status: {{status}} ({{timestamp}})",
-      "attempt": "Attempt {{attempt}}",
-      "forEachSummary": "Item: {{itemVar}} | Concurrency: {{concurrency}}",
+      "lastStatus": "Ultimo stato: {{status}} ({{timestamp}})",
+      "attempt": "Tentativo {{attempt}}",
+      "forEachSummary": "Elemento: {{itemVar}} | Concorrenza: {{concurrency}}",
       "badges": {
         "if": "Se",
         "loop": "Ciclo",
@@ -1557,254 +1557,254 @@
       }
     },
     "jsonPanel": {
-      "serializeFailed": "Unable to serialize value."
+      "serializeFailed": "Impossibile serializzare il valore."
     },
     "toasts": {
-      "reasonRequired": "Reason is required (min 3 characters).",
-      "canceled": "Run canceled.",
-      "replayStarted": "Run replay started.",
-      "actionFailed": "Failed to perform action."
+      "reasonRequired": "Il motivo è obbligatorio (minimo 3 caratteri).",
+      "canceled": "Esecuzione annullata.",
+      "replayStarted": "Ripetizione dell’esecuzione avviata.",
+      "actionFailed": "Impossibile eseguire l’azione."
     }
   },
   "schedules": {
     "common": {
       "emptyValue": "—",
-      "entityName": "schedule"
+      "entityName": "pianificazione"
     },
     "heading": {
-      "reflectionLabel": "Workflow Schedules",
-      "title": "Schedules",
-      "description": "Manage reusable workflow schedules and their saved payloads."
+      "reflectionLabel": "Pianificazioni di workflow",
+      "title": "Pianificazioni",
+      "description": "Gestisca le pianificazioni di workflow riutilizzabili e i loro payload salvati."
     },
     "actions": {
-      "new": "New Schedule",
-      "edit": "Edit",
-      "pause": "Pause",
-      "resume": "Resume",
+      "new": "Nuova pianificazione",
+      "edit": "Modifica",
+      "pause": "Metti in pausa",
+      "resume": "Riprendi",
       "delete": "Elimina",
       "cancel": "Annulla",
-      "saving": "Saving…",
-      "saveChanges": "Save Changes",
-      "create": "Create Schedule",
-      "rowMenu": "Schedule actions for {{name}}"
+      "saving": "Salvataggio…",
+      "saveChanges": "Salva modifiche",
+      "create": "Crea pianificazione",
+      "rowMenu": "Azioni di pianificazione per {{name}}"
     },
     "filters": {
       "allWorkflows": "Tutti i workflow",
       "allStatuses": "Tutti gli stati",
-      "allTriggers": "All triggers",
-      "searchPlaceholder": "Search schedules..."
+      "allTriggers": "Tutti i trigger",
+      "searchPlaceholder": "Cerca pianificazioni..."
     },
     "status": {
-      "enabled": "Enabled",
+      "enabled": "Abilitato",
       "paused": "In pausa",
       "failed": "Fallito",
       "completed": "Completato",
       "disabled": "Disabilitato"
     },
     "triggerType": {
-      "schedule": "One-time",
-      "recurring": "Recurring"
+      "schedule": "Singola",
+      "recurring": "Ricorrente"
     },
     "dayType": {
-      "any": "Any day",
-      "business": "Business days",
-      "nonBusiness": "Non-business days"
+      "any": "Qualsiasi giorno",
+      "business": "Giorni lavorativi",
+      "nonBusiness": "Giorni non lavorativi"
     },
     "table": {
       "workflowVersion": "Workflow v{{version}}",
       "columns": {
-        "schedule": "Schedule",
+        "schedule": "Pianificazione",
         "workflow": "Workflow",
-        "triggerType": "Trigger Type",
-        "nextFire": "Next Fire / Run At",
-        "lastFire": "Last Fire",
+        "triggerType": "Tipo di trigger",
+        "nextFire": "Prossima esecuzione / Esegui alle",
+        "lastFire": "Ultima esecuzione",
         "status": "Stato",
-        "lastError": "Last Error",
-        "actions": "Actions"
+        "lastError": "Ultimo errore",
+        "actions": "Azioni"
       }
     },
     "states": {
-      "loadingReflection": "Workflow Schedules Loading",
-      "loading": "Loading schedules…",
-      "never": "Never",
-      "calendarMisconfigured": "Calendar misconfigured",
-      "noEligibleUpcomingRun": "No eligible upcoming run",
-      "unknownWorkflow": "Unknown workflow",
-      "empty": "No schedules found",
-      "emptyDescription": "Create a one-time or recurring schedule to run a published workflow with saved input data."
+      "loadingReflection": "Caricamento pianificazioni di workflow",
+      "loading": "Caricamento pianificazioni…",
+      "never": "Mai",
+      "calendarMisconfigured": "Calendario configurato in modo errato",
+      "noEligibleUpcomingRun": "Nessuna esecuzione futura idonea",
+      "unknownWorkflow": "Workflow sconosciuto",
+      "empty": "Nessuna pianificazione trovata",
+      "emptyDescription": "Crei una pianificazione singola o ricorrente per eseguire un workflow pubblicato con dati di input salvati."
     },
     "errors": {
-      "loadFailed": "Failed to load schedules.",
-      "updateFailed": "Failed to update schedule.",
-      "deleteFailed": "Failed to delete schedule."
+      "loadFailed": "Impossibile caricare le pianificazioni.",
+      "updateFailed": "Impossibile aggiornare la pianificazione.",
+      "deleteFailed": "Impossibile eliminare la pianificazione."
     },
     "timezone": {
-      "browseAll": "Browse all time zones...",
-      "custom": "Custom...",
-      "browseHelp": "Choose from the full supported IANA timezone list.",
-      "customLabel": "Custom timezone",
+      "browseAll": "Sfoglia tutti i fusi orari...",
+      "custom": "Personalizzato...",
+      "browseHelp": "Scelga dall’elenco completo dei fusi orari IANA supportati.",
+      "customLabel": "Fuso orario personalizzato",
       "customPlaceholder": "Etc/GMT+5"
     },
     "dialog": {
       "title": {
-        "edit": "Edit Schedule",
-        "create": "Create Schedule"
+        "edit": "Modifica pianificazione",
+        "create": "Crea pianificazione"
       },
-      "description": "Configure timing and static payload data for a workflow schedule.",
+      "description": "Configuri tempistica e dati statici del payload per una pianificazione di workflow.",
       "states": {
-        "loading": "Loading schedule details…"
+        "loading": "Caricamento dettagli pianificazione…"
       },
       "fields": {
         "workflow": "Workflow",
-        "workflowPlaceholder": "Choose a workflow",
-        "name": "Schedule name",
-        "namePlaceholder": "Month-end AP sync",
+        "workflowPlaceholder": "Scelga un workflow",
+        "name": "Nome della pianificazione",
+        "namePlaceholder": "Sincronizzazione AP di fine mese",
         "triggerType": "Tipo di trigger",
-        "enabled": "Enabled",
-        "enabledHelp": "Schedule will run when valid.",
-        "disabledHelp": "Schedule will stay paused until resumed.",
-        "runAt": "Run at",
-        "runOn": "Run on",
-        "businessDaysOnly": "Business days only",
-        "nonBusinessDaysOnly": "Non-business days only",
-        "calendarSource": "Calendar source",
-        "businessHoursSchedule": "Business-hours schedule",
-        "businessHoursSchedulePlaceholder": "Choose a business-hours schedule",
-        "frequency": "Frequency",
+        "enabled": "Abilitato",
+        "enabledHelp": "La pianificazione verrà eseguita quando sarà valida.",
+        "disabledHelp": "La pianificazione resterà in pausa finché non viene ripresa.",
+        "runAt": "Esegui alle",
+        "runOn": "Esegui il",
+        "businessDaysOnly": "Solo giorni lavorativi",
+        "nonBusinessDaysOnly": "Solo giorni non lavorativi",
+        "calendarSource": "Origine calendario",
+        "businessHoursSchedule": "Pianificazione oraria lavorativa",
+        "businessHoursSchedulePlaceholder": "Scelga una pianificazione oraria lavorativa",
+        "frequency": "Frequenza",
         "time": "Tempo",
-        "dayOfMonth": "Day of month",
-        "weekdays": "Weekdays",
+        "dayOfMonth": "Giorno del mese",
+        "weekdays": "Giorni feriali",
         "cron": "Cron",
-        "timezone": "Timezone"
+        "timezone": "Fuso orario"
       },
       "workflow": {
         "badges": {
-          "unpublished": "Unpublished",
-          "inferredSchema": "Inferred schema"
+          "unpublished": "Non pubblicato",
+          "inferredSchema": "Schema dedotto"
         }
       },
       "eligibility": {
-        "chooseWorkflow": "Choose a workflow before saving.",
+        "chooseWorkflow": "Scelga un workflow prima di salvare.",
         "unpublished": "Le pianificazioni possono essere create solo per workflow pubblicati.",
         "pinnedOnly": "Le pianificazioni sono supportate solo per workflow con schema del payload bloccato.",
-        "noPinnedSchema": "The selected workflow does not expose a pinned payload schema.",
-        "unavailableSchemaRef": "The selected workflow uses an unavailable payload schema ref: {{schemaRef}}."
+        "noPinnedSchema": "Il workflow selezionato non espone uno schema del payload bloccato.",
+        "unavailableSchemaRef": "Il workflow selezionato utilizza un riferimento allo schema del payload non disponibile: {{schemaRef}}."
       },
       "calendarSource": {
-        "tenantDefault": "Tenant default business hours",
-        "tenantDefaultMissing": "Tenant default business hours (not configured)",
-        "tenantDefaultHint": "Set a tenant default business-hours schedule first, or choose a specific schedule.",
-        "specific": "Specific business-hours schedule",
-        "specificHint": "Create a business-hours schedule first.",
-        "tenantDefaultMissingDescription": "No tenant default business-hours schedule is configured yet. Choose a specific business-hours schedule or set a tenant default first.",
-        "holidaysNote": "Holidays are always treated as non-business days."
+        "tenantDefault": "Orario lavorativo predefinito del tenant",
+        "tenantDefaultMissing": "Orario lavorativo predefinito del tenant (non configurato)",
+        "tenantDefaultHint": "Imposti prima una pianificazione oraria lavorativa predefinita del tenant o scelga una pianificazione specifica.",
+        "specific": "Pianificazione oraria lavorativa specifica",
+        "specificHint": "Crei prima una pianificazione oraria lavorativa.",
+        "tenantDefaultMissingDescription": "Nessuna pianificazione oraria lavorativa predefinita è ancora configurata per il tenant. Scelga una pianificazione oraria lavorativa specifica o imposti prima un valore predefinito.",
+        "holidaysNote": "I giorni festivi sono sempre considerati giorni non lavorativi."
       },
       "businessHours": {
         "defaultSuffix": " (Default)",
-        "noneConfigured": "No business-hours schedules are configured yet.",
-        "usingTenantDefault": "Uses the tenant default business-hours schedule.",
-        "noTenantDefault": "No tenant default business-hours schedule is configured yet."
+        "noneConfigured": "Nessuna pianificazione oraria lavorativa è ancora configurata.",
+        "usingTenantDefault": "Utilizza la pianificazione oraria lavorativa predefinita del tenant.",
+        "noTenantDefault": "Nessuna pianificazione oraria lavorativa predefinita è ancora configurata per il tenant."
       },
       "recurring": {
         "title": "Pianificazione ricorrente",
-        "description": "Choose a common recurrence pattern. Advanced cron is available for custom schedules.",
-        "builderMode": "Schedule Builder",
-        "advancedMode": "Advanced Cron",
-        "dailyHelper": "Runs every day at the selected time.",
-        "weeklyHelper": "Choose one or more weekdays below.",
-        "customCronWarning": "This schedule uses a custom cron expression. Keep editing it here, or switch back to the builder to replace it with a common pattern.",
+        "description": "Scelga un modello di ricorrenza comune. Il cron avanzato è disponibile per pianificazioni personalizzate.",
+        "builderMode": "Generatore di pianificazioni",
+        "advancedMode": "Cron avanzato",
+        "dailyHelper": "Viene eseguito ogni giorno all’ora selezionata.",
+        "weeklyHelper": "Scelga uno o più giorni feriali di seguito.",
+        "customCronWarning": "Questa pianificazione utilizza un’espressione cron personalizzata. Continui a modificarla qui o torni al generatore per sostituirla con un modello comune.",
         "cronPreview": "Cron: {{cron}}"
       },
       "payload": {
         "title": "Payload",
-        "description": "Author static input that will be passed into each scheduled run.",
+        "description": "Componga input statici che verranno passati a ogni esecuzione pianificata.",
         "rootLabel": "Payload",
         "rootKey": "payload",
         "mode": {
-          "form": "Form Mode",
-          "json": "JSON Mode"
+          "form": "Modalità modulo",
+          "json": "Modalità JSON"
         },
         "actions": {
           "addItem": "Aggiungi elemento",
           "removeItem": "Rimuovi"
         },
         "states": {
-          "noItems": "No items yet."
+          "noItems": "Nessun elemento."
         },
         "boolean": {
-          "true": "True",
-          "false": "False"
+          "true": "Vero",
+          "false": "Falso"
         },
         "noSchema": {
-          "title": "No payload schema is available for this workflow yet.",
-          "description": "Form fields will appear here once this workflow publishes a pinned payload schema."
+          "title": "Nessuno schema del payload è ancora disponibile per questo workflow.",
+          "description": "I campi del modulo verranno visualizzati qui una volta che questo workflow pubblica uno schema del payload bloccato."
         }
       },
       "validation": {
-        "title": "Payload validation errors",
-        "more": "+{{count}} more…",
-        "invalidValue": "Invalid value",
-        "valueMustBeAllowed": "Value must be one of the allowed options.",
-        "expectedObject": "Expected object.",
-        "requiredFieldMissing": "Required field missing.",
-        "unknownProperty": "Unknown property.",
-        "expectedArray": "Expected array.",
-        "expectedString": "Expected string.",
-        "expectedNumber": "Expected number.",
-        "expectedBoolean": "Expected boolean.",
-        "payloadMustBeObject": "Schedule payload must be a JSON object.",
+        "title": "Errori di validazione del payload",
+        "more": "+{{count}} altri…",
+        "invalidValue": "Valore non valido",
+        "valueMustBeAllowed": "Il valore deve essere una delle opzioni consentite.",
+        "expectedObject": "Atteso oggetto.",
+        "requiredFieldMissing": "Campo obbligatorio mancante.",
+        "unknownProperty": "Proprietà sconosciuta.",
+        "expectedArray": "Atteso array.",
+        "expectedString": "Attesa stringa.",
+        "expectedNumber": "Atteso numero.",
+        "expectedBoolean": "Atteso booleano.",
+        "payloadMustBeObject": "Il payload della pianificazione deve essere un oggetto JSON.",
         "invalidJson": "JSON non valido"
       },
       "errors": {
-        "loadScheduleFailed": "Failed to load schedule.",
-        "saveFailed": "Failed to save schedule."
+        "loadScheduleFailed": "Impossibile caricare la pianificazione.",
+        "saveFailed": "Impossibile salvare la pianificazione."
       }
     },
     "recurrence": {
-      "andWord": "and",
+      "andWord": "e",
       "frequency": {
         "daily": "Daily",
-        "weekly": "Weekly",
-        "monthly": "Monthly"
+        "weekly": "Settimanale",
+        "monthly": "Mensile"
       },
       "validation": {
-        "validTime": "Choose a valid time.",
-        "weekdayRequired": "Choose at least one weekday.",
-        "dayOfMonthRange": "Choose a day of month between 1 and 31."
+        "validTime": "Scelga un orario valido.",
+        "weekdayRequired": "Scelga almeno un giorno feriale.",
+        "dayOfMonthRange": "Scelga un giorno del mese compreso tra 1 e 31."
       },
       "summary": {
-        "daily": "Runs every day at {{timeLabel}} {{timezoneLabel}}",
-        "weekly": "Runs every {{weekdayLabels}} at {{timeLabel}} {{timezoneLabel}}",
-        "monthly": "Runs on day {{dayOfMonth}} of each month at {{timeLabel}} {{timezoneLabel}}"
+        "daily": "Viene eseguito ogni giorno alle {{timeLabel}} {{timezoneLabel}}",
+        "weekly": "Viene eseguito ogni {{weekdayLabels}} alle {{timeLabel}} {{timezoneLabel}}",
+        "monthly": "Viene eseguito il giorno {{dayOfMonth}} di ogni mese alle {{timeLabel}} {{timezoneLabel}}"
       },
       "weekdays": {
         "0": {
-          "short": "Sun",
-          "long": "Sunday"
+          "short": "Dom",
+          "long": "Domenica"
         },
         "1": {
-          "short": "Mon",
-          "long": "Monday"
+          "short": "Lun",
+          "long": "Lunedì"
         },
         "2": {
-          "short": "Tue",
-          "long": "Tuesday"
+          "short": "Mar",
+          "long": "Martedì"
         },
         "3": {
-          "short": "Wed",
-          "long": "Wednesday"
+          "short": "Mer",
+          "long": "Mercoledì"
         },
         "4": {
-          "short": "Thu",
-          "long": "Thursday"
+          "short": "Gio",
+          "long": "Giovedì"
         },
         "5": {
-          "short": "Fri",
-          "long": "Friday"
+          "short": "Ven",
+          "long": "Venerdì"
         },
         "6": {
-          "short": "Sat",
-          "long": "Saturday"
+          "short": "Sab",
+          "long": "Sabato"
         }
       }
     }
@@ -1812,73 +1812,73 @@
   "enums": {
     "workflowRunStatus": {
       "RUNNING": "In esecuzione",
-      "WAITING": "Waiting",
+      "WAITING": "In attesa",
       "SUCCEEDED": "Riuscito",
       "FAILED": "Fallito",
       "CANCELED": "Annullato"
     },
     "workflowRunSort": {
-      "started_at:desc": "Newest first",
-      "started_at:asc": "Oldest first",
-      "updated_at:desc": "Recently updated",
-      "updated_at:asc": "Least recently updated"
+      "started_at:desc": "Prima i più recenti",
+      "started_at:asc": "Prima i più vecchi",
+      "updated_at:desc": "Aggiornato di recente",
+      "updated_at:asc": "Aggiornato meno di recente"
     },
     "workflowEventStatus": {
-      "matched": "Matched",
-      "unmatched": "Unmatched",
-      "error": "Error"
+      "matched": "Corrispondente",
+      "unmatched": "Non corrispondente",
+      "error": "Errore"
     },
     "workflowStepStatus": {
-      "STARTED": "Started",
+      "STARTED": "Avviato",
       "SUCCEEDED": "Riuscito",
       "FAILED": "Fallito",
-      "RETRY_SCHEDULED": "Retry scheduled",
+      "RETRY_SCHEDULED": "Nuovo tentativo pianificato",
       "CANCELED": "Annullato"
     },
     "workflowLogLevel": {
       "DEBUG": "Debug",
       "INFO": "Info",
-      "WARN": "Warn",
-      "ERROR": "Error"
+      "WARN": "Avviso",
+      "ERROR": "Errore"
     },
     "workflowAiSchemaType": {
-      "string": "String",
-      "number": "Number",
-      "integer": "Integer",
-      "boolean": "Boolean",
-      "object": "Object",
+      "string": "Stringa",
+      "number": "Numero",
+      "integer": "Intero",
+      "boolean": "Booleano",
+      "object": "Oggetto",
       "array": "Array"
     },
     "workflowInputSourceMode": {
-      "reference": "Reference",
-      "fixed": "Fixed value"
+      "reference": "Riferimento",
+      "fixed": "Valore fisso"
     },
     "workflowReferenceSection": {
       "payload": "Payload",
-      "vars": "Step results",
-      "meta": "Workflow details",
-      "error": "Error",
-      "forEach": "Loop context"
+      "vars": "Risultati del passaggio",
+      "meta": "Dettagli del workflow",
+      "error": "Errore",
+      "forEach": "Contesto del ciclo"
     },
     "workflowTriggerMode": {
-      "manual": "No trigger",
+      "manual": "Nessun trigger",
       "event": "Evento"
     },
     "workflowCanvasView": {
-      "list": "List",
-      "graph": "Graph"
+      "list": "Elenco",
+      "graph": "Grafo"
     },
     "workflowOnError": {
-      "continue": "Continue",
-      "fail": "Fail"
+      "continue": "Continua",
+      "fail": "Fallisce"
     },
     "workflowWaitMode": {
       "duration": "Durata",
       "until": "Fino a"
     },
     "workflowWaitTiming": {
-      "fixed": "Specific date & time",
-      "expression": "Advanced expression"
+      "fixed": "Data e ora specifiche",
+      "expression": "Espressione avanzata"
     }
   }
 }
