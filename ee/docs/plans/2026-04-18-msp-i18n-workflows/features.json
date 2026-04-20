@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Create ee/packages/workflows/src/constants/workflowEnums.ts exporting VALUES arrays and LABEL_DEFAULTS records for all 13 enums (workflowRunStatus, workflowRunSort, workflowEventStatus, workflowStepStatus, workflowLogLevel, workflowAiSchemaType, workflowInputSourceMode, workflowReferenceSection, workflowTriggerMode, workflowCanvasView, workflowOnError, workflowWaitMode, workflowWaitTiming).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Enum migration — explicit scope", "WF-A"]
   },
   {

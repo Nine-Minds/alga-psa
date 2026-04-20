@@ -141,3 +141,26 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   - `/msp/workflows/runs/run-123`
   - `/msp/workflow-editor/abc`
   - `/msp/workflow-editor/new`
+
+### F003 complete — workflow enum source of truth added
+- Added `ee/packages/workflows/src/constants/workflowEnums.ts`.
+- The file now exports 13 `*_VALUES` arrays plus 13 `*_LABEL_DEFAULTS` records for:
+  - run status
+  - run sort
+  - event status
+  - step status
+  - log level
+  - AI schema type
+  - input source mode
+  - reference section
+  - trigger mode
+  - canvas view
+  - on-error
+  - wait mode
+  - wait timing
+- Preserved raw backend values exactly as they appear today (`RUNNING`, `RETRY_SCHEDULED`, `started_at:desc`, etc.) so translation keys can be built directly from persisted values without normalization.
+- Validation command:
+  ```bash
+  npx tsx -e "import * as enums from './ee/packages/workflows/src/constants/workflowEnums.ts'; ..."
+  ```
+  Verified every label-default map contains an entry for every enum value.
