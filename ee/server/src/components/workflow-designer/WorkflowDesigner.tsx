@@ -5273,7 +5273,6 @@ const Pipe: React.FC<{
                       onInsertAtPath={onInsertAtPath}
                       dragHandleProps={dragProvided.dragHandleProps ?? undefined}
                       nodeRegistry={nodeRegistry}
-                designerActionCatalog={designerActionCatalog}
                       designerActionCatalog={designerActionCatalog}
                       errorCount={errorMap.get(step.id)?.length ?? 0}
                       errorMap={errorMap}
