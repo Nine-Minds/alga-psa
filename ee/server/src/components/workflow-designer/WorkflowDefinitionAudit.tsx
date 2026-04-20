@@ -6,6 +6,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { toast } from 'react-hot-toast';
+import { mapWorkflowServerError } from './workflowServerErrors';
 import {
   exportWorkflowAuditLogsAction,
   listWorkflowAuditLogsAction
@@ -73,9 +74,9 @@ const WorkflowDefinitionAudit: React.FC<WorkflowDefinitionAuditProps> = ({ workf
         setLogs((prev) => (append ? [...prev, ...data.logs] : data.logs));
         setCursor(data.nextCursor ?? null);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : t('audit.toasts.loadFailed', {
+        toast.error(mapWorkflowServerError(t, error, t('audit.toasts.loadFailed', {
           defaultValue: 'Failed to load audit logs',
-        }));
+        })));
       } finally {
         setIsLoading(false);
       }
@@ -106,9 +107,9 @@ const WorkflowDefinitionAudit: React.FC<WorkflowDefinitionAuditProps> = ({ workf
       window.URL.revokeObjectURL(url);
       toast.success(t('audit.toasts.exportReady', { defaultValue: 'Audit export ready' }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('audit.toasts.exportFailed', {
+      toast.error(mapWorkflowServerError(t, error, t('audit.toasts.exportFailed', {
         defaultValue: 'Failed to export audit logs',
-      }));
+      })));
     }
   };
 

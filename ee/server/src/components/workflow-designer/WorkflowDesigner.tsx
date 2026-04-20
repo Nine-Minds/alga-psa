@@ -44,6 +44,7 @@ import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { mapWorkflowServerError } from './workflowServerErrors';
 import { analytics } from '@alga-psa/analytics/client';
 import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
@@ -2104,7 +2105,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 	      const nextDefinitions = (data ?? []) as unknown as WorkflowDefinitionRecord[];
 	      setDefinitions(nextDefinitions);
 	    } catch (error) {
-	      toast.error(error instanceof Error ? error.message : t('designer.toasts.loadWorkflowsFailed', { defaultValue: 'Failed to load workflows' }));
+	      toast.error(mapWorkflowServerError(t, error, t('designer.toasts.loadWorkflowsFailed', { defaultValue: 'Failed to load workflows' })));
 	    } finally {
       setIsLoading(false);
     }
@@ -2757,7 +2758,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       // Refresh list in the background; do not block the UI on it (it can be slow during dev + Playwright).
       void loadDefinitions();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('designer.toasts.saveFailed', { defaultValue: 'Failed to save workflow' }));
+      toast.error(mapWorkflowServerError(t, error, t('designer.toasts.saveFailed', { defaultValue: 'Failed to save workflow' })));
     } finally {
       setIsSaving(false);
     }
@@ -2773,7 +2774,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       await persistMetadataDraft(activeWorkflowId, { force: true, showSuccessToast: true });
       void loadDefinitions();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('designer.toasts.settingsUpdateFailed', { defaultValue: 'Failed to update workflow settings' }));
+      toast.error(mapWorkflowServerError(t, error, t('designer.toasts.settingsUpdateFailed', { defaultValue: 'Failed to update workflow settings' })));
     }
   };
 
@@ -2828,7 +2829,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       }
       void loadDefinitions();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('designer.toasts.publishFailed', { defaultValue: 'Failed to publish workflow' }));
+      toast.error(mapWorkflowServerError(t, error, t('designer.toasts.publishFailed', { defaultValue: 'Failed to publish workflow' })));
     } finally {
       setIsPublishing(false);
     }

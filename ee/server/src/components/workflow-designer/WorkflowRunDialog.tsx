@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { mapWorkflowServerError } from './workflowServerErrors';
 import toast from 'react-hot-toast';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import {
@@ -1041,9 +1042,9 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       }
       applyTemplate(run.input_json ?? {}, { markTouched: true });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('runDialog.toasts.loadLatestRunFailed', {
+      toast.error(mapWorkflowServerError(t, error, t('runDialog.toasts.loadLatestRunFailed', {
         defaultValue: 'Failed to load latest run',
-      }));
+      })));
     }
   };
 
@@ -1128,9 +1129,9 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
         window.location.assign(`/msp/workflows/runs/${runId}`);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('runDialog.toasts.startRunFailed', {
+      toast.error(mapWorkflowServerError(t, error, t('runDialog.toasts.startRunFailed', {
         defaultValue: 'Failed to start run',
-      }));
+      })));
     } finally {
       setIsStartingRun(false);
     }

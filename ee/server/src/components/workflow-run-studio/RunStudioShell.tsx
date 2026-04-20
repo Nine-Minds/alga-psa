@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { mapWorkflowServerError } from '../workflow-designer/workflowServerErrors';
 import { RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -867,9 +868,9 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
       fetchRun();
       fetchStepsAndLogs();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('runStudio.toasts.actionFailed', {
+      toast.error(mapWorkflowServerError(t, error, t('runStudio.toasts.actionFailed', {
         defaultValue: 'Failed to perform action.',
-      }));
+      })));
     } finally {
       setIsSubmittingAction(false);
     }

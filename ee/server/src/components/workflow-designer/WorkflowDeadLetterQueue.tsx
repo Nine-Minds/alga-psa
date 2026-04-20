@@ -8,6 +8,7 @@ import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { toast } from 'react-hot-toast';
+import { mapWorkflowServerError } from './workflowServerErrors';
 import { listWorkflowDeadLetterRunsAction } from '@alga-psa/workflows/actions';
 import { useFormatWorkflowRunStatus } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 import WorkflowRunDetails from './WorkflowRunDetails';
@@ -81,9 +82,9 @@ const WorkflowDeadLetterQueue: React.FC<WorkflowDeadLetterQueueProps> = ({ isAct
         setRuns((prev) => (append ? [...prev, ...data.runs] : data.runs));
         setNextCursor(data.nextCursor ?? null);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : t('deadLetter.toasts.loadFailed', {
+        toast.error(mapWorkflowServerError(t, error, t('deadLetter.toasts.loadFailed', {
           defaultValue: 'Failed to load dead-letter runs',
-        }));
+        })));
       } finally {
         setIsLoading(false);
       }

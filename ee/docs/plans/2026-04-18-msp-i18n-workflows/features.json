@@ -236,7 +236,7 @@
   {
     "id": "F040",
     "description": "Map all server-action error strings returned from workflow-editor / run-studio / dead-letter flows into component-level error maps under errors.* keys (follows translation-guide.md error/validation pattern).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-B", "WF-C", "WF-D"]
   },
   {
@@ -278,25 +278,25 @@
   {
     "id": "F047",
     "description": "Update MSP_i18n_plan.md: mark Batch 2b-9 as DONE, add msp/workflows row with final key count to the namespace tables, update component-wiring count in Executive Summary.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-F"]
   },
   {
     "id": "F048",
     "description": "Add msp/workflows row and component count to .ai/translation/translation_files_structure.md.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-F"]
   },
   {
     "id": "F049",
     "description": "Remove stale Batch 2b-9 row from MSP_i18n_plan.md 'Remaining work' list; update the total-files/total-keys summary (27 → 28 files per language; ~12,221 → new total).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-F"]
   },
   {
     "id": "F050",
     "description": "Update .ai/translation/enum-labels-pattern.md — add a 'Batch 11 — Workflows' entry to the non-billing backlog section noting the 13 workflow enums migrated to the option-hook pattern; flag getActivityStatusOptions as remaining backlog.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Enum migration — explicit scope", "WF-F"]
   },
   {

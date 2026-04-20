@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Play, StopCircle, RotateCcw, Repeat, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { mapWorkflowServerError } from './workflowServerErrors';
 
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -400,11 +401,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       setWaits(stepData.waits ?? []);
       setDefinition(definitionJson);
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t('runDetails.toasts.loadRunDetailsFailed', { defaultValue: 'Failed to load run details' })
-      );
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.loadRunDetailsFailed', { defaultValue: 'Failed to load run details' })));
       if (onClose) {
         onClose();
       }
@@ -428,11 +425,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
         setLogs((prev) => (append ? [...prev, ...data.logs] : data.logs));
         setLogCursor(data.nextCursor ?? null);
       } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : t('runDetails.toasts.loadLogsFailed', { defaultValue: 'Failed to load logs' })
-        );
+        toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.loadLogsFailed', { defaultValue: 'Failed to load logs' })));
       } finally {
         setLogLoading(false);
       }
@@ -458,11 +451,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
         setAuditLogs((prev) => (append ? [...prev, ...data.logs] : data.logs));
         setAuditCursor(data.nextCursor ?? null);
       } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : t('runDetails.toasts.loadAuditLogsFailed', { defaultValue: 'Failed to load audit logs' })
-        );
+        toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.loadAuditLogsFailed', { defaultValue: 'Failed to load audit logs' })));
       } finally {
         setAuditLoading(false);
       }
@@ -647,11 +636,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       window.URL.revokeObjectURL(url);
       toast.success(t('runDetails.toasts.logExportReady', { defaultValue: 'Log export ready' }));
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t('runDetails.toasts.exportLogsFailed', { defaultValue: 'Failed to export logs' })
-      );
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.exportLogsFailed', { defaultValue: 'Failed to export logs' })));
     }
   };
 
@@ -676,11 +661,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       setConfirmAction(null);
       fetchDetails();
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t('runDetails.toasts.resumeRunFailed', { defaultValue: 'Failed to resume run' })
-      );
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.resumeRunFailed', { defaultValue: 'Failed to resume run' })));
     }
   };
 
@@ -696,11 +677,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       setConfirmAction(null);
       fetchDetails();
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t('runDetails.toasts.cancelRunFailed', { defaultValue: 'Failed to cancel run' })
-      );
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.cancelRunFailed', { defaultValue: 'Failed to cancel run' })));
     }
   };
 
@@ -718,11 +695,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       window.URL.revokeObjectURL(url);
       toast.success(t('runDetails.toasts.runExportReady', { defaultValue: 'Run export ready' }));
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t('runDetails.toasts.exportRunFailed', { defaultValue: 'Failed to export run' })
-      );
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.exportRunFailed', { defaultValue: 'Failed to export run' })));
     }
   };
 
@@ -738,11 +711,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       setConfirmAction(null);
       fetchDetails();
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t('runDetails.toasts.retryRunFailed', { defaultValue: 'Failed to retry run' })
-      );
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.retryRunFailed', { defaultValue: 'Failed to retry run' })));
     }
   };
 
@@ -775,11 +744,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       setConfirmAction(null);
       fetchDetails();
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t('runDetails.toasts.replayRunFailed', { defaultValue: 'Failed to replay run' })
-      );
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.replayRunFailed', { defaultValue: 'Failed to replay run' })));
     }
   };
 
@@ -799,13 +764,9 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       setConfirmAction(null);
       fetchDetails();
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t('runDetails.toasts.requeueEventWaitFailed', {
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.requeueEventWaitFailed', {
               defaultValue: 'Failed to requeue event wait',
-            })
-      );
+            })));
     }
   };
 
@@ -826,13 +787,9 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       window.URL.revokeObjectURL(url);
       toast.success(t('runDetails.toasts.auditExportReady', { defaultValue: 'Audit export ready' }));
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t('runDetails.toasts.exportAuditLogsFailed', {
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.exportAuditLogsFailed', {
               defaultValue: 'Failed to export audit logs',
-            })
-      );
+            })));
     }
   };
 

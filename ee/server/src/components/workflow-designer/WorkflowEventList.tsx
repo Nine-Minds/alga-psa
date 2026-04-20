@@ -11,6 +11,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { toast } from 'react-hot-toast';
+import { mapWorkflowServerError } from './workflowServerErrors';
 import {
   exportWorkflowEventsAction,
   getWorkflowEventAction,
@@ -171,9 +172,9 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
         setEvents((data as any)?.items ?? []);
         setTotalItems(Number((data as any)?.totalItems ?? 0));
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : t('eventList.toasts.loadEventsFailed', {
+        toast.error(mapWorkflowServerError(t, error, t('eventList.toasts.loadEventsFailed', {
           defaultValue: 'Failed to load workflow events',
-        }));
+        })));
       } finally {
         setIsLoading(false);
       }
@@ -206,9 +207,9 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
       setEventDetail(data);
       setSelectedRunId(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('eventList.toasts.loadEventDetailFailed', {
+      toast.error(mapWorkflowServerError(t, error, t('eventList.toasts.loadEventDetailFailed', {
         defaultValue: 'Failed to load event detail',
-      }));
+      })));
       setEventDetail(null);
       setSelectedRunId(null);
     } finally {
@@ -267,9 +268,9 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
       window.URL.revokeObjectURL(url);
       toast.success(t('eventList.toasts.exportReady', { defaultValue: 'Event export ready' }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('eventList.toasts.exportFailed', {
+      toast.error(mapWorkflowServerError(t, error, t('eventList.toasts.exportFailed', {
         defaultValue: 'Failed to export events',
-      }));
+      })));
     }
   };
 
