@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -16,6 +17,7 @@ import {
   listWorkflowEventSummaryAction,
   listWorkflowEventsPagedAction
 } from '@alga-psa/workflows/actions';
+import { useWorkflowEventStatusOptions } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 import WorkflowRunDetails from './WorkflowRunDetails';
 
 type WorkflowEventRecord = {
@@ -69,13 +71,6 @@ type EventFilters = {
   to: string;
 };
 
-const STATUS_OPTIONS: SelectOption[] = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'matched', label: 'Matched' },
-  { value: 'unmatched', label: 'Unmatched' },
-  { value: 'error', label: 'Error' }
-];
-
 const EVENT_STATUS_VARIANTS: Record<WorkflowEventRecord['status'], 'success' | 'warning' | 'error'> = {
   matched: 'success',
   unmatched: 'warning',
@@ -110,6 +105,8 @@ interface WorkflowEventListProps {
 }
 
 const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmin = false }) => {
+  const { t } = useTranslation('msp/workflows');
+  const workflowEventStatusOptions = useWorkflowEventStatusOptions();
   const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<EventFilters>(DEFAULT_FILTERS);
   const [events, setEvents] = useState<WorkflowEventRecord[]>([]);
@@ -125,6 +122,16 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
   const [totalItems, setTotalItems] = useState(0);
   const [sortBy, setSortBy] = useState<WorkflowEventSortBy>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const statusOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: 'all',
+        label: t('filters.allStatuses', { defaultValue: 'All statuses' }),
+      },
+      ...workflowEventStatusOptions,
+    ],
+    [t, workflowEventStatusOptions]
+  );
 
   const fetchEvents = useCallback(
     async (override?: {
@@ -370,7 +377,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
             <CustomSelect
               id="workflow-events-status"
               label="Status"
-              options={STATUS_OPTIONS}
+              options={statusOptions}
               value={filters.status}
               onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
             />

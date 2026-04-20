@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Replace inline event-status option array in WorkflowEventList.tsx (lines 73-76) with useWorkflowEventStatusOptions hook call.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-B", "Enum migration — explicit scope"]
   },
   {

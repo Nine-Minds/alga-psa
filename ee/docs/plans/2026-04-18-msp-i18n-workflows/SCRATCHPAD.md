@@ -222,3 +222,14 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   node scripts/validate-translations.cjs
   ```
 - ESLint result: no errors; current warnings in `WorkflowRunDetails.tsx` are pre-existing `any`/unused/non-null-assertion warnings outside this enum-hook change.
+
+### F008 complete — WorkflowEventList uses enum hooks
+- Updated `ee/server/src/components/workflow-designer/WorkflowEventList.tsx` to consume `useWorkflowEventStatusOptions()`.
+- Removed the local inline event-status options array.
+- Reused `filters.allStatuses` for the sentinel row.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowEventList.tsx
+  node scripts/validate-translations.cjs
+  ```
+- ESLint result: no errors; existing warnings are unrelated pre-existing `any`/unused-variable warnings in `WorkflowEventList.tsx`.
