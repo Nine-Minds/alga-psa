@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Replace inline status/level/type option arrays in WorkflowRunDetails.tsx (lines 175-188, 550) with hook calls; 'All statuses', 'All levels', 'All types' become t('filters.*') calls.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-B", "Enum migration — explicit scope"]
   },
   {

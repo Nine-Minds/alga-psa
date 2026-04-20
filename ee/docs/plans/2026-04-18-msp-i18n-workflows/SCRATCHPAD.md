@@ -204,3 +204,21 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   node scripts/validate-translations.cjs
   ```
 - ESLint result: no errors; existing warnings remain in `WorkflowRunList.tsx` for pre-existing `any`/unused-variable sites unrelated to this enum migration.
+
+### F007 complete — WorkflowRunDetails uses enum hooks
+- Updated `ee/server/src/components/workflow-designer/WorkflowRunDetails.tsx` to consume:
+  - `useWorkflowStepStatusOptions()`
+  - `useWorkflowLogLevelOptions()`
+- Removed the local inline arrays for step-status and log-level filters.
+- Localized the remaining filter sentinels with `t()`:
+  - `filters.allStatuses`
+  - `filters.allLevels`
+  - `filters.allTypes`
+- `nodeTypeOptions` still builds dynamic type values from the loaded workflow definition, but the sentinel row is now translated.
+- Added `filters.allLevels` and `filters.allTypes` to every locale file as temporary English stubs.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowRunDetails.tsx
+  node scripts/validate-translations.cjs
+  ```
+- ESLint result: no errors; current warnings in `WorkflowRunDetails.tsx` are pre-existing `any`/unused/non-null-assertion warnings outside this enum-hook change.

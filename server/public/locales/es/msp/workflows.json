@@ -17,7 +17,9 @@
     "description": "Workflows will appear here once they are created."
   },
   "filters": {
-    "allStatuses": "All statuses"
+    "allStatuses": "All statuses",
+    "allLevels": "All levels",
+    "allTypes": "All types"
   },
   "actions": {
     "create": "Create workflow",

@@ -10,6 +10,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
@@ -30,6 +31,10 @@ import {
   resumeWorkflowRunAction,
   retryWorkflowRunAction
 } from '@alga-psa/workflows/actions';
+import {
+  useWorkflowLogLevelOptions,
+  useWorkflowStepStatusOptions,
+} from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 
 import type { WorkflowDefinition, Step, IfBlock, ForEachBlock, TryCatchBlock } from '@alga-psa/workflows/runtime/client';
 import { pathDepth } from '@alga-psa/workflows/authoring';
@@ -171,23 +176,6 @@ const STATUS_STYLES: Record<string, string> = {
   DEBUG: 'bg-muted text-muted-foreground'
 };
 
-const STEP_STATUS_OPTIONS: SelectOption[] = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'STARTED', label: 'Started' },
-  { value: 'SUCCEEDED', label: 'Succeeded' },
-  { value: 'FAILED', label: 'Failed' },
-  { value: 'RETRY_SCHEDULED', label: 'Retry scheduled' },
-  { value: 'CANCELED', label: 'Canceled' }
-];
-
-const LOG_LEVEL_OPTIONS: SelectOption[] = [
-  { value: 'all', label: 'All levels' },
-  { value: 'DEBUG', label: 'Debug' },
-  { value: 'INFO', label: 'Info' },
-  { value: 'WARN', label: 'Warn' },
-  { value: 'ERROR', label: 'Error' }
-];
-
 const SENSITIVE_KEY_PATTERN = /(secret|token|password|api[_-]?key|authorization)/i;
 const REDACTION_MARKER = '***';
 
@@ -309,6 +297,9 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
   canAdmin = false,
   onClose
 }) => {
+  const { t } = useTranslation('msp/workflows');
+  const workflowStepStatusOptions = useWorkflowStepStatusOptions();
+  const workflowLogLevelOptions = useWorkflowLogLevelOptions();
   const [run, setRun] = useState<WorkflowRunRecord | null>(null);
   const [scheduleState, setScheduleState] = useState<WorkflowScheduleStateSummary | null>(null);
   const [steps, setSteps] = useState<WorkflowRunStepRecord[]>([]);
@@ -537,6 +528,26 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
   }, [waits]);
 
   const stepTypeById = useMemo(() => buildStepTypeMap(definition), [definition]);
+  const stepStatusOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: 'all',
+        label: t('filters.allStatuses', { defaultValue: 'All statuses' }),
+      },
+      ...workflowStepStatusOptions,
+    ],
+    [t, workflowStepStatusOptions]
+  );
+  const logLevelOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: 'all',
+        label: t('filters.allLevels', { defaultValue: 'All levels' }),
+      },
+      ...workflowLogLevelOptions,
+    ],
+    [t, workflowLogLevelOptions]
+  );
 
   const nodeTypeOptions = useMemo(() => {
     const types = new Set<string>();
@@ -547,10 +558,10 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       }
     });
     return [
-      { value: 'all', label: 'All types' },
+      { value: 'all', label: t('filters.allTypes', { defaultValue: 'All types' }) },
       ...Array.from(types).sort().map((type) => ({ value: type, label: type }))
     ];
-  }, [steps, stepTypeById]);
+  }, [steps, stepTypeById, t]);
 
   const filteredSteps = useMemo(() => {
     return steps.filter((step) => {
@@ -908,7 +919,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
             <CustomSelect
               id="workflow-run-step-status-filter"
               label="Step status"
-              options={STEP_STATUS_OPTIONS}
+              options={stepStatusOptions}
               value={stepStatusFilter}
               onValueChange={setStepStatusFilter}
             />
@@ -1199,7 +1210,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
               <CustomSelect
                 id="workflow-run-logs-level"
                 label="Level"
-                options={LOG_LEVEL_OPTIONS}
+                options={logLevelOptions}
                 value={logFilters.level}
                 onValueChange={(value) => setLogFilters((prev) => ({ ...prev, level: value }))}
               />
