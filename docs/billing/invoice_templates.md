@@ -44,11 +44,21 @@ There is no user-authored code execution — no compilation, no Wasm, no sandbox
 ### AST Capabilities
 
 - Explicit schema versioning
-- Layout tree: `document`, `section`, `text`, `field`, `dynamic-table`, `totals`, etc.
+- Layout tree: `document`, `section`, `stack`, `text`, `field`, `image`, `divider`, `table`, `dynamic-table`, `totals`
+- **Repeatable stack**: the `stack` node accepts an optional `repeat: { sourceBinding, itemBinding, keyPath? }` — the stack (and all its children) renders once per item in the source collection, pushing the current item onto the render scope under `itemBinding`. Nested `path` expressions and inner `dynamic-table` nodes resolve against the per-iteration item. Without `repeat`, the stack renders its children once against the outer scope.
 - Style tokens/classes and inline style declarations
 - Bindings for invoice values and collections (extensible — quote bindings added for the quoting system)
 - Declarative transform operations: `filter`, `sort`, `group`, `aggregate`, `computed-field`, `totals-compose`
 - Optional `strategyId` extension points on transform operations
+
+### Per-Location Grouping
+
+Invoice and quote view models can expose a pre-computed `groupsByLocation` collection binding. Each group contains `{ name, address, items, subtotal }` where `subtotal` is the sum of the group's item totals. A `hasMultipleLocations` flag is also set on the view model.
+
+- **Invoice**: `enrichInvoiceViewModelWithLocations` (in `packages/billing/src/lib/adapters/invoiceAdapters.ts`) resolves `location_id` on each line item to a client location and builds the groups.
+- **Quote**: equivalent enrichment is applied by the quote adapter.
+
+Templates consume the groups through a repeatable `stack` bound to `groupsByLocation` (outer iteration) with an inner `dynamic-table` bound to `group.items` — the pattern used by the `standard-invoice-by-location` and `standard-quote-by-location` templates to render a location header, line items, and a per-location subtotal row. See `buildStandardByLocationAst` in `packages/billing/src/lib/invoice-template-ast/standardTemplates.ts`.
 
 ### Style Declaration Properties
 
@@ -102,6 +112,21 @@ There are two types of invoice layouts:
 |------|--------|----------|-----------|
 | **Standard** | System-provided, seeded into `standard_invoice_templates` | No (read-only) | No |
 | **Custom** | Tenant-created or cloned from standard | Yes | Yes |
+
+### Standard Template Catalog
+
+| Code | Purpose |
+|------|---------|
+| `standard-default` | Default single-table invoice layout |
+| `standard-detailed` | Full branding + party blocks |
+| `standard-grouped` | Recurring / one-time sections |
+| `standard-invoice-by-location` | Per-location bands (address header, items, location subtotal) using the repeatable stack + `groupsByLocation` |
+
+A parallel set exists for quotes (`standard-quote-default`, `standard-quote-detailed`, `standard-quote-by-location`).
+
+### Auto-Selection for Multi-Location Documents
+
+When no custom tenant template is assigned, `autoSelectStandardInvoiceTemplateCode` (and the quote counterpart `autoSelectStandardQuoteTemplateCode`) picks the by-location standard template if the view model's `hasMultipleLocations` flag is true — i.e., the invoice/quote spans ≥2 distinct client locations. Otherwise the default template is used. Custom template assignments always win over auto-selection.
 
 ### Standard Template Editing ("Edit as Copy")
 
@@ -181,6 +206,7 @@ The quoting system reuses the AST engine for its own document templates. The sha
 | Evaluator | Invoice view model | Quote view model |
 | React renderer | Invoice sample scenarios | Quote sample scenarios (`quoteSampleScenarios.ts`) |
 | Server HTML wrapper | `invoice_templates` table | `quote_document_templates` table |
+| Repeatable stack + `groupsByLocation` binding | `standard-invoice-by-location` | `standard-quote-by-location` |
 
 Quote template details: [quoting-system.md](./quoting-system.md#document-templates-and-pdf-generation)
 
