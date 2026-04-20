@@ -1,1611 +1,1611 @@
 {
   "page": {
-    "title": "Workflows"
+    "title": "11111"
   },
   "nav": {
-    "designer": "Designer",
-    "runs": "Runs",
-    "control": "Workflow control",
-    "tasks": "Tasks"
+    "designer": "11111",
+    "runs": "11111",
+    "control": "11111",
+    "tasks": "11111"
   },
   "sections": {
-    "definitions": "Workflow definitions",
-    "runStudio": "Run studio"
+    "definitions": "11111",
+    "runStudio": "11111"
   },
   "empty": {
-    "title": "No workflows found",
-    "description": "Workflows will appear here once they are created."
+    "title": "11111",
+    "description": "11111"
   },
   "filters": {
-    "allStatuses": "All statuses",
-    "allLevels": "All levels",
-    "allTypes": "All types"
+    "allStatuses": "11111",
+    "allLevels": "11111",
+    "allTypes": "11111"
   },
   "actions": {
-    "create": "Create workflow",
-    "open": "Open",
-    "close": "Close"
+    "create": "11111",
+    "open": "11111",
+    "close": "11111"
   },
   "runList": {
     "quickRanges": {
-      "last24h": "Last 24h",
-      "last7d": "Last 7d"
+      "last24h": "11111",
+      "last7d": "11111"
     },
     "summary": {
-      "total": "Total",
-      "activeWorkflows": "Active workflows",
-      "runCount": "{{count}} runs"
+      "total": "11111",
+      "activeWorkflows": "11111",
+      "runCount": "11111 {{count}} 11111"
     },
     "filters": {
-      "all": "All",
-      "allWorkflows": "All workflows",
-      "searchLabel": "Run ID or correlation key",
-      "searchPlaceholder": "Search by run id or correlation key",
-      "statusLabel": "Status",
-      "workflowLabel": "Workflow",
-      "versionLabel": "Workflow version",
-      "versionPlaceholder": "Any version",
-      "fromLabel": "From",
-      "toLabel": "To",
-      "sortLabel": "Sort"
+      "all": "11111",
+      "allWorkflows": "11111",
+      "searchLabel": "11111",
+      "searchPlaceholder": "11111",
+      "statusLabel": "11111",
+      "workflowLabel": "11111",
+      "versionLabel": "11111",
+      "versionPlaceholder": "11111",
+      "fromLabel": "11111",
+      "toLabel": "11111",
+      "sortLabel": "11111"
     },
     "actions": {
-      "applyFilters": "Apply filters",
-      "reset": "Reset",
-      "viewLatestRun": "View latest run",
-      "runNow": "Run now",
-      "exportCsv": "Export CSV",
-      "refresh": "Refresh",
-      "resumeSelected": "Resume selected ({{count}})",
-      "cancelSelected": "Cancel selected ({{count}})",
-      "clearSelection": "Clear selection",
-      "details": "Details",
-      "loadMore": "Load more"
+      "applyFilters": "11111",
+      "reset": "11111",
+      "viewLatestRun": "11111",
+      "runNow": "11111",
+      "exportCsv": "11111",
+      "refresh": "11111",
+      "resumeSelected": "11111 {{count}} 11111",
+      "cancelSelected": "11111 {{count}} 11111",
+      "clearSelection": "11111",
+      "details": "11111",
+      "loadMore": "11111"
     },
     "table": {
-      "runId": "Run ID",
-      "workflow": "Workflow",
-      "version": "Version",
-      "tenant": "Tenant",
-      "triggerPayload": "Trigger payload",
-      "status": "Status",
-      "started": "Started",
-      "updated": "Updated",
-      "duration": "Duration",
-      "emptyValue": "—",
+      "runId": "11111",
+      "workflow": "11111",
+      "version": "11111",
+      "tenant": "11111",
+      "triggerPayload": "11111",
+      "status": "11111",
+      "started": "11111",
+      "updated": "11111",
+      "duration": "11111",
+      "emptyValue": "11111",
       "trigger": {
-        "manual": "Manual",
-        "mapped": "Mapped",
-        "identity": "Identity"
+        "manual": "11111",
+        "mapped": "11111",
+        "identity": "11111"
       }
     },
     "states": {
-      "loading": "Loading workflow runs...",
-      "empty": "No workflow runs match the current filters."
+      "loading": "11111",
+      "empty": "11111"
     },
     "bulk": {
-      "resumeTitle": "Resume Selected Runs",
-      "resumeMessage": "Resume {{count}} selected run(s)?",
-      "cancelTitle": "Cancel Selected Runs",
-      "cancelMessage": "Cancel {{count}} selected run(s)? This cannot be undone.",
-      "reasonLabel": "Reason",
-      "resumeReasonPlaceholder": "Provide a reason for resuming",
-      "cancelReasonPlaceholder": "Provide a reason for canceling",
-      "resumeConfirm": "Resume runs",
-      "cancelConfirm": "Cancel runs"
+      "resumeTitle": "11111",
+      "resumeMessage": "11111 {{count}} 11111",
+      "cancelTitle": "11111",
+      "cancelMessage": "11111 {{count}} 11111",
+      "reasonLabel": "11111",
+      "resumeReasonPlaceholder": "11111",
+      "cancelReasonPlaceholder": "11111",
+      "resumeConfirm": "11111",
+      "cancelConfirm": "11111"
     },
     "toasts": {
-      "loadRunsFailed": "Failed to load workflow runs",
-      "selectWorkflowForLatestRun": "Select a workflow to view its latest run.",
-      "noRunsFoundForWorkflow": "No runs found for that workflow.",
-      "loadLatestRunFailed": "Failed to load latest run",
-      "selectWorkflowToRun": "Select a workflow to run.",
-      "exportReady": "Run export ready",
-      "exportFailed": "Failed to export runs",
-      "selectRunsForBulkAction": "Select runs to perform this action.",
-      "bulkReasonTooShort": "Reason must be at least 3 characters.",
-      "noEligibleRuns": "No selected runs are eligible for that action.",
-      "bulkResumeFailedCount": "Failed to resume {{count}} run(s).",
-      "bulkCancelFailedCount": "Failed to cancel {{count}} run(s).",
-      "bulkResumeSuccessCount": "Resumed {{count}} run(s).",
-      "bulkCancelSuccessCount": "Canceled {{count}} run(s).",
-      "bulkSkippedIneligibleCount": "Skipped {{count}} ineligible run(s).",
-      "bulkActionFailed": "Bulk action failed"
+      "loadRunsFailed": "11111",
+      "selectWorkflowForLatestRun": "11111",
+      "noRunsFoundForWorkflow": "11111",
+      "loadLatestRunFailed": "11111",
+      "selectWorkflowToRun": "11111",
+      "exportReady": "11111",
+      "exportFailed": "11111",
+      "selectRunsForBulkAction": "11111",
+      "bulkReasonTooShort": "11111",
+      "noEligibleRuns": "11111",
+      "bulkResumeFailedCount": "11111 {{count}} 11111",
+      "bulkCancelFailedCount": "11111 {{count}} 11111",
+      "bulkResumeSuccessCount": "11111 {{count}} 11111",
+      "bulkCancelSuccessCount": "11111 {{count}} 11111",
+      "bulkSkippedIneligibleCount": "11111 {{count}} 11111",
+      "bulkActionFailed": "11111"
     }
   },
   "runDetails": {
     "common": {
-      "emptyValue": "—"
+      "emptyValue": "11111"
     },
     "header": {
-      "runIdLabel": "Run ID",
-      "workflowIdLabel": "Workflow ID:",
-      "triggerLabel": "Trigger:"
+      "runIdLabel": "11111",
+      "workflowIdLabel": "11111",
+      "triggerLabel": "11111"
     },
     "actions": {
-      "resume": "Resume",
-      "cancel": "Cancel",
-      "export": "Export",
-      "retry": "Retry",
-      "replay": "Replay",
-      "requeueEvent": "Requeue Event",
-      "close": "Close",
-      "view": "View",
-      "apply": "Apply",
-      "reset": "Reset",
-      "exportCsv": "Export CSV",
-      "loadMore": "Load more",
-      "exportAuditCsv": "Export Audit CSV"
+      "resume": "11111",
+      "cancel": "11111",
+      "export": "11111",
+      "retry": "11111",
+      "replay": "11111",
+      "requeueEvent": "11111",
+      "close": "11111",
+      "view": "11111",
+      "apply": "11111",
+      "reset": "11111",
+      "exportCsv": "11111",
+      "loadMore": "11111",
+      "exportAuditCsv": "11111"
     },
     "summary": {
-      "statusLabel": "Status",
-      "startedLabel": "Started",
-      "updatedLabel": "Updated",
-      "completedLabel": "Completed",
-      "triggerLabel": "Trigger",
-      "scheduleStateLabel": "Schedule state",
-      "scheduledForLabel": "Scheduled for",
-      "cronLabel": "Cron",
-      "nodePathLabel": "Node path:",
-      "eventTypeLabel": "Event type:",
-      "triggerPayloadSchemaLabel": "Trigger payload schema:",
-      "mapped": "Mapped",
-      "identity": "Identity",
-      "runErrorFallback": "Run error",
-      "errorCategoryFallback": "Error"
+      "statusLabel": "11111",
+      "startedLabel": "11111",
+      "updatedLabel": "11111",
+      "completedLabel": "11111",
+      "triggerLabel": "11111",
+      "scheduleStateLabel": "11111",
+      "scheduledForLabel": "11111",
+      "cronLabel": "11111",
+      "nodePathLabel": "11111",
+      "eventTypeLabel": "11111",
+      "triggerPayloadSchemaLabel": "11111",
+      "mapped": "11111",
+      "identity": "11111",
+      "runErrorFallback": "11111",
+      "errorCategoryFallback": "11111"
     },
     "stepTimeline": {
-      "title": "Step Timeline",
-      "description": "Attempts, durations, and errors per step.",
-      "loading": "Loading...",
-      "stepStatusLabel": "Step status",
-      "nodeTypeLabel": "Node type",
-      "collapseNestedLabel": "Collapse nested blocks",
+      "title": "11111",
+      "description": "11111",
+      "loading": "11111",
+      "stepStatusLabel": "11111",
+      "nodeTypeLabel": "11111",
+      "collapseNestedLabel": "11111",
       "columns": {
-        "stepPath": "Step Path",
-        "type": "Type",
-        "status": "Status",
-        "attempt": "Attempt",
-        "duration": "Duration",
-        "nextRetry": "Next Retry",
-        "started": "Started",
-        "error": "Error"
+        "stepPath": "11111",
+        "type": "11111",
+        "status": "11111",
+        "attempt": "11111",
+        "duration": "11111",
+        "nextRetry": "11111",
+        "started": "11111",
+        "error": "11111"
       },
-      "empty": "No step history yet."
+      "empty": "11111"
     },
     "stepDetails": {
-      "title": "Step Details",
-      "statusLabel": "Status",
-      "attemptLabel": "Attempt",
-      "startedLabel": "Started",
-      "completedLabel": "Completed",
-      "durationLabel": "Duration",
-      "nodeTypeLabel": "Node Type",
-      "definitionStepIdLabel": "Definition Step ID",
-      "nextRetryLabel": "Next Retry",
-      "errorTitle": "Error",
-      "stepErrorFallback": "Step error",
-      "errorCategoryFallback": "Error"
+      "title": "11111",
+      "statusLabel": "11111",
+      "attemptLabel": "11111",
+      "startedLabel": "11111",
+      "completedLabel": "11111",
+      "durationLabel": "11111",
+      "nodeTypeLabel": "11111",
+      "definitionStepIdLabel": "11111",
+      "nextRetryLabel": "11111",
+      "errorTitle": "11111",
+      "stepErrorFallback": "11111",
+      "errorCategoryFallback": "11111"
     },
     "waitHistory": {
-      "title": "Wait History",
-      "eventLine": "Event: {{event}} · Key: {{key}} · Filters: {{count}}",
-      "timeLine": "Mode: {{mode}} · Scheduled resume: {{scheduledResume}}",
-      "timeoutLine": "Timeout: {{timeout}} · Resolved: {{resolved}}"
+      "title": "11111",
+      "eventLine": "11111 {{event}} 11111 {{key}} 11111 {{count}} 11111",
+      "timeLine": "11111 {{mode}} 11111 {{scheduledResume}} 11111",
+      "timeoutLine": "11111 {{timeout}} 11111 {{resolved}} 11111"
     },
     "envelope": {
-      "title": "Envelope Data",
-      "description": "Payload, vars, meta, and error from the latest snapshot.",
-      "redactedNotice": "Redacted values shown as {{marker}}.",
-      "noSnapshot": "No snapshot available.",
+      "title": "11111",
+      "description": "11111",
+      "redactedNotice": "11111 {{marker}} 11111",
+      "noSnapshot": "11111",
       "tabs": {
-        "payload": "Payload",
-        "vars": "Vars",
-        "meta": "Meta",
-        "error": "Error",
-        "raw": "Raw"
+        "payload": "11111",
+        "vars": "11111",
+        "meta": "11111",
+        "error": "11111",
+        "raw": "11111"
       }
     },
     "invocations": {
-      "title": "Action Invocations",
-      "redactedNotice": "Redacted values shown as {{marker}}.",
-      "empty": "No action calls recorded for this step.",
-      "attemptLine": "Attempt {{count}}",
-      "durationLine": "Duration: {{duration}}",
-      "sizeLine": "Input size: {{inputSize}}{{inputSuffix}} · Output size: {{outputSize}}{{outputSuffix}}",
-      "truncatedSuffix": " (truncated)",
-      "inputLabel": "Input",
-      "outputLabel": "Output"
+      "title": "11111",
+      "redactedNotice": "11111 {{marker}} 11111",
+      "empty": "11111",
+      "attemptLine": "11111 {{count}} 11111",
+      "durationLine": "11111 {{duration}} 11111",
+      "sizeLine": "11111 {{inputSize}} 11111 {{inputSuffix}} 11111 {{outputSize}} 11111 {{outputSuffix}} 11111",
+      "truncatedSuffix": "11111",
+      "inputLabel": "11111",
+      "outputLabel": "11111"
     },
     "logs": {
-      "title": "Run Logs",
-      "description": "Operational log events for this run.",
-      "searchLabel": "Search",
-      "searchPlaceholder": "Search log message",
-      "levelLabel": "Level",
-      "empty": "No log entries found.",
+      "title": "11111",
+      "description": "11111",
+      "searchLabel": "11111",
+      "searchPlaceholder": "11111",
+      "levelLabel": "11111",
+      "empty": "11111",
       "columns": {
-        "timestamp": "Timestamp",
-        "level": "Level",
-        "message": "Message",
-        "step": "Step",
-        "event": "Event",
-        "correlation": "Correlation"
+        "timestamp": "11111",
+        "level": "11111",
+        "message": "11111",
+        "step": "11111",
+        "event": "11111",
+        "correlation": "11111"
       }
     },
     "audit": {
-      "title": "Audit Trail",
-      "description": "Administrative actions for this run.",
-      "empty": "No audit entries yet.",
-      "systemUser": "system",
+      "title": "11111",
+      "description": "11111",
+      "empty": "11111",
+      "systemUser": "11111",
       "columns": {
-        "timestamp": "Timestamp",
-        "operation": "Operation",
-        "user": "User",
-        "details": "Details"
+        "timestamp": "11111",
+        "operation": "11111",
+        "user": "11111",
+        "details": "11111"
       }
     },
     "dialogs": {
-      "reasonLabel": "Reason",
-      "resumeTitle": "Resume Workflow Run",
-      "resumeMessage": "Resume this workflow run now?",
-      "resumeReasonPlaceholder": "Provide a reason for resuming",
-      "cancelTitle": "Cancel Workflow Run",
-      "cancelMessage": "Cancel this workflow run? This cannot be undone.",
-      "cancelReasonPlaceholder": "Provide a reason for canceling",
-      "cancelConfirm": "Cancel run",
-      "retryTitle": "Retry Workflow Run",
-      "retryMessage": "Retry this run from the last failed step?",
-      "retryReasonPlaceholder": "Provide a reason for retrying",
-      "retryConfirm": "Retry run",
-      "replayTitle": "Replay Workflow Run",
-      "replayMessage": "Replay this run with a new payload.",
-      "replayReasonPlaceholder": "Provide a reason for replaying",
-      "payloadLabel": "Payload (JSON)",
-      "replayConfirm": "Replay run",
-      "requeueTitle": "Requeue Event Wait",
-      "requeueMessage": "Requeue the most recent event wait for this run?",
-      "requeueReasonPlaceholder": "Provide a reason for requeuing",
-      "requeueConfirm": "Requeue wait"
+      "reasonLabel": "11111",
+      "resumeTitle": "11111",
+      "resumeMessage": "11111",
+      "resumeReasonPlaceholder": "11111",
+      "cancelTitle": "11111",
+      "cancelMessage": "11111",
+      "cancelReasonPlaceholder": "11111",
+      "cancelConfirm": "11111",
+      "retryTitle": "11111",
+      "retryMessage": "11111",
+      "retryReasonPlaceholder": "11111",
+      "retryConfirm": "11111",
+      "replayTitle": "11111",
+      "replayMessage": "11111",
+      "replayReasonPlaceholder": "11111",
+      "payloadLabel": "11111",
+      "replayConfirm": "11111",
+      "requeueTitle": "11111",
+      "requeueMessage": "11111",
+      "requeueReasonPlaceholder": "11111",
+      "requeueConfirm": "11111"
     },
     "toasts": {
-      "loadRunDetailsFailed": "Failed to load run details",
-      "loadLogsFailed": "Failed to load logs",
-      "loadAuditLogsFailed": "Failed to load audit logs",
-      "logExportReady": "Log export ready",
-      "exportLogsFailed": "Failed to export logs",
-      "reasonTooShort": "Reason must be at least 3 characters.",
-      "runResumed": "Run resumed",
-      "resumeRunFailed": "Failed to resume run",
-      "runCanceled": "Run canceled",
-      "cancelRunFailed": "Failed to cancel run",
-      "runExportReady": "Run export ready",
-      "exportRunFailed": "Failed to export run",
-      "runRetryStarted": "Run retry started",
-      "retryRunFailed": "Failed to retry run",
-      "replayPayloadInvalid": "Replay payload must be valid JSON.",
-      "runReplayStarted": "Run replay started",
-      "replayRunFailed": "Failed to replay run",
-      "eventWaitRequeued": "Event wait requeued",
-      "requeueEventWaitFailed": "Failed to requeue event wait",
-      "auditExportReady": "Audit export ready",
-      "exportAuditLogsFailed": "Failed to export audit logs"
+      "loadRunDetailsFailed": "11111",
+      "loadLogsFailed": "11111",
+      "loadAuditLogsFailed": "11111",
+      "logExportReady": "11111",
+      "exportLogsFailed": "11111",
+      "reasonTooShort": "11111",
+      "runResumed": "11111",
+      "resumeRunFailed": "11111",
+      "runCanceled": "11111",
+      "cancelRunFailed": "11111",
+      "runExportReady": "11111",
+      "exportRunFailed": "11111",
+      "runRetryStarted": "11111",
+      "retryRunFailed": "11111",
+      "replayPayloadInvalid": "11111",
+      "runReplayStarted": "11111",
+      "replayRunFailed": "11111",
+      "eventWaitRequeued": "11111",
+      "requeueEventWaitFailed": "11111",
+      "auditExportReady": "11111",
+      "exportAuditLogsFailed": "11111"
     }
   },
   "runDialog": {
-    "title": "Run Workflow",
-    "description": "Provide a synthetic payload to preview (and run) a workflow.",
-    "descriptionEvent": "Event: {{name}}.",
-    "draftWarning": "Draft version differs from published (v{{version}}).",
-    "concurrencyLimit": "Concurrency limit: {{count}} run(s) at a time.",
+    "title": "11111",
+    "description": "11111",
+    "descriptionEvent": "11111 {{name}} 11111",
+    "draftWarning": "11111 {{version}} 11111",
+    "concurrencyLimit": "11111 {{count}} 11111",
     "common": {
-      "emptyValue": "—"
+      "emptyValue": "11111"
     },
     "actions": {
-      "addField": "Add field",
-      "addItem": "Add item",
-      "cloneLatestRun": "Clone latest run",
-      "close": "Close",
-      "copyPayload": "Copy payload",
-      "formBuilder": "Form Builder",
-      "hide": "Hide",
-      "jsonEditor": "JSON Editor",
-      "openEventCatalog": "Open event catalog",
-      "publishDraft": "Publish draft",
-      "publishLatest": "Publish latest",
-      "remove": "Remove",
-      "reset": "Reset",
-      "resetToDefaults": "Reset to defaults",
-      "savePreset": "Save preset",
-      "show": "Show",
-      "startRun": "Start Run",
-      "starting": "Starting..."
+      "addField": "11111",
+      "addItem": "11111",
+      "cloneLatestRun": "11111",
+      "close": "11111",
+      "copyPayload": "11111",
+      "formBuilder": "11111",
+      "hide": "11111",
+      "jsonEditor": "11111",
+      "openEventCatalog": "11111",
+      "publishDraft": "11111",
+      "publishLatest": "11111",
+      "remove": "11111",
+      "reset": "11111",
+      "resetToDefaults": "11111",
+      "savePreset": "11111",
+      "show": "11111",
+      "startRun": "11111",
+      "starting": "11111"
     },
     "eventCatalog": {
-      "title": "Event catalog",
-      "description": "Pick an event type to seed payload schemas.",
-      "searchLabel": "Search events",
-      "searchPlaceholder": "Search by name, type, or category",
-      "eventTypeLabel": "Event type",
-      "loadingEvents": "Loading events...",
-      "selectEventType": "Select event type",
-      "systemBadge": "System",
-      "tenantBadge": "Tenant",
-      "systemEvent": "System event",
-      "tenantEvent": "Tenant event",
-      "uncategorized": "Uncategorized"
+      "title": "11111",
+      "description": "11111",
+      "searchLabel": "11111",
+      "searchPlaceholder": "11111",
+      "eventTypeLabel": "11111",
+      "loadingEvents": "11111",
+      "selectEventType": "11111",
+      "systemBadge": "11111",
+      "tenantBadge": "11111",
+      "systemEvent": "11111",
+      "tenantEvent": "11111",
+      "uncategorized": "11111"
     },
     "fields": {
-      "workflowLabel": "Workflow",
-      "publishedVersionLabel": "Published version",
-      "triggerLabel": "Trigger",
-      "manualTrigger": "Manual",
-      "workflowStatusLabel": "Workflow status",
-      "statusActive": "active",
-      "statusPaused": "paused"
+      "workflowLabel": "11111",
+      "publishedVersionLabel": "11111",
+      "triggerLabel": "11111",
+      "manualTrigger": "11111",
+      "workflowStatusLabel": "11111",
+      "statusActive": "11111",
+      "statusPaused": "11111"
     },
     "form": {
-      "booleanTrue": "True",
-      "booleanFalse": "False",
-      "mapEntriesTitle": "Map entries",
-      "mapEntriesPrompt": "Enter field key/path",
-      "mapEntriesDescription": "For map-style objects, add keys and set each value.",
-      "mapEntriesEmpty": "No map entries added.",
-      "noSchema": "No schema available to render a form."
+      "booleanTrue": "11111",
+      "booleanFalse": "11111",
+      "mapEntriesTitle": "11111",
+      "mapEntriesPrompt": "11111",
+      "mapEntriesDescription": "11111",
+      "mapEntriesEmpty": "11111",
+      "noSchema": "11111"
     },
     "noPublishedVersion": {
-      "title": "No published version",
-      "description": "You can preview the payload builder, but you must publish the workflow before starting a run."
+      "title": "11111",
+      "description": "11111"
     },
     "payload": {
-      "largePayloadWarning": "Payload size exceeds 256KB; runs may be slower.",
-      "payloadJsonLabel": "Payload (JSON)",
-      "payloadLabel": "payload",
-      "payloadSize": "Payload size: {{size}} KB"
+      "largePayloadWarning": "11111",
+      "payloadJsonLabel": "11111",
+      "payloadLabel": "11111",
+      "payloadSize": "11111 {{size}} 11111"
     },
     "presets": {
-      "presetNameLabel": "Preset name",
-      "presetNamePlaceholder": "e.g. Regression payload",
-      "savedPresets": "Saved presets"
+      "presetNameLabel": "11111",
+      "presetNamePlaceholder": "11111",
+      "savedPresets": "11111"
     },
     "schema": {
-      "sourceLabel": "Schema source",
-      "workflowSchema": "Workflow schema",
-      "eventSchema": "Event schema",
-      "schemaRef": "Schema ref",
-      "schemaRefLabel": "Schema ref",
-      "selectSchema": "Select schema…",
-      "noSchemasFound": "No schemas found",
-      "unknownSchemaRef": "Unknown schema ref.",
-      "useEventSchema": "Use event schema",
-      "viewSchemaDiff": "View schema diff",
-      "hideSchemaDiff": "Hide schema diff",
-      "onlyInEvent": "Only in event schema",
-      "requiredOnlyInEvent": "Required only in event",
-      "onlyInWorkflow": "Only in workflow schema",
-      "requiredOnlyInWorkflow": "Required only in workflow",
-      "typeMismatches": "Type mismatches",
-      "typeMismatchLine": "{{field}}: event {{eventType}} vs workflow {{payloadType}}",
-      "selectedEventWarningPrefix": "Selected event ({{selectedEventType}}) may not match this workflow's trigger ({{triggerEventName}}). ",
-      "matchOptional": "Schema refs match; trigger mapping will be applied (optional).",
-      "matchIdentity": "Schema refs match; identity mapping will be used (no mapping required).",
-      "diffWillApply": "Schema refs differ ({{eventSchemaRef}} → {{payloadSchemaRef}}); trigger mapping will be applied.",
-      "diffRequiredMissing": "Schema refs differ ({{eventSchemaRef}} → {{payloadSchemaRef}}); trigger mapping is required but not configured.",
-      "triggerEventDiffers": "Trigger event schema differs from workflow payload schema. Switch to \"Event schema\" if you want to enter a trigger event payload.",
-      "eventUnavailable": "Event schema not available; using workflow schema instead.",
+      "sourceLabel": "11111",
+      "workflowSchema": "11111",
+      "eventSchema": "11111",
+      "schemaRef": "11111",
+      "schemaRefLabel": "11111",
+      "selectSchema": "11111",
+      "noSchemasFound": "11111",
+      "unknownSchemaRef": "11111",
+      "useEventSchema": "11111",
+      "viewSchemaDiff": "11111",
+      "hideSchemaDiff": "11111",
+      "onlyInEvent": "11111",
+      "requiredOnlyInEvent": "11111",
+      "onlyInWorkflow": "11111",
+      "requiredOnlyInWorkflow": "11111",
+      "typeMismatches": "11111",
+      "typeMismatchLine": "11111 {{field}} 11111 {{eventType}} 11111 {{payloadType}} 11111",
+      "selectedEventWarningPrefix": "11111 {{selectedEventType}} 11111 {{triggerEventName}} 11111",
+      "matchOptional": "11111",
+      "matchIdentity": "11111",
+      "diffWillApply": "11111 {{eventSchemaRef}} 11111 {{payloadSchemaRef}} 11111",
+      "diffRequiredMissing": "11111 {{eventSchemaRef}} 11111 {{payloadSchemaRef}} 11111",
+      "triggerEventDiffers": "11111",
+      "eventUnavailable": "11111",
       "mapping": {
-        "identityOptional": "Identity mapping (no mapping required)",
-        "requiredMissing": "Trigger mapping is required but not configured",
-        "willApply": "Trigger mapping will be applied",
-        "willApplyOptional": "Trigger mapping will be applied (optional)"
+        "identityOptional": "11111",
+        "requiredMissing": "11111",
+        "willApply": "11111",
+        "willApplyOptional": "11111"
       }
     },
-    "systemWorkflowWarning": "This is a system workflow. Running it may affect core automation.",
-    "systemWorkflowConfirm": "I understand and want to run it.",
+    "systemWorkflowWarning": "11111",
+    "systemWorkflowConfirm": "11111",
     "templates": {
-      "exampleLabel": "Example {{count}}",
-      "eventTemplates": "Event templates",
-      "sampleTemplates": "Sample templates",
-      "emailTemplate": "Inbound Email",
-      "webhookTemplate": "Webhook Event"
+      "exampleLabel": "11111 {{count}} 11111",
+      "eventTemplates": "11111",
+      "sampleTemplates": "11111",
+      "emailTemplate": "11111",
+      "webhookTemplate": "11111"
     },
     "toasts": {
-      "confirmSystemRun": "Confirm you want to run this system workflow.",
-      "eventMissingSchemaRef": "Selected event does not have a payload schema ref; cannot run with trigger mapping.",
-      "loadLatestRunFailed": "Failed to load latest run",
-      "mapEntryExists": "That key already exists.",
-      "noPriorPayload": "No prior run payload found.",
-      "payloadCopied": "Payload copied to clipboard.",
-      "presetSaved": "Preset saved.",
-      "providePresetName": "Provide a preset name.",
-      "startRunFailed": "Failed to start run",
-      "triggerMappingMissing": "Trigger mapping is required for this event schema but is not configured on the workflow."
+      "confirmSystemRun": "11111",
+      "eventMissingSchemaRef": "11111",
+      "loadLatestRunFailed": "11111",
+      "mapEntryExists": "11111",
+      "noPriorPayload": "11111",
+      "payloadCopied": "11111",
+      "presetSaved": "11111",
+      "providePresetName": "11111",
+      "startRunFailed": "11111",
+      "triggerMappingMissing": "11111"
     },
     "validation": {
-      "invalidJson": "Invalid JSON",
-      "summaryTitle": "Payload still needs required event fields before this run can start",
-      "summaryDescription": "Fill the missing fields below, switch to Form Builder, or use a sample payload button.",
-      "moreErrors": "+{{count}} more…"
+      "invalidJson": "11111",
+      "summaryTitle": "11111",
+      "summaryDescription": "11111",
+      "moreErrors": "11111 {{count}} 11111"
     }
   },
   "eventList": {
     "common": {
-      "emptyValue": "—"
+      "emptyValue": "11111"
     },
     "summary": {
-      "total": "Total",
-      "matched": "Matched",
-      "unmatched": "Unmatched",
-      "errors": "Errors"
+      "total": "11111",
+      "matched": "11111",
+      "unmatched": "11111",
+      "errors": "11111"
     },
     "filters": {
-      "eventNameLabel": "Event name",
-      "eventNamePlaceholder": "workflow.event",
-      "correlationKeyLabel": "Correlation key",
-      "correlationKeyPlaceholder": "corr-123",
-      "statusLabel": "Status",
-      "fromLabel": "From",
-      "toLabel": "To"
+      "eventNameLabel": "11111",
+      "eventNamePlaceholder": "11111",
+      "correlationKeyLabel": "11111",
+      "correlationKeyPlaceholder": "11111",
+      "statusLabel": "11111",
+      "fromLabel": "11111",
+      "toLabel": "11111"
     },
     "actions": {
-      "applyFilters": "Apply filters",
-      "reset": "Reset",
-      "exportCsv": "Export CSV",
-      "exportJson": "Export JSON",
-      "close": "Close",
-      "viewRunDetails": "View run details"
+      "applyFilters": "11111",
+      "reset": "11111",
+      "exportCsv": "11111",
+      "exportJson": "11111",
+      "close": "11111",
+      "viewRunDetails": "11111"
     },
     "table": {
-      "schemaConflict": "catalog ≠ submission",
+      "schemaConflict": "11111",
       "columns": {
-        "event": "Event",
-        "correlation": "Correlation",
-        "schema": "Schema",
-        "status": "Status",
-        "matchedRun": "Matched Run",
-        "payload": "Payload",
-        "created": "Created"
+        "event": "11111",
+        "correlation": "11111",
+        "schema": "11111",
+        "status": "11111",
+        "matchedRun": "11111",
+        "payload": "11111",
+        "created": "11111"
       }
     },
     "states": {
-      "loading": "Loading events...",
-      "empty": "No workflow events found."
+      "loading": "11111",
+      "empty": "11111"
     },
     "detail": {
-      "title": "Event Detail",
-      "loading": "Loading event detail...",
-      "eventIdLabel": "Event ID",
-      "statusLabel": "Status",
-      "eventNameLabel": "Event name",
-      "correlationKeyLabel": "Correlation key",
-      "payloadSchemaRefLabel": "Payload schema ref",
-      "schemaConflict": "Schema ref conflict: catalog {{catalog}} vs submission {{submission}}",
-      "createdLabel": "Created",
-      "processedLabel": "Processed",
-      "errorLine": "Error: {{message}}",
-      "waitLabel": "Wait",
-      "waitIdLine": "Wait ID: {{waitId}}",
-      "waitStatusLine": "Status: {{status}}",
-      "waitTimeoutLine": "Timeout: {{value}}",
-      "waitResolvedLine": "Resolved: {{value}}",
-      "waitStepLine": "Step: {{value}}",
-      "matchedRunLabel": "Matched run",
-      "runStatusLine": "Status: {{status}}",
-      "payloadLabel": "Payload"
+      "title": "11111",
+      "loading": "11111",
+      "eventIdLabel": "11111",
+      "statusLabel": "11111",
+      "eventNameLabel": "11111",
+      "correlationKeyLabel": "11111",
+      "payloadSchemaRefLabel": "11111",
+      "schemaConflict": "11111 {{catalog}} 11111 {{submission}} 11111",
+      "createdLabel": "11111",
+      "processedLabel": "11111",
+      "errorLine": "11111 {{message}} 11111",
+      "waitLabel": "11111",
+      "waitIdLine": "11111 {{waitId}} 11111",
+      "waitStatusLine": "11111 {{status}} 11111",
+      "waitTimeoutLine": "11111 {{value}} 11111",
+      "waitResolvedLine": "11111 {{value}} 11111",
+      "waitStepLine": "11111 {{value}} 11111",
+      "matchedRunLabel": "11111",
+      "runStatusLine": "11111 {{status}} 11111",
+      "payloadLabel": "11111"
     },
     "toasts": {
-      "loadEventsFailed": "Failed to load workflow events",
-      "loadEventDetailFailed": "Failed to load event detail",
-      "exportReady": "Event export ready",
-      "exportFailed": "Failed to export events"
+      "loadEventsFailed": "11111",
+      "loadEventDetailFailed": "11111",
+      "exportReady": "11111",
+      "exportFailed": "11111"
     }
   },
   "deadLetter": {
     "common": {
-      "emptyValue": "—"
+      "emptyValue": "11111"
     },
     "filters": {
-      "minimumRetriesLabel": "Minimum retries",
-      "minimumRetriesPlaceholder": "3"
+      "minimumRetriesLabel": "11111",
+      "minimumRetriesPlaceholder": "11111"
     },
     "actions": {
-      "refresh": "Refresh",
-      "loadMore": "Load more"
+      "refresh": "11111",
+      "loadMore": "11111"
     },
     "table": {
       "columns": {
-        "runId": "Run ID",
-        "workflow": "Workflow",
-        "version": "Version",
-        "status": "Status",
-        "retries": "Retries",
-        "failedSteps": "Failed Steps",
-        "updated": "Updated"
+        "runId": "11111",
+        "workflow": "11111",
+        "version": "11111",
+        "status": "11111",
+        "retries": "11111",
+        "failedSteps": "11111",
+        "updated": "11111"
       }
     },
     "states": {
-      "empty": "No dead-letter runs found.",
-      "loading": "Loading dead-letter runs..."
+      "empty": "11111",
+      "loading": "11111"
     },
     "toasts": {
-      "loadFailed": "Failed to load dead-letter runs"
+      "loadFailed": "11111"
     }
   },
   "audit": {
     "common": {
-      "emptyValue": "—"
+      "emptyValue": "11111"
     },
     "header": {
-      "title": "Workflow Audit"
+      "title": "11111"
     },
     "actions": {
-      "exportCsv": "Export CSV",
-      "loadMore": "Load more"
+      "exportCsv": "11111",
+      "loadMore": "11111"
     },
     "table": {
       "columns": {
-        "timestamp": "Timestamp",
-        "operation": "Operation",
-        "user": "User",
-        "details": "Details"
+        "timestamp": "11111",
+        "operation": "11111",
+        "user": "11111",
+        "details": "11111"
       }
     },
     "states": {
-      "selectWorkflow": "Select a workflow to view audit history.",
-      "empty": "No audit entries yet."
+      "selectWorkflow": "11111",
+      "empty": "11111"
     },
     "values": {
-      "system": "system"
+      "system": "11111"
     },
     "toasts": {
-      "loadFailed": "Failed to load audit logs",
-      "exportReady": "Audit export ready",
-      "exportFailed": "Failed to export audit logs"
+      "loadFailed": "11111",
+      "exportReady": "11111",
+      "exportFailed": "11111"
     }
   },
   "designer": {
     "page": {
-      "controlPanelTitle": "Workflow Control Panel",
-      "controlPanelDescription": "Manage schedules, runs, events, and the event catalog.",
-      "designerTitle": "Workflow Designer",
-      "designerDescription": "Build and maintain workflow automations.",
-      "editorTitle": "Workflow Editor",
-      "editorDescription": "Choose a workflow to edit or create a new workflow."
+      "controlPanelTitle": "11111",
+      "controlPanelDescription": "11111",
+      "designerTitle": "11111",
+      "designerDescription": "11111",
+      "editorTitle": "11111",
+      "editorDescription": "11111"
     },
     "controlPanel": {
       "tabs": {
-        "schedules": "Schedules",
-        "runs": "Runs",
-        "events": "Events",
-        "eventCatalog": "Event Catalog",
-        "deadLetter": "Dead Letter"
+        "schedules": "11111",
+        "runs": "11111",
+        "events": "11111",
+        "eventCatalog": "11111",
+        "deadLetter": "11111"
       }
     },
     "toolbar": {
-      "backToList": "Back to workflows",
-      "newWorkflow": "New Workflow",
-      "saveDraft": "Save Draft",
-      "saving": "Saving...",
-      "publish": "Publish",
-      "publishing": "Publishing...",
-      "run": "Run",
-      "previewOnly": "Preview only until a version is published.",
+      "backToList": "11111",
+      "newWorkflow": "11111",
+      "saveDraft": "11111",
+      "saving": "11111",
+      "publish": "11111",
+      "publishing": "11111",
+      "run": "11111",
+      "previewOnly": "11111",
       "validation": {
-        "lastValidated": "Last validated: {{timestamp}}",
-        "unknown": "Validation status unknown"
+        "lastValidated": "11111 {{timestamp}} 11111",
+        "unknown": "11111"
       }
     },
     "validation": {
       "badge": {
-        "invalid": "Invalid",
-        "warnings": "Warnings",
-        "valid": "Valid",
-        "unknown": "Unknown"
+        "invalid": "11111",
+        "warnings": "11111",
+        "valid": "11111",
+        "unknown": "11111"
       }
     },
     "discardDialog": {
-      "title": "Discard unsaved changes?",
-      "message": "You have unsaved changes in this workflow. Discard them and continue?",
-      "confirm": "Discard changes",
-      "cancel": "Keep editing"
+      "title": "11111",
+      "message": "11111",
+      "confirm": "11111",
+      "cancel": "11111"
     },
     "eventSchemaDialog": {
-      "title": "Switch workflow input schema?",
-      "messageWithEvent": "The selected event {{eventName}} uses {{schemaRef}}. Do you want to switch this workflow to that event schema?",
-      "messageFallback": "Do you want to switch this workflow to the selected event schema?",
-      "confirm": "Use event schema",
-      "cancel": "Keep current schema"
+      "title": "11111",
+      "messageWithEvent": "11111 {{eventName}} 11111 {{schemaRef}} 11111",
+      "messageFallback": "11111",
+      "confirm": "11111",
+      "cancel": "11111"
     },
     "blockSection": {
-      "then": "THEN",
-      "else": "ELSE",
-      "try": "TRY",
-      "catch": "CATCH",
-      "body": "BODY"
+      "then": "11111",
+      "else": "11111",
+      "try": "11111",
+      "catch": "11111",
+      "body": "11111"
     },
     "palette": {
-      "showPalette": "Show palette",
-      "hidePalette": "Hide palette",
-      "searchPlaceholder": "Search",
-      "dragHint": "Drop on pipeline to add",
+      "showPalette": "11111",
+      "hidePalette": "11111",
+      "searchPlaceholder": "11111",
+      "dragHint": "11111",
       "categories": {
-        "Control": "Control",
-        "Core": "Core",
-        "Transform": "Transform",
-        "AI": "AI",
-        "Apps": "Apps"
+        "Control": "11111",
+        "Core": "11111",
+        "Transform": "11111",
+        "AI": "11111",
+        "Apps": "11111"
       },
       "controlBlocks": {
         "control.if": {
-          "label": "If",
-          "description": "Conditional branching"
+          "label": "11111",
+          "description": "11111"
         },
         "control.forEach": {
-          "label": "For Each",
-          "description": "Iterate over items"
+          "label": "11111",
+          "description": "11111"
         },
         "control.tryCatch": {
-          "label": "Try/Catch",
-          "description": "Handle errors"
+          "label": "11111",
+          "description": "11111"
         },
         "control.callWorkflow": {
-          "label": "Call Workflow",
-          "description": "Invoke another workflow"
+          "label": "11111",
+          "description": "11111"
         },
         "control.return": {
-          "label": "Return",
-          "description": "Stop execution"
+          "label": "11111",
+          "description": "11111"
         }
       }
     },
     "stepCard": {
-      "selectAriaLabel": "Select {{label}} step",
+      "selectAriaLabel": "11111 {{label}} 11111",
       "badges": {
-        "if": "If",
-        "loop": "Loop",
-        "try": "Try",
-        "block": "Block"
+        "if": "11111",
+        "loop": "11111",
+        "try": "11111",
+        "block": "11111"
       },
       "mapping": {
-        "unmappedTitle": "{{count}} required fields are unmapped",
-        "unmappedBadge": "{{count}} required unmapped",
-        "allMappedTitle": "All {{count}} required fields are mapped",
-        "allMappedAria": "All required fields mapped"
+        "unmappedTitle": "11111 {{count}} 11111",
+        "unmappedBadge": "11111 {{count}} 11111",
+        "allMappedTitle": "11111 {{count}} 11111",
+        "allMappedAria": "11111"
       },
-      "errorCount": "{{count}} {{noun}}",
-      "errorSingular": "error",
-      "errorPlural": "errors",
+      "errorCount": "11111 {{count}} 11111 {{noun}} 11111",
+      "errorSingular": "11111",
+      "errorPlural": "11111",
       "actions": {
-        "duplicate": "Duplicate step",
-        "duplicateAriaLabel": "Duplicate {{label}} step",
-        "delete": "Delete step"
+        "duplicate": "11111",
+        "duplicateAriaLabel": "11111 {{label}} 11111",
+        "delete": "11111"
       },
-      "forEachSummary": "Item: {{itemVar}} | Concurrency: {{concurrency}}"
+      "forEachSummary": "11111 {{itemVar}} 11111 {{concurrency}} 11111"
     },
     "toasts": {
-      "loadRegistriesFailed": "Failed to load workflow registries",
-      "loadPermissionsFailed": "Failed to load permissions",
-      "loadWorkflowsFailed": "Failed to load workflows",
-      "loadEventCatalogFailed": "Failed to load event catalog",
-      "settingsUpdated": "Workflow settings updated",
-      "settingsUpdateFailed": "Failed to update workflow settings",
-      "created": "Workflow created",
-      "saved": "Workflow saved",
-      "saveFailed": "Failed to save workflow",
-      "saveBeforePublish": "Save the workflow before publishing",
-      "published": "Workflow published",
-      "publishFailed": "Failed to publish workflow",
-      "publishValidationErrors": "Publish failed - fix validation errors",
-      "systemEventMissingSchema": "This system event is missing a valid schema and cannot be selected until fixed."
+      "loadRegistriesFailed": "11111",
+      "loadPermissionsFailed": "11111",
+      "loadWorkflowsFailed": "11111",
+      "loadEventCatalogFailed": "11111",
+      "settingsUpdated": "11111",
+      "settingsUpdateFailed": "11111",
+      "created": "11111",
+      "saved": "11111",
+      "saveFailed": "11111",
+      "saveBeforePublish": "11111",
+      "published": "11111",
+      "publishFailed": "11111",
+      "publishValidationErrors": "11111",
+      "systemEventMissingSchema": "11111"
     }
   },
   "actionInputFieldInfo": {
-    "required": "Required",
-    "requiredTitle": "Required",
-    "requiredMissingTitle": "Required field is missing a value",
-    "format": "Format: {{value}}",
-    "eachItem": "Each item: {{value}}",
-    "length": "Length: {{min}} - {{max}}",
-    "range": "Range: {{min}} - {{max}}",
-    "any": "any",
-    "defaultPrefix": "Default:",
-    "examplePrefix": "Example:"
+    "required": "11111",
+    "requiredTitle": "11111",
+    "requiredMissingTitle": "11111",
+    "format": "11111 {{value}} 11111",
+    "eachItem": "11111 {{value}} 11111",
+    "length": "11111 {{min}} 11111 {{max}} 11111",
+    "range": "11111 {{min}} 11111 {{max}} 11111",
+    "any": "11111",
+    "defaultPrefix": "11111",
+    "examplePrefix": "11111"
   },
   "actionInputSection": {
-    "heading": "Action inputs"
+    "heading": "11111"
   },
   "actionInputFixedPicker": {
-    "loadingOptions": "Loading options...",
-    "ticketSearchPlaceholder": "Search tickets by number or title",
-    "ticketSelect": "Select ticket",
-    "ticketTypeAbove": "Type above to search tickets",
+    "loadingOptions": "11111",
+    "ticketSearchPlaceholder": "11111",
+    "ticketSelect": "11111",
+    "ticketTypeAbove": "11111",
     "placeholders": {
-      "board": "Select Board",
-      "client": "Select Client",
-      "contact": "Select Contact",
-      "user": "Select User",
-      "userOrTeam": "Select User or Team"
+      "board": "11111",
+      "client": "11111",
+      "contact": "11111",
+      "user": "11111",
+      "userOrTeam": "11111"
     },
     "errors": {
-      "loadTicket": "Failed to load ticket",
-      "searchTickets": "Failed to search tickets",
-      "loadOptions": "Failed to load options"
+      "loadTicket": "11111",
+      "searchTickets": "11111",
+      "loadOptions": "11111"
     },
     "dependencyHints": {
       "contact": {
-        "client_id": "Choose a fixed Client first to load contact options."
+        "client_id": "11111"
       },
       "client-location": {
-        "client_id": "Choose a fixed Client first to load location options."
+        "client_id": "11111"
       },
       "ticket-category": {
-        "board_id": "Choose a fixed Board first to load category options."
+        "board_id": "11111"
       },
       "ticket-status": {
-        "board_id": "Choose a fixed Board first to load status options.",
-        "ticket_id": "Choose a fixed Ticket first to load status options."
+        "board_id": "11111",
+        "ticket_id": "11111"
       },
       "ticket-subcategory": {
-        "board_id": "Choose a fixed Board first to load subcategory options.",
-        "category_id": "Choose a fixed Category first to load subcategory options."
+        "board_id": "11111",
+        "category_id": "11111"
       }
     }
   },
   "taskInbox": {
-    "title": "Task Inbox",
-    "backToList": "← Back to Task List",
+    "title": "11111",
+    "backToList": "11111",
     "tabs": {
-      "pending": "Pending",
-      "claimed": "Claimed",
-      "completed": "Completed",
-      "all": "All Tasks"
+      "pending": "11111",
+      "claimed": "11111",
+      "completed": "11111",
+      "all": "11111"
     }
   },
   "taskList": {
     "pagination": {
-      "previous": "Previous",
-      "next": "Next",
-      "pageLabel": "Page {{current}} of {{total}}"
+      "previous": "11111",
+      "next": "11111",
+      "pageLabel": "11111 {{current}} 11111 {{total}} 11111"
     },
     "errors": {
-      "loadFailed": "Failed to load tasks. Please try again.",
-      "claimFailed": "Failed to claim task: {{error}}",
-      "unclaimFailed": "Failed to unclaim task: {{error}}",
-      "unknown": "Unknown error"
+      "loadFailed": "11111",
+      "claimFailed": "11111 {{error}} 11111",
+      "unclaimFailed": "11111 {{error}} 11111",
+      "unknown": "11111"
     },
     "actions": {
-      "claim": "Claim",
-      "unclaim": "Unclaim"
+      "claim": "11111",
+      "unclaim": "11111"
     },
-    "noDueDate": "No due date",
-    "overdueSuffix": "(Overdue)",
-    "empty": "No tasks found",
-    "duePrefix": "Due:"
+    "noDueDate": "11111",
+    "overdueSuffix": "11111",
+    "empty": "11111",
+    "duePrefix": "11111"
   },
   "taskDetails": {
-    "notAvailable": "N/A",
-    "notFound": "Task not found",
-    "retry": "Retry",
-    "youPronoun": "You",
-    "noForm": "No form available for this task.",
-    "contextData": "Context Data",
-    "responseData": "Response Data",
+    "notAvailable": "11111",
+    "notFound": "11111",
+    "retry": "11111",
+    "youPronoun": "11111",
+    "noForm": "11111",
+    "contextData": "11111",
+    "responseData": "11111",
     "fields": {
-      "status": "Status",
-      "priority": "Priority",
-      "created": "Created",
-      "dueDate": "Due Date",
-      "claimedBy": "Claimed By",
-      "completedBy": "Completed By"
+      "status": "11111",
+      "priority": "11111",
+      "created": "11111",
+      "dueDate": "11111",
+      "claimedBy": "11111",
+      "completedBy": "11111"
     },
     "tabs": {
-      "details": "Details",
-      "form": "Form",
-      "history": "History"
+      "details": "11111",
+      "form": "11111",
+      "history": "11111"
     },
     "actions": {
-      "claim": "Claim Task",
-      "unclaim": "Unclaim Task"
+      "claim": "11111",
+      "unclaim": "11111"
     },
     "errors": {
-      "loadFailed": "Failed to load task details. Please try again.",
-      "claimFailed": "Failed to claim task: {{error}}",
-      "unclaimFailed": "Failed to unclaim task: {{error}}",
-      "unknown": "Unknown error"
+      "loadFailed": "11111",
+      "claimFailed": "11111 {{error}} 11111",
+      "unclaimFailed": "11111 {{error}} 11111",
+      "unknown": "11111"
     }
   },
   "taskHistory": {
-    "empty": "No history available for this task.",
-    "byPrefix": "By:",
-    "system": "System",
-    "detailsLabel": "Details",
+    "empty": "11111",
+    "byPrefix": "11111",
+    "system": "11111",
+    "detailsLabel": "11111",
     "actions": {
-      "created": "Created",
-      "claimed": "Claimed",
-      "unclaimed": "Unclaimed",
-      "completed": "Completed",
-      "canceled": "Canceled",
-      "expired": "Expired"
+      "created": "11111",
+      "claimed": "11111",
+      "unclaimed": "11111",
+      "completed": "11111",
+      "canceled": "11111",
+      "expired": "11111"
     },
     "errors": {
-      "loadFailed": "Failed to load task history. Please try again."
+      "loadFailed": "11111"
     }
   },
   "taskForm": {
     "actions": {
-      "complete": "Complete Task",
-      "cancel": "Cancel"
+      "complete": "11111",
+      "cancel": "11111"
     }
   },
   "dynamicForm": {
     "actions": {
-      "submit": "Submit",
-      "cancel": "Cancel"
+      "submit": "11111",
+      "cancel": "11111"
     },
     "errors": {
-      "generic": "An error occurred"
+      "generic": "11111"
     }
   },
   "embeddedTaskInbox": {
-    "title": "My Tasks",
-    "viewAll": "View All",
-    "backToTasks": "← Back to Tasks"
+    "title": "11111",
+    "viewAll": "11111",
+    "backToTasks": "11111"
   },
   "actionButton": {
-    "processing": "Processing...",
-    "confirm": "Confirm",
-    "cancel": "Cancel",
-    "confirmTitle": "Confirm Action"
+    "processing": "11111",
+    "confirm": "11111",
+    "cancel": "11111",
+    "confirmTitle": "11111"
   },
   "stepNameField": {
-    "label": "Step name"
+    "label": "11111"
   },
   "stepSaveOutput": {
-    "toggleLabel": "Save output",
-    "placeholder": "e.g., ticketDefaults",
-    "copyPathTitle": "Copy full path",
-    "accessibleAs": "Accessible as:"
+    "toggleLabel": "11111",
+    "placeholder": "11111",
+    "copyPathTitle": "11111",
+    "accessibleAs": "11111"
   },
   "aiSchemaSection": {
-    "heading": "AI response format",
-    "headingDescription": "Choose what the AI response should include for later steps.",
-    "modeSimple": "Simple",
-    "modeAdvanced": "Advanced",
-    "addField": "Add field",
-    "addNested": "Add nested field",
-    "remove": "Remove",
-    "nameLabel": "Name",
-    "answerType": "Answer type",
-    "arrayItems": "Array items",
-    "required": "Required",
-    "descriptionLabel": "Description",
-    "objectItemFields": "Object item fields",
-    "nestedFields": "Nested fields",
-    "jsonSchemaLabel": "JSON Schema",
-    "advancedHelperText": "Advanced mode supports object-rooted schemas plus nested objects, arrays, descriptions, constraints, and additionalProperties.",
-    "validationHeading": "Schema validation",
-    "advancedFallback": "This saved schema uses advanced JSON Schema features, so it is shown in Advanced mode.",
-    "simpleModeUnsupported": "This schema cannot be represented in simple mode.",
+    "heading": "11111",
+    "headingDescription": "11111",
+    "modeSimple": "11111",
+    "modeAdvanced": "11111",
+    "addField": "11111",
+    "addNested": "11111",
+    "remove": "11111",
+    "nameLabel": "11111",
+    "answerType": "11111",
+    "arrayItems": "11111",
+    "required": "11111",
+    "descriptionLabel": "11111",
+    "objectItemFields": "11111",
+    "nestedFields": "11111",
+    "jsonSchemaLabel": "11111",
+    "advancedHelperText": "11111",
+    "validationHeading": "11111",
+    "advancedFallback": "11111",
+    "simpleModeUnsupported": "11111",
     "errors": {
-      "jsonRequired": "AI output schema JSON is required."
+      "jsonRequired": "11111"
     }
   },
   "composeText": {
-    "heading": "Compose text outputs",
-    "headingDescription": "Create one or more markdown outputs with stable downstream reference keys.",
-    "addOutput": "Add output",
-    "untitled": "Untitled output",
-    "outputFallback": "output {{index}}",
-    "moveUpAria": "Move {{label}} up",
-    "moveDownAria": "Move {{label}} down",
-    "deleteAria": "Delete {{label}}",
-    "outputLabel": "Output label",
-    "stableKeyLabel": "Stable key",
-    "keyHintSafe": "Downstream-safe key",
-    "keyHintInvalid": "Use lowercase letters, numbers, and underscores only.",
-    "regenerate": "Regenerate",
-    "validationHeading": "Validation",
-    "downstreamPathLabel": "Downstream reference path",
-    "pathFallback": "Save output to see a reference path.",
-    "copied": "Copied",
-    "copyPath": "Copy path",
-    "contentHeading": "Compose content",
-    "contentDescription": "Use markdown-safe formatting and inline workflow reference chips.",
-    "insertReference": "Insert reference",
-    "insertReferenceHeading": "Insert workflow reference",
+    "heading": "11111",
+    "headingDescription": "11111",
+    "addOutput": "11111",
+    "untitled": "11111",
+    "outputFallback": "11111 {{index}} 11111",
+    "moveUpAria": "11111 {{label}} 11111",
+    "moveDownAria": "11111 {{label}} 11111",
+    "deleteAria": "11111 {{label}} 11111",
+    "outputLabel": "11111",
+    "stableKeyLabel": "11111",
+    "keyHintSafe": "11111",
+    "keyHintInvalid": "11111",
+    "regenerate": "11111",
+    "validationHeading": "11111",
+    "downstreamPathLabel": "11111",
+    "pathFallback": "11111",
+    "copied": "11111",
+    "copyPath": "11111",
+    "contentHeading": "11111",
+    "contentDescription": "11111",
+    "insertReference": "11111",
+    "insertReferenceHeading": "11111",
     "errors": {
-      "noCodeBlock": "References cannot be inserted inside code blocks. Move the cursor to another block and try again."
+      "noCodeBlock": "11111"
     }
   },
   "referenceSelector": {
     "placeholders": {
-      "scope": "Select source scope...",
-      "step": "Select step...",
-      "field": "Select field..."
+      "scope": "11111",
+      "step": "11111",
+      "field": "11111"
     }
   },
   "pipeline": {
-    "start": "Start",
-    "insertStepHere": "Insert step here",
-    "emptyDisabled": "No steps yet.",
-    "emptySelectPrompt": "Select a step from the panel to get started."
+    "start": "11111",
+    "insertStepHere": "11111",
+    "emptyDisabled": "11111",
+    "emptySelectPrompt": "11111"
   },
   "expressionEditor": {
-    "ariaLabel": "Expression editor",
-    "autocompleteAria": "Expression autocomplete suggestions",
-    "textAreaPlaceholder": "Enter JSONata expression...",
+    "ariaLabel": "11111",
+    "autocompleteAria": "11111",
+    "textAreaPlaceholder": "11111",
     "field": {
-      "placeholder": "Enter expression...",
-      "insertFieldPlaceholder": "Insert field"
+      "placeholder": "11111",
+      "insertFieldPlaceholder": "11111"
     }
   },
   "sourceDataTree": {
-    "searchPlaceholder": "Search fields...",
+    "searchPlaceholder": "11111",
     "sections": {
-      "payload": "Payload",
-      "vars": "Step Outputs (vars)",
-      "loopContext": "Loop Context",
-      "workflowMeta": "Workflow Meta",
-      "errorContext": "Error Context"
+      "payload": "11111",
+      "vars": "11111",
+      "loopContext": "11111",
+      "workflowMeta": "11111",
+      "errorContext": "11111"
     },
     "vars": {
-      "emptyPrefix": "No vars yet. Use",
-      "saveOutput": "Save output",
-      "emptyConjunction": "or an",
-      "assignStep": "Assign",
-      "emptySuffix": "step to populate"
+      "emptyPrefix": "11111",
+      "saveOutput": "11111",
+      "emptyConjunction": "11111",
+      "assignStep": "11111",
+      "emptySuffix": "11111"
     },
     "loop": {
-      "currentItem": "current item",
-      "loopIndex": "loop index"
+      "currentItem": "11111",
+      "loopIndex": "11111"
     }
   },
   "validationBadge": {
     "status": {
-      "valid": "Valid",
-      "warning": "Warnings",
-      "error": "Errors",
-      "incomplete": "Incomplete"
+      "valid": "11111",
+      "warning": "11111",
+      "error": "11111",
+      "incomplete": "11111"
     },
     "tooltip": {
-      "valid": "All required inputs are mapped",
-      "incomplete": "Configure input mappings",
-      "mappingCount": "{{mapped}} of {{required}} required fields mapped"
+      "valid": "11111",
+      "incomplete": "11111",
+      "mappingCount": "11111 {{mapped}} 11111 {{required}} 11111"
     },
-    "openEditor": "Open Mapping Editor",
-    "errorsHeading": "Errors ({{count}})",
-    "warningsHeading": "Warnings ({{count}})",
-    "moreErrors": "+{{count}} more errors",
-    "moreWarnings": "+{{count}} more warnings"
+    "openEditor": "11111",
+    "errorsHeading": "11111 {{count}} 11111",
+    "warningsHeading": "11111 {{count}} 11111",
+    "moreErrors": "11111 {{count}} 11111",
+    "moreWarnings": "11111 {{count}} 11111"
   },
   "inputMappingEditor": {
-    "empty": "This action has no input fields.",
-    "browseSources": "Browse sources",
-    "objectFields": "Object fields",
-    "itemTitle": "Item {{index}}",
-    "reset": "Reset",
-    "addItem": "Add item",
-    "fill": "Fill",
-    "clearValues": "Clear values",
-    "applySuggestions": "Apply suggestions ({{count}})",
-    "applySuggestionTitle": "Apply suggestion: {{sourcePath}}",
-    "fuzzySuffix": "(fuzzy)",
-    "removeMapping": "Remove mapping (Delete/Backspace)",
-    "invalidJson": "Invalid JSON",
-    "stringPlaceholder": "Enter value...",
+    "empty": "11111",
+    "browseSources": "11111",
+    "objectFields": "11111",
+    "itemTitle": "11111 {{index}} 11111",
+    "reset": "11111",
+    "addItem": "11111",
+    "fill": "11111",
+    "clearValues": "11111",
+    "applySuggestions": "11111 {{count}} 11111",
+    "applySuggestionTitle": "11111 {{sourcePath}} 11111",
+    "fuzzySuffix": "11111",
+    "removeMapping": "11111",
+    "invalidJson": "11111",
+    "stringPlaceholder": "11111",
     "aria": {
-      "listbox": "Action input fields",
-      "fieldList": "Action input fields list"
+      "listbox": "11111",
+      "fieldList": "11111"
     },
     "summary": {
-      "filledCount": "{{filled}} of {{total}} fields filled",
-      "missingCount": "{{count}} required missing",
-      "missingTitle": "Required fields are missing values"
+      "filledCount": "11111 {{filled}} 11111 {{total}} 11111",
+      "missingCount": "11111 {{count}} 11111",
+      "missingTitle": "11111"
     },
     "mode": {
-      "structured": "Structured",
-      "rawJson": "Raw JSON"
+      "structured": "11111",
+      "rawJson": "11111"
     },
     "nullable": {
-      "useValue": "Use value",
-      "setNull": "Set null"
+      "useValue": "11111",
+      "setNull": "11111"
     },
     "primitiveList": {
-      "placeholder": "Enter one value per line, or comma-separated",
-      "helperText": "Use newline, comma, or semicolon separators."
+      "placeholder": "11111",
+      "helperText": "11111"
     },
     "structuredGroup": {
-      "collapseAria": "Collapse {{title}}",
-      "expandAria": "Expand {{title}}"
+      "collapseAria": "11111 {{title}} 11111",
+      "expandAria": "11111 {{title}} 11111"
     },
     "legacy": {
-      "title": "Legacy mapping no longer supported here",
-      "description": "This field uses a saved expression or secret. Replace it with a structured reference or a fixed value.",
-      "useReference": "Use reference",
-      "useFixedValue": "Use fixed value"
+      "title": "11111",
+      "description": "11111",
+      "useReference": "11111",
+      "useFixedValue": "11111"
     },
     "fixedValueDialog": {
-      "title": "Edit {{fieldName}}",
-      "description": "Use the larger editor for longer fixed-value content.",
-      "openEditor": "Open editor",
-      "apply": "Apply",
-      "cancel": "Cancel"
+      "title": "11111 {{fieldName}} 11111",
+      "description": "11111",
+      "openEditor": "11111",
+      "apply": "11111",
+      "cancel": "11111"
     }
   },
   "schemaReference": {
-    "selectAction": "Select an action to see its input/output schema",
-    "viewDetails": "View schema details",
-    "hideDetails": "Hide schema details",
-    "inputSchemaTitle": "Input Schema",
-    "outputSchemaTitle": "Output Schema",
-    "noInputParameters": "No input parameters",
-    "noOutputFields": "No output fields",
-    "noFields": "No fields",
-    "outputAvailablePrefix": "Output available at",
-    "showRawJson": "Show raw JSON Schema",
-    "hideRawJson": "Hide raw JSON Schema",
-    "exportSchema": "Export schema",
-    "exportSchemaTitle": "Download schema as JSON file",
-    "rawInputComment": "// Input Schema",
-    "rawOutputComment": "// Output Schema",
-    "copyPathTitle": "Copy {{path}}",
-    "copyAllPaths": "Copy all paths",
-    "copyAllPathsTitle": "Copy all field paths",
-    "copied": "Copied!",
-    "pathsCopied": "{{count}} paths copied",
-    "nullableSuffix": "| null",
+    "selectAction": "11111",
+    "viewDetails": "11111",
+    "hideDetails": "11111",
+    "inputSchemaTitle": "11111",
+    "outputSchemaTitle": "11111",
+    "noInputParameters": "11111",
+    "noOutputFields": "11111",
+    "noFields": "11111",
+    "outputAvailablePrefix": "11111",
+    "showRawJson": "11111",
+    "hideRawJson": "11111",
+    "exportSchema": "11111",
+    "exportSchemaTitle": "11111",
+    "rawInputComment": "11111",
+    "rawOutputComment": "11111",
+    "copyPathTitle": "11111 {{path}} 11111",
+    "copyAllPaths": "11111",
+    "copyAllPathsTitle": "11111",
+    "copied": "11111",
+    "pathsCopied": "11111 {{count}} 11111",
+    "nullableSuffix": "11111",
     "constraints": {
-      "values": "Values: {{list}}{{suffix}}",
-      "min": "Min: {{value}}",
-      "max": "Max: {{value}}",
-      "minLength": "Min length: {{value}}",
-      "maxLength": "Max length: {{value}}",
-      "pattern": "Pattern: {{value}}",
-      "format": "Format: {{value}}",
-      "examples": "Examples: {{list}}",
-      "default": "Default: {{value}}"
+      "values": "11111 {{list}} 11111 {{suffix}} 11111",
+      "min": "11111 {{value}} 11111",
+      "max": "11111 {{value}} 11111",
+      "minLength": "11111 {{value}} 11111",
+      "maxLength": "11111 {{value}} 11111",
+      "pattern": "11111 {{value}} 11111",
+      "format": "11111 {{value}} 11111",
+      "examples": "11111 {{list}} 11111",
+      "default": "11111 {{value}} 11111"
     }
   },
   "groupedAction": {
-    "groupHeading": "Group",
-    "actionLabel": "Action",
-    "actionPlaceholder": "Select a {{group}} action",
+    "groupHeading": "11111",
+    "actionLabel": "11111",
+    "actionPlaceholder": "11111 {{group}} 11111",
     "required": {
-      "title": "Action required",
-      "message": "Select a {{group}} action before configuring inputs or publishing this workflow."
+      "title": "11111",
+      "message": "11111 {{group}} 11111"
     },
     "tileKind": {
-      "core-object": "Core",
-      "transform": "Transform",
-      "app": "App",
-      "ai": "AI"
+      "core-object": "11111",
+      "transform": "11111",
+      "app": "11111",
+      "ai": "11111"
     }
   },
   "trigger": {
-    "manual": "Manual",
-    "event": "Event",
-    "eventWithType": "Event: {{eventType}}",
-    "oneTimeSchedule": "One-time schedule",
-    "recurringSchedule": "Recurring schedule"
+    "manual": "11111",
+    "event": "11111",
+    "eventWithType": "11111 {{eventType}} 11111",
+    "oneTimeSchedule": "11111",
+    "recurringSchedule": "11111"
   },
   "scheduleStatus": {
-    "unknown": "Unknown",
-    "scheduled": "Scheduled",
-    "paused": "Paused",
-    "disabled": "Disabled",
-    "completed": "Completed",
-    "failed": "Failed"
+    "unknown": "11111",
+    "scheduled": "11111",
+    "paused": "11111",
+    "disabled": "11111",
+    "completed": "11111",
+    "failed": "11111"
   },
   "graph": {
     "start": {
-      "label": "Start"
+      "label": "11111"
     },
     "states": {
-      "buildingGraph": "Building graph…"
+      "buildingGraph": "11111"
     },
     "errors": {
-      "buildFailed": "Failed to build workflow graph.",
-      "renderErrorTitle": "Graph render error",
-      "switchToList": "Switch to List view to continue editing."
+      "buildFailed": "11111",
+      "renderErrorTitle": "11111",
+      "switchToList": "11111"
     },
     "empty": {
-      "readonly": "Select a step from the panel to get started.",
-      "dropFirst": "Drop to add as the first step",
-      "dragPrompt": "Drag a step from the panel, or select one to get started."
+      "readonly": "11111",
+      "dropFirst": "11111",
+      "dragPrompt": "11111"
     },
     "mapping": {
-      "unmappedTitle": "{{count}} required fields unmapped",
-      "unmappedBadge": "{{count}} req unmapped",
-      "allMapped": "All required fields mapped"
+      "unmappedTitle": "11111 {{count}} 11111",
+      "unmappedBadge": "11111 {{count}} 11111",
+      "allMapped": "11111"
     },
     "insert": {
-      "title": "Drop a step here to insert"
+      "title": "11111"
     },
     "actions": {
-      "deleteStep": "Delete step"
+      "deleteStep": "11111"
     }
   },
   "runStudio": {
     "header": {
-      "kicker": "Run Studio",
-      "fallbackTitle": "Workflow Run",
-      "version": "Version {{version}}",
-      "updated": "Updated {{time}}",
-      "backToWorkflows": "← Back to Workflows"
+      "kicker": "11111",
+      "fallbackTitle": "11111",
+      "version": "11111 {{version}} 11111",
+      "updated": "11111 {{time}} 11111",
+      "backToWorkflows": "11111"
     },
     "actions": {
-      "replay": "Replay",
-      "cancel": "Cancel"
+      "replay": "11111",
+      "cancel": "11111"
     },
     "status": {
-      "running": "Running",
-      "succeeded": "Succeeded",
-      "retrying": "Retrying",
-      "failed": "Failed",
-      "pending": "Pending",
-      "canceled": "Canceled"
+      "running": "11111",
+      "succeeded": "11111",
+      "retrying": "11111",
+      "failed": "11111",
+      "pending": "11111",
+      "canceled": "11111"
     },
     "failure": {
-      "title": "Run failed",
-      "lastSuccessfulStep": "Last successful step: {{label}}"
+      "title": "11111",
+      "lastSuccessfulStep": "11111 {{label}} 11111"
     },
     "pipeline": {
-      "title": "Execution Pipeline",
-      "emptyBranch": "No steps in this branch.",
+      "title": "11111",
+      "emptyBranch": "11111",
       "view": {
-        "graph": "Graph",
-        "list": "List"
+        "graph": "11111",
+        "list": "11111"
       },
       "states": {
-        "loadingDefinition": "Loading workflow definition…",
-        "loadingDefinitionPlain": "Loading workflow definition...",
-        "noSteps": "No steps to display."
+        "loadingDefinition": "11111",
+        "loadingDefinitionPlain": "11111",
+        "noSteps": "11111"
       }
     },
     "details": {
-      "title": "Run Details",
+      "title": "11111",
       "fields": {
-        "runId": "Run Id",
-        "started": "Started",
-        "duration": "Duration",
-        "tenant": "Tenant",
-        "trigger": "Trigger",
-        "eventType": "Event Type",
-        "scheduleState": "Schedule State",
-        "scheduledFor": "Scheduled For",
-        "cron": "Cron",
-        "waitingFor": "Waiting For",
-        "counts": "Counts"
+        "runId": "11111",
+        "started": "11111",
+        "duration": "11111",
+        "tenant": "11111",
+        "trigger": "11111",
+        "eventType": "11111",
+        "scheduleState": "11111",
+        "scheduledFor": "11111",
+        "cron": "11111",
+        "waitingFor": "11111",
+        "counts": "11111"
       },
       "values": {
-        "resumeEvent": "Resume event",
-        "counts": "{{steps}} steps · {{logs}} logs · {{waits}} waits"
+        "resumeEvent": "11111",
+        "counts": "11111 {{steps}} 11111 {{logs}} 11111 {{waits}} 11111"
       }
     },
     "errors": {
-      "title": "Run Errors",
-      "runErrorPayload": "Run Error Payload",
-      "resumeEventPayload": "Resume Event Payload"
+      "title": "11111",
+      "runErrorPayload": "11111",
+      "resumeEventPayload": "11111"
     },
     "stepDetails": {
-      "title": "Step Details",
-      "empty": "Select a step in the pipeline to inspect inputs, outputs, and snapshots.",
+      "title": "11111",
+      "empty": "11111",
       "fields": {
-        "step": "Step"
+        "step": "11111"
       },
       "panels": {
-        "configuration": "Step Configuration",
-        "inputResolved": "Input (Resolved)",
-        "output": "Output",
-        "envelopeSnapshot": "Envelope Snapshot"
+        "configuration": "11111",
+        "inputResolved": "11111",
+        "output": "11111",
+        "envelopeSnapshot": "11111"
       }
     },
     "timeline": {
-      "title": "Execution Timeline",
-      "searchLabel": "Search timeline",
-      "searchPlaceholder": "Search step path, wait type, status",
-      "empty": "No timeline entries yet.",
-      "waitTitle": "Wait · {{waitType}}",
-      "attempt": "Attempt {{attempt}} · {{status}}",
-      "inProgress": "In progress",
-      "statusLine": "Status: {{status}}",
-      "eventSegment": " · Event: {{eventName}}",
-      "keySegment": " · Key: {{key}}",
-      "createdLine": "Created: {{createdAt}}",
-      "resolvedSegment": " · Resolved: {{resolvedAt}}",
+      "title": "11111",
+      "searchLabel": "11111",
+      "searchPlaceholder": "11111",
+      "empty": "11111",
+      "waitTitle": "11111 {{waitType}} 11111",
+      "attempt": "11111 {{attempt}} 11111 {{status}} 11111",
+      "inProgress": "11111",
+      "statusLine": "11111 {{status}} 11111",
+      "eventSegment": "11111 {{eventName}} 11111",
+      "keySegment": "11111 {{key}} 11111",
+      "createdLine": "11111 {{createdAt}} 11111",
+      "resolvedSegment": "11111 {{resolvedAt}} 11111",
       "actions": {
-        "jump": "Jump"
+        "jump": "11111"
       }
     },
     "logs": {
-      "title": "Run Logs",
-      "searchLabel": "Search logs",
-      "searchPlaceholder": "Search message or step path",
-      "empty": "No logs yet.",
+      "title": "11111",
+      "searchLabel": "11111",
+      "searchPlaceholder": "11111",
+      "empty": "11111",
       "actions": {
-        "clear": "Clear"
+        "clear": "11111"
       }
     },
     "dialog": {
       "title": {
-        "cancel": "Cancel Run",
-        "replay": "Replay Run"
+        "cancel": "11111",
+        "replay": "11111"
       },
       "heading": {
-        "cancel": "Cancel Workflow Run",
-        "replay": "Replay Workflow Run"
+        "cancel": "11111",
+        "replay": "11111"
       },
       "description": {
-        "cancel": "Canceling will stop any in-progress or waiting steps for this run.",
-        "replay": "Replaying will start a new run using the payload below."
+        "cancel": "11111",
+        "replay": "11111"
       },
       "fields": {
-        "reason": "Reason",
-        "reasonPlaceholder": "e.g. Canceling to adjust inputs",
-        "payloadJson": "Payload (JSON)"
+        "reason": "11111",
+        "reasonPlaceholder": "11111",
+        "payloadJson": "11111"
       },
       "actions": {
-        "close": "Close",
-        "confirmCancel": "Confirm Cancel",
-        "startReplay": "Start Replay",
-        "working": "Working..."
+        "close": "11111",
+        "confirmCancel": "11111",
+        "startReplay": "11111",
+        "working": "11111"
       },
       "errors": {
-        "invalidJson": "Invalid JSON"
+        "invalidJson": "11111"
       }
     },
     "stepLabels": {
-      "action": "Action: {{actionId}}",
-      "ifCondition": "If Condition",
-      "forEach": "For Each",
-      "tryCatch": "Try/Catch",
-      "waitForEvent": "Wait for Event",
-      "waitForTime": "Wait for Time",
-      "humanTask": "Human Task",
-      "setState": "Set State",
-      "assign": "Assign"
+      "action": "11111 {{actionId}} 11111",
+      "ifCondition": "11111",
+      "forEach": "11111",
+      "tryCatch": "11111",
+      "waitForEvent": "11111",
+      "waitForTime": "11111",
+      "humanTask": "11111",
+      "setState": "11111",
+      "assign": "11111"
     },
     "stepCard": {
-      "lastStatus": "Last status: {{status}} ({{timestamp}})",
-      "attempt": "Attempt {{attempt}}",
-      "forEachSummary": "Item: {{itemVar}} | Concurrency: {{concurrency}}",
+      "lastStatus": "11111 {{status}} 11111 {{timestamp}} 11111",
+      "attempt": "11111 {{attempt}} 11111",
+      "forEachSummary": "11111 {{itemVar}} 11111 {{concurrency}} 11111",
       "badges": {
-        "if": "If",
-        "loop": "Loop",
-        "try": "Try",
-        "block": "Block"
+        "if": "11111",
+        "loop": "11111",
+        "try": "11111",
+        "block": "11111"
       },
       "sections": {
-        "then": "THEN",
-        "else": "ELSE",
-        "try": "TRY",
-        "catch": "CATCH",
-        "body": "BODY"
+        "then": "11111",
+        "else": "11111",
+        "try": "11111",
+        "catch": "11111",
+        "body": "11111"
       }
     },
     "jsonPanel": {
-      "serializeFailed": "Unable to serialize value."
+      "serializeFailed": "11111"
     },
     "toasts": {
-      "reasonRequired": "Reason is required (min 3 characters).",
-      "canceled": "Run canceled.",
-      "replayStarted": "Run replay started.",
-      "actionFailed": "Failed to perform action."
+      "reasonRequired": "11111",
+      "canceled": "11111",
+      "replayStarted": "11111",
+      "actionFailed": "11111"
     }
   },
   "schedules": {
     "common": {
-      "emptyValue": "—",
-      "entityName": "schedule"
+      "emptyValue": "11111",
+      "entityName": "11111"
     },
     "heading": {
-      "reflectionLabel": "Workflow Schedules",
-      "title": "Schedules",
-      "description": "Manage reusable workflow schedules and their saved payloads."
+      "reflectionLabel": "11111",
+      "title": "11111",
+      "description": "11111"
     },
     "actions": {
-      "new": "New Schedule",
-      "edit": "Edit",
-      "pause": "Pause",
-      "resume": "Resume",
-      "delete": "Delete",
-      "cancel": "Cancel",
-      "saving": "Saving…",
-      "saveChanges": "Save Changes",
-      "create": "Create Schedule",
-      "rowMenu": "Schedule actions for {{name}}"
+      "new": "11111",
+      "edit": "11111",
+      "pause": "11111",
+      "resume": "11111",
+      "delete": "11111",
+      "cancel": "11111",
+      "saving": "11111",
+      "saveChanges": "11111",
+      "create": "11111",
+      "rowMenu": "11111 {{name}} 11111"
     },
     "filters": {
-      "allWorkflows": "All workflows",
-      "allStatuses": "All statuses",
-      "allTriggers": "All triggers",
-      "searchPlaceholder": "Search schedules..."
+      "allWorkflows": "11111",
+      "allStatuses": "11111",
+      "allTriggers": "11111",
+      "searchPlaceholder": "11111"
     },
     "status": {
-      "enabled": "Enabled",
-      "paused": "Paused",
-      "failed": "Failed",
-      "completed": "Completed",
-      "disabled": "Disabled"
+      "enabled": "11111",
+      "paused": "11111",
+      "failed": "11111",
+      "completed": "11111",
+      "disabled": "11111"
     },
     "triggerType": {
-      "schedule": "One-time",
-      "recurring": "Recurring"
+      "schedule": "11111",
+      "recurring": "11111"
     },
     "dayType": {
-      "any": "Any day",
-      "business": "Business days",
-      "nonBusiness": "Non-business days"
+      "any": "11111",
+      "business": "11111",
+      "nonBusiness": "11111"
     },
     "table": {
-      "workflowVersion": "Workflow v{{version}}",
+      "workflowVersion": "11111 {{version}} 11111",
       "columns": {
-        "schedule": "Schedule",
-        "workflow": "Workflow",
-        "triggerType": "Trigger Type",
-        "nextFire": "Next Fire / Run At",
-        "lastFire": "Last Fire",
-        "status": "Status",
-        "lastError": "Last Error",
-        "actions": "Actions"
+        "schedule": "11111",
+        "workflow": "11111",
+        "triggerType": "11111",
+        "nextFire": "11111",
+        "lastFire": "11111",
+        "status": "11111",
+        "lastError": "11111",
+        "actions": "11111"
       }
     },
     "states": {
-      "loadingReflection": "Workflow Schedules Loading",
-      "loading": "Loading schedules…",
-      "never": "Never",
-      "calendarMisconfigured": "Calendar misconfigured",
-      "noEligibleUpcomingRun": "No eligible upcoming run",
-      "unknownWorkflow": "Unknown workflow",
-      "empty": "No schedules found",
-      "emptyDescription": "Create a one-time or recurring schedule to run a published workflow with saved input data."
+      "loadingReflection": "11111",
+      "loading": "11111",
+      "never": "11111",
+      "calendarMisconfigured": "11111",
+      "noEligibleUpcomingRun": "11111",
+      "unknownWorkflow": "11111",
+      "empty": "11111",
+      "emptyDescription": "11111"
     },
     "errors": {
-      "loadFailed": "Failed to load schedules.",
-      "updateFailed": "Failed to update schedule.",
-      "deleteFailed": "Failed to delete schedule."
+      "loadFailed": "11111",
+      "updateFailed": "11111",
+      "deleteFailed": "11111"
     },
     "timezone": {
-      "browseAll": "Browse all time zones...",
-      "custom": "Custom...",
-      "browseHelp": "Choose from the full supported IANA timezone list.",
-      "customLabel": "Custom timezone",
-      "customPlaceholder": "Etc/GMT+5"
+      "browseAll": "11111",
+      "custom": "11111",
+      "browseHelp": "11111",
+      "customLabel": "11111",
+      "customPlaceholder": "11111"
     },
     "dialog": {
       "title": {
-        "edit": "Edit Schedule",
-        "create": "Create Schedule"
+        "edit": "11111",
+        "create": "11111"
       },
-      "description": "Configure timing and static payload data for a workflow schedule.",
+      "description": "11111",
       "states": {
-        "loading": "Loading schedule details…"
+        "loading": "11111"
       },
       "fields": {
-        "workflow": "Workflow",
-        "workflowPlaceholder": "Choose a workflow",
-        "name": "Schedule name",
-        "namePlaceholder": "Month-end AP sync",
-        "triggerType": "Trigger type",
-        "enabled": "Enabled",
-        "enabledHelp": "Schedule will run when valid.",
-        "disabledHelp": "Schedule will stay paused until resumed.",
-        "runAt": "Run at",
-        "runOn": "Run on",
-        "businessDaysOnly": "Business days only",
-        "nonBusinessDaysOnly": "Non-business days only",
-        "calendarSource": "Calendar source",
-        "businessHoursSchedule": "Business-hours schedule",
-        "businessHoursSchedulePlaceholder": "Choose a business-hours schedule",
-        "frequency": "Frequency",
-        "time": "Time",
-        "dayOfMonth": "Day of month",
-        "weekdays": "Weekdays",
-        "cron": "Cron",
-        "timezone": "Timezone"
+        "workflow": "11111",
+        "workflowPlaceholder": "11111",
+        "name": "11111",
+        "namePlaceholder": "11111",
+        "triggerType": "11111",
+        "enabled": "11111",
+        "enabledHelp": "11111",
+        "disabledHelp": "11111",
+        "runAt": "11111",
+        "runOn": "11111",
+        "businessDaysOnly": "11111",
+        "nonBusinessDaysOnly": "11111",
+        "calendarSource": "11111",
+        "businessHoursSchedule": "11111",
+        "businessHoursSchedulePlaceholder": "11111",
+        "frequency": "11111",
+        "time": "11111",
+        "dayOfMonth": "11111",
+        "weekdays": "11111",
+        "cron": "11111",
+        "timezone": "11111"
       },
       "workflow": {
         "badges": {
-          "unpublished": "Unpublished",
-          "inferredSchema": "Inferred schema"
+          "unpublished": "11111",
+          "inferredSchema": "11111"
         }
       },
       "eligibility": {
-        "chooseWorkflow": "Choose a workflow before saving.",
-        "unpublished": "Schedules can only be created for workflows with a published version.",
-        "pinnedOnly": "Schedules are only supported for workflows with a pinned payload schema.",
-        "noPinnedSchema": "The selected workflow does not expose a pinned payload schema.",
-        "unavailableSchemaRef": "The selected workflow uses an unavailable payload schema ref: {{schemaRef}}."
+        "chooseWorkflow": "11111",
+        "unpublished": "11111",
+        "pinnedOnly": "11111",
+        "noPinnedSchema": "11111",
+        "unavailableSchemaRef": "11111 {{schemaRef}} 11111"
       },
       "calendarSource": {
-        "tenantDefault": "Tenant default business hours",
-        "tenantDefaultMissing": "Tenant default business hours (not configured)",
-        "tenantDefaultHint": "Set a tenant default business-hours schedule first, or choose a specific schedule.",
-        "specific": "Specific business-hours schedule",
-        "specificHint": "Create a business-hours schedule first.",
-        "tenantDefaultMissingDescription": "No tenant default business-hours schedule is configured yet. Choose a specific business-hours schedule or set a tenant default first.",
-        "holidaysNote": "Holidays are always treated as non-business days."
+        "tenantDefault": "11111",
+        "tenantDefaultMissing": "11111",
+        "tenantDefaultHint": "11111",
+        "specific": "11111",
+        "specificHint": "11111",
+        "tenantDefaultMissingDescription": "11111",
+        "holidaysNote": "11111"
       },
       "businessHours": {
-        "defaultSuffix": " (Default)",
-        "noneConfigured": "No business-hours schedules are configured yet.",
-        "usingTenantDefault": "Uses the tenant default business-hours schedule.",
-        "noTenantDefault": "No tenant default business-hours schedule is configured yet."
+        "defaultSuffix": "11111",
+        "noneConfigured": "11111",
+        "usingTenantDefault": "11111",
+        "noTenantDefault": "11111"
       },
       "recurring": {
-        "title": "Recurring schedule",
-        "description": "Choose a common recurrence pattern. Advanced cron is available for custom schedules.",
-        "builderMode": "Schedule Builder",
-        "advancedMode": "Advanced Cron",
-        "dailyHelper": "Runs every day at the selected time.",
-        "weeklyHelper": "Choose one or more weekdays below.",
-        "customCronWarning": "This schedule uses a custom cron expression. Keep editing it here, or switch back to the builder to replace it with a common pattern.",
-        "cronPreview": "Cron: {{cron}}"
+        "title": "11111",
+        "description": "11111",
+        "builderMode": "11111",
+        "advancedMode": "11111",
+        "dailyHelper": "11111",
+        "weeklyHelper": "11111",
+        "customCronWarning": "11111",
+        "cronPreview": "11111 {{cron}} 11111"
       },
       "payload": {
-        "title": "Payload",
-        "description": "Author static input that will be passed into each scheduled run.",
-        "rootLabel": "Payload",
-        "rootKey": "payload",
+        "title": "11111",
+        "description": "11111",
+        "rootLabel": "11111",
+        "rootKey": "11111",
         "mode": {
-          "form": "Form Mode",
-          "json": "JSON Mode"
+          "form": "11111",
+          "json": "11111"
         },
         "actions": {
-          "addItem": "Add item",
-          "removeItem": "Remove"
+          "addItem": "11111",
+          "removeItem": "11111"
         },
         "states": {
-          "noItems": "No items yet."
+          "noItems": "11111"
         },
         "boolean": {
-          "true": "True",
-          "false": "False"
+          "true": "11111",
+          "false": "11111"
         },
         "noSchema": {
-          "title": "No payload schema is available for this workflow yet.",
-          "description": "Form fields will appear here once this workflow publishes a pinned payload schema."
+          "title": "11111",
+          "description": "11111"
         }
       },
       "validation": {
-        "title": "Payload validation errors",
-        "more": "+{{count}} more…",
-        "invalidValue": "Invalid value",
-        "valueMustBeAllowed": "Value must be one of the allowed options.",
-        "expectedObject": "Expected object.",
-        "requiredFieldMissing": "Required field missing.",
-        "unknownProperty": "Unknown property.",
-        "expectedArray": "Expected array.",
-        "expectedString": "Expected string.",
-        "expectedNumber": "Expected number.",
-        "expectedBoolean": "Expected boolean.",
-        "payloadMustBeObject": "Schedule payload must be a JSON object.",
-        "invalidJson": "Invalid JSON"
+        "title": "11111",
+        "more": "11111 {{count}} 11111",
+        "invalidValue": "11111",
+        "valueMustBeAllowed": "11111",
+        "expectedObject": "11111",
+        "requiredFieldMissing": "11111",
+        "unknownProperty": "11111",
+        "expectedArray": "11111",
+        "expectedString": "11111",
+        "expectedNumber": "11111",
+        "expectedBoolean": "11111",
+        "payloadMustBeObject": "11111",
+        "invalidJson": "11111"
       },
       "errors": {
-        "loadScheduleFailed": "Failed to load schedule.",
-        "saveFailed": "Failed to save schedule."
+        "loadScheduleFailed": "11111",
+        "saveFailed": "11111"
       }
     },
     "recurrence": {
-      "andWord": "and",
+      "andWord": "11111",
       "frequency": {
-        "daily": "Daily",
-        "weekly": "Weekly",
-        "monthly": "Monthly"
+        "daily": "11111",
+        "weekly": "11111",
+        "monthly": "11111"
       },
       "validation": {
-        "validTime": "Choose a valid time.",
-        "weekdayRequired": "Choose at least one weekday.",
-        "dayOfMonthRange": "Choose a day of month between 1 and 31."
+        "validTime": "11111",
+        "weekdayRequired": "11111",
+        "dayOfMonthRange": "11111"
       },
       "summary": {
-        "daily": "Runs every day at {{timeLabel}} {{timezoneLabel}}",
-        "weekly": "Runs every {{weekdayLabels}} at {{timeLabel}} {{timezoneLabel}}",
-        "monthly": "Runs on day {{dayOfMonth}} of each month at {{timeLabel}} {{timezoneLabel}}"
+        "daily": "11111 {{timeLabel}} 11111 {{timezoneLabel}} 11111",
+        "weekly": "11111 {{weekdayLabels}} 11111 {{timeLabel}} 11111 {{timezoneLabel}} 11111",
+        "monthly": "11111 {{dayOfMonth}} 11111 {{timeLabel}} 11111 {{timezoneLabel}} 11111"
       },
       "weekdays": {
         "0": {
-          "short": "Sun",
-          "long": "Sunday"
+          "short": "11111",
+          "long": "11111"
         },
         "1": {
-          "short": "Mon",
-          "long": "Monday"
+          "short": "11111",
+          "long": "11111"
         },
         "2": {
-          "short": "Tue",
-          "long": "Tuesday"
+          "short": "11111",
+          "long": "11111"
         },
         "3": {
-          "short": "Wed",
-          "long": "Wednesday"
+          "short": "11111",
+          "long": "11111"
         },
         "4": {
-          "short": "Thu",
-          "long": "Thursday"
+          "short": "11111",
+          "long": "11111"
         },
         "5": {
-          "short": "Fri",
-          "long": "Friday"
+          "short": "11111",
+          "long": "11111"
         },
         "6": {
-          "short": "Sat",
-          "long": "Saturday"
+          "short": "11111",
+          "long": "11111"
         }
       }
     }
   },
   "enums": {
     "workflowRunStatus": {
-      "RUNNING": "Running",
-      "WAITING": "Waiting",
-      "SUCCEEDED": "Succeeded",
-      "FAILED": "Failed",
-      "CANCELED": "Canceled"
+      "RUNNING": "11111",
+      "WAITING": "11111",
+      "SUCCEEDED": "11111",
+      "FAILED": "11111",
+      "CANCELED": "11111"
     },
     "workflowRunSort": {
-      "started_at:desc": "Newest first",
-      "started_at:asc": "Oldest first",
-      "updated_at:desc": "Recently updated",
-      "updated_at:asc": "Least recently updated"
+      "started_at:desc": "11111",
+      "started_at:asc": "11111",
+      "updated_at:desc": "11111",
+      "updated_at:asc": "11111"
     },
     "workflowEventStatus": {
-      "matched": "Matched",
-      "unmatched": "Unmatched",
-      "error": "Error"
+      "matched": "11111",
+      "unmatched": "11111",
+      "error": "11111"
     },
     "workflowStepStatus": {
-      "STARTED": "Started",
-      "SUCCEEDED": "Succeeded",
-      "FAILED": "Failed",
-      "RETRY_SCHEDULED": "Retry scheduled",
-      "CANCELED": "Canceled"
+      "STARTED": "11111",
+      "SUCCEEDED": "11111",
+      "FAILED": "11111",
+      "RETRY_SCHEDULED": "11111",
+      "CANCELED": "11111"
     },
     "workflowLogLevel": {
-      "DEBUG": "Debug",
-      "INFO": "Info",
-      "WARN": "Warn",
-      "ERROR": "Error"
+      "DEBUG": "11111",
+      "INFO": "11111",
+      "WARN": "11111",
+      "ERROR": "11111"
     },
     "workflowAiSchemaType": {
-      "string": "String",
-      "number": "Number",
-      "integer": "Integer",
-      "boolean": "Boolean",
-      "object": "Object",
-      "array": "Array"
+      "string": "11111",
+      "number": "11111",
+      "integer": "11111",
+      "boolean": "11111",
+      "object": "11111",
+      "array": "11111"
     },
     "workflowInputSourceMode": {
-      "reference": "Reference",
-      "fixed": "Fixed value"
+      "reference": "11111",
+      "fixed": "11111"
     },
     "workflowReferenceSection": {
-      "payload": "Payload",
-      "vars": "Step results",
-      "meta": "Workflow details",
-      "error": "Error",
-      "forEach": "Loop context"
+      "payload": "11111",
+      "vars": "11111",
+      "meta": "11111",
+      "error": "11111",
+      "forEach": "11111"
     },
     "workflowTriggerMode": {
-      "manual": "No trigger",
-      "event": "Event"
+      "manual": "11111",
+      "event": "11111"
     },
     "workflowCanvasView": {
-      "list": "List",
-      "graph": "Graph"
+      "list": "11111",
+      "graph": "11111"
     },
     "workflowOnError": {
-      "continue": "Continue",
-      "fail": "Fail"
+      "continue": "11111",
+      "fail": "11111"
     },
     "workflowWaitMode": {
-      "duration": "Duration",
-      "until": "Until"
+      "duration": "11111",
+      "until": "11111"
     },
     "workflowWaitTiming": {
-      "fixed": "Specific date & time",
-      "expression": "Advanced expression"
+      "fixed": "11111",
+      "expression": "11111"
     }
   }
 }

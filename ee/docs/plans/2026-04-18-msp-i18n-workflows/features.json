@@ -242,7 +242,7 @@
   {
     "id": "F041",
     "description": "Run scripts/generate-pseudo-locales.cjs to regenerate server/public/locales/xx/msp/workflows.json and yy/msp/workflows.json.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-F", "Acceptance criteria"]
   },
   {

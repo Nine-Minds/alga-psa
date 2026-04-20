@@ -724,3 +724,8 @@ Batched six related surfaces in one commit since each has relatively few chrome 
   node scripts/validate-translations.cjs
   ```
 - Results: ESLint 0 errors (remaining warnings are pre-existing `no-unused-vars`, `exhaustive-deps`, and unused-prop backlog); translation validation passed with 0 missing/extra keys.
+
+### F041 complete — pseudo-locales regenerated
+- Ran `node scripts/generate-pseudo-locales.cjs`: `Generated 62 pseudo-locale files from 31 English sources.`
+- `server/public/locales/xx/msp/workflows.json` (underscored pseudo) and `server/public/locales/yy/msp/workflows.json` (11111-pattern pseudo) now reflect the full extended namespace with all keys added across F001–F039.
+- Validation: `node scripts/validate-translations.cjs` passes with 0 missing / 0 extra across 8 locales.
