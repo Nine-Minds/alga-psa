@@ -87,6 +87,7 @@
     "bulkDeleteSuccess": "{{count}} {{clientsLabel}} {{verb}} se eliminó correctamente.",
     "bulkInactiveFailed": "{{count}} {{clientsLabel}} no se pudo marcar como inactivo.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} y {{contactCount}} {{contactsLabel}} se han marcado como inactivos correctamente.",
+    "singleInactiveSuccess": "{{name}} se ha marcado como inactivo correctamente.",
     "bulkInactiveSuccess": "{{count}} {{clientsLabel}} {{verb}} se ha marcado como inactivo correctamente.",
     "bulkInactiveShortSuccess": "{{count}} {{clientsLabel}} {{verb}} se ha marcado como inactivo.",
     "bulkInactiveWithContactsShortSuccess": "{{clientCount}} {{clientsLabel}} y {{contactCount}} {{contactsLabel}} se han marcado como inactivos.",

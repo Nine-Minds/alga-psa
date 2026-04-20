@@ -87,6 +87,7 @@
     "bulkDeleteSuccess": "{{count}} {{clientsLabel}} {{verb}} is succesvol verwijderd.",
     "bulkInactiveFailed": "{{count}} {{clientsLabel}} kan niet als inactief worden gemarkeerd.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} en {{contactCount}} {{contactsLabel}} zijn succesvol als inactief gemarkeerd.",
+    "singleInactiveSuccess": "{{name}} is succesvol als inactief gemarkeerd.",
     "bulkInactiveSuccess": "{{count}} {{clientsLabel}} {{verb}} is succesvol gemarkeerd als inactief.",
     "bulkInactiveShortSuccess": "{{count}} {{clientsLabel}} {{verb}} is gemarkeerd als inactief.",
     "bulkInactiveWithContactsShortSuccess": "{{clientCount}} {{clientsLabel}} en {{contactCount}} {{contactsLabel}} zijn gemarkeerd als inactief.",

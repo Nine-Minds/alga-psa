@@ -87,6 +87,9 @@
     "bulkDeleteSuccess": "55555 {{count}} 55555 {{clientsLabel}} 55555 {{verb}} 55555",
     "bulkInactiveFailed": "55555 {{count}} 55555 {{clientsLabel}} 55555",
     "bulkInactiveWithContactsSuccess": "55555 {{clientCount}} 55555 {{clientsLabel}} 55555 {{contactCount}} 55555 {{contactsLabel}} 55555",
+    "singleInactiveSuccess": "55555 {{name}} 55555",
+    "singleInactiveWithContactsSuccess_one": "55555 {{name}} 55555 {{count}} 55555",
+    "singleInactiveWithContactsSuccess_other": "55555 {{name}} 55555 {{count}} 55555",
     "bulkInactiveSuccess": "55555 {{count}} 55555 {{clientsLabel}} 55555 {{verb}} 55555",
     "bulkInactiveShortSuccess": "55555 {{count}} 55555 {{clientsLabel}} 55555 {{verb}} 55555",
     "bulkInactiveWithContactsShortSuccess": "55555 {{clientCount}} 55555 {{clientsLabel}} 55555 {{contactCount}} 55555 {{contactsLabel}} 55555",
@@ -129,9 +132,7 @@
       "bucketUsageRecord": "55555",
       "bucketUsageRecords": "55555"
     },
-    "deleteSelectedPrompt": "55555 {{count}} 55555 {{clientsLabel}} 55555",
-    "singleInactiveWithContactsSuccess_one": "{{name}}55555{{count}}55555",
-    "singleInactiveWithContactsSuccess_other": "{{name}}55555{{count}}55555"
+    "deleteSelectedPrompt": "55555 {{count}} 55555 {{clientsLabel}} 55555"
   },
   "clientDetails": {
     "title": "55555",
@@ -182,6 +183,11 @@
     "markInactiveError": "55555",
     "reactivateError": "55555",
     "entraSyncError": "55555",
+    "entraSyncStarted": "55555 {{runId}} 55555",
+    "inboundDomainAdded": "55555",
+    "inboundDomainAddFailed": "55555",
+    "inboundDomainRemoved": "55555",
+    "inboundDomainRemoveFailed": "55555",
     "deleteError": "55555",
     "deactivateWithContactsSuccess": "55555 {{count}} 55555",
     "reactivateWithContactsSuccess": "55555 {{count}} 55555",
@@ -210,12 +216,7 @@
     "status": {
       "label": "55555",
       "helper": "55555"
-    },
-    "entraSyncStarted": "55555{{runId}}",
-    "inboundDomainAdded": "55555",
-    "inboundDomainAddFailed": "55555",
-    "inboundDomainRemoved": "55555",
-    "inboundDomainRemoveFailed": "55555"
+    }
   },
   "quickAddClient": {
     "title": "55555",

@@ -87,6 +87,7 @@
     "bulkDeleteSuccess": "{{count}} {{clientsLabel}} {{verb}} è stato eliminato correttamente.",
     "bulkInactiveFailed": "{{count}} {{clientsLabel}} non può essere contrassegnato come inattivo.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} e {{contactCount}} {{contactsLabel}} sono stati contrassegnati come inattivi con successo.",
+    "singleInactiveSuccess": "{{name}} è stato contrassegnato come inattivo con successo.",
     "bulkInactiveSuccess": "{{count}} {{clientsLabel}} {{verb}} è stato contrassegnato come inattivo correttamente.",
     "bulkInactiveShortSuccess": "{{count}} {{clientsLabel}} {{verb}} è stato contrassegnato come inattivo.",
     "bulkInactiveWithContactsShortSuccess": "{{clientCount}} {{clientsLabel}} e {{contactCount}} {{contactsLabel}} sono stati contrassegnati come inattivi.",

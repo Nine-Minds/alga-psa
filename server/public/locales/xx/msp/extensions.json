@@ -107,6 +107,6 @@
     "extensionRemoved": "11111",
     "reprovisionFailed": "11111",
     "manifestReadFailed": "11111",
-    "invalidBundleExtension": "11111{{filename}}"
+    "invalidBundleExtension": "11111 {{filename}} 11111"
   }
 }
