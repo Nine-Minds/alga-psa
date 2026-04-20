@@ -133,7 +133,23 @@
       "convertToContract": "Converteren naar contract",
       "convertToInvoice": "Converteren naar factuur",
       "createNewRevision": "Nieuwe revisie maken",
-      "sendQuote": "Offerte verzenden"
+      "sendQuote": "Offerte verzenden",
+      "saving": "Saving…",
+      "saveTemplate": "Save template",
+      "saveQuote": "Save quote",
+      "requestApproval": "Request approval",
+      "sendToClient": "Send to client",
+      "approve": "Approve",
+      "revise": "Revise",
+      "requestChanges": "Request changes",
+      "resend": "Resend",
+      "sendReminder": "Send reminder",
+      "pdf": "PDF",
+      "duplicate": "Duplicate",
+      "back": "Back",
+      "moreActions": "More actions",
+      "cancel": "Cancel",
+      "previewPdf": "Preview PDF"
     },
     "headings": {
       "editQuote": "Offerte bewerken",
@@ -230,6 +246,99 @@
     "validation": {
       "clientRequired": "Klant is vereist",
       "titleRequired": "Titel is vereist, tenzij u op basis van een sjabloon maakt"
+    },
+    "header": {
+      "editTemplate": "Edit Quote Template",
+      "newTemplate": "New Quote Template",
+      "editQuote": "Edit Quote",
+      "newQuote": "New Quote",
+      "version": "v{{version}}",
+      "quoteTotalLabel": "Quote total"
+    },
+    "breadcrumb": {
+      "billing": "Billing",
+      "quoteTemplates": "Quote Templates",
+      "quotes": "Quotes",
+      "newQuote": "New quote"
+    },
+    "subtitle": {
+      "template": "Template · {{description}}",
+      "forClient": "For {{clientName}}",
+      "expires": "Expires {{date}}"
+    },
+    "banners": {
+      "acceptedTitle": "Quote Accepted",
+      "acceptedBy": "Accepted by: {{name}}",
+      "acceptedOn": "Accepted on: {{date}}",
+      "rejectedTitle": "Quote Rejected",
+      "rejectedOn": "Rejected on: {{date}}",
+      "rejectedReason": "Reason: {{reason}}",
+      "convertedTitle": "Quote Converted",
+      "convertedDescription": "This quote has been converted to a contract and/or invoice."
+    },
+    "noticeTitle": "Quote",
+    "essentials": {
+      "title": "Essentials",
+      "subtitle": "Shown to the client on the quote document.",
+      "titleField": "Title",
+      "descriptionField": "Description / Scope",
+      "descriptionHelp": "A short paragraph that appears just under the title on the PDF.",
+      "client": "Client",
+      "clientPlaceholder": "Select client",
+      "contact": "Contact",
+      "contactPlaceholder": "Select contact",
+      "currency": "Currency",
+      "currencyPlaceholder": "Select currency",
+      "quoteDate": "Quote date",
+      "validUntil": "Valid until",
+      "validUntilHelp": "Quote auto-expires on this date."
+    },
+    "lineItems": {
+      "title": "Line items",
+      "subtitleEmpty": "No items yet.",
+      "subtitleCount": "{{count}} items · {{mix}}",
+      "mixBoth": "recurring and one-time",
+      "mixRecurring": "recurring",
+      "mixOneTime": "one-time",
+      "addLocation": "+ Add location",
+      "fromTemplate": "+ From template"
+    },
+    "clientFacing": {
+      "title": "Client-facing text",
+      "subtitle": "Appears on the PDF, below the totals.",
+      "notes": "Notes to client (Optional)",
+      "terms": "Terms & conditions (Optional)"
+    },
+    "moreDetails": {
+      "title": "More details",
+      "subtitle": "PO number, opportunity, PDF layout",
+      "poNumber": "PO number",
+      "opportunity": "Opportunity",
+      "opportunityPlaceholder": "Opportunity ID (optional)",
+      "pdfLayout": "PDF layout",
+      "pdfLayoutPlaceholder": "Use default layout",
+      "pdfLayoutHelp": "Choose which layout the client will see. Leave default to use tenant default."
+    },
+    "footer": {
+      "savedAgo": "Changes saved · {{ago}}",
+      "saving": "Saving…",
+      "unsaved": "Unsaved changes"
+    },
+    "sidebar": {
+      "quoteTotal": "Quote total",
+      "recurringPerMonth": "{{amount}} recurring / month",
+      "subtotal": "Subtotal",
+      "discounts": "Discounts",
+      "tax": "Tax",
+      "statusLabel": "Status",
+      "approvalLabel": "Approval",
+      "approvalMessage": "Quotes need sales lead approval before sending.",
+      "documentLayoutLabel": "Document layout",
+      "defaultLayout": "Tenant default",
+      "standardLayout": "Standard",
+      "customLayout": "Custom",
+      "tenantDefault": "Tenant default",
+      "changeLayout": "Change"
     }
   },
   "quoteDetail": {

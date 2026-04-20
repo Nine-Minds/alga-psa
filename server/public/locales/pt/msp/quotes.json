@@ -596,10 +596,7 @@
     },
     "pipeline": {
       "render": "Render",
-      "renderFailed": "Render failed.",
-      "shape": "Shape",
-      "shapeFailed": "Shape failed.",
-      "shapingFailed": "Shaping failed."
+      "shape": "Shape"
     },
     "tabs": {
       "code": "Code",
@@ -607,10 +604,6 @@
       "preview": "Preview",
       "transforms": "Transforms",
       "visual": "Visual"
-    },
-    "pipeline": {
-      "render": "Render",
-      "shape": "Shape"
     }
   },
   "templatesPage": {

@@ -133,7 +133,23 @@
       "convertToContract": "55555",
       "convertToInvoice": "55555",
       "createNewRevision": "55555",
-      "sendQuote": "55555"
+      "sendQuote": "55555",
+      "saving": "55555",
+      "saveTemplate": "55555",
+      "saveQuote": "55555",
+      "requestApproval": "55555",
+      "sendToClient": "55555",
+      "approve": "55555",
+      "revise": "55555",
+      "requestChanges": "55555",
+      "resend": "55555",
+      "sendReminder": "55555",
+      "pdf": "55555",
+      "duplicate": "55555",
+      "back": "55555",
+      "moreActions": "55555",
+      "cancel": "55555",
+      "previewPdf": "55555"
     },
     "headings": {
       "editQuote": "55555",
@@ -230,6 +246,99 @@
     "validation": {
       "clientRequired": "55555",
       "titleRequired": "55555"
+    },
+    "header": {
+      "editTemplate": "55555",
+      "newTemplate": "55555",
+      "editQuote": "55555",
+      "newQuote": "55555",
+      "version": "55555 {{version}} 55555",
+      "quoteTotalLabel": "55555"
+    },
+    "breadcrumb": {
+      "billing": "55555",
+      "quoteTemplates": "55555",
+      "quotes": "55555",
+      "newQuote": "55555"
+    },
+    "subtitle": {
+      "template": "55555 {{description}} 55555",
+      "forClient": "55555 {{clientName}} 55555",
+      "expires": "55555 {{date}} 55555"
+    },
+    "banners": {
+      "acceptedTitle": "55555",
+      "acceptedBy": "55555 {{name}} 55555",
+      "acceptedOn": "55555 {{date}} 55555",
+      "rejectedTitle": "55555",
+      "rejectedOn": "55555 {{date}} 55555",
+      "rejectedReason": "55555 {{reason}} 55555",
+      "convertedTitle": "55555",
+      "convertedDescription": "55555"
+    },
+    "noticeTitle": "55555",
+    "essentials": {
+      "title": "55555",
+      "subtitle": "55555",
+      "titleField": "55555",
+      "descriptionField": "55555",
+      "descriptionHelp": "55555",
+      "client": "55555",
+      "clientPlaceholder": "55555",
+      "contact": "55555",
+      "contactPlaceholder": "55555",
+      "currency": "55555",
+      "currencyPlaceholder": "55555",
+      "quoteDate": "55555",
+      "validUntil": "55555",
+      "validUntilHelp": "55555"
+    },
+    "lineItems": {
+      "title": "55555",
+      "subtitleEmpty": "55555",
+      "subtitleCount": "55555 {{count}} 55555 {{mix}} 55555",
+      "mixBoth": "55555",
+      "mixRecurring": "55555",
+      "mixOneTime": "55555",
+      "addLocation": "55555",
+      "fromTemplate": "55555"
+    },
+    "clientFacing": {
+      "title": "55555",
+      "subtitle": "55555",
+      "notes": "55555",
+      "terms": "55555"
+    },
+    "moreDetails": {
+      "title": "55555",
+      "subtitle": "55555",
+      "poNumber": "55555",
+      "opportunity": "55555",
+      "opportunityPlaceholder": "55555",
+      "pdfLayout": "55555",
+      "pdfLayoutPlaceholder": "55555",
+      "pdfLayoutHelp": "55555"
+    },
+    "footer": {
+      "savedAgo": "55555 {{ago}} 55555",
+      "saving": "55555",
+      "unsaved": "55555"
+    },
+    "sidebar": {
+      "quoteTotal": "55555",
+      "recurringPerMonth": "55555 {{amount}} 55555",
+      "subtotal": "55555",
+      "discounts": "55555",
+      "tax": "55555",
+      "statusLabel": "55555",
+      "approvalLabel": "55555",
+      "approvalMessage": "55555",
+      "documentLayoutLabel": "55555",
+      "defaultLayout": "55555",
+      "standardLayout": "55555",
+      "customLayout": "55555",
+      "tenantDefault": "55555",
+      "changeLayout": "55555"
     }
   },
   "quoteDetail": {
@@ -323,6 +432,11 @@
     },
     "table": {
       "description": "55555"
+    },
+    "locations": {
+      "groupHeading": "55555",
+      "unassigned": "55555",
+      "subtotal": "55555"
     }
   },
   "quoteLineItems": {
@@ -397,7 +511,18 @@
       "unavailable": "55555",
       "unavailableTooltip": "55555 {{costCurrency}} 55555 {{quoteCurrency}} 55555"
     },
-    "empty": "55555"
+    "empty": "55555",
+    "searchPlaceholder": "55555",
+    "locations": {
+      "groupHeading": "55555 {{index}} 55555",
+      "pickerPlaceholder": "55555",
+      "unassigned": "55555",
+      "removeGroup": "55555",
+      "subtotal": "55555",
+      "addLocationButton": "55555",
+      "needMoreLocations": "55555",
+      "emptyGroup": "55555"
+    }
   },
   "quoteRecipients": {
     "trigger": {

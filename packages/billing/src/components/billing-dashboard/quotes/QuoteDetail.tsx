@@ -2,14 +2,13 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
@@ -58,6 +57,7 @@ function renderQuoteDetailRow(
   quote: IQuote,
   item: NonNullable<IQuote['quote_items']>[number],
   formatCurrencyFn: (amount: number, currencyCode: string) => string,
+  t: (key: string, options?: Record<string, unknown>) => string,
 ) {
   const showClientSelection = quote.status === 'accepted' && item.is_optional;
   const clientSelected = item.is_selected !== false;
@@ -70,15 +70,17 @@ function renderQuoteDetailRow(
       <td className="px-3 py-3 align-top">
         <div className="font-medium text-foreground">{item.description}</div>
         <div className="text-xs text-muted-foreground">
-          {item.service_name || 'Custom item'}
+          {item.service_name || t('quoteDetail.labels.customItem', { defaultValue: 'Custom item' })}
           {item.service_sku ? ` • ${item.service_sku}` : ''}
-          {item.phase ? ` • Phase: ${item.phase}` : ''}
-          {item.is_optional ? ' • Optional' : ''}
-          {item.is_recurring ? ` • Recurring${item.billing_frequency ? ` (${item.billing_frequency})` : ''}` : ''}
+          {item.phase ? ` • ${t('quoteDetail.labels.phase', { defaultValue: 'Phase' })}: ${item.phase}` : ''}
+          {item.is_optional ? ` • ${t('quoteDetail.labels.optional', { defaultValue: 'Optional' })}` : ''}
+          {item.is_recurring ? ` • ${t('quoteDetail.labels.recurring', { defaultValue: 'Recurring' })}${item.billing_frequency ? ` (${item.billing_frequency})` : ''}` : ''}
         </div>
         {showClientSelection ? (
           <div className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${clientSelected ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-            {clientSelected ? 'Client selected this optional item' : 'Client declined this optional item'}
+            {clientSelected
+              ? t('quoteDetail.clientSelections.selectedOptionalItem', { defaultValue: 'Client selected this optional item' })
+              : t('quoteDetail.clientSelections.declinedOptionalItem', { defaultValue: 'Client declined this optional item' })}
           </div>
         ) : null}
       </td>
@@ -98,7 +100,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const { t } = useTranslation('msp/quotes');
   const { formatCurrency, formatDate } = useFormatters();
   const router = useRouter();
-  const { t } = useTranslation('features/billing');
   const [quote, setQuote] = useState<IQuote | null>(null);
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
   const [versions, setVersions] = useState<IQuote[]>([]);
@@ -1060,19 +1061,19 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                       <div className="flex flex-col gap-2 border-b border-border bg-muted/40 px-4 py-3 md:flex-row md:items-start md:justify-between">
                         <div>
                           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                            {t('quotes.locations.groupHeading', { defaultValue: 'Location' })}
+                            {t('quoteDetail.locations.groupHeading', { defaultValue: 'Location' })}
                           </div>
                           <div className="mt-1">
                             <LocationAddress
                               location={group.location}
                               showName
-                              emptyText={t('quotes.locations.unassigned', { defaultValue: 'Items without a location' })}
+                              emptyText={t('quoteDetail.locations.unassigned', { defaultValue: 'Items without a location' })}
                             />
                           </div>
                         </div>
                         <div className="text-sm">
                           <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                            {t('quotes.locations.subtotal', { defaultValue: 'Location subtotal' })}
+                            {t('quoteDetail.locations.subtotal', { defaultValue: 'Location subtotal' })}
                           </div>
                           <div className="mt-1 font-semibold">{formatCurrency(subtotal, quote.currency_code || 'USD')}</div>
                         </div>
@@ -1081,15 +1082,15 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                         <table className="min-w-full divide-y divide-border text-sm">
                           <thead className="bg-background text-left">
                             <tr>
-                              <th className="px-3 py-2 font-medium">Description</th>
-                              <th className="px-3 py-2 font-medium">Billing</th>
-                              <th className="px-3 py-2 font-medium">Qty</th>
-                              <th className="px-3 py-2 font-medium">Unit Price</th>
-                              <th className="px-3 py-2 font-medium">Total</th>
+                              <th className="px-3 py-2 font-medium">{t('quoteDetail.table.description', { defaultValue: 'Description' })}</th>
+                              <th className="px-3 py-2 font-medium">{t('quoteDetail.table.billing', { defaultValue: 'Billing' })}</th>
+                              <th className="px-3 py-2 font-medium">{t('quoteDetail.table.quantity', { defaultValue: 'Qty' })}</th>
+                              <th className="px-3 py-2 font-medium">{t('quoteDetail.table.unitPrice', { defaultValue: 'Unit Price' })}</th>
+                              <th className="px-3 py-2 font-medium">{t('quoteDetail.table.total', { defaultValue: 'Total' })}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border bg-background">
-                            {group.items.map((item) => renderQuoteDetailRow(quote, item, formatCurrency))}
+                            {group.items.map((item) => renderQuoteDetailRow(quote, item, formatCurrency, t))}
                           </tbody>
                         </table>
                       </div>
@@ -1102,15 +1103,15 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                 <table className="min-w-full divide-y divide-border text-sm">
                   <thead className="bg-muted/40 text-left">
                     <tr>
-                      <th className="px-3 py-2 font-medium">Description</th>
-                      <th className="px-3 py-2 font-medium">Billing</th>
-                      <th className="px-3 py-2 font-medium">Qty</th>
-                      <th className="px-3 py-2 font-medium">Unit Price</th>
-                      <th className="px-3 py-2 font-medium">Total</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteDetail.table.description', { defaultValue: 'Description' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteDetail.table.billing', { defaultValue: 'Billing' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteDetail.table.quantity', { defaultValue: 'Qty' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteDetail.table.unitPrice', { defaultValue: 'Unit Price' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteDetail.table.total', { defaultValue: 'Total' })}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border bg-background">
-                    {quoteItems.map((item) => renderQuoteDetailRow(quote, item, formatCurrency))}
+                    {quoteItems.map((item) => renderQuoteDetailRow(quote, item, formatCurrency, t))}
                   </tbody>
                 </table>
               </div>

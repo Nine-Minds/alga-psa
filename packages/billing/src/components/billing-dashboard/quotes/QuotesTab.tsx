@@ -108,7 +108,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
     {
       title: t('common.columns.total', { defaultValue: 'Total' }),
       dataIndex: 'total_amount',
-      render: (value: number, record) => formatCurrency(Number(value ?? 0) / 100, record.currency_code || 'USD'),
+      render: (value: number, record: IQuoteListItem) => formatCurrency(Number(value ?? 0) / 100, record.currency_code || 'USD'),
     },
     {
       title: t('common.columns.status', { defaultValue: 'Status' }),

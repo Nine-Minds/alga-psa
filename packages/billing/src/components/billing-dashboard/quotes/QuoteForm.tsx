@@ -54,7 +54,6 @@ interface QuoteFormState {
   quote_date: string;
   valid_until: string;
   po_number: string;
-  opportunity_id: string;
   client_notes: string;
   terms_and_conditions: string;
   currency_code: string;
@@ -69,7 +68,6 @@ const EMPTY_FORM: QuoteFormState = {
   quote_date: '',
   valid_until: '',
   po_number: '',
-  opportunity_id: '',
   client_notes: '',
   terms_and_conditions: '',
   currency_code: 'USD',
@@ -96,7 +94,7 @@ const formatRelativeMinutes = (iso?: string | null): string | null => {
 };
 
 const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = false, onCancel, onSaved }) => {
-  const { t } = useTranslation('features/billing');
+  const { t } = useTranslation('msp/quotes');
   const { formatCurrency: formatLocalizedCurrency, formatDate } = useFormatters();
   const isEditMode = Boolean(quoteId && quoteId !== 'new');
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
@@ -276,7 +274,6 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
           quote_date: toDateInputValue(quote.quote_date),
           valid_until: toDateInputValue(quote.valid_until),
           po_number: quote.po_number || '',
-          opportunity_id: quote.opportunity_id || '',
           client_notes: quote.client_notes || '',
           terms_and_conditions: quote.terms_and_conditions || '',
           currency_code: quote.currency_code || defaultCurrency,
@@ -421,7 +418,6 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         quote_date: form.quote_date || null,
         valid_until: form.valid_until || null,
         po_number: form.po_number || null,
-        opportunity_id: form.opportunity_id || null,
         client_notes: form.client_notes || null,
         terms_and_conditions: form.terms_and_conditions || null,
         subtotal: 0,
@@ -953,7 +949,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         return approvalRequired
           ? {
               id: 'quote-form-submit-approval',
-              label: t('quoteForm.actions.requestApproval', { defaultValue: 'Request approval' }),
+              label: t('common.actions.submitForApproval', { defaultValue: 'Request approval' }),
               onClick: () => void handleSubmitForApproval(),
               disabled: isWorking,
             }
@@ -1025,9 +1021,20 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
 
   const primaryAction = resolvePrimaryAction();
 
-  // Secondary inline button (e.g. "Request changes" pairs with "Approve").
+  // Secondary inline button (e.g. "Request changes" pairs with "Approve",
+  // "Save quote" pairs with "Send to client" on drafts).
   const resolveSecondaryAction = (): PrimaryAction => {
     if (!isEditMode || isTemplate || !quote) return null;
+    if (quoteStatus === 'draft') {
+      return {
+        id: 'quote-form-save',
+        label: isSaving
+          ? t('quoteForm.actions.saving', { defaultValue: 'Saving…' })
+          : t('quoteForm.actions.saveQuote', { defaultValue: 'Save quote' }),
+        onClick: () => void handleSubmit(),
+        disabled: isSaving,
+      };
+    }
     if (quoteStatus === 'pending_approval') {
       return {
         id: 'quote-form-request-changes',
@@ -1095,11 +1102,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
 
   const headerTitle = isTemplate
     ? (isEditMode
-        ? t('quoteForm.header.editTemplate', { defaultValue: 'Edit Quote Template' })
-        : t('quoteForm.header.newTemplate', { defaultValue: 'New Quote Template' }))
+        ? t('quoteForm.headings.editTemplate', { defaultValue: 'Edit Quote Template' })
+        : t('quoteForm.headings.newTemplate', { defaultValue: 'New Quote Template' }))
     : (form.title || (isEditMode
-        ? t('quoteForm.header.editQuote', { defaultValue: 'Edit Quote' })
-        : t('quoteForm.header.newQuote', { defaultValue: 'New Quote' })));
+        ? t('quoteForm.headings.editQuote', { defaultValue: 'Edit Quote' })
+        : t('quoteForm.headings.newQuote', { defaultValue: 'New Quote' })));
 
   const breadcrumbParts = isTemplate
     ? [
@@ -1120,7 +1127,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         if (quote?.quote_number) parts.push(quote.quote_number);
         if (selectedClient?.client_name) parts.push(t('quoteForm.subtitle.forClient', { defaultValue: 'For {{clientName}}', clientName: selectedClient.client_name }));
         if (form.valid_until) {
-          parts.push(t('quoteForm.subtitle.expires', { defaultValue: 'Expires {{date}}', date: new Date(form.valid_until + 'T00:00:00').toLocaleDateString() }));
+          parts.push(t('quoteForm.subtitle.expires', { defaultValue: 'Expires {{date}}', date: formatDate(form.valid_until + 'T00:00:00') }));
         }
         return parts.join(' · ');
       })();
@@ -1226,7 +1233,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
             <AlertTitle>{t('quoteForm.banners.acceptedTitle', { defaultValue: 'Quote Accepted' })}</AlertTitle>
             <AlertDescription>
               {quote.accepted_by_name && <>{t('quoteForm.banners.acceptedBy', { defaultValue: 'Accepted by: {{name}}', name: quote.accepted_by_name })}<br /></>}
-              {quote.accepted_at && <>{t('quoteForm.banners.acceptedOn', { defaultValue: 'Accepted on: {{date}}', date: new Date(quote.accepted_at).toLocaleDateString() })}</>}
+              {quote.accepted_at && <>{t('quoteForm.banners.acceptedOn', { defaultValue: 'Accepted on: {{date}}', date: formatDate(quote.accepted_at) })}</>}
             </AlertDescription>
           </Alert>
         )}
@@ -1234,7 +1241,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
           <Alert variant="destructive">
             <AlertTitle>{t('quoteForm.banners.rejectedTitle', { defaultValue: 'Quote Rejected' })}</AlertTitle>
             <AlertDescription>
-              {quote.rejected_at && <>{t('quoteForm.banners.rejectedOn', { defaultValue: 'Rejected on: {{date}}', date: new Date(quote.rejected_at as string).toLocaleDateString() })}<br /></>}
+              {quote.rejected_at && <>{t('quoteForm.banners.rejectedOn', { defaultValue: 'Rejected on: {{date}}', date: formatDate(quote.rejected_at as string) })}<br /></>}
               {quote.rejection_reason && <>{t('quoteForm.banners.rejectedReason', { defaultValue: 'Reason: {{reason}}', reason: quote.rejection_reason })}</>}
             </AlertDescription>
           </Alert>
@@ -1406,7 +1413,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
                         id="quote-form-template-picker"
                         value={form.template_id || undefined}
                         onValueChange={(value) => void handleTemplateChange(value)}
-                        placeholder={t('quoteForm.lineItems.fromTemplate', { defaultValue: '+ From template' })}
+                        placeholder={t('quoteForm.fields.createFromTemplate', { defaultValue: '+ From template' })}
                         allowClear
                         options={templates.map((template) => ({
                           value: template.quote_id,
@@ -1468,7 +1475,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
                   <div className="space-y-1">
                     <h3 className="text-base font-semibold">{t('quoteForm.moreDetails.title', { defaultValue: 'More details' })}</h3>
                     <p className="text-xs text-muted-foreground">
-                      {t('quoteForm.moreDetails.subtitle', { defaultValue: 'PO number, opportunity, PDF layout' })}
+                      {t('quoteForm.moreDetails.subtitle', { defaultValue: 'PO number, PDF layout' })}
                     </p>
                   </div>
                   {isMoreDetailsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -1480,18 +1487,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
                       <Input value={form.po_number} onChange={(event) => handleChange('po_number', event.target.value)} disabled={isReadOnly} />
                     </label>
 
-                    <label className="flex flex-col gap-1 text-sm font-medium">
-                      {t('quoteForm.moreDetails.opportunity', { defaultValue: 'Opportunity' })}
-                      <Input
-                        id="quote-form-opportunity"
-                        value={form.opportunity_id}
-                        onChange={(event) => handleChange('opportunity_id', event.target.value)}
-                        placeholder={t('quoteForm.moreDetails.opportunityPlaceholder', { defaultValue: 'Opportunity ID (optional)' })}
-                        disabled={isReadOnly}
-                      />
-                    </label>
-
-                    <div className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
+                    <div className="flex flex-col gap-1 text-sm font-medium">
                       <label htmlFor="quote-document-layout">{t('quoteForm.moreDetails.pdfLayout', { defaultValue: 'PDF layout' })}</label>
                       <CustomSelect
                         id="quote-document-layout"
@@ -1606,7 +1602,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
                       onClick={() => void handleSubmitForApproval()}
                       disabled={isWorking}
                     >
-                      {t('quoteForm.actions.requestApproval', { defaultValue: 'Request approval' })}
+                      {t('common.actions.submitForApproval', { defaultValue: 'Request approval' })}
                     </Button>
                   )}
                 </section>
@@ -1615,7 +1611,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
               {/* Document Layout card */}
               <section className="rounded-lg border border-border bg-background p-5 shadow-sm">
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t('quoteForm.sidebar.documentLayoutLabel', { defaultValue: 'Document layout' })}
+                  {t('common.labels.quoteLayout', { defaultValue: 'Document layout' })}
                 </div>
                 <div className="mt-2">
                   <div className="text-sm font-medium text-foreground">

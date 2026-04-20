@@ -26,7 +26,6 @@ import {
   createCustomDraftQuoteItem,
   createDraftDiscountQuoteItem,
   createDraftQuoteItemFromService,
-  formatDraftQuoteMoney,
   type DraftQuoteItem,
 } from './quoteLineItemDraft';
 
@@ -202,7 +201,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   onAddLocationGroup,
   onRemoveLocationGroup,
 }) => {
-  const { t } = useTranslation('features/billing');
+  const { t } = useTranslation('msp/quotes');
   const { formatCurrency } = useFormatters();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const formatBillingFrequency = useFormatBillingFrequency();
@@ -659,14 +658,14 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 <table className="min-w-full divide-y divide-border text-sm">
                   <thead className="bg-background text-left">
                     <tr>
-                      <th className="px-3 py-2 font-medium">Move</th>
-                      <th className="px-3 py-2 font-medium">Item</th>
-                      <th className="px-3 py-2 font-medium">Billing</th>
-                      <th className="px-3 py-2 font-medium">Flags</th>
-                      <th className="px-3 py-2 font-medium">Qty</th>
-                      <th className="px-3 py-2 font-medium">Unit Price</th>
-                      <th className="px-3 py-2 font-medium">Total</th>
-                      <th className="px-3 py-2 font-medium">Actions</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.move', { defaultValue: 'Move' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.item', { defaultValue: 'Item' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.billing', { defaultValue: 'Billing' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.flags', { defaultValue: 'Flags' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.quantity', { defaultValue: 'Qty' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.unitPrice', { defaultValue: 'Unit Price' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.total', { defaultValue: 'Total' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.actions', { defaultValue: 'Actions' })}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border bg-background">
@@ -690,7 +689,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
         onAddCustom={(description) => handleAddCustomItemForLocation(description, locationId)}
         disabled={disabled}
         currencyCode={currencyCode}
-        placeholder={t('quotes.lineItems.searchPlaceholder', { defaultValue: 'Search or type custom item name...' })}
+        placeholder={t('quoteLineItems.placeholders.servicePicker', { defaultValue: 'Search or type custom item name...' })}
       />
     </div>
   );
@@ -713,7 +712,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
       <div className="flex flex-col gap-3 rounded-t-md bg-muted/40 px-4 py-3 md:flex-row md:items-start md:justify-between">
         <div className="flex-1 space-y-2">
           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {t('quotes.locations.groupHeading', {
+            {t('quoteLineItems.locations.groupHeading', {
               defaultValue: 'Location {{index}}',
               index: index + 1,
             })}
@@ -732,7 +731,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                     : item
                 ));
               }}
-              placeholder={t('quotes.locations.pickerPlaceholder', { defaultValue: 'Select a location' })}
+              placeholder={t('quoteLineItems.locations.pickerPlaceholder', { defaultValue: 'Select a location' })}
               disabled={disabled}
               excludeLocationIds={exclude}
               allowClear={false}
@@ -742,7 +741,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
             <LocationAddress location={group.location} showName={false} />
           ) : (
             <p className="text-xs text-muted-foreground">
-              {t('quotes.locations.unassigned', { defaultValue: 'Items without a location are listed here until one is chosen.' })}
+              {t('quoteLineItems.locations.unassigned', { defaultValue: 'Items without a location are listed here until one is chosen.' })}
             </p>
           )}
         </div>
@@ -756,7 +755,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               onClick={() => onRemoveLocationGroup(group.location_id)}
               disabled={disabled}
             >
-              {t('quotes.locations.removeGroup', { defaultValue: 'Remove location' })}
+              {t('quoteLineItems.locations.removeGroup', { defaultValue: 'Remove location' })}
             </Button>
           </div>
         ) : null}
@@ -769,9 +768,9 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     return (
       <div className="flex flex-wrap items-center justify-end gap-6 border-t border-border bg-background/70 px-4 py-2 text-sm">
         <span className="text-xs uppercase tracking-wide text-muted-foreground">
-          {t('quotes.locations.subtotal', { defaultValue: 'Location subtotal' })}
+          {t('quoteLineItems.locations.subtotal', { defaultValue: 'Location subtotal' })}
         </span>
-        <span className="font-semibold">{formatDraftQuoteMoney(totals.subtotal - totals.discount_total, currencyCode)}</span>
+        <span className="font-semibold">{formatMoney(totals.subtotal - totals.discount_total)}</span>
       </div>
     );
   };
@@ -779,7 +778,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   return (
     <section className="space-y-4 rounded-lg border border-border bg-background/40 p-4">
       <div className="space-y-3">
-        <h3 className="text-base font-semibold">Line Items</h3>
+        <h3 className="text-base font-semibold">{t('quoteLineItems.title', { defaultValue: 'Line Items' })}</h3>
         {!showLocationGroups && renderServicePicker(defaultLocation?.location_id ?? null, 'root')}
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -790,7 +789,9 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
             onClick={() => setIsDiscountOpen(!isDiscountOpen)}
             disabled={disabled}
           >
-            {isDiscountOpen ? 'Hide Discount' : 'Add Discount'}
+            {isDiscountOpen
+              ? t('quoteLineItems.actions.hideDiscount', { defaultValue: 'Hide Discount' })
+              : t('quoteLineItems.actions.addDiscount', { defaultValue: 'Add Discount' })}
           </Button>
           {onAddLocationGroup ? (
             <Button
@@ -801,13 +802,13 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               onClick={() => onAddLocationGroup()}
               disabled={disabled || locations.length < 2}
             >
-              {t('quotes.locations.addLocationButton', { defaultValue: '+ Add location' })}
+              {t('quoteLineItems.locations.addLocationButton', { defaultValue: '+ Add location' })}
             </Button>
           ) : null}
         </div>
         {onAddLocationGroup && locations.length < 2 ? (
           <p className="text-xs text-muted-foreground">
-            {t('quotes.locations.needMoreLocations', {
+            {t('quoteLineItems.locations.needMoreLocations', {
               defaultValue: 'This client only has one active location. Add a second location in Client settings to enable multi-site quoting.',
             })}
           </p>
@@ -914,7 +915,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 {renderServicePicker(group.location_id ?? null, `loc-${group.key}`)}
                 {group.items.length === 0 ? (
                   <div className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-                    {t('quotes.locations.emptyGroup', { defaultValue: 'No items yet for this location.' })}
+                    {t('quoteLineItems.locations.emptyGroup', { defaultValue: 'No items yet for this location.' })}
                   </div>
                 ) : (
                   renderPhaseSections(buildPhaseSections(group.items), `loc-${group.key}`)
