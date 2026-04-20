@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { formatDistanceToNow } from 'date-fns';
 import { CalendarClock, Clock3, MoreVertical, Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -12,6 +11,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { DeleteEntityDialog } from '@alga-psa/ui';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ColumnDefinition, DeletionValidationResult } from '@alga-psa/types';
 import type { WorkflowScheduleStateRecord } from '@alga-psa/workflows/persistence';
 import {
@@ -66,46 +66,76 @@ const getScheduleStatusVariant = (schedule: WorkflowScheduleListItem): BadgeVari
   return 'success';
 };
 
-const getScheduleStatusLabel = (schedule: WorkflowScheduleListItem): string => {
-  if (!schedule.enabled || schedule.status === 'paused') return 'Paused';
-  if (schedule.status === 'failed') return 'Failed';
-  if (schedule.status === 'completed') return 'Completed';
-  if (schedule.status === 'disabled') return 'Disabled';
-  return 'Enabled';
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+const getScheduleStatusLabel = (schedule: WorkflowScheduleListItem, t: TranslateFn): string => {
+  if (!schedule.enabled || schedule.status === 'paused') {
+    return t('schedules.status.paused', { defaultValue: 'Paused' });
+  }
+  if (schedule.status === 'failed') {
+    return t('schedules.status.failed', { defaultValue: 'Failed' });
+  }
+  if (schedule.status === 'completed') {
+    return t('schedules.status.completed', { defaultValue: 'Completed' });
+  }
+  if (schedule.status === 'disabled') {
+    return t('schedules.status.disabled', { defaultValue: 'Disabled' });
+  }
+  return t('schedules.status.enabled', { defaultValue: 'Enabled' });
 };
 
-const formatTimestamp = (value?: string | null): string => {
-  if (!value) return '—';
+const formatTimestamp = (
+  value: string | null | undefined,
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string,
+  t: TranslateFn
+): string => {
+  if (!value) return t('schedules.common.emptyValue', { defaultValue: '—' });
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+  if (Number.isNaN(date.getTime())) {
+    return t('schedules.common.emptyValue', { defaultValue: '—' });
+  }
+  return formatDate(date, { dateStyle: 'medium', timeStyle: 'short' });
 };
 
-const formatRelativeTimestamp = (value?: string | null): string => {
-  if (!value) return 'Never';
+const formatRelativeTimestamp = (
+  value: string | null | undefined,
+  formatRelativeTime: (date: Date | string) => string,
+  t: TranslateFn
+): string => {
+  if (!value) return t('schedules.states.never', { defaultValue: 'Never' });
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Never';
-  return formatDistanceToNow(date, { addSuffix: true });
+  if (Number.isNaN(date.getTime())) {
+    return t('schedules.states.never', { defaultValue: 'Never' });
+  }
+  return formatRelativeTime(date);
 };
 
-const toDayFilterLabel = (value?: string | null): string => {
-  if (value === 'business') return 'Business days';
-  if (value === 'non_business') return 'Non-business days';
-  return 'Any day';
+const toDayFilterLabel = (value: string | null | undefined, t: TranslateFn): string => {
+  if (value === 'business') {
+    return t('schedules.dayType.business', { defaultValue: 'Business days' });
+  }
+  if (value === 'non_business') {
+    return t('schedules.dayType.nonBusiness', { defaultValue: 'Non-business days' });
+  }
+  return t('schedules.dayType.any', { defaultValue: 'Any day' });
 };
 
-const getNextFireDisplayText = (schedule: WorkflowScheduleListItem): string => {
+const getNextFireDisplayText = (
+  schedule: WorkflowScheduleListItem,
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string,
+  t: TranslateFn
+): string => {
   if (schedule.trigger_type === 'recurring' && schedule.day_type_filter !== 'any') {
     if (schedule.next_eligible_fire_at) {
-      return formatTimestamp(schedule.next_eligible_fire_at);
+      return formatTimestamp(schedule.next_eligible_fire_at, formatDate, t);
     }
     if (schedule.calendar_resolution_error) {
-      return 'Calendar misconfigured';
+      return t('schedules.states.calendarMisconfigured', { defaultValue: 'Calendar misconfigured' });
     }
-    return 'No eligible upcoming run';
+    return t('schedules.states.noEligibleUpcomingRun', { defaultValue: 'No eligible upcoming run' });
   }
 
-  return formatTimestamp(schedule.next_fire_at ?? schedule.run_at);
+  return formatTimestamp(schedule.next_fire_at ?? schedule.run_at, formatDate, t);
 };
 
 const defaultScheduleActions: WorkflowSchedulesActions = {
@@ -122,6 +152,8 @@ const defaultScheduleActions: WorkflowSchedulesActions = {
 export default function Schedules({
   scheduleActions = defaultScheduleActions
 }: SchedulesProps) {
+  const { t } = useTranslation('msp/workflows');
+  const { formatDate, formatRelativeTime } = useFormatters();
   const router = useRouter();
   const searchParams = useSearchParams();
   const didUnmount = useRef(false);
@@ -203,7 +235,9 @@ export default function Schedules({
       } catch (loadError) {
         console.error('Failed to load workflow schedules', loadError);
         if (!didUnmount.current) {
-          setError(loadError instanceof Error ? loadError.message : 'Failed to load schedules.');
+          setError(loadError instanceof Error ? loadError.message : t('schedules.errors.loadFailed', {
+            defaultValue: 'Failed to load schedules.',
+          }));
           setSchedules([]);
         }
       } finally {
@@ -217,7 +251,7 @@ export default function Schedules({
     return () => {
       didUnmount.current = true;
     };
-  }, [refreshKey, scheduleActions, searchTerm, statusFilter, triggerFilter, workflowFilter]);
+  }, [refreshKey, scheduleActions, searchTerm, statusFilter, t, triggerFilter, workflowFilter]);
 
   const handlePauseResume = async (schedule: WorkflowScheduleListItem) => {
     try {
@@ -229,7 +263,9 @@ export default function Schedules({
       setRefreshKey((value) => value + 1);
     } catch (actionError) {
       console.error('Failed to toggle workflow schedule', actionError);
-      setError(actionError instanceof Error ? actionError.message : 'Failed to update schedule.');
+      setError(actionError instanceof Error ? actionError.message : t('schedules.errors.updateFailed', {
+        defaultValue: 'Failed to update schedule.',
+      }));
     }
   };
 
@@ -244,50 +280,57 @@ export default function Schedules({
 
   const workflowFilterOptions = useMemo<SelectOption[]>(
     () => [
-      { value: 'all', label: 'All workflows' },
+      { value: 'all', label: t('schedules.filters.allWorkflows', { defaultValue: 'All workflows' }) },
       ...workflowOptions.map((workflow) => ({
         value: workflow.workflow_id,
         label: workflow.name
       }))
     ],
-    [workflowOptions]
+    [t, workflowOptions]
   );
 
   const statusOptions: SelectOption[] = [
-    { value: 'all', label: 'All statuses' },
-    { value: 'enabled', label: 'Enabled' },
-    { value: 'paused', label: 'Paused' },
-    { value: 'failed', label: 'Failed' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'disabled', label: 'Disabled' }
+    { value: 'all', label: t('schedules.filters.allStatuses', { defaultValue: 'All statuses' }) },
+    { value: 'enabled', label: t('schedules.status.enabled', { defaultValue: 'Enabled' }) },
+    { value: 'paused', label: t('schedules.status.paused', { defaultValue: 'Paused' }) },
+    { value: 'failed', label: t('schedules.status.failed', { defaultValue: 'Failed' }) },
+    { value: 'completed', label: t('schedules.status.completed', { defaultValue: 'Completed' }) },
+    { value: 'disabled', label: t('schedules.status.disabled', { defaultValue: 'Disabled' }) }
   ];
 
   const triggerOptions: SelectOption[] = [
-    { value: 'all', label: 'All triggers' },
-    { value: 'schedule', label: 'One-time' },
-    { value: 'recurring', label: 'Recurring' }
+    { value: 'all', label: t('schedules.filters.allTriggers', { defaultValue: 'All triggers' }) },
+    { value: 'schedule', label: t('schedules.triggerType.schedule', { defaultValue: 'One-time' }) },
+    { value: 'recurring', label: t('schedules.triggerType.recurring', { defaultValue: 'Recurring' }) }
   ];
 
   const columns: ColumnDefinition<WorkflowScheduleListItem>[] = [
     {
-      title: 'Schedule',
+      title: t('schedules.table.columns.schedule', { defaultValue: 'Schedule' }),
       dataIndex: 'name',
       render: (_value, record) => (
         <div className="flex flex-col gap-1">
           <div className="font-medium text-[rgb(var(--color-text-900))]">{record.name}</div>
-          <div className="text-xs text-[rgb(var(--color-text-500))]">Workflow v{record.workflow_version}</div>
+          <div className="text-xs text-[rgb(var(--color-text-500))]">
+            {t('schedules.table.workflowVersion', {
+              defaultValue: 'Workflow v{{version}}',
+              version: record.workflow_version,
+            })}
+          </div>
         </div>
       )
     },
     {
-      title: 'Workflow',
+      title: t('schedules.table.columns.workflow', { defaultValue: 'Workflow' }),
       dataIndex: 'workflow_name',
       render: (_value, record) => (
-        <span className="text-sm text-[rgb(var(--color-text-700))]">{record.workflow_name ?? 'Unknown workflow'}</span>
+        <span className="text-sm text-[rgb(var(--color-text-700))]">
+          {record.workflow_name ?? t('schedules.states.unknownWorkflow', { defaultValue: 'Unknown workflow' })}
+        </span>
       )
     },
     {
-      title: 'Trigger Type',
+      title: t('schedules.table.columns.triggerType', { defaultValue: 'Trigger Type' }),
       dataIndex: 'trigger_type',
       render: (_value, record) => (
         <div className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-700))]">
@@ -296,16 +339,20 @@ export default function Schedules({
           ) : (
             <Clock3 className="h-4 w-4 text-[rgb(var(--color-primary-500))]" />
           )}
-          <span>{record.trigger_type === 'schedule' ? 'One-time' : 'Recurring'}</span>
+          <span>
+            {record.trigger_type === 'schedule'
+              ? t('schedules.triggerType.schedule', { defaultValue: 'One-time' })
+              : t('schedules.triggerType.recurring', { defaultValue: 'Recurring' })}
+          </span>
         </div>
       )
     },
     {
-      title: 'Next Fire / Run At',
+      title: t('schedules.table.columns.nextFire', { defaultValue: 'Next Fire / Run At' }),
       dataIndex: 'next_fire_at',
       render: (_value, record) => (
         <div className="flex flex-col gap-1 text-sm text-[rgb(var(--color-text-700))]">
-          <span>{getNextFireDisplayText(record)}</span>
+          <span>{getNextFireDisplayText(record, formatDate, t)}</span>
           {record.trigger_type === 'recurring' && record.cron ? (
             <span className="text-xs text-[rgb(var(--color-text-500))]">
               {record.cron}{record.timezone ? ` · ${record.timezone}` : ''}
@@ -313,41 +360,45 @@ export default function Schedules({
           ) : null}
           {record.trigger_type === 'recurring' ? (
             <span className="text-xs text-[rgb(var(--color-text-500))]">
-              {toDayFilterLabel(record.day_type_filter)}
+              {toDayFilterLabel(record.day_type_filter, t)}
             </span>
           ) : null}
         </div>
       )
     },
     {
-      title: 'Last Fire',
+      title: t('schedules.table.columns.lastFire', { defaultValue: 'Last Fire' }),
       dataIndex: 'last_fire_at',
       render: (_value, record) => (
-        <span className="text-sm text-[rgb(var(--color-text-700))]">{formatRelativeTimestamp(record.last_fire_at)}</span>
+        <span className="text-sm text-[rgb(var(--color-text-700))]">
+          {formatRelativeTimestamp(record.last_fire_at, formatRelativeTime, t)}
+        </span>
       )
     },
     {
-      title: 'Status',
+      title: t('schedules.table.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       render: (_value, record) => (
-        <Badge variant={getScheduleStatusVariant(record)}>{getScheduleStatusLabel(record)}</Badge>
+        <Badge variant={getScheduleStatusVariant(record)}>{getScheduleStatusLabel(record, t)}</Badge>
       )
     },
     {
-      title: 'Last Error',
+      title: t('schedules.table.columns.lastError', { defaultValue: 'Last Error' }),
       dataIndex: 'last_error',
       render: (_value, record) => (
         <div className="max-w-[280px] text-sm text-[rgb(var(--color-text-600))]">
           {record.last_error ? (
             <span className="line-clamp-2">{record.last_error}</span>
           ) : (
-            <span className="text-[rgb(var(--color-text-400))]">—</span>
+            <span className="text-[rgb(var(--color-text-400))]">
+              {t('schedules.common.emptyValue', { defaultValue: '—' })}
+            </span>
           )}
         </div>
       )
     },
     {
-      title: 'Actions',
+      title: t('schedules.table.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'id',
       width: '72px',
       render: (_value, record) => (
@@ -356,7 +407,10 @@ export default function Schedules({
             <DropdownMenu.Trigger asChild>
               <button
                 className="rounded-md p-1.5 transition-colors hover:bg-[rgb(var(--color-border-100))]"
-                aria-label={`Schedule actions for ${record.name}`}
+                aria-label={t('schedules.actions.rowMenu', {
+                  defaultValue: 'Schedule actions for {{name}}',
+                  name: record.name,
+                })}
               >
                 <MoreVertical className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
               </button>
@@ -374,7 +428,7 @@ export default function Schedules({
                   }}
                 >
                   <Pencil className="h-4 w-4" />
-                  Edit
+                  {t('schedules.actions.edit', { defaultValue: 'Edit' })}
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-text-700))] outline-none hover:bg-[rgb(var(--color-border-50))]"
@@ -383,12 +437,12 @@ export default function Schedules({
                   {record.enabled && record.status !== 'paused' ? (
                     <>
                       <Pause className="h-4 w-4" />
-                      Pause
+                      {t('schedules.actions.pause', { defaultValue: 'Pause' })}
                     </>
                   ) : (
                     <>
                       <Play className="h-4 w-4" />
-                      Resume
+                      {t('schedules.actions.resume', { defaultValue: 'Resume' })}
                     </>
                   )}
                 </DropdownMenu.Item>
@@ -401,7 +455,7 @@ export default function Schedules({
                   }}
                 >
                   <Trash2 className="h-4 w-4" />
-                  Delete
+                  {t('schedules.actions.delete', { defaultValue: 'Delete' })}
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
@@ -443,7 +497,9 @@ export default function Schedules({
       setRefreshKey((value) => value + 1);
     } catch (deleteError) {
       console.error('Failed to delete workflow schedule', deleteError);
-      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete schedule.');
+      setError(deleteError instanceof Error ? deleteError.message : t('schedules.errors.deleteFailed', {
+        defaultValue: 'Failed to delete schedule.',
+      }));
     } finally {
       setIsDeleting(false);
     }
@@ -451,25 +507,38 @@ export default function Schedules({
 
   if (isLoading) {
     return (
-      <ReflectionContainer id="workflow-schedules-loading" label="Workflow Schedules Loading">
-        <div className="py-8 text-sm text-[rgb(var(--color-text-500))]">Loading schedules…</div>
+      <ReflectionContainer
+        id="workflow-schedules-loading"
+        label={t('schedules.states.loadingReflection', { defaultValue: 'Workflow Schedules Loading' })}
+      >
+        <div className="py-8 text-sm text-[rgb(var(--color-text-500))]">
+          {t('schedules.states.loading', { defaultValue: 'Loading schedules…' })}
+        </div>
       </ReflectionContainer>
     );
   }
 
   return (
-    <ReflectionContainer id="workflow-schedules" label="Workflow Schedules" className="h-full min-h-0">
+    <ReflectionContainer
+      id="workflow-schedules"
+      label={t('schedules.heading.reflectionLabel', { defaultValue: 'Workflow Schedules' })}
+      className="h-full min-h-0"
+    >
       <div className="flex h-full min-h-0 flex-col">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">Schedules</h2>
+            <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
+              {t('schedules.heading.title', { defaultValue: 'Schedules' })}
+            </h2>
             <p className="text-sm text-[rgb(var(--color-text-500))]">
-              Manage reusable workflow schedules and their saved payloads.
+              {t('schedules.heading.description', {
+                defaultValue: 'Manage reusable workflow schedules and their saved payloads.',
+              })}
             </p>
           </div>
           <Button id="create-schedule-btn" onClick={openCreateDialog}>
             <Plus className="mr-2 h-4 w-4" />
-            New Schedule
+            {t('schedules.actions.new', { defaultValue: 'New Schedule' })}
           </Button>
         </div>
 
@@ -480,7 +549,7 @@ export default function Schedules({
               setSearchTerm(event.target.value);
               updateUrlParams({ [SCHEDULE_SEARCH_PARAM]: event.target.value });
             }}
-            placeholder="Search schedules..."
+            placeholder={t('schedules.filters.searchPlaceholder', { defaultValue: 'Search schedules...' })}
             className="w-full"
           />
           <CustomSelect
@@ -522,9 +591,13 @@ export default function Schedules({
         {schedules.length === 0 ? (
           <div className="flex flex-1 items-center justify-center rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-8 text-center">
             <div className="max-w-md space-y-2">
-              <div className="text-lg font-semibold text-[rgb(var(--color-text-900))]">No schedules found</div>
+              <div className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
+                {t('schedules.states.empty', { defaultValue: 'No schedules found' })}
+              </div>
               <div className="text-sm text-[rgb(var(--color-text-500))]">
-                Create a one-time or recurring schedule to run a published workflow with saved input data.
+                {t('schedules.states.emptyDescription', {
+                  defaultValue: 'Create a one-time or recurring schedule to run a published workflow with saved input data.',
+                })}
               </div>
             </div>
           </div>
@@ -565,7 +638,7 @@ export default function Schedules({
           setScheduleToDelete(null);
         }}
         onConfirmDelete={() => void handleDeleteConfirm()}
-        entityName={scheduleToDelete?.name ?? 'schedule'}
+        entityName={scheduleToDelete?.name ?? t('schedules.common.entityName', { defaultValue: 'schedule' })}
         validationResult={deleteValidation}
         isValidating={false}
         isDeleting={isDeleting}

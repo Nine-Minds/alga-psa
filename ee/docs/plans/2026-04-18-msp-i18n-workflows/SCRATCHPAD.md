@@ -411,3 +411,34 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   node scripts/validate-translations.cjs
   ```
 - ESLint result: clean, no warnings or errors from this file after the extraction.
+
+### F018 complete — schedules surface extracted in automation-hub package
+- `ee/server/src/components/workflow-designer/WorkflowSchedules.tsx` is only a wrapper; the actual schedule list and dialog live in:
+  - `ee/packages/workflows/src/components/automation-hub/Schedules.tsx`
+  - `ee/packages/workflows/src/components/automation-hub/WorkflowScheduleDialog.tsx`
+  - `ee/packages/workflows/src/components/automation-hub/WorkflowScheduleTimezonePicker.tsx`
+  - `ee/packages/workflows/src/components/automation-hub/workflowScheduleRecurrence.ts`
+- Localized the full schedules surface under `schedules.*` in `msp/workflows.json`, covering:
+  - list heading, filters, table columns, statuses, row actions, empty/loading/error states
+  - create/edit dialog title, fields, recurring builder copy, business-hours guidance, payload editor chrome, validation copy
+  - timezone-picker browse/custom affordances
+  - recurrence summary/validation text via localization-aware helper options instead of hardcoded English strings
+- Switched schedules timestamp rendering to locale-aware client formatters where practical:
+  - list timestamps now use `useFormatters().formatDate(...)`
+  - relative timestamps use `useFormatters().formatRelativeTime(...)`
+- Kept fr/es/de/nl/it/pl/xx/yy as English structural stubs for this step so translation validation stays green until WF-F.
+- Test harness updates:
+  - mocked `@alga-psa/ui/lib/i18n/client` with stable `t()` + formatter functions in `Schedules.test.tsx`
+  - added the newly consumed `listWorkflowSchemaRefsAction` to the workflow-actions test mock
+  - mocked `Dialog` footer and lightweight `TimePicker` / `DateTimePicker` components so the schedule dialog remains testable after the i18n wiring
+- Checks run:
+  ```bash
+  npx vitest run src/components/automation-hub/Schedules.test.tsx src/components/automation-hub/workflowScheduleRecurrence.test.ts
+  npx eslint ee/packages/workflows/src/components/automation-hub/Schedules.tsx ee/packages/workflows/src/components/automation-hub/WorkflowScheduleDialog.tsx
+  npx eslint ee/packages/workflows/src/components/automation-hub/WorkflowScheduleTimezonePicker.tsx ee/packages/workflows/src/components/automation-hub/workflowScheduleRecurrence.ts ee/packages/workflows/src/components/automation-hub/Schedules.test.tsx
+  node scripts/validate-translations.cjs
+  ```
+- Results:
+  - Vitest passed: 30/30 tests across schedules + recurrence
+  - translation validation passed with 0 missing/extra keys
+  - ESLint reported only pre-existing warnings in `WorkflowScheduleDialog.tsx` (`no-explicit-any`) and the existing warning backlog in `Schedules.test.tsx`

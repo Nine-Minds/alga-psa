@@ -531,6 +531,249 @@
       "loadFailed": "Failed to load dead-letter runs"
     }
   },
+  "schedules": {
+    "common": {
+      "emptyValue": "—",
+      "entityName": "schedule"
+    },
+    "heading": {
+      "reflectionLabel": "Workflow Schedules",
+      "title": "Schedules",
+      "description": "Manage reusable workflow schedules and their saved payloads."
+    },
+    "actions": {
+      "new": "New Schedule",
+      "edit": "Edit",
+      "pause": "Pause",
+      "resume": "Resume",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "saveChanges": "Save Changes",
+      "create": "Create Schedule",
+      "rowMenu": "Schedule actions for {{name}}"
+    },
+    "filters": {
+      "allWorkflows": "All workflows",
+      "allStatuses": "All statuses",
+      "allTriggers": "All triggers",
+      "searchPlaceholder": "Search schedules..."
+    },
+    "status": {
+      "enabled": "Enabled",
+      "paused": "Paused",
+      "failed": "Failed",
+      "completed": "Completed",
+      "disabled": "Disabled"
+    },
+    "triggerType": {
+      "schedule": "One-time",
+      "recurring": "Recurring"
+    },
+    "dayType": {
+      "any": "Any day",
+      "business": "Business days",
+      "nonBusiness": "Non-business days"
+    },
+    "table": {
+      "workflowVersion": "Workflow v{{version}}",
+      "columns": {
+        "schedule": "Schedule",
+        "workflow": "Workflow",
+        "triggerType": "Trigger Type",
+        "nextFire": "Next Fire / Run At",
+        "lastFire": "Last Fire",
+        "status": "Status",
+        "lastError": "Last Error",
+        "actions": "Actions"
+      }
+    },
+    "states": {
+      "loadingReflection": "Workflow Schedules Loading",
+      "loading": "Loading schedules…",
+      "never": "Never",
+      "calendarMisconfigured": "Calendar misconfigured",
+      "noEligibleUpcomingRun": "No eligible upcoming run",
+      "unknownWorkflow": "Unknown workflow",
+      "empty": "No schedules found",
+      "emptyDescription": "Create a one-time or recurring schedule to run a published workflow with saved input data."
+    },
+    "errors": {
+      "loadFailed": "Failed to load schedules.",
+      "updateFailed": "Failed to update schedule.",
+      "deleteFailed": "Failed to delete schedule."
+    },
+    "timezone": {
+      "browseAll": "Browse all time zones...",
+      "custom": "Custom...",
+      "browseHelp": "Choose from the full supported IANA timezone list.",
+      "customLabel": "Custom timezone",
+      "customPlaceholder": "Etc/GMT+5"
+    },
+    "dialog": {
+      "title": {
+        "edit": "Edit Schedule",
+        "create": "Create Schedule"
+      },
+      "description": "Configure timing and static payload data for a workflow schedule.",
+      "states": {
+        "loading": "Loading schedule details…"
+      },
+      "fields": {
+        "workflow": "Workflow",
+        "workflowPlaceholder": "Choose a workflow",
+        "name": "Schedule name",
+        "namePlaceholder": "Month-end AP sync",
+        "triggerType": "Trigger type",
+        "enabled": "Enabled",
+        "enabledHelp": "Schedule will run when valid.",
+        "disabledHelp": "Schedule will stay paused until resumed.",
+        "runAt": "Run at",
+        "runOn": "Run on",
+        "businessDaysOnly": "Business days only",
+        "nonBusinessDaysOnly": "Non-business days only",
+        "calendarSource": "Calendar source",
+        "businessHoursSchedule": "Business-hours schedule",
+        "businessHoursSchedulePlaceholder": "Choose a business-hours schedule",
+        "frequency": "Frequency",
+        "time": "Time",
+        "dayOfMonth": "Day of month",
+        "weekdays": "Weekdays",
+        "cron": "Cron",
+        "timezone": "Timezone"
+      },
+      "workflow": {
+        "badges": {
+          "unpublished": "Unpublished",
+          "inferredSchema": "Inferred schema"
+        }
+      },
+      "eligibility": {
+        "chooseWorkflow": "Choose a workflow before saving.",
+        "unpublished": "Schedules can only be created for workflows with a published version.",
+        "pinnedOnly": "Schedules are only supported for workflows with a pinned payload schema.",
+        "noPinnedSchema": "The selected workflow does not expose a pinned payload schema.",
+        "unavailableSchemaRef": "The selected workflow uses an unavailable payload schema ref: {{schemaRef}}."
+      },
+      "calendarSource": {
+        "tenantDefault": "Tenant default business hours",
+        "tenantDefaultMissing": "Tenant default business hours (not configured)",
+        "tenantDefaultHint": "Set a tenant default business-hours schedule first, or choose a specific schedule.",
+        "specific": "Specific business-hours schedule",
+        "specificHint": "Create a business-hours schedule first.",
+        "tenantDefaultMissingDescription": "No tenant default business-hours schedule is configured yet. Choose a specific business-hours schedule or set a tenant default first.",
+        "holidaysNote": "Holidays are always treated as non-business days."
+      },
+      "businessHours": {
+        "defaultSuffix": " (Default)",
+        "noneConfigured": "No business-hours schedules are configured yet.",
+        "usingTenantDefault": "Uses the tenant default business-hours schedule.",
+        "noTenantDefault": "No tenant default business-hours schedule is configured yet."
+      },
+      "recurring": {
+        "title": "Recurring schedule",
+        "description": "Choose a common recurrence pattern. Advanced cron is available for custom schedules.",
+        "builderMode": "Schedule Builder",
+        "advancedMode": "Advanced Cron",
+        "dailyHelper": "Runs every day at the selected time.",
+        "weeklyHelper": "Choose one or more weekdays below.",
+        "customCronWarning": "This schedule uses a custom cron expression. Keep editing it here, or switch back to the builder to replace it with a common pattern.",
+        "cronPreview": "Cron: {{cron}}"
+      },
+      "payload": {
+        "title": "Payload",
+        "description": "Author static input that will be passed into each scheduled run.",
+        "rootLabel": "Payload",
+        "rootKey": "payload",
+        "mode": {
+          "form": "Form Mode",
+          "json": "JSON Mode"
+        },
+        "actions": {
+          "addItem": "Add item",
+          "removeItem": "Remove"
+        },
+        "states": {
+          "noItems": "No items yet."
+        },
+        "boolean": {
+          "true": "True",
+          "false": "False"
+        },
+        "noSchema": {
+          "title": "No payload schema is available for this workflow yet.",
+          "description": "Form fields will appear here once this workflow publishes a pinned payload schema."
+        }
+      },
+      "validation": {
+        "title": "Payload validation errors",
+        "more": "+{{count}} more…",
+        "invalidValue": "Invalid value",
+        "valueMustBeAllowed": "Value must be one of the allowed options.",
+        "expectedObject": "Expected object.",
+        "requiredFieldMissing": "Required field missing.",
+        "unknownProperty": "Unknown property.",
+        "expectedArray": "Expected array.",
+        "expectedString": "Expected string.",
+        "expectedNumber": "Expected number.",
+        "expectedBoolean": "Expected boolean.",
+        "payloadMustBeObject": "Schedule payload must be a JSON object.",
+        "invalidJson": "Invalid JSON"
+      },
+      "errors": {
+        "loadScheduleFailed": "Failed to load schedule.",
+        "saveFailed": "Failed to save schedule."
+      }
+    },
+    "recurrence": {
+      "andWord": "and",
+      "frequency": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly"
+      },
+      "validation": {
+        "validTime": "Choose a valid time.",
+        "weekdayRequired": "Choose at least one weekday.",
+        "dayOfMonthRange": "Choose a day of month between 1 and 31."
+      },
+      "summary": {
+        "daily": "Runs every day at {{timeLabel}} {{timezoneLabel}}",
+        "weekly": "Runs every {{weekdayLabels}} at {{timeLabel}} {{timezoneLabel}}",
+        "monthly": "Runs on day {{dayOfMonth}} of each month at {{timeLabel}} {{timezoneLabel}}"
+      },
+      "weekdays": {
+        "0": {
+          "short": "Sun",
+          "long": "Sunday"
+        },
+        "1": {
+          "short": "Mon",
+          "long": "Monday"
+        },
+        "2": {
+          "short": "Tue",
+          "long": "Tuesday"
+        },
+        "3": {
+          "short": "Wed",
+          "long": "Wednesday"
+        },
+        "4": {
+          "short": "Thu",
+          "long": "Thursday"
+        },
+        "5": {
+          "short": "Fri",
+          "long": "Friday"
+        },
+        "6": {
+          "short": "Sat",
+          "long": "Saturday"
+        }
+      }
+    }
+  },
   "enums": {
     "workflowRunStatus": {
       "RUNNING": "Running",
