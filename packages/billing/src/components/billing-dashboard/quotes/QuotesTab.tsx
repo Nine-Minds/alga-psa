@@ -91,7 +91,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
     return filteredByStatus.filter((q) => q.client_name === clientFilter);
   }, [filteredByStatus, clientFilter]);
 
-  const columns: ColumnDefinition<IQuoteListItem>[] = useMemo(() => [
+  const columns = useMemo((): ColumnDefinition<IQuoteListItem>[] => [
     {
       title: t('common.columns.quoteNumber', { defaultValue: 'Quote #' }),
       dataIndex: 'display_quote_number',
