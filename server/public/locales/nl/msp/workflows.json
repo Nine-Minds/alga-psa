@@ -428,6 +428,78 @@
       "moreErrors": "+{{count}} more…"
     }
   },
+  "eventList": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "summary": {
+      "total": "Total",
+      "matched": "Matched",
+      "unmatched": "Unmatched",
+      "errors": "Errors"
+    },
+    "filters": {
+      "eventNameLabel": "Event name",
+      "eventNamePlaceholder": "workflow.event",
+      "correlationKeyLabel": "Correlation key",
+      "correlationKeyPlaceholder": "corr-123",
+      "statusLabel": "Status",
+      "fromLabel": "From",
+      "toLabel": "To"
+    },
+    "actions": {
+      "applyFilters": "Apply filters",
+      "reset": "Reset",
+      "exportCsv": "Export CSV",
+      "exportJson": "Export JSON",
+      "close": "Close",
+      "viewRunDetails": "View run details"
+    },
+    "table": {
+      "schemaConflict": "catalog ≠ submission",
+      "columns": {
+        "event": "Event",
+        "correlation": "Correlation",
+        "schema": "Schema",
+        "status": "Status",
+        "matchedRun": "Matched Run",
+        "payload": "Payload",
+        "created": "Created"
+      }
+    },
+    "states": {
+      "loading": "Loading events...",
+      "empty": "No workflow events found."
+    },
+    "detail": {
+      "title": "Event Detail",
+      "loading": "Loading event detail...",
+      "eventIdLabel": "Event ID",
+      "statusLabel": "Status",
+      "eventNameLabel": "Event name",
+      "correlationKeyLabel": "Correlation key",
+      "payloadSchemaRefLabel": "Payload schema ref",
+      "schemaConflict": "Schema ref conflict: catalog {{catalog}} vs submission {{submission}}",
+      "createdLabel": "Created",
+      "processedLabel": "Processed",
+      "errorLine": "Error: {{message}}",
+      "waitLabel": "Wait",
+      "waitIdLine": "Wait ID: {{waitId}}",
+      "waitStatusLine": "Status: {{status}}",
+      "waitTimeoutLine": "Timeout: {{value}}",
+      "waitResolvedLine": "Resolved: {{value}}",
+      "waitStepLine": "Step: {{value}}",
+      "matchedRunLabel": "Matched run",
+      "runStatusLine": "Status: {{status}}",
+      "payloadLabel": "Payload"
+    },
+    "toasts": {
+      "loadEventsFailed": "Failed to load workflow events",
+      "loadEventDetailFailed": "Failed to load event detail",
+      "exportReady": "Event export ready",
+      "exportFailed": "Failed to export events"
+    }
+  },
   "enums": {
     "workflowRunStatus": {
       "RUNNING": "Running",

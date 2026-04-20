@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Extract all user-visible strings in WorkflowEventList.tsx (filters, columns, empty state) to t() calls.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-B"]
   },
   {

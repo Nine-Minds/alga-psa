@@ -364,3 +364,27 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   node scripts/validate-translations.cjs
   ```
 - ESLint result: no errors; remaining warnings are pre-existing `any` / unused-prop / hooks-backlog warnings in the dialog file.
+
+### F016 complete — WorkflowEventList strings extracted
+- Updated `ee/server/src/components/workflow-designer/WorkflowEventList.tsx` to localize:
+  - summary badges
+  - filter labels/placeholders
+  - table column headers
+  - empty/loading states
+  - event-detail drawer labels and action copy
+  - export/detail-load toast fallbacks
+- Switched event-status badges to `useFormatWorkflowEventStatus()` so `matched` / `unmatched` / `error` no longer render as inline English casing logic.
+- Added `eventList.*` keys to `server/public/locales/en/msp/workflows.json`, then synced the stub structure into `fr/es/de/nl/it/pl/xx/yy`.
+- Sanity check run:
+  ```bash
+  node - <<'NODE'
+  # compared all eventList.* keys referenced in WorkflowEventList.tsx against en/msp/workflows.json
+  NODE
+  ```
+  Result: zero missing keys.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowEventList.tsx
+  node scripts/validate-translations.cjs
+  ```
+- ESLint result: no errors; remaining warnings are limited to pre-existing `any` / unused-catch-variable sites.
