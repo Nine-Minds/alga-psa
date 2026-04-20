@@ -563,6 +563,21 @@
       "exportFailed": "Failed to export audit logs"
     }
   },
+  "trigger": {
+    "manual": "Manual",
+    "event": "Event",
+    "eventWithType": "Event: {{eventType}}",
+    "oneTimeSchedule": "One-time schedule",
+    "recurringSchedule": "Recurring schedule"
+  },
+  "scheduleStatus": {
+    "unknown": "Unknown",
+    "scheduled": "Scheduled",
+    "paused": "Paused",
+    "disabled": "Disabled",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
   "graph": {
     "start": {
       "label": "Start"

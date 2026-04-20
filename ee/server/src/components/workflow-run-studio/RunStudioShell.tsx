@@ -34,11 +34,13 @@ import {
   getStepTypeIcon
 } from '../workflow-designer/pipeline/PipelineComponents';
 import {
-  getWorkflowRunTriggerLabel,
   getWorkflowScheduleStatusBadgeClass,
-  getWorkflowScheduleStatusLabel,
   isTimeTriggeredRun
 } from '../workflow-designer/workflowRunTriggerPresentation';
+import {
+  useFormatWorkflowRunTrigger,
+  useFormatWorkflowScheduleStatus,
+} from '../workflow-designer/useWorkflowRunTriggerPresentation';
 import { useFormatWorkflowLogLevel, useFormatWorkflowRunStatus } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 
 type WorkflowRunRecord = {
@@ -168,6 +170,8 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
   const { t } = useTranslation('msp/workflows');
   const formatWorkflowRunStatus = useFormatWorkflowRunStatus();
   const formatWorkflowLogLevel = useFormatWorkflowLogLevel();
+  const formatWorkflowRunTrigger = useFormatWorkflowRunTrigger();
+  const formatWorkflowScheduleStatus = useFormatWorkflowScheduleStatus();
   const [run, setRun] = useState<WorkflowRunRecord | null>(null);
   const [scheduleState, setScheduleState] = useState<WorkflowScheduleStateSummary | null>(null);
   const [definition, setDefinition] = useState<WorkflowDefinition | null>(null);
@@ -271,8 +275,8 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
   }, [runId]);
 
   const triggerLabel = useMemo(
-    () => getWorkflowRunTriggerLabel(run?.trigger_type ?? null, run?.event_type ?? null),
-    [run?.event_type, run?.trigger_type]
+    () => formatWorkflowRunTrigger(run?.trigger_type ?? null, run?.event_type ?? null),
+    [formatWorkflowRunTrigger, run?.event_type, run?.trigger_type]
   );
   const triggerMetadata = (run?.trigger_metadata_json ?? null) as Record<string, unknown> | null;
 
@@ -1043,7 +1047,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                     {t('runStudio.details.fields.scheduleState', { defaultValue: 'Schedule State' })}
                   </div>
                   <Badge className={getWorkflowScheduleStatusBadgeClass(scheduleState?.status)}>
-                    {getWorkflowScheduleStatusLabel(scheduleState?.status)}
+                    {formatWorkflowScheduleStatus(scheduleState?.status)}
                   </Badge>
                 </div>
               )}

@@ -42,11 +42,13 @@ import {
 import type { WorkflowDefinition, Step, IfBlock, ForEachBlock, TryCatchBlock } from '@alga-psa/workflows/runtime/client';
 import { pathDepth } from '@alga-psa/workflows/authoring';
 import {
-  getWorkflowRunTriggerLabel,
   getWorkflowScheduleStatusBadgeClass,
-  getWorkflowScheduleStatusLabel,
   isTimeTriggeredRun
 } from './workflowRunTriggerPresentation';
+import {
+  useFormatWorkflowRunTrigger,
+  useFormatWorkflowScheduleStatus,
+} from './useWorkflowRunTriggerPresentation';
 
 type WorkflowRunRecord = {
   run_id: string;
@@ -304,6 +306,8 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
   const formatWorkflowRunStatus = useFormatWorkflowRunStatus();
   const formatWorkflowStepStatus = useFormatWorkflowStepStatus();
   const formatWorkflowLogLevel = useFormatWorkflowLogLevel();
+  const formatWorkflowRunTrigger = useFormatWorkflowRunTrigger();
+  const formatWorkflowScheduleStatus = useFormatWorkflowScheduleStatus();
   const workflowStepStatusOptions = useWorkflowStepStatusOptions();
   const workflowLogLevelOptions = useWorkflowLogLevelOptions();
   const [run, setRun] = useState<WorkflowRunRecord | null>(null);
@@ -644,7 +648,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
     }
   };
 
-  const triggerLabel = getWorkflowRunTriggerLabel(run?.trigger_type ?? null, run?.event_type ?? null);
+  const triggerLabel = formatWorkflowRunTrigger(run?.trigger_type ?? null, run?.event_type ?? null);
   const triggerMetadata = (run?.trigger_metadata_json ?? null) as Record<string, unknown> | null;
   const canResume = canAdmin && run?.status === 'WAITING';
   const canCancel = canAdmin && run?.status && !['SUCCEEDED', 'FAILED', 'CANCELED'].includes(run.status);
@@ -942,7 +946,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                 {t('runDetails.summary.scheduleStateLabel', { defaultValue: 'Schedule state' })}
               </div>
               <Badge className={getWorkflowScheduleStatusBadgeClass(scheduleState?.status)}>
-                {getWorkflowScheduleStatusLabel(scheduleState?.status)}
+                {formatWorkflowScheduleStatus(scheduleState?.status)}
               </Badge>
             </div>
           )}

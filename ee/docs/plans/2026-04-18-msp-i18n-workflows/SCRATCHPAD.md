@@ -501,6 +501,28 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
 - Cross-checked every `t('graph.*')` key referenced in the component against `en/msp/workflows.json`:
   - 13 keys referenced, 0 missing.
 - Backlog: `buildWorkflowGraph.ts` still hard-codes the `next` loop-back edge label. Internal sentinels (`Start`, `Join`, `Done`) in that helper are purely comparison values not shown to users (they drive the ✓/⋯ glyph choice), so left as-is. Edge `next` label is user-visible on the canvas — file a follow-up item to make it translation-aware by threading a label override through `buildWorkflowGraph` options.
+
+### F051 complete — workflow run trigger presentation helpers localized
+- Added `ee/server/src/components/workflow-designer/useWorkflowRunTriggerPresentation.ts` with two React hooks colocated with the pure helper:
+  - `useFormatWorkflowRunTrigger()` — returns a `(triggerType, eventType?) => string` formatter.
+  - `useFormatWorkflowScheduleStatus()` — returns a `(status) => string` formatter.
+- Both hooks read from the `msp/workflows` namespace under `trigger.*` and `scheduleStatus.*`, and use `defaultValue` fallbacks so flag-off users still see the same English copy as today.
+- Left the pure helpers (`getWorkflowRunTriggerLabel`, `getWorkflowScheduleStatusLabel`, `getWorkflowScheduleStatusBadgeClass`, `isTimeTriggeredRun`) in place so the existing unit test stays authoritative and `getWorkflowScheduleStatusBadgeClass` keeps its single-responsibility class-only API.
+- Updated callers to use the new hooks:
+  - `WorkflowRunList.tsx` — `workflowTriggerMap` useMemo and the inline row badges.
+  - `WorkflowRunDetails.tsx` — `triggerLabel` and schedule-state badge label.
+  - `RunStudioShell.tsx` — `triggerLabel` useMemo and schedule-state badge label.
+- Added `trigger.*` (5 keys) and `scheduleStatus.*` (6 keys) to `server/public/locales/en/msp/workflows.json`, synced into `fr/es/de/nl/it/pl/xx/yy` as English stubs pending WF-F translation.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/useWorkflowRunTriggerPresentation.ts ee/server/src/components/workflow-designer/WorkflowRunList.tsx ee/server/src/components/workflow-designer/WorkflowRunDetails.tsx ee/server/src/components/workflow-run-studio/RunStudioShell.tsx
+  npx vitest run src/__tests__/unit/workflowRunTriggerPresentation.unit.test.ts
+  node scripts/validate-translations.cjs
+  ```
+- Results:
+  - ESLint reports 0 errors; remaining warnings are the pre-existing `any`/non-null-assertion/`exhaustive-deps`/`no-empty`/`no-unused-vars` backlog, unchanged by this extraction.
+  - Vitest: 2/2 existing trigger-presentation unit tests still pass (they exercise the pure helpers, not the hooks).
+  - translation validation passed with 0 missing/extra keys.
 - Checks run:
   ```bash
   npx eslint ee/server/src/components/workflow-graph/WorkflowGraph.tsx

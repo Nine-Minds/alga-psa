@@ -302,7 +302,7 @@
   {
     "id": "F051",
     "description": "Extract hardcoded trigger and schedule-status labels in workflowRunTriggerPresentation.ts to translation-aware workflow formatters so WorkflowRunList/WorkflowRunDialog/WorkflowRunDetails stop rendering English helper strings.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-B", "Sub-batch plan", "Acceptance criteria"]
   }
 ]

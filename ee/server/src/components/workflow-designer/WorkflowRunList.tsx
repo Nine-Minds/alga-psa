@@ -29,11 +29,13 @@ import {
 } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 import WorkflowRunDetails from './WorkflowRunDetails';
 import {
-  getWorkflowRunTriggerLabel,
   getWorkflowScheduleStatusBadgeClass,
-  getWorkflowScheduleStatusLabel,
   isTimeTriggeredRun
 } from './workflowRunTriggerPresentation';
+import {
+  useFormatWorkflowRunTrigger,
+  useFormatWorkflowScheduleStatus,
+} from './useWorkflowRunTriggerPresentation';
 
 type WorkflowDefinitionSummary = {
   workflow_id: string;
@@ -172,6 +174,8 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
 }) => {
   const { t } = useTranslation('msp/workflows');
   const formatWorkflowRunStatus = useFormatWorkflowRunStatus();
+  const formatWorkflowRunTrigger = useFormatWorkflowRunTrigger();
+  const formatWorkflowScheduleStatus = useFormatWorkflowScheduleStatus();
   const workflowRunStatusOptions = useWorkflowRunStatusOptions();
   const workflowRunSortOptions = useWorkflowRunSortOptions();
   const [filters, setFilters] = useState<WorkflowRunFilters>(DEFAULT_FILTERS);
@@ -224,14 +228,14 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
       }
       map.set(
         definition.workflow_id,
-        getWorkflowRunTriggerLabel(
+        formatWorkflowRunTrigger(
           typeof (trigger as any)?.type === 'string' ? (trigger as any).type : null,
           typeof (trigger as any)?.eventName === 'string' ? (trigger as any).eventName : null
         )
       );
     });
     return map;
-  }, [definitions]);
+  }, [definitions, formatWorkflowRunTrigger]);
   const workflowScheduleStateMap = useMemo(
     () => new Map(definitions.map((definition) => [definition.workflow_id, definition.schedule_state ?? null])),
     [definitions]
@@ -837,7 +841,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                       <div className="flex flex-wrap items-center gap-1">
                         <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-[10px]">
                           {run.trigger_type
-                            ? getWorkflowRunTriggerLabel(run.trigger_type)
+                            ? formatWorkflowRunTrigger(run.trigger_type)
                             : (workflowTriggerMap.get(run.workflow_id)
                               ?? t('runList.table.trigger.manual', { defaultValue: 'Manual' }))}
                         </Badge>
@@ -845,7 +849,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                           <Badge
                             className={`text-[10px] ${getWorkflowScheduleStatusBadgeClass(workflowScheduleStateMap.get(run.workflow_id)?.status)}`}
                           >
-                            {getWorkflowScheduleStatusLabel(workflowScheduleStateMap.get(run.workflow_id)?.status)}
+                            {formatWorkflowScheduleStatus(workflowScheduleStateMap.get(run.workflow_id)?.status)}
                           </Badge>
                         ) : null}
                       </div>
