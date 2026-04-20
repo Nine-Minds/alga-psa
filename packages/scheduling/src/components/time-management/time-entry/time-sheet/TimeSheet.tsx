@@ -18,6 +18,7 @@ import { fetchTimeEntriesForTimeSheet, fetchWorkItemsForTimeSheet, submitTimeShe
 import { updateScheduleEntry } from '@alga-psa/scheduling/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { fetchTimeSheet, fetchTimeSheetComments, addCommentToTimeSheet } from '../../../../actions/timeSheetActions';
 import { useDrawer } from "@alga-psa/ui";
 import { formatISO, parseISO, format } from 'date-fns';
@@ -219,6 +220,7 @@ export function TimeSheet({
     initialDuration,
     onBack
 }: TimeSheetProps): React.JSX.Element {
+    const { t } = useTranslation('msp/time-entry');
     const [showIntervals, setShowIntervals] = useState(false);
     const [dateNavigator, setDateNavigator] = useState<TimeSheetDateNavigatorState | null>(null);
     const isLoadingTimeSheetData = false;
@@ -629,7 +631,7 @@ export function TimeSheet({
                 setLocalWorkItems([]);
             }
 
-            toast.success('Time entry saved successfully');
+            toast.success(t('messages.entrySavedSuccess'));
         } catch (error) {
             handleError(error, 'Failed to save time entry');
             throw error;
@@ -738,7 +740,7 @@ export function TimeSheet({
     const handleTaskUpdate = useCallback(async (_updated: any) => {
         try {
             await refreshTimeSheetData();
-            toast.success('Task updated successfully');
+            toast.success(t('messages.taskUpdated'));
             closeDrawer();
         } catch (error) {
             handleError(error, 'Failed to update task');
@@ -757,12 +759,12 @@ export function TimeSheet({
             });
 
             if (!result.success) {
-                toast.error(result.error || 'Failed to save changes');
+                toast.error(result.error || t('messages.saveChangesFailed'));
                 return;
             }
 
             await refreshTimeSheetData();
-            toast.success('Changes saved successfully');
+            toast.success(t('messages.changesSaved'));
             closeDrawer();
         } catch (error) {
             handleError(error, 'Failed to save changes');
@@ -791,7 +793,7 @@ export function TimeSheet({
 
                 return currentInteraction;
             });
-            toast.success('Work item deleted successfully');
+            toast.success(t('messages.workItemDeleted'));
         } catch (error) {
             handleError(error, 'Failed to delete work item');
         }

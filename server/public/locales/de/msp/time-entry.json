@@ -401,5 +401,18 @@
   },
   "timeEntryReadOnly": {
     "viewEntryDetails": "Eintragsdetails anzeigen"
+  },
+  "messages": {
+    "serviceRequired": "Bitte wählen Sie einen Dienst, bevor Sie Zeiteinträge speichern",
+    "invalidService": "Ungültiger Dienst ausgewählt",
+    "taxRegionRequired": "Bitte wählen Sie eine Steuerregion für steuerpflichtige Dienste",
+    "invalidTimeEntry": "Bitte überprüfen Sie die Werte des Zeiteintrags",
+    "savingEntry": "Zeiteintrag wird gespeichert...",
+    "entrySaved": "Zeiteintrag gespeichert",
+    "entrySavedSuccess": "Zeiteintrag erfolgreich gespeichert",
+    "taskUpdated": "Aufgabe erfolgreich aktualisiert",
+    "saveChangesFailed": "Änderungen konnten nicht gespeichert werden",
+    "changesSaved": "Änderungen erfolgreich gespeichert",
+    "workItemDeleted": "Arbeitsposten erfolgreich gelöscht"
   }
 }
