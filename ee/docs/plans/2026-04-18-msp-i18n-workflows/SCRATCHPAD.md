@@ -233,3 +233,14 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   node scripts/validate-translations.cjs
   ```
 - ESLint result: no errors; existing warnings are unrelated pre-existing `any`/unused-variable warnings in `WorkflowEventList.tsx`.
+
+### F009 complete — WorkflowAiSchemaSection uses schema-type hook
+- Updated `ee/server/src/components/workflow-designer/WorkflowAiSchemaSection.tsx` to consume `useWorkflowAiSchemaTypeOptions()`.
+- Removed the duplicated hardcoded primitive-type arrays.
+- Preserved current UX by filtering out the `array` option only for the array-item picker, while the main field-type selector still exposes all 6 enum values from the shared hook.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowAiSchemaSection.tsx
+  node scripts/validate-translations.cjs
+  ```
+- Result: no ESLint errors or warnings from this file; translation validation remained green.

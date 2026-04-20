@@ -22,6 +22,7 @@ import {
   type WorkflowAiSimpleFieldType,
   type WorkflowJsonSchema,
 } from '@alga-psa/workflows/authoring';
+import { useWorkflowAiSchemaTypeOptions } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 
 type WorkflowAiSchemaSectionProps = {
   stepId: string;
@@ -46,23 +47,6 @@ const getHydrationError = (
   hydrated: ReturnType<typeof hydrateWorkflowAiSimpleFields>
 ): string =>
   'reason' in hydrated ? hydrated.reason : 'This schema cannot be represented in simple mode.';
-
-const SIMPLE_FIELD_TYPE_OPTIONS: Array<{ value: WorkflowAiSimpleFieldType; label: string }> = [
-  { value: 'string', label: 'String' },
-  { value: 'number', label: 'Number' },
-  { value: 'integer', label: 'Integer' },
-  { value: 'boolean', label: 'Boolean' },
-  { value: 'object', label: 'Object' },
-  { value: 'array', label: 'Array' },
-];
-
-const SIMPLE_ARRAY_ITEM_TYPE_OPTIONS: Array<{ value: WorkflowAiSimpleArrayItemType; label: string }> = [
-  { value: 'string', label: 'String' },
-  { value: 'number', label: 'Number' },
-  { value: 'integer', label: 'Integer' },
-  { value: 'boolean', label: 'Boolean' },
-  { value: 'object', label: 'Object' },
-];
 
 const cloneFields = (fields: WorkflowAiSimpleField[]): WorkflowAiSimpleField[] =>
   JSON.parse(JSON.stringify(fields)) as WorkflowAiSimpleField[];
@@ -215,9 +199,26 @@ const FieldEditor: React.FC<{
   onRemove: (fieldId: string) => void;
   onAddChild: (fieldId: string) => void;
 }> = ({ field, stepId, depth, disabled, onUpdate, onRemove, onAddChild }) => {
+  const workflowAiSchemaTypeOptions = useWorkflowAiSchemaTypeOptions();
   const isObject = field.type === 'object';
   const isArray = field.type === 'array';
   const canHaveChildren = isObject || (isArray && field.arrayItemType === 'object');
+  const fieldTypeOptions = workflowAiSchemaTypeOptions as Array<{
+    value: WorkflowAiSimpleFieldType;
+    label: string;
+  }>;
+  const arrayItemTypeOptions = useMemo(
+    () =>
+      workflowAiSchemaTypeOptions.filter(
+        (
+          option,
+        ): option is {
+          value: WorkflowAiSimpleArrayItemType;
+          label: string;
+        } => option.value !== 'array'
+      ),
+    [workflowAiSchemaTypeOptions]
+  );
 
   return (
     <div className="rounded-md border border-gray-200 bg-white p-3" style={{ marginLeft: depth > 0 ? depth * 16 : 0 }}>
@@ -261,7 +262,7 @@ const FieldEditor: React.FC<{
               }));
             }}
           >
-            {SIMPLE_FIELD_TYPE_OPTIONS.map((option) => (
+            {fieldTypeOptions.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
@@ -284,7 +285,7 @@ const FieldEditor: React.FC<{
                 }));
               }}
             >
-              {SIMPLE_ARRAY_ITEM_TYPE_OPTIONS.map((option) => (
+              {arrayItemTypeOptions.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>

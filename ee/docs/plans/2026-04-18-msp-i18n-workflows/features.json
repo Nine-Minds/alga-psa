@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Replace the two duplicate AI schema primitive-type arrays in WorkflowAiSchemaSection.tsx (lines 51-64) with useWorkflowAiSchemaTypeOptions hook call.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-D", "Enum migration — explicit scope"]
   },
   {
