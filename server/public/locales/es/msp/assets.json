@@ -1184,5 +1184,13 @@
     "values": {
       "unknown": "Desconocido"
     }
+  },
+  "alerts": {
+    "messages": {
+      "alertAcknowledged": "Alerta confirmada",
+      "acknowledgeFailed": "Error al confirmar la alerta",
+      "ticketCreated": "Ticket creado correctamente",
+      "ticketCreateFailed": "Error al crear el ticket"
+    }
   }
 }

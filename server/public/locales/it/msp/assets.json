@@ -1184,5 +1184,13 @@
     "values": {
       "unknown": "Sconosciuto"
     }
+  },
+  "alerts": {
+    "messages": {
+      "alertAcknowledged": "Avviso confermato",
+      "acknowledgeFailed": "Impossibile confermare l'avviso",
+      "ticketCreated": "Ticket creato con successo",
+      "ticketCreateFailed": "Impossibile creare il ticket"
+    }
   }
 }

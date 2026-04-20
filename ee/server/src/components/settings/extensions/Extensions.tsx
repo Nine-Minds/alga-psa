@@ -22,6 +22,7 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { toast } from 'react-hot-toast';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 /**
  * Extensions management page
@@ -29,6 +30,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 type ExtRow = Extension & { id: string };
 
 export default function Extensions() {
+  const { t } = useTranslation('msp/extensions');
   const [extensions, setExtensions] = useState<ExtRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +78,7 @@ export default function Extensions() {
     try {
       const result = await toggleExtensionV2(id);
       if (!result.success) {
-        toast.error(result.message || 'Failed to update extension state');
+        toast.error(result.message || t('messages.toggleFailed'));
         return;
       }
   
@@ -87,11 +89,11 @@ export default function Extensions() {
         )
       );
   
-      toast.success(`Extension ${currentStatus ? 'disabled' : 'enabled'}`);
+      toast.success(currentStatus ? t('messages.extensionDisabled') : t('messages.extensionEnabled'));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'unknown error';
       console.error('Failed to toggle extension', { id, error: msg });
-      toast.error(`Failed to ${currentStatus ? 'disable' : 'enable'} extension`);
+      toast.error(currentStatus ? t('messages.disableFailed') : t('messages.enableFailed'));
     }
   };
   
@@ -108,7 +110,7 @@ export default function Extensions() {
     try {
       const result = await uninstallExtensionV2(id);
       if (!result.success) {
-        toast.error(result.message || 'Failed to remove extension');
+        toast.error(result.message || t('messages.removeFailed'));
         return;
       }
 
@@ -117,11 +119,11 @@ export default function Extensions() {
         prevExtensions.filter(ext => ext.id !== id)
       );
 
-      toast.success('Extension removed');
+      toast.success(t('messages.extensionRemoved'));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'unknown error';
       console.error('Failed to remove extension', { id, error: msg });
-      toast.error('Failed to remove extension');
+      toast.error(t('messages.removeFailed'));
     }
   };
 
@@ -130,7 +132,7 @@ export default function Extensions() {
       const result = await reprovisionExtension(id);
       setInstallInfo((prev) => ({ ...prev, [id]: { domain: result.domain || null, status: { state: 'provisioning' } } }));
     } catch (e) {
-      toast.error('Failed to reprovision');
+      toast.error(t('messages.reprovisionFailed'));
     }
   };
   

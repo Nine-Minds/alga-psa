@@ -1347,5 +1347,25 @@
     "badge": {
       "inactive": "11111"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "11111",
+      "permissionsUpdated": "11111"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "11111",
+      "scheduleUpdated": "11111",
+      "scheduleCreated": "11111",
+      "scheduleDeleted": "11111",
+      "defaultHoursCreated": "11111",
+      "scheduleRequired": "11111",
+      "holidayNameRequired": "11111",
+      "holidayDateRequired": "11111",
+      "holidayAdded": "11111",
+      "holidayDeleted": "11111"
+    }
   }
 }

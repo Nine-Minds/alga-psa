@@ -1347,5 +1347,25 @@
     "badge": {
       "inactive": "Inactive"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "Admin role permissions cannot be modified",
+      "permissionsUpdated": "Permissions updated successfully"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Schedule not found",
+      "scheduleUpdated": "Schedule updated successfully",
+      "scheduleCreated": "Schedule created successfully",
+      "scheduleDeleted": "Schedule deleted successfully",
+      "defaultHoursCreated": "Default business hours schedule created",
+      "scheduleRequired": "Please select a schedule first",
+      "holidayNameRequired": "Holiday name is required",
+      "holidayDateRequired": "Holiday date is required",
+      "holidayAdded": "Holiday added successfully",
+      "holidayDeleted": "Holiday deleted successfully"
+    }
   }
 }

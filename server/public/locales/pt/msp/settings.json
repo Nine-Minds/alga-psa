@@ -1347,5 +1347,25 @@
     "badge": {
       "inactive": "Inactive"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "As permissões do papel de administrador não podem ser modificadas",
+      "permissionsUpdated": "Permissões atualizadas com sucesso"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Agendamento não encontrado",
+      "scheduleUpdated": "Agendamento atualizado com sucesso",
+      "scheduleCreated": "Agendamento criado com sucesso",
+      "scheduleDeleted": "Agendamento excluído com sucesso",
+      "defaultHoursCreated": "Agendamento de horário comercial padrão criado",
+      "scheduleRequired": "Selecione primeiro um agendamento",
+      "holidayNameRequired": "O nome do feriado é obrigatório",
+      "holidayDateRequired": "A data do feriado é obrigatória",
+      "holidayAdded": "Feriado adicionado com sucesso",
+      "holidayDeleted": "Feriado excluído com sucesso"
+    }
   }
 }

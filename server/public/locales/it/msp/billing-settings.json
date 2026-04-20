@@ -1096,5 +1096,24 @@
       "load": "Impossibile caricare le impostazioni di numerazione.",
       "save": "Impossibile aggiornare le impostazioni."
     }
+  },
+  "payment": {
+    "messages": {
+      "loadConfigFailed": "Impossibile caricare la configurazione di pagamento",
+      "keysRequired": "Inserisci sia la chiave segreta che la chiave pubblicabile",
+      "invalidSecretKey": "La chiave segreta deve iniziare con sk_",
+      "invalidPublishableKey": "La chiave pubblicabile deve iniziare con pk_",
+      "connectSuccess": "Stripe connesso e webhook configurati automaticamente!",
+      "connectPartialSuccess": "Stripe connesso! Nota: la configurazione automatica del webhook è fallita — potrebbe essere necessario configurare i webhook manualmente nella dashboard di Stripe.",
+      "connectFailed": "Impossibile connettersi a Stripe",
+      "disconnected": "Stripe disconnesso",
+      "disconnectFailed": "Impossibile disconnettere Stripe",
+      "connectionSuccess": "Connessione riuscita!",
+      "connectionTestFailed": "Test di connessione non riuscito",
+      "settingsSaved": "Impostazioni salvate con successo",
+      "saveSettingsFailed": "Impossibile salvare le impostazioni",
+      "webhookConfigured": "Webhook configurato con successo!",
+      "webhookConfigureFailed": "Impossibile configurare il webhook"
+    }
   }
 }

@@ -1347,5 +1347,25 @@
     "badge": {
       "inactive": "Inattivo"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "I permessi del ruolo amministratore non possono essere modificati",
+      "permissionsUpdated": "Permessi aggiornati con successo"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Pianificazione non trovata",
+      "scheduleUpdated": "Pianificazione aggiornata con successo",
+      "scheduleCreated": "Pianificazione creata con successo",
+      "scheduleDeleted": "Pianificazione eliminata con successo",
+      "defaultHoursCreated": "Pianificazione orari di lavoro predefinita creata",
+      "scheduleRequired": "Seleziona prima una pianificazione",
+      "holidayNameRequired": "Il nome della festività è obbligatorio",
+      "holidayDateRequired": "La data della festività è obbligatoria",
+      "holidayAdded": "Festività aggiunta con successo",
+      "holidayDeleted": "Festività eliminata con successo"
+    }
   }
 }

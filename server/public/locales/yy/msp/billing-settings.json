@@ -1096,5 +1096,24 @@
       "load": "55555",
       "save": "55555"
     }
+  },
+  "payment": {
+    "messages": {
+      "loadConfigFailed": "55555",
+      "keysRequired": "55555",
+      "invalidSecretKey": "55555",
+      "invalidPublishableKey": "55555",
+      "connectSuccess": "55555",
+      "connectPartialSuccess": "55555",
+      "connectFailed": "55555",
+      "disconnected": "55555",
+      "disconnectFailed": "55555",
+      "connectionSuccess": "55555",
+      "connectionTestFailed": "55555",
+      "settingsSaved": "55555",
+      "saveSettingsFailed": "55555",
+      "webhookConfigured": "55555",
+      "webhookConfigureFailed": "55555"
+    }
   }
 }

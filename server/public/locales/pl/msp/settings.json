@@ -1347,5 +1347,25 @@
     "badge": {
       "inactive": "Nieaktywny"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "Nie można modyfikować uprawnień roli administratora",
+      "permissionsUpdated": "Uprawnienia zaktualizowane pomyślnie"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Nie znaleziono harmonogramu",
+      "scheduleUpdated": "Harmonogram zaktualizowany pomyślnie",
+      "scheduleCreated": "Harmonogram utworzony pomyślnie",
+      "scheduleDeleted": "Harmonogram usunięty pomyślnie",
+      "defaultHoursCreated": "Utworzono domyślny harmonogram godzin pracy",
+      "scheduleRequired": "Najpierw wybierz harmonogram",
+      "holidayNameRequired": "Nazwa święta jest wymagana",
+      "holidayDateRequired": "Data święta jest wymagana",
+      "holidayAdded": "Święto dodane pomyślnie",
+      "holidayDeleted": "Święto usunięte pomyślnie"
+    }
   }
 }

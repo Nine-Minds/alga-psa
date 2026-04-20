@@ -401,5 +401,18 @@
   },
   "timeEntryReadOnly": {
     "viewEntryDetails": "View entry details"
+  },
+  "messages": {
+    "serviceRequired": "Selecione um serviço antes de salvar as entradas de tempo",
+    "invalidService": "Serviço selecionado inválido",
+    "taxRegionRequired": "Selecione uma região fiscal para serviços tributáveis",
+    "invalidTimeEntry": "Verifique os valores da entrada de tempo",
+    "savingEntry": "Salvando entrada de tempo...",
+    "entrySaved": "Entrada de tempo salva",
+    "entrySavedSuccess": "Entrada de tempo salva com sucesso",
+    "taskUpdated": "Tarefa atualizada com sucesso",
+    "saveChangesFailed": "Falha ao salvar as alterações",
+    "changesSaved": "Alterações salvas com sucesso",
+    "workItemDeleted": "Item de trabalho excluído com sucesso"
   }
 }

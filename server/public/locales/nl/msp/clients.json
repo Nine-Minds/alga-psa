@@ -87,6 +87,7 @@
     "bulkDeleteSuccess": "{{count}} {{clientsLabel}} {{verb}} is succesvol verwijderd.",
     "bulkInactiveFailed": "{{count}} {{clientsLabel}} kan niet als inactief worden gemarkeerd.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} en {{contactCount}} {{contactsLabel}} zijn succesvol als inactief gemarkeerd.",
+    "singleInactiveSuccess": "{{name}} is succesvol als inactief gemarkeerd.",
     "bulkInactiveSuccess": "{{count}} {{clientsLabel}} {{verb}} is succesvol gemarkeerd als inactief.",
     "bulkInactiveShortSuccess": "{{count}} {{clientsLabel}} {{verb}} is gemarkeerd als inactief.",
     "bulkInactiveWithContactsShortSuccess": "{{clientCount}} {{clientsLabel}} en {{contactCount}} {{contactsLabel}} zijn gemarkeerd als inactief.",
@@ -129,7 +130,9 @@
       "bucketUsageRecord": "record voor emmergebruik",
       "bucketUsageRecords": "registraties van emmergebruik"
     },
-    "deleteSelectedPrompt": "Weet u zeker dat u {{count}} geselecteerde {{clientsLabel}} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+    "deleteSelectedPrompt": "Weet u zeker dat u {{count}} geselecteerde {{clientsLabel}} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "singleInactiveWithContactsSuccess_one": "{{name}} en {{count}} contact zijn succesvol gedeactiveerd.",
+    "singleInactiveWithContactsSuccess_other": "{{name}} en {{count}} contacten zijn succesvol gedeactiveerd."
   },
   "clientDetails": {
     "title": "Klantgegevens",
@@ -208,7 +211,12 @@
     "status": {
       "label": "Status",
       "helper": "Stel de clientstatus in op actief of inactief"
-    }
+    },
+    "entraSyncStarted": "Entra-synchronisatie gestart. Uitvoerings-ID: {{runId}}",
+    "inboundDomainAdded": "Inkomend e-maildomein toegevoegd",
+    "inboundDomainAddFailed": "Kan domein niet toevoegen",
+    "inboundDomainRemoved": "Inkomend e-maildomein verwijderd",
+    "inboundDomainRemoveFailed": "Kan domein niet verwijderen"
   },
   "quickAddClient": {
     "title": "Nieuwe klant toevoegen",

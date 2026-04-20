@@ -1347,5 +1347,25 @@
     "badge": {
       "inactive": "Inaktiv"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "Berechtigungen der Administratorrolle können nicht geändert werden",
+      "permissionsUpdated": "Berechtigungen erfolgreich aktualisiert"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Zeitplan nicht gefunden",
+      "scheduleUpdated": "Zeitplan erfolgreich aktualisiert",
+      "scheduleCreated": "Zeitplan erfolgreich erstellt",
+      "scheduleDeleted": "Zeitplan erfolgreich gelöscht",
+      "defaultHoursCreated": "Standard-Geschäftszeitenplan erstellt",
+      "scheduleRequired": "Bitte wählen Sie zuerst einen Zeitplan",
+      "holidayNameRequired": "Feiertagsname ist erforderlich",
+      "holidayDateRequired": "Feiertagsdatum ist erforderlich",
+      "holidayAdded": "Feiertag erfolgreich hinzugefügt",
+      "holidayDeleted": "Feiertag erfolgreich gelöscht"
+    }
   }
 }

@@ -160,6 +160,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/platform-updates': ['common', 'msp/core', 'msp/profile'],
   '/msp/extensions': ['common', 'msp/core', 'msp/extensions'],
   '/msp/licenses': ['common', 'msp/core', 'msp/licensing'],
+  '/msp/account': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
 } as const;
 
 /**

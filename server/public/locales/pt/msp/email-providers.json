@@ -459,5 +459,158 @@
       "update": "Update Defaults",
       "create": "Create Defaults"
     }
+  },
+  "managed": {
+    "tabs": {
+      "inboundEmail": "E-mail de entrada",
+      "outboundEmail": "E-mail de saída"
+    },
+    "outbound": {
+      "intro": "Configure o e-mail de saída para sua organização.",
+      "providerTitle": "Provedor de saída",
+      "providerDescription": "Escolha como os e-mails de saída são enviados pela sua organização.",
+      "providerPlaceholder": "Selecione o provedor de saída",
+      "providerOptions": {
+        "resend": "Gerenciado pela Nine Minds",
+        "smtp": "SMTP"
+      },
+      "resendDescription": "Os e-mails são enviados pela infraestrutura gerenciada da Nine Minds. Adicione e verifique um domínio personalizado abaixo.",
+      "smtpDescription": "Os e-mails são enviados pelo seu próprio servidor SMTP.",
+      "smtpLabel": "SMTP",
+      "upgradeNotice": "Domínios de e-mail gerenciados não estão disponíveis no seu plano atual. Faça upgrade para usar a infraestrutura de saída gerenciada da Nine Minds com domínios personalizados.",
+      "domainsTitle": "Domínios gerenciados",
+      "domainsDescription": "Adicione um domínio personalizado e siga as instruções de DNS para verificar a propriedade.",
+      "domainLabel": "Domínio",
+      "domainPlaceholder": "exemplo.com",
+      "addDomainButton": "Adicionar domínio",
+      "smtpConfigTitle": "Configuração SMTP",
+      "smtpConfigDescription": "Insira os detalhes do seu servidor SMTP para enviar e-mails de saída.",
+      "smtp": {
+        "hostLabel": "Host SMTP",
+        "hostPlaceholder": "smtp.exemplo.com",
+        "portLabel": "Porta",
+        "usernameLabel": "Nome de usuário",
+        "usernamePlaceholder": "seu-email@exemplo.com",
+        "passwordLabel": "Senha",
+        "passwordPlaceholder": "Insira a senha",
+        "fromLabel": "Endereço do remetente",
+        "fromPlaceholder": "noreply@exemplo.com",
+        "fromHelp": "Endereço do remetente padrão para e-mails de saída.",
+        "savingButton": "Salvando…",
+        "saveButton": "Salvar configurações SMTP"
+      },
+      "ticketingFrom": {
+        "title": "Endereço do remetente de tickets",
+        "description": "Escolha o endereço de e-mail que aparecerá no cabeçalho De das notificações de ticket.",
+        "smtpHint": "O endereço deve usar um domínio associado ao seu servidor SMTP ({{domain}}). As respostas funcionam melhor com uma caixa de entrada conectada.",
+        "managedHint": "O endereço deve usar seu domínio de saída ({{domain}}). As respostas funcionam melhor com uma caixa de entrada conectada.",
+        "domainNotSet": "não definido",
+        "outboundRequiredTitle": "Domínio de saída necessário",
+        "smtpRequiredMessage": "Salve sua configuração SMTP com um endereço de remetente antes de selecionar um endereço de remetente de tickets.",
+        "managedRequiredMessage": "Adicione e verifique um domínio gerenciado antes de selecionar um endereço de remetente de tickets.",
+        "connectedInboxLabel": "Caixa de entrada conectada",
+        "customOptionLabel": "Outro endereço em {{domain}}",
+        "selectPlaceholder": "Selecione o endereço do remetente",
+        "connectedInboxHelp": "Selecione uma caixa de entrada conectada para manter as respostas agrupadas.",
+        "customLabel": "Endereço do remetente",
+        "customPlaceholder": "suporte@{{domain}}",
+        "customSmtpHelp": "Use um domínio que seu servidor SMTP esteja autorizado a enviar. Um domínio incompatível pode causar falhas de entrega ou filtragem de spam.",
+        "customManagedHelp": "Deve corresponder a {{domain}}. Se não for uma de suas caixas de entrada, o processamento de tickets de entrada pode não funcionar.",
+        "warningTitle": "Atenção",
+        "errorTitle": "Corrija o endereço do remetente",
+        "clearButton": "Limpar endereço do remetente",
+        "savingButton": "Salvando…",
+        "saveButton": "Salvar endereço do remetente"
+      }
+    },
+    "inbound": {
+      "intro": "Configure o roteamento de e-mails de entrada e a automação específica do provedor."
+    },
+    "dialogs": {
+      "clearTicketingFrom": {
+        "title": "Limpar endereço do remetente de tickets",
+        "message": "Limpar o endereço do remetente de tickets salvo? As notificações de ticket deixarão de usar um endereço personalizado até que você salve um novo.",
+        "confirm": "Limpar endereço do remetente"
+      },
+      "removeDomain": {
+        "title": "Remover domínio gerenciado",
+        "messageWithClear": "Remover {{domain}}? Isso também limpará o endereço do remetente de tickets salvo porque este domínio está atualmente ativo para e-mail de saída.",
+        "message": "Remover {{domain}}?",
+        "fallbackDomain": "este domínio",
+        "confirm": "Remover domínio"
+      },
+      "cancel": "Cancelar"
+    },
+    "validation": {
+      "enterFromAddress": "Insira um endereço de remetente",
+      "saveSmtpFirst": "Salve primeiro sua configuração SMTP com um endereço de remetente",
+      "addOutboundFirst": "Adicione e verifique um domínio de saída antes de escolher um endereço de remetente",
+      "invalidEmail": "Insira um endereço de e-mail válido",
+      "mustMatchDomain": "O endereço do remetente deve usar @{{domain}}",
+      "customAddressThreadWarning": "O uso de um endereço personalizado pode impedir o agrupamento correto das respostas recebidas.",
+      "smtpDomainMismatchWarning": "Este domínio não corresponde ao domínio do remetente SMTP ({{domain}}). Os e-mails podem falhar na entrega ou serem marcados como spam se seu servidor SMTP não estiver autorizado a enviar deste domínio.",
+      "notConnectedWarning": "O processamento de tickets de entrada pode não funcionar com este endereço porque ele não é uma de suas caixas de entrada conectadas."
+    },
+    "domainList": {
+      "loading": "Carregando domínios…",
+      "empty": "Ainda não há domínios gerenciados. Adicione um para começar.",
+      "providerDomainId": "ID do domínio do provedor: {{id}}",
+      "providerFallback": "Gerenciado via Resend",
+      "failureReason": "Motivo da falha: {{reason}}",
+      "recheckButton": "Verificar DNS novamente",
+      "removeButton": "Remover domínio",
+      "dnsRecordsHeading": "Registros DNS",
+      "dnsRecordsHelp": "Copie cada registro abaixo para seu provedor de DNS (GoDaddy, Cloudflare, etc.). Não podemos alterar seu DNS por você.",
+      "dnsEmpty": {
+        "pending": "Pedimos ao Resend para gerar os registros DNS para este domínio. Assim que aparecerem, copie-os para seu provedor de DNS, pois não podemos atualizá-los automaticamente.",
+        "failed": "Ainda precisamos de instruções DNS do Resend. Clique em Verificar DNS novamente e, quando os registros carregarem, publique-os no seu provedor de DNS.",
+        "default": "As instruções DNS ainda não estão disponíveis. Verifique o DNS novamente e copie cada registro para seu provedor de DNS assim que aparecer."
+      }
+    },
+    "dnsRecords": {
+      "status": {
+        "matched": "Detectado",
+        "mismatch": "Incompatível",
+        "missing": "Não encontrado",
+        "unknown": "Aguardando verificação"
+      },
+      "detectedValues": "Valores detectados",
+      "defaultEmpty": "Estamos preparando os registros DNS para este domínio. Assim que aparecerem, copie-os para seu provedor de DNS, pois não podemos atualizá-los por você.",
+      "summary": "Correspondem {{matched}} de {{total}} registros DNS obrigatórios",
+      "summaryWithCheckedAt": "Correspondem {{matched}} de {{total}} registros DNS obrigatórios • Última verificação {{checkedAt}}.",
+      "lastCheckedNoRecords": "Última verificação {{checkedAt}}. Nenhum registro detectado ainda.",
+      "copyButton": "Copiar",
+      "copyAriaLabel": "Copiar valor DNS",
+      "copied": "Copiado para a área de transferência",
+      "copyFailed": "Falha ao copiar",
+      "checkedAt": "Verificado {{checkedAt}}",
+      "ttlLabel": "TTL:",
+      "priorityLabel": "Prioridade:",
+      "missingHelp": "Ainda não detectamos este registro no DNS. Verifique se ele existe no seu provedor de DNS com o valor exato mostrado acima.",
+      "mismatchHelp": "O registro DNS existe, mas o valor não corresponde ao que o Resend espera.",
+      "matchedHelp": "O valor detectado corresponde ao esperado.",
+      "unknownHelp": "Ainda não verificamos o DNS. Verifique o DNS novamente para executar a verificação."
+    },
+    "messages": {
+      "loadDomainsFailed": "Falha ao carregar domínios gerenciados",
+      "loadOutboundSettingsFailed": "Falha ao carregar as configurações de e-mail de saída",
+      "ticketingFromUpdated": "Endereço do remetente de tickets atualizado",
+      "ticketingFromSaveFailed": "Falha ao salvar o endereço do remetente de tickets",
+      "ticketingFromCleared": "Endereço do remetente de tickets limpo",
+      "ticketingFromClearFailed": "Falha ao limpar o endereço do remetente de tickets",
+      "switchProviderFailed": "Falha ao alterar o provedor",
+      "smtpHostRequired": "O host SMTP é obrigatório",
+      "fromAddressRequired": "O endereço do remetente é obrigatório",
+      "smtpSaved": "Configurações SMTP salvas",
+      "smtpSaveFailed": "Falha ao salvar as configurações SMTP",
+      "domainRequired": "Insira um nome de domínio",
+      "domainSubmitted": "Solicitação de domínio enviada",
+      "domainRequestFailed": "Falha ao solicitar o domínio",
+      "verificationRecheckScheduled": "Nova verificação agendada",
+      "refreshStatusFailed": "Falha ao atualizar o status do domínio",
+      "domainRemovalScheduled": "Remoção do domínio agendada",
+      "domainRemovalScheduledWithClear": "Remoção do domínio agendada e endereço do remetente de tickets limpo",
+      "removeDomainFailed": "Falha ao remover o domínio"
+    }
   }
 }

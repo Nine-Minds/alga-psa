@@ -934,5 +934,12 @@
     "addOnDescription": {
       "ai_assistant": "Unlock AI chat, document assistance, sidebar help, and workflow AI tools for your team."
     }
+  },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "O token de transferência de login está ausente ou é inválido. Faça login novamente.",
+      "handoffFinalizeFailed": "Não foi possível finalizar seu login. Tente fazer login novamente.",
+      "handoffNetworkIssue": "Problema de rede detectado ao finalizar seu login. Tente novamente."
+    }
   }
 }

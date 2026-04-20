@@ -459,5 +459,158 @@
       "update": "Aggiorna impostazioni predefinite",
       "create": "Crea valori predefiniti"
     }
+  },
+  "managed": {
+    "messages": {
+      "loadDomainsFailed": "Impossibile caricare i domini gestiti",
+      "loadOutboundSettingsFailed": "Impossibile caricare le impostazioni di posta in uscita",
+      "ticketingFromUpdated": "Indirizzo mittente per ticketing aggiornato",
+      "ticketingFromSaveFailed": "Impossibile salvare l'indirizzo mittente per ticketing",
+      "ticketingFromCleared": "Indirizzo mittente per ticketing cancellato",
+      "ticketingFromClearFailed": "Impossibile cancellare l'indirizzo mittente per ticketing",
+      "switchProviderFailed": "Impossibile cambiare provider",
+      "smtpHostRequired": "L'host SMTP è obbligatorio",
+      "fromAddressRequired": "L'indirizzo mittente è obbligatorio",
+      "smtpSaved": "Impostazioni SMTP salvate",
+      "smtpSaveFailed": "Impossibile salvare le impostazioni SMTP",
+      "domainRequired": "Inserisci un nome di dominio",
+      "domainSubmitted": "Richiesta di dominio inviata",
+      "domainRequestFailed": "Impossibile richiedere il dominio",
+      "verificationRecheckScheduled": "Nuova verifica pianificata",
+      "refreshStatusFailed": "Impossibile aggiornare lo stato del dominio",
+      "domainRemovalScheduled": "Rimozione del dominio pianificata",
+      "domainRemovalScheduledWithClear": "Rimozione del dominio pianificata e indirizzo mittente per ticketing cancellato",
+      "removeDomainFailed": "Impossibile rimuovere il dominio"
+    },
+    "tabs": {
+      "inboundEmail": "Email in entrata",
+      "outboundEmail": "Email in uscita"
+    },
+    "outbound": {
+      "intro": "Configura l'email in uscita per la tua organizzazione.",
+      "providerTitle": "Provider in uscita",
+      "providerDescription": "Scegli come vengono inviate le email in uscita dalla tua organizzazione.",
+      "providerPlaceholder": "Seleziona il provider in uscita",
+      "providerOptions": {
+        "resend": "Nine Minds gestito",
+        "smtp": "SMTP"
+      },
+      "resendDescription": "Le email vengono inviate tramite l'infrastruttura gestita di Nine Minds. Aggiungi e verifica un dominio personalizzato di seguito.",
+      "smtpDescription": "Le email vengono inviate tramite il tuo server SMTP.",
+      "smtpLabel": "SMTP",
+      "upgradeNotice": "I domini email gestiti non sono disponibili nel tuo piano attuale. Esegui l'upgrade per utilizzare l'infrastruttura in uscita gestita di Nine Minds con domini personalizzati.",
+      "domainsTitle": "Domini gestiti",
+      "domainsDescription": "Aggiungi un dominio personalizzato e segui le istruzioni DNS per verificare la proprietà.",
+      "domainLabel": "Dominio",
+      "domainPlaceholder": "esempio.it",
+      "addDomainButton": "Aggiungi dominio",
+      "smtpConfigTitle": "Configurazione SMTP",
+      "smtpConfigDescription": "Inserisci i dettagli del tuo server SMTP per inviare email in uscita.",
+      "smtp": {
+        "hostLabel": "Host SMTP",
+        "hostPlaceholder": "smtp.esempio.it",
+        "portLabel": "Porta",
+        "usernameLabel": "Nome utente",
+        "usernamePlaceholder": "la-tua-email@esempio.it",
+        "passwordLabel": "Password",
+        "passwordPlaceholder": "Inserisci la password",
+        "fromLabel": "Indirizzo mittente",
+        "fromPlaceholder": "noreply@esempio.it",
+        "fromHelp": "Indirizzo mittente predefinito per le email in uscita.",
+        "savingButton": "Salvataggio…",
+        "saveButton": "Salva impostazioni SMTP"
+      },
+      "ticketingFrom": {
+        "title": "Indirizzo mittente per ticketing",
+        "description": "Scegli l'indirizzo email che apparirà nell'intestazione Da delle notifiche dei ticket.",
+        "smtpHint": "L'indirizzo deve utilizzare un dominio associato al tuo server SMTP ({{domain}}). Le risposte funzionano meglio con una casella di posta in entrata collegata.",
+        "managedHint": "L'indirizzo deve utilizzare il tuo dominio in uscita ({{domain}}). Le risposte funzionano meglio con una casella di posta in entrata collegata.",
+        "domainNotSet": "non impostato",
+        "outboundRequiredTitle": "Dominio in uscita richiesto",
+        "smtpRequiredMessage": "Salva la configurazione SMTP con un indirizzo mittente prima di selezionare un indirizzo mittente per ticketing.",
+        "managedRequiredMessage": "Aggiungi e verifica un dominio gestito prima di selezionare un indirizzo mittente per ticketing.",
+        "connectedInboxLabel": "Casella collegata",
+        "customOptionLabel": "Altro indirizzo su {{domain}}",
+        "selectPlaceholder": "Seleziona l'indirizzo mittente",
+        "connectedInboxHelp": "Seleziona una casella collegata per mantenere raggruppate le risposte in entrata.",
+        "customLabel": "Indirizzo mittente",
+        "customPlaceholder": "supporto@{{domain}}",
+        "customSmtpHelp": "Usa un dominio da cui il tuo server SMTP è autorizzato a inviare. Un dominio non corrispondente può causare errori di consegna o filtraggio antispam.",
+        "customManagedHelp": "Deve corrispondere a {{domain}}. Se non è una delle tue caselle di posta in entrata, l'elaborazione dei ticket in entrata potrebbe non funzionare.",
+        "warningTitle": "Attenzione",
+        "errorTitle": "Correggi l'indirizzo mittente",
+        "clearButton": "Cancella indirizzo mittente",
+        "savingButton": "Salvataggio…",
+        "saveButton": "Salva indirizzo mittente"
+      }
+    },
+    "inbound": {
+      "intro": "Configura il routing delle email in entrata e l'automazione specifica del provider."
+    },
+    "dialogs": {
+      "clearTicketingFrom": {
+        "title": "Cancellare indirizzo mittente per ticketing",
+        "message": "Cancellare l'indirizzo mittente per ticketing salvato? Le notifiche dei ticket smetteranno di utilizzare un indirizzo mittente personalizzato finché non ne salvi uno nuovo.",
+        "confirm": "Cancella indirizzo mittente"
+      },
+      "removeDomain": {
+        "title": "Rimuovi dominio gestito",
+        "messageWithClear": "Rimuovere {{domain}}? Questo cancellerà anche l'indirizzo mittente per ticketing salvato perché questo dominio è attualmente attivo per l'email in uscita.",
+        "message": "Rimuovere {{domain}}?",
+        "fallbackDomain": "questo dominio",
+        "confirm": "Rimuovi dominio"
+      },
+      "cancel": "Annulla"
+    },
+    "validation": {
+      "enterFromAddress": "Inserisci un indirizzo mittente",
+      "saveSmtpFirst": "Salva prima la tua configurazione SMTP con un indirizzo mittente",
+      "addOutboundFirst": "Aggiungi e verifica un dominio in uscita prima di scegliere un indirizzo mittente",
+      "invalidEmail": "Inserisci un indirizzo email valido",
+      "mustMatchDomain": "L'indirizzo mittente deve utilizzare @{{domain}}",
+      "customAddressThreadWarning": "L'uso di un indirizzo personalizzato può impedire il corretto raggruppamento delle risposte in entrata.",
+      "smtpDomainMismatchWarning": "Questo dominio non corrisponde al dominio mittente del tuo SMTP ({{domain}}). Le email potrebbero non essere consegnate o essere contrassegnate come spam se il tuo server SMTP non è autorizzato a inviare da questo dominio.",
+      "notConnectedWarning": "L'elaborazione dei ticket in entrata potrebbe non funzionare con questo indirizzo perché non è una delle tue caselle di posta collegate."
+    },
+    "domainList": {
+      "loading": "Caricamento domini…",
+      "empty": "Nessun dominio gestito ancora. Aggiungine uno per iniziare.",
+      "providerDomainId": "ID dominio provider: {{id}}",
+      "providerFallback": "Gestito tramite Resend",
+      "failureReason": "Motivo dell'errore: {{reason}}",
+      "recheckButton": "Riverifica DNS",
+      "removeButton": "Rimuovi dominio",
+      "dnsRecordsHeading": "Record DNS",
+      "dnsRecordsHelp": "Copia ciascun record di seguito nel tuo provider DNS (GoDaddy, Cloudflare, etc.). Non possiamo modificare il tuo DNS per te.",
+      "dnsEmpty": {
+        "pending": "Abbiamo chiesto a Resend di generare i record DNS per questo dominio. Non appena appaiono, copiali nel tuo provider DNS perché non possiamo aggiornarli automaticamente.",
+        "failed": "Abbiamo ancora bisogno delle istruzioni DNS da Resend. Fai clic su Riverifica DNS e, quando i record si caricano, pubblicali nel tuo provider DNS.",
+        "default": "Le istruzioni DNS non sono ancora disponibili. Riverifica il DNS e copia ciascun record nel tuo provider DNS appena appare."
+      }
+    },
+    "dnsRecords": {
+      "status": {
+        "matched": "Rilevato",
+        "mismatch": "Non corrispondente",
+        "missing": "Non trovato",
+        "unknown": "In attesa di verifica"
+      },
+      "detectedValues": "Valori rilevati",
+      "defaultEmpty": "Stiamo preparando i record DNS per questo dominio. Non appena appaiono, copiali nel tuo provider DNS perché non possiamo aggiornarlo per te.",
+      "summary": "Corrispondono {{matched}} di {{total}} record DNS richiesti",
+      "summaryWithCheckedAt": "Corrispondono {{matched}} di {{total}} record DNS richiesti • Ultima verifica {{checkedAt}}.",
+      "lastCheckedNoRecords": "Ultima verifica {{checkedAt}}. Nessun record rilevato ancora.",
+      "copyButton": "Copia",
+      "copyAriaLabel": "Copia valore DNS",
+      "copied": "Copiato negli appunti",
+      "copyFailed": "Impossibile copiare",
+      "checkedAt": "Verificato {{checkedAt}}",
+      "ttlLabel": "TTL:",
+      "priorityLabel": "Priorità:",
+      "missingHelp": "Non abbiamo ancora rilevato questo record nel DNS. Verifica che esista nel tuo provider DNS con il valore esatto mostrato sopra.",
+      "mismatchHelp": "Il record DNS esiste, ma il valore non corrisponde a quello atteso da Resend.",
+      "matchedHelp": "Il valore rilevato corrisponde a quello atteso.",
+      "unknownHelp": "Non abbiamo ancora verificato il DNS. Riverifica il DNS per eseguire la verifica."
+    }
   }
 }

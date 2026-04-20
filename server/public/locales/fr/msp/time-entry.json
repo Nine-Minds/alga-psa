@@ -401,5 +401,18 @@
   },
   "timeEntryReadOnly": {
     "viewEntryDetails": "Afficher les détails de l'entrée"
+  },
+  "messages": {
+    "serviceRequired": "Veuillez sélectionner un service avant d'enregistrer les saisies de temps",
+    "invalidService": "Service sélectionné invalide",
+    "taxRegionRequired": "Veuillez sélectionner une région fiscale pour les services imposables",
+    "invalidTimeEntry": "Veuillez vérifier les valeurs de saisie de temps",
+    "savingEntry": "Enregistrement de la saisie de temps...",
+    "entrySaved": "Saisie de temps enregistrée",
+    "entrySavedSuccess": "Saisie de temps enregistrée avec succès",
+    "taskUpdated": "Tâche mise à jour avec succès",
+    "saveChangesFailed": "Échec de l'enregistrement des modifications",
+    "changesSaved": "Modifications enregistrées avec succès",
+    "workItemDeleted": "Élément de travail supprimé avec succès"
   }
 }
