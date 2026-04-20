@@ -341,3 +341,26 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   node scripts/validate-translations.cjs
   ```
 - ESLint result: no errors; remaining warnings are the file's pre-existing `any`/unused-type/non-null-assertion backlog unrelated to the i18n extraction.
+
+### F015 complete — WorkflowRunDialog strings extracted
+- Updated `ee/server/src/components/workflow-designer/WorkflowRunDialog.tsx` to use `useTranslation('msp/workflows')` for component-owned copy across:
+  - dialog title / description / footer actions
+  - workflow/event/schema selectors
+  - draft/system/concurrency warnings
+  - payload builder controls and validation summary
+  - preset management and clipboard/latest-run toasts
+  - form-builder object/array helper controls (`Show/Hide`, `Add field`, `Remove`, etc.)
+- Added `runDialog.*` keys to `server/public/locales/en/msp/workflows.json`, then synced the same stub content into `fr/es/de/nl/it/pl/xx/yy`.
+- Sanity check run:
+  ```bash
+  node - <<'NODE'
+  # compared all runDialog.* keys referenced in WorkflowRunDialog.tsx against en/msp/workflows.json
+  NODE
+  ```
+  Result: zero missing keys.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowRunDialog.tsx
+  node scripts/validate-translations.cjs
+  ```
+- ESLint result: no errors; remaining warnings are pre-existing `any` / unused-prop / hooks-backlog warnings in the dialog file.

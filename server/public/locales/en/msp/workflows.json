@@ -292,6 +292,142 @@
       "exportAuditLogsFailed": "Failed to export audit logs"
     }
   },
+  "runDialog": {
+    "title": "Run Workflow",
+    "description": "Provide a synthetic payload to preview (and run) a workflow.",
+    "descriptionEvent": "Event: {{name}}.",
+    "draftWarning": "Draft version differs from published (v{{version}}).",
+    "concurrencyLimit": "Concurrency limit: {{count}} run(s) at a time.",
+    "common": {
+      "emptyValue": "—"
+    },
+    "actions": {
+      "addField": "Add field",
+      "addItem": "Add item",
+      "cloneLatestRun": "Clone latest run",
+      "close": "Close",
+      "copyPayload": "Copy payload",
+      "formBuilder": "Form Builder",
+      "hide": "Hide",
+      "jsonEditor": "JSON Editor",
+      "openEventCatalog": "Open event catalog",
+      "publishDraft": "Publish draft",
+      "publishLatest": "Publish latest",
+      "remove": "Remove",
+      "reset": "Reset",
+      "resetToDefaults": "Reset to defaults",
+      "savePreset": "Save preset",
+      "show": "Show",
+      "startRun": "Start Run",
+      "starting": "Starting..."
+    },
+    "eventCatalog": {
+      "title": "Event catalog",
+      "description": "Pick an event type to seed payload schemas.",
+      "searchLabel": "Search events",
+      "searchPlaceholder": "Search by name, type, or category",
+      "eventTypeLabel": "Event type",
+      "loadingEvents": "Loading events...",
+      "selectEventType": "Select event type",
+      "systemBadge": "System",
+      "tenantBadge": "Tenant",
+      "systemEvent": "System event",
+      "tenantEvent": "Tenant event",
+      "uncategorized": "Uncategorized"
+    },
+    "fields": {
+      "workflowLabel": "Workflow",
+      "publishedVersionLabel": "Published version",
+      "triggerLabel": "Trigger",
+      "manualTrigger": "Manual",
+      "workflowStatusLabel": "Workflow status",
+      "statusActive": "active",
+      "statusPaused": "paused"
+    },
+    "form": {
+      "booleanTrue": "True",
+      "booleanFalse": "False",
+      "mapEntriesTitle": "Map entries",
+      "mapEntriesPrompt": "Enter field key/path",
+      "mapEntriesDescription": "For map-style objects, add keys and set each value.",
+      "mapEntriesEmpty": "No map entries added.",
+      "noSchema": "No schema available to render a form."
+    },
+    "noPublishedVersion": {
+      "title": "No published version",
+      "description": "You can preview the payload builder, but you must publish the workflow before starting a run."
+    },
+    "payload": {
+      "largePayloadWarning": "Payload size exceeds 256KB; runs may be slower.",
+      "payloadJsonLabel": "Payload (JSON)",
+      "payloadLabel": "payload",
+      "payloadSize": "Payload size: {{size}} KB"
+    },
+    "presets": {
+      "presetNameLabel": "Preset name",
+      "presetNamePlaceholder": "e.g. Regression payload",
+      "savedPresets": "Saved presets"
+    },
+    "schema": {
+      "sourceLabel": "Schema source",
+      "workflowSchema": "Workflow schema",
+      "eventSchema": "Event schema",
+      "schemaRef": "Schema ref",
+      "schemaRefLabel": "Schema ref",
+      "selectSchema": "Select schema…",
+      "noSchemasFound": "No schemas found",
+      "unknownSchemaRef": "Unknown schema ref.",
+      "useEventSchema": "Use event schema",
+      "viewSchemaDiff": "View schema diff",
+      "hideSchemaDiff": "Hide schema diff",
+      "onlyInEvent": "Only in event schema",
+      "requiredOnlyInEvent": "Required only in event",
+      "onlyInWorkflow": "Only in workflow schema",
+      "requiredOnlyInWorkflow": "Required only in workflow",
+      "typeMismatches": "Type mismatches",
+      "typeMismatchLine": "{{field}}: event {{eventType}} vs workflow {{payloadType}}",
+      "selectedEventWarningPrefix": "Selected event ({{selectedEventType}}) may not match this workflow's trigger ({{triggerEventName}}). ",
+      "matchOptional": "Schema refs match; trigger mapping will be applied (optional).",
+      "matchIdentity": "Schema refs match; identity mapping will be used (no mapping required).",
+      "diffWillApply": "Schema refs differ ({{eventSchemaRef}} → {{payloadSchemaRef}}); trigger mapping will be applied.",
+      "diffRequiredMissing": "Schema refs differ ({{eventSchemaRef}} → {{payloadSchemaRef}}); trigger mapping is required but not configured.",
+      "triggerEventDiffers": "Trigger event schema differs from workflow payload schema. Switch to \"Event schema\" if you want to enter a trigger event payload.",
+      "eventUnavailable": "Event schema not available; using workflow schema instead.",
+      "mapping": {
+        "identityOptional": "Identity mapping (no mapping required)",
+        "requiredMissing": "Trigger mapping is required but not configured",
+        "willApply": "Trigger mapping will be applied",
+        "willApplyOptional": "Trigger mapping will be applied (optional)"
+      }
+    },
+    "systemWorkflowWarning": "This is a system workflow. Running it may affect core automation.",
+    "systemWorkflowConfirm": "I understand and want to run it.",
+    "templates": {
+      "exampleLabel": "Example {{count}}",
+      "eventTemplates": "Event templates",
+      "sampleTemplates": "Sample templates",
+      "emailTemplate": "Inbound Email",
+      "webhookTemplate": "Webhook Event"
+    },
+    "toasts": {
+      "confirmSystemRun": "Confirm you want to run this system workflow.",
+      "eventMissingSchemaRef": "Selected event does not have a payload schema ref; cannot run with trigger mapping.",
+      "loadLatestRunFailed": "Failed to load latest run",
+      "mapEntryExists": "That key already exists.",
+      "noPriorPayload": "No prior run payload found.",
+      "payloadCopied": "Payload copied to clipboard.",
+      "presetSaved": "Preset saved.",
+      "providePresetName": "Provide a preset name.",
+      "startRunFailed": "Failed to start run",
+      "triggerMappingMissing": "Trigger mapping is required for this event schema but is not configured on the workflow."
+    },
+    "validation": {
+      "invalidJson": "Invalid JSON",
+      "summaryTitle": "Payload still needs required event fields before this run can start",
+      "summaryDescription": "Fill the missing fields below, switch to Form Builder, or use a sample payload button.",
+      "moreErrors": "+{{count}} more…"
+    }
+  },
   "enums": {
     "workflowRunStatus": {
       "RUNNING": "Running",
