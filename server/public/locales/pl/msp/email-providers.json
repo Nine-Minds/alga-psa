@@ -459,5 +459,158 @@
       "update": "Zaktualizuj ustawienia domyślne",
       "create": "Utwórz wartości domyślne"
     }
+  },
+  "managed": {
+    "messages": {
+      "loadDomainsFailed": "Nie udało się załadować zarządzanych domen",
+      "loadOutboundSettingsFailed": "Nie udało się załadować ustawień poczty wychodzącej",
+      "ticketingFromUpdated": "Zaktualizowano adres nadawcy zgłoszeń",
+      "ticketingFromSaveFailed": "Nie udało się zapisać adresu nadawcy zgłoszeń",
+      "ticketingFromCleared": "Wyczyszczono adres nadawcy zgłoszeń",
+      "ticketingFromClearFailed": "Nie udało się wyczyścić adresu nadawcy zgłoszeń",
+      "switchProviderFailed": "Nie udało się zmienić dostawcy",
+      "smtpHostRequired": "Host SMTP jest wymagany",
+      "fromAddressRequired": "Adres nadawcy jest wymagany",
+      "smtpSaved": "Zapisano ustawienia SMTP",
+      "smtpSaveFailed": "Nie udało się zapisać ustawień SMTP",
+      "domainRequired": "Wprowadź nazwę domeny",
+      "domainSubmitted": "Wysłano prośbę o domenę",
+      "domainRequestFailed": "Nie udało się zażądać domeny",
+      "verificationRecheckScheduled": "Zaplanowano ponowną weryfikację",
+      "refreshStatusFailed": "Nie udało się odświeżyć stanu domeny",
+      "domainRemovalScheduled": "Zaplanowano usunięcie domeny",
+      "domainRemovalScheduledWithClear": "Zaplanowano usunięcie domeny i wyczyszczono adres nadawcy zgłoszeń",
+      "removeDomainFailed": "Nie udało się usunąć domeny"
+    },
+    "tabs": {
+      "inboundEmail": "Poczta przychodząca",
+      "outboundEmail": "Poczta wychodząca"
+    },
+    "outbound": {
+      "intro": "Skonfiguruj pocztę wychodzącą dla swojej organizacji.",
+      "providerTitle": "Dostawca poczty wychodzącej",
+      "providerDescription": "Wybierz sposób wysyłania poczty wychodzącej z Twojej organizacji.",
+      "providerPlaceholder": "Wybierz dostawcę poczty wychodzącej",
+      "providerOptions": {
+        "resend": "Zarządzany Nine Minds",
+        "smtp": "SMTP"
+      },
+      "resendDescription": "Wiadomości są wysyłane przez zarządzaną infrastrukturę Nine Minds. Dodaj i zweryfikuj niestandardową domenę poniżej.",
+      "smtpDescription": "Wiadomości są wysyłane przez Twój własny serwer SMTP.",
+      "smtpLabel": "SMTP",
+      "upgradeNotice": "Zarządzane domeny e-mail nie są dostępne w Twoim bieżącym planie. Uaktualnij, aby korzystać z zarządzanej infrastruktury wychodzącej Nine Minds z niestandardowymi domenami.",
+      "domainsTitle": "Zarządzane domeny",
+      "domainsDescription": "Dodaj niestandardową domenę i postępuj zgodnie z instrukcjami DNS, aby zweryfikować własność.",
+      "domainLabel": "Domena",
+      "domainPlaceholder": "przyklad.pl",
+      "addDomainButton": "Dodaj domenę",
+      "smtpConfigTitle": "Konfiguracja SMTP",
+      "smtpConfigDescription": "Wprowadź dane serwera SMTP, aby wysyłać pocztę wychodzącą.",
+      "smtp": {
+        "hostLabel": "Host SMTP",
+        "hostPlaceholder": "smtp.przyklad.pl",
+        "portLabel": "Port",
+        "usernameLabel": "Nazwa użytkownika",
+        "usernamePlaceholder": "twoj-email@przyklad.pl",
+        "passwordLabel": "Hasło",
+        "passwordPlaceholder": "Wprowadź hasło",
+        "fromLabel": "Adres nadawcy",
+        "fromPlaceholder": "noreply@przyklad.pl",
+        "fromHelp": "Domyślny adres nadawcy dla poczty wychodzącej.",
+        "savingButton": "Zapisywanie…",
+        "saveButton": "Zapisz ustawienia SMTP"
+      },
+      "ticketingFrom": {
+        "title": "Adres nadawcy zgłoszeń",
+        "description": "Wybierz adres e-mail, który będzie widoczny w nagłówku Od powiadomień o zgłoszeniach.",
+        "smtpHint": "Adres powinien używać domeny powiązanej z Twoim serwerem SMTP ({{domain}}). Odpowiedzi działają najlepiej z podłączoną skrzynką przychodzącą.",
+        "managedHint": "Adres musi używać Twojej domeny wychodzącej ({{domain}}). Odpowiedzi działają najlepiej z podłączoną skrzynką przychodzącą.",
+        "domainNotSet": "nieustawiono",
+        "outboundRequiredTitle": "Wymagana domena wychodząca",
+        "smtpRequiredMessage": "Zapisz konfigurację SMTP z adresem nadawcy przed wybraniem adresu nadawcy zgłoszeń.",
+        "managedRequiredMessage": "Dodaj i zweryfikuj zarządzaną domenę przed wybraniem adresu nadawcy zgłoszeń.",
+        "connectedInboxLabel": "Podłączona skrzynka",
+        "customOptionLabel": "Inny adres w {{domain}}",
+        "selectPlaceholder": "Wybierz adres nadawcy",
+        "connectedInboxHelp": "Wybierz podłączoną skrzynkę, aby odpowiedzi przychodzące pozostawały pogrupowane.",
+        "customLabel": "Adres nadawcy",
+        "customPlaceholder": "pomoc@{{domain}}",
+        "customSmtpHelp": "Użyj domeny, z której Twój serwer SMTP jest autoryzowany do wysyłania. Niezgodna domena może powodować błędy dostarczania lub filtrowanie spamu.",
+        "customManagedHelp": "Musi pasować do {{domain}}. Jeśli to nie jest jedna z Twoich skrzynek przychodzących, przetwarzanie przychodzących zgłoszeń może nie działać.",
+        "warningTitle": "Uwaga",
+        "errorTitle": "Popraw adres nadawcy",
+        "clearButton": "Wyczyść adres nadawcy",
+        "savingButton": "Zapisywanie…",
+        "saveButton": "Zapisz adres nadawcy"
+      }
+    },
+    "inbound": {
+      "intro": "Skonfiguruj routing poczty przychodzącej i automatyzację specyficzną dla dostawcy."
+    },
+    "dialogs": {
+      "clearTicketingFrom": {
+        "title": "Wyczyść adres nadawcy zgłoszeń",
+        "message": "Wyczyścić zapisany adres nadawcy zgłoszeń? Powiadomienia o zgłoszeniach przestaną używać niestandardowego adresu nadawcy, dopóki nie zapiszesz nowego.",
+        "confirm": "Wyczyść adres nadawcy"
+      },
+      "removeDomain": {
+        "title": "Usuń zarządzaną domenę",
+        "messageWithClear": "Usunąć {{domain}}? Spowoduje to również wyczyszczenie zapisanego adresu nadawcy zgłoszeń, ponieważ ta domena jest obecnie aktywna dla poczty wychodzącej.",
+        "message": "Usunąć {{domain}}?",
+        "fallbackDomain": "tę domenę",
+        "confirm": "Usuń domenę"
+      },
+      "cancel": "Anuluj"
+    },
+    "validation": {
+      "enterFromAddress": "Wprowadź adres nadawcy",
+      "saveSmtpFirst": "Najpierw zapisz konfigurację SMTP z adresem nadawcy",
+      "addOutboundFirst": "Dodaj i zweryfikuj domenę wychodzącą przed wybraniem adresu nadawcy",
+      "invalidEmail": "Wprowadź prawidłowy adres e-mail",
+      "mustMatchDomain": "Adres nadawcy musi używać @{{domain}}",
+      "customAddressThreadWarning": "Użycie niestandardowego adresu może uniemożliwić prawidłowe grupowanie odpowiedzi przychodzących.",
+      "smtpDomainMismatchWarning": "Ta domena nie pasuje do domeny nadawcy Twojego SMTP ({{domain}}). Wiadomości mogą nie zostać dostarczone lub zostać oznaczone jako spam, jeśli Twój serwer SMTP nie jest autoryzowany do wysyłania z tej domeny.",
+      "notConnectedWarning": "Przetwarzanie przychodzących zgłoszeń może nie działać z tym adresem, ponieważ nie jest to jedna z Twoich podłączonych skrzynek."
+    },
+    "domainList": {
+      "loading": "Ładowanie domen…",
+      "empty": "Brak zarządzanych domen. Dodaj jedną, aby rozpocząć.",
+      "providerDomainId": "Identyfikator domeny dostawcy: {{id}}",
+      "providerFallback": "Zarządzane przez Resend",
+      "failureReason": "Powód błędu: {{reason}}",
+      "recheckButton": "Sprawdź DNS ponownie",
+      "removeButton": "Usuń domenę",
+      "dnsRecordsHeading": "Rekordy DNS",
+      "dnsRecordsHelp": "Skopiuj każdy poniższy rekord do swojego dostawcy DNS (GoDaddy, Cloudflare itp.). Nie możemy zmienić Twojego DNS za Ciebie.",
+      "dnsEmpty": {
+        "pending": "Poprosiliśmy Resend o wygenerowanie rekordów DNS dla tej domeny. Gdy się pojawią, skopiuj je do swojego dostawcy DNS, ponieważ nie możemy go aktualizować automatycznie.",
+        "failed": "Nadal potrzebujemy instrukcji DNS od Resend. Kliknij Sprawdź DNS ponownie i po załadowaniu rekordów opublikuj je u swojego dostawcy DNS.",
+        "default": "Instrukcje DNS nie są jeszcze dostępne. Sprawdź DNS ponownie i skopiuj każdy rekord do swojego dostawcy DNS, gdy tylko się pojawi."
+      }
+    },
+    "dnsRecords": {
+      "status": {
+        "matched": "Wykryto",
+        "mismatch": "Niezgodność",
+        "missing": "Nie znaleziono",
+        "unknown": "Oczekiwanie na sprawdzenie"
+      },
+      "detectedValues": "Wykryte wartości",
+      "defaultEmpty": "Przygotowujemy rekordy DNS dla tej domeny. Gdy tylko się pojawią, skopiuj je do swojego dostawcy DNS, ponieważ nie możemy go zaktualizować za Ciebie.",
+      "summary": "Zgadza się {{matched}} z {{total}} wymaganych rekordów DNS",
+      "summaryWithCheckedAt": "Zgadza się {{matched}} z {{total}} wymaganych rekordów DNS • Ostatnio sprawdzono {{checkedAt}}.",
+      "lastCheckedNoRecords": "Ostatnio sprawdzono {{checkedAt}}. Nie wykryto jeszcze żadnych rekordów.",
+      "copyButton": "Kopiuj",
+      "copyAriaLabel": "Kopiuj wartość DNS",
+      "copied": "Skopiowano do schowka",
+      "copyFailed": "Nie udało się skopiować",
+      "checkedAt": "Sprawdzono {{checkedAt}}",
+      "ttlLabel": "TTL:",
+      "priorityLabel": "Priorytet:",
+      "missingHelp": "Nie wykryliśmy jeszcze tego rekordu w DNS. Sprawdź, czy istnieje u Twojego dostawcy DNS z dokładną wartością pokazaną powyżej.",
+      "mismatchHelp": "Rekord DNS istnieje, ale wartość nie pasuje do tego, czego oczekuje Resend.",
+      "matchedHelp": "Wykryta wartość pasuje do oczekiwanej.",
+      "unknownHelp": "Nie sprawdziliśmy jeszcze DNS. Sprawdź DNS ponownie, aby uruchomić weryfikację."
+    }
   }
 }

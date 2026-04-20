@@ -459,5 +459,158 @@
       "update": "Standaardwaarden bijwerken",
       "create": "Standaardwaarden maken"
     }
+  },
+  "managed": {
+    "messages": {
+      "loadDomainsFailed": "Kan beheerde domeinen niet laden",
+      "loadOutboundSettingsFailed": "Kan instellingen voor uitgaande e-mail niet laden",
+      "ticketingFromUpdated": "Afzenderadres voor ticketing bijgewerkt",
+      "ticketingFromSaveFailed": "Kan afzenderadres voor ticketing niet opslaan",
+      "ticketingFromCleared": "Afzenderadres voor ticketing gewist",
+      "ticketingFromClearFailed": "Kan afzenderadres voor ticketing niet wissen",
+      "switchProviderFailed": "Kan provider niet wijzigen",
+      "smtpHostRequired": "SMTP-host is vereist",
+      "fromAddressRequired": "Afzenderadres is vereist",
+      "smtpSaved": "SMTP-instellingen opgeslagen",
+      "smtpSaveFailed": "Kan SMTP-instellingen niet opslaan",
+      "domainRequired": "Voer een domeinnaam in",
+      "domainSubmitted": "Domeinaanvraag verzonden",
+      "domainRequestFailed": "Kan domein niet aanvragen",
+      "verificationRecheckScheduled": "Nieuwe verificatie gepland",
+      "refreshStatusFailed": "Kan domeinstatus niet vernieuwen",
+      "domainRemovalScheduled": "Domeinverwijdering gepland",
+      "domainRemovalScheduledWithClear": "Domeinverwijdering gepland en afzenderadres voor ticketing gewist",
+      "removeDomainFailed": "Kan domein niet verwijderen"
+    },
+    "tabs": {
+      "inboundEmail": "Inkomende e-mail",
+      "outboundEmail": "Uitgaande e-mail"
+    },
+    "outbound": {
+      "intro": "Configureer uitgaande e-mail voor uw organisatie.",
+      "providerTitle": "Uitgaande provider",
+      "providerDescription": "Kies hoe uitgaande e-mails vanuit uw organisatie worden verzonden.",
+      "providerPlaceholder": "Selecteer uitgaande provider",
+      "providerOptions": {
+        "resend": "Nine Minds beheerd",
+        "smtp": "SMTP"
+      },
+      "resendDescription": "E-mails worden verzonden via de beheerde infrastructuur van Nine Minds. Voeg hieronder een aangepast domein toe en verifieer dit.",
+      "smtpDescription": "E-mails worden verzonden via uw eigen SMTP-server.",
+      "smtpLabel": "SMTP",
+      "upgradeNotice": "Beheerde e-maildomeinen zijn niet beschikbaar in uw huidige abonnement. Upgrade om de beheerde uitgaande infrastructuur van Nine Minds met aangepaste domeinen te gebruiken.",
+      "domainsTitle": "Beheerde domeinen",
+      "domainsDescription": "Voeg een aangepast domein toe en volg de DNS-instructies om eigendom te verifiëren.",
+      "domainLabel": "Domein",
+      "domainPlaceholder": "voorbeeld.nl",
+      "addDomainButton": "Domein toevoegen",
+      "smtpConfigTitle": "SMTP-configuratie",
+      "smtpConfigDescription": "Voer uw SMTP-servergegevens in om uitgaande e-mail te verzenden.",
+      "smtp": {
+        "hostLabel": "SMTP-host",
+        "hostPlaceholder": "smtp.voorbeeld.nl",
+        "portLabel": "Poort",
+        "usernameLabel": "Gebruikersnaam",
+        "usernamePlaceholder": "uw-email@voorbeeld.nl",
+        "passwordLabel": "Wachtwoord",
+        "passwordPlaceholder": "Voer wachtwoord in",
+        "fromLabel": "Afzenderadres",
+        "fromPlaceholder": "noreply@voorbeeld.nl",
+        "fromHelp": "Het standaard afzenderadres voor uitgaande e-mails.",
+        "savingButton": "Opslaan…",
+        "saveButton": "SMTP-instellingen opslaan"
+      },
+      "ticketingFrom": {
+        "title": "Afzenderadres voor ticketing",
+        "description": "Kies het e-mailadres dat verschijnt in de Van-header van ticketmeldingen.",
+        "smtpHint": "Het adres moet een domein gebruiken dat bij uw SMTP-server hoort ({{domain}}). Antwoorden werken het best met een verbonden inkomende inbox.",
+        "managedHint": "Het adres moet uw uitgaande domein ({{domain}}) gebruiken. Antwoorden werken het best met een verbonden inkomende inbox.",
+        "domainNotSet": "niet ingesteld",
+        "outboundRequiredTitle": "Uitgaand domein vereist",
+        "smtpRequiredMessage": "Sla eerst uw SMTP-configuratie op met een afzenderadres voordat u een ticketing-afzenderadres selecteert.",
+        "managedRequiredMessage": "Voeg een beheerd domein toe en verifieer het voordat u een ticketing-afzenderadres selecteert.",
+        "connectedInboxLabel": "Verbonden inbox",
+        "customOptionLabel": "Ander adres op {{domain}}",
+        "selectPlaceholder": "Selecteer afzenderadres",
+        "connectedInboxHelp": "Selecteer een verbonden inbox zodat inkomende antwoorden gegroepeerd blijven.",
+        "customLabel": "Afzenderadres",
+        "customPlaceholder": "support@{{domain}}",
+        "customSmtpHelp": "Gebruik een domein dat uw SMTP-server mag gebruiken als afzender. Een niet-overeenkomend domein kan bezorgingsfouten of spamfiltering veroorzaken.",
+        "customManagedHelp": "Moet overeenkomen met {{domain}}. Als dit geen van uw inkomende inboxen is, werkt de verwerking van inkomende tickets mogelijk niet.",
+        "warningTitle": "Let op",
+        "errorTitle": "Corrigeer het afzenderadres",
+        "clearButton": "Afzenderadres wissen",
+        "savingButton": "Opslaan…",
+        "saveButton": "Afzenderadres opslaan"
+      }
+    },
+    "inbound": {
+      "intro": "Configureer inkomende e-mailroutering en provider-specifieke automatisering."
+    },
+    "dialogs": {
+      "clearTicketingFrom": {
+        "title": "Ticketing-afzenderadres wissen",
+        "message": "Het opgeslagen ticketing-afzenderadres wissen? Ticketmeldingen gebruiken geen aangepast afzenderadres meer totdat u een nieuw adres opslaat.",
+        "confirm": "Afzenderadres wissen"
+      },
+      "removeDomain": {
+        "title": "Beheerd domein verwijderen",
+        "messageWithClear": "{{domain}} verwijderen? Dit wist ook het opgeslagen ticketing-afzenderadres omdat dit domein momenteel actief is voor uitgaande e-mail.",
+        "message": "{{domain}} verwijderen?",
+        "fallbackDomain": "dit domein",
+        "confirm": "Domein verwijderen"
+      },
+      "cancel": "Annuleren"
+    },
+    "validation": {
+      "enterFromAddress": "Voer een afzenderadres in",
+      "saveSmtpFirst": "Sla eerst uw SMTP-configuratie op met een afzenderadres",
+      "addOutboundFirst": "Voeg een uitgaand domein toe en verifieer het voordat u een afzenderadres kiest",
+      "invalidEmail": "Voer een geldig e-mailadres in",
+      "mustMatchDomain": "Afzenderadres moet @{{domain}} gebruiken",
+      "customAddressThreadWarning": "Het gebruik van een aangepast adres kan voorkomen dat inkomende antwoorden correct worden gegroepeerd.",
+      "smtpDomainMismatchWarning": "Dit domein komt niet overeen met uw SMTP-afzenderdomein ({{domain}}). E-mails kunnen niet worden bezorgd of als spam worden gemarkeerd als uw SMTP-server niet is geautoriseerd om vanaf dit domein te verzenden.",
+      "notConnectedWarning": "Verwerking van inkomende tickets werkt mogelijk niet met dit adres omdat het geen van uw verbonden inboxen is."
+    },
+    "domainList": {
+      "loading": "Domeinen laden…",
+      "empty": "Nog geen beheerde domeinen. Voeg er een toe om te beginnen.",
+      "providerDomainId": "Provider-domein-ID: {{id}}",
+      "providerFallback": "Beheerd via Resend",
+      "failureReason": "Reden van mislukking: {{reason}}",
+      "recheckButton": "DNS opnieuw controleren",
+      "removeButton": "Domein verwijderen",
+      "dnsRecordsHeading": "DNS-records",
+      "dnsRecordsHelp": "Kopieer elk record hieronder naar uw DNS-provider (GoDaddy, Cloudflare, etc.). We kunnen uw DNS niet voor u wijzigen.",
+      "dnsEmpty": {
+        "pending": "We hebben Resend gevraagd de DNS-records voor dit domein te genereren. Zodra ze verschijnen, kopieert u ze naar uw DNS-provider omdat we deze niet automatisch kunnen bijwerken.",
+        "failed": "We hebben nog steeds DNS-instructies van Resend nodig. Klik op DNS opnieuw controleren en publiceer de records in uw DNS-provider zodra ze zijn geladen.",
+        "default": "DNS-instructies zijn nog niet beschikbaar. Controleer het DNS opnieuw en kopieer elk record naar uw DNS-provider zodra het verschijnt."
+      }
+    },
+    "dnsRecords": {
+      "status": {
+        "matched": "Gedetecteerd",
+        "mismatch": "Niet-overeenstemming",
+        "missing": "Niet gevonden",
+        "unknown": "Wachten op controle"
+      },
+      "detectedValues": "Gedetecteerde waarden",
+      "defaultEmpty": "We bereiden de DNS-records voor dit domein voor. Zodra ze verschijnen, kopieert u ze naar uw DNS-provider omdat we deze niet voor u kunnen bijwerken.",
+      "summary": "{{matched}} van {{total}} vereiste DNS-records komen overeen",
+      "summaryWithCheckedAt": "{{matched}} van {{total}} vereiste DNS-records komen overeen • Laatst gecontroleerd {{checkedAt}}.",
+      "lastCheckedNoRecords": "Laatst gecontroleerd {{checkedAt}}. Nog geen records gedetecteerd.",
+      "copyButton": "Kopiëren",
+      "copyAriaLabel": "DNS-waarde kopiëren",
+      "copied": "Gekopieerd naar klembord",
+      "copyFailed": "Kopiëren mislukt",
+      "checkedAt": "Gecontroleerd {{checkedAt}}",
+      "ttlLabel": "TTL:",
+      "priorityLabel": "Prioriteit:",
+      "missingHelp": "We hebben dit record nog niet gedetecteerd in DNS. Controleer of het bestaat in uw DNS-provider met de exacte waarde zoals hierboven weergegeven.",
+      "mismatchHelp": "Het DNS-record bestaat, maar de waarde komt niet overeen met wat Resend verwacht.",
+      "matchedHelp": "De gedetecteerde waarde komt overeen met de verwachte waarde.",
+      "unknownHelp": "We hebben het DNS nog niet gecontroleerd. Controleer DNS opnieuw om verificatie uit te voeren."
+    }
   }
 }

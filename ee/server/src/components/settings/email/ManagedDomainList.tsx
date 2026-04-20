@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import DnsRecordInstructions from './DnsRecordInstructions';
 import type { ManagedDomainStatus } from '@ee/lib/actions/email-actions/managedDomainActions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ManagedDomainListProps {
   domains: ManagedDomainStatus[];
@@ -37,21 +38,18 @@ const STATUS_BADGE_STYLES: Record<
   },
 };
 
-const DNS_RECORDS_HELP_TEXT =
-  'Copy each record below into your DNS provider (GoDaddy, Cloudflare, etc.). We cannot change your DNS for you.';
-
-function getDnsEmptyMessage(status?: string) {
+function getDnsEmptyMessageKey(status?: string): string {
   const normalized = status?.toLowerCase();
 
   if (normalized === 'pending') {
-    return 'We asked Resend to generate the DNS records for this domain. Once they show up, copy them into your DNS provider because we cannot update it automatically.';
+    return 'managed.domainList.dnsEmpty.pending';
   }
 
   if (normalized === 'failed') {
-    return 'We still need DNS instructions from Resend. Click Re-check DNS and, when the records load, publish them inside your DNS provider.';
+    return 'managed.domainList.dnsEmpty.failed';
   }
 
-  return 'DNS instructions are not available yet. Re-check DNS and copy each record into your DNS provider as soon as it appears.';
+  return 'managed.domainList.dnsEmpty.default';
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -78,12 +76,14 @@ export default function ManagedDomainList({
   onRefresh,
   onDelete,
 }: ManagedDomainListProps) {
+  const { t } = useTranslation('msp/email-providers');
+
   if (loading) {
-    return <p className="text-sm text-gray-500">Loading domains…</p>;
+    return <p className="text-sm text-gray-500">{t('managed.domainList.loading')}</p>;
   }
 
   if (!domains || domains.length === 0) {
-    return <p className="text-sm text-gray-500">No managed domains yet. Add one to get started.</p>;
+    return <p className="text-sm text-gray-500">{t('managed.domainList.empty')}</p>;
   }
 
   return (
@@ -94,7 +94,7 @@ export default function ManagedDomainList({
         const dnsRecords = domain.dnsRecords ?? [];
         const dnsLookupResults = domain.dnsLookupResults ?? [];
         const hasRecords = dnsRecords.length > 0;
-        const emptyMessage = getDnsEmptyMessage(normalizedStatus);
+        const emptyMessage = t(getDnsEmptyMessageKey(normalizedStatus));
 
         return (
           <Card
@@ -108,7 +108,9 @@ export default function ManagedDomainList({
                 <div>
                   <CardTitle className="text-lg">{domain.domain}</CardTitle>
                   <CardDescription>
-                    {domain.providerDomainId ? `Provider domain ID: ${domain.providerDomainId}` : 'Managed via Resend'}
+                    {domain.providerDomainId
+                      ? t('managed.domainList.providerDomainId', { id: domain.providerDomainId })
+                      : t('managed.domainList.providerFallback')}
                   </CardDescription>
                 </div>
                 <StatusBadge status={domain.status} />
@@ -116,7 +118,7 @@ export default function ManagedDomainList({
             </CardHeader>
             <CardContent className="space-y-4">
               {domain.failureReason ? (
-                <p className="text-sm text-destructive">Failure reason: {domain.failureReason}</p>
+                <p className="text-sm text-destructive">{t('managed.domainList.failureReason', { reason: domain.failureReason })}</p>
               ) : null}
 
               <div className="flex flex-wrap gap-2">
@@ -131,7 +133,7 @@ export default function ManagedDomainList({
                     data-domain={domain.domain}
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
-                    Re-check DNS
+                    {t('managed.domainList.recheckButton')}
                   </Button>
                 ) : null}
                 <Button
@@ -144,13 +146,13 @@ export default function ManagedDomainList({
                   data-domain={domain.domain}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Remove Domain
+                  {t('managed.domainList.removeButton')}
                 </Button>
               </div>
 
               <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">DNS Records</p>
-                {hasRecords ? <p className="text-xs text-gray-500 mb-3">{DNS_RECORDS_HELP_TEXT}</p> : null}
+                <p className="text-sm font-medium text-gray-700 mb-2">{t('managed.domainList.dnsRecordsHeading')}</p>
+                {hasRecords ? <p className="text-xs text-gray-500 mb-3">{t('managed.domainList.dnsRecordsHelp')}</p> : null}
                 <DnsRecordInstructions
                   records={dnsRecords}
                   emptyMessage={emptyMessage}
