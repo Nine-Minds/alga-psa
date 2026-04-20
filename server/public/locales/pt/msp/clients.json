@@ -129,7 +129,10 @@
       "bucketUsageRecord": "bucket usage record",
       "bucketUsageRecords": "bucket usage records"
     },
-    "deleteSelectedPrompt": "Are you sure you want to delete {{count}} selected {{clientsLabel}}? This action cannot be undone."
+    "deleteSelectedPrompt": "Are you sure you want to delete {{count}} selected {{clientsLabel}}? This action cannot be undone.",
+    "singleInactiveSuccess": "{{name}} foi marcado como inativo com sucesso.",
+    "singleInactiveWithContactsSuccess_one": "{{name}} e {{count}} contato foram desativados com sucesso.",
+    "singleInactiveWithContactsSuccess_other": "{{name}} e {{count}} contatos foram desativados com sucesso."
   },
   "clientDetails": {
     "title": "Client Details",
@@ -208,7 +211,12 @@
     "status": {
       "label": "Status",
       "helper": "Set client status as active or inactive"
-    }
+    },
+    "entraSyncStarted": "Sincronização Entra iniciada. ID de execução: {{runId}}",
+    "inboundDomainAdded": "Domínio de e-mail de entrada adicionado",
+    "inboundDomainAddFailed": "Falha ao adicionar o domínio",
+    "inboundDomainRemoved": "Domínio de e-mail de entrada removido",
+    "inboundDomainRemoveFailed": "Falha ao remover o domínio"
   },
   "quickAddClient": {
     "title": "Add New Client",

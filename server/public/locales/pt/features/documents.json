@@ -47,7 +47,25 @@
     "downloadFailed": "Failed to download document",
     "bulkDeleteFailed": "Failed to delete some documents",
     "bulkDeleteSuccess_one": "{{count}} document deleted successfully",
-    "bulkDeleteSuccess_other": "{{count}} documents deleted successfully"
+    "bulkDeleteSuccess_other": "{{count}} documents deleted successfully",
+    "passwordRequired": "A senha é obrigatória",
+    "shareLinkCreateFailed": "Falha ao criar o link de compartilhamento",
+    "shareLinkCreated": "Link de compartilhamento criado",
+    "linkCopied": "Link copiado para a área de transferência",
+    "shareLinkRevokeFailed": "Falha ao revogar o link de compartilhamento",
+    "shareLinkRevoked": "Link de compartilhamento revogado",
+    "shareLinksLoadFailed": "Falha ao carregar os links de compartilhamento",
+    "folderPathRequired": "O caminho da pasta é obrigatório",
+    "folderAlreadyExists": "A pasta já existe",
+    "defaultsSaveFailed": "Falha ao salvar",
+    "defaultsRemoved": "Pastas padrão para {{entity}} removidas",
+    "defaultsSaved": "Pastas padrão para {{entity}} salvas",
+    "suggestedDefaultsAllLoaded": "Todos os padrões sugeridos já foram carregados",
+    "suggestedDefaultsLoaded_one": "Padrões carregados para {{count}} tipo de entidade",
+    "suggestedDefaultsLoaded_other": "Padrões carregados para {{count}} tipos de entidade",
+    "suggestedDefaultsLoadFailed": "Falha ao carregar os padrões sugeridos",
+    "entityTypesAllConfigured": "Todos os tipos de entidade já têm pastas padrão configuradas",
+    "defaultFoldersLoadFailed": "Falha ao carregar as pastas padrão"
   },
   "validation": {
     "nameRequired": "Document name is required"
