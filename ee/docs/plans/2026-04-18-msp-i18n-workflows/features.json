@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Replace inline source-mode array in WorkflowActionInputSourceMode.tsx (lines 27-28) with useWorkflowInputSourceModeOptions hook call.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-D", "Enum migration — explicit scope"]
   },
   {

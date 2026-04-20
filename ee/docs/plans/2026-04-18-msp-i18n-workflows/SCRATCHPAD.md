@@ -244,3 +244,14 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   node scripts/validate-translations.cjs
   ```
 - Result: no ESLint errors or warnings from this file; translation validation remained green.
+
+### F010 complete — WorkflowActionInputSourceMode uses enum hook
+- Updated `ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx` to consume `useWorkflowInputSourceModeOptions()`.
+- Removed the local `SOURCE_MODE_OPTIONS` inline English array.
+- Kept all source-mode derivation / transition logic unchanged; only the select-label source changed.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx
+  node scripts/validate-translations.cjs
+  ```
+- Result: no ESLint errors or warnings from this file; translation validation remained green.
