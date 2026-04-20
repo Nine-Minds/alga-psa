@@ -2,9 +2,12 @@
 
 import React from 'react';
 
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { TFunction } from 'i18next';
 import type { ActionInputField } from './mapping';
 
 const buildConstraintHints = (
+  t: TFunction,
   constraints: ActionInputField['constraints'] | undefined
 ): string[] => {
   if (!constraints) return [];
@@ -12,23 +15,27 @@ const buildConstraintHints = (
   const hints: string[] = [];
 
   if (constraints.format) {
-    hints.push(`Format: ${constraints.format}`);
+    hints.push(t('actionInputFieldInfo.format', { defaultValue: 'Format: {{value}}', value: constraints.format }));
   }
 
   if (constraints.itemType) {
-    hints.push(`Each item: ${constraints.itemType}`);
+    hints.push(t('actionInputFieldInfo.eachItem', { defaultValue: 'Each item: {{value}}', value: constraints.itemType }));
   }
 
   if (typeof constraints.minLength === 'number' || typeof constraints.maxLength === 'number') {
-    hints.push(
-      `Length: ${constraints.minLength ?? 0} - ${constraints.maxLength ?? 'any'}`
-    );
+    hints.push(t('actionInputFieldInfo.length', {
+      defaultValue: 'Length: {{min}} - {{max}}',
+      min: constraints.minLength ?? 0,
+      max: constraints.maxLength ?? t('actionInputFieldInfo.any', { defaultValue: 'any' }),
+    }));
   }
 
   if (typeof constraints.minimum === 'number' || typeof constraints.maximum === 'number') {
-    hints.push(
-      `Range: ${constraints.minimum ?? '-∞'} - ${constraints.maximum ?? '∞'}`
-    );
+    hints.push(t('actionInputFieldInfo.range', {
+      defaultValue: 'Range: {{min}} - {{max}}',
+      min: constraints.minimum ?? '-∞',
+      max: constraints.maximum ?? '∞',
+    }));
   }
 
   return hints;
@@ -39,7 +46,8 @@ export const WorkflowActionInputFieldInfo: React.FC<{
   isMissingRequired?: boolean;
   compact?: boolean;
 }> = ({ field, isMissingRequired = false, compact = false }) => {
-  const constraintHints = buildConstraintHints(field.constraints);
+  const { t } = useTranslation('msp/workflows');
+  const constraintHints = buildConstraintHints(t, field.constraints);
   const compactHint = field.description ?? constraintHints[0] ?? null;
 
   return (
@@ -51,9 +59,11 @@ export const WorkflowActionInputFieldInfo: React.FC<{
             className={`text-[11px] font-medium uppercase tracking-wide ${
               isMissingRequired ? 'text-destructive' : 'text-gray-500'
             }`}
-            title={isMissingRequired ? 'Required field is missing a value' : 'Required'}
+            title={isMissingRequired
+              ? t('actionInputFieldInfo.requiredMissingTitle', { defaultValue: 'Required field is missing a value' })
+              : t('actionInputFieldInfo.requiredTitle', { defaultValue: 'Required' })}
           >
-            Required
+            {t('actionInputFieldInfo.required', { defaultValue: 'Required' })}
           </span>
         )}
         <span className="text-xs text-gray-400">{field.type}</span>
@@ -73,12 +83,14 @@ export const WorkflowActionInputFieldInfo: React.FC<{
       ))}
       {!compact && field.default !== undefined && (
         <p className="mt-0.5 text-[11px] text-gray-500">
-          Default: <code className="rounded bg-gray-100 px-1 py-0.5 text-gray-700">{String(field.default)}</code>
+          {t('actionInputFieldInfo.defaultPrefix', { defaultValue: 'Default:' })}{' '}
+          <code className="rounded bg-gray-100 px-1 py-0.5 text-gray-700">{String(field.default)}</code>
         </p>
       )}
       {!compact && field.examples && field.examples.length > 0 && (
         <p className="mt-0.5 text-[11px] text-gray-500">
-          Example: <code className="rounded bg-gray-100 px-1 py-0.5 text-gray-700">{String(field.examples[0])}</code>
+          {t('actionInputFieldInfo.examplePrefix', { defaultValue: 'Example:' })}{' '}
+          <code className="rounded bg-gray-100 px-1 py-0.5 text-gray-700">{String(field.examples[0])}</code>
         </p>
       )}
     </div>

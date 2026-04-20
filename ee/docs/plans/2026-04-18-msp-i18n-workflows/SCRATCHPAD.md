@@ -664,6 +664,24 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   node scripts/validate-translations.cjs
   ```
 - Results: ESLint 0 errors (remaining warnings are the file's existing `no-unused-vars` backlog); translation validation passed with 0 missing/extra keys.
+
+### F029 complete — WorkflowActionInput* files localized
+- `WorkflowActionInputFieldInfo.tsx` — added `useTranslation('msp/workflows')` and threaded `t` into `buildConstraintHints` as a parameter so the module-level helper can emit localized constraint lines (`Format: …`, `Each item: …`, `Length: min - max`, `Range: min - max`, `any`/∞ fallbacks) while staying outside the React component. `Required` badge text, its hover-title in both states, `Default:` and `Example:` prefixes all translate via `actionInputFieldInfo.*`.
+- `WorkflowActionInputSection.tsx` — converted the arrow-expression component body to a function body so it can call `useTranslation` and translate the `Action inputs` heading.
+- `WorkflowActionInputSourceMode.tsx` / `WorkflowActionInputTypeHint.tsx` — both already read all copy from the shared enum hooks or prop-driven data; zero hardcoded strings, no changes required.
+- `WorkflowActionInputFixedPicker.tsx` (843 lines):
+  - Renamed `TICKET_PICKER_DEPENDENCY_HINTS` → `TICKET_PICKER_DEPENDENCY_HINT_DEFAULTS` so the hint text can be looked up by i18next key (`actionInputFixedPicker.dependencyHints.{kind}.{path}`) with the English as `defaultValue`. All 7 dependency-hint strings across 5 picker kinds now translate.
+  - `buildDisabledExplanation` and `getWorkflowPickerPlaceholder` now accept a `TFunction` so they can stay module-level but emit localized output; both call sites inside the React component pass the local `t` from `useTranslation`.
+  - `renderDedicatedPicker` (another module-level helper) also accepts `t`; all five fallback picker placeholders (`Select Board` / `Select Client` / `Select Contact` / `Select User` / `Select User or Team`) now translate, while caller-provided `fixedValueHint` overrides win as before.
+  - `WorkflowTicketPicker` inner component — translates the ticket search placeholder, the two `CustomSelect` state-dependent placeholders (`Select ticket` vs `Type above to search tickets`), and both `setLoadError` fallbacks (`Failed to load ticket`, `Failed to search tickets`).
+  - Main component — translates `Failed to load options` fallback and `Loading options...` placeholder via the parameterized helpers.
+- Added `actionInputFieldInfo.*` (10 keys), `actionInputSection.*` (1 key), and `actionInputFixedPicker.*` (18 keys) to `server/public/locales/en/msp/workflows.json`, synced the same stub structure into `fr/es/de/nl/it/pl/xx/yy`.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowActionInput*.tsx
+  node scripts/validate-translations.cjs
+  ```
+- Results: ESLint clean (0 errors, 0 warnings); translation validation passed with 0 missing/extra keys.
 - Checks run:
   ```bash
   npx eslint ee/server/src/components/workflow-graph/WorkflowGraph.tsx

@@ -170,7 +170,7 @@
   {
     "id": "F029",
     "description": "Extract all user-visible strings in WorkflowActionInput* files (WorkflowActionInputFieldInfo, WorkflowActionInputFixedPicker, WorkflowActionInputSection, WorkflowActionInputSourceMode, WorkflowActionInputTypeHint).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-D"]
   },
   {

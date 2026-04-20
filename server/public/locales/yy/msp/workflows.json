@@ -699,6 +699,58 @@
       "systemEventMissingSchema": "This system event is missing a valid schema and cannot be selected until fixed."
     }
   },
+  "actionInputFieldInfo": {
+    "required": "Required",
+    "requiredTitle": "Required",
+    "requiredMissingTitle": "Required field is missing a value",
+    "format": "Format: {{value}}",
+    "eachItem": "Each item: {{value}}",
+    "length": "Length: {{min}} - {{max}}",
+    "range": "Range: {{min}} - {{max}}",
+    "any": "any",
+    "defaultPrefix": "Default:",
+    "examplePrefix": "Example:"
+  },
+  "actionInputSection": {
+    "heading": "Action inputs"
+  },
+  "actionInputFixedPicker": {
+    "loadingOptions": "Loading options...",
+    "ticketSearchPlaceholder": "Search tickets by number or title",
+    "ticketSelect": "Select ticket",
+    "ticketTypeAbove": "Type above to search tickets",
+    "placeholders": {
+      "board": "Select Board",
+      "client": "Select Client",
+      "contact": "Select Contact",
+      "user": "Select User",
+      "userOrTeam": "Select User or Team"
+    },
+    "errors": {
+      "loadTicket": "Failed to load ticket",
+      "searchTickets": "Failed to search tickets",
+      "loadOptions": "Failed to load options"
+    },
+    "dependencyHints": {
+      "contact": {
+        "client_id": "Choose a fixed Client first to load contact options."
+      },
+      "client-location": {
+        "client_id": "Choose a fixed Client first to load location options."
+      },
+      "ticket-category": {
+        "board_id": "Choose a fixed Board first to load category options."
+      },
+      "ticket-status": {
+        "board_id": "Choose a fixed Board first to load status options.",
+        "ticket_id": "Choose a fixed Ticket first to load status options."
+      },
+      "ticket-subcategory": {
+        "board_id": "Choose a fixed Board first to load subcategory options.",
+        "category_id": "Choose a fixed Category first to load subcategory options."
+      }
+    }
+  },
   "expressionEditor": {
     "ariaLabel": "Expression editor",
     "autocompleteAria": "Expression autocomplete suggestions",

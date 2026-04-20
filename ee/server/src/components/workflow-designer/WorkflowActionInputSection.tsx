@@ -2,6 +2,7 @@
 
 import React from 'react';
 
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { MappingPanel, type ActionInputField, type WorkflowDataContext } from './mapping';
 import type { InputMapping } from '@alga-psa/workflows/runtime';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -25,13 +26,17 @@ export const WorkflowActionInputSection: React.FC<{
   dataContext,
   fieldOptions,
   disabled = false,
-}) => (
+}) => {
+  const { t } = useTranslation('msp/workflows');
+  return (
   <div
     id={`workflow-step-action-inputs-${stepId}`}
     className="mt-4 space-y-3 border-t border-gray-200 pt-4"
   >
     <div className="min-w-0">
-      <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">Action inputs</div>
+      <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+        {t('actionInputSection.heading', { defaultValue: 'Action inputs' })}
+      </div>
     </div>
 
     <MappingPanel
@@ -44,4 +49,5 @@ export const WorkflowActionInputSection: React.FC<{
       disabled={disabled}
     />
   </div>
-);
+  );
+};
