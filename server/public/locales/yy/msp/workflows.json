@@ -1,0 +1,1884 @@
+{
+  "page": {
+    "title": "55555"
+  },
+  "nav": {
+    "designer": "55555",
+    "runs": "55555",
+    "control": "55555",
+    "tasks": "55555"
+  },
+  "sections": {
+    "definitions": "55555",
+    "runStudio": "55555"
+  },
+  "empty": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "filters": {
+    "allStatuses": "55555",
+    "allLevels": "55555",
+    "allTypes": "55555"
+  },
+  "actions": {
+    "create": "55555",
+    "open": "55555",
+    "close": "55555"
+  },
+  "runList": {
+    "quickRanges": {
+      "last24h": "55555",
+      "last7d": "55555"
+    },
+    "summary": {
+      "total": "55555",
+      "activeWorkflows": "55555",
+      "runCount": "55555 {{count}} 55555"
+    },
+    "filters": {
+      "all": "55555",
+      "allWorkflows": "55555",
+      "searchLabel": "55555",
+      "searchPlaceholder": "55555",
+      "statusLabel": "55555",
+      "workflowLabel": "55555",
+      "versionLabel": "55555",
+      "versionPlaceholder": "55555",
+      "fromLabel": "55555",
+      "toLabel": "55555",
+      "sortLabel": "55555"
+    },
+    "actions": {
+      "applyFilters": "55555",
+      "reset": "55555",
+      "viewLatestRun": "55555",
+      "runNow": "55555",
+      "exportCsv": "55555",
+      "refresh": "55555",
+      "resumeSelected": "55555 {{count}} 55555",
+      "cancelSelected": "55555 {{count}} 55555",
+      "clearSelection": "55555",
+      "details": "55555",
+      "loadMore": "55555"
+    },
+    "table": {
+      "runId": "55555",
+      "workflow": "55555",
+      "version": "55555",
+      "tenant": "55555",
+      "triggerPayload": "55555",
+      "status": "55555",
+      "started": "55555",
+      "updated": "55555",
+      "duration": "55555",
+      "emptyValue": "55555",
+      "trigger": {
+        "manual": "55555",
+        "mapped": "55555",
+        "identity": "55555"
+      }
+    },
+    "states": {
+      "loading": "55555",
+      "empty": "55555"
+    },
+    "bulk": {
+      "resumeTitle": "55555",
+      "resumeMessage": "55555 {{count}} 55555",
+      "cancelTitle": "55555",
+      "cancelMessage": "55555 {{count}} 55555",
+      "reasonLabel": "55555",
+      "resumeReasonPlaceholder": "55555",
+      "cancelReasonPlaceholder": "55555",
+      "resumeConfirm": "55555",
+      "cancelConfirm": "55555"
+    },
+    "toasts": {
+      "loadRunsFailed": "55555",
+      "selectWorkflowForLatestRun": "55555",
+      "noRunsFoundForWorkflow": "55555",
+      "loadLatestRunFailed": "55555",
+      "selectWorkflowToRun": "55555",
+      "exportReady": "55555",
+      "exportFailed": "55555",
+      "selectRunsForBulkAction": "55555",
+      "bulkReasonTooShort": "55555",
+      "noEligibleRuns": "55555",
+      "bulkResumeFailedCount": "55555 {{count}} 55555",
+      "bulkCancelFailedCount": "55555 {{count}} 55555",
+      "bulkResumeSuccessCount": "55555 {{count}} 55555",
+      "bulkCancelSuccessCount": "55555 {{count}} 55555",
+      "bulkSkippedIneligibleCount": "55555 {{count}} 55555",
+      "bulkActionFailed": "55555"
+    }
+  },
+  "runDetails": {
+    "common": {
+      "emptyValue": "55555"
+    },
+    "header": {
+      "runIdLabel": "55555",
+      "workflowIdLabel": "55555",
+      "triggerLabel": "55555"
+    },
+    "actions": {
+      "resume": "55555",
+      "cancel": "55555",
+      "export": "55555",
+      "retry": "55555",
+      "replay": "55555",
+      "requeueEvent": "55555",
+      "close": "55555",
+      "view": "55555",
+      "apply": "55555",
+      "reset": "55555",
+      "exportCsv": "55555",
+      "loadMore": "55555",
+      "exportAuditCsv": "55555"
+    },
+    "summary": {
+      "statusLabel": "55555",
+      "startedLabel": "55555",
+      "updatedLabel": "55555",
+      "completedLabel": "55555",
+      "triggerLabel": "55555",
+      "scheduleStateLabel": "55555",
+      "scheduledForLabel": "55555",
+      "cronLabel": "55555",
+      "nodePathLabel": "55555",
+      "eventTypeLabel": "55555",
+      "triggerPayloadSchemaLabel": "55555",
+      "mapped": "55555",
+      "identity": "55555",
+      "runErrorFallback": "55555",
+      "errorCategoryFallback": "55555"
+    },
+    "stepTimeline": {
+      "title": "55555",
+      "description": "55555",
+      "loading": "55555",
+      "stepStatusLabel": "55555",
+      "nodeTypeLabel": "55555",
+      "collapseNestedLabel": "55555",
+      "columns": {
+        "stepPath": "55555",
+        "type": "55555",
+        "status": "55555",
+        "attempt": "55555",
+        "duration": "55555",
+        "nextRetry": "55555",
+        "started": "55555",
+        "error": "55555"
+      },
+      "empty": "55555"
+    },
+    "stepDetails": {
+      "title": "55555",
+      "statusLabel": "55555",
+      "attemptLabel": "55555",
+      "startedLabel": "55555",
+      "completedLabel": "55555",
+      "durationLabel": "55555",
+      "nodeTypeLabel": "55555",
+      "definitionStepIdLabel": "55555",
+      "nextRetryLabel": "55555",
+      "errorTitle": "55555",
+      "stepErrorFallback": "55555",
+      "errorCategoryFallback": "55555"
+    },
+    "waitHistory": {
+      "title": "55555",
+      "eventLine": "55555 {{event}} 55555 {{key}} 55555 {{count}} 55555",
+      "timeLine": "55555 {{mode}} 55555 {{scheduledResume}} 55555",
+      "timeoutLine": "55555 {{timeout}} 55555 {{resolved}} 55555"
+    },
+    "envelope": {
+      "title": "55555",
+      "description": "55555",
+      "redactedNotice": "55555 {{marker}} 55555",
+      "noSnapshot": "55555",
+      "tabs": {
+        "payload": "55555",
+        "vars": "55555",
+        "meta": "55555",
+        "error": "55555",
+        "raw": "55555"
+      }
+    },
+    "invocations": {
+      "title": "55555",
+      "redactedNotice": "55555 {{marker}} 55555",
+      "empty": "55555",
+      "attemptLine": "55555 {{count}} 55555",
+      "durationLine": "55555 {{duration}} 55555",
+      "sizeLine": "55555 {{inputSize}} 55555 {{inputSuffix}} 55555 {{outputSize}} 55555 {{outputSuffix}} 55555",
+      "truncatedSuffix": "55555",
+      "inputLabel": "55555",
+      "outputLabel": "55555"
+    },
+    "logs": {
+      "title": "55555",
+      "description": "55555",
+      "searchLabel": "55555",
+      "searchPlaceholder": "55555",
+      "levelLabel": "55555",
+      "empty": "55555",
+      "columns": {
+        "timestamp": "55555",
+        "level": "55555",
+        "message": "55555",
+        "step": "55555",
+        "event": "55555",
+        "correlation": "55555"
+      }
+    },
+    "audit": {
+      "title": "55555",
+      "description": "55555",
+      "empty": "55555",
+      "systemUser": "55555",
+      "columns": {
+        "timestamp": "55555",
+        "operation": "55555",
+        "user": "55555",
+        "details": "55555"
+      }
+    },
+    "dialogs": {
+      "reasonLabel": "55555",
+      "resumeTitle": "55555",
+      "resumeMessage": "55555",
+      "resumeReasonPlaceholder": "55555",
+      "cancelTitle": "55555",
+      "cancelMessage": "55555",
+      "cancelReasonPlaceholder": "55555",
+      "cancelConfirm": "55555",
+      "retryTitle": "55555",
+      "retryMessage": "55555",
+      "retryReasonPlaceholder": "55555",
+      "retryConfirm": "55555",
+      "replayTitle": "55555",
+      "replayMessage": "55555",
+      "replayReasonPlaceholder": "55555",
+      "payloadLabel": "55555",
+      "replayConfirm": "55555",
+      "requeueTitle": "55555",
+      "requeueMessage": "55555",
+      "requeueReasonPlaceholder": "55555",
+      "requeueConfirm": "55555"
+    },
+    "toasts": {
+      "loadRunDetailsFailed": "55555",
+      "loadLogsFailed": "55555",
+      "loadAuditLogsFailed": "55555",
+      "logExportReady": "55555",
+      "exportLogsFailed": "55555",
+      "reasonTooShort": "55555",
+      "runResumed": "55555",
+      "resumeRunFailed": "55555",
+      "runCanceled": "55555",
+      "cancelRunFailed": "55555",
+      "runExportReady": "55555",
+      "exportRunFailed": "55555",
+      "runRetryStarted": "55555",
+      "retryRunFailed": "55555",
+      "replayPayloadInvalid": "55555",
+      "runReplayStarted": "55555",
+      "replayRunFailed": "55555",
+      "eventWaitRequeued": "55555",
+      "requeueEventWaitFailed": "55555",
+      "auditExportReady": "55555",
+      "exportAuditLogsFailed": "55555"
+    }
+  },
+  "runDialog": {
+    "title": "55555",
+    "description": "55555",
+    "descriptionEvent": "55555 {{name}} 55555",
+    "draftWarning": "55555 {{version}} 55555",
+    "concurrencyLimit": "55555 {{count}} 55555",
+    "common": {
+      "emptyValue": "55555"
+    },
+    "actions": {
+      "addField": "55555",
+      "addItem": "55555",
+      "cloneLatestRun": "55555",
+      "close": "55555",
+      "copyPayload": "55555",
+      "formBuilder": "55555",
+      "hide": "55555",
+      "jsonEditor": "55555",
+      "openEventCatalog": "55555",
+      "publishDraft": "55555",
+      "publishLatest": "55555",
+      "remove": "55555",
+      "reset": "55555",
+      "resetToDefaults": "55555",
+      "savePreset": "55555",
+      "show": "55555",
+      "startRun": "55555",
+      "starting": "55555"
+    },
+    "eventCatalog": {
+      "title": "55555",
+      "description": "55555",
+      "searchLabel": "55555",
+      "searchPlaceholder": "55555",
+      "eventTypeLabel": "55555",
+      "loadingEvents": "55555",
+      "selectEventType": "55555",
+      "systemBadge": "55555",
+      "tenantBadge": "55555",
+      "systemEvent": "55555",
+      "tenantEvent": "55555",
+      "uncategorized": "55555"
+    },
+    "fields": {
+      "workflowLabel": "55555",
+      "publishedVersionLabel": "55555",
+      "triggerLabel": "55555",
+      "manualTrigger": "55555",
+      "workflowStatusLabel": "55555",
+      "statusActive": "55555",
+      "statusPaused": "55555"
+    },
+    "form": {
+      "booleanTrue": "55555",
+      "booleanFalse": "55555",
+      "mapEntriesTitle": "55555",
+      "mapEntriesPrompt": "55555",
+      "mapEntriesDescription": "55555",
+      "mapEntriesEmpty": "55555",
+      "noSchema": "55555"
+    },
+    "noPublishedVersion": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "payload": {
+      "largePayloadWarning": "55555",
+      "payloadJsonLabel": "55555",
+      "payloadLabel": "55555",
+      "payloadSize": "55555 {{size}} 55555"
+    },
+    "presets": {
+      "presetNameLabel": "55555",
+      "presetNamePlaceholder": "55555",
+      "savedPresets": "55555"
+    },
+    "schema": {
+      "sourceLabel": "55555",
+      "workflowSchema": "55555",
+      "eventSchema": "55555",
+      "schemaRef": "55555",
+      "schemaRefLabel": "55555",
+      "selectSchema": "55555",
+      "noSchemasFound": "55555",
+      "unknownSchemaRef": "55555",
+      "useEventSchema": "55555",
+      "viewSchemaDiff": "55555",
+      "hideSchemaDiff": "55555",
+      "onlyInEvent": "55555",
+      "requiredOnlyInEvent": "55555",
+      "onlyInWorkflow": "55555",
+      "requiredOnlyInWorkflow": "55555",
+      "typeMismatches": "55555",
+      "typeMismatchLine": "55555 {{field}} 55555 {{eventType}} 55555 {{payloadType}} 55555",
+      "selectedEventWarningPrefix": "55555 {{selectedEventType}} 55555 {{triggerEventName}} 55555",
+      "matchOptional": "55555",
+      "matchIdentity": "55555",
+      "diffWillApply": "55555 {{eventSchemaRef}} 55555 {{payloadSchemaRef}} 55555",
+      "diffRequiredMissing": "55555 {{eventSchemaRef}} 55555 {{payloadSchemaRef}} 55555",
+      "triggerEventDiffers": "55555",
+      "eventUnavailable": "55555",
+      "mapping": {
+        "identityOptional": "55555",
+        "requiredMissing": "55555",
+        "willApply": "55555",
+        "willApplyOptional": "55555"
+      }
+    },
+    "systemWorkflowWarning": "55555",
+    "systemWorkflowConfirm": "55555",
+    "templates": {
+      "exampleLabel": "55555 {{count}} 55555",
+      "eventTemplates": "55555",
+      "sampleTemplates": "55555",
+      "emailTemplate": "55555",
+      "webhookTemplate": "55555"
+    },
+    "toasts": {
+      "confirmSystemRun": "55555",
+      "eventMissingSchemaRef": "55555",
+      "loadLatestRunFailed": "55555",
+      "mapEntryExists": "55555",
+      "noPriorPayload": "55555",
+      "payloadCopied": "55555",
+      "presetSaved": "55555",
+      "providePresetName": "55555",
+      "startRunFailed": "55555",
+      "triggerMappingMissing": "55555"
+    },
+    "validation": {
+      "invalidJson": "55555",
+      "summaryTitle": "55555",
+      "summaryDescription": "55555",
+      "moreErrors": "55555 {{count}} 55555"
+    }
+  },
+  "eventList": {
+    "common": {
+      "emptyValue": "55555"
+    },
+    "summary": {
+      "total": "55555",
+      "matched": "55555",
+      "unmatched": "55555",
+      "errors": "55555"
+    },
+    "filters": {
+      "eventNameLabel": "55555",
+      "eventNamePlaceholder": "55555",
+      "correlationKeyLabel": "55555",
+      "correlationKeyPlaceholder": "55555",
+      "statusLabel": "55555",
+      "fromLabel": "55555",
+      "toLabel": "55555"
+    },
+    "actions": {
+      "applyFilters": "55555",
+      "reset": "55555",
+      "exportCsv": "55555",
+      "exportJson": "55555",
+      "close": "55555",
+      "viewRunDetails": "55555"
+    },
+    "table": {
+      "schemaConflict": "55555",
+      "columns": {
+        "event": "55555",
+        "correlation": "55555",
+        "schema": "55555",
+        "status": "55555",
+        "matchedRun": "55555",
+        "payload": "55555",
+        "created": "55555"
+      }
+    },
+    "states": {
+      "loading": "55555",
+      "empty": "55555"
+    },
+    "detail": {
+      "title": "55555",
+      "loading": "55555",
+      "eventIdLabel": "55555",
+      "statusLabel": "55555",
+      "eventNameLabel": "55555",
+      "correlationKeyLabel": "55555",
+      "payloadSchemaRefLabel": "55555",
+      "schemaConflict": "55555 {{catalog}} 55555 {{submission}} 55555",
+      "createdLabel": "55555",
+      "processedLabel": "55555",
+      "errorLine": "55555 {{message}} 55555",
+      "waitLabel": "55555",
+      "waitIdLine": "55555 {{waitId}} 55555",
+      "waitStatusLine": "55555 {{status}} 55555",
+      "waitTimeoutLine": "55555 {{value}} 55555",
+      "waitResolvedLine": "55555 {{value}} 55555",
+      "waitStepLine": "55555 {{value}} 55555",
+      "matchedRunLabel": "55555",
+      "runStatusLine": "55555 {{status}} 55555",
+      "payloadLabel": "55555"
+    },
+    "toasts": {
+      "loadEventsFailed": "55555",
+      "loadEventDetailFailed": "55555",
+      "exportReady": "55555",
+      "exportFailed": "55555"
+    }
+  },
+  "deadLetter": {
+    "common": {
+      "emptyValue": "55555"
+    },
+    "filters": {
+      "minimumRetriesLabel": "55555",
+      "minimumRetriesPlaceholder": "55555"
+    },
+    "actions": {
+      "refresh": "55555",
+      "loadMore": "55555"
+    },
+    "table": {
+      "columns": {
+        "runId": "55555",
+        "workflow": "55555",
+        "version": "55555",
+        "status": "55555",
+        "retries": "55555",
+        "failedSteps": "55555",
+        "updated": "55555"
+      }
+    },
+    "states": {
+      "empty": "55555",
+      "loading": "55555"
+    },
+    "toasts": {
+      "loadFailed": "55555"
+    }
+  },
+  "audit": {
+    "common": {
+      "emptyValue": "55555"
+    },
+    "header": {
+      "title": "55555"
+    },
+    "actions": {
+      "exportCsv": "55555",
+      "loadMore": "55555"
+    },
+    "table": {
+      "columns": {
+        "timestamp": "55555",
+        "operation": "55555",
+        "user": "55555",
+        "details": "55555"
+      }
+    },
+    "states": {
+      "selectWorkflow": "55555",
+      "empty": "55555"
+    },
+    "values": {
+      "system": "55555"
+    },
+    "toasts": {
+      "loadFailed": "55555",
+      "exportReady": "55555",
+      "exportFailed": "55555"
+    }
+  },
+  "designer": {
+    "page": {
+      "controlPanelTitle": "55555",
+      "controlPanelDescription": "55555",
+      "designerTitle": "55555",
+      "designerDescription": "55555",
+      "editorTitle": "55555",
+      "editorDescription": "55555"
+    },
+    "controlPanel": {
+      "tabs": {
+        "schedules": "55555",
+        "runs": "55555",
+        "events": "55555",
+        "eventCatalog": "55555",
+        "deadLetter": "55555"
+      }
+    },
+    "toolbar": {
+      "backToList": "55555",
+      "newWorkflow": "55555",
+      "saveDraft": "55555",
+      "saving": "55555",
+      "publish": "55555",
+      "publishing": "55555",
+      "run": "55555",
+      "previewOnly": "55555",
+      "validation": {
+        "lastValidated": "55555 {{timestamp}} 55555",
+        "unknown": "55555"
+      }
+    },
+    "form": {
+      "nameLabel": "55555",
+      "versionLabel": "55555",
+      "descriptionLabel": "55555",
+      "latestPublishedVersion": "55555 {{version}} 55555",
+      "triggerTypeLabel": "55555",
+      "triggerTypePlaceholder": "55555",
+      "triggerTypeHelp": "55555",
+      "manualTriggerNote": "55555",
+      "eventCategoryLabel": "55555",
+      "eventLabel": "55555",
+      "selectEventCategory": "55555",
+      "selectEvent": "55555",
+      "selectCategoryFirst": "55555",
+      "inputDataLabel": "55555",
+      "inputDataEvent": "55555",
+      "inputDataTimePrefix": "55555",
+      "inputDataManualPrefix": "55555",
+      "inputDataManualSuffix": "55555",
+      "triggerMappingRequired": "55555",
+      "schemaLocked": "55555",
+      "schemaAutoSelected": "55555",
+      "schemaSuffixClock": "55555",
+      "schemaSuffixPinned": "55555",
+      "chooseTriggerHint": "55555",
+      "schemaLoadErrorPrefix": "55555",
+      "schemaLoadErrorSuffix": "55555",
+      "draftDifferent": "55555",
+      "publishedUsesPrefix": "55555",
+      "draftResolvesTo": "55555",
+      "lockToPublished": "55555",
+      "advancedSchemaSettings": "55555",
+      "inferredSchemaPrefix": "55555",
+      "noSchemaInferred": "55555",
+      "unknownSchemaRef": "55555",
+      "workflowStepsHeading": "55555",
+      "workflowStepsListHint": "55555",
+      "workflowStepsGraphHint": "55555",
+      "workflowStepsViewAria": "55555",
+      "warningsCount": "55555 {{count}} 55555"
+    },
+    "stepPanel": {
+      "readOnly": "55555",
+      "selectPrompt": "55555"
+    },
+    "stepConfig": {
+      "eventLabel": "55555",
+      "selectEvent": "55555",
+      "correlationKey": "55555",
+      "payloadFilters": "55555",
+      "addFilter": "55555",
+      "noFiltersConfigured": "55555",
+      "loadingEventSchema": "55555",
+      "timeoutMs": "55555",
+      "assignOnResume": "55555",
+      "fieldLabel": "55555",
+      "fieldPathLabel": "55555",
+      "dataContextToggle": "55555"
+    },
+    "mappingExpr": {
+      "add": "55555",
+      "remove": "55555",
+      "empty": "55555",
+      "expressionLabel": "55555"
+    },
+    "schemaForm": {
+      "sectionTitle": "55555",
+      "stepSettings": "55555",
+      "missingRequired": "55555 {{fields}} 55555"
+    },
+    "fieldMetadata": {
+      "actionId": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "version": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "inputMapping": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "saveAs": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "idempotencyKey": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "onError": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "eventName": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "correlationKey": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "filters": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "timeoutMs": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "mode": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "durationMs": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "until": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "state": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "assign": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "taskType": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "title": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "contextData": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "actions": {
+      "ai.infer": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "validation": {
+      "badge": {
+        "invalid": "55555",
+        "warnings": "55555",
+        "valid": "55555",
+        "unknown": "55555"
+      }
+    },
+    "discardDialog": {
+      "title": "55555",
+      "message": "55555",
+      "confirm": "55555",
+      "cancel": "55555"
+    },
+    "eventSchemaDialog": {
+      "title": "55555",
+      "messageWithEvent": "55555 {{eventName}} 55555 {{schemaRef}} 55555",
+      "messageFallback": "55555",
+      "confirm": "55555",
+      "cancel": "55555"
+    },
+    "blockSection": {
+      "then": "55555",
+      "else": "55555",
+      "try": "55555",
+      "catch": "55555",
+      "body": "55555"
+    },
+    "palette": {
+      "showPalette": "55555",
+      "hidePalette": "55555",
+      "searchPlaceholder": "55555",
+      "dragHint": "55555",
+      "chooseAction": "55555",
+      "returnsSummary": "55555 {{list}} 55555 {{suffix}} 55555",
+      "categories": {
+        "Control": "55555",
+        "Core": "55555",
+        "Transform": "55555",
+        "AI": "55555",
+        "Apps": "55555",
+        "Action": "55555",
+        "Email": "55555",
+        "Nodes": "55555"
+      },
+      "controlBlocks": {
+        "control.if": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "control.forEach": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "control.tryCatch": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "control.callWorkflow": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "control.return": {
+          "label": "55555",
+          "description": "55555"
+        }
+      },
+      "nodes": {
+        "state.set": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "event.wait": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "time.wait": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "transform.assign": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "action.call": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "email.parseBody": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "email.renderCommentBlocks": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "human.task": {
+          "label": "55555",
+          "description": "55555"
+        }
+      },
+      "groups": {
+        "ticket": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "contact": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "client": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "communication": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "scheduling": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "project": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "time": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "crm": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "transform": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "ai": {
+          "label": "55555",
+          "description": "55555"
+        }
+      }
+    },
+    "stepCard": {
+      "selectAriaLabel": "55555 {{label}} 55555",
+      "badges": {
+        "if": "55555",
+        "loop": "55555",
+        "try": "55555",
+        "block": "55555"
+      },
+      "mapping": {
+        "unmappedTitle": "55555 {{count}} 55555",
+        "unmappedBadge": "55555 {{count}} 55555",
+        "allMappedTitle": "55555 {{count}} 55555",
+        "allMappedAria": "55555"
+      },
+      "errorCount": "55555 {{count}} 55555 {{noun}} 55555",
+      "errorSingular": "55555",
+      "errorPlural": "55555",
+      "actions": {
+        "duplicate": "55555",
+        "duplicateAriaLabel": "55555 {{label}} 55555",
+        "delete": "55555"
+      },
+      "forEachSummary": "55555 {{itemVar}} 55555 {{concurrency}} 55555"
+    },
+    "toasts": {
+      "loadRegistriesFailed": "55555",
+      "loadPermissionsFailed": "55555",
+      "loadWorkflowsFailed": "55555",
+      "loadEventCatalogFailed": "55555",
+      "settingsUpdated": "55555",
+      "settingsUpdateFailed": "55555",
+      "created": "55555",
+      "saved": "55555",
+      "saveFailed": "55555",
+      "saveBeforePublish": "55555",
+      "published": "55555",
+      "publishFailed": "55555",
+      "publishValidationErrors": "55555",
+      "systemEventMissingSchema": "55555"
+    }
+  },
+  "actionInputFieldInfo": {
+    "required": "55555",
+    "requiredTitle": "55555",
+    "requiredMissingTitle": "55555",
+    "format": "55555 {{value}} 55555",
+    "eachItem": "55555 {{value}} 55555",
+    "length": "55555 {{min}} 55555 {{max}} 55555",
+    "range": "55555 {{min}} 55555 {{max}} 55555",
+    "any": "55555",
+    "defaultPrefix": "55555",
+    "examplePrefix": "55555"
+  },
+  "actionInputSection": {
+    "heading": "55555"
+  },
+  "actionInputFixedPicker": {
+    "loadingOptions": "55555",
+    "ticketSearchPlaceholder": "55555",
+    "ticketSelect": "55555",
+    "ticketTypeAbove": "55555",
+    "placeholders": {
+      "board": "55555",
+      "client": "55555",
+      "contact": "55555",
+      "user": "55555",
+      "userOrTeam": "55555"
+    },
+    "errors": {
+      "loadTicket": "55555",
+      "searchTickets": "55555",
+      "loadOptions": "55555"
+    },
+    "dependencyHints": {
+      "contact": {
+        "client_id": "55555"
+      },
+      "client-location": {
+        "client_id": "55555"
+      },
+      "ticket-category": {
+        "board_id": "55555"
+      },
+      "ticket-status": {
+        "board_id": "55555",
+        "ticket_id": "55555"
+      },
+      "ticket-subcategory": {
+        "board_id": "55555",
+        "category_id": "55555"
+      }
+    }
+  },
+  "serverErrors": {
+    "forbidden": "55555",
+    "unauthorized": "55555",
+    "notFound": "55555",
+    "workflowNotFound": "55555",
+    "workflowVersionNotFound": "55555",
+    "workflowVersionExists": "55555 {{version}} 55555",
+    "workflowValidationFailed": "55555",
+    "noPublishedVersions": "55555",
+    "workflowPaused": "55555",
+    "concurrencyLimitReached": "55555",
+    "rateLimitExceeded": "55555",
+    "payloadNotSerializable": "55555",
+    "payloadTooLarge": "55555",
+    "payloadValidationFailed": "55555",
+    "missingPayloadSchemaRef": "55555",
+    "missingSourcePayloadSchemaRef": "55555",
+    "triggerMappingRequired": "55555",
+    "runNotFailed": "55555",
+    "failedStepNotFound": "55555",
+    "noEventWaitFound": "55555",
+    "cancelTemporalRunFailed": "55555",
+    "noDefinitionToPublish": "55555",
+    "deleteActiveRunsBlocked": "55555",
+    "scheduleOneTimeRunAtRequired": "55555",
+    "scheduleOneTimeInvalidTimestamp": "55555",
+    "scheduleOneTimeMustBeFuture": "55555",
+    "scheduleOneTimeDayOfWeek": "55555",
+    "scheduleOneTimeBusinessHours": "55555",
+    "scheduleRecurringCronRequired": "55555",
+    "scheduleRecurringCronFields": "55555",
+    "scheduleRecurringTimezone": "55555",
+    "cronTooLong": "55555",
+    "cronUnsupportedCharacters": "55555",
+    "cronDayConflict": "55555",
+    "cronTooFrequent": "55555",
+    "schedulePublishedRequired": "55555",
+    "schedulePinnedSchemaRequired": "55555",
+    "scheduleSchemaNotRegistered": "55555",
+    "schedulePayloadInvalid": "55555",
+    "processEventFailed": "55555"
+  },
+  "taskInbox": {
+    "title": "55555",
+    "backToList": "55555",
+    "tabs": {
+      "pending": "55555",
+      "claimed": "55555",
+      "completed": "55555",
+      "all": "55555"
+    }
+  },
+  "taskList": {
+    "pagination": {
+      "previous": "55555",
+      "next": "55555",
+      "pageLabel": "55555 {{current}} 55555 {{total}} 55555"
+    },
+    "errors": {
+      "loadFailed": "55555",
+      "claimFailed": "55555 {{error}} 55555",
+      "unclaimFailed": "55555 {{error}} 55555",
+      "unknown": "55555"
+    },
+    "actions": {
+      "claim": "55555",
+      "unclaim": "55555"
+    },
+    "noDueDate": "55555",
+    "overdueSuffix": "55555",
+    "empty": "55555",
+    "duePrefix": "55555"
+  },
+  "taskDetails": {
+    "notAvailable": "55555",
+    "notFound": "55555",
+    "retry": "55555",
+    "youPronoun": "55555",
+    "noForm": "55555",
+    "contextData": "55555",
+    "responseData": "55555",
+    "fields": {
+      "status": "55555",
+      "priority": "55555",
+      "created": "55555",
+      "dueDate": "55555",
+      "claimedBy": "55555",
+      "completedBy": "55555"
+    },
+    "tabs": {
+      "details": "55555",
+      "form": "55555",
+      "history": "55555"
+    },
+    "actions": {
+      "claim": "55555",
+      "unclaim": "55555"
+    },
+    "errors": {
+      "loadFailed": "55555",
+      "claimFailed": "55555 {{error}} 55555",
+      "unclaimFailed": "55555 {{error}} 55555",
+      "unknown": "55555"
+    }
+  },
+  "taskHistory": {
+    "empty": "55555",
+    "byPrefix": "55555",
+    "system": "55555",
+    "detailsLabel": "55555",
+    "actions": {
+      "created": "55555",
+      "claimed": "55555",
+      "unclaimed": "55555",
+      "completed": "55555",
+      "canceled": "55555",
+      "expired": "55555"
+    },
+    "errors": {
+      "loadFailed": "55555"
+    }
+  },
+  "taskForm": {
+    "actions": {
+      "complete": "55555",
+      "cancel": "55555"
+    }
+  },
+  "dynamicForm": {
+    "actions": {
+      "submit": "55555",
+      "cancel": "55555"
+    },
+    "errors": {
+      "generic": "55555"
+    }
+  },
+  "embeddedTaskInbox": {
+    "title": "55555",
+    "viewAll": "55555",
+    "backToTasks": "55555"
+  },
+  "actionButton": {
+    "processing": "55555",
+    "confirm": "55555",
+    "cancel": "55555",
+    "confirmTitle": "55555"
+  },
+  "stepNameField": {
+    "label": "55555"
+  },
+  "stepSaveOutput": {
+    "toggleLabel": "55555",
+    "placeholder": "55555",
+    "copyPathTitle": "55555",
+    "accessibleAs": "55555"
+  },
+  "aiSchemaSection": {
+    "heading": "55555",
+    "headingDescription": "55555",
+    "modeSimple": "55555",
+    "modeAdvanced": "55555",
+    "addField": "55555",
+    "addNested": "55555",
+    "remove": "55555",
+    "nameLabel": "55555",
+    "answerType": "55555",
+    "arrayItems": "55555",
+    "required": "55555",
+    "descriptionLabel": "55555",
+    "objectItemFields": "55555",
+    "nestedFields": "55555",
+    "jsonSchemaLabel": "55555",
+    "advancedHelperText": "55555",
+    "validationHeading": "55555",
+    "advancedFallback": "55555",
+    "simpleModeUnsupported": "55555",
+    "errors": {
+      "jsonRequired": "55555"
+    }
+  },
+  "composeText": {
+    "heading": "55555",
+    "headingDescription": "55555",
+    "addOutput": "55555",
+    "untitled": "55555",
+    "outputFallback": "55555 {{index}} 55555",
+    "moveUpAria": "55555 {{label}} 55555",
+    "moveDownAria": "55555 {{label}} 55555",
+    "deleteAria": "55555 {{label}} 55555",
+    "outputLabel": "55555",
+    "stableKeyLabel": "55555",
+    "keyHintSafe": "55555",
+    "keyHintInvalid": "55555",
+    "regenerate": "55555",
+    "validationHeading": "55555",
+    "downstreamPathLabel": "55555",
+    "pathFallback": "55555",
+    "copied": "55555",
+    "copyPath": "55555",
+    "contentHeading": "55555",
+    "contentDescription": "55555",
+    "insertReference": "55555",
+    "insertReferenceHeading": "55555",
+    "errors": {
+      "noCodeBlock": "55555"
+    }
+  },
+  "referenceSelector": {
+    "placeholders": {
+      "scope": "55555",
+      "step": "55555",
+      "field": "55555"
+    }
+  },
+  "pipeline": {
+    "start": "55555",
+    "insertStepHere": "55555",
+    "emptyDisabled": "55555",
+    "emptySelectPrompt": "55555"
+  },
+  "expressionEditor": {
+    "ariaLabel": "55555",
+    "autocompleteAria": "55555",
+    "textAreaPlaceholder": "55555",
+    "field": {
+      "placeholder": "55555",
+      "insertFieldPlaceholder": "55555"
+    }
+  },
+  "sourceDataTree": {
+    "searchPlaceholder": "55555",
+    "sections": {
+      "payload": "55555",
+      "vars": "55555",
+      "loopContext": "55555",
+      "workflowMeta": "55555",
+      "errorContext": "55555"
+    },
+    "vars": {
+      "emptyPrefix": "55555",
+      "saveOutput": "55555",
+      "emptyConjunction": "55555",
+      "assignStep": "55555",
+      "emptySuffix": "55555"
+    },
+    "loop": {
+      "currentItem": "55555",
+      "loopIndex": "55555"
+    }
+  },
+  "validationBadge": {
+    "status": {
+      "valid": "55555",
+      "warning": "55555",
+      "error": "55555",
+      "incomplete": "55555"
+    },
+    "tooltip": {
+      "valid": "55555",
+      "incomplete": "55555",
+      "mappingCount": "55555 {{mapped}} 55555 {{required}} 55555"
+    },
+    "openEditor": "55555",
+    "errorsHeading": "55555 {{count}} 55555",
+    "warningsHeading": "55555 {{count}} 55555",
+    "moreErrors": "55555 {{count}} 55555",
+    "moreWarnings": "55555 {{count}} 55555"
+  },
+  "inputMappingEditor": {
+    "empty": "55555",
+    "browseSources": "55555",
+    "objectFields": "55555",
+    "itemTitle": "55555 {{index}} 55555",
+    "reset": "55555",
+    "addItem": "55555",
+    "fill": "55555",
+    "clearValues": "55555",
+    "applySuggestions": "55555 {{count}} 55555",
+    "applySuggestionTitle": "55555 {{sourcePath}} 55555",
+    "fuzzySuffix": "55555",
+    "removeMapping": "55555",
+    "invalidJson": "55555",
+    "stringPlaceholder": "55555",
+    "aria": {
+      "listbox": "55555",
+      "fieldList": "55555"
+    },
+    "summary": {
+      "filledCount": "55555 {{filled}} 55555 {{total}} 55555",
+      "missingCount": "55555 {{count}} 55555",
+      "missingTitle": "55555"
+    },
+    "mode": {
+      "structured": "55555",
+      "rawJson": "55555"
+    },
+    "nullable": {
+      "useValue": "55555",
+      "setNull": "55555"
+    },
+    "primitiveList": {
+      "placeholder": "55555",
+      "helperText": "55555"
+    },
+    "structuredGroup": {
+      "collapseAria": "55555 {{title}} 55555",
+      "expandAria": "55555 {{title}} 55555"
+    },
+    "legacy": {
+      "title": "55555",
+      "description": "55555",
+      "useReference": "55555",
+      "useFixedValue": "55555"
+    },
+    "fixedValueDialog": {
+      "title": "55555 {{fieldName}} 55555",
+      "description": "55555",
+      "openEditor": "55555",
+      "apply": "55555",
+      "cancel": "55555"
+    }
+  },
+  "schemaReference": {
+    "selectAction": "55555",
+    "viewDetails": "55555",
+    "hideDetails": "55555",
+    "inputSchemaTitle": "55555",
+    "outputSchemaTitle": "55555",
+    "noInputParameters": "55555",
+    "noOutputFields": "55555",
+    "noFields": "55555",
+    "outputAvailablePrefix": "55555",
+    "showRawJson": "55555",
+    "hideRawJson": "55555",
+    "exportSchema": "55555",
+    "exportSchemaTitle": "55555",
+    "rawInputComment": "55555",
+    "rawOutputComment": "55555",
+    "copyPathTitle": "55555 {{path}} 55555",
+    "copyAllPaths": "55555",
+    "copyAllPathsTitle": "55555",
+    "copied": "55555",
+    "pathsCopied": "55555 {{count}} 55555",
+    "nullableSuffix": "55555",
+    "constraints": {
+      "values": "55555 {{list}} 55555 {{suffix}} 55555",
+      "min": "55555 {{value}} 55555",
+      "max": "55555 {{value}} 55555",
+      "minLength": "55555 {{value}} 55555",
+      "maxLength": "55555 {{value}} 55555",
+      "pattern": "55555 {{value}} 55555",
+      "format": "55555 {{value}} 55555",
+      "examples": "55555 {{list}} 55555",
+      "default": "55555 {{value}} 55555"
+    }
+  },
+  "groupedAction": {
+    "groupHeading": "55555",
+    "actionLabel": "55555",
+    "actionPlaceholder": "55555 {{group}} 55555",
+    "required": {
+      "title": "55555",
+      "message": "55555 {{group}} 55555"
+    },
+    "tileKind": {
+      "core-object": "55555",
+      "transform": "55555",
+      "app": "55555",
+      "ai": "55555"
+    }
+  },
+  "trigger": {
+    "manual": "55555",
+    "event": "55555",
+    "eventWithType": "55555 {{eventType}} 55555",
+    "oneTimeSchedule": "55555",
+    "recurringSchedule": "55555"
+  },
+  "scheduleStatus": {
+    "unknown": "55555",
+    "scheduled": "55555",
+    "paused": "55555",
+    "disabled": "55555",
+    "completed": "55555",
+    "failed": "55555"
+  },
+  "graph": {
+    "start": {
+      "label": "55555"
+    },
+    "states": {
+      "buildingGraph": "55555"
+    },
+    "errors": {
+      "buildFailed": "55555",
+      "renderErrorTitle": "55555",
+      "switchToList": "55555"
+    },
+    "empty": {
+      "readonly": "55555",
+      "dropFirst": "55555",
+      "dragPrompt": "55555"
+    },
+    "mapping": {
+      "unmappedTitle": "55555 {{count}} 55555",
+      "unmappedBadge": "55555 {{count}} 55555",
+      "allMapped": "55555"
+    },
+    "insert": {
+      "title": "55555"
+    },
+    "actions": {
+      "deleteStep": "55555"
+    }
+  },
+  "runStudio": {
+    "header": {
+      "kicker": "55555",
+      "fallbackTitle": "55555",
+      "version": "55555 {{version}} 55555",
+      "updated": "55555 {{time}} 55555",
+      "backToWorkflows": "55555"
+    },
+    "actions": {
+      "replay": "55555",
+      "cancel": "55555"
+    },
+    "status": {
+      "running": "55555",
+      "succeeded": "55555",
+      "retrying": "55555",
+      "failed": "55555",
+      "pending": "55555",
+      "canceled": "55555"
+    },
+    "failure": {
+      "title": "55555",
+      "lastSuccessfulStep": "55555 {{label}} 55555"
+    },
+    "pipeline": {
+      "title": "55555",
+      "emptyBranch": "55555",
+      "view": {
+        "graph": "55555",
+        "list": "55555"
+      },
+      "states": {
+        "loadingDefinition": "55555",
+        "loadingDefinitionPlain": "55555",
+        "noSteps": "55555"
+      }
+    },
+    "details": {
+      "title": "55555",
+      "fields": {
+        "runId": "55555",
+        "started": "55555",
+        "duration": "55555",
+        "tenant": "55555",
+        "trigger": "55555",
+        "eventType": "55555",
+        "scheduleState": "55555",
+        "scheduledFor": "55555",
+        "cron": "55555",
+        "waitingFor": "55555",
+        "counts": "55555"
+      },
+      "values": {
+        "resumeEvent": "55555",
+        "counts": "55555 {{steps}} 55555 {{logs}} 55555 {{waits}} 55555"
+      }
+    },
+    "errors": {
+      "title": "55555",
+      "runErrorPayload": "55555",
+      "resumeEventPayload": "55555"
+    },
+    "stepDetails": {
+      "title": "55555",
+      "empty": "55555",
+      "fields": {
+        "step": "55555"
+      },
+      "panels": {
+        "configuration": "55555",
+        "inputResolved": "55555",
+        "output": "55555",
+        "envelopeSnapshot": "55555"
+      }
+    },
+    "timeline": {
+      "title": "55555",
+      "searchLabel": "55555",
+      "searchPlaceholder": "55555",
+      "empty": "55555",
+      "waitTitle": "55555 {{waitType}} 55555",
+      "attempt": "55555 {{attempt}} 55555 {{status}} 55555",
+      "inProgress": "55555",
+      "statusLine": "55555 {{status}} 55555",
+      "eventSegment": "55555 {{eventName}} 55555",
+      "keySegment": "55555 {{key}} 55555",
+      "createdLine": "55555 {{createdAt}} 55555",
+      "resolvedSegment": "55555 {{resolvedAt}} 55555",
+      "actions": {
+        "jump": "55555"
+      }
+    },
+    "logs": {
+      "title": "55555",
+      "searchLabel": "55555",
+      "searchPlaceholder": "55555",
+      "empty": "55555",
+      "actions": {
+        "clear": "55555"
+      }
+    },
+    "dialog": {
+      "title": {
+        "cancel": "55555",
+        "replay": "55555"
+      },
+      "heading": {
+        "cancel": "55555",
+        "replay": "55555"
+      },
+      "description": {
+        "cancel": "55555",
+        "replay": "55555"
+      },
+      "fields": {
+        "reason": "55555",
+        "reasonPlaceholder": "55555",
+        "payloadJson": "55555"
+      },
+      "actions": {
+        "close": "55555",
+        "confirmCancel": "55555",
+        "startReplay": "55555",
+        "working": "55555"
+      },
+      "errors": {
+        "invalidJson": "55555"
+      }
+    },
+    "stepLabels": {
+      "action": "55555 {{actionId}} 55555",
+      "ifCondition": "55555",
+      "forEach": "55555",
+      "tryCatch": "55555",
+      "waitForEvent": "55555",
+      "waitForTime": "55555",
+      "humanTask": "55555",
+      "setState": "55555",
+      "assign": "55555"
+    },
+    "stepCard": {
+      "lastStatus": "55555 {{status}} 55555 {{timestamp}} 55555",
+      "attempt": "55555 {{attempt}} 55555",
+      "forEachSummary": "55555 {{itemVar}} 55555 {{concurrency}} 55555",
+      "badges": {
+        "if": "55555",
+        "loop": "55555",
+        "try": "55555",
+        "block": "55555"
+      },
+      "sections": {
+        "then": "55555",
+        "else": "55555",
+        "try": "55555",
+        "catch": "55555",
+        "body": "55555"
+      }
+    },
+    "jsonPanel": {
+      "serializeFailed": "55555"
+    },
+    "toasts": {
+      "reasonRequired": "55555",
+      "canceled": "55555",
+      "replayStarted": "55555",
+      "actionFailed": "55555"
+    }
+  },
+  "schedules": {
+    "common": {
+      "emptyValue": "55555",
+      "entityName": "55555"
+    },
+    "heading": {
+      "reflectionLabel": "55555",
+      "title": "55555",
+      "description": "55555"
+    },
+    "actions": {
+      "new": "55555",
+      "edit": "55555",
+      "pause": "55555",
+      "resume": "55555",
+      "delete": "55555",
+      "cancel": "55555",
+      "saving": "55555",
+      "saveChanges": "55555",
+      "create": "55555",
+      "rowMenu": "55555 {{name}} 55555"
+    },
+    "filters": {
+      "allWorkflows": "55555",
+      "allStatuses": "55555",
+      "allTriggers": "55555",
+      "searchPlaceholder": "55555"
+    },
+    "status": {
+      "enabled": "55555",
+      "paused": "55555",
+      "failed": "55555",
+      "completed": "55555",
+      "disabled": "55555"
+    },
+    "triggerType": {
+      "schedule": "55555",
+      "recurring": "55555"
+    },
+    "dayType": {
+      "any": "55555",
+      "business": "55555",
+      "nonBusiness": "55555"
+    },
+    "table": {
+      "workflowVersion": "55555 {{version}} 55555",
+      "columns": {
+        "schedule": "55555",
+        "workflow": "55555",
+        "triggerType": "55555",
+        "nextFire": "55555",
+        "lastFire": "55555",
+        "status": "55555",
+        "lastError": "55555",
+        "actions": "55555"
+      }
+    },
+    "states": {
+      "loadingReflection": "55555",
+      "loading": "55555",
+      "never": "55555",
+      "calendarMisconfigured": "55555",
+      "noEligibleUpcomingRun": "55555",
+      "unknownWorkflow": "55555",
+      "empty": "55555",
+      "emptyDescription": "55555"
+    },
+    "errors": {
+      "loadFailed": "55555",
+      "updateFailed": "55555",
+      "deleteFailed": "55555"
+    },
+    "timezone": {
+      "browseAll": "55555",
+      "custom": "55555",
+      "browseHelp": "55555",
+      "customLabel": "55555",
+      "customPlaceholder": "55555"
+    },
+    "dialog": {
+      "title": {
+        "edit": "55555",
+        "create": "55555"
+      },
+      "description": "55555",
+      "states": {
+        "loading": "55555"
+      },
+      "fields": {
+        "workflow": "55555",
+        "workflowPlaceholder": "55555",
+        "name": "55555",
+        "namePlaceholder": "55555",
+        "triggerType": "55555",
+        "enabled": "55555",
+        "enabledHelp": "55555",
+        "disabledHelp": "55555",
+        "runAt": "55555",
+        "runOn": "55555",
+        "businessDaysOnly": "55555",
+        "nonBusinessDaysOnly": "55555",
+        "calendarSource": "55555",
+        "businessHoursSchedule": "55555",
+        "businessHoursSchedulePlaceholder": "55555",
+        "frequency": "55555",
+        "time": "55555",
+        "dayOfMonth": "55555",
+        "weekdays": "55555",
+        "cron": "55555",
+        "timezone": "55555"
+      },
+      "workflow": {
+        "badges": {
+          "unpublished": "55555",
+          "inferredSchema": "55555"
+        }
+      },
+      "eligibility": {
+        "chooseWorkflow": "55555",
+        "unpublished": "55555",
+        "pinnedOnly": "55555",
+        "noPinnedSchema": "55555",
+        "unavailableSchemaRef": "55555 {{schemaRef}} 55555"
+      },
+      "calendarSource": {
+        "tenantDefault": "55555",
+        "tenantDefaultMissing": "55555",
+        "tenantDefaultHint": "55555",
+        "specific": "55555",
+        "specificHint": "55555",
+        "tenantDefaultMissingDescription": "55555",
+        "holidaysNote": "55555"
+      },
+      "businessHours": {
+        "defaultSuffix": "55555",
+        "noneConfigured": "55555",
+        "usingTenantDefault": "55555",
+        "noTenantDefault": "55555"
+      },
+      "recurring": {
+        "title": "55555",
+        "description": "55555",
+        "builderMode": "55555",
+        "advancedMode": "55555",
+        "dailyHelper": "55555",
+        "weeklyHelper": "55555",
+        "customCronWarning": "55555",
+        "cronPreview": "55555 {{cron}} 55555"
+      },
+      "payload": {
+        "title": "55555",
+        "description": "55555",
+        "rootLabel": "55555",
+        "rootKey": "55555",
+        "mode": {
+          "form": "55555",
+          "json": "55555"
+        },
+        "actions": {
+          "addItem": "55555",
+          "removeItem": "55555"
+        },
+        "states": {
+          "noItems": "55555"
+        },
+        "boolean": {
+          "true": "55555",
+          "false": "55555"
+        },
+        "noSchema": {
+          "title": "55555",
+          "description": "55555"
+        }
+      },
+      "validation": {
+        "title": "55555",
+        "more": "55555 {{count}} 55555",
+        "invalidValue": "55555",
+        "valueMustBeAllowed": "55555",
+        "expectedObject": "55555",
+        "requiredFieldMissing": "55555",
+        "unknownProperty": "55555",
+        "expectedArray": "55555",
+        "expectedString": "55555",
+        "expectedNumber": "55555",
+        "expectedBoolean": "55555",
+        "payloadMustBeObject": "55555",
+        "invalidJson": "55555"
+      },
+      "errors": {
+        "loadScheduleFailed": "55555",
+        "saveFailed": "55555"
+      }
+    },
+    "recurrence": {
+      "andWord": "55555",
+      "frequency": {
+        "daily": "55555",
+        "weekly": "55555",
+        "monthly": "55555"
+      },
+      "validation": {
+        "validTime": "55555",
+        "weekdayRequired": "55555",
+        "dayOfMonthRange": "55555"
+      },
+      "summary": {
+        "daily": "55555 {{timeLabel}} 55555 {{timezoneLabel}} 55555",
+        "weekly": "55555 {{weekdayLabels}} 55555 {{timeLabel}} 55555 {{timezoneLabel}} 55555",
+        "monthly": "55555 {{dayOfMonth}} 55555 {{timeLabel}} 55555 {{timezoneLabel}} 55555"
+      },
+      "weekdays": {
+        "0": {
+          "short": "55555",
+          "long": "55555"
+        },
+        "1": {
+          "short": "55555",
+          "long": "55555"
+        },
+        "2": {
+          "short": "55555",
+          "long": "55555"
+        },
+        "3": {
+          "short": "55555",
+          "long": "55555"
+        },
+        "4": {
+          "short": "55555",
+          "long": "55555"
+        },
+        "5": {
+          "short": "55555",
+          "long": "55555"
+        },
+        "6": {
+          "short": "55555",
+          "long": "55555"
+        }
+      }
+    }
+  },
+  "enums": {
+    "workflowRunStatus": {
+      "RUNNING": "55555",
+      "WAITING": "55555",
+      "SUCCEEDED": "55555",
+      "FAILED": "55555",
+      "CANCELED": "55555"
+    },
+    "workflowRunSort": {
+      "started_at:desc": "55555",
+      "started_at:asc": "55555",
+      "updated_at:desc": "55555",
+      "updated_at:asc": "55555"
+    },
+    "workflowEventStatus": {
+      "matched": "55555",
+      "unmatched": "55555",
+      "error": "55555"
+    },
+    "workflowStepStatus": {
+      "STARTED": "55555",
+      "SUCCEEDED": "55555",
+      "FAILED": "55555",
+      "RETRY_SCHEDULED": "55555",
+      "CANCELED": "55555"
+    },
+    "workflowLogLevel": {
+      "DEBUG": "55555",
+      "INFO": "55555",
+      "WARN": "55555",
+      "ERROR": "55555"
+    },
+    "workflowAiSchemaType": {
+      "string": "55555",
+      "number": "55555",
+      "integer": "55555",
+      "boolean": "55555",
+      "object": "55555",
+      "array": "55555"
+    },
+    "workflowInputSourceMode": {
+      "reference": "55555",
+      "fixed": "55555"
+    },
+    "workflowReferenceSection": {
+      "payload": "55555",
+      "vars": "55555",
+      "meta": "55555",
+      "error": "55555",
+      "forEach": "55555"
+    },
+    "workflowTriggerMode": {
+      "manual": "55555",
+      "event": "55555"
+    },
+    "workflowCanvasView": {
+      "list": "55555",
+      "graph": "55555"
+    },
+    "workflowOnError": {
+      "continue": "55555",
+      "fail": "55555"
+    },
+    "workflowWaitMode": {
+      "duration": "55555",
+      "until": "55555"
+    },
+    "workflowWaitTiming": {
+      "fixed": "55555",
+      "expression": "55555"
+    }
+  }
+}

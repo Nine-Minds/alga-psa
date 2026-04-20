@@ -81,6 +81,9 @@ export const composeTextBlockNoteSchema = BlockNoteSchema.create({
   },
 });
 
+// Block type `name` surfaces in BlockNote's formatting toolbar dropdown. These strings are rendered by the
+// BlockNote vendor toolbar which does not accept i18n wiring; the registry stays English to match the vendor UI.
+// Track localization of the formatting-toolbar dropdown under the BlockNote vendor UI backlog.
 const composeTextBlockTypeItems = [
   { name: 'Paragraph', type: 'paragraph', icon: RiText },
   { name: 'Heading 1', type: 'heading', props: { level: 1, isToggleable: false }, icon: RiH1 },

@@ -22,6 +22,9 @@ import {
   type WorkflowAiSimpleFieldType,
   type WorkflowJsonSchema,
 } from '@alga-psa/workflows/authoring';
+import { useWorkflowAiSchemaTypeOptions } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { TFunction } from 'i18next';
 
 type WorkflowAiSchemaSectionProps = {
   stepId: string;
@@ -43,26 +46,14 @@ type DerivedSectionState = {
 };
 
 const getHydrationError = (
+  t: TFunction,
   hydrated: ReturnType<typeof hydrateWorkflowAiSimpleFields>
 ): string =>
-  'reason' in hydrated ? hydrated.reason : 'This schema cannot be represented in simple mode.';
-
-const SIMPLE_FIELD_TYPE_OPTIONS: Array<{ value: WorkflowAiSimpleFieldType; label: string }> = [
-  { value: 'string', label: 'String' },
-  { value: 'number', label: 'Number' },
-  { value: 'integer', label: 'Integer' },
-  { value: 'boolean', label: 'Boolean' },
-  { value: 'object', label: 'Object' },
-  { value: 'array', label: 'Array' },
-];
-
-const SIMPLE_ARRAY_ITEM_TYPE_OPTIONS: Array<{ value: WorkflowAiSimpleArrayItemType; label: string }> = [
-  { value: 'string', label: 'String' },
-  { value: 'number', label: 'Number' },
-  { value: 'integer', label: 'Integer' },
-  { value: 'boolean', label: 'Boolean' },
-  { value: 'object', label: 'Object' },
-];
+  'reason' in hydrated
+    ? hydrated.reason
+    : t('aiSchemaSection.simpleModeUnsupported', {
+        defaultValue: 'This schema cannot be represented in simple mode.',
+      });
 
 const cloneFields = (fields: WorkflowAiSimpleField[]): WorkflowAiSimpleField[] =>
   JSON.parse(JSON.stringify(fields)) as WorkflowAiSimpleField[];
@@ -163,7 +154,7 @@ const addChildFieldToTree = (
     return field;
   });
 
-const deriveSectionState = (config?: Record<string, unknown>): DerivedSectionState => {
+const deriveSectionState = (t: TFunction, config?: Record<string, unknown>): DerivedSectionState => {
   const resolved = resolveWorkflowAiSchemaFromConfig(config);
   const storedMode = normalizeWorkflowAiSchemaMode(config?.aiOutputSchemaMode) ?? 'simple';
   const fallbackText = getWorkflowAiSchemaFallbackText(
@@ -186,14 +177,16 @@ const deriveSectionState = (config?: Record<string, unknown>): DerivedSectionSta
       };
     }
 
-    const hydrationError = getHydrationError(hydrated);
+    const hydrationError = getHydrationError(t, hydrated);
 
     return {
       mode: 'advanced',
       fields: [],
       advancedText: fallbackText,
       validationErrors: resolved.errors.length > 0 ? resolved.errors : [hydrationError],
-      fallbackMessage: 'This saved schema uses advanced JSON Schema features, so it is shown in Advanced mode.',
+      fallbackMessage: t('aiSchemaSection.advancedFallback', {
+        defaultValue: 'This saved schema uses advanced JSON Schema features, so it is shown in Advanced mode.',
+      }),
     };
   }
 
@@ -215,9 +208,27 @@ const FieldEditor: React.FC<{
   onRemove: (fieldId: string) => void;
   onAddChild: (fieldId: string) => void;
 }> = ({ field, stepId, depth, disabled, onUpdate, onRemove, onAddChild }) => {
+  const { t } = useTranslation('msp/workflows');
+  const workflowAiSchemaTypeOptions = useWorkflowAiSchemaTypeOptions();
   const isObject = field.type === 'object';
   const isArray = field.type === 'array';
   const canHaveChildren = isObject || (isArray && field.arrayItemType === 'object');
+  const fieldTypeOptions = workflowAiSchemaTypeOptions as Array<{
+    value: WorkflowAiSimpleFieldType;
+    label: string;
+  }>;
+  const arrayItemTypeOptions = useMemo(
+    () =>
+      workflowAiSchemaTypeOptions.filter(
+        (
+          option,
+        ): option is {
+          value: WorkflowAiSimpleArrayItemType;
+          label: string;
+        } => option.value !== 'array'
+      ),
+    [workflowAiSchemaTypeOptions]
+  );
 
   return (
     <div className="rounded-md border border-gray-200 bg-white p-3" style={{ marginLeft: depth > 0 ? depth * 16 : 0 }}>
@@ -231,23 +242,23 @@ const FieldEditor: React.FC<{
           onClick={() => onRemove(field.id)}
         >
           <Trash2 className="mr-1 h-3.5 w-3.5" />
-          Remove
+          {t('aiSchemaSection.remove', { defaultValue: 'Remove' })}
         </Button>
       </div>
 
       <div className="mt-2 space-y-3">
         <Input
           id={`${stepId}-ai-field-name-${field.id}`}
-          label="Name"
+          label={t('aiSchemaSection.nameLabel', { defaultValue: 'Name' })}
           value={field.name}
           disabled={disabled}
           onChange={(event) => onUpdate(field.id, (current) => ({ ...current, name: event.target.value }))}
         />
 
         <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-          <span>Answer type</span>
+          <span>{t('aiSchemaSection.answerType', { defaultValue: 'Answer type' })}</span>
           <select
-            aria-label="Answer type"
+            aria-label={t('aiSchemaSection.answerType', { defaultValue: 'Answer type' })}
             className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
             disabled={disabled}
             value={field.type}
@@ -261,7 +272,7 @@ const FieldEditor: React.FC<{
               }));
             }}
           >
-            {SIMPLE_FIELD_TYPE_OPTIONS.map((option) => (
+            {fieldTypeOptions.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
@@ -269,9 +280,9 @@ const FieldEditor: React.FC<{
 
         {isArray ? (
           <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-            <span>Array items</span>
+            <span>{t('aiSchemaSection.arrayItems', { defaultValue: 'Array items' })}</span>
             <select
-              aria-label="Array items"
+              aria-label={t('aiSchemaSection.arrayItems', { defaultValue: 'Array items' })}
               className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
               disabled={disabled}
               value={field.arrayItemType ?? 'string'}
@@ -284,7 +295,7 @@ const FieldEditor: React.FC<{
                 }));
               }}
             >
-              {SIMPLE_ARRAY_ITEM_TYPE_OPTIONS.map((option) => (
+              {arrayItemTypeOptions.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
@@ -292,13 +303,13 @@ const FieldEditor: React.FC<{
         ) : (
           <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
             <input
-              aria-label="Required"
+              aria-label={t('aiSchemaSection.required', { defaultValue: 'Required' })}
               type="checkbox"
               checked={Boolean(field.required)}
               disabled={disabled}
               onChange={(event) => onUpdate(field.id, (current) => ({ ...current, required: event.target.checked }))}
             />
-            Required
+            {t('aiSchemaSection.required', { defaultValue: 'Required' })}
           </label>
         )}
       </div>
@@ -306,20 +317,20 @@ const FieldEditor: React.FC<{
       {isArray && (
         <label className="mt-3 flex items-center gap-2 text-xs font-medium text-gray-700">
           <input
-            aria-label="Required"
+            aria-label={t('aiSchemaSection.required', { defaultValue: 'Required' })}
             type="checkbox"
             checked={Boolean(field.required)}
             disabled={disabled}
             onChange={(event) => onUpdate(field.id, (current) => ({ ...current, required: event.target.checked }))}
           />
-          Required
+          {t('aiSchemaSection.required', { defaultValue: 'Required' })}
         </label>
       )}
 
       <div className="mt-3">
         <TextArea
           id={`${stepId}-ai-field-description-${field.id}`}
-          label="Description"
+          label={t('aiSchemaSection.descriptionLabel', { defaultValue: 'Description' })}
           value={field.description ?? ''}
           disabled={disabled}
           onChange={(event) => onUpdate(field.id, (current) => ({ ...current, description: event.target.value }))}
@@ -330,7 +341,9 @@ const FieldEditor: React.FC<{
       {canHaveChildren && (
         <div className="mt-3 rounded-md bg-gray-50 p-3">
           <div className="mb-2 text-xs font-semibold text-gray-700">
-            {isArray ? 'Object item fields' : 'Nested fields'}
+            {isArray
+              ? t('aiSchemaSection.objectItemFields', { defaultValue: 'Object item fields' })
+              : t('aiSchemaSection.nestedFields', { defaultValue: 'Nested fields' })}
           </div>
           <div className="space-y-3">
             {(field.children ?? []).map((child) => (
@@ -356,7 +369,7 @@ const FieldEditor: React.FC<{
             onClick={() => onAddChild(field.id)}
           >
             <Plus className="mr-1 h-3.5 w-3.5" />
-            Add nested field
+            {t('aiSchemaSection.addNested', { defaultValue: 'Add nested field' })}
           </Button>
         </div>
       )}
@@ -370,7 +383,8 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
   disabled,
   onChange,
 }) => {
-  const derivedState = useMemo(() => deriveSectionState(config), [config]);
+  const { t } = useTranslation('msp/workflows');
+  const derivedState = useMemo(() => deriveSectionState(t, config), [config, t]);
   const fieldCounterRef = useRef(0);
   const makeFieldId = () => {
     fieldCounterRef.current += 1;
@@ -437,7 +451,7 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
 
   const emitAdvancedMode = (nextText: string) => {
     const parsed = parseWorkflowAiSchemaText(nextText);
-    const errors = parsed.schema ? validateWorkflowAiSchema(parsed.schema, 'advanced') : [parsed.error ?? 'AI output schema JSON is required.'];
+    const errors = parsed.schema ? validateWorkflowAiSchema(parsed.schema, 'advanced') : [parsed.error ?? t('aiSchemaSection.errors.jsonRequired', { defaultValue: 'AI output schema JSON is required.' })];
     setMode('advanced');
     setAdvancedText(nextText);
     setValidationErrors(errors);
@@ -454,7 +468,7 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
       if (currentAdvancedSchema.schema) {
         const hydrated = hydrateWorkflowAiSimpleFields(currentAdvancedSchema.schema);
         if (!hydrated.ok) {
-          const hydrationError = getHydrationError(hydrated);
+          const hydrationError = getHydrationError(t, hydrated);
           setFallbackMessage(hydrationError);
           return;
         }
@@ -473,9 +487,13 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
   return (
     <div className="space-y-3 rounded-md border border-gray-200 bg-white p-4">
       <div>
-        <div className="text-sm font-semibold text-gray-800">AI response format</div>
+        <div className="text-sm font-semibold text-gray-800">
+          {t('aiSchemaSection.heading', { defaultValue: 'AI response format' })}
+        </div>
         <div className="text-xs text-gray-500">
-          Choose what the AI response should include for later steps.
+          {t('aiSchemaSection.headingDescription', {
+            defaultValue: 'Choose what the AI response should include for later steps.',
+          })}
         </div>
       </div>
 
@@ -488,7 +506,7 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
           disabled={disabled}
           onClick={() => handleModeChange('simple')}
         >
-          Simple
+          {t('aiSchemaSection.modeSimple', { defaultValue: 'Simple' })}
         </Button>
         <Button
           id={`${stepId}-ai-mode-advanced`}
@@ -498,7 +516,7 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
           disabled={disabled}
           onClick={() => handleModeChange('advanced')}
         >
-          Advanced
+          {t('aiSchemaSection.modeAdvanced', { defaultValue: 'Advanced' })}
         </Button>
       </div>
 
@@ -546,14 +564,14 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
             ])}
           >
             <Plus className="mr-1 h-3.5 w-3.5" />
-            Add field
+            {t('aiSchemaSection.addField', { defaultValue: 'Add field' })}
           </Button>
         </div>
       ) : (
         <div className="space-y-3">
           <TextArea
             id={`${stepId}-ai-schema-json`}
-            label="JSON Schema"
+            label={t('aiSchemaSection.jsonSchemaLabel', { defaultValue: 'JSON Schema' })}
             value={advancedText}
             disabled={disabled}
             onChange={(event) => emitAdvancedMode(event.target.value)}
@@ -561,7 +579,9 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
             className="font-mono text-xs"
           />
           <div className="text-[11px] text-gray-500">
-            Advanced mode supports object-rooted schemas plus nested objects, arrays, descriptions, constraints, and additionalProperties.
+            {t('aiSchemaSection.advancedHelperText', {
+              defaultValue: 'Advanced mode supports object-rooted schemas plus nested objects, arrays, descriptions, constraints, and additionalProperties.',
+            })}
           </div>
         </div>
       )}
@@ -570,7 +590,7 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
         <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
           <div className="mb-1 flex items-center gap-1 font-semibold">
             <AlertTriangle className="h-3.5 w-3.5" />
-            Schema validation
+            {t('aiSchemaSection.validationHeading', { defaultValue: 'Schema validation' })}
           </div>
           <ul className="space-y-1">
             {validationErrors.map((error) => (

@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type SaveAsValidation = {
   type: 'error' | 'warning';
@@ -32,11 +33,13 @@ export const WorkflowStepSaveOutputSection: React.FC<{
   generateSaveAsName,
   disabled = false,
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const currentSaveAs = saveAs ?? '';
   const isSaveEnabled = currentSaveAs.length > 0;
 
   const handleToggleSave = (enabled: boolean) => {
     if (enabled) {
+      // 'result' is a variable-name fallback; stays untranslated since it surfaces as `vars.result` in authored workflows.
       const autoName = actionId ? generateSaveAsName(actionId) : 'result';
       onSaveAsChange(autoName);
       return;
@@ -49,7 +52,7 @@ export const WorkflowStepSaveOutputSection: React.FC<{
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <Label htmlFor={`workflow-step-saveAs-toggle-${stepId}`} className="text-sm font-medium">
-          Save output
+          {t('stepSaveOutput.toggleLabel', { defaultValue: 'Save output' })}
         </Label>
         <Switch
           id={`workflow-step-saveAs-toggle-${stepId}`}
@@ -64,7 +67,7 @@ export const WorkflowStepSaveOutputSection: React.FC<{
           <div className="flex items-center gap-2">
             <Input
               id={`workflow-step-saveAs-${stepId}`}
-              placeholder="e.g., ticketDefaults"
+              placeholder={t('stepSaveOutput.placeholder', { defaultValue: 'e.g., ticketDefaults' })}
               value={currentSaveAs}
               disabled={disabled}
               onChange={(event) => onSaveAsChange(event.target.value.trim() || undefined)}
@@ -75,7 +78,7 @@ export const WorkflowStepSaveOutputSection: React.FC<{
               variant="outline"
               size="sm"
               onClick={() => onCopyPath(`vars.${currentSaveAs}`)}
-              title="Copy full path"
+              title={t('stepSaveOutput.copyPathTitle', { defaultValue: 'Copy full path' })}
               className="flex-shrink-0"
               disabled={!currentSaveAs}
             >
@@ -84,7 +87,7 @@ export const WorkflowStepSaveOutputSection: React.FC<{
           </div>
 
           <div className="flex items-center gap-1.5 text-xs text-[rgb(var(--color-text-500))]">
-            <span>Accessible as:</span>
+            <span>{t('stepSaveOutput.accessibleAs', { defaultValue: 'Accessible as:' })}</span>
             <code className="bg-[rgb(var(--color-border-100))] px-1.5 py-0.5 rounded text-[rgb(var(--color-text-700))] font-mono">
               vars.{currentSaveAs}
             </code>

@@ -3,8 +3,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { toast } from 'react-hot-toast';
+import { mapWorkflowServerError } from './workflowServerErrors';
 import {
   exportWorkflowAuditLogsAction,
   listWorkflowAuditLogsAction
@@ -23,11 +25,17 @@ type WorkflowAuditLogResponse = {
   nextCursor: number | null;
 };
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+const useFormatDateTime = () => {
+  const { formatDate } = useFormatters();
+  return useCallback(
+    (value?: string | null) => {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return formatDate(date, { dateStyle: 'medium', timeStyle: 'short' });
+    },
+    [formatDate]
+  );
 };
 
 const truncateJsonPreview = (value: unknown, maxChars: number) => {
@@ -45,6 +53,8 @@ interface WorkflowDefinitionAuditProps {
 }
 
 const WorkflowDefinitionAudit: React.FC<WorkflowDefinitionAuditProps> = ({ workflowId, workflowName, isActive }) => {
+  const { t } = useTranslation('msp/workflows');
+  const formatDateTime = useFormatDateTime();
   const [logs, setLogs] = useState<WorkflowAuditLogRecord[]>([]);
   const [cursor, setCursor] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,12 +74,14 @@ const WorkflowDefinitionAudit: React.FC<WorkflowDefinitionAuditProps> = ({ workf
         setLogs((prev) => (append ? [...prev, ...data.logs] : data.logs));
         setCursor(data.nextCursor ?? null);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load audit logs');
+        toast.error(mapWorkflowServerError(t, error, t('audit.toasts.loadFailed', {
+          defaultValue: 'Failed to load audit logs',
+        })));
       } finally {
         setIsLoading(false);
       }
     },
-    [limit, workflowId]
+    [limit, t, workflowId]
   );
 
   useEffect(() => {
@@ -93,9 +105,11 @@ const WorkflowDefinitionAudit: React.FC<WorkflowDefinitionAuditProps> = ({ workf
       link.download = result.filename;
       link.click();
       window.URL.revokeObjectURL(url);
-      toast.success('Audit export ready');
+      toast.success(t('audit.toasts.exportReady', { defaultValue: 'Audit export ready' }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to export audit logs');
+      toast.error(mapWorkflowServerError(t, error, t('audit.toasts.exportFailed', {
+        defaultValue: 'Failed to export audit logs',
+      })));
     }
   };
 
@@ -103,7 +117,9 @@ const WorkflowDefinitionAudit: React.FC<WorkflowDefinitionAuditProps> = ({ workf
     return (
       <div className="flex-1 overflow-y-auto bg-gray-50">
         <div className="max-w-5xl mx-auto p-6">
-          <Card className="p-6 text-sm text-gray-500">Select a workflow to view audit history.</Card>
+          <Card className="p-6 text-sm text-gray-500">
+            {t('audit.states.selectWorkflow', { defaultValue: 'Select a workflow to view audit history.' })}
+          </Card>
         </div>
       </div>
     );
@@ -115,7 +131,9 @@ const WorkflowDefinitionAudit: React.FC<WorkflowDefinitionAuditProps> = ({ workf
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-gray-500">Workflow Audit</div>
+              <div className="text-sm text-gray-500">
+                {t('audit.header.title', { defaultValue: 'Workflow Audit' })}
+              </div>
               <div className="text-lg font-semibold text-gray-900">{workflowName ?? workflowId}</div>
             </div>
             <Button
@@ -123,7 +141,7 @@ const WorkflowDefinitionAudit: React.FC<WorkflowDefinitionAuditProps> = ({ workf
               variant="outline"
               onClick={handleExport}
             >
-              Export CSV
+              {t('audit.actions.exportCsv', { defaultValue: 'Export CSV' })}
             </Button>
           </div>
         </Card>
@@ -132,10 +150,10 @@ const WorkflowDefinitionAudit: React.FC<WorkflowDefinitionAuditProps> = ({ workf
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Timestamp</TableHead>
-                <TableHead>Operation</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Details</TableHead>
+                <TableHead>{t('audit.table.columns.timestamp', { defaultValue: 'Timestamp' })}</TableHead>
+                <TableHead>{t('audit.table.columns.operation', { defaultValue: 'Operation' })}</TableHead>
+                <TableHead>{t('audit.table.columns.user', { defaultValue: 'User' })}</TableHead>
+                <TableHead>{t('audit.table.columns.details', { defaultValue: 'Details' })}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -143,20 +161,22 @@ const WorkflowDefinitionAudit: React.FC<WorkflowDefinitionAuditProps> = ({ workf
                 <TableRow key={log.audit_id}>
                   <TableCell className="text-xs text-gray-500">{formatDateTime(log.timestamp)}</TableCell>
                   <TableCell className="text-xs text-gray-700">{log.operation}</TableCell>
-                  <TableCell className="text-xs text-gray-500">{log.user_id ?? 'system'}</TableCell>
+                  <TableCell className="text-xs text-gray-500">
+                    {log.user_id ?? t('audit.values.system', { defaultValue: 'system' })}
+                  </TableCell>
                   <TableCell>
                     {log.details ? (
                       <pre className="max-h-24 overflow-auto rounded bg-gray-900 text-gray-100 text-xs p-2">
                         {truncateJsonPreview(log.details, 2000).preview}
                       </pre>
-                    ) : '—'}
+                    ) : t('audit.common.emptyValue', { defaultValue: '—' })}
                   </TableCell>
                 </TableRow>
               ))}
               {!isLoading && logs.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-sm text-gray-500 py-6">
-                    No audit entries yet.
+                    {t('audit.states.empty', { defaultValue: 'No audit entries yet.' })}
                   </TableCell>
                 </TableRow>
               )}
@@ -170,7 +190,7 @@ const WorkflowDefinitionAudit: React.FC<WorkflowDefinitionAuditProps> = ({ workf
                 onClick={() => fetchLogs(cursor, true)}
                 disabled={isLoading}
               >
-                Load more
+                {t('audit.actions.loadMore', { defaultValue: 'Load more' })}
               </Button>
             </div>
           )}

@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Card } from '@alga-psa/ui/components/Card';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import { type DataField, type DataTreeContext } from './mapping/SourceDataTree';
 import { WorkflowComposeTextDocumentEditor, type WorkflowComposeTextDocumentEditorHandle } from './WorkflowComposeTextDocumentEditor';
@@ -104,6 +105,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
   disabled = false,
   onChange,
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const outputs = useMemo(
     () => coerceComposeTextOutputs(config?.outputs),
     [config]
@@ -222,7 +224,9 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
       return;
     }
 
-    setInsertError('References cannot be inserted inside code blocks. Move the cursor to another block and try again.');
+    setInsertError(t('composeText.errors.noCodeBlock', {
+      defaultValue: 'References cannot be inserted inside code blocks. Move the cursor to another block and try again.',
+    }));
   }, [resetReferenceSelection]);
 
   const handleReferencePickerToggle = useCallback(() => {
@@ -254,9 +258,13 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
     >
       <div className="flex flex-col items-start gap-3">
         <div>
-          <div className="text-sm font-semibold text-gray-800">Compose text outputs</div>
+          <div className="text-sm font-semibold text-gray-800">
+            {t('composeText.heading', { defaultValue: 'Compose text outputs' })}
+          </div>
           <p className="text-xs text-gray-500">
-            Create one or more markdown outputs with stable downstream reference keys.
+            {t('composeText.headingDescription', {
+              defaultValue: 'Create one or more markdown outputs with stable downstream reference keys.',
+            })}
           </p>
         </div>
         <Button
@@ -267,7 +275,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
           onClick={addOutput}
         >
           <Plus className="mr-1 h-3.5 w-3.5" />
-          Add output
+          {t('composeText.addOutput', { defaultValue: 'Add output' })}
         </Button>
       </div>
 
@@ -297,7 +305,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium text-gray-800">
-                      {output.label.trim() || 'Untitled output'}
+                      {output.label.trim() || t('composeText.untitled', { defaultValue: 'Untitled output' })}
                     </div>
                     <div className="truncate font-mono text-[11px] text-gray-500">
                       {output.stableKey || 'stable_key'}
@@ -306,7 +314,10 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      aria-label={`Move ${output.label || `output ${index + 1}`} up`}
+                      aria-label={t('composeText.moveUpAria', {
+                        defaultValue: 'Move {{label}} up',
+                        label: output.label || t('composeText.outputFallback', { defaultValue: 'output {{index}}', index: index + 1 }),
+                      })}
                       className="rounded p-1 text-gray-500 hover:bg-gray-100"
                       disabled={disabled || index === 0}
                       onClick={(event) => {
@@ -318,7 +329,10 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
                     </button>
                     <button
                       type="button"
-                      aria-label={`Move ${output.label || `output ${index + 1}`} down`}
+                      aria-label={t('composeText.moveDownAria', {
+                        defaultValue: 'Move {{label}} down',
+                        label: output.label || t('composeText.outputFallback', { defaultValue: 'output {{index}}', index: index + 1 }),
+                      })}
                       className="rounded p-1 text-gray-500 hover:bg-gray-100"
                       disabled={disabled || index === outputs.length - 1}
                       onClick={(event) => {
@@ -330,7 +344,10 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
                     </button>
                     <button
                       type="button"
-                      aria-label={`Delete ${output.label || `output ${index + 1}`}`}
+                      aria-label={t('composeText.deleteAria', {
+                        defaultValue: 'Delete {{label}}',
+                        label: output.label || t('composeText.outputFallback', { defaultValue: 'output {{index}}', index: index + 1 }),
+                      })}
                       className="rounded p-1 text-gray-500 hover:bg-gray-100"
                       disabled={disabled || outputs.length === 1}
                       onClick={(event) => {
@@ -359,7 +376,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
             <div className="space-y-4">
               <Input
                 id={`${stepId}-compose-text-label`}
-                label="Output label"
+                label={t('composeText.outputLabel', { defaultValue: 'Output label' })}
                 value={selectedOutput.label}
                 disabled={disabled}
                 onChange={(event) => {
@@ -374,7 +391,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
               <div className="space-y-1">
                 <Input
                   id={`${stepId}-compose-text-stable-key`}
-                  label="Stable key"
+                  label={t('composeText.stableKeyLabel', { defaultValue: 'Stable key' })}
                   value={selectedOutput.stableKey}
                   disabled={disabled}
                   onChange={(event) => {
@@ -388,8 +405,8 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
                 <div className="flex flex-col items-start gap-2 text-xs text-gray-500">
                   <span>
                     {isValidComposeTextStableKey(selectedOutput.stableKey)
-                      ? 'Downstream-safe key'
-                      : 'Use lowercase letters, numbers, and underscores only.'}
+                      ? t('composeText.keyHintSafe', { defaultValue: 'Downstream-safe key' })
+                      : t('composeText.keyHintInvalid', { defaultValue: 'Use lowercase letters, numbers, and underscores only.' })}
                   </span>
                   <button
                     type="button"
@@ -409,7 +426,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
                     }}
                   >
                     <RefreshCcw className="h-3.5 w-3.5" />
-                    Regenerate
+                    {t('composeText.regenerate', { defaultValue: 'Regenerate' })}
                   </button>
                 </div>
               </div>
@@ -417,7 +434,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
 
             {(selectedOutputErrors.label.length > 0 || selectedOutputErrors.stableKey.length > 0) && (
               <Card className="border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-                <div className="font-semibold">Validation</div>
+                <div className="font-semibold">{t('composeText.validationHeading', { defaultValue: 'Validation' })}</div>
                 <ul className="mt-1 space-y-1">
                   {[...selectedOutputErrors.label, ...selectedOutputErrors.stableKey].map((error, index) => (
                     <li key={`${selectedOutput.id}-selected-error-${index}`}>{error.message}</li>
@@ -429,9 +446,13 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
             <Card className="border border-gray-200 bg-white p-3">
               <div className="flex flex-col items-start gap-3">
                 <div>
-                  <div className="text-xs font-semibold text-gray-700">Downstream reference path</div>
+                  <div className="text-xs font-semibold text-gray-700">
+                    {t('composeText.downstreamPathLabel', { defaultValue: 'Downstream reference path' })}
+                  </div>
                   <div className="font-mono text-xs text-gray-600">
-                    {buildComposeTextReferencePath(saveAs, selectedOutput.stableKey) ?? 'Save output to see a reference path.'}
+                    {buildComposeTextReferencePath(saveAs, selectedOutput.stableKey) ?? t('composeText.pathFallback', {
+                      defaultValue: 'Save output to see a reference path.',
+                    })}
                   </div>
                 </div>
                 <Button
@@ -443,7 +464,9 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
                   onClick={() => void handleCopyReferencePath(selectedOutput.stableKey)}
                 >
                   <Copy className="mr-1 h-3.5 w-3.5" />
-                  {copyFeedback === buildComposeTextReferencePath(saveAs, selectedOutput.stableKey) ? 'Copied' : 'Copy path'}
+                  {copyFeedback === buildComposeTextReferencePath(saveAs, selectedOutput.stableKey)
+                    ? t('composeText.copied', { defaultValue: 'Copied' })
+                    : t('composeText.copyPath', { defaultValue: 'Copy path' })}
                 </Button>
               </div>
             </Card>
@@ -451,9 +474,13 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
             <Card className="space-y-3 border border-gray-200 bg-white p-3">
               <div className="flex flex-col items-start gap-3">
                 <div>
-                  <div className="text-xs font-semibold text-gray-700">Compose content</div>
+                  <div className="text-xs font-semibold text-gray-700">
+                    {t('composeText.contentHeading', { defaultValue: 'Compose content' })}
+                  </div>
                   <p className="text-xs text-gray-500">
-                    Use markdown-safe formatting and inline workflow reference chips.
+                    {t('composeText.contentDescription', {
+                      defaultValue: 'Use markdown-safe formatting and inline workflow reference chips.',
+                    })}
                   </p>
                 </div>
                 <Button
@@ -464,13 +491,15 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
                   disabled={disabled}
                   onClick={handleReferencePickerToggle}
                 >
-                  Insert reference
+                  {t('composeText.insertReference', { defaultValue: 'Insert reference' })}
                 </Button>
               </div>
 
               {showReferencePicker && (
                 <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
-                  <div className="mb-2 text-xs font-semibold text-gray-700">Insert workflow reference</div>
+                  <div className="mb-2 text-xs font-semibold text-gray-700">
+                    {t('composeText.insertReferenceHeading', { defaultValue: 'Insert workflow reference' })}
+                  </div>
                   <ReferenceScopeSelector
                     idPrefix={`${stepId}-compose-text`}
                     model={referenceSourceModel}

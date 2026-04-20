@@ -11,6 +11,7 @@
  */
 
 import React, { useRef, useEffect, useCallback, useState, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Editor, { loader, useMonaco } from '@monaco-editor/react';
 import type * as monaco from 'monaco-editor';
 import { registerJsonataLanguage, LANGUAGE_ID } from './jsonataLanguage';
@@ -156,6 +157,7 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
     },
     ref
   ) {
+    const { t } = useTranslation('msp/workflows');
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === 'dark';
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -475,7 +477,7 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
 
         // Accessibility
         accessibilitySupport: 'auto',
-        ariaLabel: ariaLabel || 'Expression editor',
+        ariaLabel: ariaLabel || t('expressionEditor.ariaLabel', { defaultValue: 'Expression editor' }),
 
         // Padding
         padding: {

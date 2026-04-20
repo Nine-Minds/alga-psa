@@ -43,6 +43,9 @@ import { Label } from '@alga-psa/ui/components/Label';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { TFunction } from 'i18next';
+import { mapWorkflowServerError } from './workflowServerErrors';
 import { analytics } from '@alga-psa/analytics/client';
 import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
@@ -59,6 +62,13 @@ import WorkflowSchedules from './WorkflowSchedules';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
+import {
+  useWorkflowCanvasViewOptions,
+  useWorkflowOnErrorOptions,
+  useWorkflowTriggerModeOptions,
+  useWorkflowWaitModeOptions,
+  useWorkflowWaitTimingOptions,
+} from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 import { getEventCatalogEntryByEventType } from '@alga-psa/workflows/actions';
 import { listEventCatalogOptionsV2Action, type WorkflowEventCatalogOptionV2 } from '@alga-psa/workflows/actions';
 import {
@@ -919,19 +929,43 @@ const buildFieldOptions = (payloadSchema?: JsonSchema | null): SelectOption[] =>
 const getStepLabel = (
   step: Step,
   nodeRegistry: Record<string, NodeRegistryItem>,
-  designerActionCatalog?: WorkflowDesignerCatalogRecord[]
+  designerActionCatalog?: WorkflowDesignerCatalogRecord[],
+  t?: TFunction,
 ): string => {
-  if (step.type === 'control.if') return 'If';
-  if (step.type === 'control.forEach') return 'For Each';
-  if (step.type === 'control.tryCatch') return 'Try/Catch';
-  if (step.type === 'control.callWorkflow') return 'Call Workflow';
-  if (step.type === 'control.return') return 'Return';
+  const translate = (key: string, fallback: string): string =>
+    t ? t(key, { defaultValue: fallback }) : fallback;
+
+  if (step.type === 'control.if') return translate('designer.palette.controlBlocks.control.if.label', 'If');
+  if (step.type === 'control.forEach') return translate('designer.palette.controlBlocks.control.forEach.label', 'For Each');
+  if (step.type === 'control.tryCatch') return translate('designer.palette.controlBlocks.control.tryCatch.label', 'Try/Catch');
+  if (step.type === 'control.callWorkflow') return translate('designer.palette.controlBlocks.control.callWorkflow.label', 'Call Workflow');
+  if (step.type === 'control.return') return translate('designer.palette.controlBlocks.control.return.label', 'Return');
+
   const registryItem = nodeRegistry[step.type];
   const name = (step as NodeStep).name?.trim();
-  const groupedLabel = designerActionCatalog
-    ? getGroupedActionCatalogRecordForStep(step, designerActionCatalog)?.label
+
+  // action.call → use the designer catalog's group label (translated via designer.palette.groups.<groupKey>.label)
+  const groupedRecord = designerActionCatalog
+    ? getGroupedActionCatalogRecordForStep(step, designerActionCatalog)
     : undefined;
-  return name || groupedLabel || registryItem?.ui?.label || step.type;
+  if (groupedRecord) {
+    const groupLabelKey = `designer.palette.groups.${groupedRecord.groupKey}.label`;
+    const translatedGroupLabel = translate(groupLabelKey, groupedRecord.label);
+    // If the user never renamed the step (or named it the default English/translated group label),
+    // render the translated group label so the pipeline card stays localized.
+    if (!name || name === groupedRecord.label || name === translatedGroupLabel) {
+      return translatedGroupLabel;
+    }
+    return name;
+  }
+
+  if (name) return name;
+
+  // Fallback: translate registry node label under designer.palette.nodes.<nodeId>.label
+  if (registryItem?.ui?.label) {
+    return translate(`designer.palette.nodes.${step.type}.label`, registryItem.ui.label);
+  }
+  return step.type;
 };
 
 const getGraphSubtitle = (step: Step): string | null => {
@@ -1262,6 +1296,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   workflowId: workflowIdProp = null,
   isNew = false
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const [activeTab, setActiveTab] = useState('Workflows');
   const [definitions, setDefinitions] = useState<WorkflowDefinitionRecord[]>([]);
   const [activeDefinition, setActiveDefinition] = useState<WorkflowDefinition | null>(null);
@@ -1340,6 +1375,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const [selectedTriggerEventCategory, setSelectedTriggerEventCategory] = useState<string>('');
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [stepsViewMode, setStepsViewMode] = useState<'list' | 'graph'>('list');
+  const workflowTriggerModeOptions = useWorkflowTriggerModeOptions() as Array<{
+    value: TriggerTypeSelection;
+    label: string;
+  }>;
+  const workflowCanvasViewOptions = useWorkflowCanvasViewOptions();
   const [designerSidebarWidth, setDesignerSidebarWidth] = useState(DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH);
   const designerFloatAnchorRef = useRef<HTMLDivElement | null>(null);
   const designerFloatAnchorRectRef = useRef<{
@@ -1594,8 +1634,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         const stepPath = `${prefix}.steps[${index}]`;
         if (step.type === 'control.if') {
           const ifStep = step as IfBlock;
-          locations.push({ pipePath: `${stepPath}.then`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} THEN` });
-          locations.push({ pipePath: `${stepPath}.else`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} ELSE` });
+          locations.push({ pipePath: `${stepPath}.then`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog, t)} ${t('designer.blockSection.then', { defaultValue: 'THEN' })}` });
+          locations.push({ pipePath: `${stepPath}.else`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog, t)} ${t('designer.blockSection.else', { defaultValue: 'ELSE' })}` });
           visit(ifStep.then, `${stepPath}.then`);
           if (ifStep.else) {
             visit(ifStep.else, `${stepPath}.else`);
@@ -1603,14 +1643,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         }
         if (step.type === 'control.tryCatch') {
           const tcStep = step as TryCatchBlock;
-          locations.push({ pipePath: `${stepPath}.try`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} TRY` });
-          locations.push({ pipePath: `${stepPath}.catch`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} CATCH` });
+          locations.push({ pipePath: `${stepPath}.try`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog, t)} ${t('designer.blockSection.try', { defaultValue: 'TRY' })}` });
+          locations.push({ pipePath: `${stepPath}.catch`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog, t)} ${t('designer.blockSection.catch', { defaultValue: 'CATCH' })}` });
           visit(tcStep.try, `${stepPath}.try`);
           visit(tcStep.catch, `${stepPath}.catch`);
         }
         if (step.type === 'control.forEach') {
           const feStep = step as ForEachBlock;
-          locations.push({ pipePath: `${stepPath}.body`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} BODY` });
+          locations.push({ pipePath: `${stepPath}.body`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog, t)} ${t('designer.blockSection.body', { defaultValue: 'BODY' })}` });
           visit(feStep.body, `${stepPath}.body`);
         }
       });
@@ -1783,15 +1823,27 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const workflowValidationBadge = useMemo(() => {
     switch (workflowValidationStatus) {
       case 'error':
-        return { label: 'Invalid', className: 'bg-destructive/15 text-destructive border-destructive/30' };
+        return {
+          label: t('designer.validation.badge.invalid', { defaultValue: 'Invalid' }),
+          className: 'bg-destructive/15 text-destructive border-destructive/30',
+        };
       case 'warning':
-        return { label: 'Warnings', className: 'bg-warning/15 text-warning-foreground border-warning/30' };
+        return {
+          label: t('designer.validation.badge.warnings', { defaultValue: 'Warnings' }),
+          className: 'bg-warning/15 text-warning-foreground border-warning/30',
+        };
       case 'valid':
-        return { label: 'Valid', className: 'bg-success/15 text-success border-success/30' };
+        return {
+          label: t('designer.validation.badge.valid', { defaultValue: 'Valid' }),
+          className: 'bg-success/15 text-success border-success/30',
+        };
       default:
-        return { label: 'Unknown', className: 'bg-muted text-muted-foreground border-border' };
+        return {
+          label: t('designer.validation.badge.unknown', { defaultValue: 'Unknown' }),
+          className: 'bg-muted text-muted-foreground border-border',
+        };
     }
-  }, [workflowValidationStatus]);
+  }, [t, workflowValidationStatus]);
 
   const canAdmin = useMemo(
     () => userPermissions.includes('workflow:admin'),
@@ -2078,7 +2130,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 	      const nextDefinitions = (data ?? []) as unknown as WorkflowDefinitionRecord[];
 	      setDefinitions(nextDefinitions);
 	    } catch (error) {
-	      toast.error(error instanceof Error ? error.message : 'Failed to load workflows');
+	      toast.error(mapWorkflowServerError(t, error, t('designer.toasts.loadWorkflowsFailed', { defaultValue: 'Failed to load workflows' })));
 	    } finally {
       setIsLoading(false);
     }
@@ -2114,7 +2166,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     } catch (err) {
       setEventCatalogOptions([]);
       setEventCatalogStatus('error');
-      const msg = err instanceof Error ? err.message : 'Failed to load event catalog';
+      const msg = err instanceof Error ? err.message : t('designer.toasts.loadEventCatalogFailed', { defaultValue: 'Failed to load event catalog' });
       toast.error(msg);
     }
   }, []);
@@ -2261,7 +2313,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       setSchemaMeta(new Map());
       setRegistryError(true);
       setRegistryStatus('error');
-      toast.error('Failed to load workflow registries');
+      toast.error(t('designer.toasts.loadRegistriesFailed', { defaultValue: 'Failed to load workflow registries' }));
     }
   }, []);
 
@@ -2378,14 +2430,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     const overrides = getWorkflowPlaywrightOverrides();
     if (overrides?.failPermissions) {
       setUserPermissions([]);
-      toast.error('Failed to load permissions');
+      toast.error(t('designer.toasts.loadPermissionsFailed', { defaultValue: 'Failed to load permissions' }));
       return;
     }
     getCurrentUserPermissions()
       .then((perms) => setUserPermissions(perms ?? []))
       .catch(() => {
         setUserPermissions([]);
-        toast.error('Failed to load permissions');
+        toast.error(t('designer.toasts.loadPermissionsFailed', { defaultValue: 'Failed to load permissions' }));
       });
   }, []);
 
@@ -2689,7 +2741,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         failureRateMinRuns: metadataDraft.failureRateMinRuns ? Number(metadataDraft.failureRateMinRuns) : null
       });
       if (showSuccessToast) {
-        toast.success('Workflow settings updated');
+        toast.success(t('designer.toasts.settingsUpdated', { defaultValue: 'Workflow settings updated' }));
       }
       return true;
     } finally {
@@ -2705,7 +2757,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       const overrides = getWorkflowPlaywrightOverrides();
       await delayIfNeeded(overrides?.saveDraftDelayMs);
       if (overrides?.failSaveDraft) {
-        throw new Error('Failed to save workflow');
+        throw new Error(t('designer.toasts.saveFailed', { defaultValue: 'Failed to save workflow' }));
       }
       if (!activeWorkflowId) {
         const data = await createWorkflowDefinitionAction({
@@ -2717,7 +2769,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         setActiveDefinition({ ...normalizedDefinition, id: data.workflowId });
 
         router.replace(`/msp/workflow-editor/${encodeURIComponent(data.workflowId)}`, { scroll: false });
-        toast.success('Workflow created');
+        toast.success(t('designer.toasts.created', { defaultValue: 'Workflow created' }));
       } else {
         await persistMetadataDraft(activeWorkflowId);
         await updateWorkflowDefinitionDraftAction({
@@ -2726,12 +2778,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           payloadSchemaMode: payloadSchemaModeDraft,
           pinnedPayloadSchemaRef: pinnedPayloadSchemaRefDraft ? pinnedPayloadSchemaRefDraft : undefined
         });
-        toast.success('Workflow saved');
+        toast.success(t('designer.toasts.saved', { defaultValue: 'Workflow saved' }));
       }
       // Refresh list in the background; do not block the UI on it (it can be slow during dev + Playwright).
       void loadDefinitions();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save workflow');
+      toast.error(mapWorkflowServerError(t, error, t('designer.toasts.saveFailed', { defaultValue: 'Failed to save workflow' })));
     } finally {
       setIsSaving(false);
     }
@@ -2747,13 +2799,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       await persistMetadataDraft(activeWorkflowId, { force: true, showSuccessToast: true });
       void loadDefinitions();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update workflow settings');
+      toast.error(mapWorkflowServerError(t, error, t('designer.toasts.settingsUpdateFailed', { defaultValue: 'Failed to update workflow settings' })));
     }
   };
 
   const handlePublish = async () => {
     if (!activeDefinition || !activeWorkflowId) {
-      toast.error('Save the workflow before publishing');
+      toast.error(t('designer.toasts.saveBeforePublish', { defaultValue: 'Save the workflow before publishing' }));
       return;
     }
     const normalizedDefinition = normalizeDesignerDefinition(activeDefinition);
@@ -2762,7 +2814,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       const overrides = getWorkflowPlaywrightOverrides();
       await delayIfNeeded(overrides?.publishDelayMs);
       if (overrides?.failPublish) {
-        throw new Error('Failed to publish workflow');
+        throw new Error(t('designer.toasts.publishFailed', { defaultValue: 'Failed to publish workflow' }));
       }
       await persistMetadataDraft(activeWorkflowId);
       const data = await publishWorkflowDefinitionAction({
@@ -2783,7 +2835,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             errorCodes: codes
           });
         } catch {}
-        toast.error('Publish failed - fix validation errors');
+        toast.error(t('designer.toasts.publishValidationErrors', { defaultValue: 'Publish failed - fix validation errors' }));
         return;
       }
       try {
@@ -2795,14 +2847,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           publishedVersion: (data as any)?.publishedVersion ?? normalizedDefinition.version
         });
       } catch {}
-      toast.success('Workflow published');
+      toast.success(t('designer.toasts.published', { defaultValue: 'Workflow published' }));
       if (typeof (data as any)?.publishedVersion === 'number') {
         const nextDraftVersion = ((data as any).publishedVersion as number) + 1;
         setActiveDefinition((prev) => (prev ? { ...prev, version: nextDraftVersion } : prev));
       }
       void loadDefinitions();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to publish workflow');
+      toast.error(mapWorkflowServerError(t, error, t('designer.toasts.publishFailed', { defaultValue: 'Failed to publish workflow' })));
     } finally {
       setIsPublishing(false);
     }
@@ -3123,20 +3175,30 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           ? extractSchemaFields(action.outputSchema, action.outputSchema).map(f => f.name)
           : [];
 
+        const rawLabel = node.ui?.label || node.id;
+        const rawDescription = node.ui?.description || node.id;
+        const translatedLabel = t(`designer.palette.nodes.${node.id}.label`, { defaultValue: rawLabel });
+        const translatedDescription = t(`designer.palette.nodes.${node.id}.description`, { defaultValue: rawDescription });
         return {
           id: node.id,
-          label: node.ui?.label || node.id,
-          description: node.ui?.description || node.id,
+          label: translatedLabel,
+          description: translatedDescription,
           category: node.ui?.category || 'Nodes',
           type: node.id,
           sortOrder: 0,
           outputSummary: outputFields.length > 0
-            ? `Returns: ${outputFields.slice(0, 3).join(', ')}${outputFields.length > 3 ? '...' : ''}`
+            ? t('designer.palette.returnsSummary', {
+              defaultValue: 'Returns: {{list}}{{suffix}}',
+              list: outputFields.slice(0, 3).join(', '),
+              suffix: outputFields.length > 3 ? '...' : '',
+            })
             : undefined,
           searchIndex: buildPaletteSearchIndex([
             node.id,
             node.ui?.label,
             node.ui?.description,
+            rawLabel,
+            translatedLabel,
             ...outputFields
           ])
         };
@@ -3154,10 +3216,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         const inputFields = record.actions.flatMap((action) => action.inputFieldNames);
         const outputFields = record.actions.flatMap((action) => action.outputFieldNames);
 
+        // Translate known built-in group labels/descriptions. Unknown groups (server-added app tiles)
+        // fall back to the server-provided label.
+        const translatedGroupLabel = t(`designer.palette.groups.${record.groupKey}.label`, { defaultValue: record.label });
+        const rawDescription = record.description || `${record.label} actions`;
+        const translatedGroupDescription = t(`designer.palette.groups.${record.groupKey}.description`, { defaultValue: rawDescription });
         return {
           id: record.groupKey,
-          label: record.label,
-          description: record.description || `${record.label} actions`,
+          label: translatedGroupLabel,
+          description: translatedGroupDescription,
           category: record.tileKind === 'core-object'
             ? 'Core'
             : record.tileKind === 'transform'
@@ -3175,11 +3242,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           sortOrder: index,
           outputSummary: actionLabels.length > 0
             ? `${actionLabels.slice(0, 3).join(', ')}${actionLabels.length > 3 ? '...' : ''}`
-            : 'Choose an action after adding this step',
+            : t('designer.palette.chooseAction', { defaultValue: 'Choose an action after adding this step' }),
           searchIndex: buildPaletteSearchIndex([
             record.groupKey,
             record.label,
             record.description,
+            translatedGroupLabel,
+            translatedGroupDescription,
             ...actionLabels,
             ...actionIds,
             ...inputFields,
@@ -3188,16 +3257,20 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         };
       });
 
-    const controlItems = CONTROL_BLOCKS.map((block) => ({
-      id: block.id,
-      label: block.label,
-      description: block.description,
-      category: block.category,
-      type: block.id,
-      sortOrder: 0,
-      outputSummary: undefined as string | undefined,
-      searchIndex: buildPaletteSearchIndex([block.id, block.label, block.description])
-    }));
+    const controlItems = CONTROL_BLOCKS.map((block) => {
+      const translatedLabel = t(`designer.palette.controlBlocks.${block.id}.label`, { defaultValue: block.label });
+      const translatedDescription = t(`designer.palette.controlBlocks.${block.id}.description`, { defaultValue: block.description });
+      return {
+        id: block.id,
+        label: translatedLabel,
+        description: translatedDescription,
+        category: block.category,
+        type: block.id,
+        sortOrder: 0,
+        outputSummary: undefined as string | undefined,
+        searchIndex: buildPaletteSearchIndex([block.id, block.label, block.description, translatedLabel, translatedDescription])
+      };
+    });
 
     // Keep generic nodes alongside grouped business tiles for compatibility while the step model transitions.
     const items = [...controlItems, ...groupedActionItems, ...registryItems];
@@ -3554,10 +3627,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   />
                 </div>
               ) : (
-                <div className="text-sm text-gray-500">Read-only access: step editing is disabled.</div>
+                <div className="text-sm text-gray-500">
+                  {t('designer.stepPanel.readOnly', { defaultValue: 'Read-only access: step editing is disabled.' })}
+                </div>
               )
             ) : (
-              <div className="text-sm text-gray-500">Select a step to edit its configuration.</div>
+              <div className="text-sm text-gray-500">
+                {t('designer.stepPanel.selectPrompt', { defaultValue: 'Select a step to edit its configuration.' })}
+              </div>
             )}
 
             {currentValidationErrors.length > 0 && activeDefinition && (
@@ -3677,13 +3754,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   <div className="grid grid-cols-2 gap-4">
                     <Input
                       id="workflow-designer-name"
-                      label="Workflow name"
+                      label={t('designer.form.nameLabel', { defaultValue: 'Workflow name' })}
                       value={activeDefinition?.name ?? ''}
                       onChange={(event) => handleDefinitionChange({ name: event.target.value })}
                     />
                     <Input
                       id="workflow-designer-version"
-                      label="Version"
+                      label={t('designer.form.versionLabel', { defaultValue: 'Version' })}
                       type="number"
                       value={activeDefinition?.version ?? 1}
                       onChange={(event) => handleDefinitionChange({ version: Number(event.target.value) })}
@@ -3692,12 +3769,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       id="workflow-designer-published-version"
                       className="col-span-2 text-xs text-gray-500"
                     >
-                      Latest published version: {activeWorkflowRecord?.published_version ?? '—'}
+                      {t('designer.form.latestPublishedVersion', {
+                        defaultValue: 'Latest published version: {{version}}',
+                        version: activeWorkflowRecord?.published_version ?? '—',
+                      })}
                     </div>
                   </div>
                   <TextArea
                     id="workflow-designer-description"
-                    label="Description"
+                    label={t('designer.form.descriptionLabel', { defaultValue: 'Description' })}
                     value={activeDefinition?.description ?? ''}
                     onChange={(event) => handleDefinitionChange({ description: event.target.value })}
                     rows={2}
@@ -3709,10 +3789,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       ? eventCatalogOptions.find((e) => e.event_type === selectedEventName) ?? null
                       : null;
                     const showTriggerSchemaDetails = contractSettingsExpanded;
-                    const triggerTypeOptions: Array<{ value: TriggerTypeSelection; label: string }> = [
-                      { value: 'manual', label: 'No trigger' },
-                      { value: 'event', label: 'Event' }
-                    ];
                     const showEventConfiguration = currentTriggerSelection === 'event';
                     const eventCategoryOptions = buildWorkflowTriggerEventCategoryOptions(eventCatalogOptions, selectedEventName);
                     const eventOptions = buildWorkflowTriggerEventOptions(
@@ -3730,26 +3806,30 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                         <div className="space-y-4">
                           <div>
                             <label htmlFor="workflow-designer-trigger-type" className="block text-sm font-medium text-gray-700 mb-1">
-                              Trigger type
+                              {t('designer.form.triggerTypeLabel', { defaultValue: 'Trigger type' })}
                             </label>
                             <SearchableSelect
                               id="workflow-designer-trigger-type"
                               value={currentTriggerSelection}
                               onChange={(value) => handleTriggerTypeSelectionChange((value || 'manual') as TriggerTypeSelection)}
-                              placeholder="Select trigger type"
+                              placeholder={t('designer.form.triggerTypePlaceholder', { defaultValue: 'Select trigger type' })}
                               dropdownMode="overlay"
-                              options={triggerTypeOptions}
+                              options={workflowTriggerModeOptions}
                               disabled={!canManage}
                             />
                             <div className="mt-1 text-xs text-gray-500">
-                              Choose whether this workflow starts manually or from an event. Reusable schedules are managed in the Workflow Control Panel.
+                              {t('designer.form.triggerTypeHelp', {
+                                defaultValue: 'Choose whether this workflow starts manually or from an event. Reusable schedules are managed in the Workflow Control Panel.',
+                              })}
                             </div>
                           </div>
 
                           <div className="space-y-3">
                             {currentTriggerSelection === 'manual' && (
                               <div className="rounded border border-dashed border-gray-300 bg-gray-50 px-3 py-3 text-xs text-gray-600">
-                                This workflow has no trigger. It can still be run manually and scheduled from the Workflow Control Panel once it has a pinned payload schema and a published version.
+                                {t('designer.form.manualTriggerNote', {
+                                  defaultValue: 'This workflow has no trigger. It can still be run manually and scheduled from the Workflow Control Panel once it has a pinned payload schema and a published version.',
+                                })}
                               </div>
                             )}
 
@@ -3757,7 +3837,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               <div className="space-y-2">
                                 <div>
                                   <label htmlFor="workflow-designer-trigger-event-category" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Event category
+                                    {t('designer.form.eventCategoryLabel', { defaultValue: 'Event category' })}
                                   </label>
                                   {eventCatalogStatus === 'loading' ? (
                                     <Skeleton className="h-10 w-full" />
@@ -3786,7 +3866,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                         handleDefinitionChange({ trigger: undefined });
                                       }}
                                       options={eventCategoryOptions}
-                                      placeholder="Select event category"
+                                      placeholder={t('designer.form.selectEventCategory', { defaultValue: 'Select event category' })}
                                       disabled={!canManage}
                                     />
                                   )}
@@ -3794,7 +3874,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                                 <div>
                                   <label htmlFor="workflow-designer-trigger-event" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Event
+                                    {t('designer.form.eventLabel', { defaultValue: 'Event' })}
                                   </label>
                                   {eventCatalogStatus === 'loading' ? (
                                     <Skeleton className="h-10 w-full" />
@@ -3812,7 +3892,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                         }
                                         const chosen = eventCatalogOptions.find((e) => e.event_type === next) ?? null;
                                         if (chosen?.source === 'system' && (chosen.payload_schema_ref_status !== 'known' || !chosen.payload_schema_ref)) {
-                                          toast.error('This system event is missing a valid schema and cannot be selected until fixed.');
+                                          toast.error(t('designer.toasts.systemEventMissingSchema', {
+                                            defaultValue: 'This system event is missing a valid schema and cannot be selected until fixed.',
+                                          }));
                                           return;
                                         }
 
@@ -3853,7 +3935,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                             : null
                                         );
                                       }}
-                                      placeholder={selectedTriggerEventCategory ? 'Select event' : 'Select category first'}
+                                      placeholder={selectedTriggerEventCategory
+                                        ? t('designer.form.selectEvent', { defaultValue: 'Select event' })
+                                        : t('designer.form.selectCategoryFirst', { defaultValue: 'Select category first' })}
                                       dropdownMode="overlay"
                                       options={eventOptions}
                                       disabled={eventPickerDisabled}
@@ -4152,24 +4236,34 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                   <div id="workflow-designer-contract-section" className="mt-4">
                     <div>
-                      <Label>Workflow input data</Label>
+                      <Label>{t('designer.form.inputDataLabel', { defaultValue: 'Workflow input data' })}</Label>
                       <div className="text-xs text-gray-500">
                         {activeDefinition?.trigger?.type === 'event' ? (
-                          'Your steps read data from the selected trigger.'
+                          t('designer.form.inputDataEvent', { defaultValue: 'Your steps read data from the selected trigger.' })
                         ) : isTimeTrigger(activeDefinition?.trigger) ? (
                           <>
-                            This workflow receives a fixed synthetic clock payload. The contract is pinned to{' '}
+                            {t('designer.form.inputDataTimePrefix', {
+                              defaultValue: 'This workflow receives a fixed synthetic clock payload. The contract is pinned to',
+                            })}{' '}
                             <span className="font-mono">{WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF}</span>.
                           </>
                         ) : (
                           <>
-                            No trigger uses <span className="font-mono">{EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF}</span> by default. Change it in Advanced schema settings if this workflow needs a different manual contract.
+                            {t('designer.form.inputDataManualPrefix', { defaultValue: 'No trigger uses' })}{' '}
+                            <span className="font-mono">{EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF}</span>{' '}
+                            {t('designer.form.inputDataManualSuffix', {
+                              defaultValue: 'by default. Change it in Advanced schema settings if this workflow needs a different manual contract.',
+                            })}
                           </>
                         )}
                       </div>
                       {activeDefinition?.trigger?.type === 'event' && triggerPayloadMappingInfo.mappingRequired && !contractSettingsExpanded && (
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-warning-foreground">
-                          <span>Trigger mapping is required. Open Advanced schema settings to configure it.</span>
+                          <span>
+                            {t('designer.form.triggerMappingRequired', {
+                              defaultValue: 'Trigger mapping is required. Open Advanced schema settings to configure it.',
+                            })}
+                          </span>
                           {showUseEventSchemaSuggestion && triggerSourceSchemaRef && !triggerPayloadMappingInfo.mappingProvided && (
                             <Button
                               id="workflow-designer-contract-use-event-schema"
@@ -4179,7 +4273,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               className="h-auto px-2 py-1 text-xs text-warning-foreground hover:opacity-80"
                               onClick={handleUseEventSchemaForWorkflowInput}
                             >
-                              Use event schema
+                              {t('designer.eventSchemaDialog.confirm', { defaultValue: 'Use event schema' })}
                             </Button>
                           )}
                         </div>
@@ -4188,13 +4282,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                     <div className="mt-2 text-xs text-gray-700">
                       <span className="font-semibold text-gray-800">
-                        {payloadSchemaModeDraft === 'pinned' ? 'Schema version locked' : 'Auto-selected from trigger'}
+                        {payloadSchemaModeDraft === 'pinned'
+                          ? t('designer.form.schemaLocked', { defaultValue: 'Schema version locked' })
+                          : t('designer.form.schemaAutoSelected', { defaultValue: 'Auto-selected from trigger' })}
                       </span>
                       <span className="text-gray-600">
                         {isTimeTrigger(activeDefinition?.trigger)
-                          ? ' to the fixed clock payload contract.'
+                          ? t('designer.form.schemaSuffixClock', { defaultValue: ' to the fixed clock payload contract.' })
                           : payloadSchemaModeDraft === 'pinned'
-                          ? ' to keep this workflow stable if trigger schemas change.'
+                          ? t('designer.form.schemaSuffixPinned', { defaultValue: ' to keep this workflow stable if trigger schemas change.' })
                           : '.'}
                       </span>
 
@@ -4206,13 +4302,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                       {payloadSchemaModeDraft === 'inferred' && !effectivePayloadSchemaRef && inferredSchemaStatus !== 'loading' && (
                         <div className="mt-2 text-xs text-gray-500">
-                          Choose a trigger to define available fields.
+                          {t('designer.form.chooseTriggerHint', { defaultValue: 'Choose a trigger to define available fields.' })}
                         </div>
                       )}
 
                       {inferredSchemaStatus === 'error' && activeDefinition?.trigger?.type === 'event' && (
                         <div className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                          We could not load schema information for <span className="font-mono">{activeDefinition.trigger.eventName}</span>. Check the event catalog entry.
+                          {t('designer.form.schemaLoadErrorPrefix', { defaultValue: 'We could not load schema information for' })}{' '}
+                          <span className="font-mono">{activeDefinition.trigger.eventName}</span>.{' '}
+                          {t('designer.form.schemaLoadErrorSuffix', { defaultValue: 'Check the event catalog entry.' })}
                         </div>
                       )}
 
@@ -4221,9 +4319,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                         effectivePayloadSchemaRef &&
                         activeWorkflowRecord.payload_schema_ref !== effectivePayloadSchemaRef && (
                         <div className="mt-2 rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
-                          <div className="font-semibold">Draft contract differs from published</div>
+                          <div className="font-semibold">
+                            {t('designer.form.draftDifferent', { defaultValue: 'Draft contract differs from published' })}
+                          </div>
                           <div className="mt-1 opacity-90">
-                            The published version uses <span className="font-mono">{activeWorkflowRecord.payload_schema_ref}</span>. This draft currently resolves to{' '}
+                            {t('designer.form.publishedUsesPrefix', { defaultValue: 'The published version uses' })}{' '}
+                            <span className="font-mono">{activeWorkflowRecord.payload_schema_ref}</span>.{' '}
+                            {t('designer.form.draftResolvesTo', { defaultValue: 'This draft currently resolves to' })}{' '}
                             <span className="font-mono">{effectivePayloadSchemaRef}</span>.
                           </div>
                           {canManage && (
@@ -4244,7 +4346,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                   }
                                 }}
                               >
-                                Lock to published contract
+                                {t('designer.form.lockToPublished', { defaultValue: 'Lock to published contract' })}
                               </Button>
                             </div>
                           )}
@@ -4262,7 +4364,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
                           onClick={() => setContractSettingsExpanded(true)}
                         >
-                          Advanced schema settings
+                          {t('designer.form.advancedSchemaSettings', { defaultValue: 'Advanced schema settings' })}
                         </Button>
                       </div>
                     )}
@@ -4409,11 +4511,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           <div className="mt-3 text-xs text-gray-600">
                             {effectivePayloadSchemaRef ? (
                               <>
-                                Current inferred schema:
+                                {t('designer.form.inferredSchemaPrefix', { defaultValue: 'Current inferred schema:' })}
                                 <span className="ml-1 font-mono break-all">{effectivePayloadSchemaRef}</span>
                               </>
                             ) : (
-                              'No schema inferred yet.'
+                              t('designer.form.noSchemaInferred', { defaultValue: 'No schema inferred yet.' })
                             )}
                           </div>
                         )}
@@ -4425,7 +4527,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       !schemaRefs.includes(effectivePayloadSchemaRef) && (
                       <div className="mt-2 flex items-center justify-between gap-3 text-xs text-destructive">
                         <div>
-                          Unknown schema ref. Open Advanced schema settings and choose a valid schema version.
+                          {t('designer.form.unknownSchemaRef', {
+                            defaultValue: 'Unknown schema ref. Open Advanced schema settings and choose a valid schema version.',
+                          })}
                         </div>
                         {canManage && (
                           <Button
@@ -4708,25 +4812,29 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Workflow Steps</h2>
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        {t('designer.form.workflowStepsHeading', { defaultValue: 'Workflow Steps' })}
+                      </h2>
                       <p className="text-sm text-gray-500">
                         {stepsViewMode === 'list'
-                          ? 'Drag steps to reorder or move between pipes.'
-                          : 'Pan/zoom the graph. Branches render as separate lanes.'}
+                          ? t('designer.form.workflowStepsListHint', { defaultValue: 'Drag steps to reorder or move between pipes.' })
+                          : t('designer.form.workflowStepsGraphHint', { defaultValue: 'Pan/zoom the graph. Branches render as separate lanes.' })}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <ViewSwitcher
-                        aria-label="Workflow steps view"
+                        aria-label={t('designer.form.workflowStepsViewAria', { defaultValue: 'Workflow steps view' })}
                         currentView={stepsViewMode}
                         onChange={(v) => setStepsViewMode(v as 'list' | 'graph')}
-                        options={[
-                          { value: 'list', label: 'List' },
-                          { value: 'graph', label: 'Graph' }
-                        ]}
+                        options={workflowCanvasViewOptions}
                       />
                       {publishWarnings.length > 0 && (
-                        <Badge variant="warning">{publishWarnings.length} warnings</Badge>
+                        <Badge variant="warning">
+                          {t('designer.form.warningsCount', {
+                            defaultValue: '{{count}} warnings',
+                            count: publishWarnings.length,
+                          })}
+                        </Badge>
                       )}
                     </div>
                   </div>
@@ -4734,7 +4842,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                     <div className="h-[650px] rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] overflow-hidden">
                       <WorkflowGraph
                         steps={(activeDefinition?.steps ?? []) as Step[]}
-                        getLabel={(step) => getStepLabel(step as Step, nodeRegistryMap, designerActionCatalog)}
+                        getLabel={(step) => getStepLabel(step as Step, nodeRegistryMap, designerActionCatalog, t)}
                         getSubtitle={(step) => getGraphSubtitle(step as Step) ?? (step as Step).type}
                         inputMappingStatusByStepId={actionInputMappingStatusByStepId}
                         selectedStepId={selectedStepId}
@@ -4761,6 +4869,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       onInsertStep={(index) => handleInsertStep('root', index)}
                       onInsertAtPath={handleInsertStep}
                       nodeRegistry={nodeRegistryMap}
+                      designerActionCatalog={designerActionCatalog}
                       errorMap={errorsByStepId}
                       isRoot={true}
                       disabled={!canManage}
@@ -4843,26 +4952,26 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const isEditorDesignerMode = mode === 'editor-designer';
 
   const controlPanelTabs = [
-    { id: 'schedules', label: 'Schedules', content: schedulesContent },
-    { id: 'runs', label: 'Runs', content: runListContent },
-    { id: 'events', label: 'Events', content: eventListContent },
-    { id: 'event-catalog', label: 'Event Catalog', content: eventCatalogContent },
-    ...(canAdmin ? [{ id: 'dead-letter', label: 'Dead Letter', content: deadLetterContent }] : [])
+    { id: 'schedules', label: t('designer.controlPanel.tabs.schedules', { defaultValue: 'Schedules' }), content: schedulesContent },
+    { id: 'runs', label: t('designer.controlPanel.tabs.runs', { defaultValue: 'Runs' }), content: runListContent },
+    { id: 'events', label: t('designer.controlPanel.tabs.events', { defaultValue: 'Events' }), content: eventListContent },
+    { id: 'event-catalog', label: t('designer.controlPanel.tabs.eventCatalog', { defaultValue: 'Event Catalog' }), content: eventCatalogContent },
+    ...(canAdmin ? [{ id: 'dead-letter', label: t('designer.controlPanel.tabs.deadLetter', { defaultValue: 'Dead Letter' }), content: deadLetterContent }] : [])
   ];
 
   const pageTitle =
     isControlPanelMode
-      ? 'Workflow Control Panel'
+      ? t('designer.page.controlPanelTitle', { defaultValue: 'Workflow Control Panel' })
       : isEditorDesignerMode
-        ? 'Workflow Designer'
-        : 'Workflow Editor';
+        ? t('designer.page.designerTitle', { defaultValue: 'Workflow Designer' })
+        : t('designer.page.editorTitle', { defaultValue: 'Workflow Editor' });
 
   const pageDescription =
     isControlPanelMode
-      ? 'Manage schedules, runs, events, and the event catalog.'
+      ? t('designer.page.controlPanelDescription', { defaultValue: 'Manage schedules, runs, events, and the event catalog.' })
       : isEditorDesignerMode
-        ? 'Build and maintain workflow automations.'
-        : 'Choose a workflow to edit or create a new workflow.';
+        ? t('designer.page.designerDescription', { defaultValue: 'Build and maintain workflow automations.' })
+        : t('designer.page.editorDescription', { defaultValue: 'Choose a workflow to edit or create a new workflow.' });
 
   const handleBackToWorkflowList = useCallback(() => {
     requestDiscardChangesConfirmation(() => {
@@ -4894,7 +5003,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                 onClick={handleBackToWorkflowList}
               >
                 <ChevronRight className="mr-1 h-4 w-4 rotate-180" />
-                Back to workflows
+                {t('designer.toolbar.backToList', { defaultValue: 'Back to workflows' })}
               </Button>
             )}
             <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{pageTitle}</h1>
@@ -4905,7 +5014,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               {activeWorkflowRecord && (
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium ${workflowValidationBadge.className}`}
-                  title={activeWorkflowRecord.validated_at ? `Last validated: ${activeWorkflowRecord.validated_at}` : 'Validation status unknown'}
+                  title={activeWorkflowRecord.validated_at
+                    ? t('designer.toolbar.validation.lastValidated', {
+                      defaultValue: 'Last validated: {{timestamp}}',
+                      timestamp: activeWorkflowRecord.validated_at,
+                    })
+                    : t('designer.toolbar.validation.unknown', { defaultValue: 'Validation status unknown' })}
                 >
                   {workflowValidationBadge.label}
                   {currentValidationErrors.length > 0 && <span>({currentValidationErrors.length})</span>}
@@ -4917,7 +5031,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   variant="secondary"
                   onClick={() => requestDiscardChangesConfirmation(() => router.push('/msp/workflow-editor/new'))}
                 >
-                  New Workflow
+                  {t('designer.toolbar.newWorkflow', { defaultValue: 'New Workflow' })}
                 </Button>
               )}
               {canManage && (
@@ -4926,7 +5040,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   onClick={handleSaveDefinition}
                   disabled={isSaving || !activeDefinition}
                 >
-                  {isSaving ? 'Saving...' : 'Save Draft'}
+                  {isSaving
+                    ? t('designer.toolbar.saving', { defaultValue: 'Saving...' })
+                    : t('designer.toolbar.saveDraft', { defaultValue: 'Save Draft' })}
                 </Button>
               )}
               {(canPublishPermission) && (
@@ -4936,7 +5052,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   disabled={isPublishing || !activeDefinition || !canPublishEnabled}
                   title={!canPublishEnabled ? publishDisabledReason || undefined : undefined}
                 >
-                  {isPublishing ? 'Publishing...' : 'Publish'}
+                  {isPublishing
+                    ? t('designer.toolbar.publishing', { defaultValue: 'Publishing...' })
+                    : t('designer.toolbar.publish', { defaultValue: 'Publish' })}
                 </Button>
               )}
               {(canRunPermission) && (
@@ -4951,11 +5069,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   }
                   title={
                     !canRunEnabled ? runDisabledReason || undefined
-                      : !activeWorkflowRecord?.published_version ? 'Preview only until a version is published.'
+                      : !activeWorkflowRecord?.published_version
+                        ? t('designer.toolbar.previewOnly', { defaultValue: 'Preview only until a version is published.' })
                         : undefined
                   }
                 >
-                  Run
+                  {t('designer.toolbar.run', { defaultValue: 'Run' })}
                 </Button>
               )}
             </div>
@@ -4969,12 +5088,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         workflowId={activeWorkflowId}
         workflowName={activeWorkflowRecord?.name ?? activeDefinition?.name ?? ''}
         triggerLabel={activeDefinition?.trigger?.type === 'event' && activeDefinition.trigger.eventName
-          ? `Event: ${activeDefinition.trigger.eventName}`
+          ? t('trigger.eventWithType', { defaultValue: 'Event: {{eventType}}', eventType: activeDefinition.trigger.eventName })
           : activeDefinition?.trigger?.type === 'schedule'
-            ? 'One-time schedule'
+            ? t('trigger.oneTimeSchedule', { defaultValue: 'One-time schedule' })
             : activeDefinition?.trigger?.type === 'recurring'
-              ? 'Recurring schedule'
-              : 'Manual'}
+              ? t('trigger.recurringSchedule', { defaultValue: 'Recurring schedule' })
+              : t('trigger.manual', { defaultValue: 'Manual' })}
         triggerEventName={activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : null}
         triggerSourcePayloadSchemaRef={triggerSourceSchemaRef}
         triggerPayloadMappingProvided={triggerPayloadMappingInfo.mappingProvided}
@@ -4994,10 +5113,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         isOpen={showDiscardChangesDialog}
         onClose={closeDiscardChangesDialog}
         onConfirm={handleConfirmDiscardChanges}
-        title="Discard unsaved changes?"
-        message="You have unsaved changes in this workflow. Discard them and continue?"
-        confirmLabel="Discard changes"
-        cancelLabel="Keep editing"
+        title={t('designer.discardDialog.title', { defaultValue: 'Discard unsaved changes?' })}
+        message={t('designer.discardDialog.message', {
+          defaultValue: 'You have unsaved changes in this workflow. Discard them and continue?',
+        })}
+        confirmLabel={t('designer.discardDialog.confirm', { defaultValue: 'Discard changes' })}
+        cancelLabel={t('designer.discardDialog.cancel', { defaultValue: 'Keep editing' })}
       />
 
       <ConfirmationDialog
@@ -5009,12 +5130,18 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           setHasExplicitContractEdits(true);
           applyWorkflowInputSchemaRef(pendingEventSchemaPrompt.schemaRef);
         }}
-        title="Switch workflow input schema?"
+        title={t('designer.eventSchemaDialog.title', { defaultValue: 'Switch workflow input schema?' })}
         message={pendingEventSchemaPrompt
-          ? `The selected event ${pendingEventSchemaPrompt.eventName} uses ${pendingEventSchemaPrompt.schemaRef}. Do you want to switch this workflow to that event schema?`
-          : 'Do you want to switch this workflow to the selected event schema?'}
-        confirmLabel="Use event schema"
-        cancelLabel="Keep current schema"
+          ? t('designer.eventSchemaDialog.messageWithEvent', {
+            defaultValue: 'The selected event {{eventName}} uses {{schemaRef}}. Do you want to switch this workflow to that event schema?',
+            eventName: pendingEventSchemaPrompt.eventName,
+            schemaRef: pendingEventSchemaPrompt.schemaRef,
+          })
+          : t('designer.eventSchemaDialog.messageFallback', {
+            defaultValue: 'Do you want to switch this workflow to the selected event schema?',
+          })}
+        confirmLabel={t('designer.eventSchemaDialog.confirm', { defaultValue: 'Use event schema' })}
+        cancelLabel={t('designer.eventSchemaDialog.cancel', { defaultValue: 'Keep current schema' })}
       />
 
       <div className="flex-1 min-h-0 overflow-hidden">
@@ -5054,6 +5181,7 @@ const Pipe: React.FC<{
   onInsertStep?: (index: number) => void;
   onInsertAtPath?: (pipePath: string, index: number) => void;
   nodeRegistry: Record<string, NodeRegistryItem>;
+  designerActionCatalog?: WorkflowDesignerCatalogRecord[];
   errorMap: Map<string, PublishError[]>;
   isRoot?: boolean;
   disabled?: boolean;
@@ -5071,10 +5199,12 @@ const Pipe: React.FC<{
   onInsertStep,
   onInsertAtPath,
   nodeRegistry,
+  designerActionCatalog,
   errorMap,
   isRoot = false,
   disabled = false
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const pipeId = `workflow-designer-pipe-${pipePath.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
   return (
@@ -5100,7 +5230,9 @@ const Pipe: React.FC<{
               <div className="flex items-center justify-center w-8 h-8 rounded-full bg-success/15 border-2 border-success" data-testid="pipeline-start">
                 <Play className="h-4 w-4 text-green-600 ml-0.5" />
               </div>
-              <div className="text-xs text-gray-500 mt-1">Start</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {t('pipeline.start', { defaultValue: 'Start' })}
+              </div>
               {onInsertStep && !disabled && (
                 <PipelineConnector onInsert={() => onInsertStep(0)} position="start" disabled={disabled} />
               )}
@@ -5141,6 +5273,7 @@ const Pipe: React.FC<{
                       onInsertAtPath={onInsertAtPath}
                       dragHandleProps={dragProvided.dragHandleProps ?? undefined}
                       nodeRegistry={nodeRegistry}
+                      designerActionCatalog={designerActionCatalog}
                       errorCount={errorMap.get(step.id)?.length ?? 0}
                       errorMap={errorMap}
                       disabled={disabled}
@@ -5196,6 +5329,7 @@ const StepCard: React.FC<{
   onInsertAtPath?: (pipePath: string, index: number) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   nodeRegistry: Record<string, NodeRegistryItem>;
+  designerActionCatalog?: WorkflowDesignerCatalogRecord[];
   errorCount: number;
   errorMap: Map<string, PublishError[]>;
   actionInputMappingStatusByStepId: Map<string, ActionInputMappingStatus>;
@@ -5215,12 +5349,14 @@ const StepCard: React.FC<{
   onInsertAtPath,
   dragHandleProps,
   nodeRegistry,
+  designerActionCatalog,
   errorCount,
   errorMap,
   actionInputMappingStatusByStepId,
   disabled = false
 }) => {
-  const label = getStepLabel(step, nodeRegistry);
+  const { t } = useTranslation('msp/workflows');
+  const label = getStepLabel(step, nodeRegistry, designerActionCatalog, t);
   const isBlock = step.type.startsWith('control.');
   const colors = getStepTypeColor(step.type);
   const icon = getStepTypeIcon(step.type);
@@ -5240,7 +5376,7 @@ const StepCard: React.FC<{
           className="text-left flex-1 min-w-0"
           type="button"
           onClick={() => onSelectStep(step.id)}
-          aria-label={`Select ${label} step`}
+          aria-label={t('designer.stepCard.selectAriaLabel', { defaultValue: 'Select {{label}} step', label })}
         >
           <div className="flex items-center gap-2 flex-wrap">
             {/* Step type icon */}
@@ -5252,7 +5388,13 @@ const StepCard: React.FC<{
             {/* Block badge */}
             {isBlock && (
               <Badge className={`text-xs ${colors.badge}`}>
-                {step.type === 'control.if' ? 'If' : step.type === 'control.forEach' ? 'Loop' : step.type === 'control.tryCatch' ? 'Try' : 'Block'}
+                {step.type === 'control.if'
+                  ? t('designer.stepCard.badges.if', { defaultValue: 'If' })
+                  : step.type === 'control.forEach'
+                    ? t('designer.stepCard.badges.loop', { defaultValue: 'Loop' })
+                    : step.type === 'control.tryCatch'
+                      ? t('designer.stepCard.badges.try', { defaultValue: 'Try' })
+                      : t('designer.stepCard.badges.block', { defaultValue: 'Block' })}
               </Badge>
             )}
             {actionInputMappingStatus && actionInputMappingStatus.requiredCount > 0 && (
@@ -5261,16 +5403,25 @@ const StepCard: React.FC<{
                   id={`workflow-step-mapping-status-${step.id}`}
                   variant="error"
                   className="text-xs"
-                  title={`${actionInputMappingStatus.unmappedRequiredCount} required fields are unmapped`}
+                  title={t('designer.stepCard.mapping.unmappedTitle', {
+                    defaultValue: '{{count}} required fields are unmapped',
+                    count: actionInputMappingStatus.unmappedRequiredCount,
+                  })}
                 >
-                  {actionInputMappingStatus.unmappedRequiredCount} required unmapped
+                  {t('designer.stepCard.mapping.unmappedBadge', {
+                    defaultValue: '{{count}} required unmapped',
+                    count: actionInputMappingStatus.unmappedRequiredCount,
+                  })}
                 </Badge>
               ) : (
                 <span
                   id={`workflow-step-mapping-status-${step.id}`}
                   className="inline-flex items-center text-emerald-700/80"
-                  title={`All ${actionInputMappingStatus.requiredCount} required fields are mapped`}
-                  aria-label="All required fields mapped"
+                  title={t('designer.stepCard.mapping.allMappedTitle', {
+                    defaultValue: 'All {{count}} required fields are mapped',
+                    count: actionInputMappingStatus.requiredCount,
+                  })}
+                  aria-label={t('designer.stepCard.mapping.allMappedAria', { defaultValue: 'All required fields mapped' })}
                 >
                   <Link className="h-3.5 w-3.5" />
                 </span>
@@ -5279,7 +5430,13 @@ const StepCard: React.FC<{
             {/* Error badge */}
             {errorCount > 0 && (
               <Badge variant="error" className="text-xs">
-                {errorCount} {errorCount === 1 ? 'error' : 'errors'}
+                {t('designer.stepCard.errorCount', {
+                  defaultValue: '{{count}} {{noun}}',
+                  count: errorCount,
+                  noun: errorCount === 1
+                    ? t('designer.stepCard.errorSingular', { defaultValue: 'error' })
+                    : t('designer.stepCard.errorPlural', { defaultValue: 'errors' }),
+                })}
               </Badge>
             )}
           </div>
@@ -5308,8 +5465,11 @@ const StepCard: React.FC<{
                 onClick={() => onDuplicateStep(step.id)}
                 className="text-gray-400 hover:text-primary-600 p-1 h-auto"
                 data-testid={`step-duplicate-${step.id}`}
-                title="Duplicate step"
-                aria-label={`Duplicate ${label} step`}
+                title={t('designer.stepCard.actions.duplicate', { defaultValue: 'Duplicate step' })}
+                aria-label={t('designer.stepCard.actions.duplicateAriaLabel', {
+                  defaultValue: 'Duplicate {{label}} step',
+                  label,
+                })}
               >
                 <Copy className="h-4 w-4" />
               </Button>
@@ -5320,7 +5480,7 @@ const StepCard: React.FC<{
                 onClick={() => onDeleteStep(step.id)}
                 className="text-gray-400 hover:text-destructive p-1 h-auto"
                 data-testid={`step-delete-${step.id}`}
-                title="Delete step"
+                title={t('designer.stepCard.actions.delete', { defaultValue: 'Delete step' })}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -5335,7 +5495,7 @@ const StepCard: React.FC<{
         const elsePath = `${stepPath}.else`;
         return (
           <div className="mt-3 space-y-2">
-            <BlockSection title="THEN" idPrefix={`${step.id}-then`}>
+            <BlockSection title={t('designer.blockSection.then', { defaultValue: 'THEN' })} idPrefix={`${step.id}-then`}>
               <Pipe
                 steps={ifStep.then}
                 pipePath={thenPath}
@@ -5349,12 +5509,13 @@ const StepCard: React.FC<{
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(thenPath, index) : undefined}
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
+                designerActionCatalog={designerActionCatalog}
                 errorMap={errorMap}
                 actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
               />
             </BlockSection>
-            <BlockSection title="ELSE" idPrefix={`${step.id}-else`}>
+            <BlockSection title={t('designer.blockSection.else', { defaultValue: 'ELSE' })} idPrefix={`${step.id}-else`}>
               <Pipe
                 steps={ifStep.else ?? []}
                 pipePath={elsePath}
@@ -5368,6 +5529,7 @@ const StepCard: React.FC<{
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(elsePath, index) : undefined}
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
+                designerActionCatalog={designerActionCatalog}
                 errorMap={errorMap}
                 actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
@@ -5383,7 +5545,7 @@ const StepCard: React.FC<{
         const catchPath = `${stepPath}.catch`;
         return (
           <div className="mt-3 space-y-2">
-            <BlockSection title="TRY" idPrefix={`${step.id}-try`}>
+            <BlockSection title={t('designer.blockSection.try', { defaultValue: 'TRY' })} idPrefix={`${step.id}-try`}>
               <Pipe
                 steps={tcStep.try}
                 pipePath={tryPath}
@@ -5397,12 +5559,13 @@ const StepCard: React.FC<{
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(tryPath, index) : undefined}
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
+                designerActionCatalog={designerActionCatalog}
                 errorMap={errorMap}
                 actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
               />
             </BlockSection>
-            <BlockSection title="CATCH" idPrefix={`${step.id}-catch`}>
+            <BlockSection title={t('designer.blockSection.catch', { defaultValue: 'CATCH' })} idPrefix={`${step.id}-catch`}>
               <Pipe
                 steps={tcStep.catch}
                 pipePath={catchPath}
@@ -5416,6 +5579,7 @@ const StepCard: React.FC<{
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(catchPath, index) : undefined}
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
+                designerActionCatalog={designerActionCatalog}
                 errorMap={errorMap}
                 actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
@@ -5430,8 +5594,14 @@ const StepCard: React.FC<{
         const bodyPath = `${stepPath}.body`;
         return (
           <div className="mt-3">
-            <div className="text-xs text-gray-500 mb-2">Item: {feStep.itemVar} | Concurrency: {feStep.concurrency ?? 1}</div>
-            <BlockSection title="BODY" idPrefix={`${step.id}-body`}>
+            <div className="text-xs text-gray-500 mb-2">
+              {t('designer.stepCard.forEachSummary', {
+                defaultValue: 'Item: {{itemVar}} | Concurrency: {{concurrency}}',
+                itemVar: feStep.itemVar,
+                concurrency: feStep.concurrency ?? 1,
+              })}
+            </div>
+            <BlockSection title={t('designer.blockSection.body', { defaultValue: 'BODY' })} idPrefix={`${step.id}-body`}>
               <Pipe
                 steps={feStep.body}
                 pipePath={bodyPath}
@@ -5445,6 +5615,7 @@ const StepCard: React.FC<{
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(bodyPath, index) : undefined}
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
+                designerActionCatalog={designerActionCatalog}
                 errorMap={errorMap}
                 actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
@@ -5747,6 +5918,10 @@ export const StepConfigPanel: React.FC<{
   editable = true,
   onChange
 }) => {
+  const { t } = useTranslation('msp/workflows');
+  const workflowOnErrorOptions = useWorkflowOnErrorOptions();
+  const workflowWaitModeOptions = useWorkflowWaitModeOptions();
+  const workflowWaitTimingOptions = useWorkflowWaitTimingOptions();
   const nodeSchema = step.type.startsWith('control.') ? null : nodeRegistry[step.type]?.configSchema;
   const [showDataContext, setShowDataContext] = useState(false);
 
@@ -6093,7 +6268,7 @@ export const StepConfigPanel: React.FC<{
   return (
     <div className="space-y-4">
       <div>
-        <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">{getStepLabel(step, nodeRegistry, designerActionCatalog)}</div>
+        <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">{getStepLabel(step, nodeRegistry, designerActionCatalog, t)}</div>
         <div className="text-xs text-gray-500">{stepPath ?? step.id}</div>
       </div>
 
@@ -6173,7 +6348,11 @@ export const StepConfigPanel: React.FC<{
           stepId={step.id}
           record={groupedActionRecord}
           selectedActionId={selectedAction?.id}
-          selectedActionDescription={selectedAction?.ui?.description}
+          selectedActionDescription={selectedAction
+            ? t(`designer.actions.${selectedAction.id}.description`, {
+              defaultValue: selectedAction.ui?.description,
+            })
+            : undefined}
           disabled={!editable}
           onActionChange={handleGroupedActionChange}
         />
@@ -6245,10 +6424,7 @@ export const StepConfigPanel: React.FC<{
             />
             <CustomSelect
               id={`foreach-onitemerror-${step.id}`}
-              options={[
-                { value: 'continue', label: 'Continue' },
-                { value: 'fail', label: 'Fail' }
-              ]}
+              options={workflowOnErrorOptions}
               value={feStep.onItemError ?? 'continue'}
               onValueChange={(value) => onChange({ ...feStep, onItemError: value as 'continue' | 'fail' })}
               label="On item error"
@@ -6317,7 +6493,7 @@ export const StepConfigPanel: React.FC<{
         <div className="space-y-3">
           <SearchableSelect
             id={`event-wait-event-${step.id}`}
-            label="Event"
+            label={t('designer.stepConfig.eventLabel', { defaultValue: 'Event' })}
             value={selectedWaitEventName}
             onChange={(value) => {
               const eventName = value.trim();
@@ -6327,7 +6503,7 @@ export const StepConfigPanel: React.FC<{
                 filters: []
               });
             }}
-            placeholder="Select event"
+            placeholder={t('designer.stepConfig.selectEvent', { defaultValue: 'Select event' })}
             dropdownMode="overlay"
             options={eventCatalogOptions.map((option) => ({
               value: option.event_type,
@@ -6338,7 +6514,7 @@ export const StepConfigPanel: React.FC<{
 
           <ExpressionField
             idPrefix={`event-wait-correlation-${step.id}`}
-            label="Correlation Key Expression"
+            label={t('designer.stepConfig.correlationKey', { defaultValue: 'Correlation Key Expression' })}
             value={ensureExpr((eventWaitConfig.correlationKey as Expr | undefined) ?? { $expr: '' })}
             onChange={(expr) => updateWaitNodeConfig({ ...eventWaitConfig, correlationKey: expr })}
             fieldOptions={enhancedFieldOptions}
@@ -6348,7 +6524,7 @@ export const StepConfigPanel: React.FC<{
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Payload Filters</Label>
+              <Label>{t('designer.stepConfig.payloadFilters', { defaultValue: 'Payload Filters' })}</Label>
               <Button
                 id={`event-wait-filter-add-${step.id}`}
                 variant="outline"
@@ -6356,14 +6532,18 @@ export const StepConfigPanel: React.FC<{
                 onClick={addEventFilterClause}
                 disabled={!editable}
               >
-                Add filter
+                {t('designer.stepConfig.addFilter', { defaultValue: 'Add filter' })}
               </Button>
             </div>
             {eventWaitPayloadSchemaStatus === 'loading' && (
-              <div className="text-xs text-gray-500">Loading event schema fields...</div>
+              <div className="text-xs text-gray-500">
+                {t('designer.stepConfig.loadingEventSchema', { defaultValue: 'Loading event schema fields...' })}
+              </div>
             )}
             {eventFilters.length === 0 && (
-              <div className="text-xs text-gray-400">No filters configured.</div>
+              <div className="text-xs text-gray-400">
+                {t('designer.stepConfig.noFiltersConfigured', { defaultValue: 'No filters configured.' })}
+              </div>
             )}
             {eventFilters.map((filter, index) => {
               const fieldMeta = eventFilterFields.find((field) => field.path === filter.path);
@@ -6384,7 +6564,7 @@ export const StepConfigPanel: React.FC<{
                       {eventFilterFieldOptions.length > 0 ? (
                         <CustomSelect
                           id={`event-wait-filter-path-${step.id}-${index}`}
-                          label={index === 0 ? 'Field' : undefined}
+                          label={index === 0 ? t('designer.stepConfig.fieldLabel', { defaultValue: 'Field' }) : undefined}
                           options={eventFilterFieldOptions}
                           value={filter.path}
                           onValueChange={(nextPath) => updateEventFilterClause(index, { path: nextPath })}
@@ -6393,7 +6573,7 @@ export const StepConfigPanel: React.FC<{
                       ) : (
                         <Input
                           id={`event-wait-filter-path-${step.id}-${index}`}
-                          label={index === 0 ? 'Field path' : undefined}
+                          label={index === 0 ? t('designer.stepConfig.fieldPathLabel', { defaultValue: 'Field path' }) : undefined}
                           value={filter.path}
                           disabled={!editable}
                           onChange={(event) => updateEventFilterClause(index, { path: event.target.value })}
@@ -6513,7 +6693,7 @@ export const StepConfigPanel: React.FC<{
 
           <Input
             id={`event-wait-timeout-${step.id}`}
-            label="Timeout (ms)"
+            label={t('designer.stepConfig.timeoutMs', { defaultValue: 'Timeout (ms)' })}
             type="number"
             value={typeof eventWaitConfig.timeoutMs === 'number' ? eventWaitConfig.timeoutMs : ''}
             disabled={!editable}
@@ -6528,7 +6708,7 @@ export const StepConfigPanel: React.FC<{
 
           <MappingExprEditor
             idPrefix={`event-wait-assign-${step.id}`}
-            label="Assign on resume"
+            label={t('designer.stepConfig.assignOnResume', { defaultValue: 'Assign on resume' })}
             value={(eventWaitConfig.assign as Record<string, Expr>) ?? {}}
             onChange={(assign) => updateWaitNodeConfig({ ...eventWaitConfig, assign })}
             fieldOptions={enhancedFieldOptions}
@@ -6546,10 +6726,7 @@ export const StepConfigPanel: React.FC<{
             <CustomSelect
               id={`time-wait-mode-${step.id}`}
               label="Mode"
-              options={[
-                { value: 'duration', label: 'Duration' },
-                { value: 'until', label: 'Until' }
-              ]}
+              options={workflowWaitModeOptions}
               value={typeof timeWaitConfig.mode === 'string' ? timeWaitConfig.mode : 'duration'}
               onValueChange={(mode) => {
                 if (mode === 'until') {
@@ -6610,10 +6787,7 @@ export const StepConfigPanel: React.FC<{
                 <CustomSelect
                   id={`time-wait-until-authoring-mode-${step.id}`}
                   label="Until input"
-                  options={[
-                    { value: 'fixed', label: 'Specific date & time' },
-                    { value: 'expression', label: 'Advanced expression' }
-                  ]}
+                  options={workflowWaitTimingOptions}
                   value={timeWaitUntilAuthoringMode}
                   onValueChange={(value) => setTimeWaitUntilAuthoringMode(value === 'expression' ? 'expression' : 'fixed')}
                   disabled={!editable}
@@ -6653,7 +6827,7 @@ export const StepConfigPanel: React.FC<{
 
             <MappingExprEditor
               idPrefix={`time-wait-assign-${step.id}`}
-              label="Assign on resume"
+              label={t('designer.stepConfig.assignOnResume', { defaultValue: 'Assign on resume' })}
               value={(timeWaitConfig.assign as Record<string, Expr>) ?? {}}
               onChange={(assign) => updateWaitNodeConfig({ ...timeWaitConfig, assign })}
               fieldOptions={enhancedFieldOptions}
@@ -6693,7 +6867,9 @@ export const StepConfigPanel: React.FC<{
                 'aiOutputSchemaText',
               ]
             : []}
-          sectionTitle={step.type === 'action.call' ? 'Step settings' : undefined}
+          sectionTitle={step.type === 'action.call'
+            ? t('designer.schemaForm.stepSettings', { defaultValue: 'Step settings' })
+            : undefined}
           expressionContext={expressionContext}
         />
       )}
@@ -6754,7 +6930,7 @@ export const StepConfigPanel: React.FC<{
         >
           {showDataContext ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
           <HelpCircle className="w-3.5 h-3.5" />
-          What data can I access here?
+          {t('designer.stepConfig.dataContextToggle', { defaultValue: 'What data can I access here?' })}
         </button>
 
         {showDataContext && (
@@ -6768,8 +6944,10 @@ export const StepConfigPanel: React.FC<{
 };
 
 // Portal-based tooltip for palette items (avoids overflow/stacking context issues)
-// Field metadata for friendly labels and descriptions
-const FIELD_METADATA: Record<string, { label: string; description?: string; advanced?: boolean }> = {
+// Field metadata for friendly labels and descriptions.
+// English defaults live here; localization happens via `getFieldMeta(t, key)` so step-config
+// schema-form fields translate their labels/descriptions under `designer.fieldMetadata.*`.
+const FIELD_METADATA_DEFAULTS: Record<string, { label: string; description?: string; advanced?: boolean }> = {
   actionId: { label: 'Action', description: 'The action to invoke' },
   version: { label: 'Version', description: 'Action version number' },
   inputMapping: { label: 'Input Mapping', description: 'Map data to action inputs' },
@@ -6794,11 +6972,23 @@ const FIELD_METADATA: Record<string, { label: string; description?: string; adva
   contextData: { label: 'Context Data', description: 'Additional data to include with the task' },
 };
 
-const getFieldMeta = (key: string) => {
-  if (FIELD_METADATA[key]) return FIELD_METADATA[key];
+const getFieldMeta = (
+  t: TFunction,
+  key: string,
+): { label: string; description?: string; advanced?: boolean } => {
+  const defaults = FIELD_METADATA_DEFAULTS[key];
+  if (defaults) {
+    return {
+      label: t(`designer.fieldMetadata.${key}.label`, { defaultValue: defaults.label }),
+      description: defaults.description
+        ? t(`designer.fieldMetadata.${key}.description`, { defaultValue: defaults.description })
+        : undefined,
+      advanced: defaults.advanced,
+    };
+  }
   // Convert camelCase to Title Case as fallback
-  const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
-  return { label };
+  const fallbackLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
+  return { label: fallbackLabel };
 };
 
 const getSchemaFormVisibleEntries = (
@@ -6833,11 +7023,13 @@ const SchemaForm: React.FC<{
   actionRegistry,
   stepId,
   excludeFields = [],
-  sectionTitle = 'Node Configuration',
+  sectionTitle,
   showSectionHeader = true,
   expressionContext,
   disabled = false
 }) => {
+  const { t } = useTranslation('msp/workflows');
+  const resolvedSectionTitle = sectionTitle ?? t('designer.schemaForm.sectionTitle', { defaultValue: 'Node Configuration' });
   const resolved = resolveSchema(schema, rootSchema);
   const configValue = value ?? {};
   const fieldEntries = getSchemaFormVisibleEntries(schema, rootSchema, excludeFields);
@@ -6864,12 +7056,12 @@ const SchemaForm: React.FC<{
   });
 
   // Separate regular and advanced fields
-  const regularFields = fieldEntries.filter(([key]) => !getFieldMeta(key).advanced);
-  const advancedFields = fieldEntries.filter(([key]) => getFieldMeta(key).advanced);
+  const regularFields = fieldEntries.filter(([key]) => !getFieldMeta(t, key).advanced);
+  const advancedFields = fieldEntries.filter(([key]) => getFieldMeta(t, key).advanced);
 
   const renderField = (key: string, propSchema: JsonSchema) => {
     const resolvedProp = resolveSchema(propSchema, rootSchema);
-    const meta = getFieldMeta(key);
+    const meta = getFieldMeta(t, key);
     const fieldDescription = meta.description || resolvedProp.description;
 
     if (isExprSchema(resolvedProp, rootSchema)) {
@@ -7039,9 +7231,14 @@ const SchemaForm: React.FC<{
     <div className="space-y-4">
       {showSectionHeader && (
         <div>
-          <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">{sectionTitle}</div>
+          <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">{resolvedSectionTitle}</div>
           {missingRequired.length > 0 && (
-            <div className="text-xs text-destructive">Missing required: {missingRequired.map(k => getFieldMeta(k).label).join(', ')}</div>
+            <div className="text-xs text-destructive">
+              {t('designer.schemaForm.missingRequired', {
+                defaultValue: 'Missing required: {{fields}}',
+                fields: missingRequired.map(k => getFieldMeta(t, k).label).join(', '),
+              })}
+            </div>
           )}
         </div>
       )}
@@ -7145,6 +7342,7 @@ const MappingExprEditor: React.FC<{
   context?: ExpressionContext;
   disabled?: boolean;
 }> = ({ idPrefix, label, value, onChange, fieldOptions, context, disabled = false }) => {
+  const { t } = useTranslation('msp/workflows');
   const entries = Object.entries(value);
 
   const handleUpdate = (key: string, expr: Expr) => {
@@ -7176,10 +7374,14 @@ const MappingExprEditor: React.FC<{
       <div className="flex items-center justify-between">
         <Label>{label}</Label>
         <Button id={`${idPrefix}-add`} variant="outline" size="sm" onClick={handleAdd} disabled={disabled}>
-          Add
+          {t('designer.mappingExpr.add', { defaultValue: 'Add' })}
         </Button>
       </div>
-      {entries.length === 0 && <div className="text-xs text-gray-400">No mappings yet.</div>}
+      {entries.length === 0 && (
+        <div className="text-xs text-gray-400">
+          {t('designer.mappingExpr.empty', { defaultValue: 'No mappings yet.' })}
+        </div>
+      )}
       <div className="space-y-3">
         {entries.map(([key, expr], index) => (
           <Card key={key} className="p-3 space-y-2">
@@ -7197,12 +7399,12 @@ const MappingExprEditor: React.FC<{
                 onClick={() => handleRemove(key)}
                 disabled={disabled}
               >
-                Remove
+                {t('designer.mappingExpr.remove', { defaultValue: 'Remove' })}
               </Button>
             </div>
             <ExpressionField
               idPrefix={`${idPrefix}-expr-${index}`}
-              label="Expression"
+              label={t('designer.mappingExpr.expressionLabel', { defaultValue: 'Expression' })}
               value={expr}
               onChange={(nextExpr) => handleUpdate(key, nextExpr)}
               fieldOptions={fieldOptions}

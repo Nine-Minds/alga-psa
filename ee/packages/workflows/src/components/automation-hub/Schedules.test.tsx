@@ -9,6 +9,7 @@ const actionMocks = vi.hoisted(() => ({
   listWorkflowSchedulesAction: vi.fn(),
   listWorkflowScheduleBusinessHoursAction: vi.fn(),
   listWorkflowDefinitionsPagedAction: vi.fn(),
+  listWorkflowSchemaRefsAction: vi.fn(),
   getWorkflowScheduleAction: vi.fn(),
   pauseWorkflowScheduleAction: vi.fn(),
   resumeWorkflowScheduleAction: vi.fn(),
@@ -16,6 +17,17 @@ const actionMocks = vi.hoisted(() => ({
   createWorkflowScheduleAction: vi.fn(),
   updateWorkflowScheduleAction: vi.fn(),
   getWorkflowSchemaAction: vi.fn()
+}));
+
+const i18nMocks = vi.hoisted(() => ({
+  t: vi.fn((key: string, options?: { defaultValue?: string; [key: string]: unknown }) => {
+    const template = options?.defaultValue ?? key;
+    return template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => String(options?.[name] ?? `{{${name}}}`));
+  }),
+  formatDate: vi.fn((date: Date | string, options?: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat('en-US', options).format(typeof date === 'string' ? new Date(date) : date)
+  ),
+  formatRelativeTime: vi.fn(() => 'relative time')
 }));
 
 const router = {
@@ -293,17 +305,69 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({
     isOpen,
     title,
-    children
+    children,
+    footer
   }: {
     isOpen: boolean;
     title?: string;
     children: React.ReactNode;
-  }) => isOpen ? <div role="dialog" aria-label={title}>{children}</div> : null,
+    footer?: React.ReactNode;
+  }) => isOpen ? <div role="dialog" aria-label={title}>{children}{footer}</div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
+}));
+
+vi.mock('@alga-psa/ui/components/TimePicker', () => ({
+  TimePicker: ({
+    id,
+    label,
+    value,
+    onChange
+  }: {
+    id?: string;
+    label?: string;
+    value?: string;
+    onChange?: (value: string) => void;
+  }) => (
+    <label>
+      {label ?? id}
+      <input
+        id={id}
+        aria-label={label ?? id ?? 'time'}
+        type="time"
+        value={value ?? ''}
+        onChange={(event) => onChange?.(event.target.value)}
+      />
+    </label>
+  )
+}));
+
+vi.mock('@alga-psa/ui/components/DateTimePicker', () => ({
+  DateTimePicker: ({
+    id,
+    label,
+    value,
+    onChange
+  }: {
+    id?: string;
+    label?: string;
+    value?: Date;
+    onChange?: (value: Date | undefined) => void;
+  }) => (
+    <label>
+      {label ?? id}
+      <input
+        id={id}
+        aria-label={label ?? id ?? 'datetime'}
+        type="datetime-local"
+        value={value ? value.toISOString().slice(0, 16) : ''}
+        onChange={(event) => onChange?.(event.target.value ? new Date(event.target.value) : undefined)}
+      />
+    </label>
+  )
 }));
 
 vi.mock('@alga-psa/ui/components/Input', () => ({
@@ -394,10 +458,21 @@ vi.mock('@alga-psa/ui/components/Switch', () => ({
   )
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: i18nMocks.t
+  }),
+  useFormatters: () => ({
+    formatDate: i18nMocks.formatDate,
+    formatRelativeTime: i18nMocks.formatRelativeTime
+  })
+}));
+
 vi.mock('@alga-psa/workflows/actions', () => ({
   listWorkflowSchedulesAction: actionMocks.listWorkflowSchedulesAction,
   listWorkflowScheduleBusinessHoursAction: actionMocks.listWorkflowScheduleBusinessHoursAction,
   listWorkflowDefinitionsPagedAction: actionMocks.listWorkflowDefinitionsPagedAction,
+  listWorkflowSchemaRefsAction: actionMocks.listWorkflowSchemaRefsAction,
   getWorkflowScheduleAction: actionMocks.getWorkflowScheduleAction,
   pauseWorkflowScheduleAction: actionMocks.pauseWorkflowScheduleAction,
   resumeWorkflowScheduleAction: actionMocks.resumeWorkflowScheduleAction,
@@ -440,6 +515,7 @@ describe('Schedules', () => {
       return { items };
     });
     actionMocks.listWorkflowDefinitionsPagedAction.mockResolvedValue({ items: workflowFixtures });
+    actionMocks.listWorkflowSchemaRefsAction.mockResolvedValue({ refs: ['schema.billing', 'schema.ticket'] });
     actionMocks.listWorkflowScheduleBusinessHoursAction.mockResolvedValue({
       items: [
         { schedule_id: 'bh-default', schedule_name: 'Default business hours', is_default: true, is_24x7: false },
@@ -642,7 +718,7 @@ describe('Schedules', () => {
     expect(screen.getByLabelText('Time')).toBeInTheDocument();
     expect(screen.getByLabelText('Timezone')).toBeInTheDocument();
     expect(screen.getByLabelText('Run on')).toBeInTheDocument();
-    expect(screen.getByText(/runs every day at/i)).toBeInTheDocument();
+    expect(screen.getByText('Runs every day at 9:00 AM UTC')).toBeInTheDocument();
   });
 
   it('T012: shows recurring day-filter controls and calendar-source options only when relevant, including specific schedule options', async () => {

@@ -3,6 +3,7 @@
 import React from 'react';
 
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useWorkflowInputSourceModeOptions } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 import type { Expr, MappingValue } from '@alga-psa/workflows/runtime';
 
 export type WorkflowActionInputSourceModeValue = 'reference' | 'fixed';
@@ -22,11 +23,6 @@ export type WorkflowActionInputPreservedModeValues = {
   preservedFixedValue?: MappingValue;
   preservedReferenceValue?: MappingValue;
 };
-
-const SOURCE_MODE_OPTIONS = [
-  { value: 'reference', label: 'Reference' },
-  { value: 'fixed', label: 'Fixed value' },
-] as const;
 
 export function isSimpleFieldReferenceExpression(expression: string | undefined): boolean {
   if (!expression) return false;
@@ -170,13 +166,14 @@ export const WorkflowActionInputSourceMode: React.FC<{
   disabled,
 }) => {
   const sourceMode = deriveWorkflowActionInputSourceMode(value);
+  const sourceModeOptions = useWorkflowInputSourceModeOptions();
 
   return (
     <div className="flex flex-col items-end gap-1">
       <div className="flex items-center gap-2">
         <CustomSelect
           id={`${idPrefix}-source-mode`}
-          options={[...SOURCE_MODE_OPTIONS]}
+          options={sourceModeOptions}
           value={sourceMode.mode}
           onValueChange={(nextMode) => onModeChange(nextMode as WorkflowActionInputSourceModeValue)}
           disabled={disabled}

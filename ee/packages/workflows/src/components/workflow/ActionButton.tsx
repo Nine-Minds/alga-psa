@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogFooter
 } from '@alga-psa/ui/components/Dialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ActionButtonProps {
   action: Action;
@@ -26,6 +27,7 @@ export function ActionButton({
   disabled = false,
   className = '',
 }: ActionButtonProps) {
+  const { t } = useTranslation('msp/workflows');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   
@@ -65,7 +67,9 @@ export function ActionButton({
   };
   
   // Determine button text based on processing state
-  const buttonText = isProcessing ? 'Processing...' : action.label;
+  const buttonText = isProcessing
+    ? t('actionButton.processing', { defaultValue: 'Processing...' })
+    : action.label;
   
   // Determine button variant (ensuring it's a valid variant)
   const variant = action.variant || (action.primary ? 'default' : 'secondary');
@@ -90,7 +94,7 @@ export function ActionButton({
           isOpen={isConfirmationOpen}
           onClose={handleDialogClose}
           id={`confirm-${action.id}`}
-          title="Confirm Action"
+          title={t('actionButton.confirmTitle', { defaultValue: 'Confirm Action' })}
         >
           <DialogContent>
             <div className="py-4">
@@ -104,7 +108,7 @@ export function ActionButton({
                 onClick={handleDialogClose}
                 disabled={isProcessing}
               >
-                Cancel
+                {t('actionButton.cancel', { defaultValue: 'Cancel' })}
               </Button>
               <Button
                 id={`confirm-action-${action.id}`}
@@ -113,7 +117,9 @@ export function ActionButton({
                 onClick={executeAction}
                 disabled={isProcessing}
               >
-                {isProcessing ? 'Processing...' : 'Confirm'}
+                {isProcessing
+                  ? t('actionButton.processing', { defaultValue: 'Processing...' })
+                  : t('actionButton.confirm', { defaultValue: 'Confirm' })}
               </Button>
             </DialogFooter>
           </DialogContent>

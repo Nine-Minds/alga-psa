@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@alga-psa/ui/components/Dialog';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { InputMapping, MappingValue, Expr } from '@alga-psa/workflows/runtime';
 import {
   type ExpressionContext,
@@ -351,6 +352,7 @@ const MappingFieldEditor: React.FC<{
   expressionContext,
   referenceBrowseContext,
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const [expanded, setExpanded] = useState(true);
   const [preservedFixedValue, setPreservedFixedValue] = useState<MappingValue | undefined>(() =>
     deriveWorkflowActionInputSourceMode(value).mode === 'fixed' ? value : undefined
@@ -555,7 +557,7 @@ const MappingFieldEditor: React.FC<{
                   ) : (
                     <ChevronRight className="mr-1 h-3.5 w-3.5" />
                   )}
-                  Browse sources
+                  {t('inputMappingEditor.browseSources', { defaultValue: 'Browse sources' })}
                 </Button>
               </div>
               <ReferenceScopeSelector
@@ -595,9 +597,13 @@ const MappingFieldEditor: React.FC<{
               <div className="flex items-start gap-2 text-sm text-amber-900">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <div>
-                  <p className="font-medium">Legacy mapping no longer supported here</p>
+                  <p className="font-medium">
+                    {t('inputMappingEditor.legacy.title', { defaultValue: 'Legacy mapping no longer supported here' })}
+                  </p>
                   <p className="text-xs text-amber-800">
-                    This field uses a saved expression or secret. Replace it with a structured reference or a fixed value.
+                    {t('inputMappingEditor.legacy.description', {
+                      defaultValue: 'This field uses a saved expression or secret. Replace it with a structured reference or a fixed value.',
+                    })}
                   </p>
                 </div>
               </div>
@@ -613,7 +619,7 @@ const MappingFieldEditor: React.FC<{
                   disabled={disabled}
                   onClick={() => handleSourceModeChange('reference')}
                 >
-                  Use reference
+                  {t('inputMappingEditor.legacy.useReference', { defaultValue: 'Use reference' })}
                 </Button>
                 <Button
                   id={`${idPrefix}-replace-with-fixed`}
@@ -623,7 +629,7 @@ const MappingFieldEditor: React.FC<{
                   disabled={disabled}
                   onClick={() => handleSourceModeChange('fixed')}
                 >
-                  Use fixed value
+                  {t('inputMappingEditor.legacy.useFixedValue', { defaultValue: 'Use fixed value' })}
                 </Button>
               </div>
             </div>
@@ -701,6 +707,7 @@ const StructuredLiteralGroup: React.FC<{
   actions,
   children,
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
@@ -712,7 +719,15 @@ const StructuredLiteralGroup: React.FC<{
           onClick={() => setExpanded(!expanded)}
           aria-expanded={expanded}
           aria-controls={`${id}-content`}
-          aria-label={`${expanded ? 'Collapse' : 'Expand'} ${title}`}
+          aria-label={expanded
+            ? t('inputMappingEditor.structuredGroup.collapseAria', {
+              defaultValue: 'Collapse {{title}}',
+              title,
+            })
+            : t('inputMappingEditor.structuredGroup.expandAria', {
+              defaultValue: 'Expand {{title}}',
+              title,
+            })}
           className="flex items-center gap-2 text-xs font-medium text-gray-700 hover:text-gray-900"
         >
           {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
@@ -832,6 +847,7 @@ const FixedValueEditorShell: React.FC<{
   disabled?: boolean;
   inlineEditor?: React.ReactNode;
 }> = ({ field, idPrefix, value, onChange, disabled, inlineEditor }) => {
+  const { t } = useTranslation('msp/workflows');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [draftValue, setDraftValue] = useState('');
   const dialogMode = getWorkflowFieldEditor(field)?.dialog?.mode;
@@ -869,7 +885,7 @@ const FixedValueEditorShell: React.FC<{
             className="gap-1"
           >
             <Expand className="h-3.5 w-3.5" />
-            Open editor
+            {t('inputMappingEditor.fixedValueDialog.openEditor', { defaultValue: 'Open editor' })}
           </Button>
         </div>
       </div>
@@ -877,7 +893,10 @@ const FixedValueEditorShell: React.FC<{
         id={`${idPrefix}-dialog`}
         isOpen={isDialogOpen}
         onClose={closeDialog}
-        title={`Edit ${field.name}`}
+        title={t('inputMappingEditor.fixedValueDialog.title', {
+          defaultValue: 'Edit {{fieldName}}',
+          fieldName: field.name,
+        })}
         className="max-w-4xl"
         footer={(
           <div className="flex justify-end space-x-2">
@@ -888,7 +907,7 @@ const FixedValueEditorShell: React.FC<{
               onClick={closeDialog}
               disabled={disabled}
             >
-              Cancel
+              {t('inputMappingEditor.fixedValueDialog.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               id={`${idPrefix}-dialog-save`}
@@ -896,16 +915,23 @@ const FixedValueEditorShell: React.FC<{
               onClick={applyDialogValue}
               disabled={disabled}
             >
-              Apply
+              {t('inputMappingEditor.fixedValueDialog.apply', { defaultValue: 'Apply' })}
             </Button>
           </div>
         )}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit {field.name}</DialogTitle>
+            <DialogTitle>
+              {t('inputMappingEditor.fixedValueDialog.title', {
+                defaultValue: 'Edit {{fieldName}}',
+                fieldName: field.name,
+              })}
+            </DialogTitle>
             <DialogDescription>
-              Use the larger editor for longer fixed-value content.
+              {t('inputMappingEditor.fixedValueDialog.description', {
+                defaultValue: 'Use the larger editor for longer fixed-value content.',
+              })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -956,6 +982,7 @@ const LiteralValueEditor: React.FC<{
   expressionContext,
   referenceBrowseContext,
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const fieldEditor = getWorkflowFieldEditor(field);
   const inlineEditorMode = fieldEditor?.inline?.mode;
   const hasPickerEditor = fieldEditor?.kind === 'picker' && inlineEditorMode === 'picker-summary';
@@ -1014,8 +1041,8 @@ const LiteralValueEditor: React.FC<{
   }, [value, hasStructuredPrimitiveArrayEditor]);
 
   const nullableOptions: SelectOption[] = [
-    { value: 'value', label: 'Use value' },
-    { value: 'null', label: 'Set null' },
+    { value: 'value', label: t('inputMappingEditor.nullable.useValue', { defaultValue: 'Use value' }) },
+    { value: 'null', label: t('inputMappingEditor.nullable.setNull', { defaultValue: 'Set null' }) },
   ];
   const supportsNull = field.nullable === true;
   const wrapNullableEditor = (editor: React.ReactNode) => {
@@ -1125,8 +1152,8 @@ const LiteralValueEditor: React.FC<{
   // Handle array/object
   if (fieldType === 'array' || fieldType === 'object') {
     const modeOptions: SelectOption[] = [
-      { value: 'structured', label: 'Structured' },
-      { value: 'json', label: 'Raw JSON' }
+      { value: 'structured', label: t('inputMappingEditor.mode.structured', { defaultValue: 'Structured' }) },
+      { value: 'json', label: t('inputMappingEditor.mode.rawJson', { defaultValue: 'Raw JSON' }) }
     ];
 
     const handleJsonChange = (text: string) => {
@@ -1136,7 +1163,7 @@ const LiteralValueEditor: React.FC<{
         setJsonError(null);
         onChange(parsed);
       } catch {
-        setJsonError('Invalid JSON');
+        setJsonError(t('inputMappingEditor.invalidJson', { defaultValue: 'Invalid JSON' }));
       }
     };
 
@@ -1165,7 +1192,7 @@ const LiteralValueEditor: React.FC<{
       return (
         <StructuredLiteralGroup
           id={`${idPrefix}-literal-object`}
-          title="Object fields"
+          title={t('inputMappingEditor.objectFields', { defaultValue: 'Object fields' })}
           actions={
             <Button
               id={`${idPrefix}-literal-object-reset`}
@@ -1176,7 +1203,7 @@ const LiteralValueEditor: React.FC<{
               disabled={disabled}
               className="h-7 px-2 text-gray-500 hover:text-gray-900"
             >
-              Reset
+              {t('inputMappingEditor.reset', { defaultValue: 'Reset' })}
             </Button>
           }
         >
@@ -1229,7 +1256,10 @@ const LiteralValueEditor: React.FC<{
             <StructuredLiteralGroup
               key={`${idPrefix}-row-${rowIndex}`}
               id={`${idPrefix}-literal-row-${rowIndex}`}
-              title={`Item ${rowIndex + 1}`}
+              title={t('inputMappingEditor.itemTitle', {
+                defaultValue: 'Item {{index}}',
+                index: rowIndex + 1,
+              })}
               actions={
                 <div className="flex items-center gap-1">
                   <Button
@@ -1245,7 +1275,7 @@ const LiteralValueEditor: React.FC<{
                     disabled={disabled}
                     className="h-7 px-2 text-gray-500 hover:text-gray-900"
                   >
-                    Reset
+                    {t('inputMappingEditor.reset', { defaultValue: 'Reset' })}
                   </Button>
                   <Button
                     id={`${idPrefix}-literal-row-remove-${rowIndex}`}
@@ -1295,7 +1325,7 @@ const LiteralValueEditor: React.FC<{
             className="w-full justify-center"
           >
             <Plus className="mr-1 h-3.5 w-3.5" />
-            Add item
+            {t('inputMappingEditor.addItem', { defaultValue: 'Add item' })}
           </Button>
         </div>
       );
@@ -1318,12 +1348,16 @@ const LiteralValueEditor: React.FC<{
               }
             }}
             rows={4}
-            placeholder="Enter one value per line, or comma-separated"
+            placeholder={t('inputMappingEditor.primitiveList.placeholder', {
+              defaultValue: 'Enter one value per line, or comma-separated',
+            })}
             className={listError ? 'border-destructive focus:ring-destructive focus:border-destructive' : ''}
             disabled={disabled}
           />
           <p className="text-[11px] text-gray-500">
-            Use newline, comma, or semicolon separators.
+            {t('inputMappingEditor.primitiveList.helperText', {
+              defaultValue: 'Use newline, comma, or semicolon separators.',
+            })}
           </p>
           {listError && (
             <div className="flex items-center gap-1 text-xs text-destructive">
@@ -1358,7 +1392,10 @@ const LiteralValueEditor: React.FC<{
             <StructuredLiteralGroup
               key={`${idPrefix}-dynamic-row-${rowIndex}`}
               id={`${idPrefix}-literal-dynamic-row-${rowIndex}`}
-              title={`Item ${rowIndex + 1}`}
+              title={t('inputMappingEditor.itemTitle', {
+                defaultValue: 'Item {{index}}',
+                index: rowIndex + 1,
+              })}
               actions={
                 <div className="flex items-center gap-1">
                   <Button
@@ -1378,7 +1415,7 @@ const LiteralValueEditor: React.FC<{
                     disabled={disabled}
                     className="h-7 px-2 text-gray-500 hover:text-gray-900"
                   >
-                    Reset
+                    {t('inputMappingEditor.reset', { defaultValue: 'Reset' })}
                   </Button>
                   <Button
                     id={`${idPrefix}-literal-dynamic-row-remove-${rowIndex}`}
@@ -1424,7 +1461,7 @@ const LiteralValueEditor: React.FC<{
             className="w-full justify-center"
           >
             <Plus className="mr-1 h-3.5 w-3.5" />
-            Add item
+            {t('inputMappingEditor.addItem', { defaultValue: 'Add item' })}
           </Button>
         </div>
       );
@@ -1465,7 +1502,7 @@ const LiteralValueEditor: React.FC<{
       id={`${idPrefix}-literal-str`}
       value={typeof value === 'string' ? value : ''}
       onChange={(e) => onChange(e.target.value)}
-      placeholder="Enter value..."
+      placeholder={t('inputMappingEditor.stringPlaceholder', { defaultValue: 'Enter value...' })}
       rows={5}
       disabled={disabled}
     />
@@ -1475,7 +1512,7 @@ const LiteralValueEditor: React.FC<{
       type={stringInputType}
       value={typeof value === 'string' ? value : ''}
       onChange={(e) => onChange(e.target.value)}
-      placeholder="Enter value..."
+      placeholder={t('inputMappingEditor.stringPlaceholder', { defaultValue: 'Enter value...' })}
       disabled={disabled}
     />
   ) : null;
@@ -1577,6 +1614,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   expressionContext: providedExpressionContext,
   referenceBrowseContext,
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const missingRequiredCount = useMemo(() => {
     return targetFields.filter((field) => {
       if (!field.required) return false;
@@ -1679,7 +1717,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   if (targetFields.length === 0) {
     return (
       <div className="text-sm text-gray-500 p-3 bg-gray-50 rounded border border-gray-200">
-        This action has no input fields.
+        {t('inputMappingEditor.empty', { defaultValue: 'This action has no input fields.' })}
       </div>
     );
   }
@@ -1691,7 +1729,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
       onFocus={keyboardHandlers.activate}
       onBlur={keyboardHandlers.deactivate}
       role="listbox"
-      aria-label="Action input fields"
+      aria-label={t('inputMappingEditor.aria.listbox', { defaultValue: 'Action input fields' })}
       aria-activedescendant={
         keyboardState.focusedIndex >= 0
           ? `mapping-field-${stepId}-${allFieldNames[keyboardState.focusedIndex]}`
@@ -1701,12 +1739,22 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
           <div>
-            {filledFieldCount} of {targetFields.length} fields filled
+            {t('inputMappingEditor.summary.filledCount', {
+              defaultValue: '{{filled}} of {{total}} fields filled',
+              filled: filledFieldCount,
+              total: targetFields.length,
+            })}
           </div>
           {missingRequiredCount > 0 && (
-            <div className="text-xs text-destructive flex items-center gap-1" title="Required fields are missing values">
+            <div
+              className="text-xs text-destructive flex items-center gap-1"
+              title={t('inputMappingEditor.summary.missingTitle', { defaultValue: 'Required fields are missing values' })}
+            >
               <AlertTriangle className="w-3 h-3" />
-              {missingRequiredCount} required missing
+              {t('inputMappingEditor.summary.missingCount', {
+                defaultValue: '{{count}} required missing',
+                count: missingRequiredCount,
+              })}
             </div>
           )}
         </div>
@@ -1721,7 +1769,10 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
               className="text-xs text-primary-600 hover:text-primary-700"
             >
               <Wand2 className="w-3.5 h-3.5 mr-1" />
-              Apply suggestions ({suggestions.length})
+              {t('inputMappingEditor.applySuggestions', {
+                defaultValue: 'Apply suggestions ({{count}})',
+                count: suggestions.length,
+              })}
             </Button>
           )}
           {Object.keys(value).length > 0 && (
@@ -1734,13 +1785,17 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
               className="text-xs text-gray-500 hover:text-destructive"
             >
               <RotateCcw className="w-3.5 h-3.5 mr-1" />
-              Clear values
+              {t('inputMappingEditor.clearValues', { defaultValue: 'Clear values' })}
             </Button>
           )}
         </div>
       </div>
 
-      <div className="space-y-2" role="group" aria-label="Action input fields list">
+      <div
+        className="space-y-2"
+        role="group"
+        aria-label={t('inputMappingEditor.aria.fieldList', { defaultValue: 'Action input fields list' })}
+      >
         {targetFields.map((field) => {
           const suggestion = suggestionMap.get(field.name);
           const isMissingRequired = Boolean(field.required) && !isMappingValueSet(value[field.name], field.type);
@@ -1779,7 +1834,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                   className={`absolute -right-2 -top-2 p-1 bg-white dark:bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-full shadow-sm transition-opacity hover:bg-destructive/10 hover:border-destructive/30 ${
                     isFocused ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                   }`}
-                  title="Remove mapping (Delete/Backspace)"
+                  title={t('inputMappingEditor.removeMapping', { defaultValue: 'Remove mapping (Delete/Backspace)' })}
                   disabled={disabled}
                   tabIndex={-1}
                 >
@@ -1814,7 +1869,9 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                       <Sparkles className="w-3 h-3" />
                       <span className="truncate">← {suggestion.sourcePath}</span>
                       {suggestion.confidence === 'fuzzy' && (
-                        <span className="text-primary-400">(fuzzy)</span>
+                        <span className="text-primary-400">
+                          {t('inputMappingEditor.fuzzySuffix', { defaultValue: '(fuzzy)' })}
+                        </span>
                       )}
                     </span>
                   )}
@@ -1828,7 +1885,10 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                       onClick={() => handleApplySuggestion(suggestion)}
                       disabled={disabled}
                       className="text-xs text-primary-600"
-                      title={`Apply suggestion: ${suggestion.sourcePath}`}
+                      title={t('inputMappingEditor.applySuggestionTitle', {
+                        defaultValue: 'Apply suggestion: {{sourcePath}}',
+                        sourcePath: suggestion.sourcePath,
+                      })}
                     >
                       <Wand2 className="w-3.5 h-3.5" />
                     </Button>
@@ -1841,7 +1901,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                     disabled={disabled}
                   >
                     <Plus className="w-3.5 h-3.5 mr-1" />
-                    Fill
+                    {t('inputMappingEditor.fill', { defaultValue: 'Fill' })}
                   </Button>
                 </div>
               </div>

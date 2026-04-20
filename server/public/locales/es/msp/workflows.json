@@ -1,0 +1,1884 @@
+{
+  "page": {
+    "title": "Flujos de trabajo"
+  },
+  "nav": {
+    "designer": "Diseñador",
+    "runs": "Ejecuciones",
+    "control": "Control de flujo de trabajo",
+    "tasks": "Tareas"
+  },
+  "sections": {
+    "definitions": "Definiciones de flujo de trabajo",
+    "runStudio": "Estudio de ejecución"
+  },
+  "empty": {
+    "title": "No se encontraron flujos de trabajo",
+    "description": "Los flujos de trabajo aparecerán aquí una vez creados."
+  },
+  "filters": {
+    "allStatuses": "Todos los estados",
+    "allLevels": "Todos los niveles",
+    "allTypes": "Todos los tipos"
+  },
+  "actions": {
+    "create": "Crear flujo de trabajo",
+    "open": "Abrir",
+    "close": "Cerrar"
+  },
+  "runList": {
+    "quickRanges": {
+      "last24h": "Últimas 24 h",
+      "last7d": "Últimos 7 días"
+    },
+    "summary": {
+      "total": "Total",
+      "activeWorkflows": "Flujos de trabajo activos",
+      "runCount": "{{count}} ejecuciones"
+    },
+    "filters": {
+      "all": "Todos",
+      "allWorkflows": "Todos los flujos de trabajo",
+      "searchLabel": "ID de ejecución o clave de correlación",
+      "searchPlaceholder": "Buscar por ID de ejecución o clave de correlación",
+      "statusLabel": "Estado",
+      "workflowLabel": "Flujo de trabajo",
+      "versionLabel": "Versión del flujo de trabajo",
+      "versionPlaceholder": "Cualquier versión",
+      "fromLabel": "Desde",
+      "toLabel": "Hasta",
+      "sortLabel": "Ordenar"
+    },
+    "actions": {
+      "applyFilters": "Aplicar filtros",
+      "reset": "Restablecer",
+      "viewLatestRun": "Ver última ejecución",
+      "runNow": "Ejecutar ahora",
+      "exportCsv": "Exportar CSV",
+      "refresh": "Actualizar",
+      "resumeSelected": "Reanudar selección ({{count}})",
+      "cancelSelected": "Cancelar selección ({{count}})",
+      "clearSelection": "Borrar selección",
+      "details": "Detalles",
+      "loadMore": "Cargar más"
+    },
+    "table": {
+      "runId": "ID de ejecución",
+      "workflow": "Flujo de trabajo",
+      "version": "Versión",
+      "tenant": "Inquilino",
+      "triggerPayload": "Carga útil del disparador",
+      "status": "Estado",
+      "started": "Iniciado",
+      "updated": "Actualizado",
+      "duration": "Duración",
+      "emptyValue": "—",
+      "trigger": {
+        "manual": "Manual",
+        "mapped": "Mapeado",
+        "identity": "Identidad"
+      }
+    },
+    "states": {
+      "loading": "Cargando ejecuciones…",
+      "empty": "Ninguna ejecución coincide con los filtros actuales."
+    },
+    "bulk": {
+      "resumeTitle": "Reanudar ejecuciones seleccionadas",
+      "resumeMessage": "¿Reanudar {{count}} ejecución(es) seleccionada(s)?",
+      "cancelTitle": "Cancelar ejecuciones seleccionadas",
+      "cancelMessage": "¿Cancelar {{count}} ejecución(es) seleccionada(s)? No se puede deshacer.",
+      "reasonLabel": "Motivo",
+      "resumeReasonPlaceholder": "Indique un motivo para reanudar",
+      "cancelReasonPlaceholder": "Indique un motivo para cancelar",
+      "resumeConfirm": "Reanudar ejecuciones",
+      "cancelConfirm": "Cancelar ejecuciones"
+    },
+    "toasts": {
+      "loadRunsFailed": "Error al cargar las ejecuciones",
+      "selectWorkflowForLatestRun": "Seleccione un flujo de trabajo para ver su última ejecución.",
+      "noRunsFoundForWorkflow": "No se encontraron ejecuciones para ese flujo de trabajo.",
+      "loadLatestRunFailed": "Error al cargar la última ejecución",
+      "selectWorkflowToRun": "Seleccione un flujo de trabajo para ejecutar.",
+      "exportReady": "Exportación de ejecución lista",
+      "exportFailed": "Error al exportar las ejecuciones",
+      "selectRunsForBulkAction": "Seleccione ejecuciones para realizar esta acción.",
+      "bulkReasonTooShort": "El motivo debe tener al menos 3 caracteres.",
+      "noEligibleRuns": "Ninguna de las ejecuciones seleccionadas es elegible para esa acción.",
+      "bulkResumeFailedCount": "Error al reanudar {{count}} ejecución(es).",
+      "bulkCancelFailedCount": "Error al cancelar {{count}} ejecución(es).",
+      "bulkResumeSuccessCount": "{{count}} ejecución(es) reanudada(s).",
+      "bulkCancelSuccessCount": "{{count}} ejecución(es) cancelada(s).",
+      "bulkSkippedIneligibleCount": "{{count}} ejecución(es) no elegible(s) omitida(s).",
+      "bulkActionFailed": "Acción masiva fallida"
+    }
+  },
+  "runDetails": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "header": {
+      "runIdLabel": "ID de ejecución",
+      "workflowIdLabel": "ID del flujo de trabajo:",
+      "triggerLabel": "Disparador:"
+    },
+    "actions": {
+      "resume": "Reanudar",
+      "cancel": "Cancelar",
+      "export": "Exportar",
+      "retry": "Reintentar",
+      "replay": "Repetir",
+      "requeueEvent": "Reencolar evento",
+      "close": "Cerrar",
+      "view": "Ver",
+      "apply": "Aplicar",
+      "reset": "Restablecer",
+      "exportCsv": "Exportar CSV",
+      "loadMore": "Cargar más",
+      "exportAuditCsv": "Exportar auditoría en CSV"
+    },
+    "summary": {
+      "statusLabel": "Estado",
+      "startedLabel": "Iniciado",
+      "updatedLabel": "Actualizado",
+      "completedLabel": "Completado",
+      "triggerLabel": "Disparador",
+      "scheduleStateLabel": "Estado de la programación",
+      "scheduledForLabel": "Programado para",
+      "cronLabel": "Cron",
+      "nodePathLabel": "Ruta del nodo:",
+      "eventTypeLabel": "Tipo de evento:",
+      "triggerPayloadSchemaLabel": "Esquema de carga útil del disparador:",
+      "mapped": "Mapeado",
+      "identity": "Identidad",
+      "runErrorFallback": "Error de ejecución",
+      "errorCategoryFallback": "Error"
+    },
+    "stepTimeline": {
+      "title": "Cronología del paso",
+      "description": "Intentos, duraciones y errores por paso.",
+      "loading": "Cargando…",
+      "stepStatusLabel": "Estado del paso",
+      "nodeTypeLabel": "Tipo de nodo",
+      "collapseNestedLabel": "Contraer bloques anidados",
+      "columns": {
+        "stepPath": "Ruta del paso",
+        "type": "Tipo",
+        "status": "Estado",
+        "attempt": "Intento",
+        "duration": "Duración",
+        "nextRetry": "Próximo reintento",
+        "started": "Iniciado",
+        "error": "Error"
+      },
+      "empty": "Aún no hay historial de pasos."
+    },
+    "stepDetails": {
+      "title": "Detalles del paso",
+      "statusLabel": "Estado",
+      "attemptLabel": "Intento",
+      "startedLabel": "Iniciado",
+      "completedLabel": "Completado",
+      "durationLabel": "Duración",
+      "nodeTypeLabel": "Tipo de nodo",
+      "definitionStepIdLabel": "ID del paso de definición",
+      "nextRetryLabel": "Próximo reintento",
+      "errorTitle": "Error",
+      "stepErrorFallback": "Error de paso",
+      "errorCategoryFallback": "Error"
+    },
+    "waitHistory": {
+      "title": "Historial de esperas",
+      "eventLine": "Evento: {{event}} · Clave: {{key}} · Filtros: {{count}}",
+      "timeLine": "Modo: {{mode}} · Reanudación programada: {{scheduledResume}}",
+      "timeoutLine": "Tiempo de espera: {{timeout}} · Resuelto: {{resolved}}"
+    },
+    "envelope": {
+      "title": "Datos del envoltorio",
+      "description": "Carga útil, variables, metadatos y errores de la última instantánea.",
+      "redactedNotice": "Los valores redactados se muestran como {{marker}}.",
+      "noSnapshot": "No hay instantánea disponible.",
+      "tabs": {
+        "payload": "Carga útil",
+        "vars": "Variables",
+        "meta": "Meta",
+        "error": "Error",
+        "raw": "Sin procesar"
+      }
+    },
+    "invocations": {
+      "title": "Invocaciones de acción",
+      "redactedNotice": "Los valores redactados se muestran como {{marker}}.",
+      "empty": "No se han registrado llamadas de acción para este paso.",
+      "attemptLine": "Intento {{count}}",
+      "durationLine": "Duración: {{duration}}",
+      "sizeLine": "Tamaño de entrada: {{inputSize}}{{inputSuffix}} · Tamaño de salida: {{outputSize}}{{outputSuffix}}",
+      "truncatedSuffix": " (truncated)",
+      "inputLabel": "Entrada",
+      "outputLabel": "Salida"
+    },
+    "logs": {
+      "title": "Registros de ejecución",
+      "description": "Eventos de registro operativo de esta ejecución.",
+      "searchLabel": "Buscar",
+      "searchPlaceholder": "Buscar en los registros",
+      "levelLabel": "Nivel",
+      "empty": "No se encontraron entradas de registro.",
+      "columns": {
+        "timestamp": "Marca de tiempo",
+        "level": "Nivel",
+        "message": "Mensaje",
+        "step": "Paso",
+        "event": "Evento",
+        "correlation": "Correlación"
+      }
+    },
+    "audit": {
+      "title": "Registro de auditoría",
+      "description": "Acciones administrativas para esta ejecución.",
+      "empty": "Aún no hay entradas de auditoría.",
+      "systemUser": "sistema",
+      "columns": {
+        "timestamp": "Marca de tiempo",
+        "operation": "Operación",
+        "user": "Usuario",
+        "details": "Detalles"
+      }
+    },
+    "dialogs": {
+      "reasonLabel": "Motivo",
+      "resumeTitle": "Reanudar ejecución del flujo de trabajo",
+      "resumeMessage": "¿Reanudar esta ejecución ahora?",
+      "resumeReasonPlaceholder": "Indique un motivo para reanudar",
+      "cancelTitle": "Cancelar la ejecución del flujo de trabajo",
+      "cancelMessage": "¿Cancelar esta ejecución? No se puede deshacer.",
+      "cancelReasonPlaceholder": "Indique un motivo para cancelar",
+      "cancelConfirm": "Cancelar ejecución",
+      "retryTitle": "Reintentar ejecución del flujo de trabajo",
+      "retryMessage": "¿Reintentar esta ejecución desde el último paso fallido?",
+      "retryReasonPlaceholder": "Indique un motivo para reintentar",
+      "retryConfirm": "Reintentar ejecución",
+      "replayTitle": "Repetir la ejecución del flujo de trabajo",
+      "replayMessage": "Repetir esta ejecución con una nueva carga útil.",
+      "replayReasonPlaceholder": "Indique un motivo para repetir",
+      "payloadLabel": "Carga útil (JSON)",
+      "replayConfirm": "Repetir ejecución",
+      "requeueTitle": "Reencolar espera de evento",
+      "requeueMessage": "¿Reencolar la espera de evento más reciente de esta ejecución?",
+      "requeueReasonPlaceholder": "Indique un motivo para reencolar",
+      "requeueConfirm": "Reencolar espera"
+    },
+    "toasts": {
+      "loadRunDetailsFailed": "Error al cargar los detalles de la ejecución",
+      "loadLogsFailed": "Error al cargar los registros",
+      "loadAuditLogsFailed": "Error al cargar los registros de auditoría",
+      "logExportReady": "Exportación de registros lista",
+      "exportLogsFailed": "Error al exportar los registros",
+      "reasonTooShort": "El motivo debe tener al menos 3 caracteres.",
+      "runResumed": "Ejecución reanudada",
+      "resumeRunFailed": "Error al reanudar la ejecución",
+      "runCanceled": "Ejecución cancelada",
+      "cancelRunFailed": "Error al cancelar la ejecución",
+      "runExportReady": "Exportación de ejecución lista",
+      "exportRunFailed": "Error al exportar la ejecución",
+      "runRetryStarted": "Reintento de ejecución iniciado",
+      "retryRunFailed": "Error al reintentar la ejecución",
+      "replayPayloadInvalid": "La carga útil de la repetición debe ser JSON válido.",
+      "runReplayStarted": "Repetición de ejecución iniciada",
+      "replayRunFailed": "Error al repetir la ejecución",
+      "eventWaitRequeued": "Espera de evento reencolada",
+      "requeueEventWaitFailed": "Error al reencolar la espera de evento",
+      "auditExportReady": "Exportación de auditoría lista",
+      "exportAuditLogsFailed": "Error al exportar los registros de auditoría"
+    }
+  },
+  "runDialog": {
+    "title": "Ejecutar flujo de trabajo",
+    "description": "Provide a synthetic payload to preview (and run) a workflow.",
+    "descriptionEvent": "Evento: {{name}}.",
+    "draftWarning": "La versión borrador difiere de la publicada (v{{version}}).",
+    "concurrencyLimit": "Límite de concurrencia: {{count}} ejecución(es) a la vez.",
+    "common": {
+      "emptyValue": "—"
+    },
+    "actions": {
+      "addField": "Añadir campo",
+      "addItem": "Añadir elemento",
+      "cloneLatestRun": "Clonar última ejecución",
+      "close": "Cerrar",
+      "copyPayload": "Copiar carga útil",
+      "formBuilder": "Constructor de formulario",
+      "hide": "Ocultar",
+      "jsonEditor": "Editor JSON",
+      "openEventCatalog": "Abrir catálogo de eventos",
+      "publishDraft": "Publicar borrador",
+      "publishLatest": "Publicar la última versión",
+      "remove": "Eliminar",
+      "reset": "Restablecer",
+      "resetToDefaults": "Restablecer valores predeterminados",
+      "savePreset": "Guardar preajuste",
+      "show": "Mostrar",
+      "startRun": "Iniciar ejecución",
+      "starting": "Iniciando…"
+    },
+    "eventCatalog": {
+      "title": "Catálogo de eventos",
+      "description": "Elija un tipo de evento para iniciar los esquemas de carga útil.",
+      "searchLabel": "Buscar eventos",
+      "searchPlaceholder": "Buscar por nombre, tipo o categoría",
+      "eventTypeLabel": "Tipo de evento",
+      "loadingEvents": "Cargando eventos…",
+      "selectEventType": "Seleccionar tipo de evento",
+      "systemBadge": "Sistema",
+      "tenantBadge": "Inquilino",
+      "systemEvent": "Evento del sistema",
+      "tenantEvent": "Evento de inquilino",
+      "uncategorized": "Sin categoría"
+    },
+    "fields": {
+      "workflowLabel": "Flujo de trabajo",
+      "publishedVersionLabel": "Versión publicada",
+      "triggerLabel": "Disparador",
+      "manualTrigger": "Manual",
+      "workflowStatusLabel": "Estado del flujo de trabajo",
+      "statusActive": "activo",
+      "statusPaused": "en pausa"
+    },
+    "form": {
+      "booleanTrue": "Verdadero",
+      "booleanFalse": "Falso",
+      "mapEntriesTitle": "Entradas del mapa",
+      "mapEntriesPrompt": "Introduzca la clave o ruta del campo",
+      "mapEntriesDescription": "Para objetos de tipo mapa, añada claves y establezca cada valor.",
+      "mapEntriesEmpty": "No se han añadido entradas de mapa.",
+      "noSchema": "No hay esquema disponible para renderizar un formulario."
+    },
+    "noPublishedVersion": {
+      "title": "Sin versión publicada",
+      "description": "Puede previsualizar el constructor de carga útil, pero debe publicar el flujo de trabajo antes de iniciar una ejecución."
+    },
+    "payload": {
+      "largePayloadWarning": "El tamaño de la carga útil supera los 256 KB; las ejecuciones pueden ser más lentas.",
+      "payloadJsonLabel": "Carga útil (JSON)",
+      "payloadLabel": "carga útil",
+      "payloadSize": "Tamaño de la carga útil: {{size}} KB"
+    },
+    "presets": {
+      "presetNameLabel": "Nombre del preajuste",
+      "presetNamePlaceholder": "p. ej. Carga útil de regresión",
+      "savedPresets": "Preajustes guardados"
+    },
+    "schema": {
+      "sourceLabel": "Origen del esquema",
+      "workflowSchema": "Esquema del flujo de trabajo",
+      "eventSchema": "Esquema de evento",
+      "schemaRef": "Ref. de esquema",
+      "schemaRefLabel": "Ref. de esquema",
+      "selectSchema": "Seleccionar esquema…",
+      "noSchemasFound": "No se encontraron esquemas",
+      "unknownSchemaRef": "Referencia de esquema desconocida.",
+      "useEventSchema": "Usar el esquema del evento",
+      "viewSchemaDiff": "Ver diferencia de esquema",
+      "hideSchemaDiff": "Ocultar diferencia de esquema",
+      "onlyInEvent": "Solo en el esquema de evento",
+      "requiredOnlyInEvent": "Obligatorio solo en el evento",
+      "onlyInWorkflow": "Solo en el esquema del flujo de trabajo",
+      "requiredOnlyInWorkflow": "Obligatorio solo en el flujo de trabajo",
+      "typeMismatches": "Incompatibilidades de tipo",
+      "typeMismatchLine": "{{field}}: evento {{eventType}} vs flujo de trabajo {{payloadType}}",
+      "selectedEventWarningPrefix": "El evento seleccionado ({{selectedEventType}}) puede no coincidir con el disparador de este flujo de trabajo ({{triggerEventName}}). ",
+      "matchOptional": "Las referencias de esquema coinciden; se aplicará un mapeo de disparador (opcional).",
+      "matchIdentity": "Las referencias de esquema coinciden; se usará un mapeo de identidad (sin mapeo necesario).",
+      "diffWillApply": "Las referencias de esquema difieren ({{eventSchemaRef}} → {{payloadSchemaRef}}); se aplicará un mapeo de disparador.",
+      "diffRequiredMissing": "Las referencias de esquema difieren ({{eventSchemaRef}} → {{payloadSchemaRef}}); se requiere un mapeo de disparador pero no está configurado.",
+      "triggerEventDiffers": "El esquema de evento del disparador difiere del esquema de carga útil del flujo de trabajo. Cambie a «Esquema de evento» si desea introducir una carga útil de evento del disparador.",
+      "eventUnavailable": "Esquema de evento no disponible; se usa el esquema del flujo de trabajo en su lugar.",
+      "mapping": {
+        "identityOptional": "Mapeo de identidad (sin mapeo necesario)",
+        "requiredMissing": "Se requiere un mapeo de disparador pero no está configurado",
+        "willApply": "Se aplicará un mapeo de disparador",
+        "willApplyOptional": "Se aplicará un mapeo de disparador (opcional)"
+      }
+    },
+    "systemWorkflowWarning": "Este es un flujo de trabajo del sistema. Ejecutarlo puede afectar a la automatización principal.",
+    "systemWorkflowConfirm": "Entiendo y deseo ejecutarlo.",
+    "templates": {
+      "exampleLabel": "Ejemplo {{count}}",
+      "eventTemplates": "Plantillas de evento",
+      "sampleTemplates": "Plantillas de ejemplo",
+      "emailTemplate": "Correo entrante",
+      "webhookTemplate": "Evento webhook"
+    },
+    "toasts": {
+      "confirmSystemRun": "Confirme que desea ejecutar este flujo de trabajo del sistema.",
+      "eventMissingSchemaRef": "El evento seleccionado no tiene referencia de esquema de carga útil; no se puede ejecutar con mapeo de disparador.",
+      "loadLatestRunFailed": "Error al cargar la última ejecución",
+      "mapEntryExists": "Esa clave ya existe.",
+      "noPriorPayload": "No prior run payload found.",
+      "payloadCopied": "Carga útil copiada al portapapeles.",
+      "presetSaved": "Preajuste guardado.",
+      "providePresetName": "Indique un nombre de preajuste.",
+      "startRunFailed": "Error al iniciar la ejecución",
+      "triggerMappingMissing": "Se requiere un mapeo de disparador para este esquema de evento pero no está configurado en el flujo de trabajo."
+    },
+    "validation": {
+      "invalidJson": "JSON no válido",
+      "summaryTitle": "La carga útil todavía necesita campos de evento obligatorios antes de iniciar la ejecución",
+      "summaryDescription": "Rellene los campos que faltan a continuación, cambie al constructor de formulario o use un botón de carga útil de ejemplo.",
+      "moreErrors": "+{{count}} más…"
+    }
+  },
+  "eventList": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "summary": {
+      "total": "Total",
+      "matched": "Coincidente",
+      "unmatched": "Sin coincidencia",
+      "errors": "Errores"
+    },
+    "filters": {
+      "eventNameLabel": "Nombre del evento",
+      "eventNamePlaceholder": "workflow.event",
+      "correlationKeyLabel": "Clave de correlación",
+      "correlationKeyPlaceholder": "corr-123",
+      "statusLabel": "Estado",
+      "fromLabel": "Desde",
+      "toLabel": "Hasta"
+    },
+    "actions": {
+      "applyFilters": "Aplicar filtros",
+      "reset": "Restablecer",
+      "exportCsv": "Exportar CSV",
+      "exportJson": "Exportar JSON",
+      "close": "Cerrar",
+      "viewRunDetails": "Ver detalles de la ejecución"
+    },
+    "table": {
+      "schemaConflict": "catálogo ≠ envío",
+      "columns": {
+        "event": "Evento",
+        "correlation": "Correlación",
+        "schema": "Esquema",
+        "status": "Estado",
+        "matchedRun": "Ejecución coincidente",
+        "payload": "Carga útil",
+        "created": "Creado"
+      }
+    },
+    "states": {
+      "loading": "Cargando eventos…",
+      "empty": "No se encontraron eventos."
+    },
+    "detail": {
+      "title": "Detalle del evento",
+      "loading": "Cargando detalle del evento…",
+      "eventIdLabel": "ID del evento",
+      "statusLabel": "Estado",
+      "eventNameLabel": "Nombre del evento",
+      "correlationKeyLabel": "Clave de correlación",
+      "payloadSchemaRefLabel": "Referencia de esquema de carga útil",
+      "schemaConflict": "Conflicto de referencia de esquema: catálogo {{catalog}} vs envío {{submission}}",
+      "createdLabel": "Creado",
+      "processedLabel": "Procesado",
+      "errorLine": "Error: {{message}}",
+      "waitLabel": "Espera",
+      "waitIdLine": "ID de espera: {{waitId}}",
+      "waitStatusLine": "Estado: {{status}}",
+      "waitTimeoutLine": "Tiempo de espera: {{value}}",
+      "waitResolvedLine": "Resuelto: {{value}}",
+      "waitStepLine": "Paso: {{value}}",
+      "matchedRunLabel": "Ejecución coincidente",
+      "runStatusLine": "Estado: {{status}}",
+      "payloadLabel": "Carga útil"
+    },
+    "toasts": {
+      "loadEventsFailed": "Error al cargar los eventos",
+      "loadEventDetailFailed": "Error al cargar el detalle del evento",
+      "exportReady": "Exportación de eventos lista",
+      "exportFailed": "Error al exportar los eventos"
+    }
+  },
+  "deadLetter": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "filters": {
+      "minimumRetriesLabel": "Reintentos mínimos",
+      "minimumRetriesPlaceholder": "3"
+    },
+    "actions": {
+      "refresh": "Actualizar",
+      "loadMore": "Cargar más"
+    },
+    "table": {
+      "columns": {
+        "runId": "ID de ejecución",
+        "workflow": "Flujo de trabajo",
+        "version": "Versión",
+        "status": "Estado",
+        "retries": "Reintentos",
+        "failedSteps": "Pasos fallidos",
+        "updated": "Actualizado"
+      }
+    },
+    "states": {
+      "empty": "No se encontraron ejecuciones de carta muerta.",
+      "loading": "Cargando ejecuciones de carta muerta…"
+    },
+    "toasts": {
+      "loadFailed": "Error al cargar las ejecuciones de carta muerta"
+    }
+  },
+  "audit": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "header": {
+      "title": "Auditoría del flujo de trabajo"
+    },
+    "actions": {
+      "exportCsv": "Exportar CSV",
+      "loadMore": "Cargar más"
+    },
+    "table": {
+      "columns": {
+        "timestamp": "Marca de tiempo",
+        "operation": "Operación",
+        "user": "Usuario",
+        "details": "Detalles"
+      }
+    },
+    "states": {
+      "selectWorkflow": "Seleccione un flujo de trabajo para ver el historial de auditoría.",
+      "empty": "Aún no hay entradas de auditoría."
+    },
+    "values": {
+      "system": "sistema"
+    },
+    "toasts": {
+      "loadFailed": "Error al cargar los registros de auditoría",
+      "exportReady": "Exportación de auditoría lista",
+      "exportFailed": "Error al exportar los registros de auditoría"
+    }
+  },
+  "designer": {
+    "page": {
+      "controlPanelTitle": "Panel de control de flujos de trabajo",
+      "controlPanelDescription": "Gestione programaciones, ejecuciones, eventos y el catálogo de eventos.",
+      "designerTitle": "Diseñador de flujos de trabajo",
+      "designerDescription": "Cree y mantenga automatizaciones de flujos de trabajo.",
+      "editorTitle": "Editor de flujos de trabajo",
+      "editorDescription": "Elija un flujo de trabajo para editar o cree uno nuevo."
+    },
+    "controlPanel": {
+      "tabs": {
+        "schedules": "Programaciones",
+        "runs": "Ejecuciones",
+        "events": "Eventos",
+        "eventCatalog": "Catálogo de eventos",
+        "deadLetter": "Carta muerta"
+      }
+    },
+    "toolbar": {
+      "backToList": "Volver a flujos de trabajo",
+      "newWorkflow": "Nuevo flujo de trabajo",
+      "saveDraft": "Guardar borrador",
+      "saving": "Guardando...",
+      "publish": "Publicar",
+      "publishing": "Publicando...",
+      "run": "Ejecutar",
+      "previewOnly": "Solo vista previa hasta que se publique una versión.",
+      "validation": {
+        "lastValidated": "Última validación: {{timestamp}}",
+        "unknown": "Estado de validación desconocido"
+      }
+    },
+    "form": {
+      "nameLabel": "Nombre del flujo de trabajo",
+      "versionLabel": "Versión",
+      "descriptionLabel": "Descripción",
+      "latestPublishedVersion": "Última versión publicada: {{version}}",
+      "triggerTypeLabel": "Tipo de disparador",
+      "triggerTypePlaceholder": "Seleccionar tipo de disparador",
+      "triggerTypeHelp": "Elija si este flujo de trabajo se inicia manualmente o desde un evento. Las programaciones reutilizables se gestionan en el panel de control.",
+      "manualTriggerNote": "Este flujo de trabajo no tiene disparador. Aun así se puede ejecutar manualmente y programar desde el panel de control una vez tenga un esquema de carga útil anclado y una versión publicada.",
+      "eventCategoryLabel": "Categoría del evento",
+      "eventLabel": "Evento",
+      "selectEventCategory": "Seleccionar categoría de evento",
+      "selectEvent": "Seleccionar evento",
+      "selectCategoryFirst": "Seleccione primero una categoría",
+      "inputDataLabel": "Datos de entrada del flujo de trabajo",
+      "inputDataEvent": "Sus pasos leen los datos desde el disparador seleccionado.",
+      "inputDataTimePrefix": "Este flujo de trabajo recibe una carga útil de reloj sintético fija. El contrato está anclado a",
+      "inputDataManualPrefix": "Ningún disparador usa",
+      "inputDataManualSuffix": "de forma predeterminada. Cámbielo en los ajustes avanzados del esquema si este flujo de trabajo requiere un contrato manual distinto.",
+      "triggerMappingRequired": "Se requiere un mapeo del disparador. Abra los ajustes avanzados del esquema para configurarlo.",
+      "schemaLocked": "Versión del esquema bloqueada",
+      "schemaAutoSelected": "Seleccionado automáticamente desde el disparador",
+      "schemaSuffixClock": " al contrato fijo de carga útil del reloj.",
+      "schemaSuffixPinned": " para mantener este flujo de trabajo estable si los esquemas del disparador cambian.",
+      "chooseTriggerHint": "Elija un disparador para definir los campos disponibles.",
+      "schemaLoadErrorPrefix": "No se pudo cargar la información del esquema para",
+      "schemaLoadErrorSuffix": "Verifique la entrada del catálogo de eventos.",
+      "draftDifferent": "El contrato del borrador difiere del publicado",
+      "publishedUsesPrefix": "La versión publicada usa",
+      "draftResolvesTo": "Este borrador se resuelve actualmente en",
+      "lockToPublished": "Bloquear al contrato publicado",
+      "advancedSchemaSettings": "Ajustes avanzados del esquema",
+      "inferredSchemaPrefix": "Esquema inferido actual:",
+      "noSchemaInferred": "Aún no se ha inferido ningún esquema.",
+      "unknownSchemaRef": "Referencia de esquema desconocida. Abra los ajustes avanzados del esquema y elija una versión válida.",
+      "workflowStepsHeading": "Pasos del flujo de trabajo",
+      "workflowStepsListHint": "Arrastre los pasos para reordenarlos o moverlos entre los canales.",
+      "workflowStepsGraphHint": "Desplácese/acerque el gráfico. Las ramas se muestran en carriles separados.",
+      "workflowStepsViewAria": "Vista de los pasos del flujo de trabajo",
+      "warningsCount": "{{count}} advertencias"
+    },
+    "stepPanel": {
+      "readOnly": "Acceso de solo lectura: la edición de pasos está deshabilitada.",
+      "selectPrompt": "Seleccione un paso para editar su configuración."
+    },
+    "stepConfig": {
+      "eventLabel": "Evento",
+      "selectEvent": "Seleccionar evento",
+      "correlationKey": "Expresión de clave de correlación",
+      "payloadFilters": "Filtros de carga útil",
+      "addFilter": "Añadir filtro",
+      "noFiltersConfigured": "No hay filtros configurados.",
+      "loadingEventSchema": "Cargando campos del esquema del evento...",
+      "timeoutMs": "Tiempo de espera (ms)",
+      "assignOnResume": "Asignar al reanudar",
+      "fieldLabel": "Campo",
+      "fieldPathLabel": "Ruta del campo",
+      "dataContextToggle": "¿A qué datos puedo acceder aquí?"
+    },
+    "mappingExpr": {
+      "add": "Añadir",
+      "remove": "Eliminar",
+      "empty": "Aún no hay mapeos.",
+      "expressionLabel": "Expresión"
+    },
+    "schemaForm": {
+      "sectionTitle": "Configuración del nodo",
+      "stepSettings": "Ajustes del paso",
+      "missingRequired": "Campos obligatorios faltantes: {{fields}}"
+    },
+    "fieldMetadata": {
+      "actionId": {
+        "label": "Acción",
+        "description": "La acción a invocar"
+      },
+      "version": {
+        "label": "Versión",
+        "description": "Número de versión de la acción"
+      },
+      "inputMapping": {
+        "label": "Mapeo de entradas",
+        "description": "Mapear datos a las entradas de la acción"
+      },
+      "saveAs": {
+        "label": "Guardar resultado como",
+        "description": "Nombre de variable o ruta de asignación (p. ej. result, vars.result, payload.result)"
+      },
+      "idempotencyKey": {
+        "label": "Clave de idempotencia",
+        "description": "Expresión que produce una clave única para evitar ejecuciones duplicadas. Si la misma clave aparece dos veces, se devuelve el resultado en caché."
+      },
+      "onError": {
+        "label": "Gestión de errores",
+        "description": "Cómo gestionar los errores"
+      },
+      "eventName": {
+        "label": "Nombre del evento",
+        "description": "Nombre del evento a esperar"
+      },
+      "correlationKey": {
+        "label": "Clave de correlación",
+        "description": "Expresión para coincidir con los eventos entrantes"
+      },
+      "filters": {
+        "label": "Filtros de carga útil",
+        "description": "Filtros opcionales de carga útil del evento (semántica AND)"
+      },
+      "timeoutMs": {
+        "label": "Tiempo de espera (ms)",
+        "description": "Tiempo máximo de espera en milisegundos"
+      },
+      "mode": {
+        "label": "Modo de espera",
+        "description": "Duración o hasta una hora"
+      },
+      "durationMs": {
+        "label": "Duración",
+        "description": "Duración relativa almacenada en milisegundos"
+      },
+      "until": {
+        "label": "Hasta",
+        "description": "Expresión que se resuelve en una fecha/hora absoluta"
+      },
+      "state": {
+        "label": "Nombre del estado",
+        "description": "El estado al que transicionar"
+      },
+      "assign": {
+        "label": "Asignaciones",
+        "description": "Variables a asignar"
+      },
+      "taskType": {
+        "label": "Tipo de tarea",
+        "description": "Tipo de tarea humana"
+      },
+      "title": {
+        "label": "Título",
+        "description": "Título de la tarea mostrado al asignado"
+      },
+      "contextData": {
+        "label": "Datos de contexto",
+        "description": "Datos adicionales a incluir con la tarea"
+      }
+    },
+    "actions": {
+      "ai.infer": {
+        "label": "Inferir salida estructurada",
+        "description": "Generar datos estructurados del flujo de trabajo a partir de una indicación usando el proveedor de IA configurado."
+      }
+    },
+    "validation": {
+      "badge": {
+        "invalid": "No válido",
+        "warnings": "Advertencias",
+        "valid": "Válido",
+        "unknown": "Desconocido"
+      }
+    },
+    "discardDialog": {
+      "title": "¿Descartar los cambios no guardados?",
+      "message": "Tiene cambios sin guardar en este flujo de trabajo. ¿Descartarlos y continuar?",
+      "confirm": "Descartar cambios",
+      "cancel": "Seguir editando"
+    },
+    "eventSchemaDialog": {
+      "title": "¿Cambiar el esquema de entrada del flujo de trabajo?",
+      "messageWithEvent": "El evento seleccionado {{eventName}} usa {{schemaRef}}. ¿Desea cambiar este flujo de trabajo a ese esquema de evento?",
+      "messageFallback": "¿Desea cambiar este flujo de trabajo al esquema de evento seleccionado?",
+      "confirm": "Usar el esquema del evento",
+      "cancel": "Conservar el esquema actual"
+    },
+    "blockSection": {
+      "then": "ENTONCES",
+      "else": "SI NO",
+      "try": "INTENTAR",
+      "catch": "CAPTURAR",
+      "body": "CUERPO"
+    },
+    "palette": {
+      "showPalette": "Mostrar paleta",
+      "hidePalette": "Ocultar paleta",
+      "searchPlaceholder": "Buscar",
+      "dragHint": "Suelte en el canal para añadir",
+      "chooseAction": "Elija una acción tras añadir este paso",
+      "returnsSummary": "Devuelve: {{list}}{{suffix}}",
+      "categories": {
+        "Control": "Control",
+        "Core": "Núcleo",
+        "Transform": "Transformar",
+        "AI": "IA",
+        "Apps": "Aplicaciones",
+        "Action": "Acción",
+        "Email": "Correo",
+        "Nodes": "Nodos"
+      },
+      "controlBlocks": {
+        "control.if": {
+          "label": "Si",
+          "description": "Ramificación condicional"
+        },
+        "control.forEach": {
+          "label": "Para cada",
+          "description": "Iterar sobre elementos"
+        },
+        "control.tryCatch": {
+          "label": "Intentar/Capturar",
+          "description": "Gestionar errores"
+        },
+        "control.callWorkflow": {
+          "label": "Llamar flujo de trabajo",
+          "description": "Invocar otro flujo de trabajo"
+        },
+        "control.return": {
+          "label": "Retornar",
+          "description": "Detener ejecución"
+        }
+      },
+      "nodes": {
+        "state.set": {
+          "label": "Establecer estado",
+          "description": "Actualizar el estado del flujo de trabajo"
+        },
+        "event.wait": {
+          "label": "Esperar un evento",
+          "description": "Esperar un evento externo"
+        },
+        "time.wait": {
+          "label": "Esperar un tiempo",
+          "description": "Esperar una duración o hasta una fecha/hora"
+        },
+        "transform.assign": {
+          "label": "Asignar",
+          "description": "Asignar valores a la carga útil o a las variables"
+        },
+        "action.call": {
+          "label": "Llamar acción",
+          "description": "Invocar una acción registrada"
+        },
+        "email.parseBody": {
+          "label": "Analizar cuerpo del correo",
+          "description": "Analizar y sanear el cuerpo de la respuesta de correo"
+        },
+        "email.renderCommentBlocks": {
+          "label": "Renderizar bloques de comentario",
+          "description": "Renderizar bloques de comentario desde el contenido del correo"
+        },
+        "human.task": {
+          "label": "Tarea humana",
+          "description": "Pausar para la finalización de una tarea humana"
+        }
+      },
+      "groups": {
+        "ticket": {
+          "label": "Ticket",
+          "description": "Acciones de ticket"
+        },
+        "contact": {
+          "label": "Contacto",
+          "description": "Acciones de contacto"
+        },
+        "client": {
+          "label": "Cliente",
+          "description": "Acciones de cliente"
+        },
+        "communication": {
+          "label": "Comunicación",
+          "description": "Acciones de comunicación"
+        },
+        "scheduling": {
+          "label": "Programación",
+          "description": "Acciones de programación"
+        },
+        "project": {
+          "label": "Proyecto",
+          "description": "Acciones de proyecto"
+        },
+        "time": {
+          "label": "Tiempo",
+          "description": "Acciones de tiempo"
+        },
+        "crm": {
+          "label": "CRM",
+          "description": "Acciones de CRM"
+        },
+        "transform": {
+          "label": "Transformar",
+          "description": "Acciones de transformación"
+        },
+        "ai": {
+          "label": "IA",
+          "description": "Acciones de IA"
+        }
+      }
+    },
+    "stepCard": {
+      "selectAriaLabel": "Seleccionar paso {{label}}",
+      "badges": {
+        "if": "Si",
+        "loop": "Bucle",
+        "try": "Intentar",
+        "block": "Bloque"
+      },
+      "mapping": {
+        "unmappedTitle": "{{count}} campos obligatorios sin mapear",
+        "unmappedBadge": "{{count}} obligatorio sin mapear",
+        "allMappedTitle": "Los {{count}} campos obligatorios están mapeados",
+        "allMappedAria": "Todos los campos obligatorios mapeados"
+      },
+      "errorCount": "{{count}} {{noun}}",
+      "errorSingular": "error",
+      "errorPlural": "errores",
+      "actions": {
+        "duplicate": "Duplicar paso",
+        "duplicateAriaLabel": "Duplicar paso {{label}}",
+        "delete": "Eliminar paso"
+      },
+      "forEachSummary": "Elemento: {{itemVar}} | Concurrencia: {{concurrency}}"
+    },
+    "toasts": {
+      "loadRegistriesFailed": "Error al cargar los registros de flujo de trabajo",
+      "loadPermissionsFailed": "Error al cargar los permisos",
+      "loadWorkflowsFailed": "Error al cargar los flujos de trabajo",
+      "loadEventCatalogFailed": "Error al cargar el catálogo de eventos",
+      "settingsUpdated": "Configuración del flujo de trabajo actualizada",
+      "settingsUpdateFailed": "Error al actualizar la configuración",
+      "created": "Flujo de trabajo creado",
+      "saved": "Flujo de trabajo guardado",
+      "saveFailed": "Error al guardar el flujo de trabajo",
+      "saveBeforePublish": "Guarde el flujo de trabajo antes de publicar",
+      "published": "Flujo de trabajo publicado",
+      "publishFailed": "Error al publicar el flujo de trabajo",
+      "publishValidationErrors": "Error al publicar: corrija los errores de validación",
+      "systemEventMissingSchema": "Este evento del sistema no tiene un esquema válido y no puede seleccionarse hasta que se corrija."
+    }
+  },
+  "actionInputFieldInfo": {
+    "required": "Obligatorio",
+    "requiredTitle": "Obligatorio",
+    "requiredMissingTitle": "Este campo obligatorio no tiene valor",
+    "format": "Formato: {{value}}",
+    "eachItem": "Cada elemento: {{value}}",
+    "length": "Longitud: {{min}} - {{max}}",
+    "range": "Rango: {{min}} - {{max}}",
+    "any": "cualquier",
+    "defaultPrefix": "Predeterminado:",
+    "examplePrefix": "Ejemplo:"
+  },
+  "actionInputSection": {
+    "heading": "Action inputs"
+  },
+  "actionInputFixedPicker": {
+    "loadingOptions": "Cargando opciones…",
+    "ticketSearchPlaceholder": "Buscar tickets por número o título",
+    "ticketSelect": "Seleccionar ticket",
+    "ticketTypeAbove": "Escriba arriba para buscar tickets",
+    "placeholders": {
+      "board": "Seleccionar tablero",
+      "client": "Seleccionar cliente",
+      "contact": "Seleccionar contacto",
+      "user": "Seleccionar usuario",
+      "userOrTeam": "Seleccionar usuario o equipo"
+    },
+    "errors": {
+      "loadTicket": "Error al cargar el ticket",
+      "searchTickets": "Error al buscar tickets",
+      "loadOptions": "Error al cargar las opciones"
+    },
+    "dependencyHints": {
+      "contact": {
+        "client_id": "Elija primero un cliente fijo para cargar las opciones de contacto."
+      },
+      "client-location": {
+        "client_id": "Elija primero un cliente fijo para cargar las opciones de ubicación."
+      },
+      "ticket-category": {
+        "board_id": "Elija primero un tablero fijo para cargar las opciones de categoría."
+      },
+      "ticket-status": {
+        "board_id": "Elija primero un tablero fijo para cargar las opciones de estado.",
+        "ticket_id": "Elija primero un ticket fijo para cargar las opciones de estado."
+      },
+      "ticket-subcategory": {
+        "board_id": "Elija primero un tablero fijo para cargar las opciones de subcategoría.",
+        "category_id": "Elija primero una categoría fija para cargar las opciones de subcategoría."
+      }
+    }
+  },
+  "serverErrors": {
+    "forbidden": "No tiene permiso para realizar esta acción.",
+    "unauthorized": "Debe iniciar sesión para realizar esta acción.",
+    "notFound": "No encontrado.",
+    "workflowNotFound": "Flujo de trabajo no encontrado.",
+    "workflowVersionNotFound": "Versión del flujo de trabajo no encontrada.",
+    "workflowVersionExists": "La versión {{version}} del flujo de trabajo ya existe. Actualice e inténtelo de nuevo.",
+    "workflowValidationFailed": "La validación del flujo de trabajo falló.",
+    "noPublishedVersions": "Este flujo de trabajo aún no tiene versiones publicadas.",
+    "workflowPaused": "Este flujo de trabajo está en pausa.",
+    "concurrencyLimitReached": "Se ha alcanzado el límite de concurrencia del flujo de trabajo.",
+    "rateLimitExceeded": "Se ha superado el límite de frecuencia de ejecución.",
+    "payloadNotSerializable": "La carga útil debe ser serializable en JSON.",
+    "payloadTooLarge": "La carga útil supera el tamaño máximo permitido.",
+    "payloadValidationFailed": "La carga útil no superó la validación.",
+    "missingPayloadSchemaRef": "Este flujo de trabajo no tiene referencia de esquema de carga útil.",
+    "missingSourcePayloadSchemaRef": "A la carga útil del evento le falta una referencia de esquema fuente.",
+    "triggerMappingRequired": "Se requiere un mapeo de disparador para esta ejecución.",
+    "runNotFailed": "La ejecución no está en estado fallido.",
+    "failedStepNotFound": "No se encontró el paso fallido.",
+    "noEventWaitFound": "No se encontró ninguna espera de evento para esta ejecución.",
+    "cancelTemporalRunFailed": "Error al cancelar la ejecución en el motor.",
+    "noDefinitionToPublish": "No hay definición de flujo de trabajo para publicar.",
+    "deleteActiveRunsBlocked": "Este flujo de trabajo tiene ejecuciones activas. Cancélelas antes de eliminarlo.",
+    "scheduleOneTimeRunAtRequired": "Las programaciones únicas requieren una marca de tiempo de ejecución.",
+    "scheduleOneTimeInvalidTimestamp": "Las programaciones únicas requieren una marca de tiempo ISO 8601 válida.",
+    "scheduleOneTimeMustBeFuture": "Las programaciones únicas deben programarse en el futuro.",
+    "scheduleOneTimeDayOfWeek": "Las programaciones únicas solo admiten «Cualquier día».",
+    "scheduleOneTimeBusinessHours": "Las programaciones únicas no pueden anular el horario laboral.",
+    "scheduleRecurringCronRequired": "Las programaciones recurrentes requieren una expresión cron.",
+    "scheduleRecurringCronFields": "Las programaciones recurrentes requieren una expresión cron de 5 campos.",
+    "scheduleRecurringTimezone": "Las programaciones recurrentes requieren una zona horaria IANA válida.",
+    "cronTooLong": "La expresión cron es demasiado larga.",
+    "cronUnsupportedCharacters": "La expresión cron contiene caracteres no admitidos.",
+    "cronDayConflict": "Una expresión cron no puede definir día del mes y día de la semana a la vez.",
+    "cronTooFrequent": "Esta programación cron se ejecuta con demasiada frecuencia (intervalo mínimo 5 minutos).",
+    "schedulePublishedRequired": "Las programaciones solo se pueden crear para flujos de trabajo publicados.",
+    "schedulePinnedSchemaRequired": "Las programaciones solo se admiten para flujos de trabajo con un esquema de carga útil anclado.",
+    "scheduleSchemaNotRegistered": "La última versión publicada no tiene un esquema de carga útil anclado registrado.",
+    "schedulePayloadInvalid": "La carga útil de la programación no superó la validación del esquema.",
+    "processEventFailed": "Error al procesar el evento del flujo de trabajo."
+  },
+  "taskInbox": {
+    "title": "Bandeja de tareas",
+    "backToList": "← Volver a la lista",
+    "tabs": {
+      "pending": "Pendiente",
+      "claimed": "Reclamado",
+      "completed": "Completado",
+      "all": "Todas las tareas"
+    }
+  },
+  "taskList": {
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "pageLabel": "Page {{current}} of {{total}}"
+    },
+    "errors": {
+      "loadFailed": "Error al cargar tareas. Inténtelo de nuevo.",
+      "claimFailed": "Error al reclamar la tarea: {{error}}",
+      "unclaimFailed": "Error al liberar la tarea: {{error}}",
+      "unknown": "Error desconocido"
+    },
+    "actions": {
+      "claim": "Reclamar",
+      "unclaim": "Liberar"
+    },
+    "noDueDate": "Sin fecha de vencimiento",
+    "overdueSuffix": "(Vencido)",
+    "empty": "No se encontraron tareas",
+    "duePrefix": "Vence:"
+  },
+  "taskDetails": {
+    "notAvailable": "N/D",
+    "notFound": "Tarea no encontrada",
+    "retry": "Reintentar",
+    "youPronoun": "Usted",
+    "noForm": "No hay formulario disponible para esta tarea.",
+    "contextData": "Datos de contexto",
+    "responseData": "Datos de respuesta",
+    "fields": {
+      "status": "Estado",
+      "priority": "Prioridad",
+      "created": "Creado",
+      "dueDate": "Fecha de vencimiento",
+      "claimedBy": "Reclamado por",
+      "completedBy": "Completado por"
+    },
+    "tabs": {
+      "details": "Detalles",
+      "form": "Formulario",
+      "history": "Historial"
+    },
+    "actions": {
+      "claim": "Reclamar tarea",
+      "unclaim": "Liberar tarea"
+    },
+    "errors": {
+      "loadFailed": "Error al cargar los detalles de la tarea. Inténtelo de nuevo.",
+      "claimFailed": "Error al reclamar la tarea: {{error}}",
+      "unclaimFailed": "Error al liberar la tarea: {{error}}",
+      "unknown": "Error desconocido"
+    }
+  },
+  "taskHistory": {
+    "empty": "No hay historial disponible para esta tarea.",
+    "byPrefix": "Por:",
+    "system": "Sistema",
+    "detailsLabel": "Detalles",
+    "actions": {
+      "created": "Creado",
+      "claimed": "Reclamado",
+      "unclaimed": "Liberado",
+      "completed": "Completado",
+      "canceled": "Cancelado",
+      "expired": "Expirado"
+    },
+    "errors": {
+      "loadFailed": "Error al cargar el historial de la tarea. Inténtelo de nuevo."
+    }
+  },
+  "taskForm": {
+    "actions": {
+      "complete": "Completar tarea",
+      "cancel": "Cancelar"
+    }
+  },
+  "dynamicForm": {
+    "actions": {
+      "submit": "Enviar",
+      "cancel": "Cancelar"
+    },
+    "errors": {
+      "generic": "Se produjo un error"
+    }
+  },
+  "embeddedTaskInbox": {
+    "title": "Mis tareas",
+    "viewAll": "Ver todo",
+    "backToTasks": "← Volver a las tareas"
+  },
+  "actionButton": {
+    "processing": "Procesando...",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "confirmTitle": "Confirmar acción"
+  },
+  "stepNameField": {
+    "label": "Nombre del paso"
+  },
+  "stepSaveOutput": {
+    "toggleLabel": "Guardar salida",
+    "placeholder": "p. ej. ticketDefaults",
+    "copyPathTitle": "Copiar ruta completa",
+    "accessibleAs": "Accesible como:"
+  },
+  "aiSchemaSection": {
+    "heading": "Formato de respuesta de IA",
+    "headingDescription": "Elija qué debe incluir la respuesta de la IA para los siguientes pasos.",
+    "modeSimple": "Simple",
+    "modeAdvanced": "Avanzado",
+    "addField": "Añadir campo",
+    "addNested": "Añadir campo anidado",
+    "remove": "Eliminar",
+    "nameLabel": "Nombre",
+    "answerType": "Tipo de respuesta",
+    "arrayItems": "Elementos del arreglo",
+    "required": "Obligatorio",
+    "descriptionLabel": "Descripción",
+    "objectItemFields": "Campos de elementos de objeto",
+    "nestedFields": "Campos anidados",
+    "jsonSchemaLabel": "Esquema JSON",
+    "advancedHelperText": "El modo Avanzado admite esquemas raíz de objeto, objetos anidados, arreglos, descripciones, restricciones y additionalProperties.",
+    "validationHeading": "Validación del esquema",
+    "advancedFallback": "Este esquema guardado usa funciones avanzadas de JSON Schema, por lo que se muestra en modo Avanzado.",
+    "simpleModeUnsupported": "Este esquema no se puede representar en modo simple.",
+    "errors": {
+      "jsonRequired": "El JSON del esquema de salida de IA es obligatorio."
+    }
+  },
+  "composeText": {
+    "heading": "Salidas de texto compuesto",
+    "headingDescription": "Cree una o más salidas en markdown con claves de referencia estables.",
+    "addOutput": "Añadir salida",
+    "untitled": "Salida sin título",
+    "outputFallback": "salida {{index}}",
+    "moveUpAria": "Mover {{label}} hacia arriba",
+    "moveDownAria": "Mover {{label}} hacia abajo",
+    "deleteAria": "Eliminar {{label}}",
+    "outputLabel": "Etiqueta de salida",
+    "stableKeyLabel": "Clave estable",
+    "keyHintSafe": "Clave segura para posteriores",
+    "keyHintInvalid": "Use únicamente minúsculas, números y guiones bajos.",
+    "regenerate": "Regenerar",
+    "validationHeading": "Validación",
+    "downstreamPathLabel": "Ruta de referencia posterior",
+    "pathFallback": "Guarde la salida para ver una ruta de referencia.",
+    "copied": "Copiado",
+    "copyPath": "Copiar ruta",
+    "contentHeading": "Componer contenido",
+    "contentDescription": "Use formato seguro para markdown y chips de referencia en línea.",
+    "insertReference": "Insertar referencia",
+    "insertReferenceHeading": "Insertar referencia de flujo de trabajo",
+    "errors": {
+      "noCodeBlock": "No se pueden insertar referencias dentro de bloques de código. Mueva el cursor a otro bloque e inténtelo de nuevo."
+    }
+  },
+  "referenceSelector": {
+    "placeholders": {
+      "scope": "Seleccionar ámbito de origen...",
+      "step": "Seleccionar paso...",
+      "field": "Seleccionar campo..."
+    }
+  },
+  "pipeline": {
+    "start": "Inicio",
+    "insertStepHere": "Insertar paso aquí",
+    "emptyDisabled": "Aún no hay pasos.",
+    "emptySelectPrompt": "Seleccione un paso del panel para comenzar."
+  },
+  "expressionEditor": {
+    "ariaLabel": "Editor de expresiones",
+    "autocompleteAria": "Sugerencias de autocompletado de expresiones",
+    "textAreaPlaceholder": "Introducir expresión JSONata...",
+    "field": {
+      "placeholder": "Introducir expresión...",
+      "insertFieldPlaceholder": "Insertar campo"
+    }
+  },
+  "sourceDataTree": {
+    "searchPlaceholder": "Buscar campos...",
+    "sections": {
+      "payload": "Carga útil",
+      "vars": "Salidas de paso (vars)",
+      "loopContext": "Contexto del bucle",
+      "workflowMeta": "Metadatos del flujo",
+      "errorContext": "Contexto de error"
+    },
+    "vars": {
+      "emptyPrefix": "Aún no hay variables. Use",
+      "saveOutput": "Guardar salida",
+      "emptyConjunction": "o un paso",
+      "assignStep": "Asignar",
+      "emptySuffix": "para rellenar"
+    },
+    "loop": {
+      "currentItem": "elemento actual",
+      "loopIndex": "índice del bucle"
+    }
+  },
+  "validationBadge": {
+    "status": {
+      "valid": "Válido",
+      "warning": "Advertencias",
+      "error": "Errores",
+      "incomplete": "Incompleto"
+    },
+    "tooltip": {
+      "valid": "Todas las entradas obligatorias están mapeadas",
+      "incomplete": "Configurar los mapeos de entrada",
+      "mappingCount": "{{mapped}} de {{required}} campos obligatorios mapeados"
+    },
+    "openEditor": "Abrir el editor de mapeos",
+    "errorsHeading": "Errores ({{count}})",
+    "warningsHeading": "Advertencias ({{count}})",
+    "moreErrors": "+{{count}} errores más",
+    "moreWarnings": "+{{count}} advertencias más"
+  },
+  "inputMappingEditor": {
+    "empty": "Esta acción no tiene campos de entrada.",
+    "browseSources": "Explorar orígenes",
+    "objectFields": "Campos de objeto",
+    "itemTitle": "Elemento {{index}}",
+    "reset": "Restablecer",
+    "addItem": "Añadir elemento",
+    "fill": "Rellenar",
+    "clearValues": "Borrar valores",
+    "applySuggestions": "Aplicar sugerencias ({{count}})",
+    "applySuggestionTitle": "Aplicar sugerencia: {{sourcePath}}",
+    "fuzzySuffix": "(aproximado)",
+    "removeMapping": "Eliminar mapeo (Supr/Retroceso)",
+    "invalidJson": "JSON no válido",
+    "stringPlaceholder": "Introducir valor...",
+    "aria": {
+      "listbox": "Campos de entrada de la acción",
+      "fieldList": "Lista de campos de entrada de la acción"
+    },
+    "summary": {
+      "filledCount": "{{filled}} de {{total}} campos rellenados",
+      "missingCount": "{{count}} obligatorios sin valor",
+      "missingTitle": "Faltan valores en campos obligatorios"
+    },
+    "mode": {
+      "structured": "Estructurado",
+      "rawJson": "JSON sin procesar"
+    },
+    "nullable": {
+      "useValue": "Usar valor",
+      "setNull": "Establecer en null"
+    },
+    "primitiveList": {
+      "placeholder": "Introduzca un valor por línea o separados por coma",
+      "helperText": "Use saltos de línea, comas o punto y coma como separadores."
+    },
+    "structuredGroup": {
+      "collapseAria": "Contraer {{title}}",
+      "expandAria": "Expandir {{title}}"
+    },
+    "legacy": {
+      "title": "El mapeo heredado ya no está admitido aquí",
+      "description": "Este campo usa una expresión guardada o un secreto. Sustitúyalo por una referencia estructurada o un valor fijo.",
+      "useReference": "Usar referencia",
+      "useFixedValue": "Usar valor fijo"
+    },
+    "fixedValueDialog": {
+      "title": "Editar {{fieldName}}",
+      "description": "Use el editor ampliado para contenido más largo.",
+      "openEditor": "Abrir editor",
+      "apply": "Aplicar",
+      "cancel": "Cancelar"
+    }
+  },
+  "schemaReference": {
+    "selectAction": "Seleccione una acción para ver su esquema de entrada/salida",
+    "viewDetails": "Ver detalles del esquema",
+    "hideDetails": "Ocultar detalles del esquema",
+    "inputSchemaTitle": "Esquema de entrada",
+    "outputSchemaTitle": "Esquema de salida",
+    "noInputParameters": "Sin parámetros de entrada",
+    "noOutputFields": "Sin campos de salida",
+    "noFields": "Sin campos",
+    "outputAvailablePrefix": "Salida disponible en",
+    "showRawJson": "Mostrar esquema JSON sin procesar",
+    "hideRawJson": "Ocultar esquema JSON sin procesar",
+    "exportSchema": "Exportar esquema",
+    "exportSchemaTitle": "Descargar esquema como JSON",
+    "rawInputComment": "// Esquema de entrada",
+    "rawOutputComment": "// Esquema de salida",
+    "copyPathTitle": "Copiar {{path}}",
+    "copyAllPaths": "Copiar todas las rutas",
+    "copyAllPathsTitle": "Copiar todas las rutas de campo",
+    "copied": "¡Copiado!",
+    "pathsCopied": "{{count}} rutas copiadas",
+    "nullableSuffix": "| null",
+    "constraints": {
+      "values": "Valores: {{list}}{{suffix}}",
+      "min": "Mín.: {{value}}",
+      "max": "Máx.: {{value}}",
+      "minLength": "Longitud mín.: {{value}}",
+      "maxLength": "Longitud máx.: {{value}}",
+      "pattern": "Patrón: {{value}}",
+      "format": "Formato: {{value}}",
+      "examples": "Ejemplos: {{list}}",
+      "default": "Predeterminado: {{value}}"
+    }
+  },
+  "groupedAction": {
+    "groupHeading": "Grupo",
+    "actionLabel": "Acción",
+    "actionPlaceholder": "Seleccionar una acción de {{group}}",
+    "required": {
+      "title": "Acción requerida",
+      "message": "Seleccione una acción de {{group}} antes de configurar entradas o publicar este flujo de trabajo."
+    },
+    "tileKind": {
+      "core-object": "Núcleo",
+      "transform": "Transformar",
+      "app": "Aplicación",
+      "ai": "IA"
+    }
+  },
+  "trigger": {
+    "manual": "Manual",
+    "event": "Evento",
+    "eventWithType": "Evento: {{eventType}}",
+    "oneTimeSchedule": "Programación puntual",
+    "recurringSchedule": "Programación recurrente"
+  },
+  "scheduleStatus": {
+    "unknown": "Desconocido",
+    "scheduled": "Programado",
+    "paused": "En pausa",
+    "disabled": "Desactivado",
+    "completed": "Completado",
+    "failed": "Fallido"
+  },
+  "graph": {
+    "start": {
+      "label": "Inicio"
+    },
+    "states": {
+      "buildingGraph": "Construyendo gráfico…"
+    },
+    "errors": {
+      "buildFailed": "Error al construir el gráfico del flujo de trabajo.",
+      "renderErrorTitle": "Error al renderizar el gráfico",
+      "switchToList": "Cambie a la vista de Lista para continuar editando."
+    },
+    "empty": {
+      "readonly": "Seleccione un paso del panel para comenzar.",
+      "dropFirst": "Suelte para añadir como primer paso",
+      "dragPrompt": "Arrastre un paso desde el panel, o seleccione uno para comenzar."
+    },
+    "mapping": {
+      "unmappedTitle": "{{count}} campos obligatorios sin mapear",
+      "unmappedBadge": "{{count}} obligatorio sin mapear",
+      "allMapped": "Todos los campos obligatorios mapeados"
+    },
+    "insert": {
+      "title": "Drop a step here to insert"
+    },
+    "actions": {
+      "deleteStep": "Eliminar paso"
+    }
+  },
+  "runStudio": {
+    "header": {
+      "kicker": "Estudio de ejecución",
+      "fallbackTitle": "Ejecución del flujo de trabajo",
+      "version": "Versión {{version}}",
+      "updated": "Actualizado {{time}}",
+      "backToWorkflows": "← Volver a flujos de trabajo"
+    },
+    "actions": {
+      "replay": "Repetir",
+      "cancel": "Cancelar"
+    },
+    "status": {
+      "running": "En ejecución",
+      "succeeded": "Completado con éxito",
+      "retrying": "Reintentando",
+      "failed": "Fallido",
+      "pending": "Pendiente",
+      "canceled": "Cancelado"
+    },
+    "failure": {
+      "title": "La ejecución falló",
+      "lastSuccessfulStep": "Último paso exitoso: {{label}}"
+    },
+    "pipeline": {
+      "title": "Canal de ejecución",
+      "emptyBranch": "No hay pasos en esta rama.",
+      "view": {
+        "graph": "Gráfico",
+        "list": "Lista"
+      },
+      "states": {
+        "loadingDefinition": "Cargando la definición del flujo de trabajo…",
+        "loadingDefinitionPlain": "Cargando la definición del flujo de trabajo...",
+        "noSteps": "No hay pasos para mostrar."
+      }
+    },
+    "details": {
+      "title": "Detalles de la ejecución",
+      "fields": {
+        "runId": "ID de ejecución",
+        "started": "Iniciado",
+        "duration": "Duración",
+        "tenant": "Inquilino",
+        "trigger": "Disparador",
+        "eventType": "Tipo de evento",
+        "scheduleState": "Estado de la programación",
+        "scheduledFor": "Programado para",
+        "cron": "Cron",
+        "waitingFor": "Esperando",
+        "counts": "Contadores"
+      },
+      "values": {
+        "resumeEvent": "Reanudar evento",
+        "counts": "{{steps}} pasos · {{logs}} registros · {{waits}} esperas"
+      }
+    },
+    "errors": {
+      "title": "Errores de ejecución",
+      "runErrorPayload": "Carga útil del error",
+      "resumeEventPayload": "Carga útil del evento de reanudación"
+    },
+    "stepDetails": {
+      "title": "Detalles del paso",
+      "empty": "Seleccione un paso en el canal para inspeccionar entradas, salidas e instantáneas.",
+      "fields": {
+        "step": "Paso"
+      },
+      "panels": {
+        "configuration": "Configuración del paso",
+        "inputResolved": "Entrada (resuelta)",
+        "output": "Salida",
+        "envelopeSnapshot": "Instantánea del envoltorio"
+      }
+    },
+    "timeline": {
+      "title": "Cronología de ejecución",
+      "searchLabel": "Buscar en la cronología",
+      "searchPlaceholder": "Buscar ruta de paso, tipo de espera, estado",
+      "empty": "Aún no hay entradas en la cronología.",
+      "waitTitle": "Esperar · {{waitType}}",
+      "attempt": "Intento {{attempt}} · {{status}}",
+      "inProgress": "En curso",
+      "statusLine": "Estado: {{status}}",
+      "eventSegment": " · Evento: {{eventName}}",
+      "keySegment": " · Clave: {{key}}",
+      "createdLine": "Creado: {{createdAt}}",
+      "resolvedSegment": " · Resuelto: {{resolvedAt}}",
+      "actions": {
+        "jump": "Ir a"
+      }
+    },
+    "logs": {
+      "title": "Registros de ejecución",
+      "searchLabel": "Buscar en los registros",
+      "searchPlaceholder": "Buscar mensaje o ruta de paso",
+      "empty": "Aún no hay registros.",
+      "actions": {
+        "clear": "Borrar"
+      }
+    },
+    "dialog": {
+      "title": {
+        "cancel": "Cancelar ejecución",
+        "replay": "Repetir ejecución"
+      },
+      "heading": {
+        "cancel": "Cancelar la ejecución del flujo de trabajo",
+        "replay": "Repetir la ejecución del flujo de trabajo"
+      },
+      "description": {
+        "cancel": "Cancelar detendrá cualquier paso en curso o en espera de esta ejecución.",
+        "replay": "Repetir iniciará una nueva ejecución usando la carga útil de abajo."
+      },
+      "fields": {
+        "reason": "Motivo",
+        "reasonPlaceholder": "p. ej. Cancelando para ajustar entradas",
+        "payloadJson": "Carga útil (JSON)"
+      },
+      "actions": {
+        "close": "Cerrar",
+        "confirmCancel": "Confirmar cancelación",
+        "startReplay": "Iniciar repetición",
+        "working": "Trabajando..."
+      },
+      "errors": {
+        "invalidJson": "JSON no válido"
+      }
+    },
+    "stepLabels": {
+      "action": "Acción: {{actionId}}",
+      "ifCondition": "Condición Si",
+      "forEach": "Para cada",
+      "tryCatch": "Intentar/Capturar",
+      "waitForEvent": "Esperar un evento",
+      "waitForTime": "Esperar un tiempo",
+      "humanTask": "Tarea humana",
+      "setState": "Establecer estado",
+      "assign": "Asignar"
+    },
+    "stepCard": {
+      "lastStatus": "Último estado: {{status}} ({{timestamp}})",
+      "attempt": "Intento {{attempt}}",
+      "forEachSummary": "Elemento: {{itemVar}} | Concurrencia: {{concurrency}}",
+      "badges": {
+        "if": "Si",
+        "loop": "Bucle",
+        "try": "Intentar",
+        "block": "Bloque"
+      },
+      "sections": {
+        "then": "ENTONCES",
+        "else": "SI NO",
+        "try": "INTENTAR",
+        "catch": "CAPTURAR",
+        "body": "CUERPO"
+      }
+    },
+    "jsonPanel": {
+      "serializeFailed": "No se puede serializar el valor."
+    },
+    "toasts": {
+      "reasonRequired": "El motivo es obligatorio (mín. 3 caracteres).",
+      "canceled": "Ejecución cancelada.",
+      "replayStarted": "Repetición de la ejecución iniciada.",
+      "actionFailed": "Error al realizar la acción."
+    }
+  },
+  "schedules": {
+    "common": {
+      "emptyValue": "—",
+      "entityName": "programación"
+    },
+    "heading": {
+      "reflectionLabel": "Programaciones de flujo de trabajo",
+      "title": "Programaciones",
+      "description": "Gestione programaciones reutilizables y sus cargas útiles guardadas."
+    },
+    "actions": {
+      "new": "Nueva programación",
+      "edit": "Editar",
+      "pause": "Pausar",
+      "resume": "Reanudar",
+      "delete": "Eliminar",
+      "cancel": "Cancelar",
+      "saving": "Guardando…",
+      "saveChanges": "Guardar cambios",
+      "create": "Crear programación",
+      "rowMenu": "Acciones de programación para {{name}}"
+    },
+    "filters": {
+      "allWorkflows": "Todos los flujos de trabajo",
+      "allStatuses": "Todos los estados",
+      "allTriggers": "Todos los disparadores",
+      "searchPlaceholder": "Buscar programaciones…"
+    },
+    "status": {
+      "enabled": "Habilitado",
+      "paused": "En pausa",
+      "failed": "Fallido",
+      "completed": "Completado",
+      "disabled": "Desactivado"
+    },
+    "triggerType": {
+      "schedule": "Puntual",
+      "recurring": "Recurrente"
+    },
+    "dayType": {
+      "any": "Cualquier día",
+      "business": "Días laborables",
+      "nonBusiness": "Días no laborables"
+    },
+    "table": {
+      "workflowVersion": "Flujo de trabajo v{{version}}",
+      "columns": {
+        "schedule": "Programación",
+        "workflow": "Flujo de trabajo",
+        "triggerType": "Tipo de disparador",
+        "nextFire": "Próxima ejecución",
+        "lastFire": "Última ejecución",
+        "status": "Estado",
+        "lastError": "Último error",
+        "actions": "Acciones"
+      }
+    },
+    "states": {
+      "loadingReflection": "Cargando programaciones",
+      "loading": "Cargando programaciones…",
+      "never": "Nunca",
+      "calendarMisconfigured": "Calendario mal configurado",
+      "noEligibleUpcomingRun": "Sin ejecución próxima elegible",
+      "unknownWorkflow": "Flujo de trabajo desconocido",
+      "empty": "No se encontraron programaciones",
+      "emptyDescription": "Cree una programación puntual o recurrente para ejecutar un flujo de trabajo publicado con datos de entrada guardados."
+    },
+    "errors": {
+      "loadFailed": "Error al cargar las programaciones.",
+      "updateFailed": "Error al actualizar la programación.",
+      "deleteFailed": "Error al eliminar la programación."
+    },
+    "timezone": {
+      "browseAll": "Explorar todas las zonas horarias…",
+      "custom": "Personalizado…",
+      "browseHelp": "Elija de la lista completa de zonas horarias IANA compatibles.",
+      "customLabel": "Zona horaria personalizada",
+      "customPlaceholder": "Etc/GMT+5"
+    },
+    "dialog": {
+      "title": {
+        "edit": "Editar programación",
+        "create": "Crear programación"
+      },
+      "description": "Configure el horario y los datos estáticos de carga útil para una programación de flujo de trabajo.",
+      "states": {
+        "loading": "Cargando detalles…"
+      },
+      "fields": {
+        "workflow": "Flujo de trabajo",
+        "workflowPlaceholder": "Elija un flujo de trabajo",
+        "name": "Nombre de la programación",
+        "namePlaceholder": "Sincronización AP de fin de mes",
+        "triggerType": "Tipo de disparador",
+        "enabled": "Habilitado",
+        "enabledHelp": "La programación se ejecutará cuando sea válida.",
+        "disabledHelp": "La programación permanecerá pausada hasta que se reanude.",
+        "runAt": "Ejecutar a las",
+        "runOn": "Ejecutado el",
+        "businessDaysOnly": "Solo días laborables",
+        "nonBusinessDaysOnly": "Solo días no laborables",
+        "calendarSource": "Origen del calendario",
+        "businessHoursSchedule": "Horario laboral",
+        "businessHoursSchedulePlaceholder": "Elija un horario laboral",
+        "frequency": "Frecuencia",
+        "time": "Tiempo",
+        "dayOfMonth": "Día del mes",
+        "weekdays": "Días laborables",
+        "cron": "Cron",
+        "timezone": "Zona horaria"
+      },
+      "workflow": {
+        "badges": {
+          "unpublished": "No publicado",
+          "inferredSchema": "Esquema inferido"
+        }
+      },
+      "eligibility": {
+        "chooseWorkflow": "Elija un flujo de trabajo antes de guardar.",
+        "unpublished": "Las programaciones solo se pueden crear para flujos de trabajo publicados.",
+        "pinnedOnly": "Las programaciones solo se admiten para flujos de trabajo con un esquema de carga útil anclado.",
+        "noPinnedSchema": "El flujo de trabajo seleccionado no expone un esquema de carga útil anclado.",
+        "unavailableSchemaRef": "El flujo de trabajo seleccionado usa una referencia de esquema de carga útil no disponible: {{schemaRef}}."
+      },
+      "calendarSource": {
+        "tenantDefault": "Horario laboral por defecto del inquilino",
+        "tenantDefaultMissing": "Horario laboral por defecto del inquilino (no configurado)",
+        "tenantDefaultHint": "Establezca primero un horario laboral por defecto para el inquilino o elija uno específico.",
+        "specific": "Horario laboral específico",
+        "specificHint": "Cree primero un horario laboral.",
+        "tenantDefaultMissingDescription": "Aún no hay horario laboral por defecto configurado para el inquilino. Elija un horario específico o establezca primero un valor por defecto.",
+        "holidaysNote": "Los festivos siempre se tratan como días no laborables."
+      },
+      "businessHours": {
+        "defaultSuffix": " (Default)",
+        "noneConfigured": "Aún no hay horarios laborales configurados.",
+        "usingTenantDefault": "Usa el horario laboral por defecto del inquilino.",
+        "noTenantDefault": "Aún no hay horario laboral por defecto configurado para el inquilino."
+      },
+      "recurring": {
+        "title": "Programación recurrente",
+        "description": "Elija un patrón de recurrencia habitual. El cron avanzado está disponible para programaciones personalizadas.",
+        "builderMode": "Constructor de programación",
+        "advancedMode": "Cron avanzado",
+        "dailyHelper": "Se ejecuta cada día a la hora seleccionada.",
+        "weeklyHelper": "Elija uno o más días de la semana a continuación.",
+        "customCronWarning": "Esta programación usa una expresión cron personalizada. Continúe editándola aquí o vuelva al constructor para reemplazarla por un patrón habitual.",
+        "cronPreview": "Cron: {{cron}}"
+      },
+      "payload": {
+        "title": "Carga útil",
+        "description": "Redacte una entrada estática que se pasará a cada ejecución programada.",
+        "rootLabel": "Carga útil",
+        "rootKey": "carga útil",
+        "mode": {
+          "form": "Modo formulario",
+          "json": "Modo JSON"
+        },
+        "actions": {
+          "addItem": "Añadir elemento",
+          "removeItem": "Eliminar"
+        },
+        "states": {
+          "noItems": "Aún no hay elementos."
+        },
+        "boolean": {
+          "true": "Verdadero",
+          "false": "Falso"
+        },
+        "noSchema": {
+          "title": "Aún no hay un esquema de carga útil disponible para este flujo de trabajo.",
+          "description": "Los campos del formulario aparecerán aquí una vez que este flujo de trabajo publique un esquema de carga útil anclado."
+        }
+      },
+      "validation": {
+        "title": "Errores de validación de la carga útil",
+        "more": "+{{count}} más…",
+        "invalidValue": "Valor no válido",
+        "valueMustBeAllowed": "El valor debe ser una de las opciones permitidas.",
+        "expectedObject": "Se esperaba un objeto.",
+        "requiredFieldMissing": "Falta un campo obligatorio.",
+        "unknownProperty": "Propiedad desconocida.",
+        "expectedArray": "Se esperaba una matriz.",
+        "expectedString": "Se esperaba una cadena.",
+        "expectedNumber": "Se esperaba un número.",
+        "expectedBoolean": "Se esperaba un valor booleano.",
+        "payloadMustBeObject": "La carga útil de la programación debe ser un objeto JSON.",
+        "invalidJson": "JSON no válido"
+      },
+      "errors": {
+        "loadScheduleFailed": "Error al cargar la programación.",
+        "saveFailed": "Error al guardar la programación."
+      }
+    },
+    "recurrence": {
+      "andWord": "y",
+      "frequency": {
+        "daily": "Daily",
+        "weekly": "Semanal",
+        "monthly": "Mensual"
+      },
+      "validation": {
+        "validTime": "Elija una hora válida.",
+        "weekdayRequired": "Elija al menos un día de la semana.",
+        "dayOfMonthRange": "Elija un día del mes entre 1 y 31."
+      },
+      "summary": {
+        "daily": "Se ejecuta cada día a las {{timeLabel}} {{timezoneLabel}}",
+        "weekly": "Se ejecuta cada {{weekdayLabels}} a las {{timeLabel}} {{timezoneLabel}}",
+        "monthly": "Se ejecuta el día {{dayOfMonth}} de cada mes a las {{timeLabel}} {{timezoneLabel}}"
+      },
+      "weekdays": {
+        "0": {
+          "short": "Dom",
+          "long": "Domingo"
+        },
+        "1": {
+          "short": "Lun",
+          "long": "Lunes"
+        },
+        "2": {
+          "short": "Mar",
+          "long": "Martes"
+        },
+        "3": {
+          "short": "Mié",
+          "long": "Miércoles"
+        },
+        "4": {
+          "short": "Jue",
+          "long": "Jueves"
+        },
+        "5": {
+          "short": "Vie",
+          "long": "Viernes"
+        },
+        "6": {
+          "short": "Sáb",
+          "long": "Sábado"
+        }
+      }
+    }
+  },
+  "enums": {
+    "workflowRunStatus": {
+      "RUNNING": "En ejecución",
+      "WAITING": "En espera",
+      "SUCCEEDED": "Completado con éxito",
+      "FAILED": "Fallido",
+      "CANCELED": "Cancelado"
+    },
+    "workflowRunSort": {
+      "started_at:desc": "Más recientes primero",
+      "started_at:asc": "Más antiguos primero",
+      "updated_at:desc": "Recientemente actualizados",
+      "updated_at:asc": "Los menos recientemente actualizados"
+    },
+    "workflowEventStatus": {
+      "matched": "Coincidente",
+      "unmatched": "Sin coincidencia",
+      "error": "Error"
+    },
+    "workflowStepStatus": {
+      "STARTED": "Iniciado",
+      "SUCCEEDED": "Completado con éxito",
+      "FAILED": "Fallido",
+      "RETRY_SCHEDULED": "Reintento programado",
+      "CANCELED": "Cancelado"
+    },
+    "workflowLogLevel": {
+      "DEBUG": "Depuración",
+      "INFO": "Info",
+      "WARN": "Advertencia",
+      "ERROR": "Error"
+    },
+    "workflowAiSchemaType": {
+      "string": "Cadena",
+      "number": "Número",
+      "integer": "Entero",
+      "boolean": "Booleano",
+      "object": "Objeto",
+      "array": "Arreglo"
+    },
+    "workflowInputSourceMode": {
+      "reference": "Referencia",
+      "fixed": "Valor fijo"
+    },
+    "workflowReferenceSection": {
+      "payload": "Carga útil",
+      "vars": "Resultados del paso",
+      "meta": "Detalles del flujo de trabajo",
+      "error": "Error",
+      "forEach": "Contexto de bucle"
+    },
+    "workflowTriggerMode": {
+      "manual": "Sin disparador",
+      "event": "Evento"
+    },
+    "workflowCanvasView": {
+      "list": "Lista",
+      "graph": "Gráfico"
+    },
+    "workflowOnError": {
+      "continue": "Continuar",
+      "fail": "Fallar"
+    },
+    "workflowWaitMode": {
+      "duration": "Duración",
+      "until": "Hasta"
+    },
+    "workflowWaitTiming": {
+      "fixed": "Fecha y hora específicas",
+      "expression": "Expresión avanzada"
+    }
+  }
+}
