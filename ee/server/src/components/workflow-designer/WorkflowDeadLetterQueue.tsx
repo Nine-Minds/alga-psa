@@ -4,10 +4,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { toast } from 'react-hot-toast';
 import { listWorkflowDeadLetterRunsAction } from '@alga-psa/workflows/actions';
+import { useFormatWorkflowRunStatus } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 import WorkflowRunDetails from './WorkflowRunDetails';
 
 type DeadLetterRun = {
@@ -50,6 +52,8 @@ interface WorkflowDeadLetterQueueProps {
 }
 
 const WorkflowDeadLetterQueue: React.FC<WorkflowDeadLetterQueueProps> = ({ isActive, canAdmin = false }) => {
+  const { t } = useTranslation('msp/workflows');
+  const formatWorkflowRunStatus = useFormatWorkflowRunStatus();
   const [runs, setRuns] = useState<DeadLetterRun[]>([]);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,12 +74,14 @@ const WorkflowDeadLetterQueue: React.FC<WorkflowDeadLetterQueueProps> = ({ isAct
         setRuns((prev) => (append ? [...prev, ...data.runs] : data.runs));
         setNextCursor(data.nextCursor ?? null);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load dead-letter runs');
+        toast.error(error instanceof Error ? error.message : t('deadLetter.toasts.loadFailed', {
+          defaultValue: 'Failed to load dead-letter runs',
+        }));
       } finally {
         setIsLoading(false);
       }
     },
-    [minRetries]
+    [minRetries, t]
   );
 
   useEffect(() => {
@@ -93,15 +99,15 @@ const WorkflowDeadLetterQueue: React.FC<WorkflowDeadLetterQueueProps> = ({ isAct
             <div className="flex-1 min-w-[220px]">
               <Input
                 id="workflow-dead-letter-min-retries"
-                label="Minimum retries"
+                label={t('deadLetter.filters.minimumRetriesLabel', { defaultValue: 'Minimum retries' })}
                 type="number"
                 value={minRetries}
                 onChange={(event) => setMinRetries(event.target.value)}
-                placeholder="3"
+                placeholder={t('deadLetter.filters.minimumRetriesPlaceholder', { defaultValue: '3' })}
               />
             </div>
             <Button id="workflow-dead-letter-refresh" variant="outline" onClick={() => fetchDeadLetter(0, false)}>
-              Refresh
+              {t('deadLetter.actions.refresh', { defaultValue: 'Refresh' })}
             </Button>
           </div>
         </Card>
@@ -111,13 +117,13 @@ const WorkflowDeadLetterQueue: React.FC<WorkflowDeadLetterQueueProps> = ({ isAct
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Run ID</TableHead>
-                  <TableHead>Workflow</TableHead>
-                  <TableHead>Version</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Retries</TableHead>
-                  <TableHead>Failed Steps</TableHead>
-                  <TableHead>Updated</TableHead>
+                  <TableHead>{t('deadLetter.table.columns.runId', { defaultValue: 'Run ID' })}</TableHead>
+                  <TableHead>{t('deadLetter.table.columns.workflow', { defaultValue: 'Workflow' })}</TableHead>
+                  <TableHead>{t('deadLetter.table.columns.version', { defaultValue: 'Version' })}</TableHead>
+                  <TableHead>{t('deadLetter.table.columns.status', { defaultValue: 'Status' })}</TableHead>
+                  <TableHead>{t('deadLetter.table.columns.retries', { defaultValue: 'Retries' })}</TableHead>
+                  <TableHead>{t('deadLetter.table.columns.failedSteps', { defaultValue: 'Failed Steps' })}</TableHead>
+                  <TableHead>{t('deadLetter.table.columns.updated', { defaultValue: 'Updated' })}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -132,25 +138,25 @@ const WorkflowDeadLetterQueue: React.FC<WorkflowDeadLetterQueueProps> = ({ isAct
                     <TableCell>v{run.workflow_version}</TableCell>
                     <TableCell>
                       <Badge className={STATUS_STYLES[run.status] ?? 'bg-gray-100 text-gray-600'}>
-                        {run.status}
+                        {formatWorkflowRunStatus(run.status)}
                       </Badge>
                     </TableCell>
-                    <TableCell>{run.max_attempt ?? '—'}</TableCell>
-                    <TableCell>{run.failed_steps ?? '—'}</TableCell>
+                    <TableCell>{run.max_attempt ?? t('deadLetter.common.emptyValue', { defaultValue: '—' })}</TableCell>
+                    <TableCell>{run.failed_steps ?? t('deadLetter.common.emptyValue', { defaultValue: '—' })}</TableCell>
                     <TableCell>{formatDateTime(run.updated_at)}</TableCell>
                   </TableRow>
                 ))}
                 {runs.length === 0 && !isLoading && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-sm text-gray-500 py-6">
-                      No dead-letter runs found.
+                      {t('deadLetter.states.empty', { defaultValue: 'No dead-letter runs found.' })}
                     </TableCell>
                   </TableRow>
                 )}
                 {isLoading && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-sm text-gray-500 py-6">
-                      Loading dead-letter runs...
+                      {t('deadLetter.states.loading', { defaultValue: 'Loading dead-letter runs...' })}
                     </TableCell>
                   </TableRow>
                 )}
@@ -164,7 +170,7 @@ const WorkflowDeadLetterQueue: React.FC<WorkflowDeadLetterQueueProps> = ({ isAct
                 variant="outline"
                 onClick={() => fetchDeadLetter(nextCursor, true)}
               >
-                Load more
+                {t('deadLetter.actions.loadMore', { defaultValue: 'Load more' })}
               </Button>
             </div>
           )}

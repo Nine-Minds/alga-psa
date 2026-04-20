@@ -388,3 +388,26 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   node scripts/validate-translations.cjs
   ```
 - ESLint result: no errors; remaining warnings are limited to pre-existing `any` / unused-catch-variable sites.
+
+### F017 complete — WorkflowDeadLetterQueue strings extracted
+- Updated `ee/server/src/components/workflow-designer/WorkflowDeadLetterQueue.tsx` to localize:
+  - minimum-retry filter label/placeholder
+  - table column headers
+  - loading/empty states
+  - refresh/load-more actions
+  - dead-letter load toast fallback
+- Switched dead-letter run status badges to `useFormatWorkflowRunStatus()` so persisted status codes no longer render raw.
+- Added `deadLetter.*` keys to `server/public/locales/en/msp/workflows.json`, then synced the same stub structure into `fr/es/de/nl/it/pl/xx/yy`.
+- Sanity check run:
+  ```bash
+  node - <<'NODE'
+  # compared all deadLetter.* keys referenced in WorkflowDeadLetterQueue.tsx against en/msp/workflows.json
+  NODE
+  ```
+  Result: zero missing keys.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowDeadLetterQueue.tsx
+  node scripts/validate-translations.cjs
+  ```
+- ESLint result: clean, no warnings or errors from this file after the extraction.

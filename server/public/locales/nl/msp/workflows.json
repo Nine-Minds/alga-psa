@@ -500,6 +500,37 @@
       "exportFailed": "Failed to export events"
     }
   },
+  "deadLetter": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "filters": {
+      "minimumRetriesLabel": "Minimum retries",
+      "minimumRetriesPlaceholder": "3"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "loadMore": "Load more"
+    },
+    "table": {
+      "columns": {
+        "runId": "Run ID",
+        "workflow": "Workflow",
+        "version": "Version",
+        "status": "Status",
+        "retries": "Retries",
+        "failedSteps": "Failed Steps",
+        "updated": "Updated"
+      }
+    },
+    "states": {
+      "empty": "No dead-letter runs found.",
+      "loading": "Loading dead-letter runs..."
+    },
+    "toasts": {
+      "loadFailed": "Failed to load dead-letter runs"
+    }
+  },
   "enums": {
     "workflowRunStatus": {
       "RUNNING": "Running",
