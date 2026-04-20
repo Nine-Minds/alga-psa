@@ -113,6 +113,185 @@
       "bulkActionFailed": "Bulk action failed"
     }
   },
+  "runDetails": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "header": {
+      "runIdLabel": "Run ID",
+      "workflowIdLabel": "Workflow ID:",
+      "triggerLabel": "Trigger:"
+    },
+    "actions": {
+      "resume": "Resume",
+      "cancel": "Cancel",
+      "export": "Export",
+      "retry": "Retry",
+      "replay": "Replay",
+      "requeueEvent": "Requeue Event",
+      "close": "Close",
+      "view": "View",
+      "apply": "Apply",
+      "reset": "Reset",
+      "exportCsv": "Export CSV",
+      "loadMore": "Load more",
+      "exportAuditCsv": "Export Audit CSV"
+    },
+    "summary": {
+      "statusLabel": "Status",
+      "startedLabel": "Started",
+      "updatedLabel": "Updated",
+      "completedLabel": "Completed",
+      "triggerLabel": "Trigger",
+      "scheduleStateLabel": "Schedule state",
+      "scheduledForLabel": "Scheduled for",
+      "cronLabel": "Cron",
+      "nodePathLabel": "Node path:",
+      "eventTypeLabel": "Event type:",
+      "triggerPayloadSchemaLabel": "Trigger payload schema:",
+      "mapped": "Mapped",
+      "identity": "Identity",
+      "runErrorFallback": "Run error",
+      "errorCategoryFallback": "Error"
+    },
+    "stepTimeline": {
+      "title": "Step Timeline",
+      "description": "Attempts, durations, and errors per step.",
+      "loading": "Loading...",
+      "stepStatusLabel": "Step status",
+      "nodeTypeLabel": "Node type",
+      "collapseNestedLabel": "Collapse nested blocks",
+      "columns": {
+        "stepPath": "Step Path",
+        "type": "Type",
+        "status": "Status",
+        "attempt": "Attempt",
+        "duration": "Duration",
+        "nextRetry": "Next Retry",
+        "started": "Started",
+        "error": "Error"
+      },
+      "empty": "No step history yet."
+    },
+    "stepDetails": {
+      "title": "Step Details",
+      "statusLabel": "Status",
+      "attemptLabel": "Attempt",
+      "startedLabel": "Started",
+      "completedLabel": "Completed",
+      "durationLabel": "Duration",
+      "nodeTypeLabel": "Node Type",
+      "definitionStepIdLabel": "Definition Step ID",
+      "nextRetryLabel": "Next Retry",
+      "errorTitle": "Error",
+      "stepErrorFallback": "Step error",
+      "errorCategoryFallback": "Error"
+    },
+    "waitHistory": {
+      "title": "Wait History",
+      "eventLine": "Event: {{event}} · Key: {{key}} · Filters: {{count}}",
+      "timeLine": "Mode: {{mode}} · Scheduled resume: {{scheduledResume}}",
+      "timeoutLine": "Timeout: {{timeout}} · Resolved: {{resolved}}"
+    },
+    "envelope": {
+      "title": "Envelope Data",
+      "description": "Payload, vars, meta, and error from the latest snapshot.",
+      "redactedNotice": "Redacted values shown as {{marker}}.",
+      "noSnapshot": "No snapshot available.",
+      "tabs": {
+        "payload": "Payload",
+        "vars": "Vars",
+        "meta": "Meta",
+        "error": "Error",
+        "raw": "Raw"
+      }
+    },
+    "invocations": {
+      "title": "Action Invocations",
+      "redactedNotice": "Redacted values shown as {{marker}}.",
+      "empty": "No action calls recorded for this step.",
+      "attemptLine": "Attempt {{count}}",
+      "durationLine": "Duration: {{duration}}",
+      "sizeLine": "Input size: {{inputSize}}{{inputSuffix}} · Output size: {{outputSize}}{{outputSuffix}}",
+      "truncatedSuffix": " (truncated)",
+      "inputLabel": "Input",
+      "outputLabel": "Output"
+    },
+    "logs": {
+      "title": "Run Logs",
+      "description": "Operational log events for this run.",
+      "searchLabel": "Search",
+      "searchPlaceholder": "Search log message",
+      "levelLabel": "Level",
+      "empty": "No log entries found.",
+      "columns": {
+        "timestamp": "Timestamp",
+        "level": "Level",
+        "message": "Message",
+        "step": "Step",
+        "event": "Event",
+        "correlation": "Correlation"
+      }
+    },
+    "audit": {
+      "title": "Audit Trail",
+      "description": "Administrative actions for this run.",
+      "empty": "No audit entries yet.",
+      "systemUser": "system",
+      "columns": {
+        "timestamp": "Timestamp",
+        "operation": "Operation",
+        "user": "User",
+        "details": "Details"
+      }
+    },
+    "dialogs": {
+      "reasonLabel": "Reason",
+      "resumeTitle": "Resume Workflow Run",
+      "resumeMessage": "Resume this workflow run now?",
+      "resumeReasonPlaceholder": "Provide a reason for resuming",
+      "cancelTitle": "Cancel Workflow Run",
+      "cancelMessage": "Cancel this workflow run? This cannot be undone.",
+      "cancelReasonPlaceholder": "Provide a reason for canceling",
+      "cancelConfirm": "Cancel run",
+      "retryTitle": "Retry Workflow Run",
+      "retryMessage": "Retry this run from the last failed step?",
+      "retryReasonPlaceholder": "Provide a reason for retrying",
+      "retryConfirm": "Retry run",
+      "replayTitle": "Replay Workflow Run",
+      "replayMessage": "Replay this run with a new payload.",
+      "replayReasonPlaceholder": "Provide a reason for replaying",
+      "payloadLabel": "Payload (JSON)",
+      "replayConfirm": "Replay run",
+      "requeueTitle": "Requeue Event Wait",
+      "requeueMessage": "Requeue the most recent event wait for this run?",
+      "requeueReasonPlaceholder": "Provide a reason for requeuing",
+      "requeueConfirm": "Requeue wait"
+    },
+    "toasts": {
+      "loadRunDetailsFailed": "Failed to load run details",
+      "loadLogsFailed": "Failed to load logs",
+      "loadAuditLogsFailed": "Failed to load audit logs",
+      "logExportReady": "Log export ready",
+      "exportLogsFailed": "Failed to export logs",
+      "reasonTooShort": "Reason must be at least 3 characters.",
+      "runResumed": "Run resumed",
+      "resumeRunFailed": "Failed to resume run",
+      "runCanceled": "Run canceled",
+      "cancelRunFailed": "Failed to cancel run",
+      "runExportReady": "Run export ready",
+      "exportRunFailed": "Failed to export run",
+      "runRetryStarted": "Run retry started",
+      "retryRunFailed": "Failed to retry run",
+      "replayPayloadInvalid": "Replay payload must be valid JSON.",
+      "runReplayStarted": "Run replay started",
+      "replayRunFailed": "Failed to replay run",
+      "eventWaitRequeued": "Event wait requeued",
+      "requeueEventWaitFailed": "Failed to requeue event wait",
+      "auditExportReady": "Audit export ready",
+      "exportAuditLogsFailed": "Failed to export audit logs"
+    }
+  },
   "enums": {
     "workflowRunStatus": {
       "RUNNING": "Running",

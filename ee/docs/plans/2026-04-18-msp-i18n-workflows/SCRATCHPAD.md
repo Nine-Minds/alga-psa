@@ -319,3 +319,25 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   - `F051` — translate the helper via workflow-aware formatters
   - `T046` — formatter coverage test for trigger + schedule-status labels
 - Rationale: without a dedicated item, run-list and dialog surfaces would still leak English even after component extraction work is complete.
+
+### F014 complete — WorkflowRunDetails strings extracted
+- Updated `ee/server/src/components/workflow-designer/WorkflowRunDetails.tsx` to localize component-owned copy across:
+  - run header + action bar
+  - summary metadata grid
+  - step timeline filters / table / empty state
+  - step detail panels, wait history, envelope tabs
+  - action invocation cards
+  - log viewer and audit trail
+  - all five confirmation dialogs
+  - toast fallbacks for load/export/retry/resume/cancel/replay/requeue flows
+- Switched workflow run / step / log level badges from raw enum values to:
+  - `useFormatWorkflowRunStatus()`
+  - `useFormatWorkflowStepStatus()`
+  - `useFormatWorkflowLogLevel()`
+- Added `runDetails.*` keys to `server/public/locales/en/msp/workflows.json`, then synced the same stub structure into `fr/es/de/nl/it/pl/xx/yy` to preserve validation parity until WF-F translations.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowRunDetails.tsx
+  node scripts/validate-translations.cjs
+  ```
+- ESLint result: no errors; remaining warnings are the file's pre-existing `any`/unused-type/non-null-assertion backlog unrelated to the i18n extraction.
