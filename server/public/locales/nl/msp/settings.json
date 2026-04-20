@@ -1347,5 +1347,11 @@
     "badge": {
       "inactive": "Inactief"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "Machtigingen van de beheerdersrol kunnen niet worden gewijzigd",
+      "permissionsUpdated": "Machtigingen succesvol bijgewerkt"
+    }
   }
 }

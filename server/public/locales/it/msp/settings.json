@@ -1347,5 +1347,11 @@
     "badge": {
       "inactive": "Inattivo"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "I permessi del ruolo amministratore non possono essere modificati",
+      "permissionsUpdated": "Permessi aggiornati con successo"
+    }
   }
 }

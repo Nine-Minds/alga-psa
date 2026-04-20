@@ -1347,5 +1347,11 @@
     "badge": {
       "inactive": "11111"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "11111",
+      "permissionsUpdated": "11111"
+    }
   }
 }

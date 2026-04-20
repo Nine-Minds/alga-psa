@@ -934,5 +934,12 @@
     "addOnDescription": {
       "ai_assistant": "Unlock AI chat, document assistance, sidebar help, and workflow AI tools for your team."
     }
+  },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "The login handoff token is missing or invalid. Please sign in again.",
+      "handoffFinalizeFailed": "We could not finalize your login. Please try signing in again.",
+      "handoffNetworkIssue": "Network issue detected while finalizing your login. Please try again."
+    }
   }
 }

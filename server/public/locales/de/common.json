@@ -934,5 +934,12 @@
     "addOnDescription": {
       "ai_assistant": "Schalten Sie KI-Chat, Dokumentenhilfe, Seitenleisten-Assistenz und Workflow-KI-Tools für Ihr Team frei."
     }
+  },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "Das Anmelde-Übergabe-Token fehlt oder ist ungültig. Bitte erneut anmelden.",
+      "handoffFinalizeFailed": "Wir konnten Ihre Anmeldung nicht abschließen. Bitte erneut versuchen.",
+      "handoffNetworkIssue": "Netzwerkproblem beim Abschließen Ihrer Anmeldung. Bitte erneut versuchen."
+    }
   }
 }

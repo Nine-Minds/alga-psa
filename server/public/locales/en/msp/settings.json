@@ -1347,5 +1347,11 @@
     "badge": {
       "inactive": "Inactive"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "Admin role permissions cannot be modified",
+      "permissionsUpdated": "Permissions updated successfully"
+    }
   }
 }

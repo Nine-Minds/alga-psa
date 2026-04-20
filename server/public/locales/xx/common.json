@@ -934,5 +934,12 @@
     "addOnDescription": {
       "ai_assistant": "11111"
     }
+  },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "11111",
+      "handoffFinalizeFailed": "11111",
+      "handoffNetworkIssue": "11111"
+    }
   }
 }

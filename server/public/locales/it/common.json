@@ -934,5 +934,12 @@
     "addOnDescription": {
       "ai_assistant": "Sblocca la chat AI, l'assistenza ai documenti, l'aiuto nella barra laterale e gli strumenti AI per i flussi di lavoro del tuo team."
     }
+  },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "Il token di trasferimento dell'accesso è mancante o non valido. Accedi di nuovo.",
+      "handoffFinalizeFailed": "Non siamo riusciti a finalizzare il tuo accesso. Prova ad accedere di nuovo.",
+      "handoffNetworkIssue": "Problema di rete rilevato durante la finalizzazione dell'accesso. Riprova."
+    }
   }
 }
