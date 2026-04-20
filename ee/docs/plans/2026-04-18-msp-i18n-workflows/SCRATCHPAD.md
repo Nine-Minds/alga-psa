@@ -462,3 +462,31 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
 - Results:
   - ESLint clean
   - translation validation passed with 0 missing/extra keys
+
+### F020 complete — RunStudioShell strings extracted
+- Updated `ee/server/src/components/workflow-run-studio/RunStudioShell.tsx` to use `useTranslation('msp/workflows')` for component-owned copy across:
+  - header kicker/title/version/updated badges and back-to-workflows link
+  - replay/cancel action buttons
+  - run-status indicator row and pipeline view toggle (Graph/List)
+  - execution-pipeline empty/loading/no-steps states and step-card labels (if/loop/try/block, then/else/try/catch/body sections, forEach summary)
+  - step-status badges (running/succeeded/failed/retrying/pending/canceled) with attempt counter
+  - run-details card fields (run id, started, duration, tenant, trigger, event type, schedule state, scheduled for, cron, waiting for, counts)
+  - run errors panel and step-details empty/panels (configuration, input resolved, output, envelope snapshot)
+  - execution timeline (search, empty, attempt/wait entries, status/event/key segments, created/resolved lines, jump buttons)
+  - run logs (search, filters, clear, empty state) with localized log-level button labels via `useFormatWorkflowLogLevel()`
+  - cancel/replay dialog (title, heading, description, reason/payload fields, close/confirm/working actions, invalid-JSON error)
+  - toast fallbacks for reason-required/canceled/replay-started/action-failed flows
+- Switched the run-status badge from raw persisted values to `useFormatWorkflowRunStatus()` while keeping `statusBadgeClasses` style lookups on the raw status code.
+- Added `runStudio.*` keys to `server/public/locales/en/msp/workflows.json` (168 keys) and synced the same stub structure into `fr/es/de/nl/it/pl/xx/yy`.
+- Cross-checked every `t('runStudio.*')` key referenced in the component against `en/msp/workflows.json`:
+  - 104 keys referenced, 0 missing.
+- Fixed a small indentation inconsistency in the `getStepStatusStyle` default branch introduced during extraction.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-run-studio/RunStudioShell.tsx
+  node scripts/validate-translations.cjs
+  ```
+- Results:
+  - ESLint reports 0 errors; remaining warnings are pre-existing `no-empty`, `exhaustive-deps`, non-null-assertion, and `any` sites unrelated to the i18n extraction.
+  - translation validation passed with 0 missing/extra keys.
+- Deliberately left `new Date(...).toLocaleString()` calls (`started`, `scheduled for`, `created`, `resolved`, timeline entry created/resolved lines) for `F022`, and `getWorkflowRunTriggerLabel`/`getWorkflowScheduleStatusLabel` helper output for `F051`.

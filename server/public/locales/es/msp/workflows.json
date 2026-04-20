@@ -563,6 +563,174 @@
       "exportFailed": "Failed to export audit logs"
     }
   },
+  "runStudio": {
+    "header": {
+      "kicker": "Run Studio",
+      "fallbackTitle": "Workflow Run",
+      "version": "Version {{version}}",
+      "updated": "Updated {{time}}",
+      "backToWorkflows": "← Back to Workflows"
+    },
+    "actions": {
+      "replay": "Replay",
+      "cancel": "Cancel"
+    },
+    "status": {
+      "running": "Running",
+      "succeeded": "Succeeded",
+      "retrying": "Retrying",
+      "failed": "Failed",
+      "pending": "Pending",
+      "canceled": "Canceled"
+    },
+    "failure": {
+      "title": "Run failed",
+      "lastSuccessfulStep": "Last successful step: {{label}}"
+    },
+    "pipeline": {
+      "title": "Execution Pipeline",
+      "emptyBranch": "No steps in this branch.",
+      "view": {
+        "graph": "Graph",
+        "list": "List"
+      },
+      "states": {
+        "loadingDefinition": "Loading workflow definition…",
+        "loadingDefinitionPlain": "Loading workflow definition...",
+        "noSteps": "No steps to display."
+      }
+    },
+    "details": {
+      "title": "Run Details",
+      "fields": {
+        "runId": "Run Id",
+        "started": "Started",
+        "duration": "Duration",
+        "tenant": "Tenant",
+        "trigger": "Trigger",
+        "eventType": "Event Type",
+        "scheduleState": "Schedule State",
+        "scheduledFor": "Scheduled For",
+        "cron": "Cron",
+        "waitingFor": "Waiting For",
+        "counts": "Counts"
+      },
+      "values": {
+        "resumeEvent": "Resume event",
+        "counts": "{{steps}} steps · {{logs}} logs · {{waits}} waits"
+      }
+    },
+    "errors": {
+      "title": "Run Errors",
+      "runErrorPayload": "Run Error Payload",
+      "resumeEventPayload": "Resume Event Payload"
+    },
+    "stepDetails": {
+      "title": "Step Details",
+      "empty": "Select a step in the pipeline to inspect inputs, outputs, and snapshots.",
+      "fields": {
+        "step": "Step"
+      },
+      "panels": {
+        "configuration": "Step Configuration",
+        "inputResolved": "Input (Resolved)",
+        "output": "Output",
+        "envelopeSnapshot": "Envelope Snapshot"
+      }
+    },
+    "timeline": {
+      "title": "Execution Timeline",
+      "searchLabel": "Search timeline",
+      "searchPlaceholder": "Search step path, wait type, status",
+      "empty": "No timeline entries yet.",
+      "waitTitle": "Wait · {{waitType}}",
+      "attempt": "Attempt {{attempt}} · {{status}}",
+      "inProgress": "In progress",
+      "statusLine": "Status: {{status}}",
+      "eventSegment": " · Event: {{eventName}}",
+      "keySegment": " · Key: {{key}}",
+      "createdLine": "Created: {{createdAt}}",
+      "resolvedSegment": " · Resolved: {{resolvedAt}}",
+      "actions": {
+        "jump": "Jump"
+      }
+    },
+    "logs": {
+      "title": "Run Logs",
+      "searchLabel": "Search logs",
+      "searchPlaceholder": "Search message or step path",
+      "empty": "No logs yet.",
+      "actions": {
+        "clear": "Clear"
+      }
+    },
+    "dialog": {
+      "title": {
+        "cancel": "Cancel Run",
+        "replay": "Replay Run"
+      },
+      "heading": {
+        "cancel": "Cancel Workflow Run",
+        "replay": "Replay Workflow Run"
+      },
+      "description": {
+        "cancel": "Canceling will stop any in-progress or waiting steps for this run.",
+        "replay": "Replaying will start a new run using the payload below."
+      },
+      "fields": {
+        "reason": "Reason",
+        "reasonPlaceholder": "e.g. Canceling to adjust inputs",
+        "payloadJson": "Payload (JSON)"
+      },
+      "actions": {
+        "close": "Close",
+        "confirmCancel": "Confirm Cancel",
+        "startReplay": "Start Replay",
+        "working": "Working..."
+      },
+      "errors": {
+        "invalidJson": "Invalid JSON"
+      }
+    },
+    "stepLabels": {
+      "action": "Action: {{actionId}}",
+      "ifCondition": "If Condition",
+      "forEach": "For Each",
+      "tryCatch": "Try/Catch",
+      "waitForEvent": "Wait for Event",
+      "waitForTime": "Wait for Time",
+      "humanTask": "Human Task",
+      "setState": "Set State",
+      "assign": "Assign"
+    },
+    "stepCard": {
+      "lastStatus": "Last status: {{status}} ({{timestamp}})",
+      "attempt": "Attempt {{attempt}}",
+      "forEachSummary": "Item: {{itemVar}} | Concurrency: {{concurrency}}",
+      "badges": {
+        "if": "If",
+        "loop": "Loop",
+        "try": "Try",
+        "block": "Block"
+      },
+      "sections": {
+        "then": "THEN",
+        "else": "ELSE",
+        "try": "TRY",
+        "catch": "CATCH",
+        "body": "BODY"
+      }
+    },
+    "jsonPanel": {
+      "serializeFailed": "Unable to serialize value."
+    },
+    "toasts": {
+      "reasonRequired": "Reason is required (min 3 characters).",
+      "canceled": "Run canceled.",
+      "replayStarted": "Run replay started.",
+      "actionFailed": "Failed to perform action."
+    }
+  },
   "schedules": {
     "common": {
       "emptyValue": "—",

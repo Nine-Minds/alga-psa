@@ -8,6 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -38,6 +39,7 @@ import {
   getWorkflowScheduleStatusLabel,
   isTimeTriggeredRun
 } from '../workflow-designer/workflowRunTriggerPresentation';
+import { useFormatWorkflowLogLevel, useFormatWorkflowRunStatus } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 
 type WorkflowRunRecord = {
   run_id: string;
@@ -163,6 +165,9 @@ const statusBadgeClasses: Record<string, string> = {
 };
 
 const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
+  const { t } = useTranslation('msp/workflows');
+  const formatWorkflowRunStatus = useFormatWorkflowRunStatus();
+  const formatWorkflowLogLevel = useFormatWorkflowLogLevel();
   const [run, setRun] = useState<WorkflowRunRecord | null>(null);
   const [scheduleState, setScheduleState] = useState<WorkflowScheduleStateSummary | null>(null);
   const [definition, setDefinition] = useState<WorkflowDefinition | null>(null);
@@ -341,16 +346,34 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
   const getStepLabel = (step: Step): string => {
     if (step.type === 'action.call') {
       const config = (step as NodeStep).config as { actionId?: string } | undefined;
-      return config?.actionId ? `Action: ${config.actionId}` : step.id;
+      return config?.actionId
+        ? t('runStudio.stepLabels.action', { defaultValue: 'Action: {{actionId}}', actionId: config.actionId })
+        : step.id;
     }
-    if (step.type === 'control.if') return 'If Condition';
-    if (step.type === 'control.forEach') return 'For Each';
-    if (step.type === 'control.tryCatch') return 'Try/Catch';
-    if (step.type === 'event.wait') return 'Wait for Event';
-    if (step.type === 'time.wait') return 'Wait for Time';
-    if (step.type === 'human.task') return 'Human Task';
-    if (step.type === 'state.set') return 'Set State';
-    if (step.type === 'transform.assign') return 'Assign';
+    if (step.type === 'control.if') {
+      return t('runStudio.stepLabels.ifCondition', { defaultValue: 'If Condition' });
+    }
+    if (step.type === 'control.forEach') {
+      return t('runStudio.stepLabels.forEach', { defaultValue: 'For Each' });
+    }
+    if (step.type === 'control.tryCatch') {
+      return t('runStudio.stepLabels.tryCatch', { defaultValue: 'Try/Catch' });
+    }
+    if (step.type === 'event.wait') {
+      return t('runStudio.stepLabels.waitForEvent', { defaultValue: 'Wait for Event' });
+    }
+    if (step.type === 'time.wait') {
+      return t('runStudio.stepLabels.waitForTime', { defaultValue: 'Wait for Time' });
+    }
+    if (step.type === 'human.task') {
+      return t('runStudio.stepLabels.humanTask', { defaultValue: 'Human Task' });
+    }
+    if (step.type === 'state.set') {
+      return t('runStudio.stepLabels.setState', { defaultValue: 'Set State' });
+    }
+    if (step.type === 'transform.assign') {
+      return t('runStudio.stepLabels.assign', { defaultValue: 'Assign' });
+    }
     return step.id;
   };
 
@@ -478,7 +501,10 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
   const getStepStatusStyle = (record?: WorkflowRunStepRecord) => {
     if (!record) {
       return {
-        badge: { label: 'Pending', className: 'bg-gray-500/15 text-gray-600 border-gray-500/30' },
+        badge: {
+          label: t('runStudio.status.pending', { defaultValue: 'Pending' }),
+          className: 'bg-gray-500/15 text-gray-600 border-gray-500/30'
+        },
         card: 'border-gray-200',
         pulse: false,
         stripe: false,
@@ -489,7 +515,10 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
     switch (record.status) {
       case 'STARTED':
         return {
-          badge: { label: 'Running', className: 'bg-cyan-500/15 text-cyan-600 border-cyan-500/30' },
+          badge: {
+            label: t('runStudio.status.running', { defaultValue: 'Running' }),
+            className: 'bg-cyan-500/15 text-cyan-600 border-cyan-500/30'
+          },
           card: 'border-cyan-500/30 ring-2 ring-cyan-500/30',
           pulse: true,
           stripe: false,
@@ -497,7 +526,10 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
         };
       case 'SUCCEEDED':
         return {
-          badge: { label: 'Succeeded', className: 'bg-green-500/15 text-green-600 border-green-500/30' },
+          badge: {
+            label: t('runStudio.status.succeeded', { defaultValue: 'Succeeded' }),
+            className: 'bg-green-500/15 text-green-600 border-green-500/30'
+          },
           card: 'border-green-500/30 ring-1 ring-green-500/30',
           pulse: false,
           stripe: false,
@@ -505,7 +537,10 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
         };
       case 'FAILED':
         return {
-          badge: { label: 'Failed', className: 'bg-red-500/15 text-red-600 border-red-500/30' },
+          badge: {
+            label: t('runStudio.status.failed', { defaultValue: 'Failed' }),
+            className: 'bg-red-500/15 text-red-600 border-red-500/30'
+          },
           card: 'border-red-500/30 ring-2 ring-red-500/30',
           pulse: false,
           stripe: false,
@@ -513,7 +548,10 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
         };
       case 'RETRY_SCHEDULED':
         return {
-          badge: { label: 'Retrying', className: 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30' },
+          badge: {
+            label: t('runStudio.status.retrying', { defaultValue: 'Retrying' }),
+            className: 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30'
+          },
           card: 'border-yellow-500/30 ring-1 ring-yellow-500/30',
           pulse: false,
           stripe: true,
@@ -521,7 +559,10 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
         };
       case 'CANCELED':
         return {
-          badge: { label: 'Canceled', className: 'bg-gray-500/15 text-gray-600 border-gray-500/30' },
+          badge: {
+            label: t('runStudio.status.canceled', { defaultValue: 'Canceled' }),
+            className: 'bg-gray-500/15 text-gray-600 border-gray-500/30'
+          },
           card: 'border-gray-200',
           pulse: false,
           stripe: false,
@@ -549,7 +590,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
         )}
         {pipeSteps.length === 0 && (
           <div className="rounded border border-dashed border-gray-200 bg-gray-50 p-4 text-xs text-gray-500">
-            No steps in this branch.
+            {t('runStudio.pipeline.emptyBranch', { defaultValue: 'No steps in this branch.' })}
           </div>
         )}
         {pipeSteps.map((step, index) => (
@@ -576,8 +617,14 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
     const icon = getStepTypeIcon(step.type);
     const record = stepStatusMap.get(step.id);
     const statusInfo = getStepStatusStyle(record);
-    const timestampLabel = statusInfo.timestamp ? new Date(statusInfo.timestamp).toLocaleString() : 'Pending';
-    const title = `Last status: ${statusInfo.badge.label} (${timestampLabel})`;
+    const timestampLabel = statusInfo.timestamp
+      ? new Date(statusInfo.timestamp).toLocaleString()
+      : t('runStudio.status.pending', { defaultValue: 'Pending' });
+    const title = t('runStudio.stepCard.lastStatus', {
+      defaultValue: 'Last status: {{status}} ({{timestamp}})',
+      status: statusInfo.badge.label,
+      timestamp: timestampLabel,
+    });
     const isSelected = selectedStepId === step.id;
 
     const stripeStyle = statusInfo.stripe
@@ -605,7 +652,13 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
               <span className="text-sm font-medium text-gray-900 truncate">{getStepLabel(step)}</span>
               {step.type.startsWith('control.') && (
                 <Badge className={`text-xs ${colors.badge}`}>
-                  {step.type === 'control.if' ? 'If' : step.type === 'control.forEach' ? 'Loop' : step.type === 'control.tryCatch' ? 'Try' : 'Block'}
+                  {step.type === 'control.if'
+                    ? t('runStudio.stepCard.badges.if', { defaultValue: 'If' })
+                    : step.type === 'control.forEach'
+                      ? t('runStudio.stepCard.badges.loop', { defaultValue: 'Loop' })
+                      : step.type === 'control.tryCatch'
+                        ? t('runStudio.stepCard.badges.try', { defaultValue: 'Try' })
+                        : t('runStudio.stepCard.badges.block', { defaultValue: 'Block' })}
                 </Badge>
               )}
             </div>
@@ -613,7 +666,12 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
           </div>
           <div className="flex items-center gap-2">
             {record?.attempt && record.attempt > 1 && (
-              <Badge variant="warning" className="text-xs">Attempt {record.attempt}</Badge>
+              <Badge variant="warning" className="text-xs">
+                {t('runStudio.stepCard.attempt', {
+                  defaultValue: 'Attempt {{attempt}}',
+                  attempt: record.attempt,
+                })}
+              </Badge>
             )}
             <Badge className={statusInfo.badge.className}>{statusInfo.badge.label}</Badge>
           </div>
@@ -625,10 +683,10 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
           const elsePath = `${stepPath}.else`;
           return (
             <div className="mt-3 space-y-2">
-              <RunBlockSection title="THEN">
+              <RunBlockSection title={t('runStudio.stepCard.sections.then', { defaultValue: 'THEN' })}>
                 {renderPipe(ifStep.then, thenPath, false)}
               </RunBlockSection>
-              <RunBlockSection title="ELSE">
+              <RunBlockSection title={t('runStudio.stepCard.sections.else', { defaultValue: 'ELSE' })}>
                 {renderPipe(ifStep.else ?? [], elsePath, false)}
               </RunBlockSection>
             </div>
@@ -641,10 +699,10 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
           const catchPath = `${stepPath}.catch`;
           return (
             <div className="mt-3 space-y-2">
-              <RunBlockSection title="TRY">
+              <RunBlockSection title={t('runStudio.stepCard.sections.try', { defaultValue: 'TRY' })}>
                 {renderPipe(tcStep.try, tryPath, false)}
               </RunBlockSection>
-              <RunBlockSection title="CATCH">
+              <RunBlockSection title={t('runStudio.stepCard.sections.catch', { defaultValue: 'CATCH' })}>
                 {renderPipe(tcStep.catch, catchPath, false)}
               </RunBlockSection>
             </div>
@@ -656,8 +714,14 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
           const bodyPath = `${stepPath}.body`;
           return (
             <div className="mt-3">
-              <div className="text-xs text-gray-500 mb-2">Item: {feStep.itemVar} | Concurrency: {feStep.concurrency ?? 1}</div>
-              <RunBlockSection title="BODY">
+              <div className="text-xs text-gray-500 mb-2">
+                {t('runStudio.stepCard.forEachSummary', {
+                  defaultValue: 'Item: {{itemVar}} | Concurrency: {{concurrency}}',
+                  itemVar: feStep.itemVar,
+                  concurrency: feStep.concurrency ?? 1,
+                })}
+              </div>
+              <RunBlockSection title={t('runStudio.stepCard.sections.body', { defaultValue: 'BODY' })}>
                 {renderPipe(feStep.body, bodyPath, false)}
               </RunBlockSection>
             </div>
@@ -737,27 +801,33 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
       JSON.parse(value);
       setReplayPayloadError(null);
     } catch (err) {
-      setReplayPayloadError(err instanceof Error ? err.message : 'Invalid JSON');
+      setReplayPayloadError(err instanceof Error ? err.message : t('runStudio.dialog.errors.invalidJson', {
+        defaultValue: 'Invalid JSON',
+      }));
     }
   };
 
   const handleRunActionConfirm = async () => {
     if (!runActionMode || !run) return;
     if (!actionReasonValid) {
-      toast.error('Reason is required (min 3 characters).');
+      toast.error(t('runStudio.toasts.reasonRequired', {
+        defaultValue: 'Reason is required (min 3 characters).',
+      }));
       return;
     }
     setIsSubmittingAction(true);
     try {
       if (runActionMode === 'cancel') {
         await cancelWorkflowRunAction({ runId: run.run_id, reason: runActionReason, source: 'run-studio' });
-        toast.success('Run canceled.');
+        toast.success(t('runStudio.toasts.canceled', { defaultValue: 'Run canceled.' }));
       } else {
         let payload: Record<string, unknown> = {};
         try {
           payload = JSON.parse(replayPayloadText || '{}');
         } catch (err) {
-          setReplayPayloadError(err instanceof Error ? err.message : 'Invalid JSON');
+          setReplayPayloadError(err instanceof Error ? err.message : t('runStudio.dialog.errors.invalidJson', {
+            defaultValue: 'Invalid JSON',
+          }));
           setIsSubmittingAction(false);
           return;
         }
@@ -772,13 +842,15 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
           window.location.assign(`/msp/workflows/runs/${newRunId}`);
           return;
         }
-        toast.success('Run replay started.');
+        toast.success(t('runStudio.toasts.replayStarted', { defaultValue: 'Run replay started.' }));
       }
       setRunActionMode(null);
       fetchRun();
       fetchStepsAndLogs();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to perform action.');
+      toast.error(error instanceof Error ? error.message : t('runStudio.toasts.actionFailed', {
+        defaultValue: 'Failed to perform action.',
+      }));
     } finally {
       setIsSubmittingAction(false);
     }
@@ -788,26 +860,44 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
     <div className="h-full flex flex-col gap-4 p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-sm text-gray-500">Run Studio</div>
-          <h1 className="text-2xl font-semibold text-gray-900">{runSummary?.workflow_name ?? 'Workflow Run'}</h1>
+          <div className="text-sm text-gray-500">
+            {t('runStudio.header.kicker', { defaultValue: 'Run Studio' })}
+          </div>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            {runSummary?.workflow_name ?? t('runStudio.header.fallbackTitle', { defaultValue: 'Workflow Run' })}
+          </h1>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
             <span className="font-mono">{runId}</span>
-            {run?.workflow_version ? <span>Version {run.workflow_version}</span> : null}
-            {lastUpdatedAt ? <span>Updated {lastUpdatedAt.toLocaleTimeString()}</span> : null}
+            {run?.workflow_version ? (
+              <span>
+                {t('runStudio.header.version', {
+                  defaultValue: 'Version {{version}}',
+                  version: run.workflow_version,
+                })}
+              </span>
+            ) : null}
+            {lastUpdatedAt ? (
+              <span>
+                {t('runStudio.header.updated', {
+                  defaultValue: 'Updated {{time}}',
+                  time: lastUpdatedAt.toLocaleTimeString(),
+                })}
+              </span>
+            ) : null}
           </div>
           <div className="mt-2 text-xs">
             <Link href="/msp/workflow-control" className="text-primary-600 hover:text-primary-700">
-              ← Back to Workflows
+              {t('runStudio.header.backToWorkflows', { defaultValue: '← Back to Workflows' })}
             </Link>
           </div>
         </div>
 	        <div className="flex items-center gap-2">
-	          <Badge className={badgeClass}>{status}</Badge>
+	          <Badge className={badgeClass}>{formatWorkflowRunStatus(status)}</Badge>
 	          <Button id="workflow-run-replay" variant="outline" size="sm" onClick={openReplay} disabled={!canReplay}>
-	            Replay
+	            {t('runStudio.actions.replay', { defaultValue: 'Replay' })}
 	          </Button>
 	          <Button id="workflow-run-cancel" variant="outline" size="sm" onClick={openCancel} disabled={!canCancel}>
-	            Cancel
+	            {t('runStudio.actions.cancel', { defaultValue: 'Cancel' })}
 	          </Button>
 	          <Button
 	            id="workflow-run-refresh"
@@ -825,23 +915,30 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
         <Card className="lg:col-span-2 p-4 flex flex-col min-h-[420px]">
           {run?.status === 'FAILED' && (
             <div className="mb-3 rounded border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              <div className="font-semibold">Run failed</div>
+              <div className="font-semibold">
+                {t('runStudio.failure.title', { defaultValue: 'Run failed' })}
+              </div>
               {lastSucceededStep && (
                 <div className="mt-1 text-xs">
-                  Last successful step: {lastSucceededStep.label}
+                  {t('runStudio.failure.lastSuccessfulStep', {
+                    defaultValue: 'Last successful step: {{label}}',
+                    label: lastSucceededStep.label,
+                  })}
                 </div>
               )}
             </div>
           )}
           <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-semibold text-gray-800">Execution Pipeline</div>
+            <div className="text-sm font-semibold text-gray-800">
+              {t('runStudio.pipeline.title', { defaultValue: 'Execution Pipeline' })}
+            </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-cyan-500" />Running</span>
-                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />Succeeded</span>
-                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-500" />Retrying</span>
-                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />Failed</span>
-                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-gray-500" />Pending</span>
+                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-cyan-500" />{t('runStudio.status.running', { defaultValue: 'Running' })}</span>
+                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />{t('runStudio.status.succeeded', { defaultValue: 'Succeeded' })}</span>
+                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-500" />{t('runStudio.status.retrying', { defaultValue: 'Retrying' })}</span>
+                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />{t('runStudio.status.failed', { defaultValue: 'Failed' })}</span>
+                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-gray-500" />{t('runStudio.status.pending', { defaultValue: 'Pending' })}</span>
               </div>
 	              <div className="flex items-center gap-2">
 	                <Button
@@ -850,7 +947,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
 	                  size="sm"
 	                  onClick={() => setPipelineViewMode('graph')}
 	                >
-	                  Graph
+	                  {t('runStudio.pipeline.view.graph', { defaultValue: 'Graph' })}
 	                </Button>
 	                <Button
 	                  id="workflow-run-pipeline-view-list"
@@ -858,7 +955,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
 	                  size="sm"
 	                  onClick={() => setPipelineViewMode('list')}
 	                >
-	                  List
+	                  {t('runStudio.pipeline.view.list', { defaultValue: 'List' })}
                 </Button>
               </div>
             </div>
@@ -867,7 +964,9 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
             <div className="flex-1 overflow-hidden rounded border border-gray-200 bg-white">
               {orderedSteps.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-sm text-gray-500">
-                  {loading ? 'Loading workflow definition…' : 'No steps to display.'}
+                  {loading
+                    ? t('runStudio.pipeline.states.loadingDefinition', { defaultValue: 'Loading workflow definition…' })
+                    : t('runStudio.pipeline.states.noSteps', { defaultValue: 'No steps to display.' })}
                 </div>
               ) : (
                 <WorkflowGraph
@@ -885,7 +984,9 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
             <div className="flex-1 overflow-auto space-y-2">
               {orderedSteps.length === 0 && (
                 <div className="rounded border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-500">
-                  {loading ? 'Loading workflow definition...' : 'No steps to display.'}
+                  {loading
+                    ? t('runStudio.pipeline.states.loadingDefinitionPlain', { defaultValue: 'Loading workflow definition...' })
+                    : t('runStudio.pipeline.states.noSteps', { defaultValue: 'No steps to display.' })}
                 </div>
               )}
               {orderedSteps.length > 0 && renderPipe(orderedSteps, 'root', true)}
@@ -893,38 +994,54 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
           )}
         </Card>
         <Card className="p-4 flex flex-col min-h-[420px]">
-          <div className="text-sm font-semibold text-gray-800 mb-2">Run Details</div>
+          <div className="text-sm font-semibold text-gray-800 mb-2">
+            {t('runStudio.details.title', { defaultValue: 'Run Details' })}
+          </div>
           <div className="space-y-3 text-xs text-gray-600 mb-4">
             <div>
-              <div className="text-[11px] uppercase text-gray-400">Run Id</div>
+              <div className="text-[11px] uppercase text-gray-400">
+                {t('runStudio.details.fields.runId', { defaultValue: 'Run Id' })}
+              </div>
               <div className="font-mono text-gray-700">{runId}</div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <div className="text-[11px] uppercase text-gray-400">Started</div>
+                <div className="text-[11px] uppercase text-gray-400">
+                  {t('runStudio.details.fields.started', { defaultValue: 'Started' })}
+                </div>
                 <div>{run?.started_at ? new Date(run.started_at).toLocaleString() : '-'}</div>
               </div>
               <div>
-                <div className="text-[11px] uppercase text-gray-400">Duration</div>
+                <div className="text-[11px] uppercase text-gray-400">
+                  {t('runStudio.details.fields.duration', { defaultValue: 'Duration' })}
+                </div>
                 <div>{durationSeconds != null ? `${durationSeconds}s` : '-'}</div>
               </div>
               <div>
-                <div className="text-[11px] uppercase text-gray-400">Tenant</div>
+                <div className="text-[11px] uppercase text-gray-400">
+                  {t('runStudio.details.fields.tenant', { defaultValue: 'Tenant' })}
+                </div>
                 <div className="font-mono">{run?.tenant_id ?? '-'}</div>
               </div>
               <div>
-                <div className="text-[11px] uppercase text-gray-400">Trigger</div>
+                <div className="text-[11px] uppercase text-gray-400">
+                  {t('runStudio.details.fields.trigger', { defaultValue: 'Trigger' })}
+                </div>
                 <div>{triggerLabel}</div>
               </div>
               {run?.event_type && (
                 <div>
-                  <div className="text-[11px] uppercase text-gray-400">Event Type</div>
+                  <div className="text-[11px] uppercase text-gray-400">
+                    {t('runStudio.details.fields.eventType', { defaultValue: 'Event Type' })}
+                  </div>
                   <div className="font-mono">{run.event_type}</div>
                 </div>
               )}
               {isTimeTriggeredRun(run?.trigger_type) && (
                 <div>
-                  <div className="text-[11px] uppercase text-gray-400">Schedule State</div>
+                  <div className="text-[11px] uppercase text-gray-400">
+                    {t('runStudio.details.fields.scheduleState', { defaultValue: 'Schedule State' })}
+                  </div>
                   <Badge className={getWorkflowScheduleStatusBadgeClass(scheduleState?.status)}>
                     {getWorkflowScheduleStatusLabel(scheduleState?.status)}
                   </Badge>
@@ -932,26 +1049,41 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
               )}
               {isTimeTriggeredRun(run?.trigger_type) && typeof triggerMetadata?.scheduledFor === 'string' && (
                 <div>
-                  <div className="text-[11px] uppercase text-gray-400">Scheduled For</div>
+                  <div className="text-[11px] uppercase text-gray-400">
+                    {t('runStudio.details.fields.scheduledFor', { defaultValue: 'Scheduled For' })}
+                  </div>
                   <div>{new Date(String(triggerMetadata.scheduledFor)).toLocaleString()}</div>
                 </div>
               )}
               {run?.trigger_type === 'recurring' && typeof triggerMetadata?.cron === 'string' && (
                 <div>
-                  <div className="text-[11px] uppercase text-gray-400">Cron</div>
+                  <div className="text-[11px] uppercase text-gray-400">
+                    {t('runStudio.details.fields.cron', { defaultValue: 'Cron' })}
+                  </div>
                   <div className="font-mono">{String(triggerMetadata.cron)}</div>
                 </div>
               )}
               {run?.status === 'WAITING' && (
                 <div>
-                  <div className="text-[11px] uppercase text-gray-400">Waiting For</div>
-                  <div>{runError.resume_event_name ?? 'Resume event'}</div>
+                  <div className="text-[11px] uppercase text-gray-400">
+                    {t('runStudio.details.fields.waitingFor', { defaultValue: 'Waiting For' })}
+                  </div>
+                  <div>{runError.resume_event_name ?? t('runStudio.details.values.resumeEvent', { defaultValue: 'Resume event' })}</div>
                 </div>
               )}
               {summaryMetadata && (
                 <div>
-                  <div className="text-[11px] uppercase text-gray-400">Counts</div>
-                  <div>{summaryMetadata.stepsCount} steps · {summaryMetadata.logsCount} logs · {summaryMetadata.waitsCount} waits</div>
+                  <div className="text-[11px] uppercase text-gray-400">
+                    {t('runStudio.details.fields.counts', { defaultValue: 'Counts' })}
+                  </div>
+                  <div>
+                    {t('runStudio.details.values.counts', {
+                      defaultValue: '{{steps}} steps · {{logs}} logs · {{waits}} waits',
+                      steps: summaryMetadata.stepsCount,
+                      logs: summaryMetadata.logsCount,
+                      waits: summaryMetadata.waitsCount,
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -959,36 +1091,44 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
 
           {(runError.error_json || runError.resume_event_payload) && (
             <div className="space-y-3 mb-4">
-              <div className="text-sm font-semibold text-gray-800">Run Errors</div>
+              <div className="text-sm font-semibold text-gray-800">
+                {t('runStudio.errors.title', { defaultValue: 'Run Errors' })}
+              </div>
               {runError.error_json && (
-                <RunJsonPanel title="Run Error Payload" value={runError.error_json} />
+                <RunJsonPanel title={t('runStudio.errors.runErrorPayload', { defaultValue: 'Run Error Payload' })} value={runError.error_json} />
               )}
               {runError.resume_event_payload && (
-                <RunJsonPanel title="Resume Event Payload" value={runError.resume_event_payload} />
+                <RunJsonPanel title={t('runStudio.errors.resumeEventPayload', { defaultValue: 'Resume Event Payload' })} value={runError.resume_event_payload} />
               )}
             </div>
           )}
 
-          <div className="text-sm font-semibold text-gray-800 mb-2">Step Details</div>
+          <div className="text-sm font-semibold text-gray-800 mb-2">
+            {t('runStudio.stepDetails.title', { defaultValue: 'Step Details' })}
+          </div>
           {!selectedStep && (
             <div className="rounded border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500 mb-4">
-              Select a step in the pipeline to inspect inputs, outputs, and snapshots.
+              {t('runStudio.stepDetails.empty', {
+                defaultValue: 'Select a step in the pipeline to inspect inputs, outputs, and snapshots.',
+              })}
             </div>
           )}
           {selectedStep && (
             <div className="space-y-3 mb-4">
               <div className="text-xs text-gray-600">
-                <div className="text-[11px] uppercase text-gray-400">Step</div>
+                <div className="text-[11px] uppercase text-gray-400">
+                  {t('runStudio.stepDetails.fields.step', { defaultValue: 'Step' })}
+                </div>
                 <div className="font-medium text-gray-800">{getStepLabel(selectedStep)}</div>
                 <div className="text-[11px] text-gray-500">{selectedStep.type}</div>
                 {selectedStepPath ? <div className="font-mono text-[11px] text-gray-500">{selectedStepPath}</div> : null}
               </div>
-              <RunJsonPanel title="Step Configuration" value={selectedStep} />
+              <RunJsonPanel title={t('runStudio.stepDetails.panels.configuration', { defaultValue: 'Step Configuration' })} value={selectedStep} />
               {selectedInvocation?.input_json && (
-                <RunJsonPanel title="Input (Resolved)" value={selectedInvocation.input_json} />
+                <RunJsonPanel title={t('runStudio.stepDetails.panels.inputResolved', { defaultValue: 'Input (Resolved)' })} value={selectedInvocation.input_json} />
               )}
               {selectedInvocation?.output_json && (
-                <RunJsonPanel title="Output" value={selectedInvocation.output_json} />
+                <RunJsonPanel title={t('runStudio.stepDetails.panels.output', { defaultValue: 'Output' })} value={selectedInvocation.output_json} />
               )}
               {selectedInvocation?.error_message && (
                 <div className="rounded border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
@@ -996,24 +1136,30 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                 </div>
               )}
               {selectedSnapshot?.envelope_json && (
-                <RunJsonPanel title="Envelope Snapshot" value={selectedSnapshot.envelope_json} />
+                <RunJsonPanel title={t('runStudio.stepDetails.panels.envelopeSnapshot', { defaultValue: 'Envelope Snapshot' })} value={selectedSnapshot.envelope_json} />
               )}
             </div>
           )}
 
-          <div className="text-sm font-semibold text-gray-800 mb-2">Execution Timeline</div>
+          <div className="text-sm font-semibold text-gray-800 mb-2">
+            {t('runStudio.timeline.title', { defaultValue: 'Execution Timeline' })}
+          </div>
           <div className="mb-2">
             <Input
               id="workflow-run-timeline-search"
-              label="Search timeline"
+              label={t('runStudio.timeline.searchLabel', { defaultValue: 'Search timeline' })}
               value={timelineSearch}
               onChange={(event) => setTimelineSearch(event.target.value)}
-              placeholder="Search step path, wait type, status"
+              placeholder={t('runStudio.timeline.searchPlaceholder', {
+                defaultValue: 'Search step path, wait type, status',
+              })}
             />
           </div>
           <div className="mb-4 max-h-64 overflow-auto rounded border border-gray-200 bg-white">
             {timelineEntries.length === 0 && (
-              <div className="p-4 text-sm text-gray-500">No timeline entries yet.</div>
+              <div className="p-4 text-sm text-gray-500">
+                {t('runStudio.timeline.empty', { defaultValue: 'No timeline entries yet.' })}
+              </div>
             )}
             {timelineEntries.map((entry, index) => (
               <div key={`${entry.kind}-${entry.stepPath}-${index}`} className="border-b border-gray-100 px-3 py-2 text-xs text-gray-700">
@@ -1031,7 +1177,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
 	                          size="sm"
 	                          onClick={() => setSelectedStepId(entry.stepId!)}
 	                        >
-	                          Jump
+	                          {t('runStudio.timeline.actions.jump', { defaultValue: 'Jump' })}
 	                        </Button>
 	                      )}
                     </div>
@@ -1041,8 +1187,14 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                         : null;
                       return (
                         <div key={attempt.step_id} className="flex items-center justify-between text-[11px] text-gray-500">
-                          <span>Attempt {attempt.attempt} · {attempt.status}</span>
-                          <span>{duration != null ? `${duration}ms` : 'In progress'}</span>
+                          <span>
+                            {t('runStudio.timeline.attempt', {
+                              defaultValue: 'Attempt {{attempt}} · {{status}}',
+                              attempt: attempt.attempt,
+                              status: attempt.status,
+                            })}
+                          </span>
+                          <span>{duration != null ? `${duration}ms` : t('runStudio.timeline.inProgress', { defaultValue: 'In progress' })}</span>
                         </div>
                       );
                     })}
@@ -1051,7 +1203,12 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                   <div className="space-y-1">
                     <div className="flex items-center justify-between gap-2">
                       <div>
-                        <div className="font-medium text-gray-800">Wait · {entry.waitType}</div>
+                        <div className="font-medium text-gray-800">
+                          {t('runStudio.timeline.waitTitle', {
+                            defaultValue: 'Wait · {{waitType}}',
+                            waitType: entry.waitType,
+                          })}
+                        </div>
                         <div className="font-mono text-[10px] text-gray-400">{entry.stepPath}</div>
                       </div>
 	                      {entry.stepId && (
@@ -1061,18 +1218,33 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
 	                          size="sm"
 	                          onClick={() => setSelectedStepId(entry.stepId!)}
 	                        >
-	                          Jump
+	                          {t('runStudio.timeline.actions.jump', { defaultValue: 'Jump' })}
 	                        </Button>
 	                      )}
                     </div>
                     <div className="text-[11px] text-gray-500">
-                      Status: {entry.status}
-                      {entry.eventName ? ` · Event: ${entry.eventName}` : ''}
-                      {entry.key ? ` · Key: ${entry.key}` : ''}
+                      {t('runStudio.timeline.statusLine', {
+                        defaultValue: 'Status: {{status}}',
+                        status: entry.status,
+                      })}
+                      {entry.eventName ? t('runStudio.timeline.eventSegment', {
+                        defaultValue: ' · Event: {{eventName}}',
+                        eventName: entry.eventName,
+                      }) : ''}
+                      {entry.key ? t('runStudio.timeline.keySegment', {
+                        defaultValue: ' · Key: {{key}}',
+                        key: entry.key,
+                      }) : ''}
                     </div>
                     <div className="text-[11px] text-gray-500">
-                      Created: {new Date(entry.createdAt).toLocaleString()}
-                      {entry.resolvedAt ? ` · Resolved: ${new Date(entry.resolvedAt).toLocaleString()}` : ''}
+                      {t('runStudio.timeline.createdLine', {
+                        defaultValue: 'Created: {{createdAt}}',
+                        createdAt: new Date(entry.createdAt).toLocaleString(),
+                      })}
+                      {entry.resolvedAt ? t('runStudio.timeline.resolvedSegment', {
+                        defaultValue: ' · Resolved: {{resolvedAt}}',
+                        resolvedAt: new Date(entry.resolvedAt).toLocaleString(),
+                      }) : ''}
                     </div>
                   </div>
                 )}
@@ -1080,14 +1252,18 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
             ))}
           </div>
 
-          <div className="text-sm font-semibold text-gray-800 mb-2">Run Logs</div>
+          <div className="text-sm font-semibold text-gray-800 mb-2">
+            {t('runStudio.logs.title', { defaultValue: 'Run Logs' })}
+          </div>
           <div className="mb-2 space-y-2">
             <Input
               id="workflow-run-log-search"
-              label="Search logs"
+              label={t('runStudio.logs.searchLabel', { defaultValue: 'Search logs' })}
               value={logSearch}
               onChange={(event) => setLogSearch(event.target.value)}
-              placeholder="Search message or step path"
+              placeholder={t('runStudio.logs.searchPlaceholder', {
+                defaultValue: 'Search message or step path',
+              })}
             />
             <div className="flex flex-wrap gap-2">
 	              {['ERROR', 'WARN', 'INFO', 'DEBUG'].map((level) => (
@@ -1098,7 +1274,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
 	                  size="sm"
 	                  onClick={() => toggleLogLevel(level)}
 	                >
-	                  {level}
+	                  {formatWorkflowLogLevel(level as 'ERROR' | 'WARN' | 'INFO' | 'DEBUG')}
 	                </Button>
 	              ))}
 	              {logLevelFilters.length > 0 && (
@@ -1108,14 +1284,16 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
 	                  size="sm"
 	                  onClick={() => setLogLevelFilters([])}
 	                >
-	                  Clear
+	                  {t('runStudio.logs.actions.clear', { defaultValue: 'Clear' })}
 	                </Button>
 	              )}
             </div>
           </div>
           <div className="flex-1 overflow-auto rounded border border-gray-200 bg-white">
             {filteredLogs.length === 0 && (
-              <div className="p-4 text-sm text-gray-500">No logs yet.</div>
+              <div className="p-4 text-sm text-gray-500">
+                {t('runStudio.logs.empty', { defaultValue: 'No logs yet.' })}
+              </div>
             )}
             {filteredLogs.map((log) => (
               <div key={log.log_id} className="border-b border-gray-100 px-3 py-2 text-xs text-gray-700">
@@ -1138,45 +1316,63 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
       <Dialog
         isOpen={runActionMode !== null}
         onClose={() => setRunActionMode(null)}
-        title={runActionMode === 'cancel' ? 'Cancel Run' : 'Replay Run'}
+        title={runActionMode === 'cancel'
+          ? t('runStudio.dialog.title.cancel', { defaultValue: 'Cancel Run' })
+          : t('runStudio.dialog.title.replay', { defaultValue: 'Replay Run' })}
         className="max-w-2xl"
         footer={(
           <div className="flex justify-end space-x-2">
             <Button id="workflow-run-action-close" variant="outline" onClick={() => setRunActionMode(null)}>
-              Close
+              {t('runStudio.dialog.actions.close', { defaultValue: 'Close' })}
             </Button>
             <Button
               id="workflow-run-action-confirm"
               onClick={handleRunActionConfirm}
               disabled={!actionReasonValid || isSubmittingAction || (runActionMode === 'replay' && !!replayPayloadError)}
             >
-              {isSubmittingAction ? 'Working...' : runActionMode === 'cancel' ? 'Confirm Cancel' : 'Start Replay'}
+              {isSubmittingAction
+                ? t('runStudio.dialog.actions.working', { defaultValue: 'Working...' })
+                : runActionMode === 'cancel'
+                  ? t('runStudio.dialog.actions.confirmCancel', { defaultValue: 'Confirm Cancel' })
+                  : t('runStudio.dialog.actions.startReplay', { defaultValue: 'Start Replay' })}
             </Button>
           </div>
         )}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{runActionMode === 'cancel' ? 'Cancel Workflow Run' : 'Replay Workflow Run'}</DialogTitle>
+            <DialogTitle>
+              {runActionMode === 'cancel'
+                ? t('runStudio.dialog.heading.cancel', { defaultValue: 'Cancel Workflow Run' })
+                : t('runStudio.dialog.heading.replay', { defaultValue: 'Replay Workflow Run' })}
+            </DialogTitle>
             <DialogDescription>
               {runActionMode === 'cancel'
-                ? 'Canceling will stop any in-progress or waiting steps for this run.'
-                : 'Replaying will start a new run using the payload below.'}
+                ? t('runStudio.dialog.description.cancel', {
+                  defaultValue: 'Canceling will stop any in-progress or waiting steps for this run.',
+                })
+                : t('runStudio.dialog.description.replay', {
+                  defaultValue: 'Replaying will start a new run using the payload below.',
+                })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <Input
               id="workflow-run-action-reason"
-              label="Reason"
+              label={t('runStudio.dialog.fields.reason', { defaultValue: 'Reason' })}
               value={runActionReason}
               onChange={(event) => setRunActionReason(event.target.value)}
-              placeholder="e.g. Canceling to adjust inputs"
+              placeholder={t('runStudio.dialog.fields.reasonPlaceholder', {
+                defaultValue: 'e.g. Canceling to adjust inputs',
+              })}
             />
 
             {runActionMode === 'replay' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Payload (JSON)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('runStudio.dialog.fields.payloadJson', { defaultValue: 'Payload (JSON)' })}
+                </label>
                 <TextArea
                   id="workflow-run-replay-payload"
                   value={replayPayloadText}
@@ -1215,6 +1411,7 @@ const RunBlockSection: React.FC<{ title: string; children: React.ReactNode }> = 
 };
 
 const RunJsonPanel: React.FC<{ title: string; value: unknown }> = ({ title, value }) => {
+  const { t } = useTranslation('msp/workflows');
   const extracted = value as { message?: string; name?: string; errorType?: string; category?: string } | null;
   const summary = extracted
     ? [extracted.errorType, extracted.category, extracted.name].filter(Boolean).join(' · ')
@@ -1223,7 +1420,7 @@ const RunJsonPanel: React.FC<{ title: string; value: unknown }> = ({ title, valu
   try {
     content = JSON.stringify(value ?? null, null, 2);
   } catch {
-    content = 'Unable to serialize value.';
+    content = t('runStudio.jsonPanel.serializeFailed', { defaultValue: 'Unable to serialize value.' });
   }
   return (
     <div className="rounded border border-gray-200 bg-white">
