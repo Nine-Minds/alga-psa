@@ -288,3 +288,34 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   node scripts/validate-translations.cjs
   ```
 - ESLint result: no errors; the file still has a large pre-existing warning backlog (`unused`, `any`, `react-hooks/exhaustive-deps`, etc.) unrelated to this enum-hook conversion.
+
+### F013 complete — WorkflowRunList strings extracted
+- Updated `ee/server/src/components/workflow-designer/WorkflowRunList.tsx` to route all component-owned copy through `useTranslation('msp/workflows')`, including:
+  - quick range chips
+  - summary strip labels
+  - filter labels/placeholders
+  - table headers / empty states
+  - row action labels
+  - bulk-action dialog copy
+  - toast fallbacks for load/export/bulk-action flows
+- Switched run-status badges and summary counts from raw persisted values (`RUNNING`, `FAILED`, etc.) to `useFormatWorkflowRunStatus()` so localized labels render while action payloads still send raw enum values.
+- Added `runList.*` keys to `server/public/locales/{en,fr,es,de,nl,it,pl,xx,yy}/msp/workflows.json` as temporary English stubs; real translations remain WF-F work.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowRunList.tsx
+  node scripts/validate-translations.cjs
+  ```
+- ESLint result: no errors; the remaining warnings in `WorkflowRunList.tsx` are pre-existing `any`/unused-variable sites, plus the same existing helper-input typing.
+
+### Added backlog item — workflowRunTriggerPresentation helper still returns English
+- While extracting `WorkflowRunList.tsx`, confirmed `ee/server/src/components/workflow-designer/workflowRunTriggerPresentation.ts` still returns hardcoded English labels for:
+  - `Manual`
+  - `Event`
+  - `One-time schedule`
+  - `Recurring schedule`
+  - schedule statuses such as `Scheduled` / `Paused`
+- This helper is explicitly named in the PRD WF-B surface list but was missing from `features.json`.
+- Added:
+  - `F051` — translate the helper via workflow-aware formatters
+  - `T046` — formatter coverage test for trigger + schedule-status labels
+- Rationale: without a dedicated item, run-list and dialog surfaces would still leak English even after component extraction work is complete.

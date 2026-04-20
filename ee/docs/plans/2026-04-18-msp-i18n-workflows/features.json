@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Extract all user-visible strings in WorkflowRunList.tsx to t('…') calls under page/table/filters/actions key roots in msp/workflows.json.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-B"]
   },
   {
@@ -298,5 +298,11 @@
     "description": "Update .ai/translation/enum-labels-pattern.md — add a 'Batch 11 — Workflows' entry to the non-billing backlog section noting the 13 workflow enums migrated to the option-hook pattern; flag getActivityStatusOptions as remaining backlog.",
     "implemented": false,
     "prdRefs": ["Enum migration — explicit scope", "WF-F"]
+  },
+  {
+    "id": "F051",
+    "description": "Extract hardcoded trigger and schedule-status labels in workflowRunTriggerPresentation.ts to translation-aware workflow formatters so WorkflowRunList/WorkflowRunDialog/WorkflowRunDetails stop rendering English helper strings.",
+    "implemented": false,
+    "prdRefs": ["WF-B", "Sub-batch plan", "Acceptance criteria"]
   }
 ]

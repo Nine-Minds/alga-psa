@@ -26,6 +26,93 @@
     "open": "Open",
     "close": "Close"
   },
+  "runList": {
+    "quickRanges": {
+      "last24h": "Last 24h",
+      "last7d": "Last 7d"
+    },
+    "summary": {
+      "total": "Total",
+      "activeWorkflows": "Active workflows",
+      "runCount": "{{count}} runs"
+    },
+    "filters": {
+      "all": "All",
+      "allWorkflows": "All workflows",
+      "searchLabel": "Run ID or correlation key",
+      "searchPlaceholder": "Search by run id or correlation key",
+      "statusLabel": "Status",
+      "workflowLabel": "Workflow",
+      "versionLabel": "Workflow version",
+      "versionPlaceholder": "Any version",
+      "fromLabel": "From",
+      "toLabel": "To",
+      "sortLabel": "Sort"
+    },
+    "actions": {
+      "applyFilters": "Apply filters",
+      "reset": "Reset",
+      "viewLatestRun": "View latest run",
+      "runNow": "Run now",
+      "exportCsv": "Export CSV",
+      "refresh": "Refresh",
+      "resumeSelected": "Resume selected ({{count}})",
+      "cancelSelected": "Cancel selected ({{count}})",
+      "clearSelection": "Clear selection",
+      "details": "Details",
+      "loadMore": "Load more"
+    },
+    "table": {
+      "runId": "Run ID",
+      "workflow": "Workflow",
+      "version": "Version",
+      "tenant": "Tenant",
+      "triggerPayload": "Trigger payload",
+      "status": "Status",
+      "started": "Started",
+      "updated": "Updated",
+      "duration": "Duration",
+      "emptyValue": "—",
+      "trigger": {
+        "manual": "Manual",
+        "mapped": "Mapped",
+        "identity": "Identity"
+      }
+    },
+    "states": {
+      "loading": "Loading workflow runs...",
+      "empty": "No workflow runs match the current filters."
+    },
+    "bulk": {
+      "resumeTitle": "Resume Selected Runs",
+      "resumeMessage": "Resume {{count}} selected run(s)?",
+      "cancelTitle": "Cancel Selected Runs",
+      "cancelMessage": "Cancel {{count}} selected run(s)? This cannot be undone.",
+      "reasonLabel": "Reason",
+      "resumeReasonPlaceholder": "Provide a reason for resuming",
+      "cancelReasonPlaceholder": "Provide a reason for canceling",
+      "resumeConfirm": "Resume runs",
+      "cancelConfirm": "Cancel runs"
+    },
+    "toasts": {
+      "loadRunsFailed": "Failed to load workflow runs",
+      "selectWorkflowForLatestRun": "Select a workflow to view its latest run.",
+      "noRunsFoundForWorkflow": "No runs found for that workflow.",
+      "loadLatestRunFailed": "Failed to load latest run",
+      "selectWorkflowToRun": "Select a workflow to run.",
+      "exportReady": "Run export ready",
+      "exportFailed": "Failed to export runs",
+      "selectRunsForBulkAction": "Select runs to perform this action.",
+      "bulkReasonTooShort": "Reason must be at least 3 characters.",
+      "noEligibleRuns": "No selected runs are eligible for that action.",
+      "bulkResumeFailedCount": "Failed to resume {{count}} run(s).",
+      "bulkCancelFailedCount": "Failed to cancel {{count}} run(s).",
+      "bulkResumeSuccessCount": "Resumed {{count}} run(s).",
+      "bulkCancelSuccessCount": "Canceled {{count}} run(s).",
+      "bulkSkippedIneligibleCount": "Skipped {{count}} ineligible run(s).",
+      "bulkActionFailed": "Bulk action failed"
+    }
+  },
   "enums": {
     "workflowRunStatus": {
       "RUNNING": "Running",

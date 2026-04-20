@@ -268,5 +268,11 @@
     "description": "Namespace-not-loaded regression: temporarily remove 'msp/workflows' from ROUTE_NAMESPACES['/msp/workflows'] and confirm the page renders key strings (enums.workflowRunStatus.RUNNING) — then restore. This confirms the namespace is actually being loaded on the route, not silently falling back to common.",
     "implemented": false,
     "featureIds": ["F002"]
+  },
+  {
+    "id": "T046",
+    "description": "workflowRunTriggerPresentation.ts formatter coverage: manual/event/schedule/recurring trigger labels and schedule status badges resolve through workflow translation keys instead of returning hardcoded English strings.",
+    "implemented": false,
+    "featureIds": ["F051"]
   }
 ]

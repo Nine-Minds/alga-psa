@@ -23,6 +23,7 @@ import {
   resumeWorkflowRunAction
 } from '@alga-psa/workflows/actions';
 import {
+  useFormatWorkflowRunStatus,
   useWorkflowRunSortOptions,
   useWorkflowRunStatusOptions,
 } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
@@ -124,14 +125,6 @@ const formatDuration = (start?: string | null, end?: string | null) => {
   return `${hours}h ${minutes % 60}m`;
 };
 
-const buildWorkflowOptions = (definitions: WorkflowDefinitionSummary[]): SelectOption[] => [
-  { value: '', label: 'All workflows' },
-  ...definitions.map((definition) => ({
-    value: definition.workflow_id,
-    label: definition.name
-  }))
-];
-
 const parseDateInputAsUtc = (value?: string): Date | null => {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const [yearRaw, monthRaw, dayRaw] = value.split('-');
@@ -178,6 +171,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
   canManage = false
 }) => {
   const { t } = useTranslation('msp/workflows');
+  const formatWorkflowRunStatus = useFormatWorkflowRunStatus();
   const workflowRunStatusOptions = useWorkflowRunStatusOptions();
   const workflowRunSortOptions = useWorkflowRunSortOptions();
   const [filters, setFilters] = useState<WorkflowRunFilters>(DEFAULT_FILTERS);
@@ -203,7 +197,19 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
     [t, workflowRunStatusOptions]
   );
 
-  const workflowOptions = useMemo(() => buildWorkflowOptions(definitions), [definitions]);
+  const workflowOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: '',
+        label: t('runList.filters.allWorkflows', { defaultValue: 'All workflows' }),
+      },
+      ...definitions.map((definition) => ({
+        value: definition.workflow_id,
+        label: definition.name,
+      })),
+    ],
+    [definitions, t]
+  );
   const workflowNameMap = useMemo(
     () => new Map(definitions.map((definition) => [definition.workflow_id, definition.name])),
     [definitions]
@@ -270,12 +276,16 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
           setSelectedRunIds(new Set());
         }
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load workflow runs');
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : t('runList.toasts.loadRunsFailed', { defaultValue: 'Failed to load workflow runs' })
+        );
       } finally {
         setIsLoading(false);
       }
     },
-    [filters]
+    [filters, t]
   );
 
   const fetchSummary = useCallback(
@@ -339,7 +349,11 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
 
   const handleViewLatestRun = async () => {
     if (!activeDefinition) {
-      toast.error('Select a workflow to view its latest run.');
+      toast.error(
+        t('runList.toasts.selectWorkflowForLatestRun', {
+          defaultValue: 'Select a workflow to view its latest run.',
+        })
+      );
       return;
     }
     try {
@@ -351,18 +365,30 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
       })) as WorkflowRunListResponse;
       const latest = result.runs?.[0];
       if (!latest) {
-        toast.error('No runs found for that workflow.');
+        toast.error(
+          t('runList.toasts.noRunsFoundForWorkflow', {
+            defaultValue: 'No runs found for that workflow.',
+          })
+        );
         return;
       }
       window.location.assign(`/msp/workflows/runs/${latest.run_id}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load latest run');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t('runList.toasts.loadLatestRunFailed', { defaultValue: 'Failed to load latest run' })
+      );
     }
   };
 
   const openRunDialog = () => {
     if (!activeDefinition) {
-      toast.error('Select a workflow to run.');
+      toast.error(
+        t('runList.toasts.selectWorkflowToRun', {
+          defaultValue: 'Select a workflow to run.',
+        })
+      );
       return;
     }
     setIsRunDialogOpen(true);
@@ -406,9 +432,13 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
       link.download = result.filename;
       link.click();
       window.URL.revokeObjectURL(url);
-      toast.success('Run export ready');
+      toast.success(t('runList.toasts.exportReady', { defaultValue: 'Run export ready' }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to export runs');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t('runList.toasts.exportFailed', { defaultValue: 'Failed to export runs' })
+      );
     }
   };
 
@@ -448,12 +478,20 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
 
   const performBulkAction = async (action: 'resume' | 'cancel') => {
     if (selectedRuns.length === 0) {
-      toast.error('Select runs to perform this action.');
+      toast.error(
+        t('runList.toasts.selectRunsForBulkAction', {
+          defaultValue: 'Select runs to perform this action.',
+        })
+      );
       setBulkAction(null);
       return;
     }
     if (bulkReason.trim().length < 3) {
-      toast.error('Reason must be at least 3 characters.');
+      toast.error(
+        t('runList.toasts.bulkReasonTooShort', {
+          defaultValue: 'Reason must be at least 3 characters.',
+        })
+      );
       return;
     }
 
@@ -463,7 +501,11 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
     const skipped = selectedRuns.length - eligible.length;
 
     if (eligible.length === 0) {
-      toast.error('No selected runs are eligible for that action.');
+      toast.error(
+        t('runList.toasts.noEligibleRuns', {
+          defaultValue: 'No selected runs are eligible for that action.',
+        })
+      );
       setBulkAction(null);
       return;
     }
@@ -478,12 +520,44 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
       );
       const failed = responses.filter((response: any) => !response?.ok).length;
       if (failed > 0) {
-        toast.error(`Failed to ${action} ${failed} run(s).`);
+        toast.error(
+          t(
+            action === 'resume'
+              ? 'runList.toasts.bulkResumeFailedCount'
+              : 'runList.toasts.bulkCancelFailedCount',
+            {
+              defaultValue:
+                action === 'resume'
+                  ? 'Failed to resume {{count}} run(s).'
+                  : 'Failed to cancel {{count}} run(s).',
+              count: failed,
+            }
+          )
+        );
       } else {
-        toast.success(`${action === 'resume' ? 'Resumed' : 'Canceled'} ${eligible.length} run(s).`);
+        toast.success(
+          t(
+            action === 'resume'
+              ? 'runList.toasts.bulkResumeSuccessCount'
+              : 'runList.toasts.bulkCancelSuccessCount',
+            {
+              defaultValue:
+                action === 'resume'
+                  ? 'Resumed {{count}} run(s).'
+                  : 'Canceled {{count}} run(s).',
+              count: eligible.length,
+            }
+          )
+        );
       }
       if (skipped > 0) {
-        toast(`Skipped ${skipped} ineligible run(s).`, { icon: '⚠️' });
+        toast(
+          t('runList.toasts.bulkSkippedIneligibleCount', {
+            defaultValue: 'Skipped {{count}} ineligible run(s).',
+            count: skipped,
+          }),
+          { icon: '⚠️' }
+        );
       }
       setBulkAction(null);
       setBulkReason('');
@@ -491,7 +565,11 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
       fetchRuns(0, false);
       fetchSummary();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Bulk action failed');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t('runList.toasts.bulkActionFailed', { defaultValue: 'Bulk action failed' })
+      );
       setBulkAction(null);
     }
   };
@@ -511,17 +589,17 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
         <Card className="p-4 space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <Button id="workflow-runs-last-24h" variant="outline" size="sm" onClick={() => applyQuickRange(24)}>
-              Last 24h
+              {t('runList.quickRanges.last24h', { defaultValue: 'Last 24h' })}
             </Button>
             <Button id="workflow-runs-last-7d" variant="outline" size="sm" onClick={() => applyQuickRange(168)}>
-              Last 7d
+              {t('runList.quickRanges.last7d', { defaultValue: 'Last 7d' })}
             </Button>
             {summary && (
               <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                <span>Total: {summary.total}</span>
+                <span>{t('runList.summary.total', { defaultValue: 'Total' })}: {summary.total}</span>
                 {Object.entries(summary.byStatus).map(([status, count]) => (
                   <Badge key={status} className={STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-600'}>
-                    {status}: {count}
+                    {formatWorkflowRunStatus(status)}: {count}
                   </Badge>
                 ))}
               </div>
@@ -530,14 +608,16 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
 
           {isActive && runningWorkflowButtons.length > 0 && (
             <div className="flex items-center gap-2 overflow-x-auto">
-              <span className="text-xs text-gray-500 shrink-0">Active workflows</span>
+              <span className="text-xs text-gray-500 shrink-0">
+                {t('runList.summary.activeWorkflows', { defaultValue: 'Active workflows' })}
+              </span>
               <Button
                 id="workflow-runs-active-all"
                 variant={filters.workflowId === '' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => applyWorkflowFilter('')}
               >
-                All
+                {t('runList.filters.all', { defaultValue: 'All' })}
               </Button>
               {runningWorkflowButtons.map((workflow) => (
                 <Button
@@ -550,12 +630,15 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                 >
                   <span className="flex items-center gap-2">
                     <Badge className={STATUS_STYLES[workflow.status] ?? 'bg-gray-100 text-gray-600'}>
-                      {workflow.status}
+                      {formatWorkflowRunStatus(workflow.status)}
                     </Badge>
                     <span>{workflow.name}</span>
                     {workflow.runCount != null && (
                       <Badge variant="info">
-                        {workflow.runCount} runs
+                        {t('runList.summary.runCount', {
+                          defaultValue: '{{count}} runs',
+                          count: workflow.runCount,
+                        })}
                       </Badge>
                     )}
                   </span>
@@ -566,28 +649,30 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Input
               id="workflow-runs-search"
-              label="Run ID or correlation key"
+              label={t('runList.filters.searchLabel', { defaultValue: 'Run ID or correlation key' })}
               value={filters.search}
               onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
-              placeholder="Search by run id or correlation key"
+              placeholder={t('runList.filters.searchPlaceholder', {
+                defaultValue: 'Search by run id or correlation key',
+              })}
             />
             <CustomSelect
               id="workflow-runs-status"
-              label="Status"
+              label={t('runList.filters.statusLabel', { defaultValue: 'Status' })}
               options={statusOptions}
               value={filters.status}
               onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
             />
             <CustomSelect
               id="workflow-runs-workflow"
-              label="Workflow"
+              label={t('runList.filters.workflowLabel', { defaultValue: 'Workflow' })}
               options={workflowOptions}
               value={filters.workflowId}
               onValueChange={(value) => setFilters((prev) => ({ ...prev, workflowId: value }))}
             />
             <Input
               id="workflow-runs-version"
-              label="Workflow version"
+              label={t('runList.filters.versionLabel', { defaultValue: 'Workflow version' })}
               type="number"
               value={filters.workflowVersion}
               onChange={(event) => setFilters((prev) => ({ ...prev, workflowVersion: event.target.value }))}
@@ -596,25 +681,25 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                   event.currentTarget.blur();
                 }
               }}
-              placeholder="Any version"
+              placeholder={t('runList.filters.versionPlaceholder', { defaultValue: 'Any version' })}
             />
             <Input
               id="workflow-runs-from"
-              label="From"
+              label={t('runList.filters.fromLabel', { defaultValue: 'From' })}
               type="date"
               value={filters.from}
               onChange={(event) => setFilters((prev) => ({ ...prev, from: event.target.value }))}
             />
             <Input
               id="workflow-runs-to"
-              label="To"
+              label={t('runList.filters.toLabel', { defaultValue: 'To' })}
               type="date"
               value={filters.to}
               onChange={(event) => setFilters((prev) => ({ ...prev, to: event.target.value }))}
             />
             <CustomSelect
               id="workflow-runs-sort"
-              label="Sort"
+              label={t('runList.filters.sortLabel', { defaultValue: 'Sort' })}
               options={workflowRunSortOptions}
               value={filters.sort}
               onValueChange={(value) => setFilters((prev) => ({ ...prev, sort: value }))}
@@ -622,10 +707,10 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
           </div>
           <div className="flex items-center gap-2">
             <Button id="workflow-runs-apply" onClick={handleApplyFilters} disabled={isLoading}>
-              Apply filters
+              {t('runList.actions.applyFilters', { defaultValue: 'Apply filters' })}
             </Button>
             <Button id="workflow-runs-reset" variant="outline" onClick={handleResetFilters} disabled={isLoading}>
-              Reset
+              {t('runList.actions.reset', { defaultValue: 'Reset' })}
             </Button>
             <Button
               id="workflow-runs-view-latest"
@@ -633,7 +718,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
               onClick={handleViewLatestRun}
               disabled={!activeDefinition}
             >
-              View latest run
+              {t('runList.actions.viewLatestRun', { defaultValue: 'View latest run' })}
             </Button>
             <Button
               id="workflow-runs-run-now"
@@ -641,10 +726,10 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
               onClick={openRunDialog}
               disabled={!canRunSelected}
             >
-              Run now
+              {t('runList.actions.runNow', { defaultValue: 'Run now' })}
             </Button>
             <Button id="workflow-runs-export" variant="outline" onClick={handleExport}>
-              Export CSV
+              {t('runList.actions.exportCsv', { defaultValue: 'Export CSV' })}
             </Button>
             <Button
               id="workflow-runs-refresh"
@@ -653,7 +738,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
               disabled={isLoading}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
+              {t('runList.actions.refresh', { defaultValue: 'Refresh' })}
             </Button>
             {showSelection && selectedRunIds.size > 0 && (
               <>
@@ -663,7 +748,10 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                   onClick={() => setBulkAction('resume')}
                   disabled={isLoading}
                 >
-                  Resume selected ({selectedRunIds.size})
+                  {t('runList.actions.resumeSelected', {
+                    defaultValue: 'Resume selected ({{count}})',
+                    count: selectedRunIds.size,
+                  })}
                 </Button>
                 <Button
                   id="workflow-runs-bulk-cancel"
@@ -671,7 +759,10 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                   onClick={() => setBulkAction('cancel')}
                   disabled={isLoading}
                 >
-                  Cancel selected ({selectedRunIds.size})
+                  {t('runList.actions.cancelSelected', {
+                    defaultValue: 'Cancel selected ({{count}})',
+                    count: selectedRunIds.size,
+                  })}
                 </Button>
                 <Button
                   id="workflow-runs-clear-selection"
@@ -679,7 +770,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                   onClick={() => setSelectedRunIds(new Set())}
                   disabled={isLoading}
                 >
-                  Clear selection
+                  {t('runList.actions.clearSelection', { defaultValue: 'Clear selection' })}
                 </Button>
               </>
             )}
@@ -701,15 +792,15 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                     />
                   </TableHead>
                 )}
-                <TableHead>Run ID</TableHead>
-                <TableHead>Workflow</TableHead>
-                <TableHead>Version</TableHead>
-                {showTenantColumn && <TableHead>Tenant</TableHead>}
-                <TableHead>Trigger payload</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Started</TableHead>
-                <TableHead>Updated</TableHead>
-                <TableHead>Duration</TableHead>
+                <TableHead>{t('runList.table.runId', { defaultValue: 'Run ID' })}</TableHead>
+                <TableHead>{t('runList.table.workflow', { defaultValue: 'Workflow' })}</TableHead>
+                <TableHead>{t('runList.table.version', { defaultValue: 'Version' })}</TableHead>
+                {showTenantColumn && <TableHead>{t('runList.table.tenant', { defaultValue: 'Tenant' })}</TableHead>}
+                <TableHead>{t('runList.table.triggerPayload', { defaultValue: 'Trigger payload' })}</TableHead>
+                <TableHead>{t('runList.table.status', { defaultValue: 'Status' })}</TableHead>
+                <TableHead>{t('runList.table.started', { defaultValue: 'Started' })}</TableHead>
+                <TableHead>{t('runList.table.updated', { defaultValue: 'Updated' })}</TableHead>
+                <TableHead>{t('runList.table.duration', { defaultValue: 'Duration' })}</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -747,7 +838,8 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                         <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-[10px]">
                           {run.trigger_type
                             ? getWorkflowRunTriggerLabel(run.trigger_type)
-                            : (workflowTriggerMap.get(run.workflow_id) ?? 'Manual')}
+                            : (workflowTriggerMap.get(run.workflow_id)
+                              ?? t('runList.table.trigger.manual', { defaultValue: 'Manual' }))}
                         </Badge>
                         {isTimeTriggeredRun(run.trigger_type) && workflowScheduleStateMap.get(run.workflow_id)?.status ? (
                           <Badge
@@ -760,7 +852,11 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                     </div>
                   </TableCell>
                   <TableCell>{run.workflow_version}</TableCell>
-                  {showTenantColumn && <TableCell className="text-xs text-gray-500">{run.tenant_id ?? '—'}</TableCell>}
+                  {showTenantColumn && (
+                    <TableCell className="text-xs text-gray-500">
+                      {run.tenant_id ?? t('runList.table.emptyValue', { defaultValue: '—' })}
+                    </TableCell>
+                  )}
                   <TableCell className="text-xs">
                     {run.source_payload_schema_ref ? (
                       <div className="flex flex-col gap-1">
@@ -769,19 +865,25 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                         </div>
                         <div className="flex items-center gap-1">
                           {run.trigger_mapping_applied ? (
-                            <Badge variant="info" className="text-[10px]">Mapped</Badge>
+                            <Badge variant="info" className="text-[10px]">
+                              {t('runList.table.trigger.mapped', { defaultValue: 'Mapped' })}
+                            </Badge>
                           ) : (
-                            <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-[10px]">Identity</Badge>
+                            <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-[10px]">
+                              {t('runList.table.trigger.identity', { defaultValue: 'Identity' })}
+                            </Badge>
                           )}
                         </div>
                       </div>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <span className="text-gray-400">
+                        {t('runList.table.emptyValue', { defaultValue: '—' })}
+                      </span>
                     )}
                   </TableCell>
                   <TableCell>
                     <Badge className={STATUS_STYLES[run.status] ?? 'bg-gray-100 text-gray-600'}>
-                      {run.status}
+                      {formatWorkflowRunStatus(run.status)}
                     </Badge>
                   </TableCell>
                   <TableCell>{formatDateTime(run.started_at)}</TableCell>
@@ -794,7 +896,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                       size="sm"
                       onClick={() => setSelectedRunId(run.run_id)}
                     >
-                      Details
+                      {t('runList.actions.details', { defaultValue: 'Details' })}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -802,14 +904,16 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
               {isLoading && runs.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={columnCount} className="text-center text-sm text-gray-500 py-8">
-                    Loading workflow runs...
+                    {t('runList.states.loading', { defaultValue: 'Loading workflow runs...' })}
                   </TableCell>
                 </TableRow>
               )}
               {!isLoading && runs.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={columnCount} className="text-center text-sm text-gray-500 py-8">
-                    No workflow runs match the current filters.
+                    {t('runList.states.empty', {
+                      defaultValue: 'No workflow runs match the current filters.',
+                    })}
                   </TableCell>
                 </TableRow>
               )}
@@ -823,7 +927,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                 onClick={() => fetchRuns(nextCursor, true)}
                 disabled={isLoading}
               >
-                Load more
+                {t('runList.actions.loadMore', { defaultValue: 'Load more' })}
               </Button>
             </div>
           )}
@@ -849,40 +953,54 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
           <ConfirmationDialog
             id="workflow-runs-bulk-resume-confirm"
             isOpen={bulkAction === 'resume'}
-            title="Resume Selected Runs"
+            title={t('runList.bulk.resumeTitle', { defaultValue: 'Resume Selected Runs' })}
             message={(
               <div className="space-y-3">
-                <p>Resume {selectedRunIds.size} selected run(s)?</p>
+                <p>
+                  {t('runList.bulk.resumeMessage', {
+                    defaultValue: 'Resume {{count}} selected run(s)?',
+                    count: selectedRunIds.size,
+                  })}
+                </p>
                 <TextArea
                   id="workflow-runs-bulk-resume-reason"
-                  label="Reason"
+                  label={t('runList.bulk.reasonLabel', { defaultValue: 'Reason' })}
                   value={bulkReason}
                   onChange={(event) => setBulkReason(event.target.value)}
-                  placeholder="Provide a reason for resuming"
+                  placeholder={t('runList.bulk.resumeReasonPlaceholder', {
+                    defaultValue: 'Provide a reason for resuming',
+                  })}
                 />
               </div>
             )}
-            confirmLabel="Resume runs"
+            confirmLabel={t('runList.bulk.resumeConfirm', { defaultValue: 'Resume runs' })}
             onConfirm={() => performBulkAction('resume')}
             onClose={() => setBulkAction(null)}
           />
           <ConfirmationDialog
             id="workflow-runs-bulk-cancel-confirm"
             isOpen={bulkAction === 'cancel'}
-            title="Cancel Selected Runs"
+            title={t('runList.bulk.cancelTitle', { defaultValue: 'Cancel Selected Runs' })}
             message={(
               <div className="space-y-3">
-                <p>Cancel {selectedRunIds.size} selected run(s)? This cannot be undone.</p>
+                <p>
+                  {t('runList.bulk.cancelMessage', {
+                    defaultValue: 'Cancel {{count}} selected run(s)? This cannot be undone.',
+                    count: selectedRunIds.size,
+                  })}
+                </p>
                 <TextArea
                   id="workflow-runs-bulk-cancel-reason"
-                  label="Reason"
+                  label={t('runList.bulk.reasonLabel', { defaultValue: 'Reason' })}
                   value={bulkReason}
                   onChange={(event) => setBulkReason(event.target.value)}
-                  placeholder="Provide a reason for canceling"
+                  placeholder={t('runList.bulk.cancelReasonPlaceholder', {
+                    defaultValue: 'Provide a reason for canceling',
+                  })}
                 />
               </div>
             )}
-            confirmLabel="Cancel runs"
+            confirmLabel={t('runList.bulk.cancelConfirm', { defaultValue: 'Cancel runs' })}
             onConfirm={() => performBulkAction('cancel')}
             onClose={() => setBulkAction(null)}
           />
@@ -894,7 +1012,12 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
         onClose={() => setIsRunDialogOpen(false)}
         workflowId={activeDefinition?.workflow_id ?? null}
         workflowName={activeDefinition?.name ?? ''}
-        triggerLabel={activeDefinition ? workflowTriggerMap.get(activeDefinition.workflow_id) ?? 'Manual' : 'Manual'}
+        triggerLabel={
+          activeDefinition
+            ? workflowTriggerMap.get(activeDefinition.workflow_id)
+              ?? t('runList.table.trigger.manual', { defaultValue: 'Manual' })
+            : t('runList.table.trigger.manual', { defaultValue: 'Manual' })
+        }
         triggerEventName={activeDefinition ? (activeDefinition.trigger as any)?.eventName ?? null : null}
         payloadSchemaRef={activeDefinition?.payload_schema_ref ?? null}
         publishedVersion={activeDefinition?.published_version ?? null}
