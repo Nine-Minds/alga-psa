@@ -624,6 +624,30 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   node scripts/validate-translations.cjs
   ```
 - Results: ESLint clean (0 errors, 0 warnings); translation validation passed with 0 missing/extra keys.
+
+### F027 complete — mapping components localized
+- `ValidationBadge.tsx` — Status labels (`Valid`/`Warnings`/`Errors`/`Incomplete`) now resolve via `t(\`validationBadge.status.${status}\`)` with the original English as `defaultValue`. Also localized: tooltip copy (both `All required inputs are mapped` and `Configure input mappings`), the `{mapped} of {required} required fields mapped` interpolated line, both `Open Mapping Editor` CTAs, the `Errors (n)`/`Warnings (n)` expanded-section headings, and the `+N more errors`/`+N more warnings` truncation tail rows.
+- `SourceDataTree.tsx` — Localized the search placeholder, all five section titles (`Payload`, `Step Outputs (vars)`, `Loop Context`, `Workflow Meta`, `Error Context`), the empty-vars helper copy (split into 5 ordered pieces to preserve the inline `vars.<name>` code span), and both loop-context badges (`current item`, `loop index`).
+- `InputMappingEditor.tsx` — Five React components inside this 1.8k-line file now call `useTranslation('msp/workflows')`:
+  - `MappingFieldEditor` — `Browse sources` toggle, `Use reference`/`Use fixed value` legacy-replacement buttons and their explanatory card (`Legacy mapping no longer supported here` + description).
+  - `StructuredLiteralGroup` — `Collapse {{title}}` / `Expand {{title}}` aria-labels for the expand/collapse button.
+  - `FixedValueEditorShell` — `Open editor` trigger, the dialog `Edit {{fieldName}}` title (used in both the Dialog component's `title` prop and the inner `DialogTitle`), `Cancel`/`Apply` footer buttons, and the dialog description `Use the larger editor for longer fixed-value content.`.
+  - `LiteralValueEditor` — nullable select options (`Use value`/`Set null`), editor mode select options (`Structured`/`Raw JSON`), the `Invalid JSON` error toast/label, object-fields section title + `Reset`, per-row `Item {{index}}` titles and their `Reset` buttons (replaced by a single `replace_all` edit), `Add item` buttons, primitive-array placeholder (`Enter one value per line, or comma-separated`) + helper (`Use newline, comma, or semicolon separators.`), and the default string-input placeholder `Enter value...`.
+  - Top-level `InputMappingEditor` — Empty state (`This action has no input fields.`), list-box / field-list ARIA labels, `{{filled}} of {{total}} fields filled` summary + `{{count}} required missing` + its red badge tooltip, `Apply suggestions ({{count}})` + `Clear values` bulk actions, `(fuzzy)` confidence suffix, `Apply suggestion: {{sourcePath}}` button tooltip, `Remove mapping (Delete/Backspace)` per-row trash button tooltip, `Fill` add-mapping button.
+- `MappingPanel.tsx`, `MappingEditorSkeleton.tsx`, `MappingConnectionsOverlay.tsx` — no user-visible hardcoded English strings; all three components are purely presentational / data-pass-through. No changes required.
+- Added `sourceDataTree.*` (14 keys), `validationBadge.*` (12 keys), and `inputMappingEditor.*` (~35 keys) to `server/public/locales/en/msp/workflows.json`, synced the same stub structure into `fr/es/de/nl/it/pl/xx/yy`.
+- Deliberately deferred out of F027:
+  - The inline array-validation error strings (`Item {index} must be an integer`, `At most {n} value(s)…`, etc.) produced by `parsePrimitiveList` — these are validator return values pushed up through `onChange` plumbing, not direct UI strings. Better handled with the validator module or as part of F040's server-error mapping pass so the same `errors[]` shape works across client and server validators.
+  - The literal numeric `number` editor, boolean labels (`true`/`false`), and enum pass-through values — those are rendered verbatim from option values and don't need localization per PRD "node body text driven by workflow data remains unchanged".
+  - `mapping/ExpressionTextArea.tsx` and `mapping/ExpressionAutocomplete.tsx` — scoped to F028.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/mapping/SourceDataTree.tsx ee/server/src/components/workflow-designer/mapping/ValidationBadge.tsx
+  node scripts/validate-translations.cjs
+  ```
+- Results:
+  - ESLint reports 0 errors across the three files; warnings are the pre-existing `no-non-null-assertion`, `no-unused-vars` backlog.
+  - translation validation passed with 0 missing/extra keys.
 - Checks run:
   ```bash
   npx eslint ee/server/src/components/workflow-graph/WorkflowGraph.tsx

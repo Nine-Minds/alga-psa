@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "Extract all user-visible strings in mapping/* components: InputMappingEditor, MappingPanel, SourceDataTree, ValidationBadge, MappingEditorSkeleton, MappingConnectionsOverlay (section headers, drop-target hints, validation messages, empty states).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-D"]
   },
   {

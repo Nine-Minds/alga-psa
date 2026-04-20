@@ -699,6 +699,99 @@
       "systemEventMissingSchema": "This system event is missing a valid schema and cannot be selected until fixed."
     }
   },
+  "sourceDataTree": {
+    "searchPlaceholder": "Search fields...",
+    "sections": {
+      "payload": "Payload",
+      "vars": "Step Outputs (vars)",
+      "loopContext": "Loop Context",
+      "workflowMeta": "Workflow Meta",
+      "errorContext": "Error Context"
+    },
+    "vars": {
+      "emptyPrefix": "No vars yet. Use",
+      "saveOutput": "Save output",
+      "emptyConjunction": "or an",
+      "assignStep": "Assign",
+      "emptySuffix": "step to populate"
+    },
+    "loop": {
+      "currentItem": "current item",
+      "loopIndex": "loop index"
+    }
+  },
+  "validationBadge": {
+    "status": {
+      "valid": "Valid",
+      "warning": "Warnings",
+      "error": "Errors",
+      "incomplete": "Incomplete"
+    },
+    "tooltip": {
+      "valid": "All required inputs are mapped",
+      "incomplete": "Configure input mappings",
+      "mappingCount": "{{mapped}} of {{required}} required fields mapped"
+    },
+    "openEditor": "Open Mapping Editor",
+    "errorsHeading": "Errors ({{count}})",
+    "warningsHeading": "Warnings ({{count}})",
+    "moreErrors": "+{{count}} more errors",
+    "moreWarnings": "+{{count}} more warnings"
+  },
+  "inputMappingEditor": {
+    "empty": "This action has no input fields.",
+    "browseSources": "Browse sources",
+    "objectFields": "Object fields",
+    "itemTitle": "Item {{index}}",
+    "reset": "Reset",
+    "addItem": "Add item",
+    "fill": "Fill",
+    "clearValues": "Clear values",
+    "applySuggestions": "Apply suggestions ({{count}})",
+    "applySuggestionTitle": "Apply suggestion: {{sourcePath}}",
+    "fuzzySuffix": "(fuzzy)",
+    "removeMapping": "Remove mapping (Delete/Backspace)",
+    "invalidJson": "Invalid JSON",
+    "stringPlaceholder": "Enter value...",
+    "aria": {
+      "listbox": "Action input fields",
+      "fieldList": "Action input fields list"
+    },
+    "summary": {
+      "filledCount": "{{filled}} of {{total}} fields filled",
+      "missingCount": "{{count}} required missing",
+      "missingTitle": "Required fields are missing values"
+    },
+    "mode": {
+      "structured": "Structured",
+      "rawJson": "Raw JSON"
+    },
+    "nullable": {
+      "useValue": "Use value",
+      "setNull": "Set null"
+    },
+    "primitiveList": {
+      "placeholder": "Enter one value per line, or comma-separated",
+      "helperText": "Use newline, comma, or semicolon separators."
+    },
+    "structuredGroup": {
+      "collapseAria": "Collapse {{title}}",
+      "expandAria": "Expand {{title}}"
+    },
+    "legacy": {
+      "title": "Legacy mapping no longer supported here",
+      "description": "This field uses a saved expression or secret. Replace it with a structured reference or a fixed value.",
+      "useReference": "Use reference",
+      "useFixedValue": "Use fixed value"
+    },
+    "fixedValueDialog": {
+      "title": "Edit {{fieldName}}",
+      "description": "Use the larger editor for longer fixed-value content.",
+      "openEditor": "Open editor",
+      "apply": "Apply",
+      "cancel": "Cancel"
+    }
+  },
   "schemaReference": {
     "selectAction": "Select an action to see its input/output schema",
     "viewDetails": "View schema details",
