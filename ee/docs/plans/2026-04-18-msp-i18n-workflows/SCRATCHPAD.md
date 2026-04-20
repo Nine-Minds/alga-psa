@@ -180,3 +180,12 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   npx tsx -e "import { useWorkflowRunStatusOptions, useFormatWorkflowRunStatus } from './ee/packages/workflows/src/hooks/useWorkflowEnumOptions.ts'; ..."
   ```
   Confirmed the new hook module resolves and exports functions.
+
+### F005 complete — enum translation keys seeded
+- Added `enums.*` trees for all 13 workflow enums under `server/public/locales/en/msp/workflows.json`.
+- To keep `validate-translations.cjs` green while the feature batch is still in progress, mirrored the same key structure into `fr/es/de/nl/it/pl/xx/yy` as temporary English stubs. F042/F041 will replace those with real translations and regenerated pseudo-locales later.
+- Validation rerun after the enum-key expansion:
+  ```bash
+  node scripts/validate-translations.cjs
+  ```
+  Passed with 0 missing/extra keys.

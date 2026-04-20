@@ -20,5 +20,77 @@
     "create": "Create workflow",
     "open": "Open",
     "close": "Close"
+  },
+  "enums": {
+    "workflowRunStatus": {
+      "RUNNING": "Running",
+      "WAITING": "Waiting",
+      "SUCCEEDED": "Succeeded",
+      "FAILED": "Failed",
+      "CANCELED": "Canceled"
+    },
+    "workflowRunSort": {
+      "started_at:desc": "Newest first",
+      "started_at:asc": "Oldest first",
+      "updated_at:desc": "Recently updated",
+      "updated_at:asc": "Least recently updated"
+    },
+    "workflowEventStatus": {
+      "matched": "Matched",
+      "unmatched": "Unmatched",
+      "error": "Error"
+    },
+    "workflowStepStatus": {
+      "STARTED": "Started",
+      "SUCCEEDED": "Succeeded",
+      "FAILED": "Failed",
+      "RETRY_SCHEDULED": "Retry scheduled",
+      "CANCELED": "Canceled"
+    },
+    "workflowLogLevel": {
+      "DEBUG": "Debug",
+      "INFO": "Info",
+      "WARN": "Warn",
+      "ERROR": "Error"
+    },
+    "workflowAiSchemaType": {
+      "string": "String",
+      "number": "Number",
+      "integer": "Integer",
+      "boolean": "Boolean",
+      "object": "Object",
+      "array": "Array"
+    },
+    "workflowInputSourceMode": {
+      "reference": "Reference",
+      "fixed": "Fixed value"
+    },
+    "workflowReferenceSection": {
+      "payload": "Payload",
+      "vars": "Step results",
+      "meta": "Workflow details",
+      "error": "Error",
+      "forEach": "Loop context"
+    },
+    "workflowTriggerMode": {
+      "manual": "No trigger",
+      "event": "Event"
+    },
+    "workflowCanvasView": {
+      "list": "List",
+      "graph": "Graph"
+    },
+    "workflowOnError": {
+      "continue": "Continue",
+      "fail": "Fail"
+    },
+    "workflowWaitMode": {
+      "duration": "Duration",
+      "until": "Until"
+    },
+    "workflowWaitTiming": {
+      "fixed": "Specific date & time",
+      "expression": "Advanced expression"
+    }
   }
 }

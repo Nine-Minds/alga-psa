@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "Add enums.workflowRunStatus.*, enums.workflowRunSort.*, enums.workflowEventStatus.*, enums.workflowStepStatus.*, enums.workflowLogLevel.*, enums.workflowAiSchemaType.*, enums.workflowInputSourceMode.*, enums.workflowReferenceSection.*, enums.workflowTriggerMode.*, enums.workflowCanvasView.*, enums.workflowOnError.*, enums.workflowWaitMode.*, enums.workflowWaitTiming.* keys to en/msp/workflows.json.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Enum migration — explicit scope", "WF-A"]
   },
   {
