@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Replace all inline option arrays in WorkflowDesigner.tsx (trigger mode 3713-3714, canvas view 4724-4725, on-error 6249-6250, wait mode 6550-6551, wait timing 6614-6615) with the corresponding enum option hooks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-C", "Enum migration — explicit scope"]
   },
   {

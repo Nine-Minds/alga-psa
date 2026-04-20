@@ -59,6 +59,13 @@ import WorkflowSchedules from './WorkflowSchedules';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
+import {
+  useWorkflowCanvasViewOptions,
+  useWorkflowOnErrorOptions,
+  useWorkflowTriggerModeOptions,
+  useWorkflowWaitModeOptions,
+  useWorkflowWaitTimingOptions,
+} from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 import { getEventCatalogEntryByEventType } from '@alga-psa/workflows/actions';
 import { listEventCatalogOptionsV2Action, type WorkflowEventCatalogOptionV2 } from '@alga-psa/workflows/actions';
 import {
@@ -1340,6 +1347,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const [selectedTriggerEventCategory, setSelectedTriggerEventCategory] = useState<string>('');
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [stepsViewMode, setStepsViewMode] = useState<'list' | 'graph'>('list');
+  const workflowTriggerModeOptions = useWorkflowTriggerModeOptions() as Array<{
+    value: TriggerTypeSelection;
+    label: string;
+  }>;
+  const workflowCanvasViewOptions = useWorkflowCanvasViewOptions();
   const [designerSidebarWidth, setDesignerSidebarWidth] = useState(DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH);
   const designerFloatAnchorRef = useRef<HTMLDivElement | null>(null);
   const designerFloatAnchorRectRef = useRef<{
@@ -3709,10 +3721,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       ? eventCatalogOptions.find((e) => e.event_type === selectedEventName) ?? null
                       : null;
                     const showTriggerSchemaDetails = contractSettingsExpanded;
-                    const triggerTypeOptions: Array<{ value: TriggerTypeSelection; label: string }> = [
-                      { value: 'manual', label: 'No trigger' },
-                      { value: 'event', label: 'Event' }
-                    ];
                     const showEventConfiguration = currentTriggerSelection === 'event';
                     const eventCategoryOptions = buildWorkflowTriggerEventCategoryOptions(eventCatalogOptions, selectedEventName);
                     const eventOptions = buildWorkflowTriggerEventOptions(
@@ -3738,7 +3746,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               onChange={(value) => handleTriggerTypeSelectionChange((value || 'manual') as TriggerTypeSelection)}
                               placeholder="Select trigger type"
                               dropdownMode="overlay"
-                              options={triggerTypeOptions}
+                              options={workflowTriggerModeOptions}
                               disabled={!canManage}
                             />
                             <div className="mt-1 text-xs text-gray-500">
@@ -4720,10 +4728,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                         aria-label="Workflow steps view"
                         currentView={stepsViewMode}
                         onChange={(v) => setStepsViewMode(v as 'list' | 'graph')}
-                        options={[
-                          { value: 'list', label: 'List' },
-                          { value: 'graph', label: 'Graph' }
-                        ]}
+                        options={workflowCanvasViewOptions}
                       />
                       {publishWarnings.length > 0 && (
                         <Badge variant="warning">{publishWarnings.length} warnings</Badge>
@@ -5747,6 +5752,9 @@ export const StepConfigPanel: React.FC<{
   editable = true,
   onChange
 }) => {
+  const workflowOnErrorOptions = useWorkflowOnErrorOptions();
+  const workflowWaitModeOptions = useWorkflowWaitModeOptions();
+  const workflowWaitTimingOptions = useWorkflowWaitTimingOptions();
   const nodeSchema = step.type.startsWith('control.') ? null : nodeRegistry[step.type]?.configSchema;
   const [showDataContext, setShowDataContext] = useState(false);
 
@@ -6245,10 +6253,7 @@ export const StepConfigPanel: React.FC<{
             />
             <CustomSelect
               id={`foreach-onitemerror-${step.id}`}
-              options={[
-                { value: 'continue', label: 'Continue' },
-                { value: 'fail', label: 'Fail' }
-              ]}
+              options={workflowOnErrorOptions}
               value={feStep.onItemError ?? 'continue'}
               onValueChange={(value) => onChange({ ...feStep, onItemError: value as 'continue' | 'fail' })}
               label="On item error"
@@ -6546,10 +6551,7 @@ export const StepConfigPanel: React.FC<{
             <CustomSelect
               id={`time-wait-mode-${step.id}`}
               label="Mode"
-              options={[
-                { value: 'duration', label: 'Duration' },
-                { value: 'until', label: 'Until' }
-              ]}
+              options={workflowWaitModeOptions}
               value={typeof timeWaitConfig.mode === 'string' ? timeWaitConfig.mode : 'duration'}
               onValueChange={(mode) => {
                 if (mode === 'until') {
@@ -6610,10 +6612,7 @@ export const StepConfigPanel: React.FC<{
                 <CustomSelect
                   id={`time-wait-until-authoring-mode-${step.id}`}
                   label="Until input"
-                  options={[
-                    { value: 'fixed', label: 'Specific date & time' },
-                    { value: 'expression', label: 'Advanced expression' }
-                  ]}
+                  options={workflowWaitTimingOptions}
                   value={timeWaitUntilAuthoringMode}
                   onValueChange={(value) => setTimeWaitUntilAuthoringMode(value === 'expression' ? 'expression' : 'fixed')}
                   disabled={!editable}

@@ -265,3 +265,26 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   node scripts/validate-translations.cjs
   ```
 - Result: no ESLint errors or warnings from this file; translation validation remained green.
+
+### F012 complete — WorkflowDesigner inline enum arrays removed
+- Updated `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx` to consume:
+  - `useWorkflowTriggerModeOptions()`
+  - `useWorkflowCanvasViewOptions()`
+  - `useWorkflowOnErrorOptions()`
+  - `useWorkflowWaitModeOptions()`
+  - `useWorkflowWaitTimingOptions()`
+- Replaced the five inline option arrays called out in the PRD:
+  - trigger mode
+  - canvas view
+  - foreach/on-item-error
+  - wait mode
+  - wait timing
+- Kept the hook calls local to the two component boundaries already present in the file:
+  - main `WorkflowDesigner`
+  - `StepConfigPanel`
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowDesigner.tsx
+  node scripts/validate-translations.cjs
+  ```
+- ESLint result: no errors; the file still has a large pre-existing warning backlog (`unused`, `any`, `react-hooks/exhaustive-deps`, etc.) unrelated to this enum-hook conversion.
