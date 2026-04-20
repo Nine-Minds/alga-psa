@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "Extract all user-visible strings in WorkflowDesigner.tsx including toolbar, palette toggle, sidebar tabs, validation messages, save/publish/discard dialogs, keyboard-shortcut tooltips, and status pill.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-C"]
   },
   {

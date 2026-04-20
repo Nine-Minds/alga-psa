@@ -545,6 +545,43 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
   - ESLint reports 0 errors across all 6 files; remaining warnings are the pre-existing `any`/`no-empty`/non-null-assertion/`exhaustive-deps` backlog.
   - `grep` for locale-sensitive Date method calls returns zero matches across the workflow-designer and workflow-run-studio directories.
   - translation validation passed with 0 missing/extra keys.
+
+### F023 complete — WorkflowDesigner shell strings extracted
+- Scope limited to shell chrome per PRD WF-C: header/toolbar/page title & description, validation badge + tooltip, status dialogs, tabs, block-level step-card chrome, and top-level toasts. Inner components that belong to F024–F034 (palette, StepConfigPanel properties sidebar, mapping editor, expression editor, AI schema section, compose text, step-level editor fields) were intentionally left untranslated in this pass.
+- Added `useTranslation('msp/workflows')` to two places in this ~7.5k-line file:
+  - Main `WorkflowDesigner` component (top of function body).
+  - `StepCard` inner component (used by both root and block pipelines inside the designer surface).
+- Localized in `WorkflowDesigner`:
+  - Control-panel tab labels (`Schedules` / `Runs` / `Events` / `Event Catalog` / `Dead Letter`).
+  - Page title + description for all three modes (`control-panel`, `editor-designer`, `editor-list`).
+  - Toolbar: `Back to workflows` link, `New Workflow`, `Save Draft` + `Saving…`, `Publish` + `Publishing…`, `Run`, and the run-disabled "Preview only until a version is published." tooltip.
+  - Validation status badge (`Invalid` / `Warnings` / `Valid` / `Unknown`) and the header tooltip (`Last validated: …` / `Validation status unknown`).
+  - Two confirmation dialogs: discard-changes and event-schema-adoption (title, message, confirm, cancel — including parameterized message with `eventName`/`schemaRef`).
+  - Trigger-label passed into `WorkflowRunDialog` now routes through the shared `trigger.*` keys seeded by F051 (`Event: {{eventType}}`, `One-time schedule`, `Recurring schedule`, `Manual`).
+  - Scattered toasts: load registries/permissions/workflows/event catalog failures, settings update success + failure, save/create/publish success + failure, save-before-publish error, publish validation-errors warning, and the system-event missing-schema warning.
+- Localized in `StepCard`:
+  - Card select-button aria-label (`Select {{label}} step`).
+  - Control-block badges (`If` / `Loop` / `Try` / `Block`).
+  - Input-mapping status badge (`{{count}} required unmapped`) and counterpart all-mapped tooltip + aria-label.
+  - Duplicate + delete tooltip / aria-labels and the error-count badge (with singular/plural pieces).
+  - `forEach` summary line (`Item: {{itemVar}} | Concurrency: {{concurrency}}`).
+- `BlockSection` titles (`THEN` / `ELSE` / `TRY` / `CATCH` / `BODY`) flow through `t()` at the call sites (inside `StepCard`) so the inner `BlockSection` component stays a passive presentational wrapper.
+- Added 73 keys under `designer.*` in `server/public/locales/en/msp/workflows.json`, synced the same stub structure into `fr/es/de/nl/it/pl/xx/yy` pending WF-F translation work. The `trigger.*` keys added for F051 are reused here rather than duplicated.
+- Deliberately deferred:
+  - `StepConfigPanel` properties sidebar copy (save-as validation banner, inline references section, etc.) — belongs to F029.
+  - `Pipe` component drop-hint / empty copy — none found in current code beyond step-card and block-section.
+  - Toast fallback at line 5958 (`Copied: {{path}}`) — lives inside `StepConfigPanel`, scoped with F029.
+  - The extensive inline validation-error and trigger-validation copy surfaced by the roadmap; those render error payloads from the server and are better handled as part of F040's server-error mapping pass.
+- Cross-checked every `t('designer.*')` key referenced in the component against `en/msp/workflows.json`:
+  - 73 keys referenced, 0 missing.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowDesigner.tsx
+  node scripts/validate-translations.cjs
+  ```
+- Results:
+  - ESLint reports 0 errors; remaining warnings are the file's long-standing `any` / non-null-assertion / `no-unused-vars` / `react/no-unescaped-entities` / `exhaustive-deps` backlog, unchanged by this extraction.
+  - translation validation passed with 0 missing/extra keys.
 - Checks run:
   ```bash
   npx eslint ee/server/src/components/workflow-graph/WorkflowGraph.tsx

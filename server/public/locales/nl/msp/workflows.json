@@ -563,6 +563,107 @@
       "exportFailed": "Failed to export audit logs"
     }
   },
+  "designer": {
+    "page": {
+      "controlPanelTitle": "Workflow Control Panel",
+      "controlPanelDescription": "Manage schedules, runs, events, and the event catalog.",
+      "designerTitle": "Workflow Designer",
+      "designerDescription": "Build and maintain workflow automations.",
+      "editorTitle": "Workflow Editor",
+      "editorDescription": "Choose a workflow to edit or create a new workflow."
+    },
+    "controlPanel": {
+      "tabs": {
+        "schedules": "Schedules",
+        "runs": "Runs",
+        "events": "Events",
+        "eventCatalog": "Event Catalog",
+        "deadLetter": "Dead Letter"
+      }
+    },
+    "toolbar": {
+      "backToList": "Back to workflows",
+      "newWorkflow": "New Workflow",
+      "saveDraft": "Save Draft",
+      "saving": "Saving...",
+      "publish": "Publish",
+      "publishing": "Publishing...",
+      "run": "Run",
+      "previewOnly": "Preview only until a version is published.",
+      "validation": {
+        "lastValidated": "Last validated: {{timestamp}}",
+        "unknown": "Validation status unknown"
+      }
+    },
+    "validation": {
+      "badge": {
+        "invalid": "Invalid",
+        "warnings": "Warnings",
+        "valid": "Valid",
+        "unknown": "Unknown"
+      }
+    },
+    "discardDialog": {
+      "title": "Discard unsaved changes?",
+      "message": "You have unsaved changes in this workflow. Discard them and continue?",
+      "confirm": "Discard changes",
+      "cancel": "Keep editing"
+    },
+    "eventSchemaDialog": {
+      "title": "Switch workflow input schema?",
+      "messageWithEvent": "The selected event {{eventName}} uses {{schemaRef}}. Do you want to switch this workflow to that event schema?",
+      "messageFallback": "Do you want to switch this workflow to the selected event schema?",
+      "confirm": "Use event schema",
+      "cancel": "Keep current schema"
+    },
+    "blockSection": {
+      "then": "THEN",
+      "else": "ELSE",
+      "try": "TRY",
+      "catch": "CATCH",
+      "body": "BODY"
+    },
+    "stepCard": {
+      "selectAriaLabel": "Select {{label}} step",
+      "badges": {
+        "if": "If",
+        "loop": "Loop",
+        "try": "Try",
+        "block": "Block"
+      },
+      "mapping": {
+        "unmappedTitle": "{{count}} required fields are unmapped",
+        "unmappedBadge": "{{count}} required unmapped",
+        "allMappedTitle": "All {{count}} required fields are mapped",
+        "allMappedAria": "All required fields mapped"
+      },
+      "errorCount": "{{count}} {{noun}}",
+      "errorSingular": "error",
+      "errorPlural": "errors",
+      "actions": {
+        "duplicate": "Duplicate step",
+        "duplicateAriaLabel": "Duplicate {{label}} step",
+        "delete": "Delete step"
+      },
+      "forEachSummary": "Item: {{itemVar}} | Concurrency: {{concurrency}}"
+    },
+    "toasts": {
+      "loadRegistriesFailed": "Failed to load workflow registries",
+      "loadPermissionsFailed": "Failed to load permissions",
+      "loadWorkflowsFailed": "Failed to load workflows",
+      "loadEventCatalogFailed": "Failed to load event catalog",
+      "settingsUpdated": "Workflow settings updated",
+      "settingsUpdateFailed": "Failed to update workflow settings",
+      "created": "Workflow created",
+      "saved": "Workflow saved",
+      "saveFailed": "Failed to save workflow",
+      "saveBeforePublish": "Save the workflow before publishing",
+      "published": "Workflow published",
+      "publishFailed": "Failed to publish workflow",
+      "publishValidationErrors": "Publish failed - fix validation errors",
+      "systemEventMissingSchema": "This system event is missing a valid schema and cannot be selected until fixed."
+    }
+  },
   "trigger": {
     "manual": "Manual",
     "event": "Event",

@@ -43,6 +43,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { analytics } from '@alga-psa/analytics/client';
 import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
@@ -1269,6 +1270,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   workflowId: workflowIdProp = null,
   isNew = false
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const [activeTab, setActiveTab] = useState('Workflows');
   const [definitions, setDefinitions] = useState<WorkflowDefinitionRecord[]>([]);
   const [activeDefinition, setActiveDefinition] = useState<WorkflowDefinition | null>(null);
@@ -1795,15 +1797,27 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const workflowValidationBadge = useMemo(() => {
     switch (workflowValidationStatus) {
       case 'error':
-        return { label: 'Invalid', className: 'bg-destructive/15 text-destructive border-destructive/30' };
+        return {
+          label: t('designer.validation.badge.invalid', { defaultValue: 'Invalid' }),
+          className: 'bg-destructive/15 text-destructive border-destructive/30',
+        };
       case 'warning':
-        return { label: 'Warnings', className: 'bg-warning/15 text-warning-foreground border-warning/30' };
+        return {
+          label: t('designer.validation.badge.warnings', { defaultValue: 'Warnings' }),
+          className: 'bg-warning/15 text-warning-foreground border-warning/30',
+        };
       case 'valid':
-        return { label: 'Valid', className: 'bg-success/15 text-success border-success/30' };
+        return {
+          label: t('designer.validation.badge.valid', { defaultValue: 'Valid' }),
+          className: 'bg-success/15 text-success border-success/30',
+        };
       default:
-        return { label: 'Unknown', className: 'bg-muted text-muted-foreground border-border' };
+        return {
+          label: t('designer.validation.badge.unknown', { defaultValue: 'Unknown' }),
+          className: 'bg-muted text-muted-foreground border-border',
+        };
     }
-  }, [workflowValidationStatus]);
+  }, [t, workflowValidationStatus]);
 
   const canAdmin = useMemo(
     () => userPermissions.includes('workflow:admin'),
@@ -2090,7 +2104,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 	      const nextDefinitions = (data ?? []) as unknown as WorkflowDefinitionRecord[];
 	      setDefinitions(nextDefinitions);
 	    } catch (error) {
-	      toast.error(error instanceof Error ? error.message : 'Failed to load workflows');
+	      toast.error(error instanceof Error ? error.message : t('designer.toasts.loadWorkflowsFailed', { defaultValue: 'Failed to load workflows' }));
 	    } finally {
       setIsLoading(false);
     }
@@ -2126,7 +2140,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     } catch (err) {
       setEventCatalogOptions([]);
       setEventCatalogStatus('error');
-      const msg = err instanceof Error ? err.message : 'Failed to load event catalog';
+      const msg = err instanceof Error ? err.message : t('designer.toasts.loadEventCatalogFailed', { defaultValue: 'Failed to load event catalog' });
       toast.error(msg);
     }
   }, []);
@@ -2273,7 +2287,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       setSchemaMeta(new Map());
       setRegistryError(true);
       setRegistryStatus('error');
-      toast.error('Failed to load workflow registries');
+      toast.error(t('designer.toasts.loadRegistriesFailed', { defaultValue: 'Failed to load workflow registries' }));
     }
   }, []);
 
@@ -2390,14 +2404,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     const overrides = getWorkflowPlaywrightOverrides();
     if (overrides?.failPermissions) {
       setUserPermissions([]);
-      toast.error('Failed to load permissions');
+      toast.error(t('designer.toasts.loadPermissionsFailed', { defaultValue: 'Failed to load permissions' }));
       return;
     }
     getCurrentUserPermissions()
       .then((perms) => setUserPermissions(perms ?? []))
       .catch(() => {
         setUserPermissions([]);
-        toast.error('Failed to load permissions');
+        toast.error(t('designer.toasts.loadPermissionsFailed', { defaultValue: 'Failed to load permissions' }));
       });
   }, []);
 
@@ -2701,7 +2715,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         failureRateMinRuns: metadataDraft.failureRateMinRuns ? Number(metadataDraft.failureRateMinRuns) : null
       });
       if (showSuccessToast) {
-        toast.success('Workflow settings updated');
+        toast.success(t('designer.toasts.settingsUpdated', { defaultValue: 'Workflow settings updated' }));
       }
       return true;
     } finally {
@@ -2717,7 +2731,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       const overrides = getWorkflowPlaywrightOverrides();
       await delayIfNeeded(overrides?.saveDraftDelayMs);
       if (overrides?.failSaveDraft) {
-        throw new Error('Failed to save workflow');
+        throw new Error(t('designer.toasts.saveFailed', { defaultValue: 'Failed to save workflow' }));
       }
       if (!activeWorkflowId) {
         const data = await createWorkflowDefinitionAction({
@@ -2729,7 +2743,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         setActiveDefinition({ ...normalizedDefinition, id: data.workflowId });
 
         router.replace(`/msp/workflow-editor/${encodeURIComponent(data.workflowId)}`, { scroll: false });
-        toast.success('Workflow created');
+        toast.success(t('designer.toasts.created', { defaultValue: 'Workflow created' }));
       } else {
         await persistMetadataDraft(activeWorkflowId);
         await updateWorkflowDefinitionDraftAction({
@@ -2738,12 +2752,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           payloadSchemaMode: payloadSchemaModeDraft,
           pinnedPayloadSchemaRef: pinnedPayloadSchemaRefDraft ? pinnedPayloadSchemaRefDraft : undefined
         });
-        toast.success('Workflow saved');
+        toast.success(t('designer.toasts.saved', { defaultValue: 'Workflow saved' }));
       }
       // Refresh list in the background; do not block the UI on it (it can be slow during dev + Playwright).
       void loadDefinitions();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save workflow');
+      toast.error(error instanceof Error ? error.message : t('designer.toasts.saveFailed', { defaultValue: 'Failed to save workflow' }));
     } finally {
       setIsSaving(false);
     }
@@ -2759,13 +2773,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       await persistMetadataDraft(activeWorkflowId, { force: true, showSuccessToast: true });
       void loadDefinitions();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update workflow settings');
+      toast.error(error instanceof Error ? error.message : t('designer.toasts.settingsUpdateFailed', { defaultValue: 'Failed to update workflow settings' }));
     }
   };
 
   const handlePublish = async () => {
     if (!activeDefinition || !activeWorkflowId) {
-      toast.error('Save the workflow before publishing');
+      toast.error(t('designer.toasts.saveBeforePublish', { defaultValue: 'Save the workflow before publishing' }));
       return;
     }
     const normalizedDefinition = normalizeDesignerDefinition(activeDefinition);
@@ -2774,7 +2788,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       const overrides = getWorkflowPlaywrightOverrides();
       await delayIfNeeded(overrides?.publishDelayMs);
       if (overrides?.failPublish) {
-        throw new Error('Failed to publish workflow');
+        throw new Error(t('designer.toasts.publishFailed', { defaultValue: 'Failed to publish workflow' }));
       }
       await persistMetadataDraft(activeWorkflowId);
       const data = await publishWorkflowDefinitionAction({
@@ -2795,7 +2809,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             errorCodes: codes
           });
         } catch {}
-        toast.error('Publish failed - fix validation errors');
+        toast.error(t('designer.toasts.publishValidationErrors', { defaultValue: 'Publish failed - fix validation errors' }));
         return;
       }
       try {
@@ -2807,14 +2821,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           publishedVersion: (data as any)?.publishedVersion ?? normalizedDefinition.version
         });
       } catch {}
-      toast.success('Workflow published');
+      toast.success(t('designer.toasts.published', { defaultValue: 'Workflow published' }));
       if (typeof (data as any)?.publishedVersion === 'number') {
         const nextDraftVersion = ((data as any).publishedVersion as number) + 1;
         setActiveDefinition((prev) => (prev ? { ...prev, version: nextDraftVersion } : prev));
       }
       void loadDefinitions();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to publish workflow');
+      toast.error(error instanceof Error ? error.message : t('designer.toasts.publishFailed', { defaultValue: 'Failed to publish workflow' }));
     } finally {
       setIsPublishing(false);
     }
@@ -3820,7 +3834,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                         }
                                         const chosen = eventCatalogOptions.find((e) => e.event_type === next) ?? null;
                                         if (chosen?.source === 'system' && (chosen.payload_schema_ref_status !== 'known' || !chosen.payload_schema_ref)) {
-                                          toast.error('This system event is missing a valid schema and cannot be selected until fixed.');
+                                          toast.error(t('designer.toasts.systemEventMissingSchema', {
+                                            defaultValue: 'This system event is missing a valid schema and cannot be selected until fixed.',
+                                          }));
                                           return;
                                         }
 
@@ -4848,26 +4864,26 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const isEditorDesignerMode = mode === 'editor-designer';
 
   const controlPanelTabs = [
-    { id: 'schedules', label: 'Schedules', content: schedulesContent },
-    { id: 'runs', label: 'Runs', content: runListContent },
-    { id: 'events', label: 'Events', content: eventListContent },
-    { id: 'event-catalog', label: 'Event Catalog', content: eventCatalogContent },
-    ...(canAdmin ? [{ id: 'dead-letter', label: 'Dead Letter', content: deadLetterContent }] : [])
+    { id: 'schedules', label: t('designer.controlPanel.tabs.schedules', { defaultValue: 'Schedules' }), content: schedulesContent },
+    { id: 'runs', label: t('designer.controlPanel.tabs.runs', { defaultValue: 'Runs' }), content: runListContent },
+    { id: 'events', label: t('designer.controlPanel.tabs.events', { defaultValue: 'Events' }), content: eventListContent },
+    { id: 'event-catalog', label: t('designer.controlPanel.tabs.eventCatalog', { defaultValue: 'Event Catalog' }), content: eventCatalogContent },
+    ...(canAdmin ? [{ id: 'dead-letter', label: t('designer.controlPanel.tabs.deadLetter', { defaultValue: 'Dead Letter' }), content: deadLetterContent }] : [])
   ];
 
   const pageTitle =
     isControlPanelMode
-      ? 'Workflow Control Panel'
+      ? t('designer.page.controlPanelTitle', { defaultValue: 'Workflow Control Panel' })
       : isEditorDesignerMode
-        ? 'Workflow Designer'
-        : 'Workflow Editor';
+        ? t('designer.page.designerTitle', { defaultValue: 'Workflow Designer' })
+        : t('designer.page.editorTitle', { defaultValue: 'Workflow Editor' });
 
   const pageDescription =
     isControlPanelMode
-      ? 'Manage schedules, runs, events, and the event catalog.'
+      ? t('designer.page.controlPanelDescription', { defaultValue: 'Manage schedules, runs, events, and the event catalog.' })
       : isEditorDesignerMode
-        ? 'Build and maintain workflow automations.'
-        : 'Choose a workflow to edit or create a new workflow.';
+        ? t('designer.page.designerDescription', { defaultValue: 'Build and maintain workflow automations.' })
+        : t('designer.page.editorDescription', { defaultValue: 'Choose a workflow to edit or create a new workflow.' });
 
   const handleBackToWorkflowList = useCallback(() => {
     requestDiscardChangesConfirmation(() => {
@@ -4899,7 +4915,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                 onClick={handleBackToWorkflowList}
               >
                 <ChevronRight className="mr-1 h-4 w-4 rotate-180" />
-                Back to workflows
+                {t('designer.toolbar.backToList', { defaultValue: 'Back to workflows' })}
               </Button>
             )}
             <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{pageTitle}</h1>
@@ -4910,7 +4926,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               {activeWorkflowRecord && (
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium ${workflowValidationBadge.className}`}
-                  title={activeWorkflowRecord.validated_at ? `Last validated: ${activeWorkflowRecord.validated_at}` : 'Validation status unknown'}
+                  title={activeWorkflowRecord.validated_at
+                    ? t('designer.toolbar.validation.lastValidated', {
+                      defaultValue: 'Last validated: {{timestamp}}',
+                      timestamp: activeWorkflowRecord.validated_at,
+                    })
+                    : t('designer.toolbar.validation.unknown', { defaultValue: 'Validation status unknown' })}
                 >
                   {workflowValidationBadge.label}
                   {currentValidationErrors.length > 0 && <span>({currentValidationErrors.length})</span>}
@@ -4922,7 +4943,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   variant="secondary"
                   onClick={() => requestDiscardChangesConfirmation(() => router.push('/msp/workflow-editor/new'))}
                 >
-                  New Workflow
+                  {t('designer.toolbar.newWorkflow', { defaultValue: 'New Workflow' })}
                 </Button>
               )}
               {canManage && (
@@ -4931,7 +4952,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   onClick={handleSaveDefinition}
                   disabled={isSaving || !activeDefinition}
                 >
-                  {isSaving ? 'Saving...' : 'Save Draft'}
+                  {isSaving
+                    ? t('designer.toolbar.saving', { defaultValue: 'Saving...' })
+                    : t('designer.toolbar.saveDraft', { defaultValue: 'Save Draft' })}
                 </Button>
               )}
               {(canPublishPermission) && (
@@ -4941,7 +4964,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   disabled={isPublishing || !activeDefinition || !canPublishEnabled}
                   title={!canPublishEnabled ? publishDisabledReason || undefined : undefined}
                 >
-                  {isPublishing ? 'Publishing...' : 'Publish'}
+                  {isPublishing
+                    ? t('designer.toolbar.publishing', { defaultValue: 'Publishing...' })
+                    : t('designer.toolbar.publish', { defaultValue: 'Publish' })}
                 </Button>
               )}
               {(canRunPermission) && (
@@ -4956,11 +4981,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   }
                   title={
                     !canRunEnabled ? runDisabledReason || undefined
-                      : !activeWorkflowRecord?.published_version ? 'Preview only until a version is published.'
+                      : !activeWorkflowRecord?.published_version
+                        ? t('designer.toolbar.previewOnly', { defaultValue: 'Preview only until a version is published.' })
                         : undefined
                   }
                 >
-                  Run
+                  {t('designer.toolbar.run', { defaultValue: 'Run' })}
                 </Button>
               )}
             </div>
@@ -4974,12 +5000,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         workflowId={activeWorkflowId}
         workflowName={activeWorkflowRecord?.name ?? activeDefinition?.name ?? ''}
         triggerLabel={activeDefinition?.trigger?.type === 'event' && activeDefinition.trigger.eventName
-          ? `Event: ${activeDefinition.trigger.eventName}`
+          ? t('trigger.eventWithType', { defaultValue: 'Event: {{eventType}}', eventType: activeDefinition.trigger.eventName })
           : activeDefinition?.trigger?.type === 'schedule'
-            ? 'One-time schedule'
+            ? t('trigger.oneTimeSchedule', { defaultValue: 'One-time schedule' })
             : activeDefinition?.trigger?.type === 'recurring'
-              ? 'Recurring schedule'
-              : 'Manual'}
+              ? t('trigger.recurringSchedule', { defaultValue: 'Recurring schedule' })
+              : t('trigger.manual', { defaultValue: 'Manual' })}
         triggerEventName={activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : null}
         triggerSourcePayloadSchemaRef={triggerSourceSchemaRef}
         triggerPayloadMappingProvided={triggerPayloadMappingInfo.mappingProvided}
@@ -4999,10 +5025,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         isOpen={showDiscardChangesDialog}
         onClose={closeDiscardChangesDialog}
         onConfirm={handleConfirmDiscardChanges}
-        title="Discard unsaved changes?"
-        message="You have unsaved changes in this workflow. Discard them and continue?"
-        confirmLabel="Discard changes"
-        cancelLabel="Keep editing"
+        title={t('designer.discardDialog.title', { defaultValue: 'Discard unsaved changes?' })}
+        message={t('designer.discardDialog.message', {
+          defaultValue: 'You have unsaved changes in this workflow. Discard them and continue?',
+        })}
+        confirmLabel={t('designer.discardDialog.confirm', { defaultValue: 'Discard changes' })}
+        cancelLabel={t('designer.discardDialog.cancel', { defaultValue: 'Keep editing' })}
       />
 
       <ConfirmationDialog
@@ -5014,12 +5042,18 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           setHasExplicitContractEdits(true);
           applyWorkflowInputSchemaRef(pendingEventSchemaPrompt.schemaRef);
         }}
-        title="Switch workflow input schema?"
+        title={t('designer.eventSchemaDialog.title', { defaultValue: 'Switch workflow input schema?' })}
         message={pendingEventSchemaPrompt
-          ? `The selected event ${pendingEventSchemaPrompt.eventName} uses ${pendingEventSchemaPrompt.schemaRef}. Do you want to switch this workflow to that event schema?`
-          : 'Do you want to switch this workflow to the selected event schema?'}
-        confirmLabel="Use event schema"
-        cancelLabel="Keep current schema"
+          ? t('designer.eventSchemaDialog.messageWithEvent', {
+            defaultValue: 'The selected event {{eventName}} uses {{schemaRef}}. Do you want to switch this workflow to that event schema?',
+            eventName: pendingEventSchemaPrompt.eventName,
+            schemaRef: pendingEventSchemaPrompt.schemaRef,
+          })
+          : t('designer.eventSchemaDialog.messageFallback', {
+            defaultValue: 'Do you want to switch this workflow to the selected event schema?',
+          })}
+        confirmLabel={t('designer.eventSchemaDialog.confirm', { defaultValue: 'Use event schema' })}
+        cancelLabel={t('designer.eventSchemaDialog.cancel', { defaultValue: 'Keep current schema' })}
       />
 
       <div className="flex-1 min-h-0 overflow-hidden">
@@ -5225,6 +5259,7 @@ const StepCard: React.FC<{
   actionInputMappingStatusByStepId,
   disabled = false
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const label = getStepLabel(step, nodeRegistry);
   const isBlock = step.type.startsWith('control.');
   const colors = getStepTypeColor(step.type);
@@ -5245,7 +5280,7 @@ const StepCard: React.FC<{
           className="text-left flex-1 min-w-0"
           type="button"
           onClick={() => onSelectStep(step.id)}
-          aria-label={`Select ${label} step`}
+          aria-label={t('designer.stepCard.selectAriaLabel', { defaultValue: 'Select {{label}} step', label })}
         >
           <div className="flex items-center gap-2 flex-wrap">
             {/* Step type icon */}
@@ -5257,7 +5292,13 @@ const StepCard: React.FC<{
             {/* Block badge */}
             {isBlock && (
               <Badge className={`text-xs ${colors.badge}`}>
-                {step.type === 'control.if' ? 'If' : step.type === 'control.forEach' ? 'Loop' : step.type === 'control.tryCatch' ? 'Try' : 'Block'}
+                {step.type === 'control.if'
+                  ? t('designer.stepCard.badges.if', { defaultValue: 'If' })
+                  : step.type === 'control.forEach'
+                    ? t('designer.stepCard.badges.loop', { defaultValue: 'Loop' })
+                    : step.type === 'control.tryCatch'
+                      ? t('designer.stepCard.badges.try', { defaultValue: 'Try' })
+                      : t('designer.stepCard.badges.block', { defaultValue: 'Block' })}
               </Badge>
             )}
             {actionInputMappingStatus && actionInputMappingStatus.requiredCount > 0 && (
@@ -5266,16 +5307,25 @@ const StepCard: React.FC<{
                   id={`workflow-step-mapping-status-${step.id}`}
                   variant="error"
                   className="text-xs"
-                  title={`${actionInputMappingStatus.unmappedRequiredCount} required fields are unmapped`}
+                  title={t('designer.stepCard.mapping.unmappedTitle', {
+                    defaultValue: '{{count}} required fields are unmapped',
+                    count: actionInputMappingStatus.unmappedRequiredCount,
+                  })}
                 >
-                  {actionInputMappingStatus.unmappedRequiredCount} required unmapped
+                  {t('designer.stepCard.mapping.unmappedBadge', {
+                    defaultValue: '{{count}} required unmapped',
+                    count: actionInputMappingStatus.unmappedRequiredCount,
+                  })}
                 </Badge>
               ) : (
                 <span
                   id={`workflow-step-mapping-status-${step.id}`}
                   className="inline-flex items-center text-emerald-700/80"
-                  title={`All ${actionInputMappingStatus.requiredCount} required fields are mapped`}
-                  aria-label="All required fields mapped"
+                  title={t('designer.stepCard.mapping.allMappedTitle', {
+                    defaultValue: 'All {{count}} required fields are mapped',
+                    count: actionInputMappingStatus.requiredCount,
+                  })}
+                  aria-label={t('designer.stepCard.mapping.allMappedAria', { defaultValue: 'All required fields mapped' })}
                 >
                   <Link className="h-3.5 w-3.5" />
                 </span>
@@ -5284,7 +5334,13 @@ const StepCard: React.FC<{
             {/* Error badge */}
             {errorCount > 0 && (
               <Badge variant="error" className="text-xs">
-                {errorCount} {errorCount === 1 ? 'error' : 'errors'}
+                {t('designer.stepCard.errorCount', {
+                  defaultValue: '{{count}} {{noun}}',
+                  count: errorCount,
+                  noun: errorCount === 1
+                    ? t('designer.stepCard.errorSingular', { defaultValue: 'error' })
+                    : t('designer.stepCard.errorPlural', { defaultValue: 'errors' }),
+                })}
               </Badge>
             )}
           </div>
@@ -5313,8 +5369,11 @@ const StepCard: React.FC<{
                 onClick={() => onDuplicateStep(step.id)}
                 className="text-gray-400 hover:text-primary-600 p-1 h-auto"
                 data-testid={`step-duplicate-${step.id}`}
-                title="Duplicate step"
-                aria-label={`Duplicate ${label} step`}
+                title={t('designer.stepCard.actions.duplicate', { defaultValue: 'Duplicate step' })}
+                aria-label={t('designer.stepCard.actions.duplicateAriaLabel', {
+                  defaultValue: 'Duplicate {{label}} step',
+                  label,
+                })}
               >
                 <Copy className="h-4 w-4" />
               </Button>
@@ -5325,7 +5384,7 @@ const StepCard: React.FC<{
                 onClick={() => onDeleteStep(step.id)}
                 className="text-gray-400 hover:text-destructive p-1 h-auto"
                 data-testid={`step-delete-${step.id}`}
-                title="Delete step"
+                title={t('designer.stepCard.actions.delete', { defaultValue: 'Delete step' })}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -5340,7 +5399,7 @@ const StepCard: React.FC<{
         const elsePath = `${stepPath}.else`;
         return (
           <div className="mt-3 space-y-2">
-            <BlockSection title="THEN" idPrefix={`${step.id}-then`}>
+            <BlockSection title={t('designer.blockSection.then', { defaultValue: 'THEN' })} idPrefix={`${step.id}-then`}>
               <Pipe
                 steps={ifStep.then}
                 pipePath={thenPath}
@@ -5359,7 +5418,7 @@ const StepCard: React.FC<{
                 disabled={disabled}
               />
             </BlockSection>
-            <BlockSection title="ELSE" idPrefix={`${step.id}-else`}>
+            <BlockSection title={t('designer.blockSection.else', { defaultValue: 'ELSE' })} idPrefix={`${step.id}-else`}>
               <Pipe
                 steps={ifStep.else ?? []}
                 pipePath={elsePath}
@@ -5388,7 +5447,7 @@ const StepCard: React.FC<{
         const catchPath = `${stepPath}.catch`;
         return (
           <div className="mt-3 space-y-2">
-            <BlockSection title="TRY" idPrefix={`${step.id}-try`}>
+            <BlockSection title={t('designer.blockSection.try', { defaultValue: 'TRY' })} idPrefix={`${step.id}-try`}>
               <Pipe
                 steps={tcStep.try}
                 pipePath={tryPath}
@@ -5407,7 +5466,7 @@ const StepCard: React.FC<{
                 disabled={disabled}
               />
             </BlockSection>
-            <BlockSection title="CATCH" idPrefix={`${step.id}-catch`}>
+            <BlockSection title={t('designer.blockSection.catch', { defaultValue: 'CATCH' })} idPrefix={`${step.id}-catch`}>
               <Pipe
                 steps={tcStep.catch}
                 pipePath={catchPath}
@@ -5435,8 +5494,14 @@ const StepCard: React.FC<{
         const bodyPath = `${stepPath}.body`;
         return (
           <div className="mt-3">
-            <div className="text-xs text-gray-500 mb-2">Item: {feStep.itemVar} | Concurrency: {feStep.concurrency ?? 1}</div>
-            <BlockSection title="BODY" idPrefix={`${step.id}-body`}>
+            <div className="text-xs text-gray-500 mb-2">
+              {t('designer.stepCard.forEachSummary', {
+                defaultValue: 'Item: {{itemVar}} | Concurrency: {{concurrency}}',
+                itemVar: feStep.itemVar,
+                concurrency: feStep.concurrency ?? 1,
+              })}
+            </div>
+            <BlockSection title={t('designer.blockSection.body', { defaultValue: 'BODY' })} idPrefix={`${step.id}-body`}>
               <Pipe
                 steps={feStep.body}
                 pipePath={bodyPath}
