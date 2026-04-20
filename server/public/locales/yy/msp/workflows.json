@@ -660,6 +660,91 @@
       "empty": "55555",
       "expressionLabel": "55555"
     },
+    "schemaForm": {
+      "sectionTitle": "55555",
+      "stepSettings": "55555",
+      "missingRequired": "55555 {{fields}} 55555"
+    },
+    "fieldMetadata": {
+      "actionId": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "version": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "inputMapping": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "saveAs": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "idempotencyKey": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "onError": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "eventName": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "correlationKey": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "filters": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "timeoutMs": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "mode": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "durationMs": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "until": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "state": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "assign": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "taskType": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "title": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "contextData": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "actions": {
+      "ai.infer": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
     "validation": {
       "badge": {
         "invalid": "55555",
@@ -757,6 +842,48 @@
           "description": "55555"
         },
         "human.task": {
+          "label": "55555",
+          "description": "55555"
+        }
+      },
+      "groups": {
+        "ticket": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "contact": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "client": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "communication": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "scheduling": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "project": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "time": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "crm": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "transform": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "ai": {
           "label": "55555",
           "description": "55555"
         }

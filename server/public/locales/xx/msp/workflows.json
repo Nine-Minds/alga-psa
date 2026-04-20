@@ -660,6 +660,91 @@
       "empty": "11111",
       "expressionLabel": "11111"
     },
+    "schemaForm": {
+      "sectionTitle": "11111",
+      "stepSettings": "11111",
+      "missingRequired": "11111 {{fields}} 11111"
+    },
+    "fieldMetadata": {
+      "actionId": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "version": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "inputMapping": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "saveAs": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "idempotencyKey": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "onError": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "eventName": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "correlationKey": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "filters": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "timeoutMs": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "mode": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "durationMs": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "until": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "state": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "assign": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "taskType": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "title": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "contextData": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "actions": {
+      "ai.infer": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
     "validation": {
       "badge": {
         "invalid": "11111",
@@ -757,6 +842,48 @@
           "description": "11111"
         },
         "human.task": {
+          "label": "11111",
+          "description": "11111"
+        }
+      },
+      "groups": {
+        "ticket": {
+          "label": "11111",
+          "description": "11111"
+        },
+        "contact": {
+          "label": "11111",
+          "description": "11111"
+        },
+        "client": {
+          "label": "11111",
+          "description": "11111"
+        },
+        "communication": {
+          "label": "11111",
+          "description": "11111"
+        },
+        "scheduling": {
+          "label": "11111",
+          "description": "11111"
+        },
+        "project": {
+          "label": "11111",
+          "description": "11111"
+        },
+        "time": {
+          "label": "11111",
+          "description": "11111"
+        },
+        "crm": {
+          "label": "11111",
+          "description": "11111"
+        },
+        "transform": {
+          "label": "11111",
+          "description": "11111"
+        },
+        "ai": {
           "label": "11111",
           "description": "11111"
         }

@@ -44,6 +44,7 @@ import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { TFunction } from 'i18next';
 import { mapWorkflowServerError } from './workflowServerErrors';
 import { analytics } from '@alga-psa/analytics/client';
 import WorkflowRunList from './WorkflowRunList';
@@ -928,19 +929,43 @@ const buildFieldOptions = (payloadSchema?: JsonSchema | null): SelectOption[] =>
 const getStepLabel = (
   step: Step,
   nodeRegistry: Record<string, NodeRegistryItem>,
-  designerActionCatalog?: WorkflowDesignerCatalogRecord[]
+  designerActionCatalog?: WorkflowDesignerCatalogRecord[],
+  t?: TFunction,
 ): string => {
-  if (step.type === 'control.if') return 'If';
-  if (step.type === 'control.forEach') return 'For Each';
-  if (step.type === 'control.tryCatch') return 'Try/Catch';
-  if (step.type === 'control.callWorkflow') return 'Call Workflow';
-  if (step.type === 'control.return') return 'Return';
+  const translate = (key: string, fallback: string): string =>
+    t ? t(key, { defaultValue: fallback }) : fallback;
+
+  if (step.type === 'control.if') return translate('designer.palette.controlBlocks.control.if.label', 'If');
+  if (step.type === 'control.forEach') return translate('designer.palette.controlBlocks.control.forEach.label', 'For Each');
+  if (step.type === 'control.tryCatch') return translate('designer.palette.controlBlocks.control.tryCatch.label', 'Try/Catch');
+  if (step.type === 'control.callWorkflow') return translate('designer.palette.controlBlocks.control.callWorkflow.label', 'Call Workflow');
+  if (step.type === 'control.return') return translate('designer.palette.controlBlocks.control.return.label', 'Return');
+
   const registryItem = nodeRegistry[step.type];
   const name = (step as NodeStep).name?.trim();
-  const groupedLabel = designerActionCatalog
-    ? getGroupedActionCatalogRecordForStep(step, designerActionCatalog)?.label
+
+  // action.call → use the designer catalog's group label (translated via designer.palette.groups.<groupKey>.label)
+  const groupedRecord = designerActionCatalog
+    ? getGroupedActionCatalogRecordForStep(step, designerActionCatalog)
     : undefined;
-  return name || groupedLabel || registryItem?.ui?.label || step.type;
+  if (groupedRecord) {
+    const groupLabelKey = `designer.palette.groups.${groupedRecord.groupKey}.label`;
+    const translatedGroupLabel = translate(groupLabelKey, groupedRecord.label);
+    // If the user never renamed the step (or named it the default English/translated group label),
+    // render the translated group label so the pipeline card stays localized.
+    if (!name || name === groupedRecord.label || name === translatedGroupLabel) {
+      return translatedGroupLabel;
+    }
+    return name;
+  }
+
+  if (name) return name;
+
+  // Fallback: translate registry node label under designer.palette.nodes.<nodeId>.label
+  if (registryItem?.ui?.label) {
+    return translate(`designer.palette.nodes.${step.type}.label`, registryItem.ui.label);
+  }
+  return step.type;
 };
 
 const getGraphSubtitle = (step: Step): string | null => {
@@ -1609,8 +1634,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         const stepPath = `${prefix}.steps[${index}]`;
         if (step.type === 'control.if') {
           const ifStep = step as IfBlock;
-          locations.push({ pipePath: `${stepPath}.then`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} THEN` });
-          locations.push({ pipePath: `${stepPath}.else`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} ELSE` });
+          locations.push({ pipePath: `${stepPath}.then`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog, t)} ${t('designer.blockSection.then', { defaultValue: 'THEN' })}` });
+          locations.push({ pipePath: `${stepPath}.else`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog, t)} ${t('designer.blockSection.else', { defaultValue: 'ELSE' })}` });
           visit(ifStep.then, `${stepPath}.then`);
           if (ifStep.else) {
             visit(ifStep.else, `${stepPath}.else`);
@@ -1618,14 +1643,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         }
         if (step.type === 'control.tryCatch') {
           const tcStep = step as TryCatchBlock;
-          locations.push({ pipePath: `${stepPath}.try`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} TRY` });
-          locations.push({ pipePath: `${stepPath}.catch`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} CATCH` });
+          locations.push({ pipePath: `${stepPath}.try`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog, t)} ${t('designer.blockSection.try', { defaultValue: 'TRY' })}` });
+          locations.push({ pipePath: `${stepPath}.catch`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog, t)} ${t('designer.blockSection.catch', { defaultValue: 'CATCH' })}` });
           visit(tcStep.try, `${stepPath}.try`);
           visit(tcStep.catch, `${stepPath}.catch`);
         }
         if (step.type === 'control.forEach') {
           const feStep = step as ForEachBlock;
-          locations.push({ pipePath: `${stepPath}.body`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} BODY` });
+          locations.push({ pipePath: `${stepPath}.body`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog, t)} ${t('designer.blockSection.body', { defaultValue: 'BODY' })}` });
           visit(feStep.body, `${stepPath}.body`);
         }
       });
@@ -3191,10 +3216,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         const inputFields = record.actions.flatMap((action) => action.inputFieldNames);
         const outputFields = record.actions.flatMap((action) => action.outputFieldNames);
 
+        // Translate known built-in group labels/descriptions. Unknown groups (server-added app tiles)
+        // fall back to the server-provided label.
+        const translatedGroupLabel = t(`designer.palette.groups.${record.groupKey}.label`, { defaultValue: record.label });
+        const rawDescription = record.description || `${record.label} actions`;
+        const translatedGroupDescription = t(`designer.palette.groups.${record.groupKey}.description`, { defaultValue: rawDescription });
         return {
           id: record.groupKey,
-          label: record.label,
-          description: record.description || `${record.label} actions`,
+          label: translatedGroupLabel,
+          description: translatedGroupDescription,
           category: record.tileKind === 'core-object'
             ? 'Core'
             : record.tileKind === 'transform'
@@ -3217,6 +3247,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             record.groupKey,
             record.label,
             record.description,
+            translatedGroupLabel,
+            translatedGroupDescription,
             ...actionLabels,
             ...actionIds,
             ...inputFields,
@@ -4810,7 +4842,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                     <div className="h-[650px] rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] overflow-hidden">
                       <WorkflowGraph
                         steps={(activeDefinition?.steps ?? []) as Step[]}
-                        getLabel={(step) => getStepLabel(step as Step, nodeRegistryMap, designerActionCatalog)}
+                        getLabel={(step) => getStepLabel(step as Step, nodeRegistryMap, designerActionCatalog, t)}
                         getSubtitle={(step) => getGraphSubtitle(step as Step) ?? (step as Step).type}
                         inputMappingStatusByStepId={actionInputMappingStatusByStepId}
                         selectedStepId={selectedStepId}
@@ -4837,6 +4869,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       onInsertStep={(index) => handleInsertStep('root', index)}
                       onInsertAtPath={handleInsertStep}
                       nodeRegistry={nodeRegistryMap}
+                      designerActionCatalog={designerActionCatalog}
                       errorMap={errorsByStepId}
                       isRoot={true}
                       disabled={!canManage}
@@ -5148,6 +5181,7 @@ const Pipe: React.FC<{
   onInsertStep?: (index: number) => void;
   onInsertAtPath?: (pipePath: string, index: number) => void;
   nodeRegistry: Record<string, NodeRegistryItem>;
+  designerActionCatalog?: WorkflowDesignerCatalogRecord[];
   errorMap: Map<string, PublishError[]>;
   isRoot?: boolean;
   disabled?: boolean;
@@ -5165,10 +5199,12 @@ const Pipe: React.FC<{
   onInsertStep,
   onInsertAtPath,
   nodeRegistry,
+  designerActionCatalog,
   errorMap,
   isRoot = false,
   disabled = false
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const pipeId = `workflow-designer-pipe-${pipePath.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
   return (
@@ -5194,7 +5230,9 @@ const Pipe: React.FC<{
               <div className="flex items-center justify-center w-8 h-8 rounded-full bg-success/15 border-2 border-success" data-testid="pipeline-start">
                 <Play className="h-4 w-4 text-green-600 ml-0.5" />
               </div>
-              <div className="text-xs text-gray-500 mt-1">Start</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {t('pipeline.start', { defaultValue: 'Start' })}
+              </div>
               {onInsertStep && !disabled && (
                 <PipelineConnector onInsert={() => onInsertStep(0)} position="start" disabled={disabled} />
               )}
@@ -5235,6 +5273,8 @@ const Pipe: React.FC<{
                       onInsertAtPath={onInsertAtPath}
                       dragHandleProps={dragProvided.dragHandleProps ?? undefined}
                       nodeRegistry={nodeRegistry}
+                designerActionCatalog={designerActionCatalog}
+                      designerActionCatalog={designerActionCatalog}
                       errorCount={errorMap.get(step.id)?.length ?? 0}
                       errorMap={errorMap}
                       disabled={disabled}
@@ -5290,6 +5330,7 @@ const StepCard: React.FC<{
   onInsertAtPath?: (pipePath: string, index: number) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   nodeRegistry: Record<string, NodeRegistryItem>;
+  designerActionCatalog?: WorkflowDesignerCatalogRecord[];
   errorCount: number;
   errorMap: Map<string, PublishError[]>;
   actionInputMappingStatusByStepId: Map<string, ActionInputMappingStatus>;
@@ -5309,13 +5350,14 @@ const StepCard: React.FC<{
   onInsertAtPath,
   dragHandleProps,
   nodeRegistry,
+  designerActionCatalog,
   errorCount,
   errorMap,
   actionInputMappingStatusByStepId,
   disabled = false
 }) => {
   const { t } = useTranslation('msp/workflows');
-  const label = getStepLabel(step, nodeRegistry);
+  const label = getStepLabel(step, nodeRegistry, designerActionCatalog, t);
   const isBlock = step.type.startsWith('control.');
   const colors = getStepTypeColor(step.type);
   const icon = getStepTypeIcon(step.type);
@@ -5468,6 +5510,7 @@ const StepCard: React.FC<{
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(thenPath, index) : undefined}
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
+                designerActionCatalog={designerActionCatalog}
                 errorMap={errorMap}
                 actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
@@ -5487,6 +5530,7 @@ const StepCard: React.FC<{
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(elsePath, index) : undefined}
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
+                designerActionCatalog={designerActionCatalog}
                 errorMap={errorMap}
                 actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
@@ -5516,6 +5560,7 @@ const StepCard: React.FC<{
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(tryPath, index) : undefined}
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
+                designerActionCatalog={designerActionCatalog}
                 errorMap={errorMap}
                 actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
@@ -5535,6 +5580,7 @@ const StepCard: React.FC<{
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(catchPath, index) : undefined}
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
+                designerActionCatalog={designerActionCatalog}
                 errorMap={errorMap}
                 actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
@@ -5570,6 +5616,7 @@ const StepCard: React.FC<{
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(bodyPath, index) : undefined}
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
+                designerActionCatalog={designerActionCatalog}
                 errorMap={errorMap}
                 actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
@@ -6222,7 +6269,7 @@ export const StepConfigPanel: React.FC<{
   return (
     <div className="space-y-4">
       <div>
-        <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">{getStepLabel(step, nodeRegistry, designerActionCatalog)}</div>
+        <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">{getStepLabel(step, nodeRegistry, designerActionCatalog, t)}</div>
         <div className="text-xs text-gray-500">{stepPath ?? step.id}</div>
       </div>
 
@@ -6302,7 +6349,11 @@ export const StepConfigPanel: React.FC<{
           stepId={step.id}
           record={groupedActionRecord}
           selectedActionId={selectedAction?.id}
-          selectedActionDescription={selectedAction?.ui?.description}
+          selectedActionDescription={selectedAction
+            ? t(`designer.actions.${selectedAction.id}.description`, {
+              defaultValue: selectedAction.ui?.description,
+            })
+            : undefined}
           disabled={!editable}
           onActionChange={handleGroupedActionChange}
         />
@@ -6817,7 +6868,9 @@ export const StepConfigPanel: React.FC<{
                 'aiOutputSchemaText',
               ]
             : []}
-          sectionTitle={step.type === 'action.call' ? 'Step settings' : undefined}
+          sectionTitle={step.type === 'action.call'
+            ? t('designer.schemaForm.stepSettings', { defaultValue: 'Step settings' })
+            : undefined}
           expressionContext={expressionContext}
         />
       )}
@@ -6892,8 +6945,10 @@ export const StepConfigPanel: React.FC<{
 };
 
 // Portal-based tooltip for palette items (avoids overflow/stacking context issues)
-// Field metadata for friendly labels and descriptions
-const FIELD_METADATA: Record<string, { label: string; description?: string; advanced?: boolean }> = {
+// Field metadata for friendly labels and descriptions.
+// English defaults live here; localization happens via `getFieldMeta(t, key)` so step-config
+// schema-form fields translate their labels/descriptions under `designer.fieldMetadata.*`.
+const FIELD_METADATA_DEFAULTS: Record<string, { label: string; description?: string; advanced?: boolean }> = {
   actionId: { label: 'Action', description: 'The action to invoke' },
   version: { label: 'Version', description: 'Action version number' },
   inputMapping: { label: 'Input Mapping', description: 'Map data to action inputs' },
@@ -6918,11 +6973,23 @@ const FIELD_METADATA: Record<string, { label: string; description?: string; adva
   contextData: { label: 'Context Data', description: 'Additional data to include with the task' },
 };
 
-const getFieldMeta = (key: string) => {
-  if (FIELD_METADATA[key]) return FIELD_METADATA[key];
+const getFieldMeta = (
+  t: TFunction,
+  key: string,
+): { label: string; description?: string; advanced?: boolean } => {
+  const defaults = FIELD_METADATA_DEFAULTS[key];
+  if (defaults) {
+    return {
+      label: t(`designer.fieldMetadata.${key}.label`, { defaultValue: defaults.label }),
+      description: defaults.description
+        ? t(`designer.fieldMetadata.${key}.description`, { defaultValue: defaults.description })
+        : undefined,
+      advanced: defaults.advanced,
+    };
+  }
   // Convert camelCase to Title Case as fallback
-  const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
-  return { label };
+  const fallbackLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
+  return { label: fallbackLabel };
 };
 
 const getSchemaFormVisibleEntries = (
@@ -6957,11 +7024,13 @@ const SchemaForm: React.FC<{
   actionRegistry,
   stepId,
   excludeFields = [],
-  sectionTitle = 'Node Configuration',
+  sectionTitle,
   showSectionHeader = true,
   expressionContext,
   disabled = false
 }) => {
+  const { t } = useTranslation('msp/workflows');
+  const resolvedSectionTitle = sectionTitle ?? t('designer.schemaForm.sectionTitle', { defaultValue: 'Node Configuration' });
   const resolved = resolveSchema(schema, rootSchema);
   const configValue = value ?? {};
   const fieldEntries = getSchemaFormVisibleEntries(schema, rootSchema, excludeFields);
@@ -6988,12 +7057,12 @@ const SchemaForm: React.FC<{
   });
 
   // Separate regular and advanced fields
-  const regularFields = fieldEntries.filter(([key]) => !getFieldMeta(key).advanced);
-  const advancedFields = fieldEntries.filter(([key]) => getFieldMeta(key).advanced);
+  const regularFields = fieldEntries.filter(([key]) => !getFieldMeta(t, key).advanced);
+  const advancedFields = fieldEntries.filter(([key]) => getFieldMeta(t, key).advanced);
 
   const renderField = (key: string, propSchema: JsonSchema) => {
     const resolvedProp = resolveSchema(propSchema, rootSchema);
-    const meta = getFieldMeta(key);
+    const meta = getFieldMeta(t, key);
     const fieldDescription = meta.description || resolvedProp.description;
 
     if (isExprSchema(resolvedProp, rootSchema)) {
@@ -7163,9 +7232,14 @@ const SchemaForm: React.FC<{
     <div className="space-y-4">
       {showSectionHeader && (
         <div>
-          <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">{sectionTitle}</div>
+          <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">{resolvedSectionTitle}</div>
           {missingRequired.length > 0 && (
-            <div className="text-xs text-destructive">Missing required: {missingRequired.map(k => getFieldMeta(k).label).join(', ')}</div>
+            <div className="text-xs text-destructive">
+              {t('designer.schemaForm.missingRequired', {
+                defaultValue: 'Missing required: {{fields}}',
+                fields: missingRequired.map(k => getFieldMeta(t, k).label).join(', '),
+              })}
+            </div>
           )}
         </div>
       )}

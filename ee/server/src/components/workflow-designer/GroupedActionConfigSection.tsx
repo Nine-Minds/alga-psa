@@ -16,12 +16,15 @@ const TILE_KIND_LABEL_DEFAULTS: Record<WorkflowDesignerCatalogRecord['tileKind']
   ai: 'AI',
 };
 
+type ActionLabelTranslator = (action: WorkflowDesignerCatalogRecord['actions'][number]) => string;
+
 export const buildGroupedActionSelectOptions = (
-  record: WorkflowDesignerCatalogRecord
+  record: WorkflowDesignerCatalogRecord,
+  translateActionLabel?: ActionLabelTranslator,
 ): SelectOption[] =>
   record.actions.map((action) => ({
     value: action.id,
-    label: action.label,
+    label: translateActionLabel ? translateActionLabel(action) : action.label,
   }));
 
 export const GroupedActionConfigSection: React.FC<{
@@ -40,8 +43,14 @@ export const GroupedActionConfigSection: React.FC<{
   disabled = false,
 }) => {
   const { t } = useTranslation('msp/workflows');
-  const actionOptions = buildGroupedActionSelectOptions(record);
-  const helperText = selectedActionDescription?.trim() || record.description?.trim();
+  const translatedGroupLabel = t(`designer.palette.groups.${record.groupKey}.label`, { defaultValue: record.label });
+  const translatedGroupDescription = record.description
+    ? t(`designer.palette.groups.${record.groupKey}.description`, { defaultValue: record.description })
+    : undefined;
+  const actionOptions = buildGroupedActionSelectOptions(record, (action) =>
+    t(`designer.actions.${action.id}.label`, { defaultValue: action.label })
+  );
+  const helperText = selectedActionDescription?.trim() || translatedGroupDescription?.trim();
   const tileKindLabel = t(`groupedAction.tileKind.${record.tileKind}`, {
     defaultValue: TILE_KIND_LABEL_DEFAULTS[record.tileKind],
   });
@@ -57,7 +66,7 @@ export const GroupedActionConfigSection: React.FC<{
             id={`workflow-step-group-label-${stepId}`}
             className="text-sm font-semibold text-[rgb(var(--color-text-900))]"
           >
-            {record.label}
+            {translatedGroupLabel}
           </div>
           <Badge variant="secondary">{tileKindLabel}</Badge>
         </div>
@@ -76,7 +85,7 @@ export const GroupedActionConfigSection: React.FC<{
         label={t('groupedAction.actionLabel', { defaultValue: 'Action' })}
         placeholder={t('groupedAction.actionPlaceholder', {
           defaultValue: 'Select a {{group}} action',
-          group: record.label,
+          group: translatedGroupLabel,
         })}
         options={actionOptions}
         value={selectedActionId ?? ''}
@@ -96,7 +105,7 @@ export const GroupedActionConfigSection: React.FC<{
           <div className="mt-1 text-xs text-destructive">
             {t('groupedAction.required.message', {
               defaultValue: 'Select a {{group}} action before configuring inputs or publishing this workflow.',
-              group: record.label,
+              group: translatedGroupLabel,
             })}
           </div>
         </Card>

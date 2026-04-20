@@ -660,6 +660,40 @@
       "empty": "No mappings yet.",
       "expressionLabel": "Expression"
     },
+    "schemaForm": {
+      "sectionTitle": "Node Configuration",
+      "stepSettings": "Step settings",
+      "missingRequired": "Missing required: {{fields}}"
+    },
+    "fieldMetadata": {
+      "actionId": { "label": "Action", "description": "The action to invoke" },
+      "version": { "label": "Version", "description": "Action version number" },
+      "inputMapping": { "label": "Input Mapping", "description": "Map data to action inputs" },
+      "saveAs": { "label": "Save Result As", "description": "Variable name or assignment path (e.g., result, vars.result, payload.result)" },
+      "idempotencyKey": {
+        "label": "Idempotency Key",
+        "description": "Expression that produces a unique key to prevent duplicate executions. If the same key is seen twice, the cached result is returned."
+      },
+      "onError": { "label": "Error Handling", "description": "How to handle errors" },
+      "eventName": { "label": "Event Name", "description": "Name of the event to wait for" },
+      "correlationKey": { "label": "Correlation Key", "description": "Expression to match incoming events" },
+      "filters": { "label": "Payload Filters", "description": "Optional event payload filters (AND semantics)" },
+      "timeoutMs": { "label": "Timeout (ms)", "description": "Maximum time to wait in milliseconds" },
+      "mode": { "label": "Wait Mode", "description": "Duration or until time" },
+      "durationMs": { "label": "Duration", "description": "Relative duration stored in milliseconds" },
+      "until": { "label": "Until", "description": "Expression resolving to an absolute date/time" },
+      "state": { "label": "State Name", "description": "The state to transition to" },
+      "assign": { "label": "Assignments", "description": "Variables to assign" },
+      "taskType": { "label": "Task Type", "description": "Type of human task" },
+      "title": { "label": "Title", "description": "Task title shown to assignee" },
+      "contextData": { "label": "Context Data", "description": "Additional data to include with the task" }
+    },
+    "actions": {
+      "ai.infer": {
+        "label": "Infer Structured Output",
+        "description": "Generate structured workflow data from a prompt using the configured AI provider."
+      }
+    },
     "validation": {
       "badge": {
         "invalid": "Invalid",
@@ -760,6 +794,18 @@
           "label": "Human Task",
           "description": "Pause for human task completion"
         }
+      },
+      "groups": {
+        "ticket": { "label": "Ticket", "description": "Ticket actions" },
+        "contact": { "label": "Contact", "description": "Contact actions" },
+        "client": { "label": "Client", "description": "Client actions" },
+        "communication": { "label": "Communication", "description": "Communication actions" },
+        "scheduling": { "label": "Scheduling", "description": "Scheduling actions" },
+        "project": { "label": "Project", "description": "Project actions" },
+        "time": { "label": "Time", "description": "Time actions" },
+        "crm": { "label": "CRM", "description": "CRM actions" },
+        "transform": { "label": "Transform", "description": "Transform actions" },
+        "ai": { "label": "AI", "description": "AI actions" }
       }
     },
     "stepCard": {

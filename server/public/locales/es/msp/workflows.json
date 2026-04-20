@@ -660,6 +660,91 @@
       "empty": "Aún no hay mapeos.",
       "expressionLabel": "Expresión"
     },
+    "schemaForm": {
+      "sectionTitle": "Configuración del nodo",
+      "stepSettings": "Ajustes del paso",
+      "missingRequired": "Campos obligatorios faltantes: {{fields}}"
+    },
+    "fieldMetadata": {
+      "actionId": {
+        "label": "Acción",
+        "description": "La acción a invocar"
+      },
+      "version": {
+        "label": "Versión",
+        "description": "Número de versión de la acción"
+      },
+      "inputMapping": {
+        "label": "Mapeo de entradas",
+        "description": "Mapear datos a las entradas de la acción"
+      },
+      "saveAs": {
+        "label": "Guardar resultado como",
+        "description": "Nombre de variable o ruta de asignación (p. ej. result, vars.result, payload.result)"
+      },
+      "idempotencyKey": {
+        "label": "Clave de idempotencia",
+        "description": "Expresión que produce una clave única para evitar ejecuciones duplicadas. Si la misma clave aparece dos veces, se devuelve el resultado en caché."
+      },
+      "onError": {
+        "label": "Gestión de errores",
+        "description": "Cómo gestionar los errores"
+      },
+      "eventName": {
+        "label": "Nombre del evento",
+        "description": "Nombre del evento a esperar"
+      },
+      "correlationKey": {
+        "label": "Clave de correlación",
+        "description": "Expresión para coincidir con los eventos entrantes"
+      },
+      "filters": {
+        "label": "Filtros de carga útil",
+        "description": "Filtros opcionales de carga útil del evento (semántica AND)"
+      },
+      "timeoutMs": {
+        "label": "Tiempo de espera (ms)",
+        "description": "Tiempo máximo de espera en milisegundos"
+      },
+      "mode": {
+        "label": "Modo de espera",
+        "description": "Duración o hasta una hora"
+      },
+      "durationMs": {
+        "label": "Duración",
+        "description": "Duración relativa almacenada en milisegundos"
+      },
+      "until": {
+        "label": "Hasta",
+        "description": "Expresión que se resuelve en una fecha/hora absoluta"
+      },
+      "state": {
+        "label": "Nombre del estado",
+        "description": "El estado al que transicionar"
+      },
+      "assign": {
+        "label": "Asignaciones",
+        "description": "Variables a asignar"
+      },
+      "taskType": {
+        "label": "Tipo de tarea",
+        "description": "Tipo de tarea humana"
+      },
+      "title": {
+        "label": "Título",
+        "description": "Título de la tarea mostrado al asignado"
+      },
+      "contextData": {
+        "label": "Datos de contexto",
+        "description": "Datos adicionales a incluir con la tarea"
+      }
+    },
+    "actions": {
+      "ai.infer": {
+        "label": "Inferir salida estructurada",
+        "description": "Generar datos estructurados del flujo de trabajo a partir de una indicación usando el proveedor de IA configurado."
+      }
+    },
     "validation": {
       "badge": {
         "invalid": "No válido",
@@ -759,6 +844,48 @@
         "human.task": {
           "label": "Tarea humana",
           "description": "Pausar para la finalización de una tarea humana"
+        }
+      },
+      "groups": {
+        "ticket": {
+          "label": "Ticket",
+          "description": "Acciones de ticket"
+        },
+        "contact": {
+          "label": "Contacto",
+          "description": "Acciones de contacto"
+        },
+        "client": {
+          "label": "Cliente",
+          "description": "Acciones de cliente"
+        },
+        "communication": {
+          "label": "Comunicación",
+          "description": "Acciones de comunicación"
+        },
+        "scheduling": {
+          "label": "Programación",
+          "description": "Acciones de programación"
+        },
+        "project": {
+          "label": "Proyecto",
+          "description": "Acciones de proyecto"
+        },
+        "time": {
+          "label": "Tiempo",
+          "description": "Acciones de tiempo"
+        },
+        "crm": {
+          "label": "CRM",
+          "description": "Acciones de CRM"
+        },
+        "transform": {
+          "label": "Transformar",
+          "description": "Acciones de transformación"
+        },
+        "ai": {
+          "label": "IA",
+          "description": "Acciones de IA"
         }
       }
     },
@@ -1544,7 +1671,7 @@
         "businessHoursSchedule": "Business-hours schedule",
         "businessHoursSchedulePlaceholder": "Choose a business-hours schedule",
         "frequency": "Frequency",
-        "time": "Time",
+        "time": "Tiempo",
         "dayOfMonth": "Day of month",
         "weekdays": "Weekdays",
         "cron": "Cron",
@@ -1747,7 +1874,7 @@
     },
     "workflowWaitMode": {
       "duration": "Duración",
-      "until": "Until"
+      "until": "Hasta"
     },
     "workflowWaitTiming": {
       "fixed": "Specific date & time",

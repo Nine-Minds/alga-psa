@@ -660,6 +660,91 @@
       "empty": "Nog geen koppelingen.",
       "expressionLabel": "Expressie"
     },
+    "schemaForm": {
+      "sectionTitle": "Knooppuntconfiguratie",
+      "stepSettings": "Stapinstellingen",
+      "missingRequired": "Ontbrekende verplichte velden: {{fields}}"
+    },
+    "fieldMetadata": {
+      "actionId": {
+        "label": "Actie",
+        "description": "De aan te roepen actie"
+      },
+      "version": {
+        "label": "Versie",
+        "description": "Versienummer van de actie"
+      },
+      "inputMapping": {
+        "label": "Invoerkoppeling",
+        "description": "Gegevens koppelen aan de invoer van de actie"
+      },
+      "saveAs": {
+        "label": "Resultaat opslaan als",
+        "description": "Variabelenaam of toewijzingspad (bijv. result, vars.result, payload.result)"
+      },
+      "idempotencyKey": {
+        "label": "Idempotentiesleutel",
+        "description": "Expressie die een unieke sleutel produceert om dubbele uitvoeringen te voorkomen. Als dezelfde sleutel twee keer voorkomt, wordt het opgeslagen resultaat geretourneerd."
+      },
+      "onError": {
+        "label": "Foutafhandeling",
+        "description": "Hoe fouten moeten worden afgehandeld"
+      },
+      "eventName": {
+        "label": "Gebeurtenisnaam",
+        "description": "Naam van de gebeurtenis waarop wordt gewacht"
+      },
+      "correlationKey": {
+        "label": "Correlatiesleutel",
+        "description": "Expressie om inkomende gebeurtenissen te matchen"
+      },
+      "filters": {
+        "label": "Payload-filters",
+        "description": "Optionele payloadfilters voor gebeurtenissen (EN-semantiek)"
+      },
+      "timeoutMs": {
+        "label": "Time-out (ms)",
+        "description": "Maximale wachttijd in milliseconden"
+      },
+      "mode": {
+        "label": "Wachtmodus",
+        "description": "Duur of tot een tijdstip"
+      },
+      "durationMs": {
+        "label": "Duur",
+        "description": "Relatieve duur opgeslagen in milliseconden"
+      },
+      "until": {
+        "label": "Tot",
+        "description": "Expressie die oplost naar een absolute datum/tijd"
+      },
+      "state": {
+        "label": "Statusnaam",
+        "description": "De status waarnaar moet worden overgegaan"
+      },
+      "assign": {
+        "label": "Toewijzingen",
+        "description": "Toe te wijzen variabelen"
+      },
+      "taskType": {
+        "label": "Taaktype",
+        "description": "Type handmatige taak"
+      },
+      "title": {
+        "label": "Titel",
+        "description": "Taaktitel die aan de toegewezene wordt getoond"
+      },
+      "contextData": {
+        "label": "Context Data",
+        "description": "Aanvullende gegevens om bij de taak op te nemen"
+      }
+    },
+    "actions": {
+      "ai.infer": {
+        "label": "Gestructureerde uitvoer afleiden",
+        "description": "Gestructureerde workflowgegevens genereren vanuit een prompt via de geconfigureerde AI-provider."
+      }
+    },
     "validation": {
       "badge": {
         "invalid": "Ongeldig",
@@ -759,6 +844,48 @@
         "human.task": {
           "label": "Handmatige taak",
           "description": "Pauzeren tot voltooiing van een handmatige taak"
+        }
+      },
+      "groups": {
+        "ticket": {
+          "label": "Ticket",
+          "description": "Ticketacties"
+        },
+        "contact": {
+          "label": "Contact",
+          "description": "Contactacties"
+        },
+        "client": {
+          "label": "Klant",
+          "description": "Klantacties"
+        },
+        "communication": {
+          "label": "Communicatie",
+          "description": "Communicatieacties"
+        },
+        "scheduling": {
+          "label": "Planning",
+          "description": "Planningsacties"
+        },
+        "project": {
+          "label": "Project",
+          "description": "Projectacties"
+        },
+        "time": {
+          "label": "Tijd",
+          "description": "Tijdacties"
+        },
+        "crm": {
+          "label": "CRM",
+          "description": "CRM-acties"
+        },
+        "transform": {
+          "label": "Transform",
+          "description": "Transformatieacties"
+        },
+        "ai": {
+          "label": "AI",
+          "description": "AI-acties"
         }
       }
     },
@@ -1544,7 +1671,7 @@
         "businessHoursSchedule": "Business-hours schedule",
         "businessHoursSchedulePlaceholder": "Choose a business-hours schedule",
         "frequency": "Frequency",
-        "time": "Time",
+        "time": "Tijd",
         "dayOfMonth": "Day of month",
         "weekdays": "Weekdays",
         "cron": "Cron",
@@ -1747,7 +1874,7 @@
     },
     "workflowWaitMode": {
       "duration": "Duur",
-      "until": "Until"
+      "until": "Tot"
     },
     "workflowWaitTiming": {
       "fixed": "Specific date & time",

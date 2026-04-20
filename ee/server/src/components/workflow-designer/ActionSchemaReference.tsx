@@ -335,7 +335,9 @@ export const ActionSchemaReference: React.FC<{
       {action.ui?.description && (
         <div className="text-xs text-gray-600 bg-blue-500/10 p-2 rounded-md flex items-start gap-2">
           <Info className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
-          <span>{action.ui.description}</span>
+          <span>
+            {t(`designer.actions.${action.id}.description`, { defaultValue: action.ui.description })}
+          </span>
         </div>
       )}
 

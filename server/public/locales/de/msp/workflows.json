@@ -660,6 +660,91 @@
       "empty": "Noch keine Zuordnungen.",
       "expressionLabel": "Ausdruck"
     },
+    "schemaForm": {
+      "sectionTitle": "Knoten-Konfiguration",
+      "stepSettings": "Schritt-Einstellungen",
+      "missingRequired": "Pflichtfelder fehlen: {{fields}}"
+    },
+    "fieldMetadata": {
+      "actionId": {
+        "label": "Aktion",
+        "description": "Die aufzurufende Aktion"
+      },
+      "version": {
+        "label": "Version",
+        "description": "Versionsnummer der Aktion"
+      },
+      "inputMapping": {
+        "label": "Eingabezuordnung",
+        "description": "Daten auf Aktionseingaben abbilden"
+      },
+      "saveAs": {
+        "label": "Ergebnis speichern als",
+        "description": "Variablenname oder Zuweisungspfad (z. B. result, vars.result, payload.result)"
+      },
+      "idempotencyKey": {
+        "label": "Idempotenzschlüssel",
+        "description": "Ausdruck, der einen eindeutigen Schlüssel erzeugt, um doppelte Ausführungen zu verhindern. Wird derselbe Schlüssel zweimal gesehen, wird das zwischengespeicherte Ergebnis zurückgegeben."
+      },
+      "onError": {
+        "label": "Fehlerbehandlung",
+        "description": "Wie Fehler behandelt werden sollen"
+      },
+      "eventName": {
+        "label": "Ereignisname",
+        "description": "Name des Ereignisses, auf das gewartet wird"
+      },
+      "correlationKey": {
+        "label": "Korrelationsschlüssel",
+        "description": "Ausdruck zum Abgleich eingehender Ereignisse"
+      },
+      "filters": {
+        "label": "Nutzdaten-Filter",
+        "description": "Optionale Nutzdaten-Filter (UND-Semantik)"
+      },
+      "timeoutMs": {
+        "label": "Zeitüberschreitung (ms)",
+        "description": "Maximale Wartezeit in Millisekunden"
+      },
+      "mode": {
+        "label": "Wartemodus",
+        "description": "Dauer oder bis zu einer Zeit"
+      },
+      "durationMs": {
+        "label": "Dauer",
+        "description": "Relative Dauer in Millisekunden gespeichert"
+      },
+      "until": {
+        "label": "Bis",
+        "description": "Ausdruck, der zu einem absoluten Datum/Uhrzeit aufgelöst wird"
+      },
+      "state": {
+        "label": "Zustandsname",
+        "description": "Der Zustand, zu dem gewechselt werden soll"
+      },
+      "assign": {
+        "label": "Zuweisungen",
+        "description": "Zuzuweisende Variablen"
+      },
+      "taskType": {
+        "label": "Aufgabentyp",
+        "description": "Typ der menschlichen Aufgabe"
+      },
+      "title": {
+        "label": "Titel",
+        "description": "Aufgabentitel, der dem Zugewiesenen angezeigt wird"
+      },
+      "contextData": {
+        "label": "Kontextdaten",
+        "description": "Zusätzliche Daten, die mit der Aufgabe einbezogen werden"
+      }
+    },
+    "actions": {
+      "ai.infer": {
+        "label": "Strukturierte Ausgabe ableiten",
+        "description": "Strukturierte Workflow-Daten aus einer Eingabe über den konfigurierten KI-Anbieter generieren."
+      }
+    },
     "validation": {
       "badge": {
         "invalid": "Ungültig",
@@ -759,6 +844,48 @@
         "human.task": {
           "label": "Menschliche Aufgabe",
           "description": "Pausieren bis zur Fertigstellung einer menschlichen Aufgabe"
+        }
+      },
+      "groups": {
+        "ticket": {
+          "label": "Ticket",
+          "description": "Ticket-Aktionen"
+        },
+        "contact": {
+          "label": "Kontakt",
+          "description": "Kontakt-Aktionen"
+        },
+        "client": {
+          "label": "Kunde",
+          "description": "Kunden-Aktionen"
+        },
+        "communication": {
+          "label": "Kommunikation",
+          "description": "Kommunikations-Aktionen"
+        },
+        "scheduling": {
+          "label": "Planung",
+          "description": "Planungs-Aktionen"
+        },
+        "project": {
+          "label": "Projekt",
+          "description": "Projekt-Aktionen"
+        },
+        "time": {
+          "label": "Zeit",
+          "description": "Zeit-Aktionen"
+        },
+        "crm": {
+          "label": "CRM",
+          "description": "CRM-Aktionen"
+        },
+        "transform": {
+          "label": "Transformieren",
+          "description": "Transformations-Aktionen"
+        },
+        "ai": {
+          "label": "KI",
+          "description": "KI-Aktionen"
         }
       }
     },
@@ -1544,7 +1671,7 @@
         "businessHoursSchedule": "Business-hours schedule",
         "businessHoursSchedulePlaceholder": "Choose a business-hours schedule",
         "frequency": "Frequency",
-        "time": "Time",
+        "time": "Zeit",
         "dayOfMonth": "Day of month",
         "weekdays": "Weekdays",
         "cron": "Cron",
@@ -1747,7 +1874,7 @@
     },
     "workflowWaitMode": {
       "duration": "Dauer",
-      "until": "Until"
+      "until": "Bis"
     },
     "workflowWaitTiming": {
       "fixed": "Specific date & time",

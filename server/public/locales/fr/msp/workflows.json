@@ -660,6 +660,91 @@
       "empty": "Aucun mappage pour l’instant.",
       "expressionLabel": "Expression"
     },
+    "schemaForm": {
+      "sectionTitle": "Configuration du nœud",
+      "stepSettings": "Paramètres de l’étape",
+      "missingRequired": "Champs requis manquants : {{fields}}"
+    },
+    "fieldMetadata": {
+      "actionId": {
+        "label": "Action",
+        "description": "L’action à invoquer"
+      },
+      "version": {
+        "label": "Version",
+        "description": "Numéro de version de l’action"
+      },
+      "inputMapping": {
+        "label": "Mappage des entrées",
+        "description": "Mapper les données aux entrées de l’action"
+      },
+      "saveAs": {
+        "label": "Enregistrer le résultat sous",
+        "description": "Nom de variable ou chemin d’affectation (ex. result, vars.result, payload.result)"
+      },
+      "idempotencyKey": {
+        "label": "Clé d’idempotence",
+        "description": "Expression produisant une clé unique pour éviter les exécutions dupliquées. Si la même clé apparaît deux fois, le résultat mis en cache est renvoyé."
+      },
+      "onError": {
+        "label": "Gestion des erreurs",
+        "description": "Comment gérer les erreurs"
+      },
+      "eventName": {
+        "label": "Nom de l’événement",
+        "description": "Nom de l’événement à attendre"
+      },
+      "correlationKey": {
+        "label": "Clé de corrélation",
+        "description": "Expression pour associer les événements entrants"
+      },
+      "filters": {
+        "label": "Filtres de charge utile",
+        "description": "Filtres facultatifs sur la charge utile (sémantique ET)"
+      },
+      "timeoutMs": {
+        "label": "Délai d’attente (ms)",
+        "description": "Temps d’attente maximal en millisecondes"
+      },
+      "mode": {
+        "label": "Mode d’attente",
+        "description": "Durée ou jusqu’à une date"
+      },
+      "durationMs": {
+        "label": "Durée",
+        "description": "Durée relative stockée en millisecondes"
+      },
+      "until": {
+        "label": "Jusqu’à",
+        "description": "Expression se résolvant en une date/heure absolue"
+      },
+      "state": {
+        "label": "Nom de l’état",
+        "description": "L’état vers lequel basculer"
+      },
+      "assign": {
+        "label": "Affectations",
+        "description": "Variables à assigner"
+      },
+      "taskType": {
+        "label": "Type de tâche",
+        "description": "Type de tâche humaine"
+      },
+      "title": {
+        "label": "Titre",
+        "description": "Titre de la tâche affiché à l’assigné"
+      },
+      "contextData": {
+        "label": "Données de contexte",
+        "description": "Données supplémentaires à inclure avec la tâche"
+      }
+    },
+    "actions": {
+      "ai.infer": {
+        "label": "Inférer une sortie structurée",
+        "description": "Générer des données structurées de workflow à partir d’une invite via le fournisseur d’IA configuré."
+      }
+    },
     "validation": {
       "badge": {
         "invalid": "Invalide",
@@ -759,6 +844,48 @@
         "human.task": {
           "label": "Tâche humaine",
           "description": "Mettre en pause pour l’achèvement d’une tâche humaine"
+        }
+      },
+      "groups": {
+        "ticket": {
+          "label": "Ticket",
+          "description": "Actions de ticket"
+        },
+        "contact": {
+          "label": "Contact",
+          "description": "Actions de contact"
+        },
+        "client": {
+          "label": "Client",
+          "description": "Actions client"
+        },
+        "communication": {
+          "label": "Communication",
+          "description": "Actions de communication"
+        },
+        "scheduling": {
+          "label": "Planification",
+          "description": "Actions de planification"
+        },
+        "project": {
+          "label": "Projet",
+          "description": "Actions de projet"
+        },
+        "time": {
+          "label": "Temps",
+          "description": "Actions de temps"
+        },
+        "crm": {
+          "label": "CRM",
+          "description": "Actions CRM"
+        },
+        "transform": {
+          "label": "Transformer",
+          "description": "Actions de transformation"
+        },
+        "ai": {
+          "label": "IA",
+          "description": "Actions IA"
         }
       }
     },
@@ -1544,7 +1671,7 @@
         "businessHoursSchedule": "Business-hours schedule",
         "businessHoursSchedulePlaceholder": "Choose a business-hours schedule",
         "frequency": "Frequency",
-        "time": "Time",
+        "time": "Temps",
         "dayOfMonth": "Day of month",
         "weekdays": "Weekdays",
         "cron": "Cron",
@@ -1747,7 +1874,7 @@
     },
     "workflowWaitMode": {
       "duration": "Durée",
-      "until": "Until"
+      "until": "Jusqu’à"
     },
     "workflowWaitTiming": {
       "fixed": "Specific date & time",
