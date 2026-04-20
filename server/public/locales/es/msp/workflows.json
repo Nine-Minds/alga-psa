@@ -623,6 +623,41 @@
       "catch": "CATCH",
       "body": "BODY"
     },
+    "palette": {
+      "showPalette": "Show palette",
+      "hidePalette": "Hide palette",
+      "searchPlaceholder": "Search",
+      "dragHint": "Drop on pipeline to add",
+      "categories": {
+        "Control": "Control",
+        "Core": "Core",
+        "Transform": "Transform",
+        "AI": "AI",
+        "Apps": "Apps"
+      },
+      "controlBlocks": {
+        "control.if": {
+          "label": "If",
+          "description": "Conditional branching"
+        },
+        "control.forEach": {
+          "label": "For Each",
+          "description": "Iterate over items"
+        },
+        "control.tryCatch": {
+          "label": "Try/Catch",
+          "description": "Handle errors"
+        },
+        "control.callWorkflow": {
+          "label": "Call Workflow",
+          "description": "Invoke another workflow"
+        },
+        "control.return": {
+          "label": "Return",
+          "description": "Stop execution"
+        }
+      }
+    },
     "stepCard": {
       "selectAriaLabel": "Select {{label}} step",
       "badges": {

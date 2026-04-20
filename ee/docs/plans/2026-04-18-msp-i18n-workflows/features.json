@@ -140,13 +140,13 @@
   {
     "id": "F024",
     "description": "Extract all user-visible strings in WorkflowDesignerPalette.tsx (search placeholder, category headers, empty state, drag hints).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-C"]
   },
   {
     "id": "F025",
     "description": "Extract all user-visible strings in PaletteItemWithTooltip.tsx (tooltip labels, help text, badges).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-C"]
   },
   {

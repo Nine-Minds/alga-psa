@@ -3214,16 +3214,20 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         };
       });
 
-    const controlItems = CONTROL_BLOCKS.map((block) => ({
-      id: block.id,
-      label: block.label,
-      description: block.description,
-      category: block.category,
-      type: block.id,
-      sortOrder: 0,
-      outputSummary: undefined as string | undefined,
-      searchIndex: buildPaletteSearchIndex([block.id, block.label, block.description])
-    }));
+    const controlItems = CONTROL_BLOCKS.map((block) => {
+      const translatedLabel = t(`designer.palette.controlBlocks.${block.id}.label`, { defaultValue: block.label });
+      const translatedDescription = t(`designer.palette.controlBlocks.${block.id}.description`, { defaultValue: block.description });
+      return {
+        id: block.id,
+        label: translatedLabel,
+        description: translatedDescription,
+        category: block.category,
+        type: block.id,
+        sortOrder: 0,
+        outputSummary: undefined as string | undefined,
+        searchIndex: buildPaletteSearchIndex([block.id, block.label, block.description, translatedLabel, translatedDescription])
+      };
+    });
 
     // Keep generic nodes alongside grouped business tiles for compatibility while the step model transitions.
     const items = [...controlItems, ...groupedActionItems, ...registryItems];

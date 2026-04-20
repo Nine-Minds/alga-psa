@@ -582,6 +582,30 @@ Target order: WF-A → WF-B+WF-E in parallel → WF-C → WF-D → WF-F.
 - Results:
   - ESLint reports 0 errors; remaining warnings are the file's long-standing `any` / non-null-assertion / `no-unused-vars` / `react/no-unescaped-entities` / `exhaustive-deps` backlog, unchanged by this extraction.
   - translation validation passed with 0 missing/extra keys.
+
+### F024 + F025 complete — palette chrome + control-block tiles localized
+- `WorkflowDesignerPalette.tsx` is now translation-aware via `useTranslation('msp/workflows')`. Localized:
+  - `Show palette` / `Hide palette` labels on the collapse toggle.
+  - `Search` placeholder on the search input.
+  - `Drop on pipeline to add` hint shown while dragging.
+  - Category headers — the component now calls `t(\`designer.palette.categories.${category}\`, { defaultValue: category })`, so the hardcoded `'Core' | 'Transform' | 'AI' | 'Apps' | 'Control'` keys produced upstream translate when matching locale keys exist and fall back to the raw English label otherwise.
+- `PaletteItemWithTooltip.tsx` has no hardcoded user-visible strings — tooltip label/description flow entirely through the `item: PaletteTooltipItem` prop. F025's "extraction" therefore happens at the caller site (this batch) and at any future catalog source that feeds the palette (deferred).
+- `CONTROL_BLOCKS` in `WorkflowDesigner.tsx` are now translated at mapping time inside `paletteItems`: each block's label and description resolve via `t(\`designer.palette.controlBlocks.${block.id}.label\`, …)` / `...description`, with the hardcoded English retained as `defaultValue`. Both the translated and original strings stay in the palette search index so in-flight translations don't break `buildPaletteSearchIndex`/`matchesPaletteSearchQuery` matching for either surface.
+- Added `designer.palette.*` keys to `server/public/locales/en/msp/workflows.json` (17 keys: chrome, 5 category labels, 5 control-block label+description pairs) and synced the same stub structure into `fr/es/de/nl/it/pl/xx/yy`.
+- Existing vitest for the palette passes: ran `src/components/workflow-designer/__tests__/WorkflowDesignerPalette.test.tsx` → 2/2 tests pass. `useTranslation` emits a no-i18next-instance log in test context as expected; fallbacks to `defaultValue` keep the English assertions (`getByPlaceholderText('Search')`, `getByText('Drop on pipeline to add')`) green.
+- Deferred:
+  - Action registry / designer catalog items coming from the server — their `label` / `description` / `groupLabel` values are server-sourced palette data, covered by the workflow action registry initiative (out of scope for this batch per PRD).
+  - `outputSummary` default string `'Choose an action after adding this step'` lives in `WorkflowDesigner.tsx` inside `groupedActionItems` mapping; this is palette tile copy tied to the registry flow and is better bundled with the registry-labels initiative.
+- Checks run:
+  ```bash
+  npx eslint ee/server/src/components/workflow-designer/WorkflowDesignerPalette.tsx ee/server/src/components/workflow-designer/PaletteItemWithTooltip.tsx ee/server/src/components/workflow-designer/WorkflowDesigner.tsx
+  npx vitest run src/components/workflow-designer/__tests__/WorkflowDesignerPalette.test.tsx
+  node scripts/validate-translations.cjs
+  ```
+- Results:
+  - ESLint reports 0 errors across the three files; warnings are pre-existing.
+  - Vitest: 2/2 palette tests pass.
+  - translation validation passed with 0 missing/extra keys.
 - Checks run:
   ```bash
   npx eslint ee/server/src/components/workflow-graph/WorkflowGraph.tsx
