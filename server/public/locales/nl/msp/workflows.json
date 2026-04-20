@@ -3,10 +3,10 @@
     "title": "Workflows"
   },
   "nav": {
-    "designer": "Designer",
-    "runs": "Runs",
-    "control": "Workflow control",
-    "tasks": "Tasks"
+    "designer": "Ontwerper",
+    "runs": "Uitvoeringen",
+    "control": "Workflow-beheer",
+    "tasks": "Taken"
   },
   "sections": {
     "definitions": "Workflow definitions",
@@ -17,14 +17,14 @@
     "description": "Workflows will appear here once they are created."
   },
   "filters": {
-    "allStatuses": "All statuses",
-    "allLevels": "All levels",
-    "allTypes": "All types"
+    "allStatuses": "Alle statussen",
+    "allLevels": "Alle niveaus",
+    "allTypes": "Alle typen"
   },
   "actions": {
-    "create": "Create workflow",
-    "open": "Open",
-    "close": "Close"
+    "create": "Workflow maken",
+    "open": "Openen",
+    "close": "Sluiten"
   },
   "runList": {
     "quickRanges": {
@@ -37,8 +37,8 @@
       "runCount": "{{count}} runs"
     },
     "filters": {
-      "all": "All",
-      "allWorkflows": "All workflows",
+      "all": "Alle",
+      "allWorkflows": "Alle workflows",
       "searchLabel": "Run ID or correlation key",
       "searchPlaceholder": "Search by run id or correlation key",
       "statusLabel": "Status",
@@ -50,17 +50,17 @@
       "sortLabel": "Sort"
     },
     "actions": {
-      "applyFilters": "Apply filters",
-      "reset": "Reset",
+      "applyFilters": "Filters toepassen",
+      "reset": "Resetten",
       "viewLatestRun": "View latest run",
       "runNow": "Run now",
-      "exportCsv": "Export CSV",
-      "refresh": "Refresh",
+      "exportCsv": "CSV exporteren",
+      "refresh": "Vernieuwen",
       "resumeSelected": "Resume selected ({{count}})",
       "cancelSelected": "Cancel selected ({{count}})",
-      "clearSelection": "Clear selection",
+      "clearSelection": "Selectie wissen",
       "details": "Details",
-      "loadMore": "Load more"
+      "loadMore": "Meer laden"
     },
     "table": {
       "runId": "Run ID",
@@ -71,10 +71,10 @@
       "status": "Status",
       "started": "Started",
       "updated": "Updated",
-      "duration": "Duration",
+      "duration": "Duur",
       "emptyValue": "—",
       "trigger": {
-        "manual": "Manual",
+        "manual": "Handmatig",
         "mapped": "Mapped",
         "identity": "Identity"
       }
@@ -88,7 +88,7 @@
       "resumeMessage": "Resume {{count}} selected run(s)?",
       "cancelTitle": "Cancel Selected Runs",
       "cancelMessage": "Cancel {{count}} selected run(s)? This cannot be undone.",
-      "reasonLabel": "Reason",
+      "reasonLabel": "Reden",
       "resumeReasonPlaceholder": "Provide a reason for resuming",
       "cancelReasonPlaceholder": "Provide a reason for canceling",
       "resumeConfirm": "Resume runs",
@@ -124,24 +124,24 @@
     },
     "actions": {
       "resume": "Resume",
-      "cancel": "Cancel",
+      "cancel": "Annuleren",
       "export": "Export",
-      "retry": "Retry",
+      "retry": "Opnieuw proberen",
       "replay": "Replay",
       "requeueEvent": "Requeue Event",
-      "close": "Close",
+      "close": "Sluiten",
       "view": "View",
-      "apply": "Apply",
-      "reset": "Reset",
-      "exportCsv": "Export CSV",
-      "loadMore": "Load more",
+      "apply": "Toepassen",
+      "reset": "Resetten",
+      "exportCsv": "CSV exporteren",
+      "loadMore": "Meer laden",
       "exportAuditCsv": "Export Audit CSV"
     },
     "summary": {
       "statusLabel": "Status",
       "startedLabel": "Started",
       "updatedLabel": "Updated",
-      "completedLabel": "Completed",
+      "completedLabel": "Voltooid",
       "triggerLabel": "Trigger",
       "scheduleStateLabel": "Schedule state",
       "scheduledForLabel": "Scheduled for",
@@ -166,7 +166,7 @@
         "type": "Type",
         "status": "Status",
         "attempt": "Attempt",
-        "duration": "Duration",
+        "duration": "Duur",
         "nextRetry": "Next Retry",
         "started": "Started",
         "error": "Error"
@@ -178,8 +178,8 @@
       "statusLabel": "Status",
       "attemptLabel": "Attempt",
       "startedLabel": "Started",
-      "completedLabel": "Completed",
-      "durationLabel": "Duration",
+      "completedLabel": "Voltooid",
+      "durationLabel": "Duur",
       "nodeTypeLabel": "Node Type",
       "definitionStepIdLabel": "Definition Step ID",
       "nextRetryLabel": "Next Retry",
@@ -215,12 +215,12 @@
       "sizeLine": "Input size: {{inputSize}}{{inputSuffix}} · Output size: {{outputSize}}{{outputSuffix}}",
       "truncatedSuffix": " (truncated)",
       "inputLabel": "Input",
-      "outputLabel": "Output"
+      "outputLabel": "Uitvoer"
     },
     "logs": {
       "title": "Run Logs",
       "description": "Operational log events for this run.",
-      "searchLabel": "Search",
+      "searchLabel": "Zoeken",
       "searchPlaceholder": "Search log message",
       "levelLabel": "Level",
       "empty": "No log entries found.",
@@ -228,8 +228,8 @@
         "timestamp": "Timestamp",
         "level": "Level",
         "message": "Message",
-        "step": "Step",
-        "event": "Event",
+        "step": "Stap",
+        "event": "Gebeurtenis",
         "correlation": "Correlation"
       }
     },
@@ -246,7 +246,7 @@
       }
     },
     "dialogs": {
-      "reasonLabel": "Reason",
+      "reasonLabel": "Reden",
       "resumeTitle": "Resume Workflow Run",
       "resumeMessage": "Resume this workflow run now?",
       "resumeReasonPlaceholder": "Provide a reason for resuming",
@@ -302,10 +302,10 @@
       "emptyValue": "—"
     },
     "actions": {
-      "addField": "Add field",
-      "addItem": "Add item",
+      "addField": "Veld toevoegen",
+      "addItem": "Item toevoegen",
       "cloneLatestRun": "Clone latest run",
-      "close": "Close",
+      "close": "Sluiten",
       "copyPayload": "Copy payload",
       "formBuilder": "Form Builder",
       "hide": "Hide",
@@ -313,8 +313,8 @@
       "openEventCatalog": "Open event catalog",
       "publishDraft": "Publish draft",
       "publishLatest": "Publish latest",
-      "remove": "Remove",
-      "reset": "Reset",
+      "remove": "Verwijderen",
+      "reset": "Resetten",
       "resetToDefaults": "Reset to defaults",
       "savePreset": "Save preset",
       "show": "Show",
@@ -329,7 +329,7 @@
       "eventTypeLabel": "Event type",
       "loadingEvents": "Loading events...",
       "selectEventType": "Select event type",
-      "systemBadge": "System",
+      "systemBadge": "Systeem",
       "tenantBadge": "Tenant",
       "systemEvent": "System event",
       "tenantEvent": "Tenant event",
@@ -339,7 +339,7 @@
       "workflowLabel": "Workflow",
       "publishedVersionLabel": "Published version",
       "triggerLabel": "Trigger",
-      "manualTrigger": "Manual",
+      "manualTrigger": "Handmatig",
       "workflowStatusLabel": "Workflow status",
       "statusActive": "active",
       "statusPaused": "paused"
@@ -422,7 +422,7 @@
       "triggerMappingMissing": "Trigger mapping is required for this event schema but is not configured on the workflow."
     },
     "validation": {
-      "invalidJson": "Invalid JSON",
+      "invalidJson": "Ongeldige JSON",
       "summaryTitle": "Payload still needs required event fields before this run can start",
       "summaryDescription": "Fill the missing fields below, switch to Form Builder, or use a sample payload button.",
       "moreErrors": "+{{count}} more…"
@@ -436,7 +436,7 @@
       "total": "Total",
       "matched": "Matched",
       "unmatched": "Unmatched",
-      "errors": "Errors"
+      "errors": "Fouten"
     },
     "filters": {
       "eventNameLabel": "Event name",
@@ -448,23 +448,23 @@
       "toLabel": "To"
     },
     "actions": {
-      "applyFilters": "Apply filters",
-      "reset": "Reset",
-      "exportCsv": "Export CSV",
+      "applyFilters": "Filters toepassen",
+      "reset": "Resetten",
+      "exportCsv": "CSV exporteren",
       "exportJson": "Export JSON",
-      "close": "Close",
+      "close": "Sluiten",
       "viewRunDetails": "View run details"
     },
     "table": {
       "schemaConflict": "catalog ≠ submission",
       "columns": {
-        "event": "Event",
+        "event": "Gebeurtenis",
         "correlation": "Correlation",
         "schema": "Schema",
         "status": "Status",
         "matchedRun": "Matched Run",
         "payload": "Payload",
-        "created": "Created"
+        "created": "Aangemaakt"
       }
     },
     "states": {
@@ -480,7 +480,7 @@
       "correlationKeyLabel": "Correlation key",
       "payloadSchemaRefLabel": "Payload schema ref",
       "schemaConflict": "Schema ref conflict: catalog {{catalog}} vs submission {{submission}}",
-      "createdLabel": "Created",
+      "createdLabel": "Aangemaakt",
       "processedLabel": "Processed",
       "errorLine": "Error: {{message}}",
       "waitLabel": "Wait",
@@ -509,8 +509,8 @@
       "minimumRetriesPlaceholder": "3"
     },
     "actions": {
-      "refresh": "Refresh",
-      "loadMore": "Load more"
+      "refresh": "Vernieuwen",
+      "loadMore": "Meer laden"
     },
     "table": {
       "columns": {
@@ -539,8 +539,8 @@
       "title": "Workflow Audit"
     },
     "actions": {
-      "exportCsv": "Export CSV",
-      "loadMore": "Load more"
+      "exportCsv": "CSV exporteren",
+      "loadMore": "Meer laden"
     },
     "table": {
       "columns": {
@@ -575,20 +575,20 @@
     "controlPanel": {
       "tabs": {
         "schedules": "Schedules",
-        "runs": "Runs",
+        "runs": "Uitvoeringen",
         "events": "Events",
         "eventCatalog": "Event Catalog",
         "deadLetter": "Dead Letter"
       }
     },
     "toolbar": {
-      "backToList": "Back to workflows",
-      "newWorkflow": "New Workflow",
-      "saveDraft": "Save Draft",
-      "saving": "Saving...",
-      "publish": "Publish",
-      "publishing": "Publishing...",
-      "run": "Run",
+      "backToList": "Terug naar workflows",
+      "newWorkflow": "Nieuwe workflow",
+      "saveDraft": "Concept opslaan",
+      "saving": "Opslaan...",
+      "publish": "Publiceren",
+      "publishing": "Publiceren...",
+      "run": "Uitvoeren",
       "previewOnly": "Preview only until a version is published.",
       "validation": {
         "lastValidated": "Last validated: {{timestamp}}",
@@ -597,10 +597,10 @@
     },
     "validation": {
       "badge": {
-        "invalid": "Invalid",
-        "warnings": "Warnings",
-        "valid": "Valid",
-        "unknown": "Unknown"
+        "invalid": "Ongeldig",
+        "warnings": "Waarschuwingen",
+        "valid": "Geldig",
+        "unknown": "Onbekend"
       }
     },
     "discardDialog": {
@@ -626,7 +626,7 @@
     "palette": {
       "showPalette": "Show palette",
       "hidePalette": "Hide palette",
-      "searchPlaceholder": "Search",
+      "searchPlaceholder": "Zoeken",
       "dragHint": "Drop on pipeline to add",
       "categories": {
         "Control": "Control",
@@ -637,7 +637,7 @@
       },
       "controlBlocks": {
         "control.if": {
-          "label": "If",
+          "label": "Als",
           "description": "Conditional branching"
         },
         "control.forEach": {
@@ -653,7 +653,7 @@
           "description": "Invoke another workflow"
         },
         "control.return": {
-          "label": "Return",
+          "label": "Terugkeren",
           "description": "Stop execution"
         }
       }
@@ -661,10 +661,10 @@
     "stepCard": {
       "selectAriaLabel": "Select {{label}} step",
       "badges": {
-        "if": "If",
-        "loop": "Loop",
-        "try": "Try",
-        "block": "Block"
+        "if": "Als",
+        "loop": "Lus",
+        "try": "Proberen",
+        "block": "Blok"
       },
       "mapping": {
         "unmappedTitle": "{{count}} required fields are unmapped",
@@ -676,9 +676,9 @@
       "errorSingular": "error",
       "errorPlural": "errors",
       "actions": {
-        "duplicate": "Duplicate step",
+        "duplicate": "Stap dupliceren",
         "duplicateAriaLabel": "Duplicate {{label}} step",
-        "delete": "Delete step"
+        "delete": "Stap verwijderen"
       },
       "forEachSummary": "Item: {{itemVar}} | Concurrency: {{concurrency}}"
     },
@@ -700,8 +700,8 @@
     }
   },
   "actionInputFieldInfo": {
-    "required": "Required",
-    "requiredTitle": "Required",
+    "required": "Verplicht",
+    "requiredTitle": "Verplicht",
     "requiredMissingTitle": "Required field is missing a value",
     "format": "Format: {{value}}",
     "eachItem": "Each item: {{value}}",
@@ -752,19 +752,19 @@
     }
   },
   "taskInbox": {
-    "title": "Task Inbox",
-    "backToList": "← Back to Task List",
+    "title": "Taken-inbox",
+    "backToList": "← Terug naar takenlijst",
     "tabs": {
-      "pending": "Pending",
-      "claimed": "Claimed",
-      "completed": "Completed",
-      "all": "All Tasks"
+      "pending": "In behandeling",
+      "claimed": "Geclaimd",
+      "completed": "Voltooid",
+      "all": "Alle taken"
     }
   },
   "taskList": {
     "pagination": {
-      "previous": "Previous",
-      "next": "Next",
+      "previous": "Vorige",
+      "next": "Volgende",
       "pageLabel": "Page {{current}} of {{total}}"
     },
     "errors": {
@@ -774,38 +774,38 @@
       "unknown": "Unknown error"
     },
     "actions": {
-      "claim": "Claim",
-      "unclaim": "Unclaim"
+      "claim": "Claimen",
+      "unclaim": "Claim opheffen"
     },
-    "noDueDate": "No due date",
-    "overdueSuffix": "(Overdue)",
-    "empty": "No tasks found",
-    "duePrefix": "Due:"
+    "noDueDate": "Geen vervaldatum",
+    "overdueSuffix": "(Verlopen)",
+    "empty": "Geen taken gevonden",
+    "duePrefix": "Vervalt:"
   },
   "taskDetails": {
-    "notAvailable": "N/A",
-    "notFound": "Task not found",
-    "retry": "Retry",
-    "youPronoun": "You",
+    "notAvailable": "n.v.t.",
+    "notFound": "Taak niet gevonden",
+    "retry": "Opnieuw proberen",
+    "youPronoun": "U",
     "noForm": "No form available for this task.",
     "contextData": "Context Data",
     "responseData": "Response Data",
     "fields": {
       "status": "Status",
-      "priority": "Priority",
-      "created": "Created",
-      "dueDate": "Due Date",
+      "priority": "Prioriteit",
+      "created": "Aangemaakt",
+      "dueDate": "Vervaldatum",
       "claimedBy": "Claimed By",
       "completedBy": "Completed By"
     },
     "tabs": {
       "details": "Details",
-      "form": "Form",
-      "history": "History"
+      "form": "Formulier",
+      "history": "Geschiedenis"
     },
     "actions": {
-      "claim": "Claim Task",
-      "unclaim": "Unclaim Task"
+      "claim": "Taak claimen",
+      "unclaim": "Claim opheffen"
     },
     "errors": {
       "loadFailed": "Failed to load task details. Please try again.",
@@ -816,16 +816,16 @@
   },
   "taskHistory": {
     "empty": "No history available for this task.",
-    "byPrefix": "By:",
-    "system": "System",
+    "byPrefix": "Door:",
+    "system": "Systeem",
     "detailsLabel": "Details",
     "actions": {
-      "created": "Created",
-      "claimed": "Claimed",
-      "unclaimed": "Unclaimed",
-      "completed": "Completed",
-      "canceled": "Canceled",
-      "expired": "Expired"
+      "created": "Aangemaakt",
+      "claimed": "Geclaimd",
+      "unclaimed": "Niet meer geclaimd",
+      "completed": "Voltooid",
+      "canceled": "Geannuleerd",
+      "expired": "Verlopen"
     },
     "errors": {
       "loadFailed": "Failed to load task history. Please try again."
@@ -833,29 +833,29 @@
   },
   "taskForm": {
     "actions": {
-      "complete": "Complete Task",
-      "cancel": "Cancel"
+      "complete": "Taak voltooien",
+      "cancel": "Annuleren"
     }
   },
   "dynamicForm": {
     "actions": {
-      "submit": "Submit",
-      "cancel": "Cancel"
+      "submit": "Verzenden",
+      "cancel": "Annuleren"
     },
     "errors": {
       "generic": "An error occurred"
     }
   },
   "embeddedTaskInbox": {
-    "title": "My Tasks",
-    "viewAll": "View All",
-    "backToTasks": "← Back to Tasks"
+    "title": "Mijn taken",
+    "viewAll": "Alles bekijken",
+    "backToTasks": "← Terug naar taken"
   },
   "actionButton": {
-    "processing": "Processing...",
-    "confirm": "Confirm",
-    "cancel": "Cancel",
-    "confirmTitle": "Confirm Action"
+    "processing": "Verwerken...",
+    "confirm": "Bevestigen",
+    "cancel": "Annuleren",
+    "confirmTitle": "Actie bevestigen"
   },
   "stepNameField": {
     "label": "Step name"
@@ -863,7 +863,7 @@
   "stepSaveOutput": {
     "toggleLabel": "Save output",
     "placeholder": "e.g., ticketDefaults",
-    "copyPathTitle": "Copy full path",
+    "copyPathTitle": "Volledig pad kopiëren",
     "accessibleAs": "Accessible as:"
   },
   "aiSchemaSection": {
@@ -871,14 +871,14 @@
     "headingDescription": "Choose what the AI response should include for later steps.",
     "modeSimple": "Simple",
     "modeAdvanced": "Advanced",
-    "addField": "Add field",
-    "addNested": "Add nested field",
-    "remove": "Remove",
-    "nameLabel": "Name",
+    "addField": "Veld toevoegen",
+    "addNested": "Geneste veld toevoegen",
+    "remove": "Verwijderen",
+    "nameLabel": "Naam",
     "answerType": "Answer type",
     "arrayItems": "Array items",
-    "required": "Required",
-    "descriptionLabel": "Description",
+    "required": "Verplicht",
+    "descriptionLabel": "Beschrijving",
     "objectItemFields": "Object item fields",
     "nestedFields": "Nested fields",
     "jsonSchemaLabel": "JSON Schema",
@@ -893,7 +893,7 @@
   "composeText": {
     "heading": "Compose text outputs",
     "headingDescription": "Create one or more markdown outputs with stable downstream reference keys.",
-    "addOutput": "Add output",
+    "addOutput": "Uitvoer toevoegen",
     "untitled": "Untitled output",
     "outputFallback": "output {{index}}",
     "moveUpAria": "Move {{label}} up",
@@ -903,12 +903,12 @@
     "stableKeyLabel": "Stable key",
     "keyHintSafe": "Downstream-safe key",
     "keyHintInvalid": "Use lowercase letters, numbers, and underscores only.",
-    "regenerate": "Regenerate",
-    "validationHeading": "Validation",
+    "regenerate": "Opnieuw genereren",
+    "validationHeading": "Validatie",
     "downstreamPathLabel": "Downstream reference path",
     "pathFallback": "Save output to see a reference path.",
-    "copied": "Copied",
-    "copyPath": "Copy path",
+    "copied": "Gekopieerd",
+    "copyPath": "Pad kopiëren",
     "contentHeading": "Compose content",
     "contentDescription": "Use markdown-safe formatting and inline workflow reference chips.",
     "insertReference": "Insert reference",
@@ -962,10 +962,10 @@
   },
   "validationBadge": {
     "status": {
-      "valid": "Valid",
-      "warning": "Warnings",
-      "error": "Errors",
-      "incomplete": "Incomplete"
+      "valid": "Geldig",
+      "warning": "Waarschuwingen",
+      "error": "Fouten",
+      "incomplete": "Onvolledig"
     },
     "tooltip": {
       "valid": "All required inputs are mapped",
@@ -983,15 +983,15 @@
     "browseSources": "Browse sources",
     "objectFields": "Object fields",
     "itemTitle": "Item {{index}}",
-    "reset": "Reset",
-    "addItem": "Add item",
-    "fill": "Fill",
-    "clearValues": "Clear values",
+    "reset": "Resetten",
+    "addItem": "Item toevoegen",
+    "fill": "Invullen",
+    "clearValues": "Waarden wissen",
     "applySuggestions": "Apply suggestions ({{count}})",
     "applySuggestionTitle": "Apply suggestion: {{sourcePath}}",
     "fuzzySuffix": "(fuzzy)",
     "removeMapping": "Remove mapping (Delete/Backspace)",
-    "invalidJson": "Invalid JSON",
+    "invalidJson": "Ongeldige JSON",
     "stringPlaceholder": "Enter value...",
     "aria": {
       "listbox": "Action input fields",
@@ -1028,8 +1028,8 @@
       "title": "Edit {{fieldName}}",
       "description": "Use the larger editor for longer fixed-value content.",
       "openEditor": "Open editor",
-      "apply": "Apply",
-      "cancel": "Cancel"
+      "apply": "Toepassen",
+      "cancel": "Annuleren"
     }
   },
   "schemaReference": {
@@ -1044,14 +1044,14 @@
     "outputAvailablePrefix": "Output available at",
     "showRawJson": "Show raw JSON Schema",
     "hideRawJson": "Hide raw JSON Schema",
-    "exportSchema": "Export schema",
+    "exportSchema": "Schema exporteren",
     "exportSchemaTitle": "Download schema as JSON file",
     "rawInputComment": "// Input Schema",
     "rawOutputComment": "// Output Schema",
     "copyPathTitle": "Copy {{path}}",
-    "copyAllPaths": "Copy all paths",
-    "copyAllPathsTitle": "Copy all field paths",
-    "copied": "Copied!",
+    "copyAllPaths": "Alle paden kopiëren",
+    "copyAllPathsTitle": "Alle veldpaden kopiëren",
+    "copied": "Gekopieerd!",
     "pathsCopied": "{{count}} paths copied",
     "nullableSuffix": "| null",
     "constraints": {
@@ -1067,8 +1067,8 @@
     }
   },
   "groupedAction": {
-    "groupHeading": "Group",
-    "actionLabel": "Action",
+    "groupHeading": "Groep",
+    "actionLabel": "Actie",
     "actionPlaceholder": "Select a {{group}} action",
     "required": {
       "title": "Action required",
@@ -1082,19 +1082,19 @@
     }
   },
   "trigger": {
-    "manual": "Manual",
-    "event": "Event",
+    "manual": "Handmatig",
+    "event": "Gebeurtenis",
     "eventWithType": "Event: {{eventType}}",
-    "oneTimeSchedule": "One-time schedule",
-    "recurringSchedule": "Recurring schedule"
+    "oneTimeSchedule": "Eenmalige planning",
+    "recurringSchedule": "Terugkerende planning"
   },
   "scheduleStatus": {
-    "unknown": "Unknown",
-    "scheduled": "Scheduled",
-    "paused": "Paused",
-    "disabled": "Disabled",
-    "completed": "Completed",
-    "failed": "Failed"
+    "unknown": "Onbekend",
+    "scheduled": "Gepland",
+    "paused": "Gepauzeerd",
+    "disabled": "Uitgeschakeld",
+    "completed": "Voltooid",
+    "failed": "Mislukt"
   },
   "graph": {
     "start": {
@@ -1122,7 +1122,7 @@
       "title": "Drop a step here to insert"
     },
     "actions": {
-      "deleteStep": "Delete step"
+      "deleteStep": "Stap verwijderen"
     }
   },
   "runStudio": {
@@ -1135,15 +1135,15 @@
     },
     "actions": {
       "replay": "Replay",
-      "cancel": "Cancel"
+      "cancel": "Annuleren"
     },
     "status": {
-      "running": "Running",
-      "succeeded": "Succeeded",
-      "retrying": "Retrying",
-      "failed": "Failed",
-      "pending": "Pending",
-      "canceled": "Canceled"
+      "running": "Wordt uitgevoerd",
+      "succeeded": "Geslaagd",
+      "retrying": "Opnieuw proberen",
+      "failed": "Mislukt",
+      "pending": "In behandeling",
+      "canceled": "Geannuleerd"
     },
     "failure": {
       "title": "Run failed",
@@ -1153,8 +1153,8 @@
       "title": "Execution Pipeline",
       "emptyBranch": "No steps in this branch.",
       "view": {
-        "graph": "Graph",
-        "list": "List"
+        "graph": "Grafiek",
+        "list": "Lijst"
       },
       "states": {
         "loadingDefinition": "Loading workflow definition…",
@@ -1167,7 +1167,7 @@
       "fields": {
         "runId": "Run Id",
         "started": "Started",
-        "duration": "Duration",
+        "duration": "Duur",
         "tenant": "Tenant",
         "trigger": "Trigger",
         "eventType": "Event Type",
@@ -1191,12 +1191,12 @@
       "title": "Step Details",
       "empty": "Select a step in the pipeline to inspect inputs, outputs, and snapshots.",
       "fields": {
-        "step": "Step"
+        "step": "Stap"
       },
       "panels": {
         "configuration": "Step Configuration",
         "inputResolved": "Input (Resolved)",
-        "output": "Output",
+        "output": "Uitvoer",
         "envelopeSnapshot": "Envelope Snapshot"
       }
     },
@@ -1223,7 +1223,7 @@
       "searchPlaceholder": "Search message or step path",
       "empty": "No logs yet.",
       "actions": {
-        "clear": "Clear"
+        "clear": "Wissen"
       }
     },
     "dialog": {
@@ -1240,18 +1240,18 @@
         "replay": "Replaying will start a new run using the payload below."
       },
       "fields": {
-        "reason": "Reason",
+        "reason": "Reden",
         "reasonPlaceholder": "e.g. Canceling to adjust inputs",
         "payloadJson": "Payload (JSON)"
       },
       "actions": {
-        "close": "Close",
+        "close": "Sluiten",
         "confirmCancel": "Confirm Cancel",
         "startReplay": "Start Replay",
-        "working": "Working..."
+        "working": "Bezig..."
       },
       "errors": {
-        "invalidJson": "Invalid JSON"
+        "invalidJson": "Ongeldige JSON"
       }
     },
     "stepLabels": {
@@ -1270,10 +1270,10 @@
       "attempt": "Attempt {{attempt}}",
       "forEachSummary": "Item: {{itemVar}} | Concurrency: {{concurrency}}",
       "badges": {
-        "if": "If",
-        "loop": "Loop",
-        "try": "Try",
-        "block": "Block"
+        "if": "Als",
+        "loop": "Lus",
+        "try": "Proberen",
+        "block": "Blok"
       },
       "sections": {
         "then": "THEN",
@@ -1308,25 +1308,25 @@
       "edit": "Edit",
       "pause": "Pause",
       "resume": "Resume",
-      "delete": "Delete",
-      "cancel": "Cancel",
+      "delete": "Verwijderen",
+      "cancel": "Annuleren",
       "saving": "Saving…",
       "saveChanges": "Save Changes",
       "create": "Create Schedule",
       "rowMenu": "Schedule actions for {{name}}"
     },
     "filters": {
-      "allWorkflows": "All workflows",
-      "allStatuses": "All statuses",
+      "allWorkflows": "Alle workflows",
+      "allStatuses": "Alle statussen",
       "allTriggers": "All triggers",
       "searchPlaceholder": "Search schedules..."
     },
     "status": {
       "enabled": "Enabled",
-      "paused": "Paused",
-      "failed": "Failed",
-      "completed": "Completed",
-      "disabled": "Disabled"
+      "paused": "Gepauzeerd",
+      "failed": "Mislukt",
+      "completed": "Voltooid",
+      "disabled": "Uitgeschakeld"
     },
     "triggerType": {
       "schedule": "One-time",
@@ -1433,7 +1433,7 @@
         "noTenantDefault": "No tenant default business-hours schedule is configured yet."
       },
       "recurring": {
-        "title": "Recurring schedule",
+        "title": "Terugkerende planning",
         "description": "Choose a common recurrence pattern. Advanced cron is available for custom schedules.",
         "builderMode": "Schedule Builder",
         "advancedMode": "Advanced Cron",
@@ -1452,8 +1452,8 @@
           "json": "JSON Mode"
         },
         "actions": {
-          "addItem": "Add item",
-          "removeItem": "Remove"
+          "addItem": "Item toevoegen",
+          "removeItem": "Verwijderen"
         },
         "states": {
           "noItems": "No items yet."
@@ -1480,7 +1480,7 @@
         "expectedNumber": "Expected number.",
         "expectedBoolean": "Expected boolean.",
         "payloadMustBeObject": "Schedule payload must be a JSON object.",
-        "invalidJson": "Invalid JSON"
+        "invalidJson": "Ongeldige JSON"
       },
       "errors": {
         "loadScheduleFailed": "Failed to load schedule.",
@@ -1538,11 +1538,11 @@
   },
   "enums": {
     "workflowRunStatus": {
-      "RUNNING": "Running",
+      "RUNNING": "Wordt uitgevoerd",
       "WAITING": "Waiting",
-      "SUCCEEDED": "Succeeded",
-      "FAILED": "Failed",
-      "CANCELED": "Canceled"
+      "SUCCEEDED": "Geslaagd",
+      "FAILED": "Mislukt",
+      "CANCELED": "Geannuleerd"
     },
     "workflowRunSort": {
       "started_at:desc": "Newest first",
@@ -1557,10 +1557,10 @@
     },
     "workflowStepStatus": {
       "STARTED": "Started",
-      "SUCCEEDED": "Succeeded",
-      "FAILED": "Failed",
+      "SUCCEEDED": "Geslaagd",
+      "FAILED": "Mislukt",
       "RETRY_SCHEDULED": "Retry scheduled",
-      "CANCELED": "Canceled"
+      "CANCELED": "Geannuleerd"
     },
     "workflowLogLevel": {
       "DEBUG": "Debug",
@@ -1589,18 +1589,18 @@
     },
     "workflowTriggerMode": {
       "manual": "No trigger",
-      "event": "Event"
+      "event": "Gebeurtenis"
     },
     "workflowCanvasView": {
-      "list": "List",
-      "graph": "Graph"
+      "list": "Lijst",
+      "graph": "Grafiek"
     },
     "workflowOnError": {
       "continue": "Continue",
       "fail": "Fail"
     },
     "workflowWaitMode": {
-      "duration": "Duration",
+      "duration": "Duur",
       "until": "Until"
     },
     "workflowWaitTiming": {

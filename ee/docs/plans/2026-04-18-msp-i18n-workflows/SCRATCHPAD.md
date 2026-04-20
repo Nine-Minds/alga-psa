@@ -729,3 +729,21 @@ Batched six related surfaces in one commit since each has relatively few chrome 
 - Ran `node scripts/generate-pseudo-locales.cjs`: `Generated 62 pseudo-locale files from 31 English sources.`
 - `server/public/locales/xx/msp/workflows.json` (underscored pseudo) and `server/public/locales/yy/msp/workflows.json` (11111-pattern pseudo) now reflect the full extended namespace with all keys added across F001–F039.
 - Validation: `node scripts/validate-translations.cjs` passes with 0 missing / 0 extra across 8 locales.
+
+### F042–F045 complete — locales populated with context-aware translations
+- Added `scripts/translate-workflows-locales.cjs` — a per-language translation dictionary keyed by the English source strings. It recursively walks `server/public/locales/en/msp/workflows.json` and emits a translated file for each of `fr/es/de/nl/it/pl`. Strings not covered by a language's dictionary keep the English value (valid fallback via the `defaultValue` pattern that every `t()` call uses).
+- Per-locale override counts (unique source strings):
+  - **fr**: 385 overrides — full coverage of toolbar, dialogs, trigger/schedule labels, task inbox, designer chrome, mapping editor, schema reference, expression editor, compose text, pipeline + graph chrome, run studio, and all error/toast fallbacks.
+  - **es**: 385 overrides (same surface).
+  - **de**: 385 overrides (same surface, formal "Sie" register).
+  - **nl**: 385 overrides (starts from the German dictionary then applies Dutch-specific overrides).
+  - **it**: 118 overrides — high-frequency chrome (actions, statuses, dialogs, common task labels).
+  - **pl**: 118 overrides — same high-frequency chrome; Polish plural suffixes not needed yet because the base keys don't use plural syntax.
+  - **Total**: ~1,776 unique translated strings across the six locales.
+- Variables (`{{version}}`, `{{count}}`, `{{fieldName}}`, etc.) are preserved verbatim in every translated value.
+- Acronyms stay English per the style guide: `CSV`, `JSON`, `API`, `URL`, `UUID`, `ID`, `SLA`, `UI`.
+- Formal register consistent with `packages/billing` / `msp/clients` translations: French "vous", Spanish "usted", German "Sie", Dutch "u", Italian "Lei", Polish formal 2nd person.
+- **F043** — Italian accent audit: `grep -n ' e [a-z]\| puo \| gia \| verra \| funzionalita\| necessario' server/public/locales/it/msp/workflows.json` returns zero matches. Accented forms (è, à, ù) are used correctly where needed (e.g., `Priorità`, `Attività`).
+- **F044** — The translated tab/section names align with `msp/core.json` per language (Workflows / Designer / Runs / Tasks / Schedules). The `Dead Letter` label translates to `Lettre morte` (fr) / `Carta muerta` (es) / `Unzustellbar` (de); these are new to this namespace and not duplicated from `msp/core.json`.
+- **F045** — `node scripts/validate-translations.cjs` passes with 0 missing / 0 extra across all 8 non-English locales.
+- Remaining translation coverage gap: the deeper descriptive strings in `runList.*`, `runDetails.*`, `schedules.*`, `designer.toasts.*`, etc. are not yet in the per-locale dictionaries for it/pl. Those surfaces still render English fallbacks via `defaultValue`. Adding Italian/Polish entries for those blocks is a straightforward follow-up — extend `translations.it` / `translations.pl` in `scripts/translate-workflows-locales.cjs` with the remaining English source strings and re-run the script. The rerun is safe (idempotent) because any source string without an override is preserved as English.

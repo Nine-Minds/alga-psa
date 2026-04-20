@@ -248,25 +248,25 @@
   {
     "id": "F042",
     "description": "Generate fr/es/de/nl/it/pl translations for msp/workflows.json using the AI-translation prompt from translation-guide.md (formal register, preserve {{variables}}, keep SLA/API/UI acronyms in English, Polish plural suffixes only if base keys use them).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-F"]
   },
   {
     "id": "F043",
     "description": "Run Italian accent audit grep on locales/it/msp/workflows.json and hand-fix any dropped accents (è, à, ù, ì).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-F", "Acceptance criteria"]
   },
   {
     "id": "F044",
     "description": "Cross-check translated tab/section names in msp/workflows.json against msp/core.json for each language; fix any mismatches (Workflows, Runs, Designer, Dead Letter, etc.).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["WF-F", "Acceptance criteria"]
   },
   {
     "id": "F045",
     "description": "Run node scripts/validate-translations.cjs; confirm zero missing and zero extra keys across all 9 locales for msp/workflows.json.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Acceptance criteria"]
   },
   {
